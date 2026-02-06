@@ -1,0 +1,21 @@
+<Page
+    x:Class="IPTVPlayer.WinUI.Pages.HomePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="20">
+            <TextBlock Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" 
+                       Style="{StaticResource SubtitleTextBlockStyle}" 
+                       HorizontalAlignment="Center"/>
+            
+            <!-- Simple Playlist List for verification -->
+            <ListView ItemsSource="{x:Bind ViewModel.Playlists, Mode=OneWay}"
+                      DisplayMemberPath="Name"
+                      MaxHeight="300"/>
+        </StackPanel>
+    </Grid>
+</Page>
