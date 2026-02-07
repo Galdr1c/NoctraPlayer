@@ -1,0 +1,275 @@
+<Window x:Class="IPTVPlayer.Views.AddProfileWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:viewmodels="clr-namespace:IPTVPlayer.ViewModels;assembly=IPTVPlayer.Core"
+        xmlns:converters="clr-namespace:IPTVPlayer.Converters"
+        xmlns:helper="clr-namespace:IPTVPlayer.Helpers"
+        mc:Ignorable="d"
+        Title="Profil Ayarları" Height="750" Width="1000"
+        MinHeight="600" MinWidth="800"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        WindowStyle="None"
+        Background="{StaticResource Bg0Brush}" 
+        FontFamily="Segoe UI">
+    
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Resources/Colors.xaml"/>
+                <ResourceDictionary Source="/Resources/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+            <converters:ProfileColorConverter x:Key="ProfileColorConverter"/>
+            <converters:AvatarExpressionConverter x:Key="AvatarExpressionConverter"/>
+            <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+            <converters:InverseBoolConverter x:Key="InverseBoolConverter"/>
+            <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
+            <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
+            <converters:ErrorColorConverter x:Key="ErrorColorConverter"/>
+            <converters:ObjectToVisibilityConverter x:Key="ObjectToVisibilityConverter"/>
+            <converters:AvatarPathConverter x:Key="AvatarPathConverter"/>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid VerticalAlignment="Center" HorizontalAlignment="Center" Margin="40">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Header -->
+            <RowDefinition Height="Auto"/> <!-- Main Content -->
+            <RowDefinition Height="Auto"/> <!-- Footer -->
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,40">
+            <TextBlock x:Name="TitleText" FontSize="56" FontWeight="Medium" Foreground="White" HorizontalAlignment="Center">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Text" Value="Profil Ekle"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding EditingProfile, Converter={StaticResource NullToVisibilityConverter}}" Value="Visible">
+                                <Setter Property="Text" Value="Profili Düzenle"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+            <TextBlock Text="Noctra izleyen başka bir kişi için profil ekleyin." FontSize="18" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+            <Rectangle Height="1" Fill="{StaticResource BorderBrush}" Margin="0,30,0,0" Width="800"/>
+        </StackPanel>
+
+        <!-- Main Content (Horizontal Split: Avatar | Info) -->
+        <Grid Grid.Row="1" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/> <!-- Avatar -->
+                <ColumnDefinition Width="500"/> <!-- Info Stack -->
+            </Grid.ColumnDefinitions>
+
+            <!-- Avatar Column -->
+            <Button Style="{StaticResource ImageButtonStyle}" Command="{Binding OpenAvatarPickerCommand}" 
+                    Cursor="Hand" VerticalAlignment="Top" Margin="0,0,50,0"
+                    Background="Transparent" BorderThickness="0">
+                <Grid x:Name="AvatarRoot" Width="180" Height="180">
+                    <!-- 1. Background & Animation Preview (Clipped) -->
+                    <Border CornerRadius="14" ClipToBounds="True"
+                            Background="{Binding SelectedAvatar, Converter={StaticResource ProfileColorConverter}, FallbackValue='#E50914'}">
+                        <Grid>
+                            <Image Source="{Binding SelectedAvatar, Converter={StaticResource AvatarPathConverter}}" 
+                                   Stretch="UniformToFill" 
+                                   RenderOptions.BitmapScalingMode="HighQuality">
+                                <Image.Clip>
+                                    <RectangleGeometry Rect="0,0,180,180" RadiusX="14" RadiusY="14"/>
+                                </Image.Clip>
+                            </Image>
+
+                            <!-- Edit Overlay -->
+                            <Border Background="#CC000000" Width="44" Height="44" 
+                                    HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                                    CornerRadius="22" Margin="10">
+                                <TextBlock Text="✎" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24" Margin="0,0,0,2"/>
+                            </Border>
+                        </Grid>
+                    </Border>
+                    
+                    <!-- 2. Static Frame (Optional for Add window, but kept for consistency) -->
+                    <Border x:Name="AvatarBorder" CornerRadius="14" BorderThickness="0" Background="Transparent"/>
+                </Grid>
+            </Button>
+
+            <!-- Info Column -->
+            <StackPanel Grid.Column="1" VerticalAlignment="Top">
+                <!-- Profile Name -->
+                <TextBlock Text="Profil Adı" Foreground="#AAAAAA" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"/>
+                <TextBox Text="{Binding ProfileName, UpdateSourceTrigger=PropertyChanged}" 
+                         Style="{StaticResource ModernTextBox}" 
+                         Height="52"
+                         helper:TextBoxHelper.Watermark="İsim girin"/>
+
+                <CheckBox Content="Çocuk Profili" 
+                          IsChecked="{Binding IsChild}"
+                          Style="{StaticResource NoctraCheckBox}"
+                          Margin="4,16,0,0"/>
+                
+                <Separator Height="1" Background="#333" Margin="0,32"/>
+                
+                <!-- Provider Account -->
+                <TextBlock Text="Hesap Ayarları" Foreground="White" FontSize="20" FontWeight="Bold" Margin="0,0,0,16"/>
+                
+
+                <!-- Connection Details -->
+                <!-- Connection Details Section -->
+                <StackPanel>
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Style.Triggers>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding IsNewAccount}" Value="False"/>
+                                        <Condition Binding="{Binding IsEditingAccount}" Value="False"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+
+                    <!-- URL Field with Smart Label -->
+                    <TextBlock Foreground="#AAAAAA" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Text" Value="Sunucu URL"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsM3U}" Value="True">
+                                        <Setter Property="Text" Value="M3U Link"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    
+                    <TextBox Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}" 
+                             Height="52" Margin="0,0,0,20">
+                        <TextBox.Style>
+                            <Style TargetType="TextBox" BasedOn="{StaticResource ModernTextBox}">
+                                <Setter Property="helper:TextBoxHelper.Watermark" Value="http://server.com:8080"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsM3U}" Value="True">
+                                        <Setter Property="helper:TextBoxHelper.Watermark" 
+                                                Value="http://server.com:8080/get.php?username=...&amp;password=..."/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBox.Style>
+                    </TextBox>
+                    
+                    <!-- Credentials Grid - Shows for both Xtream and M3U with get.php -->
+                    <Grid Margin="0,0,0,20">
+                        <Grid.Style>
+                            <Style TargetType="Grid">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <!-- Show if Xtream selected -->
+                                    <DataTrigger Binding="{Binding IsXtream}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                    <!-- OR if M3U with get.php in URL -->
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsM3U}" Value="True"/>
+                                            <Condition Binding="{Binding Url, Converter={StaticResource StringContainsConverter}, ConverterParameter='get.php'}" Value="True"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Grid.Style>
+                        
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <StackPanel Margin="0,0,10,0">
+                            <TextBlock Text="Kullanıcı Adı" Foreground="#AAAAAA" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"/>
+                            <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" 
+                                     Style="{StaticResource ModernTextBox}" Height="52"
+                                     helper:TextBoxHelper.Watermark="Kullanıcı adı"/>
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                            <TextBlock Text="Şifre" Foreground="#AAAAAA" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"/>
+                            <TextBox Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}" 
+                                     Style="{StaticResource ModernTextBox}" Height="52"
+                                     helper:TextBoxHelper.Watermark="Şifre"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Format Type Toggle -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <RadioButton GroupName="ProfileType" Content="Xtream Codes" 
+                                     IsChecked="{Binding IsXtream}" 
+                                     Style="{StaticResource TabRadioButtonStyle}" 
+                                     Margin="0,0,12,0" Padding="20,10"/>
+                        <RadioButton GroupName="ProfileType" Content="M3U Playlist" 
+                                     IsChecked="{Binding IsM3U}" 
+                                     Style="{StaticResource TabRadioButtonStyle}" 
+                                     Padding="20,10"/>
+                    </StackPanel>
+                    
+                    <!-- ✨ Info Banner - M3U → Xtream Conversion -->
+                    <Border Background="#1A7C3AED" BorderBrush="{StaticResource AccentBrush}" 
+                            BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,10,0,0">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <!-- Show when switching from M3U with get.php to Xtream -->
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsXtream}" Value="True"/>
+                                            <Condition Binding="{Binding Username, Converter={StaticResource StringToVisibilityConverter}}" Value="Visible"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="💡" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap">
+                                <Run Text="M3U linkiniz Xtream formatına dönüştürüldü."/>
+                                <Run Text="Sunucu, kullanıcı adı ve şifre otomatik ayrıştırıldı." FontWeight="SemiBold"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+
+        <!-- Footer Actions -->
+        <StackPanel Grid.Row="2" Margin="0,20,0,0">
+            <TextBlock Text="{Binding StatusMessage}" 
+                       Foreground="{Binding HasError, Converter={StaticResource ErrorColorConverter}}" 
+                       FontSize="14" HorizontalAlignment="Center" Margin="0,0,0,20"
+                       Visibility="{Binding StatusMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button Content="PROFİLİ SİL" 
+                        Style="{StaticResource DangerButtonStyle}"
+                        Command="{Binding DeleteProfileCommand}"
+                        CommandParameter="{Binding EditingProfile}"
+                        Visibility="{Binding EditingProfile, Converter={StaticResource NullToVisibilityConverter}}"
+                        Margin="0,0,80,0"/>
+
+                <Button Content="KAYDET" Command="{Binding SaveCommand}" 
+                        Style="{StaticResource PrimaryButtonStyle}" Width="160" Height="56" FontSize="16" FontWeight="Bold"/>
+                <Button Content="İPTAL" Click="CancelButton_Click" 
+                        Style="{StaticResource SecondaryButton}" Width="140" Height="56" FontSize="16" FontWeight="Bold" Margin="20,0,0,0"/>
+            </StackPanel>
+        </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</Window>

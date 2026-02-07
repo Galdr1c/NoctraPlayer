@@ -1,6 +1,6 @@
 using IPTVPlayer.Models;
 
-namespace IPTVPlayer.Services.Interfaces;
+namespace IPTVPlayer.Services;
 
 /// <summary>
 /// License/subscription yönetimi servisi

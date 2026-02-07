@@ -100,7 +100,7 @@ _pkginfo.txt
 *.pidb
 
 # Project Specific
-# FFmpeg binaries downloaded by script
+# FFmpeg binaries (large files)
 **/FFmpeg/
 *.dll
 !**/obj/**/*.dll

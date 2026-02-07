@@ -10,21 +10,24 @@ namespace IPTVPlayer.Services;
 /// </summary>
 public class PlaylistService : IPlaylistService
 {
-    private readonly AppDbContext _context;
+    private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly IM3UParser _parser;
+    private readonly IMediaService _mediaService;
 
-    public PlaylistService(AppDbContext context, IM3UParser parser)
+    public PlaylistService(IDbContextFactory<AppDbContext> contextFactory, IM3UParser parser, IMediaService mediaService)
     {
-        _context = context;
+        _contextFactory = contextFactory;
         _parser = parser;
+        _mediaService = mediaService;
     }
 
     public async Task<Playlist> AddFromUrlAsync(string name, string url, int? profileId = null)
     {
+        using var context = await _contextFactory.CreateDbContextAsync();
         try 
         {
             // Duplicate check
-            var existing = await _context.Playlists
+            var existing = await context.Playlists
                 .FirstOrDefaultAsync(p => p.Url == url && p.ProfileId == profileId && p.IsActive);
                 
             if (existing != null) return existing;
@@ -43,10 +46,10 @@ public class PlaylistService : IPlaylistService
             };
 
             // Optimization for large playlists
-            _context.ChangeTracker.AutoDetectChangesEnabled = false;
+            context.ChangeTracker.AutoDetectChangesEnabled = false;
             
-            _context.Playlists.Add(playlist);
-            await _context.SaveChangesAsync();
+            context.Playlists.Add(playlist);
+            await context.SaveChangesAsync();
 
             // Add channels in batches
             const int batchSize = 500;
@@ -57,20 +60,24 @@ public class PlaylistService : IPlaylistService
                 {
                     channel.PlaylistId = playlist.Id;
                 }
-                _context.Channels.AddRange(batch);
-                await _context.SaveChangesAsync();
+                context.Channels.AddRange(batch);
+                await context.SaveChangesAsync();
             }
+
+            // Aggregation for Series/VOD
+            await _mediaService.AggregateContentAsync(playlist.Id);
 
             return playlist;
         }
         finally
         {
-            _context.ChangeTracker.AutoDetectChangesEnabled = true;
+            context.ChangeTracker.AutoDetectChangesEnabled = true;
         }
     }
 
     public async Task<Playlist> AddFromFileAsync(string name, string filePath, int? profileId = null)
     {
+        using var context = await _contextFactory.CreateDbContextAsync();
         try 
         {
             var channels = await _parser.ParseFromFileAsync(filePath);
@@ -86,9 +93,9 @@ public class PlaylistService : IPlaylistService
                 IsActive = true
             };
 
-            _context.ChangeTracker.AutoDetectChangesEnabled = false;
-            _context.Playlists.Add(playlist);
-            await _context.SaveChangesAsync();
+            context.ChangeTracker.AutoDetectChangesEnabled = false;
+            context.Playlists.Add(playlist);
+            await context.SaveChangesAsync();
 
             const int batchSize = 500;
             for (int i = 0; i < channels.Count; i += batchSize)
@@ -98,21 +105,25 @@ public class PlaylistService : IPlaylistService
                 {
                     channel.PlaylistId = playlist.Id;
                 }
-                _context.Channels.AddRange(batch);
-                await _context.SaveChangesAsync();
+                context.Channels.AddRange(batch);
+                await context.SaveChangesAsync();
             }
+
+            // Aggregation for Series/VOD
+            await _mediaService.AggregateContentAsync(playlist.Id);
 
             return playlist;
         }
         finally
         {
-            _context.ChangeTracker.AutoDetectChangesEnabled = true;
+            context.ChangeTracker.AutoDetectChangesEnabled = true;
         }
     }
 
     public async Task<List<Playlist>> GetAllAsync(int? profileId = null)
     {
-        var query = _context.Playlists.Where(p => p.IsActive);
+        using var context = await _contextFactory.CreateDbContextAsync();
+        var query = context.Playlists.Where(p => p.IsActive);
         
         if (profileId.HasValue)
         {
@@ -126,71 +137,67 @@ public class PlaylistService : IPlaylistService
 
     public async Task<Playlist> RefreshAsync(int playlistId)
     {
-        // Change tracking optimization for bulk updates
-        _context.ChangeTracker.AutoDetectChangesEnabled = false;
+        using var context = await _contextFactory.CreateDbContextAsync();
+        var playlist = await context.Playlists
+            .Include(p => p.Channels)
+            .FirstOrDefaultAsync(p => p.Id == playlistId);
 
-        try
+        if (playlist == null)
+            throw new KeyNotFoundException($"Playlist bulunamadı: {playlistId}");
+
+        // Mevcut kanalları sil
+        context.Channels.RemoveRange(playlist.Channels);
+
+        // Yeni kanalları parse et
+        List<Channel> newChannels;
+        if (!string.IsNullOrEmpty(playlist.Url))
         {
-            var playlist = await _context.Playlists
-                .Include(p => p.Channels)
-                .FirstOrDefaultAsync(p => p.Id == playlistId);
-
-            if (playlist == null)
-                throw new KeyNotFoundException($"Playlist bulunamadı: {playlistId}");
-
-            // Mevcut kanalları sil
-            _context.Channels.RemoveRange(playlist.Channels);
-
-            // Yeni kanalları parse et
-            List<Channel> newChannels;
-            if (!string.IsNullOrEmpty(playlist.Url))
-            {
-                newChannels = await _parser.ParseFromUrlAsync(playlist.Url);
-            }
-            else if (!string.IsNullOrEmpty(playlist.FilePath))
-            {
-                newChannels = await _parser.ParseFromFileAsync(playlist.FilePath);
-            }
-            else
-            {
-                throw new InvalidOperationException("Playlist'in URL veya dosya yolu yok");
-            }
-
-            // Yeni kanalları ekle
-            foreach (var channel in newChannels)
-            {
-                channel.PlaylistId = playlist.Id;
-                _context.Channels.Add(channel);
-            }
-
-            playlist.ChannelCount = newChannels.Count;
-            playlist.LastUpdated = DateTime.Now;
-
-            await _context.SaveChangesAsync();
-
-            return playlist;
+            newChannels = await _parser.ParseFromUrlAsync(playlist.Url);
         }
-        finally
+        else if (!string.IsNullOrEmpty(playlist.FilePath))
         {
-            _context.ChangeTracker.AutoDetectChangesEnabled = true;
+            newChannels = await _parser.ParseFromFileAsync(playlist.FilePath);
         }
+        else
+        {
+            throw new InvalidOperationException("Playlist'in URL veya dosya yolu yok");
+        }
+
+        // Yeni kanalları ekle
+        foreach (var channel in newChannels)
+        {
+            channel.PlaylistId = playlist.Id;
+            context.Channels.Add(channel);
+        }
+
+        playlist.ChannelCount = newChannels.Count;
+        playlist.LastUpdated = DateTime.Now;
+
+        await context.SaveChangesAsync();
+
+        // Re-aggregate
+        await _mediaService.AggregateContentAsync(playlist.Id);
+
+        return playlist;
     }
 
     public async Task DeleteAsync(int playlistId)
     {
-        var playlist = await _context.Playlists
+        using var context = await _contextFactory.CreateDbContextAsync();
+        var playlist = await context.Playlists
             .FirstOrDefaultAsync(p => p.Id == playlistId);
 
         if (playlist != null)
         {
             playlist.IsActive = false;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
     }
 
     public async Task<List<Channel>> GetChannelsAsync(int playlistId)
     {
-        return await _context.Channels
+        using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Channels
             .Where(c => c.PlaylistId == playlistId)
             .OrderBy(c => c.GroupTitle)
             .ThenBy(c => c.Name)

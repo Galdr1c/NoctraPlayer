@@ -16,14 +16,14 @@ public class Profile
     [Required]
     public string Name { get; set; } = string.Empty;
 
-    public bool IsChild { get; set; }
-
     public int ProviderAccountId { get; set; }
     public ProviderAccount? ProviderAccount { get; set; }
 
     // Visuals
     public string Avatar { get; set; } = "default"; // Asset name or path
     public string Color { get; set; } = "#FF6B00"; // Default accent color
+
+    public bool IsChild { get; set; }
 
     public DateTime LastUsed { get; set; } = DateTime.MinValue;
 

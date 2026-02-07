@@ -19,25 +19,6 @@ public class AppDbContext : DbContext
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
-        try
-        {
-            Database.EnsureCreated();
-            EnsureSchema();
-        }
-        catch { /* Ignored */ }
-    }
-
-    private void EnsureSchema()
-    {
-        try
-        {
-            // Manual migration for IsChild column
-            Database.ExecuteSqlRaw("ALTER TABLE Profiles ADD COLUMN IsChild INTEGER DEFAULT 0;");
-        }
-        catch
-        {
-            // Column likely exists or other non-critical error
-        }
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

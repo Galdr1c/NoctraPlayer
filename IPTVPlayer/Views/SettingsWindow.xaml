@@ -1,0 +1,79 @@
+<Window x:Class="IPTVPlayer.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:viewmodels="clr-namespace:IPTVPlayer.ViewModels;assembly=IPTVPlayer.Core"
+        xmlns:helper="clr-namespace:IPTVPlayer.Helpers"
+        mc:Ignorable="d"
+        Title="Ayarlar" Height="400" Width="600"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        AllowsTransparency="True"
+        Background="Transparent"
+        FontFamily="Segoe UI">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Resources/Colors.xaml"/>
+                <ResourceDictionary Source="/Resources/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Border Background="{StaticResource BackgroundBrush}" CornerRadius="12" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+        <Grid Margin="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Header -->
+                <RowDefinition Height="*"/>    <!-- Content -->
+                <RowDefinition Height="Auto"/> <!-- Footer -->
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Grid Grid.Row="0" Margin="0,0,0,24">
+                <TextBlock Text="Ayarlar" FontSize="24" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                <Button HorizontalAlignment="Right" Content="✕" 
+                        Click="CloseButton_Click"
+                        FontSize="18"
+                        Style="{StaticResource IconButton}" 
+                        Foreground="{StaticResource TextSecondaryBrush}"/>
+            </Grid>
+
+            <!-- Content -->
+            <StackPanel Grid.Row="1">
+                
+                <!-- Theme Toggle -->
+                <Border Background="{StaticResource SurfaceBrush}" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                    <Grid>
+                        <StackPanel>
+                            <TextBlock Text="Görünüm" FontWeight="SemiBold" FontSize="16" Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <TextBlock Text="Koyu veya açık tema arasında geçiş yapın" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        
+                        <Button HorizontalAlignment="Right" Command="{Binding ToggleThemeCommand}" 
+                                Style="{StaticResource SecondaryButton}" Padding="16,8">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding IsDarkTheme, Converter={StaticResource InverseBoolConverter}, ConverterParameter=Koyu}" 
+                                           TextDecorations="None"/> 
+                                <!-- Placeholder text toggle logic: "Koyu Tema" -> "Açık Tema" -->
+                                <TextBlock Text=" Tema Değiştir 🌓"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- About/Version -->
+                <Border Background="{StaticResource SurfaceBrush}" CornerRadius="8" Padding="16">
+                    <StackPanel>
+                        <TextBlock Text="Hakkında" FontWeight="SemiBold" FontSize="16" Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <TextBlock Text="Noctra v1.0.0" FontSize="14" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                        <TextBlock Text="© 2026 Tüm Hakları Saklıdır" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+        </Grid>
+    </Border>
+</Window>

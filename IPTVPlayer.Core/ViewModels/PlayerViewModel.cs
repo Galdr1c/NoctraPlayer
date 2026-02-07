@@ -15,6 +15,45 @@ public partial class PlayerViewModel : ObservableObject
     private Timer? _positionTimer;
 
     [ObservableProperty]
+    private bool _isVisible = true;
+
+    [ObservableProperty]
+    private bool _isLocked;
+
+    [ObservableProperty]
+    private string _currentTimeStr = "00:00";
+
+    [ObservableProperty]
+    private bool _isZappingVisible;
+
+    [ObservableProperty]
+    private string _channelName = string.Empty;
+
+    [ObservableProperty]
+    private string _channelLogo = string.Empty;
+
+    [ObservableProperty]
+    private string _connectionStatus = "Bağlanıyor...";
+
+    [ObservableProperty]
+    private string _streamInfo = string.Empty;
+
+    [ObservableProperty]
+    private double _bufferingProgress;
+
+    [ObservableProperty]
+    private bool _isLive;
+
+    [ObservableProperty]
+    private bool _isAudioSettingsOpen;
+
+    [ObservableProperty]
+    private string _networkStatus = "Wi-Fi";
+
+    [ObservableProperty]
+    private string _remainingTime = "-00:00:00";
+
+    [ObservableProperty]
     private Channel? _currentChannel;
 
     [ObservableProperty]
@@ -59,13 +98,30 @@ public partial class PlayerViewModel : ObservableObject
     [ObservableProperty]
     private int _selectedSubtitleTrack = -1;
 
+    [ObservableProperty]
+    private bool _isQualitySettingsOpen;
+
     private readonly IDispatcherService _dispatcherService;
+    private readonly System.Timers.Timer _autoHideTimer;
+    private readonly System.Timers.Timer _clockTimer;
+    private System.Timers.Timer? _zappingTimer;
 
     public PlayerViewModel(IVideoPlayerService videoPlayerService, IEpgService epgService, IDispatcherService dispatcherService)
     {
         _videoPlayerService = videoPlayerService;
         _epgService = epgService;
         _dispatcherService = dispatcherService;
+
+        // Auto-hide timer
+        _autoHideTimer = new System.Timers.Timer(4000);
+        _autoHideTimer.Elapsed += (s, e) => IsVisible = IsLocked;
+        _autoHideTimer.AutoReset = false;
+
+        // Clock timer
+        _clockTimer = new System.Timers.Timer(1000);
+        _clockTimer.Elapsed += (s, e) => CurrentTimeStr = DateTime.Now.ToString("HH:mm");
+        _clockTimer.Start();
+        CurrentTimeStr = DateTime.Now.ToString("HH:mm");
 
         _videoPlayerService.PlayingChanged += (s, playing) => 
         {
@@ -82,6 +138,12 @@ public partial class PlayerViewModel : ObservableObject
             {
                 Position = pos;
                 PositionText = TimeSpan.FromSeconds(pos).ToString(@"hh\:mm\:ss");
+                
+                if (Duration > 0)
+                {
+                    var remaining = Math.Max(0, Duration - pos);
+                    RemainingTime = "-" + TimeSpan.FromSeconds(remaining).ToString(@"hh\:mm\:ss");
+                }
             });
         };
     }
@@ -91,11 +153,81 @@ public partial class PlayerViewModel : ObservableObject
         CurrentChannel = channel;
         await _videoPlayerService.PlayAsync(channel.StreamUrl);
 
+        // Zapping göster
+        ShowZapping(channel.Name, channel.LogoUrl, channel.Type == ChannelType.Live);
+
         // EPG bilgisini al
         if (!string.IsNullOrEmpty(channel.TvgId) && _epgService.IsLoaded)
         {
             CurrentProgram = await _epgService.GetCurrentProgramAsync(channel.TvgId);
         }
+    }
+
+    public void ShowZapping(string name, string? logo, bool isLive)
+    {
+        ChannelName = name;
+        ChannelLogo = logo ?? string.Empty;
+        IsLive = isLive;
+        ConnectionStatus = "Bağlanıyor...";
+        BufferingProgress = 0;
+        StreamInfo = isLive ? "1080p | 60fps" : "4K | HDR | 24fps";
+        IsZappingVisible = true;
+
+        _zappingTimer?.Stop();
+        _zappingTimer ??= new System.Timers.Timer(4000);
+        _zappingTimer.AutoReset = false;
+        _zappingTimer.Elapsed += (s, e) => IsZappingVisible = false;
+        
+        // Simüle progress
+        var progressTimer = new System.Timers.Timer(100);
+        progressTimer.Elapsed += (s, e) => {
+            if (BufferingProgress < 100) BufferingProgress += 5;
+            else progressTimer.Stop();
+        };
+        progressTimer.Start();
+        _zappingTimer.Start();
+        
+        RestartAutoHideTimer();
+    }
+
+    private void RestartAutoHideTimer()
+    {
+        _autoHideTimer.Stop();
+        if (!IsLocked) _autoHideTimer.Start();
+        IsVisible = true;
+    }
+
+    [RelayCommand]
+    private void ShowOverlay() => RestartAutoHideTimer();
+
+    [RelayCommand]
+    private void ToggleLock()
+    {
+        IsLocked = !IsLocked;
+        RestartAutoHideTimer();
+    }
+
+    [RelayCommand]
+    private void OpenAudioSettings()
+    {
+        IsAudioSettingsOpen = !IsAudioSettingsOpen;
+        if (IsAudioSettingsOpen) IsLocked = true;
+    }
+
+    [RelayCommand]
+    private void OpenQualitySettings()
+    {
+        IsQualitySettingsOpen = !IsQualitySettingsOpen;
+        if (IsQualitySettingsOpen) IsLocked = true;
+    }
+
+    [RelayCommand]
+    private void ClosePanels()
+    {
+        IsAudioSettingsOpen = false;
+        IsQualitySettingsOpen = false;
+        IsLocked = false;
+        RestartAutoHideTimer();
     }
 
     private void UpdateMediaInfo()
@@ -114,6 +246,8 @@ public partial class PlayerViewModel : ObservableObject
             _videoPlayerService.Pause();
         else if (CurrentChannel != null)
             _ = _videoPlayerService.PlayAsync(CurrentChannel.StreamUrl);
+        
+        RestartAutoHideTimer();
     }
 
     [RelayCommand]
@@ -122,6 +256,7 @@ public partial class PlayerViewModel : ObservableObject
         _videoPlayerService.Stop();
         CurrentChannel = null;
         CurrentProgram = null;
+        IsVisible = true;
     }
 
     partial void OnVolumeChanged(int value)
@@ -138,12 +273,14 @@ public partial class PlayerViewModel : ObservableObject
     private void ToggleMute()
     {
         IsMuted = !IsMuted;
+        RestartAutoHideTimer();
     }
 
     [RelayCommand]
     private void Seek(double position)
     {
         _videoPlayerService.Position = position;
+        RestartAutoHideTimer();
     }
 
     [RelayCommand]
@@ -151,6 +288,7 @@ public partial class PlayerViewModel : ObservableObject
     {
         var newPos = Math.Min(Position + seconds, Duration);
         _videoPlayerService.Position = newPos;
+        RestartAutoHideTimer();
     }
 
     [RelayCommand]
@@ -158,6 +296,7 @@ public partial class PlayerViewModel : ObservableObject
     {
         var newPos = Math.Max(Position - seconds, 0);
         _videoPlayerService.Position = newPos;
+        RestartAutoHideTimer();
     }
 
     partial void OnSelectedAudioTrackChanged(int value)
@@ -176,5 +315,18 @@ public partial class PlayerViewModel : ObservableObject
     private void ToggleFullScreen()
     {
         IsFullScreen = !IsFullScreen;
+        RestartAutoHideTimer();
     }
+
+    [RelayCommand]
+    private void ClosePlayer()
+    {
+        Stop();
+        CloseRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    public event EventHandler? CloseRequested;
+
+    [RelayCommand]
+    private void UserInteraction() => RestartAutoHideTimer();
 }

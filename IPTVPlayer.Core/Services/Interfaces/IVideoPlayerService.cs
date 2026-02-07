@@ -1,3 +1,5 @@
+using LibVLCSharp.Shared;
+
 namespace IPTVPlayer.Services.Interfaces;
 
 /// <summary>
@@ -76,6 +78,11 @@ public interface IVideoPlayerService : IDisposable
     /// </summary>
     event EventHandler<double>? PositionChanged;
     
+    /// <summary>
+    /// LibVLC MediaPlayer nesnesini döner (Sadece UI/VideoView bağlama için)
+    /// </summary>
+    LibVLCSharp.Shared.MediaPlayer? GetMediaPlayer();
+
     /// <summary>
     /// Hata oluştuğunda
     /// </summary>

@@ -5,14 +5,43 @@ using IPTVPlayer.Services.Interfaces;
 
 namespace IPTVPlayer.ViewModels;
 
+public enum AppView
+{
+    Home,
+    Live,
+    Movies,
+    Series,
+    Search,
+    MyList
+}
+
 /// <summary>
 /// Ana sayfa view model
 /// </summary>
 public partial class MainViewModel : ObservableObject
 {
     private readonly IPlaylistService _playlistService;
-    private readonly IVideoPlayerService _videoPlayerService;
     private readonly IEpgService _epgService;
+    private readonly IMediaService _mediaService;
+    private readonly IChannelService _channelService;
+
+    [ObservableProperty]
+    private AppView _activeView = AppView.Home;
+
+    [ObservableProperty]
+    private List<Channel> _trendingChannels = new();
+
+    [ObservableProperty]
+    private List<Channel> _continueWatching = new();
+
+    [ObservableProperty]
+    private List<Channel> _latestMovies = new();
+
+    [ObservableProperty]
+    private List<Series> _latestSeries = new();
+
+    [ObservableProperty]
+    private Channel? _featuredMedia;
 
     [ObservableProperty]
     private List<Playlist> _playlists = new();
@@ -62,16 +91,18 @@ public partial class MainViewModel : ObservableObject
 
     public MainViewModel(
         IPlaylistService playlistService,
-        IVideoPlayerService videoPlayerService,
         IEpgService epgService,
         IDispatcherService dispatcherService,
-        WatermarkViewModel watermarkViewModel)
+        WatermarkViewModel watermarkViewModel,
+        IMediaService mediaService,
+        IChannelService channelService)
     {
         _playlistService = playlistService;
-        _videoPlayerService = videoPlayerService;
         _epgService = epgService;
         _dispatcherService = dispatcherService;
         WatermarkViewModel = watermarkViewModel;
+        _mediaService = mediaService;
+        _channelService = channelService;
     }
 
     public async Task InitializeAsync()
@@ -182,6 +213,7 @@ public partial class MainViewModel : ObservableObject
                 .ToList();
             
             ApplyFilters();
+            await LoadHomeContentAsync();
             StatusMessage = $"{Channels.Count} kanal yüklendi";
         }
         finally
@@ -190,10 +222,31 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    private async Task LoadHomeContentAsync()
+    {
+        // Rail içeriklerini yükle
+        TrendingChannels = Channels.Where(c => c.Type == ChannelType.Live).Take(10).ToList();
+        LatestMovies = Channels.Where(c => c.Type == ChannelType.VOD).Take(10).ToList();
+        LatestSeries = await _mediaService.GetSeriesAsync(SelectedPlaylist?.Id ?? 0);
+        ContinueWatching = Channels.Where(c => c.LastWatched.HasValue).OrderByDescending(c => c.LastWatched).Take(10).ToList();
+
+        // Hero içeriği
+        FeaturedMedia = TrendingChannels.FirstOrDefault() ?? LatestMovies.FirstOrDefault();
+    }
+
     private CancellationTokenSource? _filterCts;
 
     partial void OnSearchTextChanged(string value)
     {
+        if (!string.IsNullOrWhiteSpace(value) && ActiveView != AppView.Search)
+        {
+            ActiveView = AppView.Search;
+        }
+        else if (string.IsNullOrWhiteSpace(value) && ActiveView == AppView.Search)
+        {
+            ActiveView = AppView.Home;
+        }
+
         // Cancel previous search
         _filterCts?.Cancel();
         _filterCts = new CancellationTokenSource();
@@ -212,7 +265,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            // Ignored
+            // İptal edildi
         }
     }
 
@@ -269,7 +322,7 @@ public partial class MainViewModel : ObservableObject
                 }
 
                 // Limit for UI stability
-                return query.Take(1000).ToList();
+                return query.ToList();
             });
 
             // UI Thread güncellemesi
@@ -285,17 +338,44 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void PlayChannel(Channel channel)
+    private void SelectChannel(Channel channel)
     {
         SelectedChannel = channel;
-        _ = _videoPlayerService.PlayAsync(channel.StreamUrl);
-        StatusMessage = $"Oynatılıyor: {channel.Name}";
+        StatusMessage = $"Seçildi: {channel.Name}";
+        
+        // Update last watched
+        channel.LastWatched = DateTime.Now;
+        _ = _channelService.UpdateChannelAsync(channel);
+    }
+
+    [RelayCommand]
+    private void SelectMedia(object media)
+    {
+        if (media is Channel channel)
+        {
+            if (channel.Type == ChannelType.Live)
+            {
+                SelectChannel(channel);
+            }
+            else
+            {
+                // VOD Detail view açılması lazım
+                SelectedChannel = channel;
+                // DetailView açılması için bir flag eklenebilir
+            }
+        }
+        else if (media is Series series)
+        {
+            // Series Detail view
+            // SelectedSeries = series;
+        }
     }
 
     [RelayCommand]
     private async Task ToggleFavoriteAsync(Channel channel)
     {
         channel.IsFavorite = !channel.IsFavorite;
+        await _channelService.UpdateChannelAsync(channel);
         ApplyFilters();
     }
 
@@ -363,5 +443,17 @@ public partial class MainViewModel : ObservableObject
         SelectedGroup = null;
         SelectedChannelType = null;
         ShowOnlyFavorites = false;
+    }
+
+    [RelayCommand]
+    private void Navigate(AppView view)
+    {
+        ActiveView = view;
+        if (view == AppView.Live) SelectedChannelType = ChannelType.Live;
+        else if (view == AppView.Movies) SelectedChannelType = ChannelType.VOD;
+        else if (view == AppView.Series) SelectedChannelType = ChannelType.Series;
+        else SelectedChannelType = null;
+        
+        ApplyFilters();
     }
 }

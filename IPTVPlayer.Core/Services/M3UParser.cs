@@ -16,6 +16,7 @@ public partial class M3UParser : IM3UParser
     public M3UParser(HttpClient httpClient)
     {
         _httpClient = httpClient;
+        _httpClient.Timeout = TimeSpan.FromSeconds(30); // Global timeout
     }
 
     public async Task<List<Channel>> ParseAsync(string content)
@@ -49,7 +50,7 @@ public partial class M3UParser : IM3UParser
             else if (!line.StartsWith("#") && currentChannel != null)
             {
                 currentChannel.StreamUrl = line;
-                currentChannel.Type = DetectChannelType(line, currentChannel.GroupTitle);
+                currentChannel.Type = DetectChannelType(line, currentChannel.Name, currentChannel.GroupTitle);
                 channels.Add(currentChannel);
                 currentChannel = null;
             }
@@ -75,15 +76,27 @@ public partial class M3UParser : IM3UParser
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
             var content = await _httpClient.GetStringAsync(url, cts.Token);
+            
+            if (string.IsNullOrWhiteSpace(content))
+                throw new InvalidOperationException("M3U dosyası boş.");
+            
             return await ParseAsync(content);
         }
-        catch (TaskCanceledException ex)
+        catch (TaskCanceledException)
         {
-            throw new TimeoutException($"M3U indirme işlemi zaman aşımına uğradı (30sn): {url}", ex);
+            throw new TimeoutException($"M3U indirme zaman aşımına uğradı: {url}");
         }
         catch (HttpRequestException ex)
         {
-            throw new InvalidOperationException($"M3U URL'sine erişilemedi: {url}", ex);
+            throw new InvalidOperationException(
+                $"M3U URL'sine erişilemedi: {url}\n" +
+                $"Sunucu yanıt vermedi veya URL yanlış.", ex);
+        }
+        catch (FormatException ex)
+        {
+            throw new InvalidOperationException(
+                $"Geçersiz M3U formatı: {url}\n" +
+                $"Dosya içeriği M3U standardına uygun değil.", ex);
         }
     }
 
@@ -127,10 +140,21 @@ public partial class M3UParser : IM3UParser
     /// <summary>
     /// Kanal türünü URL ve grup bilgisinden tespit eder
     /// </summary>
-    private static ChannelType DetectChannelType(string url, string? groupTitle)
+    private static ChannelType DetectChannelType(string url, string name, string? groupTitle)
     {
         var lowerUrl = url.ToLower();
         var lowerGroup = groupTitle?.ToLower() ?? "";
+        var lowerName = name.ToLower();
+
+        // Series tespiti (Regex ile S01E01 veya 1x01 ara)
+        if (SeriesPattern1().IsMatch(name) || 
+            SeriesPattern2().IsMatch(name) ||
+            lowerUrl.Contains("/series/") ||
+            lowerGroup.Contains("series") ||
+            lowerGroup.Contains("dizi"))
+        {
+            return ChannelType.Series;
+        }
 
         // VOD tespiti
         if (lowerUrl.Contains("/movie/") || 
@@ -138,22 +162,21 @@ public partial class M3UParser : IM3UParser
             lowerGroup.Contains("movie") ||
             lowerGroup.Contains("film") ||
             lowerUrl.EndsWith(".mp4") ||
-            lowerUrl.EndsWith(".mkv"))
+            lowerUrl.EndsWith(".mkv") ||
+            lowerUrl.EndsWith(".avi"))
         {
             return ChannelType.VOD;
-        }
-
-        // Series tespiti
-        if (lowerUrl.Contains("/series/") ||
-            lowerGroup.Contains("series") ||
-            lowerGroup.Contains("dizi"))
-        {
-            return ChannelType.Series;
         }
 
         // Varsayılan olarak Live
         return ChannelType.Live;
     }
+
+    [GeneratedRegex(@"S(\d{1,2})E(\d{1,2})", RegexOptions.IgnoreCase)]
+    private static partial Regex SeriesPattern1();
+
+    [GeneratedRegex(@"(\d{1,2})x(\d{1,2})", RegexOptions.IgnoreCase)]
+    private static partial Regex SeriesPattern2();
 
     // Regex pattern'ları
     [GeneratedRegex(@"tvg-id=""([^""]*)""", RegexOptions.IgnoreCase)]

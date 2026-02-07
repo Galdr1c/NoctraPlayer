@@ -12,15 +12,15 @@ namespace IPTVPlayer.Services;
 /// </summary>
 public class EpgService : IEpgService
 {
-    private readonly AppDbContext _context;
+    private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly HttpClient _httpClient;
     
     public bool IsLoaded { get; private set; }
     public DateTime? LastUpdated { get; private set; }
 
-    public EpgService(AppDbContext context, HttpClient httpClient)
+    public EpgService(IDbContextFactory<AppDbContext> contextFactory, HttpClient httpClient)
     {
-        _context = context;
+        _contextFactory = contextFactory;
         _httpClient = httpClient;
     }
 
@@ -28,56 +28,116 @@ public class EpgService : IEpgService
     {
         try
         {
-            var content = await _httpClient.GetStringAsync(epgUrl);
-            var doc = XDocument.Parse(content);
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+            using var response = await _httpClient.GetAsync(epgUrl, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+            response.EnsureSuccessStatusCode();
 
-            // Mevcut EPG verilerini sil
-            var existingPrograms = await _context.EpgPrograms.ToListAsync();
-            _context.EpgPrograms.RemoveRange(existingPrograms);
+            using var stream = await response.Content.ReadAsStreamAsync(cts.Token);
+            using var reader = System.Xml.XmlReader.Create(stream, new System.Xml.XmlReaderSettings { Async = true });
 
-            // Programları parse et
-            var programs = doc.Descendants("programme")
-                .Select(p => new EpgProgram
+            using var context = await _contextFactory.CreateDbContextAsync();
+            
+            // Clear existing programs (consider optimization if this is too slow for very large DBs)
+            await context.Database.ExecuteSqlRawAsync("DELETE FROM EpgPrograms");
+
+            var programs = new List<EpgProgram>();
+            var batchSize = 500;
+            var now = DateTime.UtcNow;
+            var cutoffDate = now.AddDays(-1);
+            var maxFutureDate = now.AddDays(14); // Limit storage to 14 days
+
+            while (await reader.ReadAsync())
+            {
+                if (reader.NodeType == System.Xml.XmlNodeType.Element && reader.Name == "programme")
                 {
-                    ChannelId = p.Attribute("channel")?.Value ?? "",
-                    Title = p.Element("title")?.Value ?? "Bilinmeyen Program",
-                    Description = p.Element("desc")?.Value,
-                    StartTime = ParseXmlTvDate(p.Attribute("start")?.Value),
-                    EndTime = ParseXmlTvDate(p.Attribute("stop")?.Value),
-                    Category = p.Element("category")?.Value,
-                    IconUrl = p.Element("icon")?.Attribute("src")?.Value
-                })
-                .Where(p => p.EndTime > DateTime.Now.AddDays(-1)) // Sadece güncel programlar
-                .ToList();
+                    var start = reader.GetAttribute("start");
+                    var stop = reader.GetAttribute("stop");
+                    var channel = reader.GetAttribute("channel");
 
-            _context.EpgPrograms.AddRange(programs);
-            await _context.SaveChangesAsync();
+                    var startTime = ParseXmlTvDate(start);
+                    var endTime = ParseXmlTvDate(stop);
+
+                    // Skip old or too far future programs
+                    if (endTime < cutoffDate || startTime > maxFutureDate)
+                        continue;
+
+                    var program = new EpgProgram
+                    {
+                        ChannelId = channel ?? "",
+                        StartTime = startTime,
+                        EndTime = endTime
+                    };
+
+                    // Read inner elements
+                    using var subReader = reader.ReadSubtree();
+                    while (await subReader.ReadAsync())
+                    {
+                        if (subReader.NodeType == System.Xml.XmlNodeType.Element)
+                        {
+                            switch (subReader.Name)
+                            {
+                                case "title":
+                                    program.Title = await subReader.ReadElementContentAsStringAsync();
+                                    break;
+                                case "desc":
+                                    program.Description = await subReader.ReadElementContentAsStringAsync();
+                                    break;
+                                case "category":
+                                    program.Category = await subReader.ReadElementContentAsStringAsync();
+                                    break;
+                                case "icon":
+                                    program.IconUrl = subReader.GetAttribute("src");
+                                    break;
+                            }
+                        }
+                    }
+
+                    programs.Add(program);
+
+                    if (programs.Count >= batchSize)
+                    {
+                        await context.EpgPrograms.AddRangeAsync(programs);
+                        await context.SaveChangesAsync();
+                        programs.Clear();
+                    }
+                }
+            }
+
+            // Final batch
+            if (programs.Any())
+            {
+                await context.EpgPrograms.AddRangeAsync(programs);
+                await context.SaveChangesAsync();
+            }
 
             IsLoaded = true;
             LastUpdated = DateTime.Now;
         }
-        catch (System.Xml.XmlException ex)
-        {
-             throw new InvalidOperationException($"EPG verisi hatalı formatta: {ex.Message}", ex);
-        }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"EPG yüklenemedi: {ex.Message}", ex);
+            System.Diagnostics.Debug.WriteLine($"EPG Load Error: {ex}");
+            throw;
         }
     }
 
     public async Task<EpgProgram?> GetCurrentProgramAsync(string channelId)
     {
-        var now = DateTime.Now;
-        return await _context.EpgPrograms
+        using var context = await _contextFactory.CreateDbContextAsync();
+        var now = DateTime.UtcNow;
+        return await context.EpgPrograms
             .Where(p => p.ChannelId == channelId && p.StartTime <= now && p.EndTime > now)
             .FirstOrDefaultAsync();
     }
 
     public async Task<List<EpgProgram>> GetProgramsAsync(string channelId, DateTime from, DateTime to)
     {
-        return await _context.EpgPrograms
-            .Where(p => p.ChannelId == channelId && p.StartTime >= from && p.StartTime <= to)
+        using var context = await _contextFactory.CreateDbContextAsync();
+        // Ensure we compare in UTC if stored in UTC
+        var fromUtc = from.ToUniversalTime();
+        var toUtc = to.ToUniversalTime();
+
+        return await context.EpgPrograms
+            .Where(p => p.ChannelId == channelId && p.StartTime >= fromUtc && p.StartTime <= toUtc)
             .OrderBy(p => p.StartTime)
             .ToListAsync();
     }
@@ -90,19 +150,48 @@ public class EpgService : IEpgService
         if (string.IsNullOrEmpty(dateStr))
             return DateTime.MinValue;
 
-        // "20240101120000 +0300" formatı
-        var parts = dateStr.Split(' ');
-        var datePart = parts[0];
-
-        if (datePart.Length >= 14)
+        // XMLTV formats: 
+        // 20240101120000 +0300
+        // 20240101120000
+        
+        try
         {
-            if (DateTime.TryParseExact(datePart[..14], "yyyyMMddHHmmss",
-                null, System.Globalization.DateTimeStyles.None, out var result))
+            // Normalize spaces
+            dateStr = dateStr.Trim();
+            
+            if (dateStr.Contains(" +") || dateStr.Contains(" -"))
             {
-                return result;
+                // Has offset
+                if (DateTimeOffset.TryParseExact(dateStr, 
+                    new[] { "yyyyMMddHHmmss zzz", "yyyyMMddHHmm zzz", "yyyyMMddHHmmss zzzz", "yyyyMMddHHmm zzzz" },
+                    System.Globalization.CultureInfo.InvariantCulture, 
+                    System.Globalization.DateTimeStyles.None, 
+                    out var dto))
+                {
+                    return dto.UtcDateTime;
+                }
+            }
+            else
+            {
+                // No offset, assume local or UTC? XMLTV spec varies, but usually it's UTC-like or local.
+                // We'll try to parse as local then convert to UTC for consistent storage.
+                if (DateTime.TryParseExact(datePart(dateStr), 
+                    new[] { "yyyyMMddHHmmss", "yyyyMMddHHmm" },
+                    System.Globalization.CultureInfo.InvariantCulture, 
+                    System.Globalization.DateTimeStyles.None, 
+                    out var dt))
+                {
+                    return dt.ToUniversalTime();
+                }
             }
         }
+        catch { }
 
         return DateTime.MinValue;
+    }
+
+    private static string datePart(string fullDate)
+    {
+        return fullDate.Split(' ')[0];
     }
 }

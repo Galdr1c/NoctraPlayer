@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IPTVPlayer.Tests", "IPTVPla
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IPTVPlayer.Core", "IPTVPlayer.Core\IPTVPlayer.Core.csproj", "{2A55A23A-CC29-4EE5-93E2-21D3C77E4DFA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IPTVPlayer", "IPTVPlayer\IPTVPlayer.csproj", "{51A21637-531D-4454-B493-29862DE2595E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{2A55A23A-CC29-4EE5-93E2-21D3C77E4DFA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2A55A23A-CC29-4EE5-93E2-21D3C77E4DFA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2A55A23A-CC29-4EE5-93E2-21D3C77E4DFA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{51A21637-531D-4454-B493-29862DE2595E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{51A21637-531D-4454-B493-29862DE2595E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{51A21637-531D-4454-B493-29862DE2595E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{51A21637-531D-4454-B493-29862DE2595E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

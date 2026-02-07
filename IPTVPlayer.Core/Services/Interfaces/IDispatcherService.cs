@@ -6,4 +6,6 @@ public interface IDispatcherService
 {
     void Invoke(Action action);
     Task InvokeAsync(Func<Task> function);
+    Task<T> InvokeAsync<T>(Func<T> function);
+    Task<T> InvokeAsync<T>(Func<Task<T>> function);
 }
