@@ -2,23 +2,13 @@
     x:Class="IPTVPlayer.WinUI.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:IPTVPlayer.WinUI"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:vlc="using:LibVLCSharp.WinUI"
-    mc:Ignorable="d">
+    mc:Ignorable="d"
+    Title="IPTV Player">
 
-    <Grid x:Name="RootGrid">
-        <NavigationView x:Name="NavView" 
-                        PaneDisplayMode="Left"
-                        IsSettingsVisible="True"
-                        SelectionChanged="NavView_SelectionChanged"
-                        Loaded="NavView_Loaded">
-            <NavigationView.MenuItems>
-                <NavigationViewItem Icon="Home" Content="Ana Sayfa" Tag="Home" />
-                <NavigationViewItem Icon="Video" Content="Oynatıcı" Tag="Player" />
-            </NavigationView.MenuItems>
-            
-            <Frame x:Name="ContentFrame"/>
-        </NavigationView>
+    <Grid>
+        <Frame x:Name="RootFrame"/>
     </Grid>
 </Window>

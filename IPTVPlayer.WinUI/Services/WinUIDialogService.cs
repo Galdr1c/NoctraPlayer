@@ -1,57 +1,63 @@
 using IPTVPlayer.Services.Interfaces;
 using Microsoft.UI.Xaml.Controls;
-using System;
 using System.Threading.Tasks;
+using System;
+using Microsoft.UI.Xaml;
 
 namespace IPTVPlayer.WinUI.Services;
 
 public class WinUIDialogService : IDialogService
 {
+    private static global::IPTVPlayer.WinUI.App AppInstance => (global::IPTVPlayer.WinUI.App)global::Microsoft.UI.Xaml.Application.Current;
+
     public async Task ShowMessageAsync(string title, string message)
     {
-        if (App.Current.MainWindow?.Content?.XamlRoot == null) return;
-
         var dialog = new ContentDialog
         {
             Title = title,
             Content = message,
             CloseButtonText = "Tamam",
-            XamlRoot = App.Current.MainWindow.Content.XamlRoot
+            XamlRoot = AppInstance.MainWindow.Content.XamlRoot
         };
         await dialog.ShowAsync();
     }
 
     public async Task<bool> ShowConfirmationAsync(string title, string message)
     {
-        if (App.Current.MainWindow?.Content?.XamlRoot == null) return false;
-
         var dialog = new ContentDialog
         {
             Title = title,
             Content = message,
             PrimaryButtonText = "Evet",
             CloseButtonText = "Hayır",
-            XamlRoot = App.Current.MainWindow.Content.XamlRoot
+            XamlRoot = AppInstance.MainWindow.Content.XamlRoot
         };
-        
         var result = await dialog.ShowAsync();
         return result == ContentDialogResult.Primary;
     }
 
-    public async Task ShowUpsellAsync()
+    public async Task ShowErrorAsync(string title, string message, Exception? ex = null)
     {
-        await ShowMessageAsync("Premium", "Upsell ekranı henüz eklenmedi (WinUI)");
+        string fullMessage = message;
+        if (ex != null) fullMessage += $"\n\nDetay: {ex.Message}";
+        await ShowMessageAsync(title, fullMessage);
     }
 
-    public async Task<bool> ShowAddProfileAsync()
+    public Task ShowUpsellAsync()
     {
-        await ShowMessageAsync("Profil Ekle", "Profil ekleme ekranı henüz eklenmedi (WinUI)");
-        return false;
+        // Placeholder until UpsellWindow is migrated to WinUI 3
+        return ShowMessageAsync("Premium Özellik", "Bu özellik için premium abonelik gereklidir.");
     }
 
-    public async Task<bool> ShowEditProfileAsync(int profileId)
+    public Task<bool> ShowAddProfileAsync()
     {
-         await ShowMessageAsync("Profil Düzenle", "Profil düzenleme ekranı henüz eklenmedi (WinUI)");
-         return false;
+        // Placeholder until AddProfileWindow is migrated
+        return Task.FromResult(false);
+    }
+
+    public Task<bool> ShowEditProfileAsync(int profileId)
+    {
+        // Placeholder until AddProfileWindow is migrated
+        return Task.FromResult(false);
     }
 }

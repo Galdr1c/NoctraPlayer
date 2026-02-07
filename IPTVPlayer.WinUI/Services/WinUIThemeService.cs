@@ -5,11 +5,11 @@ namespace IPTVPlayer.WinUI.Services;
 
 public class WinUIThemeService : IThemeService
 {
-    public bool IsDarkTheme => App.Current.RequestedTheme == ApplicationTheme.Dark;
+    public bool IsDarkTheme => global::IPTVPlayer.WinUI.App.Instance.RequestedTheme == ApplicationTheme.Dark;
 
     public void SetTheme(bool isDark)
     {
-        if (App.Current.MainWindow?.Content is FrameworkElement root)
+        if (global::IPTVPlayer.WinUI.App.Instance.MainWindow?.Content is FrameworkElement root)
         {
             root.RequestedTheme = isDark ? ElementTheme.Dark : ElementTheme.Light;
         }

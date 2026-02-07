@@ -30,49 +30,71 @@ public partial class AddProfileViewModel : ObservableObject
     [ObservableProperty]
     private string _url = string.Empty;
 
+    private bool _isUpdatingUrl;
+
     partial void OnUrlChanged(string value)
     {
-        if (string.IsNullOrEmpty(value)) return;
+        if (string.IsNullOrEmpty(value) || _isUpdatingUrl) return;
 
-        // Auto-detect M3U
-        var lower = value.ToLower();
-        if (lower.Contains(".m3u") || lower.Contains(".m3u8") || lower.Contains("get.php"))
-        {
-            if (!IsM3U)
-            {
-                IsM3U = true; 
-            }
-        }
-
-        // Automatic Credential Extraction
         try
         {
+            _isUpdatingUrl = true;
+            var lower = value.ToLower();
+
+            // 1. Auto-detect Type
+            if (lower.Contains(".m3u") || lower.Contains(".m3u8") || lower.Contains("get.php"))
+            {
+                 // Only auto-switch to M3U if it looks like a file list and NOT a get.php API call
+                 if ((lower.Contains(".m3u") || lower.Contains(".m3u8")) && !lower.Contains("get.php"))
+                 {
+                     if (!IsM3U) IsM3U = true;
+                 }
+                 else if (lower.Contains("get.php"))
+                 {
+                     // get.php is typically Xtream
+                     if (!IsXtream) IsXtream = true;
+                 }
+            }
+
+            // 2. Credential Extraction
             if (value.Contains("?"))
             {
                 var uri = new Uri(value);
-                var query = uri.Query;
                 
-                // Parse Query manually to be more flexible (some use & but some might have USERNAMEpassword=...)
-                // Standard case
-                var usernameMatch = System.Text.RegularExpressions.Regex.Match(query, @"[?&]username=([^&]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                var passwordMatch = System.Text.RegularExpressions.Regex.Match(query, @"[?&]password=([^&]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                // Fallback to manual parsing if HttpUtility is not available in Core
+                string? user = null, pass = null;
 
-                if (usernameMatch.Success) Username = Uri.UnescapeDataString(usernameMatch.Groups[1].Value);
-                if (passwordMatch.Success) Password = Uri.UnescapeDataString(passwordMatch.Groups[1].Value);
+                // Try regex for common patterns
+                var uMatch = System.Text.RegularExpressions.Regex.Match(uri.Query, @"[?&](username|user|u)=([^&]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                if (uMatch.Success) user = Uri.UnescapeDataString(uMatch.Groups[2].Value);
 
-                // If it's a get.php style link, extract the base server URL
+                var pMatch = System.Text.RegularExpressions.Regex.Match(uri.Query, @"[?&](password|pass|p)=([^&]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                if (pMatch.Success) pass = Uri.UnescapeDataString(pMatch.Groups[2].Value);
+
+                if (!string.IsNullOrEmpty(user)) Username = user;
+                if (!string.IsNullOrEmpty(pass)) Password = pass;
+
+                // Clean URL for Xtream
                 if (lower.Contains("get.php"))
                 {
-                    var baseUrl = value.Split('?')[0].Replace("/get.php", "");
-                    Url = baseUrl; // This will trigger OnUrlChanged again but with no query, so it's safe
-                    
-                    if (!IsXtream) IsXtream = true; // Usually get.php implies Xtream server backend
+                    // For Xtream, we often want just the base domain + port
+                    // e.g. http://server:8080/get.php... -> http://server:8080
+                    var cleanUrl = value.Split("/get.php")[0];
+                    if (Url != cleanUrl) 
+                    {
+                        Url = cleanUrl; // This will re-trigger, so return
+                        return;
+                    }
                 }
             }
         }
         catch 
         {
-            // Invalid URI format, skip auto-extraction
+            // Ignore parsing errors
+        }
+        finally
+        {
+            _isUpdatingUrl = false;
         }
     }
 
@@ -94,6 +116,9 @@ public partial class AddProfileViewModel : ObservableObject
     
     [ObservableProperty]
     private string _selectedAvatar = "default";
+
+    [ObservableProperty]
+    private bool _isChild;
 
     // Validations
     [ObservableProperty]
@@ -131,6 +156,7 @@ public partial class AddProfileViewModel : ObservableObject
         EditingProfile = profile;
         ProfileName = profile.Name;
         SelectedAvatar = profile.Avatar ?? "default";
+        IsChild = profile.IsChild;
         
         // Use a background task to wait for initialization and then set account
         _ = InitializeEditAsync(profile);
@@ -213,18 +239,27 @@ public partial class AddProfileViewModel : ObservableObject
         SelectedAvatar = avatar;
     }
 
-    [RelayCommand]
     private async Task DeleteProfileAsync()
     {
         if (EditingProfile == null) return;
 
-        var confirmed = await _context.Profiles.AnyAsync(p => p.Id == EditingProfile.Id);
-        if (!confirmed) return;
-
-        _context.Profiles.Remove(EditingProfile);
-        await _context.SaveChangesAsync();
-        
-        RequestClose?.Invoke(this, EventArgs.Empty);
+        try
+        {
+            // Fetch fresh entity to avoid tracking issues
+            var profileToDelete = await _context.Profiles.FindAsync(EditingProfile.Id);
+            if (profileToDelete != null)
+            {
+                _context.Profiles.Remove(profileToDelete);
+                await _context.SaveChangesAsync();
+            }
+            
+            RequestClose?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Silme hatası: {ex.Message}";
+            HasError = true;
+        }
     }
 
     [RelayCommand]
@@ -243,12 +278,15 @@ public partial class AddProfileViewModel : ObservableObject
              // URL Validation for M3U as requested
              if (IsM3U)
              {
-                 var lowerUrl = Url.ToLower();
-                 bool isValidM3U = lowerUrl.Contains(".m3u") || lowerUrl.Contains(".m3u8") || lowerUrl.Contains("get.php");
+                 bool isValidM3U = Uri.TryCreate(Url, UriKind.Absolute, out var uri) &&
+                                   (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps) &&
+                                   (uri.AbsolutePath.EndsWith(".m3u", StringComparison.OrdinalIgnoreCase) || 
+                                    uri.AbsolutePath.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase) ||
+                                    (uri.Query != null && uri.Query.Contains("get.php")));
                  
                  if (!isValidM3U)
                  {
-                     StatusMessage = "Geçerli bir M3U adresi girin (m3u, m3u8 veya get.php içermeli)";
+                     StatusMessage = "Geçerli bir M3U adresi girin (http/s ve .m3u/.m3u8 veya get.php)";
                      HasError = true;
                      return;
                  }
@@ -290,23 +328,23 @@ public partial class AddProfileViewModel : ObservableObject
             }
             else if (IsEditingAccount && SelectedAccount != null)
             {
-                // Fix: Check if already tracked to avoid collision
-                var tracked = _context.ProviderAccounts.Local.FirstOrDefault(a => a.Id == SelectedAccount.Id);
-                if (tracked != null && tracked != SelectedAccount)
+                // Fix: Fetch by ID to ensure we are updating the tracked entity in THIS context
+                var existingAccount = await _context.ProviderAccounts.FindAsync(SelectedAccount.Id);
+                
+                if (existingAccount != null)
                 {
-                    // Update the tracked instance instead
-                    tracked.Url = Url;
-                    tracked.Username = Username;
-                    tracked.Password = Password;
-                    tracked.Type = IsXtream ? ProfileType.XtreamCodes : ProfileType.M3U;
-                    account = tracked;
+                    // Update the found entity
+                    existingAccount.Url = Url;
+                    existingAccount.Username = Username;
+                    existingAccount.Password = Password;
+                    existingAccount.Type = IsXtream ? ProfileType.XtreamCodes : ProfileType.M3U;
+                    
+                    // Use the tracked entity moving forward
+                    account = existingAccount;
                 }
                 else
                 {
-                    SelectedAccount.Url = Url;
-                    SelectedAccount.Username = Username;
-                    SelectedAccount.Password = Password;
-                    SelectedAccount.Type = IsXtream ? ProfileType.XtreamCodes : ProfileType.M3U;
+                    // Should not happen if ID exists, but fallback
                     _context.ProviderAccounts.Update(SelectedAccount);
                     account = SelectedAccount;
                 }
@@ -319,11 +357,16 @@ public partial class AddProfileViewModel : ObservableObject
 
             if (EditingProfile != null)
             {
-                // Update existing
-                EditingProfile.Name = ProfileName;
-                EditingProfile.Avatar = SelectedAvatar;
-                EditingProfile.ProviderAccountId = account.Id;
-                _context.Profiles.Update(EditingProfile);
+                // Update existing - Fetch fresh to avoid tracking conflict
+                var profileToUpdate = await _context.Profiles.FindAsync(EditingProfile.Id);
+                if (profileToUpdate != null)
+                {
+                    profileToUpdate.Name = ProfileName;
+                    profileToUpdate.Avatar = SelectedAvatar;
+                    profileToUpdate.ProviderAccountId = account.Id;
+                    profileToUpdate.IsChild = IsChild;
+                    _context.Profiles.Update(profileToUpdate);
+                }
             }
             else
             {
@@ -333,6 +376,7 @@ public partial class AddProfileViewModel : ObservableObject
                     Name = ProfileName,
                     ProviderAccountId = account.Id,
                     Avatar = SelectedAvatar,
+                    IsChild = IsChild,
                     LastUsed = DateTime.Now
                 };
                 _context.Profiles.Add(profile);

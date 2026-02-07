@@ -11,6 +11,7 @@ public partial class WatermarkViewModel : ObservableObject, IDisposable
     private readonly System.Timers.Timer _shiftTimer;
     private readonly Random _random = new();
     private readonly ILicenseService _licenseService;
+    private readonly IDispatcherService _dispatcherService;
     
     [ObservableProperty]
     private double _opacity = 0.12;
@@ -25,9 +26,10 @@ public partial class WatermarkViewModel : ObservableObject, IDisposable
     private bool _isVisible;
 
     // Constructor Injection
-    public WatermarkViewModel(ILicenseService licenseService)
+    public WatermarkViewModel(ILicenseService licenseService, IDispatcherService dispatcherService)
     {
         _licenseService = licenseService;
+        _dispatcherService = dispatcherService;
 
         _shiftTimer = new System.Timers.Timer(TimeSpan.FromSeconds(60).TotalMilliseconds);
         _shiftTimer.Elapsed += ShiftTimer_Elapsed;
@@ -63,10 +65,11 @@ public partial class WatermarkViewModel : ObservableObject, IDisposable
         // Shift within a small range (-20 to +20 px)
         // Note: In WinUI/WPF bound properties generally notify on UI thread automatically if updated from View, 
         // but updating form VM background thread might need dispatching. 
-        // For Core, we just set the property. The UI framework binding engine usually handles it or we need a dispatcher service.
-        // For now, we leave it as simple assignment.
-        TranslateX = _random.Next(-20, 21);
-        TranslateY = _random.Next(-20, 21);
+        _dispatcherService.Invoke(() =>
+        {
+            TranslateX = _random.Next(-20, 21);
+            TranslateY = _random.Next(-20, 21);
+        });
     }
 
     public void Dispose()

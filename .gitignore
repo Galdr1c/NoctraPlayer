@@ -67,6 +67,10 @@ nunit-*.xml
 # Build Log
 *.log
 build_log.txt
+msbuild.log
+build_output.txt
+errors.txt
+final_errors.txt
 
 # Publish Web Output
 *.[Pp]ublish.xml
@@ -80,6 +84,9 @@ build_log.txt
 App_Data/
 *.mdf
 *.ldf
+*.db
+*.sqlite
+*.sqlite3
 
 # Windows Store apps
 AppPackages/
@@ -91,3 +98,10 @@ _pkginfo.txt
 # Visual Studio For Mac
 .DS_Store
 *.pidb
+
+# Project Specific
+# FFmpeg binaries downloaded by script
+**/FFmpeg/
+*.dll
+!**/obj/**/*.dll
+!**/bin/**/*.dll

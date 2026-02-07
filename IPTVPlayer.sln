@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IPTVPlayer", "IPTVPlayer\IPTVPlayer.csproj", "{CBC37D94-B9A3-4E62-A0E6-98974A8B8948}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IPTVPlayer.Tests", "IPTVPlayer.Tests\IPTVPlayer.Tests.csproj", "{0D8D76C7-8D34-476C-B2F2-FD28F8D7EB58}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IPTVPlayer.Core", "IPTVPlayer.Core\IPTVPlayer.Core.csproj", "{2A55A23A-CC29-4EE5-93E2-21D3C77E4DFA}"
@@ -18,10 +16,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{CBC37D94-B9A3-4E62-A0E6-98974A8B8948}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CBC37D94-B9A3-4E62-A0E6-98974A8B8948}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CBC37D94-B9A3-4E62-A0E6-98974A8B8948}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CBC37D94-B9A3-4E62-A0E6-98974A8B8948}.Release|Any CPU.Build.0 = Release|Any CPU
 		{0D8D76C7-8D34-476C-B2F2-FD28F8D7EB58}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{0D8D76C7-8D34-476C-B2F2-FD28F8D7EB58}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0D8D76C7-8D34-476C-B2F2-FD28F8D7EB58}.Release|Any CPU.ActiveCfg = Release|Any CPU

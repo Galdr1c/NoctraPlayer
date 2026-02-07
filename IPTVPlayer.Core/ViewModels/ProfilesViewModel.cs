@@ -23,28 +23,44 @@ public partial class ProfilesViewModel : ObservableObject
     public event Action<Profile>? OnProfileAddRequested;
     public event Action<Profile>? OnProfileEditRequested;
 
-    public ProfilesViewModel(AppDbContext context, IDialogService dialogService)
+    private readonly IDispatcherService _dispatcherService;
+
+    public ProfilesViewModel(AppDbContext context, IDialogService dialogService, IDispatcherService dispatcherService)
     {
         _context = context;
         _dialogService = dialogService;
-        RefreshProfiles();
+        _dispatcherService = dispatcherService;
+        _ = InitializeAsync();
     }
 
-    public void RefreshProfiles()
+    private async Task InitializeAsync()
+    {
+        await LoadProfilesAsync();
+    }
+
+    public async Task LoadProfilesAsync()
     {
         try 
         {
-            var items = _context.Profiles
+            var items = await _context.Profiles
                 .Include(p => p.ProviderAccount) // Load account info
                 .OrderByDescending(p => p.LastUsed)
-                .ToList();
+                .ToListAsync();
             
-            Profiles = new ObservableCollection<Profile>(items);
+            await _dispatcherService.InvokeAsync(() =>
+            {
+                Profiles = new ObservableCollection<Profile>(items);
+                return Task.CompletedTask;
+            });
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Profil yükleme hatası: {ex.Message}");
-            Profiles = new ObservableCollection<Profile>();
+            await _dispatcherService.InvokeAsync(() =>
+            {
+                Profiles = new ObservableCollection<Profile>();
+                return Task.CompletedTask;
+            });
         }
     }
 

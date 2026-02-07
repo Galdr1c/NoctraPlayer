@@ -73,8 +73,13 @@ public partial class M3UParser : IM3UParser
     {
         try
         {
-            var content = await _httpClient.GetStringAsync(url);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            var content = await _httpClient.GetStringAsync(url, cts.Token);
             return await ParseAsync(content);
+        }
+        catch (TaskCanceledException ex)
+        {
+            throw new TimeoutException($"M3U indirme işlemi zaman aşımına uğradı (30sn): {url}", ex);
         }
         catch (HttpRequestException ex)
         {

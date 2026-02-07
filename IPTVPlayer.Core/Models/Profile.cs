@@ -16,6 +16,8 @@ public class Profile
     [Required]
     public string Name { get; set; } = string.Empty;
 
+    public bool IsChild { get; set; }
+
     public int ProviderAccountId { get; set; }
     public ProviderAccount? ProviderAccount { get; set; }
 

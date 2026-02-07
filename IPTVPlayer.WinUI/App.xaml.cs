@@ -1,19 +1,22 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Navigation;
 using Microsoft.Extensions.DependencyInjection;
 using IPTVPlayer.Services.Interfaces;
 using IPTVPlayer.Services;
-using IPTVPlayer.ViewModels;
+using IPTVPlayer.ViewModels; // Corrected namespace
 using IPTVPlayer.Data;
 using Microsoft.EntityFrameworkCore;
 using System.IO;
 using System;
+using IPTVPlayer.WinUI.Services; // For FFmpegPlayerService
 
 namespace IPTVPlayer.WinUI;
 
 public partial class App : Application
 {
     public IServiceProvider Services { get; private set; }
-    public new static App Current => (App)Application.Current;
+    public static App Instance => (App)Application.Current;
     public Window MainWindow { get; set; }
 
     public App()
@@ -40,20 +43,28 @@ public partial class App : Application
     {
         var services = new ServiceCollection();
 
-        // Core Services
+        // Database
         services.AddDbContext<AppDbContext>(options =>
-            options.UseSqlite($"Data Source={Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "iptvplayer_v2.db")}"));
+            options.UseSqlite($"Data Source={GetDbPath()}"), 
+            ServiceLifetime.Transient);
         
-        services.AddSingleton<IPlaylistService, PlaylistService>();
-        services.AddSingleton<IEpgService, EpgService>();
-        services.AddSingleton<ILicenseService, Services.StoreEntitlementService>();
-        services.AddTransient<IVideoPlayerService, VideoPlayerService>();
+        // Core Services
+        services.AddTransient<IPlaylistService, PlaylistService>();
+        services.AddSingleton<ILicenseService, StoreEntitlementService>();
+        services.AddHttpClient<IM3UParser, M3UParser>();
+        services.AddHttpClient<IEpgService, EpgService>();
+        
+        // FFmpeg Player Service (Singleton!)
+        services.AddSingleton<FFmpegPlayerService>();
+        services.AddSingleton<IVideoPlayerService>(sp => 
+            sp.GetRequiredService<FFmpegPlayerService>());
+        
         services.AddSingleton<IAvatarService, AvatarService>();
         
         // UI Services (Implementations)
-        services.AddSingleton<IDialogService, Services.WinUIDialogService>(); 
-        services.AddSingleton<IDispatcherService, Services.WinUIDispatcherService>();
-        services.AddSingleton<IThemeService, Services.WinUIThemeService>(); 
+        services.AddSingleton<IDialogService, WinUIDialogService>(); 
+        services.AddSingleton<IDispatcherService, WinUIDispatcherService>();
+        services.AddSingleton<IThemeService, WinUIThemeService>(); 
 
         // ViewModels
         services.AddTransient<MainViewModel>();
@@ -62,10 +73,20 @@ public partial class App : Application
         services.AddTransient<WatermarkViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<AddProfileViewModel>();
+        services.AddTransient<AvatarPickerViewModel>();
 
         // Windows
         services.AddSingleton<MainWindow>();
 
         return services.BuildServiceProvider();
+    }
+
+    private string GetDbPath()
+    {
+        var folder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "IPTVPlayer");
+        Directory.CreateDirectory(folder);
+        return Path.Combine(folder, "iptv_v2.db");
     }
 }

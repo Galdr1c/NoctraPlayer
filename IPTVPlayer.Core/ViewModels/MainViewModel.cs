@@ -190,9 +190,30 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    private CancellationTokenSource? _filterCts;
+
     partial void OnSearchTextChanged(string value)
     {
-        ApplyFilters();
+        // Cancel previous search
+        _filterCts?.Cancel();
+        _filterCts = new CancellationTokenSource();
+        var token = _filterCts.Token;
+
+        // Fire and forget debounce
+        _ = DebounceSearchAsync(token);
+    }
+
+    private async Task DebounceSearchAsync(CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(300, token);
+            await _dispatcherService.InvokeAsync(() => ApplyFilters());
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignored
+        }
     }
 
     partial void OnSelectedGroupChanged(string? value)
@@ -210,7 +231,7 @@ public partial class MainViewModel : ObservableObject
         ApplyFilters();
     }
 
-    private async void ApplyFilters()
+    private async Task ApplyFilters()
     {
         IsLoading = true;
         

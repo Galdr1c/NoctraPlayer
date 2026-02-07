@@ -56,6 +56,10 @@ public class EpgService : IEpgService
             IsLoaded = true;
             LastUpdated = DateTime.Now;
         }
+        catch (System.Xml.XmlException ex)
+        {
+             throw new InvalidOperationException($"EPG verisi hatalı formatta: {ex.Message}", ex);
+        }
         catch (Exception ex)
         {
             throw new InvalidOperationException($"EPG yüklenemedi: {ex.Message}", ex);

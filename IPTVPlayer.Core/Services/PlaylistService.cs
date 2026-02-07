@@ -126,44 +126,54 @@ public class PlaylistService : IPlaylistService
 
     public async Task<Playlist> RefreshAsync(int playlistId)
     {
-        var playlist = await _context.Playlists
-            .Include(p => p.Channels)
-            .FirstOrDefaultAsync(p => p.Id == playlistId);
+        // Change tracking optimization for bulk updates
+        _context.ChangeTracker.AutoDetectChangesEnabled = false;
 
-        if (playlist == null)
-            throw new KeyNotFoundException($"Playlist bulunamadı: {playlistId}");
-
-        // Mevcut kanalları sil
-        _context.Channels.RemoveRange(playlist.Channels);
-
-        // Yeni kanalları parse et
-        List<Channel> newChannels;
-        if (!string.IsNullOrEmpty(playlist.Url))
+        try
         {
-            newChannels = await _parser.ParseFromUrlAsync(playlist.Url);
+            var playlist = await _context.Playlists
+                .Include(p => p.Channels)
+                .FirstOrDefaultAsync(p => p.Id == playlistId);
+
+            if (playlist == null)
+                throw new KeyNotFoundException($"Playlist bulunamadı: {playlistId}");
+
+            // Mevcut kanalları sil
+            _context.Channels.RemoveRange(playlist.Channels);
+
+            // Yeni kanalları parse et
+            List<Channel> newChannels;
+            if (!string.IsNullOrEmpty(playlist.Url))
+            {
+                newChannels = await _parser.ParseFromUrlAsync(playlist.Url);
+            }
+            else if (!string.IsNullOrEmpty(playlist.FilePath))
+            {
+                newChannels = await _parser.ParseFromFileAsync(playlist.FilePath);
+            }
+            else
+            {
+                throw new InvalidOperationException("Playlist'in URL veya dosya yolu yok");
+            }
+
+            // Yeni kanalları ekle
+            foreach (var channel in newChannels)
+            {
+                channel.PlaylistId = playlist.Id;
+                _context.Channels.Add(channel);
+            }
+
+            playlist.ChannelCount = newChannels.Count;
+            playlist.LastUpdated = DateTime.Now;
+
+            await _context.SaveChangesAsync();
+
+            return playlist;
         }
-        else if (!string.IsNullOrEmpty(playlist.FilePath))
+        finally
         {
-            newChannels = await _parser.ParseFromFileAsync(playlist.FilePath);
+            _context.ChangeTracker.AutoDetectChangesEnabled = true;
         }
-        else
-        {
-            throw new InvalidOperationException("Playlist'in URL veya dosya yolu yok");
-        }
-
-        // Yeni kanalları ekle
-        foreach (var channel in newChannels)
-        {
-            channel.PlaylistId = playlist.Id;
-            _context.Channels.Add(channel);
-        }
-
-        playlist.ChannelCount = newChannels.Count;
-        playlist.LastUpdated = DateTime.Now;
-
-        await _context.SaveChangesAsync();
-
-        return playlist;
     }
 
     public async Task DeleteAsync(int playlistId)
