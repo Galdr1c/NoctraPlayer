@@ -5,8 +5,8 @@
         <ResourceDictionary Source="Themes/DarkTheme.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
-    <!-- Primary Color (uses Accent500 from theme) -->
-    <Color x:Key="PrimaryColor">#7C3AED</Color>
+    <!-- Primary Color (uses Accent600 from theme - Main Purple) -->
+    <Color x:Key="PrimaryColor">#8B5CF6</Color>
     <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}"/>
     
     <!-- Noctra Specific Colors & Brushes -->

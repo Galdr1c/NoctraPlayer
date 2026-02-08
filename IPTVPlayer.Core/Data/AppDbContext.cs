@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
     public DbSet<EpgProgram> EpgPrograms { get; set; }
     public DbSet<Profile> Profiles { get; set; }
     public DbSet<ProviderAccount> ProviderAccounts { get; set; }
+    public DbSet<WatchHistory> WatchHistories { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
@@ -104,6 +105,26 @@ public class AppDbContext : DbContext
                   .WithMany(p => p.Profiles)
                   .HasForeignKey(e => e.ProviderAccountId)
                   .OnDelete(DeleteBehavior.Cascade); // Delete account -> delete profiles
+        });
+
+        // WatchHistory Configuration
+        modelBuilder.Entity<WatchHistory>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.Profile)
+                  .WithMany()
+                  .HasForeignKey(e => e.ProfileId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Channel)
+                  .WithMany()
+                  .HasForeignKey(e => e.ChannelId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Episode)
+                  .WithMany()
+                  .HasForeignKey(e => e.EpisodeId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

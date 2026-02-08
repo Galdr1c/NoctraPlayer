@@ -8,6 +8,31 @@
              mc:Ignorable="d" 
              d:DesignHeight="800" d:DesignWidth="1200">
 
+    <UserControl.Resources>
+        <Storyboard x:Key="ShowOverlayAnim">
+            <DoubleAnimation Storyboard.TargetName="OverlayRoot" 
+                             Storyboard.TargetProperty="Opacity"
+                             To="1" Duration="0:0:0.25"/>
+        </Storyboard>
+        <Storyboard x:Key="HideOverlayAnim">
+            <DoubleAnimation Storyboard.TargetName="OverlayRoot" 
+                             Storyboard.TargetProperty="Opacity"
+                             To="0" Duration="0:0:0.35"/>
+        </Storyboard>
+
+        <!-- Side Sheet Animations -->
+        <Storyboard x:Key="ShowSideSheetAnim">
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                             From="360" To="0" Duration="0:0:0.25">
+                <DoubleAnimation.EasingFunction>
+                    <ExponentialEase Exponent="6" EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+        
+        <!-- Add other converters if needed or rely on App.xaml -->
+    </UserControl.Resources>
+
     <Grid>
         <!-- Mouse Interaction Surface (Detects movement/clicks to show overlay) -->
         <Grid Background="Transparent" 
@@ -17,30 +42,7 @@
         <!-- ==========================================
              OVERLAY CONTENT (Visible when interacting) 
              ========================================== -->
-        <Grid x:Name="OverlayRoot" 
-              Visibility="{Binding IsVisible, Converter={StaticResource BoolToVisibilityConverter}}">
-            <Grid.Resources>
-                <Storyboard x:Key="ShowOverlayAnim">
-                    <DoubleAnimation Storyboard.TargetName="OverlayRoot" 
-                                     Storyboard.TargetProperty="Opacity"
-                                     To="1" Duration="0:0:0.25"/>
-                </Storyboard>
-                <Storyboard x:Key="HideOverlayAnim">
-                    <DoubleAnimation Storyboard.TargetName="OverlayRoot" 
-                                     Storyboard.TargetProperty="Opacity"
-                                     To="0" Duration="0:0:0.35"/>
-                </Storyboard>
-
-                <!-- Side Sheet Animations -->
-                <Storyboard x:Key="ShowSideSheetAnim">
-                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
-                                     From="360" To="0" Duration="0:0:0.25">
-                        <DoubleAnimation.EasingFunction>
-                            <ExponentialEase Exponent="6" EasingMode="EaseOut"/>
-                        </DoubleAnimation.EasingFunction>
-                    </DoubleAnimation>
-                </Storyboard>
-            </Grid.Resources>
+        <Grid x:Name="OverlayRoot">
 
             <!-- 1. Gradient Scrims (Readability Layer) -->
             <Grid IsHitTestVisible="False">
@@ -260,6 +262,25 @@
                         <Button Style="{StaticResource PremiumTextButtonStyle}" Content="720p (HD)" HorizontalContentAlignment="Left" Margin="0,0,0,8"/>
                         <Button Style="{StaticResource PremiumTextButtonStyle}" Content="480p (SD)" HorizontalContentAlignment="Left" Margin="0,0,0,8"/>
                         
+                        <!-- Playback Speed (Only for VOD/Series) -->
+                        <StackPanel Visibility="{Binding IsLive, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}">
+                            <TextBlock Text="OYNATMA HIZI" FontSize="12" FontWeight="Bold" Foreground="#88FFFFFF" Margin="0,24,0,16"/>
+                            <UniformGrid Columns="3">
+                                <Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=0.5}"
+                                        Style="{StaticResource PremiumTextButtonStyle}" Content="0.5x" HorizontalContentAlignment="Center" Margin="0,0,4,8"/>
+                                <Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=0.75}"
+                                        Style="{StaticResource PremiumTextButtonStyle}" Content="0.75x" HorizontalContentAlignment="Center" Margin="4,0,4,8"/>
+                                <Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=1.0}"
+                                        Style="{StaticResource PremiumTextButtonStyle}" Content="Normal" HorizontalContentAlignment="Center" Margin="4,0,0,8"/>
+                                <Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=1.25}"
+                                        Style="{StaticResource PremiumTextButtonStyle}" Content="1.25x" HorizontalContentAlignment="Center" Margin="0,0,4,0"/>
+                                <Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=1.5}"
+                                        Style="{StaticResource PremiumTextButtonStyle}" Content="1.5x" HorizontalContentAlignment="Center" Margin="4,0,4,0"/>
+                                <Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=2.0}"
+                                        Style="{StaticResource PremiumTextButtonStyle}" Content="2.0x" HorizontalContentAlignment="Center" Margin="4,0,0,0"/>
+                            </UniformGrid>
+                        </StackPanel>
+
                         <TextBlock Text="AKILLI AYARLAR" FontSize="12" FontWeight="Bold" Foreground="#88FFFFFF" Margin="0,24,0,16"/>
                         <Button Style="{StaticResource PremiumTextButtonStyle}" Content="Düşük Bant Genişliği Modu" HorizontalContentAlignment="Left" Margin="0,0,0,8"/>
                     </StackPanel>
@@ -303,6 +324,60 @@
             
         </Grid>
         
+        <!-- 6. Volume Toast Indicator -->
+        <Border x:Name="VolumeToast"
+                Background="#DD000000"
+                CornerRadius="12"
+                Padding="32,24"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                IsHitTestVisible="False"
+                Panel.ZIndex="1000"
+                Opacity="0">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsVolumeToastVisible}" Value="True">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.2"/>
+                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" From="0.8" To="1.0" Duration="0:0:0.3">
+                                            <DoubleAnimation.EasingFunction>
+                                                <BackEase Amplitude="0.5" EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" From="0.8" To="1.0" Duration="0:0:0.3">
+                                            <DoubleAnimation.EasingFunction>
+                                                <BackEase Amplitude="0.5" EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                            <DataTrigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.5"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.ExitActions>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <Border.RenderTransform>
+                <ScaleTransform CenterX="60" CenterY="60"/>
+            </Border.RenderTransform>
+            <StackPanel>
+                <TextBlock Text="🔊" FontSize="40" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                <TextBlock Text="{Binding Volume, StringFormat='{}{0}%'}" 
+                           FontSize="28" FontWeight="Bold"
+                           Foreground="White"
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
         <!-- 5. Ephemeral UI (Always visible/floating) -->
         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" 
                     Visibility="{Binding IsBuffering, Converter={StaticResource BoolToVisibilityConverter}}">

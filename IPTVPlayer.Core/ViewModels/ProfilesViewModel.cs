@@ -11,7 +11,7 @@ namespace IPTVPlayer.ViewModels;
 public partial class ProfilesViewModel : ObservableObject
 {
     private readonly IDialogService _dialogService;
-    private readonly IDbContextFactory<AppDbContext> _contextFactory;
+    private readonly AppDbContext _context;
     private readonly IDispatcherService _dispatcherService;
     
     [ObservableProperty]
@@ -25,9 +25,9 @@ public partial class ProfilesViewModel : ObservableObject
     public event Action<Profile>? OnProfileEditRequested;
     public event Action? RequestClose;
 
-    public ProfilesViewModel(IDbContextFactory<AppDbContext> contextFactory, IDialogService dialogService, IDispatcherService dispatcherService)
+    public ProfilesViewModel(AppDbContext context, IDialogService dialogService, IDispatcherService dispatcherService)
     {
-        _contextFactory = contextFactory;
+        _context = context;
         _dialogService = dialogService;
         _dispatcherService = dispatcherService;
         RefreshProfiles();
@@ -35,32 +35,28 @@ public partial class ProfilesViewModel : ObservableObject
 
     public void RefreshProfiles()
     {
-        Task.Run(async () => 
+        // Use a discarded task to run the async method
+        _ = LoadProfilesAsync();
+    }
+
+    private async Task LoadProfilesAsync()
+    {
+        try 
         {
-            try 
-            {
-                using var context = await _contextFactory.CreateDbContextAsync();
-                var items = await context.Profiles
-                    .Include(p => p.ProviderAccount) // Load account info
-                    .OrderByDescending(p => p.LastUsed)
-                    .ToListAsync();
-                
-                _dispatcherService.Invoke(() => 
-                {
-                    Profiles = new ObservableCollection<Profile>(items);
-                    if (!items.Any()) IsManageMode = false;
-                });
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Profil yükleme hatası: {ex.Message}");
-                _dispatcherService.Invoke(() => 
-                {
-                    Profiles = new ObservableCollection<Profile>();
-                    IsManageMode = false;
-                });
-            }
-        });
+            var items = await _context.Profiles
+                .Include(p => p.ProviderAccount) // Load account info
+                .OrderByDescending(p => p.LastUsed)
+                .ToListAsync();
+            
+            Profiles = new ObservableCollection<Profile>(items);
+            if (!items.Any()) IsManageMode = false;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Profil yükleme hatası: {ex.Message}");
+            Profiles = new ObservableCollection<Profile>();
+            IsManageMode = false;
+        }
     }
 
     [RelayCommand]
@@ -88,14 +84,11 @@ public partial class ProfilesViewModel : ObservableObject
         }
 
         // Normal mode
-        using (var context = await _contextFactory.CreateDbContextAsync())
+        var dbProfile = await _context.Profiles.FindAsync(profile.Id);
+        if (dbProfile != null)
         {
-            var dbProfile = await context.Profiles.FindAsync(profile.Id);
-            if (dbProfile != null)
-            {
-                dbProfile.LastUsed = DateTime.Now;
-                await context.SaveChangesAsync();
-            }
+            dbProfile.LastUsed = DateTime.Now;
+            await _context.SaveChangesAsync();
         }
 
         OnProfileSelected?.Invoke(profile);
@@ -118,8 +111,7 @@ public partial class ProfilesViewModel : ObservableObject
             var profileId = profile.Id;
 
             // 2. Find and Remove Profile & Account
-            using var context = await _contextFactory.CreateDbContextAsync();
-            var dbProfile = await context.Profiles
+            var dbProfile = await _context.Profiles
                 .Include(p => p.ProviderAccount)
                 .FirstOrDefaultAsync(p => p.Id == profileId);
 
@@ -127,22 +119,19 @@ public partial class ProfilesViewModel : ObservableObject
             {
                 if (dbProfile.ProviderAccount != null)
                 {
-                    context.ProviderAccounts.Remove(dbProfile.ProviderAccount);
+                    _context.ProviderAccounts.Remove(dbProfile.ProviderAccount);
                 }
                 
-                context.Profiles.Remove(dbProfile);
-                await context.SaveChangesAsync();
+                _context.Profiles.Remove(dbProfile);
+                await _context.SaveChangesAsync();
             }
 
-            // 4. Update UI (Thread-safe)
+            // 4. Update UI
             var profileToRemove = Profiles.FirstOrDefault(p => p.Id == profileId);
             if (profileToRemove != null)
             {
-                _dispatcherService.Invoke(() => 
-                {
-                    Profiles.Remove(profileToRemove);
-                    if (!Profiles.Any()) IsManageMode = false;
-                });
+                Profiles.Remove(profileToRemove);
+                if (!Profiles.Any()) IsManageMode = false;
             }
         }
         catch (Exception ex)

@@ -36,4 +36,19 @@ public interface IPlaylistService
     /// Playlist kanallarını getirir
     /// </summary>
     Task<List<Channel>> GetChannelsAsync(int playlistId);
+
+    /// <summary>
+    /// Filtrelenmiş kanalları getirir (lazy loading için)
+    /// </summary>
+    Task<List<Channel>> GetChannelsFilteredAsync(int playlistId, string? searchText = null, string? group = null, ChannelType? type = null, int limit = 1000);
+
+    /// <summary>
+    /// Sadece grup isimlerini getirir (hızlı başlangıç için)
+    /// </summary>
+    Task<List<string>> GetGroupsAsync(int playlistId);
+
+    /// <summary>
+    /// Kanal sayısını getirir (tümünü yüklemeden)
+    /// </summary>
+    Task<int> GetChannelCountAsync(int playlistId);
 }

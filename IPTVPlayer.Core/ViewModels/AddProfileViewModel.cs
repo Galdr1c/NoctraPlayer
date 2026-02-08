@@ -9,7 +9,7 @@ namespace IPTVPlayer.ViewModels;
 
 public partial class AddProfileViewModel : ObservableObject
 {
-    private readonly IDbContextFactory<AppDbContext> _contextFactory;
+    private readonly AppDbContext _context;
     private readonly IDispatcherService _dispatcherService;
     private readonly IAvatarService _avatarService;
     private readonly IDialogService _dialogService;
@@ -21,58 +21,71 @@ public partial class AddProfileViewModel : ObservableObject
     [ObservableProperty]
     private string _url = string.Empty;
 
-    // Flag to prevent infinite loops
-    private bool _isUpdatingFromParse = false;
+    private bool _isUpdatingUrl = false;
 
     partial void OnUrlChanged(string value)
     {
-        if (_isUpdatingFromParse) return;
-        if (string.IsNullOrWhiteSpace(value)) return;
-
+        if (_isUpdatingUrl || string.IsNullOrEmpty(value)) return;
+        
         try
         {
+            _isUpdatingUrl = true;
+            
             var lower = value.ToLower();
             
-            // Auto-detect format
-            bool hasM3uExtension = lower.Contains(".m3u") || lower.Contains(".m3u8");
-            bool hasGetPhp = lower.Contains("get.php");
-            bool hasCredentials = lower.Contains("username=") && lower.Contains("password=");
-
-            // Parse credentials if present
-            if (hasCredentials)
+            // Auto-detect M3U
+            if (lower.Contains(".m3u") || lower.Contains(".m3u8") || lower.Contains("get.php"))
             {
-                ParseCredentialsFromUrl(value);
+                if (!IsM3U) IsM3U = true;
             }
 
-            // Auto-select type based on final URL
-            if (hasGetPhp && hasCredentials)
+            // Extract credentials
+            if (value.Contains("?"))
             {
-                // get.php with credentials = Xtream format
-                if (!IsXtream)
+                var uri = new Uri(value);
+                var query = uri.Query;
+                
+                var usernameMatch = System.Text.RegularExpressions.Regex.Match(
+                    query, @"[?&]username=([^&]+)", 
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                var passwordMatch = System.Text.RegularExpressions.Regex.Match(
+                    query, @"[?&]password=([^&]+)", 
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+                if (usernameMatch.Success) 
+                    Username = Uri.UnescapeDataString(usernameMatch.Groups[1].Value);
+                if (passwordMatch.Success) 
+                    Password = Uri.UnescapeDataString(passwordMatch.Groups[1].Value);
+
+                // Extract base URL without triggering recursion
+                if (lower.Contains("get.php"))
                 {
-                    _isUpdatingFromParse = true;
-                    IsXtream = true;
-                    IsM3U = false;
-                    _isUpdatingFromParse = false;
-                }
-            }
-            else if (hasM3uExtension)
-            {
-                // .m3u/.m3u8 = M3U format
-                if (!IsM3U)
-                {
-                    _isUpdatingFromParse = true;
-                    IsM3U = true;
-                    IsXtream = false;
-                    _isUpdatingFromParse = false;
+                    var parts = value.Split('?');
+                    if (parts.Length > 0)
+                    {
+                        var baseUrl = parts[0].Replace("/get.php", "");
+                        if (baseUrl != value)
+                        {
+                            // Use field directly to avoid triggering OnChanged
+                            _url = baseUrl;
+                            OnPropertyChanged(nameof(Url));
+                        }
+                    }
+                    
+                    if (!IsXtream) IsXtream = true;
                 }
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"URL parse error: {ex.Message}");
+             System.Diagnostics.Debug.WriteLine($"URL parse error: {ex.Message}");
+        }
+        finally
+        {
+            _isUpdatingUrl = false;
         }
     }
+
     private void ParseCredentialsFromUrl(string url)
     {
         try
@@ -88,9 +101,9 @@ public partial class AddProfileViewModel : ObservableObject
                 var username = usernameValues.ToString();
                 if (!string.IsNullOrWhiteSpace(username))
                 {
-                    _isUpdatingFromParse = true;
+                    _isUpdatingUrl = true;
                     Username = username;
-                    _isUpdatingFromParse = false;
+                    _isUpdatingUrl = false;
                 }
             }
 
@@ -99,9 +112,9 @@ public partial class AddProfileViewModel : ObservableObject
                 var password = passwordValues.ToString();
                 if (!string.IsNullOrWhiteSpace(password))
                 {
-                    _isUpdatingFromParse = true;
+                    _isUpdatingUrl = true;
                     Password = password;
-                    _isUpdatingFromParse = false;
+                    _isUpdatingUrl = false;
                 }
             }
         }
@@ -124,9 +137,9 @@ public partial class AddProfileViewModel : ObservableObject
                 baseUrl += $":{uri.Port}";
             }
 
-            _isUpdatingFromParse = true;
+            _isUpdatingUrl = true;
             Url = baseUrl;
-            _isUpdatingFromParse = false;
+            _isUpdatingUrl = false;
 
             StatusMessage = "M3U linki Xtream formatına dönüştürüldü";
             HasError = false;
@@ -157,9 +170,9 @@ public partial class AddProfileViewModel : ObservableObject
 
             var m3uUrl = $"{baseUrl}/get.php?username={Uri.EscapeDataString(Username)}&password={Uri.EscapeDataString(Password)}&type=m3u_plus&output=ts";
 
-            _isUpdatingFromParse = true;
+            _isUpdatingUrl = true;
             Url = m3uUrl;
-            _isUpdatingFromParse = false;
+            _isUpdatingUrl = false;
 
             StatusMessage = "Xtream bilgileri M3U linkine dönüştürüldü";
             HasError = false;
@@ -176,7 +189,7 @@ public partial class AddProfileViewModel : ObservableObject
 
     partial void OnUsernameChanged(string value)
     {
-        if (_isUpdatingFromParse) return;
+        if (_isUpdatingUrl) return;
         
         if (IsM3U && !string.IsNullOrWhiteSpace(Url) && !string.IsNullOrWhiteSpace(Password))
         {
@@ -189,7 +202,7 @@ public partial class AddProfileViewModel : ObservableObject
 
     partial void OnPasswordChanged(string value)
     {
-        if (_isUpdatingFromParse) return;
+        if (_isUpdatingUrl) return;
         
         if (IsM3U && !string.IsNullOrWhiteSpace(Url) && !string.IsNullOrWhiteSpace(Username))
         {
@@ -202,7 +215,7 @@ public partial class AddProfileViewModel : ObservableObject
 
     partial void OnIsXtreamChanged(bool value)
     {
-        if (_isUpdatingFromParse) return;
+        if (_isUpdatingUrl) return;
         
         if (value)
         {
@@ -222,7 +235,7 @@ public partial class AddProfileViewModel : ObservableObject
 
     partial void OnIsM3UChanged(bool value)
     {
-        if (_isUpdatingFromParse) return;
+        if (_isUpdatingUrl) return;
         
         if (value)
         {
@@ -261,9 +274,9 @@ public partial class AddProfileViewModel : ObservableObject
     public event EventHandler? RequestClose;
     public event EventHandler? RequestAvatarPicker;
 
-    public AddProfileViewModel(IDbContextFactory<AppDbContext> contextFactory, IDispatcherService dispatcherService, IAvatarService avatarService, IDialogService dialogService)
+    public AddProfileViewModel(AppDbContext context, IDispatcherService dispatcherService, IAvatarService avatarService, IDialogService dialogService)
     {
-        _contextFactory = contextFactory;
+        _context = context;
         _dispatcherService = dispatcherService;
         _avatarService = avatarService;
         _dialogService = dialogService;
@@ -288,7 +301,7 @@ public partial class AddProfileViewModel : ObservableObject
     {
         if (profile.ProviderAccount != null)
         {
-            _isUpdatingFromParse = true;
+            _isUpdatingUrl = true;
 
             // Set account details
             Url = profile.ProviderAccount.Url;
@@ -297,7 +310,7 @@ public partial class AddProfileViewModel : ObservableObject
             IsXtream = profile.ProviderAccount.Type == ProfileType.XtreamCodes;
             IsM3U = profile.ProviderAccount.Type == ProfileType.M3U;
 
-            _isUpdatingFromParse = false;
+            _isUpdatingUrl = false;
 
             // Eğer M3U linkiyse ve credentials varsa, parse et
             if (IsM3U && Url.Contains("get.php"))
@@ -331,8 +344,7 @@ public partial class AddProfileViewModel : ObservableObject
 
         try 
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
-            var dbProfile = await context.Profiles
+            var dbProfile = await _context.Profiles
                 .Include(p => p.ProviderAccount)
                 .FirstOrDefaultAsync(p => p.Id == EditingProfile.Id);
 
@@ -341,11 +353,11 @@ public partial class AddProfileViewModel : ObservableObject
                 // Delete the account first if it's uniquely linked
                 if (dbProfile.ProviderAccount != null)
                 {
-                    context.ProviderAccounts.Remove(dbProfile.ProviderAccount);
+                    _context.ProviderAccounts.Remove(dbProfile.ProviderAccount);
                 }
                 
-                context.Profiles.Remove(dbProfile);
-                await context.SaveChangesAsync();
+                _context.Profiles.Remove(dbProfile);
+                await _context.SaveChangesAsync();
             }
             
             RequestClose?.Invoke(this, EventArgs.Empty);
@@ -393,25 +405,30 @@ public partial class AddProfileViewModel : ObservableObject
             HasError = false;
             StatusMessage = "Kaydediliyor...";
 
-            using var context = await _contextFactory.CreateDbContextAsync();
+            using var transaction = await _context.Database.BeginTransactionAsync();
             ProviderAccount account;
 
             if (EditingProfile?.ProviderAccount != null)
             {
-                // Load the account into the current context to update it
-                account = await context.ProviderAccounts.FindAsync(EditingProfile.ProviderAccount.Id);
-                if (account != null)
-                {
-                    account.Url = Url;
-                    account.Username = Username;
-                    account.Password = Password;
-                    account.Type = IsXtream ? ProfileType.XtreamCodes : ProfileType.M3U;
-                    context.ProviderAccounts.Update(account);
-                }
-                else
-                {
-                    throw new Exception("Hesap bulunamadı.");
-                }
+                 var selectedAccount = EditingProfile.ProviderAccount;
+                 
+                 // Detach existing if needed
+                 var existing = _context.ProviderAccounts.Local
+                     .FirstOrDefault(a => a.Id == selectedAccount.Id);
+                 
+                 if (existing != null && existing != selectedAccount)
+                 {
+                     _context.Entry(existing).State = EntityState.Detached;
+                 }
+                 
+                 // Enable tracking/Update
+                 selectedAccount.Url = Url;
+                 selectedAccount.Username = Username;
+                 selectedAccount.Password = Password;
+                 selectedAccount.Type = IsXtream ? ProfileType.XtreamCodes : ProfileType.M3U;
+                 
+                 _context.Entry(selectedAccount).State = EntityState.Modified;
+                 account = selectedAccount;
             }
             else
             {
@@ -423,20 +440,25 @@ public partial class AddProfileViewModel : ObservableObject
                     Username = Username,
                     Password = Password
                 };
-                context.ProviderAccounts.Add(account);
+                _context.ProviderAccounts.Add(account);
             }
 
             if (EditingProfile != null)
             {
                 // Update existing profile
-                var dbProfile = await context.Profiles.FindAsync(EditingProfile.Id);
-                if (dbProfile != null)
+                
+                // Check if profile is tracked
+                var trackedProfile = _context.Profiles.Local.FirstOrDefault(p => p.Id == EditingProfile.Id);
+                if (trackedProfile != null && trackedProfile != EditingProfile)
                 {
-                    dbProfile.Name = ProfileName;
-                    dbProfile.Avatar = SelectedAvatar;
-                    dbProfile.IsChild = IsChild;
-                    context.Profiles.Update(dbProfile);
+                     _context.Entry(trackedProfile).State = EntityState.Detached;
                 }
+
+                EditingProfile.Name = ProfileName;
+                EditingProfile.Avatar = SelectedAvatar;
+                EditingProfile.IsChild = IsChild;
+                
+                _context.Entry(EditingProfile).State = EntityState.Modified;
             }
             else
             {
@@ -449,10 +471,12 @@ public partial class AddProfileViewModel : ObservableObject
                     IsChild = IsChild,
                     LastUsed = DateTime.Now
                 };
-                context.Profiles.Add(profile);
+                _context.Profiles.Add(profile);
             }
 
-            await context.SaveChangesAsync();
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
 
             RequestClose?.Invoke(this, EventArgs.Empty);
         }

@@ -42,6 +42,9 @@ public partial class PlayerViewModel : ObservableObject
     private double _bufferingProgress;
 
     [ObservableProperty]
+    private bool _isBuffering;
+
+    [ObservableProperty]
     private bool _isLive;
 
     [ObservableProperty]
@@ -101,34 +104,66 @@ public partial class PlayerViewModel : ObservableObject
     [ObservableProperty]
     private bool _isQualitySettingsOpen;
 
+    [ObservableProperty]
+    private bool _isIntroDetected;
+
+    [ObservableProperty]
+    private Episode? _nextEpisode;
+
+    [ObservableProperty]
+    private bool _isNextEpisodePromptVisible;
+
     private readonly IDispatcherService _dispatcherService;
+    private readonly IWatchHistoryService? _watchHistoryService;
     private readonly System.Timers.Timer _autoHideTimer;
     private readonly System.Timers.Timer _clockTimer;
+    private readonly System.Timers.Timer _watchHistoryTimer;
     private System.Timers.Timer? _zappingTimer;
 
-    public PlayerViewModel(IVideoPlayerService videoPlayerService, IEpgService epgService, IDispatcherService dispatcherService)
+    public int? CurrentProfileId { get; set; }
+
+    public PlayerViewModel(IVideoPlayerService videoPlayerService, IEpgService epgService, IDispatcherService dispatcherService, IWatchHistoryService? watchHistoryService = null)
     {
         _videoPlayerService = videoPlayerService;
         _epgService = epgService;
         _dispatcherService = dispatcherService;
+        _watchHistoryService = watchHistoryService;
 
         // Auto-hide timer
         _autoHideTimer = new System.Timers.Timer(4000);
-        _autoHideTimer.Elapsed += (s, e) => IsVisible = IsLocked;
+        _autoHideTimer.Elapsed += (s, e) => _dispatcherService.Invoke(() => IsVisible = IsLocked);
         _autoHideTimer.AutoReset = false;
 
         // Clock timer
         _clockTimer = new System.Timers.Timer(1000);
-        _clockTimer.Elapsed += (s, e) => CurrentTimeStr = DateTime.Now.ToString("HH:mm");
+        _clockTimer.Elapsed += (s, e) => _dispatcherService.Invoke(() => CurrentTimeStr = DateTime.Now.ToString("HH:mm"));
         _clockTimer.Start();
         CurrentTimeStr = DateTime.Now.ToString("HH:mm");
+
+        // Watch history timer (every 5 seconds)
+        _watchHistoryTimer = new System.Timers.Timer(5000);
+        _watchHistoryTimer.Elapsed += async (s, e) => await TrackWatchHistoryAsync();
+        _watchHistoryTimer.AutoReset = true;
 
         _videoPlayerService.PlayingChanged += (s, playing) => 
         {
             _dispatcherService.Invoke(() =>
             {
                 IsPlaying = playing;
-                if (playing) UpdateMediaInfo();
+                if (playing) 
+                {
+                    IsBuffering = false;
+                    UpdateMediaInfo();
+                }
+            });
+        };
+
+        _videoPlayerService.BufferingChanged += (s, progress) =>
+        {
+            _dispatcherService.Invoke(() =>
+            {
+                BufferingProgress = progress;
+                IsBuffering = progress < 100;
             });
         };
 
@@ -143,6 +178,9 @@ public partial class PlayerViewModel : ObservableObject
                 {
                     var remaining = Math.Max(0, Duration - pos);
                     RemainingTime = "-" + TimeSpan.FromSeconds(remaining).ToString(@"hh\:mm\:ss");
+
+                    // Intro Detection Stub: Detects intro between 0:30 and 2:00
+                    IsIntroDetected = pos > 30 && pos < 120;
                 }
             });
         };
@@ -151,7 +189,15 @@ public partial class PlayerViewModel : ObservableObject
     public async Task PlayChannelAsync(Channel channel)
     {
         CurrentChannel = channel;
+        IsBuffering = true;
+        BufferingProgress = 0;
         await _videoPlayerService.PlayAsync(channel.StreamUrl);
+
+        // Start watch history tracking for VOD content
+        if (channel.Type != ChannelType.Live)
+        {
+            _watchHistoryTimer.Start();
+        }
 
         // Zapping göster
         ShowZapping(channel.Name, channel.LogoUrl, channel.Type == ChannelType.Live);
@@ -160,6 +206,27 @@ public partial class PlayerViewModel : ObservableObject
         if (!string.IsNullOrEmpty(channel.TvgId) && _epgService.IsLoaded)
         {
             CurrentProgram = await _epgService.GetCurrentProgramAsync(channel.TvgId);
+        }
+    }
+
+    private async Task TrackWatchHistoryAsync()
+    {
+        if (_watchHistoryService == null || CurrentProfileId == null || CurrentChannel == null || !IsPlaying)
+            return;
+
+        try
+        {
+            await _watchHistoryService.TrackWatchAsync(
+                CurrentProfileId.Value,
+                CurrentChannel.Id,
+                null, // EpisodeId - null for channels
+                TimeSpan.FromSeconds(Position),
+                Position >= Duration - 30 // Completed if within 30 seconds of end
+            );
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Watch history tracking error: {ex.Message}");
         }
     }
 
@@ -176,14 +243,15 @@ public partial class PlayerViewModel : ObservableObject
         _zappingTimer?.Stop();
         _zappingTimer ??= new System.Timers.Timer(4000);
         _zappingTimer.AutoReset = false;
-        _zappingTimer.Elapsed += (s, e) => IsZappingVisible = false;
+        _zappingTimer.AutoReset = false;
+        _zappingTimer.Elapsed += (s, e) => _dispatcherService.Invoke(() => IsZappingVisible = false);
         
         // Simüle progress
         var progressTimer = new System.Timers.Timer(100);
-        progressTimer.Elapsed += (s, e) => {
+        progressTimer.Elapsed += (s, e) => _dispatcherService.Invoke(() => {
             if (BufferingProgress < 100) BufferingProgress += 5;
             else progressTimer.Stop();
-        };
+        });
         progressTimer.Start();
         _zappingTimer.Start();
         
@@ -292,6 +360,42 @@ public partial class PlayerViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void SkipIntro()
+    {
+        SkipForward(85); // Skip 1:25 typical intro length
+        IsIntroDetected = false;
+        
+        // Mock Next Episode Prompt appearing after skip
+        ShowNextEpisodePromptMock();
+    }
+
+    private void ShowNextEpisodePromptMock()
+    {
+        NextEpisode = new Episode
+        {
+            Name = "The One With The Mock Episode",
+            Plot = "This is a test description for the next episode prompt. Joey eats a pizza.",
+            Duration = TimeSpan.FromMinutes(22)
+        };
+        IsNextEpisodePromptVisible = true;
+        
+        // Auto-hide after 10 seconds
+        Task.Delay(10000).ContinueWith(_ => IsNextEpisodePromptVisible = false);
+    }
+
+    [RelayCommand]
+    private void PlayNextEpisode()
+    {
+        if (NextEpisode != null)
+        {
+            // Logic to play next episode would go here
+            // For now, just hide the prompt and simulate
+            IsNextEpisodePromptVisible = false;
+            ChannelName = NextEpisode.Name; // Mock update
+        }
+    }
+
+    [RelayCommand]
     private void SkipBackward(double seconds = 10)
     {
         var newPos = Math.Max(Position - seconds, 0);
@@ -315,6 +419,29 @@ public partial class PlayerViewModel : ObservableObject
     private void ToggleFullScreen()
     {
         IsFullScreen = !IsFullScreen;
+        RestartAutoHideTimer();
+    }
+
+    [RelayCommand]
+    private void SetAudioTrack(int id)
+    {
+        SelectedAudioTrack = id;
+        // _videoPlayerService.SetAudioTrack(id); // Handled by OnSelectedAudioTrackChanged
+        RestartAutoHideTimer();
+    }
+
+    [RelayCommand]
+    private void SetSubtitleTrack(int id)
+    {
+        SelectedSubtitleTrack = id;
+        // _videoPlayerService.SetSubtitleTrack(id); // Handled by OnSelectedSubtitleTrackChanged
+        RestartAutoHideTimer();
+    }
+
+    [RelayCommand]
+    private void SetPlaybackSpeed(float speed)
+    {
+        _videoPlayerService.PlaybackRate = speed;
         RestartAutoHideTimer();
     }
 

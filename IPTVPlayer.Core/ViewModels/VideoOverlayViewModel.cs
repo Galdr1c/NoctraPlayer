@@ -75,8 +75,12 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private System.Collections.Generic.IReadOnlyList<(int Id, string? Name)> _subtitleTracks = new System.Collections.Generic.List<(int, string?)>();
 
+    [ObservableProperty]
+    private bool _isVolumeToastVisible;
+
     private bool _isUpdatingFromService;
     private System.Timers.Timer? _zappingTimer;
+    private readonly System.Timers.Timer _volumeToastTimer;
 
     public VideoOverlayViewModel(IVideoPlayerService playerService)
     {
@@ -86,6 +90,11 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
         _autoHideTimer = new System.Timers.Timer(3000); // 3 seconds
         _autoHideTimer.Elapsed += AutoHideTimer_Elapsed;
         _autoHideTimer.AutoReset = false;
+
+        // Timer for volume toast
+        _volumeToastTimer = new System.Timers.Timer(2000); // 2 seconds
+        _volumeToastTimer.Elapsed += (s, e) => IsVolumeToastVisible = false;
+        _volumeToastTimer.AutoReset = false;
 
         IsVisible = true;
         RestartAutoHideTimer();
@@ -127,6 +136,15 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
             _playerService.Position = value;
             RestartAutoHideTimer();
         }
+    }
+
+    partial void OnVolumeChanged(double value)
+    {
+        _playerService.Volume = (int)value;
+        IsVolumeToastVisible = true;
+        _volumeToastTimer?.Stop();
+        _volumeToastTimer?.Start();
+        RestartAutoHideTimer();
     }
 
     [RelayCommand]
@@ -246,6 +264,17 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
         IsAudioSettingsOpen = false;
         IsQualitySettingsOpen = false;
         UnlockOverlay();
+    }
+
+    [ObservableProperty]
+    private float _playbackRate = 1.0f;
+
+    [RelayCommand]
+    private void SetPlaybackSpeed(float speed)
+    {
+        PlaybackRate = speed;
+        _playerService.PlaybackRate = speed;
+        RestartAutoHideTimer();
     }
 
     [ObservableProperty]

@@ -140,7 +140,7 @@
                                     <Button.RenderTransformOrigin>0.5,0.5</Button.RenderTransformOrigin>
                                     <Button.Template>
                                         <ControlTemplate TargetType="Button">
-                                            <Grid Width="110">
+                                            <Grid Width="{StaticResource RatioSquareSize}">
                                                 <Grid.RowDefinitions>
                                                     <RowDefinition Height="Auto"/>
                                                     <RowDefinition Height="Auto"/>
@@ -148,7 +148,7 @@
                                                 
                                                 <!-- Avatar -->
                                                 <Grid Grid.Row="0" Margin="0,0,0,12">
-                                                    <Grid x:Name="AvatarRoot" Width="110" Height="110">
+                                                    <Grid x:Name="AvatarRoot" Width="{StaticResource RatioSquareSize}" Height="{StaticResource RatioSquareSize}">
                                                         <!-- 1. Background & Content (Clipped) -->
                                                         <Border CornerRadius="14" ClipToBounds="True"
                                                                 Background="{StaticResource IconGradientBrush}">
@@ -158,7 +158,7 @@
                                                                        Stretch="UniformToFill" 
                                                                        RenderOptions.BitmapScalingMode="HighQuality">
                                                                     <Image.Clip>
-                                                                        <RectangleGeometry Rect="0,0,110,110" RadiusX="14" RadiusY="14"/>
+                                                                        <RectangleGeometry Rect="0,0,120,120" RadiusX="14" RadiusY="14"/>
                                                                     </Image.Clip>
                                                                 </Image>
 
@@ -186,7 +186,7 @@
                                                            Foreground="{StaticResource TextMutedBrush}" 
                                                            FontSize="15" FontWeight="Medium"
                                                            HorizontalAlignment="Center" 
-                                                           TextTrimming="CharacterEllipsis" MaxWidth="110"/>
+                                                           TextTrimming="CharacterEllipsis" MaxWidth="120"/>
                                             </Grid>
                                             <ControlTemplate.Triggers>
                                                 <!-- Focus State (Keyboard) -->
@@ -229,14 +229,14 @@
                         <Button.RenderTransformOrigin>0.5,0.5</Button.RenderTransformOrigin>
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
-                                <Grid Width="110">
+                                <Grid Width="{StaticResource RatioSquareSize}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
                                     <!-- Plus Icon Box (Dashed Border) -->
-                                    <Border x:Name="AddBorder" Width="110" Height="110" CornerRadius="{StaticResource RadiusMedium}" 
+                                    <Border x:Name="AddBorder" Width="{StaticResource RatioSquareSize}" Height="{StaticResource RatioSquareSize}" CornerRadius="{StaticResource RadiusMedium}" 
                                             Grid.Row="0" Margin="0,0,0,12" 
                                             Background="Transparent"
                                             BorderThickness="2">
@@ -246,7 +246,7 @@
                                                     <Rectangle StrokeDashArray="4 2" 
                                                                Stroke="{StaticResource BorderBrush}" 
                                                                StrokeThickness="2"
-                                                               Width="110" Height="110"
+                                                               Width="{StaticResource RatioSquareSize}" Height="{StaticResource RatioSquareSize}"
                                                                RadiusX="14" RadiusY="14"/>
                                                 </VisualBrush.Visual>
                                             </VisualBrush>

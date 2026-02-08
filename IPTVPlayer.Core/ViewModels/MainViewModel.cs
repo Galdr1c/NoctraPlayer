@@ -41,7 +41,7 @@ public partial class MainViewModel : ObservableObject
     private List<Series> _latestSeries = new();
 
     [ObservableProperty]
-    private Channel? _featuredMedia;
+    private Channel? _featuredChannel;
 
     [ObservableProperty]
     private List<Playlist> _playlists = new();
@@ -62,6 +62,12 @@ public partial class MainViewModel : ObservableObject
     private Channel? _selectedChannel;
 
     [ObservableProperty]
+    private Series? _selectedSeries;
+
+    [ObservableProperty]
+    private bool _isSeriesDetailVisible;
+
+    [ObservableProperty]
     private string? _selectedGroup;
 
     [ObservableProperty]
@@ -69,6 +75,15 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private ChannelType? _selectedChannelType;
+
+    [ObservableProperty]
+    private bool _isSearchOverlayVisible;
+
+    [ObservableProperty]
+    private string _searchQuery = string.Empty;
+
+    [ObservableProperty]
+    private List<object> _searchResults = new();
 
     [ObservableProperty]
     private bool _isLoading;
@@ -126,27 +141,39 @@ public partial class MainViewModel : ObservableObject
             // Ensure provider account is loaded
             if (profile.ProviderAccount == null)
             {
-                // Try to reload or exit gracefully
                 StatusMessage = "Hesap bilgileri yüklenemedi";
                 return;
             }
 
-            if (profile.ProviderAccount.Type == ProfileType.M3U)
+            // Check if playlist already exists (cache-first approach)
+            var existingPlaylists = await _playlistService.GetAllAsync(profile.Id);
+            
+            if (existingPlaylists.Count > 0)
             {
-                // Profile ID ile playlist ekle
-                await _playlistService.AddFromUrlAsync(profile.Name, profile.ProviderAccount.Url, profile.Id);
-                await LoadPlaylistsAsync(); 
+                // Use cached playlist - much faster!
+                System.Diagnostics.Debug.WriteLine($"[MainViewModel] Using cached playlist for profile {profile.Id}");
+                StatusMessage = "Önbellekten yükleniyor...";
+                await LoadPlaylistsAsync();
             }
-            else if (profile.ProviderAccount.Type == ProfileType.XtreamCodes)
+            else
             {
-                // Xtream Codes -> M3U Conversion
-                StatusMessage = "Xtream bağlantısı kuruluyor...";
+                // No cache - download and parse M3U
+                System.Diagnostics.Debug.WriteLine($"[MainViewModel] No cache found, downloading playlist for profile {profile.Id}");
                 
-                var baseUrl = profile.ProviderAccount.Url.TrimEnd('/');
-                if (!baseUrl.StartsWith("http")) baseUrl = "http://" + baseUrl;
-
-                var m3uUrl = $"{baseUrl}/get.php?username={profile.ProviderAccount.Username}&password={profile.ProviderAccount.Password}&type=m3u_plus&output=ts";
+                string m3uUrl;
+                if (profile.ProviderAccount.Type == ProfileType.M3U)
+                {
+                    m3uUrl = profile.ProviderAccount.Url;
+                }
+                else // XtreamCodes
+                {
+                    StatusMessage = "Xtream bağlantısı kuruluyor...";
+                    var baseUrl = profile.ProviderAccount.Url.TrimEnd('/');
+                    if (!baseUrl.StartsWith("http")) baseUrl = "http://" + baseUrl;
+                    m3uUrl = $"{baseUrl}/get.php?username={profile.ProviderAccount.Username}&password={profile.ProviderAccount.Password}&type=m3u_plus&output=ts";
+                }
                 
+                StatusMessage = "Kanal listesi indiriliyor...";
                 await _playlistService.AddFromUrlAsync(profile.Name, m3uUrl, profile.Id);
                 await LoadPlaylistsAsync();
             }
@@ -154,7 +181,6 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusMessage = $"Profil yüklenirken hata oluştu: {ex.Message}";
-            // Log the error
             System.Diagnostics.Debug.WriteLine($"LoadProfile Error: {ex}");
         }
         finally
@@ -202,19 +228,16 @@ public partial class MainViewModel : ObservableObject
             IsLoading = true;
             StatusMessage = "Kanallar yükleniyor...";
             
-            Channels = await _playlistService.GetChannelsAsync(playlistId);
+            // FAST: Only load groups and channel count initially
+            Groups = await _playlistService.GetGroupsAsync(playlistId);
+            var channelCount = await _playlistService.GetChannelCountAsync(playlistId);
             
-            // Grupları çıkar
-            Groups = Channels
-                .Where(c => !string.IsNullOrEmpty(c.GroupTitle))
-                .Select(c => c.GroupTitle!)
-                .Distinct()
-                .OrderBy(g => g)
-                .ToList();
+            // Load filtered channels (limited to 1000 for fast UI)
+            Channels = await _playlistService.GetChannelsFilteredAsync(playlistId, limit: 1000);
+            FilteredChannels = Channels;
             
-            ApplyFilters();
             await LoadHomeContentAsync();
-            StatusMessage = $"{Channels.Count} kanal yüklendi";
+            StatusMessage = $"{channelCount} kanal hazır";
         }
         finally
         {
@@ -231,10 +254,11 @@ public partial class MainViewModel : ObservableObject
         ContinueWatching = Channels.Where(c => c.LastWatched.HasValue).OrderByDescending(c => c.LastWatched).Take(10).ToList();
 
         // Hero içeriği
-        FeaturedMedia = TrendingChannels.FirstOrDefault() ?? LatestMovies.FirstOrDefault();
+        FeaturedChannel = TrendingChannels.FirstOrDefault() ?? LatestMovies.FirstOrDefault();
     }
 
     private CancellationTokenSource? _filterCts;
+    private readonly int _filterDelayMs = 300;
 
     partial void OnSearchTextChanged(string value)
     {
@@ -247,26 +271,18 @@ public partial class MainViewModel : ObservableObject
             ActiveView = AppView.Home;
         }
 
-        // Cancel previous search
+        // Debounce logic
         _filterCts?.Cancel();
         _filterCts = new CancellationTokenSource();
         var token = _filterCts.Token;
-
-        // Fire and forget debounce
-        _ = DebounceSearchAsync(token);
-    }
-
-    private async Task DebounceSearchAsync(CancellationToken token)
-    {
-        try
+        
+        Task.Delay(_filterDelayMs, token).ContinueWith(_ => 
         {
-            await Task.Delay(300, token);
-            await _dispatcherService.InvokeAsync(() => ApplyFilters());
-        }
-        catch (OperationCanceledException)
-        {
-            // İptal edildi
-        }
+            if (!token.IsCancellationRequested)
+            {
+                _dispatcherService.Invoke(() => ApplyFilters());
+            }
+        }, TaskScheduler.Default);
     }
 
     partial void OnSelectedGroupChanged(string? value)
@@ -284,52 +300,40 @@ public partial class MainViewModel : ObservableObject
         ApplyFilters();
     }
 
-    private async Task ApplyFilters()
+    private async void ApplyFilters()
     {
+        if (SelectedPlaylist == null) return;
+        
         IsLoading = true;
         
         try
         {
-            var filtered = await Task.Run(() =>
+            // Use database-level filtering for performance
+            var filtered = await _playlistService.GetChannelsFilteredAsync(
+                SelectedPlaylist.Id,
+                searchText: SearchText,
+                group: SelectedGroup,
+                type: SelectedChannelType,
+                limit: 1000
+            );
+
+            // Apply favorites filter (in-memory since it's a local property)
+            if (ShowOnlyFavorites)
             {
-                var query = Channels.AsEnumerable();
+                filtered = filtered.Where(c => c.IsFavorite).ToList();
+            }
 
-                // Metin araması
-                if (!string.IsNullOrWhiteSpace(SearchText))
-                {
-                    var searchLower = SearchText.ToLower();
-                    query = query.Where(c => 
-                        c.Name.ToLower().Contains(searchLower) ||
-                        (c.GroupTitle?.ToLower().Contains(searchLower) ?? false));
-                }
-
-                // Grup filtresi
-                if (!string.IsNullOrEmpty(SelectedGroup))
-                {
-                    query = query.Where(c => c.GroupTitle == SelectedGroup);
-                }
-
-                // Tür filtresi
-                if (SelectedChannelType.HasValue)
-                {
-                    query = query.Where(c => c.Type == SelectedChannelType.Value);
-                }
-
-                // Favoriler filtresi
-                if (ShowOnlyFavorites)
-                {
-                    query = query.Where(c => c.IsFavorite);
-                }
-
-                // Limit for UI stability
-                return query.ToList();
-            });
-
-            // UI Thread güncellemesi
+            // UI Thread update
             _dispatcherService.Invoke(() =>
             {
+                Channels = filtered;
                 FilteredChannels = filtered;
             });
+        }
+        catch (Exception ex)
+        {
+             System.Diagnostics.Debug.WriteLine($"ApplyFilters error: {ex}");
+             StatusMessage = "Filtreleme sırasında hata oluştu";
         }
         finally
         {
@@ -346,29 +350,6 @@ public partial class MainViewModel : ObservableObject
         // Update last watched
         channel.LastWatched = DateTime.Now;
         _ = _channelService.UpdateChannelAsync(channel);
-    }
-
-    [RelayCommand]
-    private void SelectMedia(object media)
-    {
-        if (media is Channel channel)
-        {
-            if (channel.Type == ChannelType.Live)
-            {
-                SelectChannel(channel);
-            }
-            else
-            {
-                // VOD Detail view açılması lazım
-                SelectedChannel = channel;
-                // DetailView açılması için bir flag eklenebilir
-            }
-        }
-        else if (media is Series series)
-        {
-            // Series Detail view
-            // SelectedSeries = series;
-        }
     }
 
     [RelayCommand]
@@ -455,5 +436,133 @@ public partial class MainViewModel : ObservableObject
         else SelectedChannelType = null;
         
         ApplyFilters();
+    }
+
+    [RelayCommand]
+    private void OpenSearch()
+    {
+        IsSearchOverlayVisible = true;
+        SearchQuery = string.Empty;
+        SearchResults.Clear();
+        // Notify view to focus
+        OnPropertyChanged(nameof(SearchQuery)); // Just to trigger some UI logic if needed
+    }
+
+    [RelayCommand]
+    private void CommitSearch()
+    {
+        if (!string.IsNullOrWhiteSpace(SearchQuery))
+        {
+            // Sync with global search and navigate
+            SearchText = SearchQuery;
+            Navigate(AppView.Search);
+            CloseSearch();
+        }
+    }
+
+    [RelayCommand]
+    private void CloseSearch()
+    {
+        IsSearchOverlayVisible = false;
+        SearchQuery = string.Empty;
+        SearchResults.Clear();
+    }
+
+    partial void OnSearchQueryChanged(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            SearchResults = new List<object>();
+            return;
+        }
+
+        var searchLower = value.ToLower();
+        
+        var results = new List<object>();
+        
+        // Search Channels (Movies/Live)
+        results.AddRange(Channels.Where(c => 
+            c.Name.ToLower().Contains(searchLower) ||
+            (c.GroupTitle?.ToLower().Contains(searchLower) ?? false))
+            .Take(10));
+
+        // Search Series
+        results.AddRange(LatestSeries.Where(s => 
+            s.Name.ToLower().Contains(searchLower) ||
+            (s.Genre?.ToLower().Contains(searchLower) ?? false))
+            .Take(10));
+
+        SearchResults = results;
+    }
+
+    [RelayCommand]
+    private async Task AddToMyList(object media)
+    {
+        if (media is Channel channel)
+        {
+            channel.IsInMyList = !channel.IsInMyList;
+            await _channelService.UpdateChannelAsync(channel);
+        }
+        else if (media is Series series)
+        {
+            series.IsInMyList = !series.IsInMyList;
+            // TODO: Series persistence service update
+        }
+    }
+
+    [RelayCommand]
+    private void PlayEpisode(Episode episode)
+    {
+        // Convert Episode to Channel for playing
+        var channel = new Channel
+        {
+            Name = episode.Name,
+            StreamUrl = episode.StreamUrl,
+            LogoUrl = episode.CoverUrl,
+            Type = ChannelType.Series,
+            PlaylistId = SelectedPlaylist?.Id ?? 0
+        };
+        
+        SelectChannel(channel);
+        IsSeriesDetailVisible = false;
+    }
+
+    [RelayCommand]
+    private void CloseSeriesDetail()
+    {
+        IsSeriesDetailVisible = false;
+        SelectedSeries = null;
+    }
+
+    [RelayCommand]
+    private void PlayFeatured()
+    {
+        if (FeaturedChannel != null)
+        {
+            SelectMedia(FeaturedChannel);
+        }
+    }
+
+    // Event for media selection - MainWindow subscribes to this for video playback
+    public event Action<object>? OnMediaSelected;
+
+    [RelayCommand]
+    private void SelectMedia(object? media)
+    {
+        if (media == null) return;
+
+        if (media is Channel channel)
+        {
+            SelectedChannel = channel;
+            StatusMessage = $"Seçildi: {channel.Name}";
+            OnMediaSelected?.Invoke(channel);
+        }
+        else if (media is Series series)
+        {
+            SelectedSeries = series;
+            IsSeriesDetailVisible = true;
+            StatusMessage = $"Seçildi: {series.Name}";
+            OnMediaSelected?.Invoke(series);
+        }
     }
 }

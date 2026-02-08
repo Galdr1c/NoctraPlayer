@@ -25,6 +25,7 @@ public class Channel
     public string? Language { get; set; }
     public ChannelType Type { get; set; } = ChannelType.Live;
     public bool IsFavorite { get; set; }
+    public bool IsInMyList { get; set; }
     public DateTime? LastWatched { get; set; }
     public int PlaylistId { get; set; }
     
@@ -36,7 +37,27 @@ public class Channel
     public string? Director { get; set; }
     public string? Cast { get; set; }
     public TimeSpan? Duration { get; set; }
+    public TimeSpan? WatchedPosition { get; set; }
+
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public double WatchedPercentage
+    {
+        get
+        {
+            if (Duration == null || Duration.Value.TotalSeconds <= 0 || WatchedPosition == null)
+                return 0;
+
+            var percent = (WatchedPosition.Value.TotalSeconds / Duration.Value.TotalSeconds) * 100;
+            return Math.Clamp(percent, 0, 100);
+        }
+    }
     
     // Navigation property
     public Playlist? Playlist { get; set; }
+
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public string? CoverUrl => !string.IsNullOrEmpty(BackdropUrl) ? BackdropUrl : LogoUrl;
+
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public string? Description => Plot;
 }

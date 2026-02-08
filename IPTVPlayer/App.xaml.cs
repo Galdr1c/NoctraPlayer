@@ -183,8 +183,8 @@ public partial class App : Application
         
         Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
         
-        services.AddDbContextFactory<AppDbContext>(options =>
-            options.UseSqlite($"Data Source={dbPath}"));
+        services.AddDbContext<AppDbContext>(options =>
+            options.UseSqlite($"Data Source={dbPath}"), ServiceLifetime.Scoped);
 
         // HTTP Client
         services.AddHttpClient<IM3UParser, M3UParser>();
@@ -196,24 +196,26 @@ public partial class App : Application
         services.AddSingleton<ILicenseService, LicenseService>();
         services.AddScoped<IMediaService, MediaService>();
         services.AddScoped<IChannelService, ChannelService>();
+        services.AddScoped<IWatchHistoryService, WatchHistoryService>();
         services.AddSingleton<Services.Interfaces.IAvatarService, Services.Interfaces.AvatarService>();
+        services.AddSingleton<HoverPreviewService>();
         
         // UI Services (WPF Implementations)
         services.AddSingleton<IDispatcherService, WpfDispatcherService>();
         services.AddSingleton<IDialogService, WpfDialogService>();
         services.AddSingleton<IThemeService, WpfThemeService>();
 
-        // ViewModels
-        services.AddTransient<MainViewModel>();
-        services.AddTransient<PlayerViewModel>();
+        // ViewModels - Singleton for instant profile switching
+        services.AddSingleton<MainViewModel>();
+        services.AddSingleton<PlayerViewModel>();
         services.AddTransient<SettingsViewModel>();
-        services.AddTransient<ProfilesViewModel>();
-        services.AddTransient<AddProfileViewModel>();
+        services.AddScoped<ProfilesViewModel>();
+        services.AddScoped<AddProfileViewModel>();
         services.AddTransient<AvatarPickerViewModel>();
         services.AddTransient<WatermarkViewModel>();
 
-        // Windows
-        services.AddTransient<MainWindow>();
+        // Windows - Singleton MainWindow for instant loading
+        services.AddSingleton<MainWindow>();
         services.AddTransient<UpsellWindow>();
         services.AddTransient<ProfilesWindow>();
         services.AddTransient<AddProfileWindow>();

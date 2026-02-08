@@ -12,15 +12,15 @@ namespace IPTVPlayer.Services;
 /// </summary>
 public class EpgService : IEpgService
 {
-    private readonly IDbContextFactory<AppDbContext> _contextFactory;
+    private readonly AppDbContext _context;
     private readonly HttpClient _httpClient;
     
     public bool IsLoaded { get; private set; }
     public DateTime? LastUpdated { get; private set; }
 
-    public EpgService(IDbContextFactory<AppDbContext> contextFactory, HttpClient httpClient)
+    public EpgService(AppDbContext context, HttpClient httpClient)
     {
-        _contextFactory = contextFactory;
+        _context = context;
         _httpClient = httpClient;
     }
 
@@ -35,10 +35,8 @@ public class EpgService : IEpgService
             using var stream = await response.Content.ReadAsStreamAsync(cts.Token);
             using var reader = System.Xml.XmlReader.Create(stream, new System.Xml.XmlReaderSettings { Async = true });
 
-            using var context = await _contextFactory.CreateDbContextAsync();
-            
             // Clear existing programs (consider optimization if this is too slow for very large DBs)
-            await context.Database.ExecuteSqlRawAsync("DELETE FROM EpgPrograms");
+            await _context.Database.ExecuteSqlRawAsync("DELETE FROM EpgPrograms");
 
             var programs = new List<EpgProgram>();
             var batchSize = 500;
@@ -96,8 +94,8 @@ public class EpgService : IEpgService
 
                     if (programs.Count >= batchSize)
                     {
-                        await context.EpgPrograms.AddRangeAsync(programs);
-                        await context.SaveChangesAsync();
+                        await _context.EpgPrograms.AddRangeAsync(programs);
+                        await _context.SaveChangesAsync();
                         programs.Clear();
                     }
                 }
@@ -106,8 +104,8 @@ public class EpgService : IEpgService
             // Final batch
             if (programs.Any())
             {
-                await context.EpgPrograms.AddRangeAsync(programs);
-                await context.SaveChangesAsync();
+                await _context.EpgPrograms.AddRangeAsync(programs);
+                await _context.SaveChangesAsync();
             }
 
             IsLoaded = true;
@@ -122,21 +120,19 @@ public class EpgService : IEpgService
 
     public async Task<EpgProgram?> GetCurrentProgramAsync(string channelId)
     {
-        using var context = await _contextFactory.CreateDbContextAsync();
         var now = DateTime.UtcNow;
-        return await context.EpgPrograms
+        return await _context.EpgPrograms
             .Where(p => p.ChannelId == channelId && p.StartTime <= now && p.EndTime > now)
             .FirstOrDefaultAsync();
     }
 
     public async Task<List<EpgProgram>> GetProgramsAsync(string channelId, DateTime from, DateTime to)
     {
-        using var context = await _contextFactory.CreateDbContextAsync();
         // Ensure we compare in UTC if stored in UTC
         var fromUtc = from.ToUniversalTime();
         var toUtc = to.ToUniversalTime();
 
-        return await context.EpgPrograms
+        return await _context.EpgPrograms
             .Where(p => p.ChannelId == channelId && p.StartTime >= fromUtc && p.StartTime <= toUtc)
             .OrderBy(p => p.StartTime)
             .ToListAsync();

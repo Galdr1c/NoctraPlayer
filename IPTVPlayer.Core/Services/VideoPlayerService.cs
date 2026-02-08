@@ -28,16 +28,32 @@ public class VideoPlayerService : IVideoPlayerService
         // IPTV optimized options
         var options = new string[]
         {
+            // Hardware Acceleration
             "--avcodec-hw=any",
+            "--vout=direct3d11",           // DirectX 11 renderer
+            
+            // Network Options
             "--network-caching=3000",
+            "--live-caching=1000",         // Canlı TV için daha az buffer
             "--file-caching=3000",
-            "--live-caching=1000",        // Low latency
+            
+            // RTSP Options
+            "--rtsp-tcp",                  // TCP kullan (UDP yerine, daha stabil)
+            "--rtsp-frame-buffer-size=500000",
+            
+            // Sync Options
             "--clock-jitter=0",
             "--clock-synchro=0",
-            "--rtsp-tcp",                 // Stable connection
-            "--no-audio-time-stretch",    // Sync
-            "--drop-late-frames",         // Frame drop
-            "--skip-frames"               // Performance
+            "--no-audio-time-stretch",
+            
+            // Performance
+            "--drop-late-frames",          // Geciken frame'leri at
+            "--skip-frames",               // FPS drop'ta frame atla
+            "--avcodec-threads=4",         // Multi-threading
+            
+            // Logging
+            "--verbose=0",
+            "--quiet"
         };
         
         _libVLC = new LibVLC(options);
@@ -60,13 +76,24 @@ public class VideoPlayerService : IVideoPlayerService
         
         _mediaPlayer.EncounteredError += (s, e) => 
             _dispatcherService.Invoke(() => ErrorOccurred?.Invoke(this, "Video oynatma hatası oluştu"));
+            
+        _mediaPlayer.Buffering += (s, e) =>
+            _dispatcherService.Invoke(() => BufferingChanged?.Invoke(this, e.Cache));
     }
+
+    public event EventHandler<float>? BufferingChanged;
 
     public MediaPlayer? GetMediaPlayer() => _mediaPlayer;
 
     public async Task PlayAsync(string url)
     {
-        if (_mediaPlayer == null) return;
+        System.Diagnostics.Debug.WriteLine($"[VideoPlayerService] PlayAsync called with URL: {url}");
+        
+        if (_mediaPlayer == null)
+        {
+            System.Diagnostics.Debug.WriteLine("[VideoPlayerService] ERROR: _mediaPlayer is null!");
+            return;
+        }
         
         _retryCount = 0;
         await PlayWithRetryAsync(url);
@@ -159,6 +186,16 @@ public class VideoPlayerService : IVideoPlayerService
         {
             if (_mediaPlayer != null && Duration > 0)
                 _mediaPlayer.Position = (float)(value / Duration);
+        }
+    }
+
+    public float PlaybackRate
+    {
+        get => _mediaPlayer?.Rate ?? 1.0f;
+        set
+        {
+            if (_mediaPlayer != null)
+                _mediaPlayer.SetRate(value);
         }
     }
 

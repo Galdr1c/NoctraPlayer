@@ -18,9 +18,10 @@ public partial class VideoOverlayView : UserControl
 
     private void Panel_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
-        if (sender is FrameworkElement element && element.Visibility == Visibility.Visible)
+        if (sender is FrameworkElement element && 
+            element.Visibility == Visibility.Visible && 
+            this.TryFindResource("ShowSideSheetAnim") is System.Windows.Media.Animation.Storyboard sb)
         {
-            var sb = (System.Windows.Media.Animation.Storyboard)this.Resources["ShowSideSheetAnim"];
             sb.Begin(element);
         }
     }

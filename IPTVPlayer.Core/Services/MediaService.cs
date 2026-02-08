@@ -8,17 +8,16 @@ namespace IPTVPlayer.Services;
 
 public class MediaService : IMediaService
 {
-    private readonly IDbContextFactory<AppDbContext> _contextFactory;
+    private readonly AppDbContext _context;
 
-    public MediaService(IDbContextFactory<AppDbContext> contextFactory)
+    public MediaService(AppDbContext context)
     {
-        _contextFactory = contextFactory;
+        _context = context;
     }
 
     public async Task AggregateContentAsync(int playlistId)
     {
-        using var context = await _contextFactory.CreateDbContextAsync();
-        var channels = await context.Channels
+        var channels = await _context.Channels
             .Where(c => c.PlaylistId == playlistId && c.Type == ChannelType.Series)
             .ToListAsync();
 
@@ -59,7 +58,7 @@ public class MediaService : IMediaService
             {
                 series = new Series { Name = seriesName, PlaylistId = playlistId, CoverUrl = channel.LogoUrl, Genre = channel.GroupTitle };
                 seriesGroups[seriesName] = series;
-                context.Series.Add(series);
+                _context.Series.Add(series);
             }
 
             var season = series.Seasons.FirstOrDefault(s => s.SeasonNumber == seasonNum);
@@ -80,13 +79,12 @@ public class MediaService : IMediaService
             season.Episodes.Add(episode);
         }
 
-        await context.SaveChangesAsync();
+        await _context.SaveChangesAsync();
     }
 
     public async Task<List<Series>> GetSeriesAsync(int playlistId)
     {
-        using var context = await _contextFactory.CreateDbContextAsync();
-        return await context.Series
+        return await _context.Series
             .Include(s => s.Seasons)
             .ThenInclude(sn => sn.Episodes)
             .Where(s => s.PlaylistId == playlistId)

@@ -2,6 +2,7 @@ using System.Windows;
 using IPTVPlayer.ViewModels;
 using IPTVPlayer.Services;
 using IPTVPlayer.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace IPTVPlayer.Views;
@@ -22,32 +23,38 @@ public partial class ProfilesWindow : Window
         viewModel.OnProfileSelected += ViewModel_OnProfileSelected;
     }
 
-    private void ViewModel_OnProfileSelected(IPTVPlayer.Models.Profile profile)
+    private async void ViewModel_OnProfileSelected(IPTVPlayer.Models.Profile profile)
     {
         try
         {
-            // Create a new scope for the main window session
-            // Note: We're not disposing this scope here because MainWindow needs to live on.
-            // In a DI scenario with Window lifecycles, usually the App.xaml.cs handles the main scope, 
-            // or we rely on the MainWindow to manage its own scope/dependencies. 
-            // For now, we follow the user's requested flow which implies a fresh scope for the session.
-            var scope = _scopeFactory.CreateScope(); 
+            // Get singleton window/viewmodel FIRST
+            var mainWindow = App.Current.Services.GetRequiredService<MainWindow>();
+            var mainViewModel = App.Current.Services.GetRequiredService<MainViewModel>();
             
-            var mainWindow = scope.ServiceProvider.GetRequiredService<MainWindow>();
-            var mainViewModel = scope.ServiceProvider.GetRequiredService<MainViewModel>();
-            
-            // Assign ViewModel
-            mainWindow.DataContext = mainViewModel;
-            
-            // Load Profile Data (Fire and Forget or await if possible, but void event handler)
-            _ = mainViewModel.LoadProfileAsync(profile);
-            
+            // INSTANT: Show MainWindow immediately (empty/loading state)
             mainWindow.Show();
             Close();
+            
+            // THEN reload profile data asynchronously in background
+            using var scope = _scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<IPTVPlayer.Data.AppDbContext>();
+            
+            var reloadedProfile = await context.Profiles
+                .Include(p => p.ProviderAccount)
+                .FirstOrDefaultAsync(p => p.Id == profile.Id);
+
+            if (reloadedProfile == null)
+            {
+                mainViewModel.StatusMessage = "Profil bulunamadı.";
+                return;
+            }
+            
+            // Load Profile Data in background (UI already visible)
+            await mainViewModel.LoadProfileAsync(reloadedProfile);
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Profil yüklenirken hata oluştu: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
+            System.Diagnostics.Debug.WriteLine($"Profil yüklenirken hata: {ex.Message}");
         }
     }
 

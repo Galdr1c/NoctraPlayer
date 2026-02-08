@@ -5,30 +5,9 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="Resources/Colors.xaml"/>
+                <ResourceDictionary Source="Resources/Converters.xaml"/>
                 <ResourceDictionary Source="Resources/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
-            
-            <!-- Converters -->
-            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-            <converters:FavoriteConverter x:Key="FavoriteConverter"/>
-            <converters:InverseBoolConverter x:Key="InverseBoolConverter"/>
-            <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
-            <converters:ProfileColorConverter x:Key="ProfileColorConverter"/>
-            
-            <!-- New Converters -->
-            <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
-            <converters:BoolToStringConverter x:Key="BoolToStringConverter"/>
-            <converters:EqualityToBoolConverter x:Key="EqualityToBoolConverter"/>
-            <converters:EqualityToBrushConverter x:Key="EqualityToBrushConverter" TrueBrush="{StaticResource AccentBrush}" FalseBrush="Transparent"/>
-            <converters:EqualityToVisibilityConverter x:Key="EqualityToVisibilityConverter"/>
-            <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
-            <converters:AvatarPathConverter x:Key="AvatarPathConverter"/>
-            <converters:EqualityToBoolMultiConverter x:Key="EqualityToBoolMultiConverter"/>
-            <converters:AvatarExpressionConverter x:Key="AvatarExpressionConverter"/>
-            <converters:StringContainsConverter x:Key="StringContainsConverter"/>
-            <converters:BoolToPlayPauseIconConverter x:Key="BoolToPlayPauseIconConverter"/>
-            <converters:StringToVisibilityConverter x:Key="StringNotEmptyToVisibilityConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

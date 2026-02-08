@@ -44,6 +44,11 @@ public interface IVideoPlayerService : IDisposable
     double Position { get; set; }
     
     /// <summary>
+    /// Oynatma hızı (0.5 - 2.0)
+    /// </summary>
+    float PlaybackRate { get; set; }
+    
+    /// <summary>
     /// VOD için toplam süre (saniye)
     /// </summary>
     double Duration { get; }
@@ -82,6 +87,11 @@ public interface IVideoPlayerService : IDisposable
     /// LibVLC MediaPlayer nesnesini döner (Sadece UI/VideoView bağlama için)
     /// </summary>
     LibVLCSharp.Shared.MediaPlayer? GetMediaPlayer();
+
+    /// <summary>
+    /// Buffering durumu değiştiğinde (0-100)
+    /// </summary>
+    event EventHandler<float>? BufferingChanged;
 
     /// <summary>
     /// Hata oluştuğunda

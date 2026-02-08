@@ -1,5 +1,8 @@
 ﻿using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
+using System.Windows.Media.Animation;
 using IPTVPlayer.Models;
 using IPTVPlayer.Services;
 using IPTVPlayer.Services.Interfaces;
@@ -12,27 +15,41 @@ namespace IPTVPlayer;
 /// </summary>
 public partial class MainWindow : Window
 {
-    private readonly MainViewModel _viewModel;
+    private MainViewModel _viewModel;
     private readonly PlayerViewModel _playerViewModel;
+    private readonly IVideoPlayerService _videoPlayerService;
+    private readonly HoverPreviewService _hoverPreviewService;
     private bool _isDarkTheme = true;
 
-    public MainWindow(MainViewModel viewModel, PlayerViewModel playerViewModel, WatermarkViewModel watermarkViewModel, IVideoPlayerService videoPlayerService)
+    public MainWindow(MainViewModel viewModel, PlayerViewModel playerViewModel, 
+                      IVideoPlayerService videoPlayerService,
+                      HoverPreviewService hoverPreviewService)
     {
         InitializeComponent();
         
         _viewModel = viewModel;
         _playerViewModel = playerViewModel;
+        _videoPlayerService = videoPlayerService;
+        _hoverPreviewService = hoverPreviewService;
         DataContext = _viewModel;
+        
+        // Set DataContext explicitly
+        OverlayView.DataContext = _playerViewModel;
+        Panel.SetZIndex(OverlayView, 1000);
         
         PlayerArea.DataContext = _playerViewModel;
         _playerViewModel.CloseRequested += (s, e) =>
         {
             PlayerArea.Visibility = Visibility.Collapsed;
+            VideoView.MediaPlayer = null; // Detach to reset HWND hook
             ShowMainContent();
+            
+            // Ensure cursor is visible when leaving player
+            Cursor = Cursors.Arrow;
         };
 
         // Video player'ı bağla
-        VideoView.MediaPlayer = videoPlayerService.GetMediaPlayer();
+        VideoView.MediaPlayer = _videoPlayerService.GetMediaPlayer();
 
         // Window sürükleme
         MouseLeftButtonDown += (s, e) =>
@@ -46,6 +63,23 @@ public partial class MainWindow : Window
             await _viewModel.InitializeAsync();
         };
 
+        // Subscribe to DataContext changes to handle ViewModel reassignment from ProfilesWindow
+        DataContextChanged += (s, e) =>
+        {
+            if (e.OldValue is MainViewModel oldVm)
+            {
+                oldVm.OnMediaSelected -= OnMediaSelected;
+            }
+            if (e.NewValue is MainViewModel newVm)
+            {
+                _viewModel = newVm;
+                newVm.OnMediaSelected += OnMediaSelected;
+            }
+        };
+
+        // Initial subscription
+        _viewModel.OnMediaSelected += OnMediaSelected;
+
         _playerViewModel.PropertyChanged += (s, e) =>
         {
             if (e.PropertyName == nameof(_playerViewModel.IsFullScreen))
@@ -56,18 +90,51 @@ public partial class MainWindow : Window
                     WindowState = WindowState.Normal;
             }
         };
+
+        _viewModel.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(_viewModel.IsSearchOverlayVisible))
+            {
+                if (_viewModel.IsSearchOverlayVisible)
+                {
+                    // Focus search box after UI updates
+                    Dispatcher.BeginInvoke(() => SearchInput.Focus(), DispatcherPriority.Input);
+                }
+            }
+        };
+
+        // InitializeControlsTimer(); // Conflict with PlayerViewModel logic
+        
+        // PreviewKeyDown ile global key handling
+        PreviewKeyDown += Window_PreviewKeyDown;
+    }
+
+    private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            if (_playerViewModel.IsAudioSettingsOpen || _playerViewModel.IsQualitySettingsOpen)
+            {
+                _playerViewModel.ClosePanelsCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (PlayerArea.Visibility == Visibility.Visible)
+            {
+                PlayerArea.Visibility = Visibility.Collapsed;
+                VideoView.MediaPlayer = null; // Detach to reset HWND hook
+                ShowMainContent();
+                Cursor = Cursors.Arrow;
+                _playerViewModel.ClosePlayerCommand.Execute(null);
+                e.Handled = true;
+            }
+        }
     }
 
     private void ChannelCard_Click(object sender, MouseButtonEventArgs e)
     {
         if (sender is FrameworkElement element && element.DataContext is Channel channel)
         {
-            // Tek otorite: PlayerViewModel
-            _ = _playerViewModel.PlayChannelAsync(channel);
-            
-            // Video player'ı göster
-            PlayerArea.Visibility = Visibility.Visible;
-            HideMainContent();
+            PlayChannel(channel);
         }
         else if (sender is FrameworkElement seriesElement && seriesElement.DataContext is Series series)
         {
@@ -76,19 +143,92 @@ public partial class MainWindow : Window
         }
     }
 
-    private void HideMainContent()
+    private void OnMediaSelected(object media)
     {
-        HomeView.Visibility = Visibility.Collapsed;
-        MoviesView.Visibility = Visibility.Collapsed;
-        SeriesView.Visibility = Visibility.Collapsed;
-        SearchView.Visibility = Visibility.Collapsed;
-        if (LiveView != null) LiveView.Visibility = Visibility.Collapsed;
+        try
+        {
+            if (media is Channel channel)
+            {
+                PlayChannel(channel);
+            }
+            else if (media is Series series)
+            {
+                // Series detail view will be shown by ViewModel
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"OnMediaSelected error: {ex}");
+        }
+    }
+
+    private void PlayChannel(Channel channel)
+    {
+        try
+        {
+            // Sync profile ID for watch history
+            if (_viewModel != null)
+                _playerViewModel.CurrentProfileId = _viewModel.CurrentProfileId;
+            
+            // Tek otorite: PlayerViewModel
+            _ = _playerViewModel.PlayChannelAsync(channel);
+            
+            // Video player'ı göster
+            PlayerArea.Visibility = Visibility.Visible;
+            MiniPlayer.Visibility = Visibility.Collapsed;
+            MiniVideoView.MediaPlayer = null;
+            
+            // ALways re-attach to ensure HWND is hooked correctly
+            // Detach first just in case
+            VideoView.MediaPlayer = null; 
+
+            if (VideoView.IsLoaded)
+            {
+                VideoView.MediaPlayer = _videoPlayerService.GetMediaPlayer();
+            }
+            else
+            {
+                VideoView.Loaded += (s, e) => 
+                {
+                    if (VideoView.MediaPlayer == null)
+                        VideoView.MediaPlayer = _videoPlayerService.GetMediaPlayer();
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"PlayChannel error: {ex}");
+            MessageBox.Show($"Video oynatılamadı: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
     private void ShowMainContent()
     {
-        // View-model'e göre geri yükle
-        _viewModel.NavigateCommand.Execute(_viewModel.ActiveView);
+        // Force visibility of views based on ViewModel state
+        // This is necessary because we stopped collapsing them in PlayChannel, but if we did, we need to restore.
+        // Also, if navigation state is messed up, this fixes it.
+        
+        // Ensure Home/Etc are visible if ActiveView matches
+        // Binding should handle it, but let's trigger update
+        // _viewModel.OnPropertyChanged(nameof(_viewModel.ActiveView)); // Protected, removed
+        
+        // Manual visibility restore just in case
+        if (_viewModel.ActiveView == AppView.Home) HomeView.Visibility = Visibility.Visible;
+        else if (_viewModel.ActiveView == AppView.Movies) MoviesView.Visibility = Visibility.Visible;
+        else if (_viewModel.ActiveView == AppView.Series) SeriesView.Visibility = Visibility.Visible;
+        else if (_viewModel.ActiveView == AppView.Search) SearchView.Visibility = Visibility.Visible;
+        if (LiveView != null && _viewModel.ActiveView == AppView.Live) LiveView.Visibility = Visibility.Visible;
+
+        // PiP logic: If video is playing, show mini player
+        if (_playerViewModel.IsPlaying)
+        {
+            MiniPlayer.Visibility = Visibility.Visible;
+            MiniVideoView.MediaPlayer = _videoPlayerService.GetMediaPlayer();
+        }
+        else
+        {
+            MiniPlayer.Visibility = Visibility.Collapsed;
+        }
     }
 
     private void GroupItem_Click(object sender, MouseButtonEventArgs e)
@@ -127,6 +267,62 @@ public partial class MainWindow : Window
         // TODO: Tema değişikliği uygulanacak
     }
 
+    private void SearchInput_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            _viewModel.CommitSearchCommand.Execute(null);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape)
+        {
+            _viewModel.CloseSearchCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
+    private async void MediaCard_MouseEnter(object sender, MouseEventArgs e)
+    {
+        if (sender is Border card && card.DataContext is Channel media)
+        {
+            if (string.IsNullOrEmpty(media.StreamUrl)) return;
+
+            // Find preview container and video view inside the card
+            var previewContainer = card.FindName("PreviewContainer") as Border;
+            var videoView = card.FindName("PreviewVideoView") as LibVLCSharp.WPF.VideoView;
+
+            if (previewContainer != null && videoView != null)
+            {
+                await _hoverPreviewService.StartPreviewAsync(media.StreamUrl, previewContainer, videoView);
+            }
+        }
+    }
+
+    private void MediaCard_MouseLeave(object sender, MouseEventArgs e)
+    {
+        _hoverPreviewService.StopPreview();
+    }
+
+    private void HomeView_ScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+        if (ParallaxTransform != null)
+        {
+            // Parallax: 30% of scroll speed
+            ParallaxTransform.Y = e.VerticalOffset * 0.3;
+        }
+
+        if (HeroZoomTransform != null)
+        {
+            // Subtle zoom as we scroll
+            double zoomFactor = 1.0 + (e.VerticalOffset / 2500); // 1.1 at 250px scroll
+            HeroZoomTransform.ScaleX = zoomFactor;
+            HeroZoomTransform.ScaleY = zoomFactor;
+            
+            // Fade out the hero section as we scroll down
+            HeroGrid.Opacity = Math.Max(0.2, 1.0 - (e.VerticalOffset / 800));
+        }
+    }
+
     private void MinimizeButton_Click(object sender, RoutedEventArgs e)
     {
         WindowState = WindowState.Minimized;
@@ -144,8 +340,29 @@ public partial class MainWindow : Window
         Application.Current.Shutdown();
     }
 
+    private void CloseMiniPlayer_Click(object sender, RoutedEventArgs e)
+    {
+        MiniPlayer.Visibility = Visibility.Collapsed;
+        MiniVideoView.MediaPlayer = null;
+        _playerViewModel.PlayPauseCommand.Execute(null); // Stop playback
+    }
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
+        if (e.Handled) return;
+
+        // Don't intercept shortcuts if any TextBox has focus (typing) or overlay is open
+        if (Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase || 
+            _viewModel.IsSearchOverlayVisible ||
+            e.OriginalSource is System.Windows.Controls.Primitives.TextBoxBase)
+        {
+            if (e.Key != Key.Escape)
+            {
+                base.OnKeyDown(e);
+                return;
+            }
+        }
+
         base.OnKeyDown(e);
 
         // Keyboard shortcuts
@@ -160,19 +377,7 @@ public partial class MainWindow : Window
                 _playerViewModel.ToggleFullScreenCommand.Execute(null);
                 e.Handled = true;
                 break;
-            case Key.Escape:
-                if (_playerViewModel.IsAudioSettingsOpen || _playerViewModel.IsQualitySettingsOpen)
-                {
-                    _playerViewModel.ClosePanelsCommand.Execute(null);
-                    e.Handled = true;
-                }
-                else if (PlayerArea.Visibility == Visibility.Visible)
-                {
-                    PlayerArea.Visibility = Visibility.Collapsed;
-                    ShowMainContent();
-                    e.Handled = true;
-                }
-                break;
+            // Escape is handled in PreviewKeyDown
             case Key.Left:
                 _playerViewModel.SkipBackwardCommand.Execute(null);
                 e.Handled = true;

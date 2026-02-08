@@ -13,10 +13,14 @@ public class Series
     public int? ReleaseYear { get; set; }
     public double? Rating { get; set; }
     public int PlaylistId { get; set; }
+    public bool IsInMyList { get; set; }
     
     // Navigation properties
     public Playlist? Playlist { get; set; }
     public ICollection<Season> Seasons { get; set; } = new List<Season>();
+
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public string? GroupTitle => Genre;
 }
 
 /// <summary>
@@ -53,4 +57,17 @@ public class Episode
     
     // Navigation property
     public Season? Season { get; set; }
+
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public double WatchedPercentage
+    {
+        get
+        {
+            if (Duration == null || Duration.Value.TotalSeconds <= 0 || WatchedPosition == null)
+                return 0;
+
+            var percent = (WatchedPosition.Value.TotalSeconds / Duration.Value.TotalSeconds) * 100;
+            return Math.Clamp(percent, 0, 100);
+        }
+    }
 }

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
+using IPTVPlayer.Models;
 
 namespace IPTVPlayer.Converters;
 
@@ -259,6 +260,57 @@ public class BoolToPlayPauseIconConverter : IValueConverter
         if (value is bool isPlaying && isPlaying)
             return "⏸"; // Pause
         return "▶"; // Play
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+}
+
+public class MediaThumbnailConverter : IValueConverter
+{
+    public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is Channel channel) return channel.LogoUrl;
+        if (value is Series series) return series.CoverUrl;
+        return null;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+}
+public class DoubleToFloatConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value != null && float.TryParse(value.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out float result))
+            return result;
+        if (parameter != null && float.TryParse(parameter.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out float pResult))
+            return pResult;
+        return 1.0f;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+}
+
+public class PercentToWidthConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is double percentage && parameter != null && double.TryParse(parameter.ToString(), out double totalWidth))
+        {
+            return (percentage / 100.0) * totalWidth;
+        }
+        return 0.0;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+}
+
+public class BoolToIconConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is bool isInList)
+            return isInList ? "✓" : "+";
+        return "+";
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();

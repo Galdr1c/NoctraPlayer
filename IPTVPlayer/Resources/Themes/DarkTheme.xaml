@@ -6,28 +6,31 @@
          ========================================== -->
     
     <!-- BASE COLORS (Dark) -->
-    <Color x:Key="Bg0Color">#0B0614</Color>
-    <Color x:Key="Bg1Color">#120A24</Color>
-    <Color x:Key="Surface0Color">#16102A</Color>
-    <Color x:Key="Surface1Color">#1E1636</Color>
-    <Color x:Key="BorderColor">#2A1F4A</Color>
+    <Color x:Key="Bg0Color">#141414</Color>        <!-- Netflix exact bg -->
+    <Color x:Key="Bg1Color">#1A1A1A</Color>
+    <Color x:Key="Surface0Color">#2A2A2A</Color>
+    <Color x:Key="Surface1Color">#333333</Color>
+    <Color x:Key="BorderColor">#404040</Color>
     
     <!-- ACCENT COLORS (Purple) -->
-    <Color x:Key="Accent500Color">#7C3AED</Color>
-    <Color x:Key="Accent600Color">#6D28D9</Color>
-    <Color x:Key="Accent300Color">#A78BFA</Color>
-    <Color x:Key="GlowColor">#A855F7</Color>
+    <Color x:Key="Accent300Color">#C4B5FD</Color>  <!-- Extra light purple (Glow) -->
+    <Color x:Key="Accent500Color">#A78BFA</Color>  <!-- Light purple -->
+    <Color x:Key="Accent600Color">#8B5CF6</Color>  <!-- Main purple -->
+    <Color x:Key="Accent700Color">#7C3AED</Color>  <!-- Deep purple -->
+    <Color x:Key="GlowColor">#C4B5FD</Color>       <!-- Light glow -->
     
     <!-- TEXT COLORS -->
-    <Color x:Key="TextPrimaryColor">#F5F3FF</Color>
-    <Color x:Key="TextSecondaryColor">#C4B5FD</Color>
-    <Color x:Key="TextMutedColor">#9CA3AF</Color>
+    <Color x:Key="TextPrimaryColor">#FFFFFF</Color>
+    <Color x:Key="TextSecondaryColor">#E5E5E5</Color>
+    <Color x:Key="TextMutedColor">#B3B3B3</Color>
+    <Color x:Key="TextDisabledColor">#808080</Color>
     
     <!-- STATUS COLORS -->
-    <Color x:Key="SuccessColor">#22C55E</Color>
-    <Color x:Key="WarningColor">#F59E0B</Color>
-    <Color x:Key="ErrorColor">#EF4444</Color>
-    <Color x:Key="LiveRedColor">#EF4444</Color>
+    <Color x:Key="SuccessColor">#46D369</Color>
+    <Color x:Key="WarningColor">#FFA00A</Color>
+    <Color x:Key="ErrorColor">#E50914</Color>      <!-- Netflix red -->
+    <Color x:Key="InfoColor">#54B4D3</Color>
+    <Color x:Key="LiveRedColor">#E50914</Color>
     
     <!-- ==========================================
          SOLID COLOR BRUSHES
@@ -50,11 +53,13 @@
     <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}"/>
     <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}"/>
     <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource TextMutedColor}"/>
+    <SolidColorBrush x:Key="TextDisabledBrush" Color="{StaticResource TextDisabledColor}"/>
     
     <!-- Status -->
     <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}"/>
     <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}"/>
     <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}"/>
+    <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource InfoColor}"/>
     <SolidColorBrush x:Key="LiveRedBrush" Color="{StaticResource LiveRedColor}"/>
     
     <!-- Legacy Compatibility -->
@@ -71,8 +76,8 @@
     
     <!-- Primary Accent Gradient -->
     <LinearGradientBrush x:Key="PrimaryGradientBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="{StaticResource Accent500Color}" Offset="0.0"/>
-        <GradientStop Color="{StaticResource Accent600Color}" Offset="1.0"/>
+        <GradientStop Color="#8B5CF6" Offset="0.0"/>
+        <GradientStop Color="#7C3AED" Offset="1.0"/>
     </LinearGradientBrush>
     
     <!-- Background Gradient (for windows) -->
@@ -96,8 +101,8 @@
     <!-- Hero Overlay Gradient -->
     <LinearGradientBrush x:Key="HeroOverlayBrush" StartPoint="0,0" EndPoint="0,1">
         <GradientStop Color="Transparent" Offset="0.0"/>
-        <GradientStop Color="#CC0B0614" Offset="0.7"/>
-        <GradientStop Color="{StaticResource Bg0Color}" Offset="1.0"/>
+        <GradientStop Color="#99141414" Offset="0.5"/>
+        <GradientStop Color="#141414" Offset="1.0"/>
     </LinearGradientBrush>
 
     <!-- Premium Icon Gradient (#6D28D9 → #A855F7 diagonal) -->
@@ -108,8 +113,8 @@
     
     <!-- Card Hover Gradient -->
     <LinearGradientBrush x:Key="CardHoverGradientBrush" StartPoint="0,0" EndPoint="1,0">
-        <GradientStop Color="{StaticResource Surface1Color}" Offset="0.0"/>
-        <GradientStop Color="#251A40" Offset="1.0"/>
+        <GradientStop Color="#333333" Offset="0.0"/>
+        <GradientStop Color="#404040" Offset="1.0"/>
     </LinearGradientBrush>
     
     <!-- ==========================================
@@ -118,11 +123,20 @@
     
     <!-- Shadows -->
     <DropShadowEffect x:Key="DefaultShadow" BlurRadius="10" ShadowDepth="2" Direction="270" Color="#000000" Opacity="0.5"/>
-    <DropShadowEffect x:Key="CardShadow" BlurRadius="20" ShadowDepth="5" Direction="270" Color="#000000" Opacity="0.4"/>
+    <DropShadowEffect x:Key="CardShadow" 
+                      BlurRadius="24" 
+                      ShadowDepth="8" 
+                      Direction="270" 
+                      Color="#000000" 
+                      Opacity="0.5"/>
     <DropShadowEffect x:Key="HeroShadow" BlurRadius="40" ShadowDepth="10" Direction="270" Color="#000000" Opacity="0.6"/>
     
     <!-- Glow Effects -->
-    <DropShadowEffect x:Key="AccentGlow" BlurRadius="20" ShadowDepth="0" Direction="0" Color="{StaticResource GlowColor}" Opacity="0.5"/>
+    <DropShadowEffect x:Key="AccentGlow" 
+                      BlurRadius="20" 
+                      ShadowDepth="0" 
+                      Color="#A78BFA" 
+                      Opacity="0.4"/>
     <DropShadowEffect x:Key="FocusGlow" BlurRadius="15" ShadowDepth="0" Direction="0" Color="{StaticResource Accent500Color}" Opacity="0.6"/>
     
     <!-- ==========================================
