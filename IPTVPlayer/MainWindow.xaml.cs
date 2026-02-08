@@ -20,6 +20,8 @@ public partial class MainWindow : Window
     private readonly IVideoPlayerService _videoPlayerService;
     private readonly HoverPreviewService _hoverPreviewService;
     private bool _isDarkTheme = true;
+    private WindowState _previousWindowState;
+    private bool _isPlayerMode;
 
     public MainWindow(MainViewModel viewModel, PlayerViewModel playerViewModel, 
                       IVideoPlayerService videoPlayerService,
@@ -43,6 +45,7 @@ public partial class MainWindow : Window
             PlayerArea.Visibility = Visibility.Collapsed;
             VideoView.MediaPlayer = null; // Detach to reset HWND hook
             ShowMainContent();
+            ExitPlayerMode();
             
             // Ensure cursor is visible when leaving player
             Cursor = Cursors.Arrow;
@@ -120,10 +123,6 @@ public partial class MainWindow : Window
             }
             else if (PlayerArea.Visibility == Visibility.Visible)
             {
-                PlayerArea.Visibility = Visibility.Collapsed;
-                VideoView.MediaPlayer = null; // Detach to reset HWND hook
-                ShowMainContent();
-                Cursor = Cursors.Arrow;
                 _playerViewModel.ClosePlayerCommand.Execute(null);
                 e.Handled = true;
             }
@@ -172,6 +171,10 @@ public partial class MainWindow : Window
             
             // Tek otorite: PlayerViewModel
             _ = _playerViewModel.PlayChannelAsync(channel);
+
+            EnterPlayerMode();
+            _viewModel.CloseSearchCommand.Execute(null);
+            _viewModel.IsSeriesDetailVisible = false;
             
             // Video player'ı göster
             PlayerArea.Visibility = Visibility.Visible;
@@ -200,6 +203,29 @@ public partial class MainWindow : Window
             System.Diagnostics.Debug.WriteLine($"PlayChannel error: {ex}");
             MessageBox.Show($"Video oynatılamadı: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
+    }
+
+    private void EnterPlayerMode()
+    {
+        if (_isPlayerMode)
+        {
+            return;
+        }
+
+        _isPlayerMode = true;
+        _previousWindowState = WindowState;
+        WindowState = WindowState.Maximized;
+    }
+
+    private void ExitPlayerMode()
+    {
+        if (!_isPlayerMode)
+        {
+            return;
+        }
+
+        WindowState = _previousWindowState;
+        _isPlayerMode = false;
     }
 
     private void ShowMainContent()

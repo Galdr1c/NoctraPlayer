@@ -38,20 +38,13 @@ public partial class VideoOverlayView : UserControl
     {
         if (DataContext is PlayerViewModel vm)
         {
-            // Toggle visibility if not interacting with controls
-            // Actually, if we click on "background", we want to toggle.
-            // But if control is visible, maybe just show it?
-            // Noctra behavior: Click on video pauses/plays OR shows overlay.
-            // Here let's just show it. Or toggle play/pause if double click?
-            
-            // For now, assume single click wakes up overlay.
-            vm.UserInteractionCommand.Execute(null);
-            
-            // If overlay was already visible, maybe toggle play/pause?
-            if (vm.IsVisible)
+            if (e.ClickCount == 2)
             {
-                vm.PlayPauseCommand.Execute(null);
+                vm.ToggleFullScreenCommand.Execute(null);
+                return;
             }
+
+            vm.UserInteractionCommand.Execute(null);
         }
     }
 

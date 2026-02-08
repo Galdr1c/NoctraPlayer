@@ -524,6 +524,7 @@ public partial class MainViewModel : ObservableObject
         };
         
         SelectChannel(channel);
+        OnMediaSelected?.Invoke(channel);
         IsSeriesDetailVisible = false;
     }
 

@@ -42,7 +42,25 @@
         <!-- ==========================================
              OVERLAY CONTENT (Visible when interacting) 
              ========================================== -->
-        <Grid x:Name="OverlayRoot">
+        <Grid x:Name="OverlayRoot" Opacity="0" IsHitTestVisible="False">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsVisible}" Value="True">
+                            <Setter Property="IsHitTestVisible" Value="True"/>
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard Storyboard="{StaticResource ShowOverlayAnim}"/>
+                            </DataTrigger.EnterActions>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsVisible}" Value="False">
+                            <Setter Property="IsHitTestVisible" Value="False"/>
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard Storyboard="{StaticResource HideOverlayAnim}"/>
+                            </DataTrigger.EnterActions>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
 
             <!-- 1. Gradient Scrims (Readability Layer) -->
             <Grid IsHitTestVisible="False">

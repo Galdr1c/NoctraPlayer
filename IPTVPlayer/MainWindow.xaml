@@ -61,6 +61,147 @@
                 <RowDefinition Height="48"/>   <!-- Status Bar -->
             </Grid.RowDefinitions>
 
+            <!-- Video Player Area (Hidden by default) -->
+            <Grid x:Name="PlayerArea" Background="Black" Visibility="Collapsed" Grid.RowSpan="3" Panel.ZIndex="2000">
+                <vlc:VideoView x:Name="VideoView"/>
+                
+                <!-- Watermark Overlay (Free Tier Only) -->
+                <views:WatermarkView DataContext="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=WatermarkViewModel}" Panel.ZIndex="999" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,100"/>
+                
+                <!-- Player Controls Overlay -->
+                <!-- Video Overlay (Controls, Scrim, Info) -->
+                <views:VideoOverlayView x:Name="OverlayView" Panel.ZIndex="2000"/>
+
+                <!-- Next Episode Prompt -->
+                <Border x:Name="NextEpisodePrompt"
+                        Background="#DD000000"
+                        CornerRadius="12"
+                        Padding="24"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,40,40"
+                        Width="350"
+                        Visibility="Collapsed">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsNextEpisodePromptVisible}" Value="True">
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="Visible"/>
+                                                </ObjectAnimationUsingKeyFrames>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                               To="1" Duration="0:0:0.3"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
+                                    <DataTrigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                               To="0" Duration="0:0:0.3"/>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+                                                    <DiscreteObjectKeyFrame KeyTime="0:0:0.3" Value="Collapsed"/>
+                                                </ObjectAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.ExitActions>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Text="Sonraki Bölüm" 
+                                   FontSize="14" 
+                                   Foreground="#B3B3B3"
+                                   Margin="0,0,0,8"/>
+                        
+                        <StackPanel Grid.Row="1" Margin="0,0,0,16">
+                            <TextBlock Text="{Binding NextEpisode.Name}"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Foreground="White"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding NextEpisode.Plot}"
+                                       FontSize="14"
+                                       Foreground="#B3B3B3"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxHeight="40"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+                        
+                        <Button Grid.Row="2"
+                                Content="▶ Şimdi İzle"
+                                Command="{Binding PlayNextEpisodeCommand}"
+                                Background="White"
+                                Foreground="Black"
+                                FontSize="16"
+                                FontWeight="Bold"
+                                Padding="20,12"
+                                BorderThickness="0"
+                                HorizontalAlignment="Stretch"
+                                Cursor="Hand"/>
+                    </Grid>
+                </Border>
+
+                <!-- Skip Intro Button -->
+                <Button x:Name="SkipIntroButton"
+                        Command="{Binding SkipIntroCommand}"
+                        Content="İntro'yu Geç ›"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,100,120"
+                        Padding="24,12"
+                        Background="#E5E5E5"
+                        Foreground="Black"
+                        FontSize="16"
+                        FontWeight="Bold"
+                        BorderThickness="0"
+
+                        Cursor="Hand"
+                        Opacity="0"
+                        Visibility="Collapsed">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsIntroDetected}" Value="True">
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="Visible"/>
+                                                </ObjectAnimationUsingKeyFrames>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                               To="1" Duration="0:0:0.3"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
+                                    <DataTrigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                               To="0" Duration="0:0:0.3"/>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+                                                    <DiscreteObjectKeyFrame KeyTime="0:0:0.3" Value="Collapsed"/>
+                                                </ObjectAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.ExitActions>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </Grid>
+
             <!-- ==========================================
                  HEADER BAR
                  ========================================== -->
@@ -320,147 +461,6 @@
 
                 <!-- MAIN CONTENT -->
                 <Grid Grid.Column="1">
-                    <!-- Video Player Area (Hidden by default) -->
-                    <Grid x:Name="PlayerArea" Background="Black" Visibility="Collapsed">
-                        <vlc:VideoView x:Name="VideoView"/>
-                        
-                        <!-- Watermark Overlay (Free Tier Only) -->
-                        <views:WatermarkView DataContext="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=WatermarkViewModel}" Panel.ZIndex="999" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,100"/>
-                        
-                        <!-- Player Controls Overlay -->
-                        <!-- Video Overlay (Controls, Scrim, Info) -->
-                        <views:VideoOverlayView x:Name="OverlayView" Panel.ZIndex="2000"/>
-
-                        <!-- Next Episode Prompt -->
-                        <Border x:Name="NextEpisodePrompt"
-                                Background="#DD000000"
-                                CornerRadius="12"
-                                Padding="24"
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Bottom"
-                                Margin="0,0,40,40"
-                                Width="350"
-                                Visibility="Collapsed">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsNextEpisodePromptVisible}" Value="True">
-                                            <DataTrigger.EnterActions>
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="Visible"/>
-                                                        </ObjectAnimationUsingKeyFrames>
-                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                                       To="1" Duration="0:0:0.3"/>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </DataTrigger.EnterActions>
-                                            <DataTrigger.ExitActions>
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                                       To="0" Duration="0:0:0.3"/>
-                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                                                            <DiscreteObjectKeyFrame KeyTime="0:0:0.3" Value="Collapsed"/>
-                                                        </ObjectAnimationUsingKeyFrames>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </DataTrigger.ExitActions>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-                                
-                                <TextBlock Text="Sonraki Bölüm" 
-                                           FontSize="14" 
-                                           Foreground="#B3B3B3"
-                                           Margin="0,0,0,8"/>
-                                
-                                <StackPanel Grid.Row="1" Margin="0,0,0,16">
-                                    <TextBlock Text="{Binding NextEpisode.Name}"
-                                               FontSize="18"
-                                               FontWeight="SemiBold"
-                                               Foreground="White"
-                                               TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding NextEpisode.Plot}"
-                                               FontSize="14"
-                                               Foreground="#B3B3B3"
-                                               TextTrimming="CharacterEllipsis"
-                                               MaxHeight="40"
-                                               Margin="0,4,0,0"/>
-                                </StackPanel>
-                                
-                                <Button Grid.Row="2"
-                                        Content="▶ Şimdi İzle"
-                                        Command="{Binding PlayNextEpisodeCommand}"
-                                        Background="White"
-                                        Foreground="Black"
-                                        FontSize="16"
-                                        FontWeight="Bold"
-                                        Padding="20,12"
-                                        BorderThickness="0"
-                                        HorizontalAlignment="Stretch"
-                                        Cursor="Hand"/>
-                            </Grid>
-                        </Border>
-
-                        <!-- Skip Intro Button -->
-                        <Button x:Name="SkipIntroButton"
-                                Command="{Binding SkipIntroCommand}"
-                                Content="İntro'yu Geç ›"
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Bottom"
-                                Margin="0,0,100,120"
-                                Padding="24,12"
-                                Background="#E5E5E5"
-                                Foreground="Black"
-                                FontSize="16"
-                                FontWeight="Bold"
-                                BorderThickness="0"
-
-                                Cursor="Hand"
-                                Opacity="0"
-                                Visibility="Collapsed">
-                            <Button.Style>
-                                <Style TargetType="Button">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsIntroDetected}" Value="True">
-                                            <DataTrigger.EnterActions>
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="Visible"/>
-                                                        </ObjectAnimationUsingKeyFrames>
-                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                                       To="1" Duration="0:0:0.3"/>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </DataTrigger.EnterActions>
-                                            <DataTrigger.ExitActions>
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                                       To="0" Duration="0:0:0.3"/>
-                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                                                            <DiscreteObjectKeyFrame KeyTime="0:0:0.3" Value="Collapsed"/>
-                                                        </ObjectAnimationUsingKeyFrames>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </DataTrigger.ExitActions>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                    </Grid>
-
                     <!-- 1. HOME VIEW (Hero + Rails) -->
                     <ScrollViewer x:Name="HomeView" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                   ScrollChanged="HomeView_ScrollChanged"
