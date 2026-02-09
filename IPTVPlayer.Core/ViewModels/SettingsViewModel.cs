@@ -1,122 +1,154 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using IPTVPlayer.Models;
 using IPTVPlayer.Services.Interfaces;
 
 namespace IPTVPlayer.ViewModels;
 
-/// <summary>
-/// Ayarlar view model
-/// </summary>
 public partial class SettingsViewModel : ObservableObject
 {
     private readonly IPlaylistService _playlistService;
     private readonly IEpgService _epgService;
     private readonly IThemeService _themeService;
+    private readonly ILicenseService _licenseService;
+    private readonly IDialogService _dialogService;
 
     [ObservableProperty]
-    private bool _isDarkTheme = true;
+    private Profile? _currentProfile;
 
     [ObservableProperty]
-    private string _newPlaylistName = string.Empty;
+    private UserSettings _settings = new();
 
     [ObservableProperty]
-    private string _newPlaylistUrl = string.Empty;
+    private UserSettings _originalSettings = new();
 
     [ObservableProperty]
-    private string _epgUrl = string.Empty;
+    private bool _hasUnsavedChanges;
 
     [ObservableProperty]
-    private bool _isEpgLoading;
+    private bool _isPremium;
 
-    [ObservableProperty]
-    private string _statusMessage = string.Empty;
-
-    [ObservableProperty]
-    private int _defaultVolume = 100;
-
-    [ObservableProperty]
-    private bool _autoPlay = true;
-
-    [ObservableProperty]
-    private bool _rememberLastChannel = true;
-
-    public SettingsViewModel(IPlaylistService playlistService, IEpgService epgService, IThemeService themeService)
+    public SettingsViewModel(
+        IPlaylistService playlistService,
+        IEpgService epgService,
+        IThemeService themeService,
+        ILicenseService licenseService,
+        IDialogService dialogService)
     {
         _playlistService = playlistService;
         _epgService = epgService;
         _themeService = themeService;
-        
+        _licenseService = licenseService;
+        _dialogService = dialogService;
+
+        IsPremium = _licenseService.IsPremium;
         LoadSettings();
+    }
+
+    public void Initialize(Profile profile)
+    {
+        CurrentProfile = profile;
     }
 
     private void LoadSettings()
     {
-        // Uygulama ayarlarını yükle (örn. Properties.Settings veya JSON config)
-        // Şimdilik varsayılan değerler kullanılıyor
+        Settings = new UserSettings
+        {
+            AutoPlayNext = true,
+            AutoSkipIntro = false,
+            AutoPlayPreviews = false,
+            Quality = "Auto",
+            SubtitleFontSize = 20,
+            SubtitleBackgroundOpacity = 75,
+            DefaultAudioLanguage = "tr",
+            DefaultSubtitleLanguage = "off"
+        };
+
+        OriginalSettings = Settings.Clone();
+        TrackChanges();
+    }
+
+    private void TrackChanges()
+    {
+        Settings.PropertyChanged += (s, e) =>
+        {
+            HasUnsavedChanges = !Settings.Equals(OriginalSettings);
+        };
     }
 
     [RelayCommand]
-    private async Task AddPlaylistAsync()
+    private async Task SaveSettingsAsync()
     {
-        if (string.IsNullOrWhiteSpace(NewPlaylistName) || string.IsNullOrWhiteSpace(NewPlaylistUrl))
-        {
-            StatusMessage = "Lütfen playlist adı ve URL'sini girin";
-            return;
-        }
-
         try
         {
-            StatusMessage = "Playlist ekleniyor...";
-            var playlist = await _playlistService.AddFromUrlAsync(NewPlaylistName, NewPlaylistUrl);
-            StatusMessage = $"'{playlist.Name}' başarıyla eklendi ({playlist.ChannelCount} kanal)";
-            
-            NewPlaylistName = string.Empty;
-            NewPlaylistUrl = string.Empty;
+            await SaveToStorageAsync(Settings);
+            OriginalSettings = Settings.Clone();
+            HasUnsavedChanges = false;
+
+            await _dialogService.ShowMessageAsync(
+                "Başarılı",
+                "Ayarlar kaydedildi"
+            );
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Hata: {ex.Message}";
+            await _dialogService.ShowErrorAsync(
+                "Hata",
+                "Ayarlar kaydedilemedi",
+                ex
+            );
         }
     }
 
     [RelayCommand]
-    private async Task LoadEpgAsync()
+    private void CancelChanges()
     {
-        if (string.IsNullOrWhiteSpace(EpgUrl))
-        {
-            StatusMessage = "Lütfen EPG URL'sini girin";
-            return;
-        }
+        Settings = OriginalSettings.Clone();
+        HasUnsavedChanges = false;
+    }
 
-        try
+    [RelayCommand]
+    private async Task EditProfileAsync()
+    {
+        if (CurrentProfile != null)
         {
-            IsEpgLoading = true;
-            StatusMessage = "EPG yükleniyor...";
-            
-            await _epgService.LoadEpgAsync(EpgUrl);
-            StatusMessage = $"EPG yüklendi (Son güncelleme: {_epgService.LastUpdated:HH:mm})";
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"EPG yüklenemedi: {ex.Message}";
-        }
-        finally
-        {
-            IsEpgLoading = false;
+            await _dialogService.ShowEditProfileAsync(CurrentProfile.Id);
         }
     }
 
     [RelayCommand]
-    private void ToggleTheme()
+    private async Task ChangeProviderAsync()
     {
-        IsDarkTheme = !IsDarkTheme;
-        _themeService.SetTheme(IsDarkTheme);
+        await _dialogService.ShowMessageAsync(
+            "Sağlayıcı Değiştir",
+            "Bu özellik yakında eklenecek"
+        );
     }
 
     [RelayCommand]
-    private void SaveSettings()
+    private async Task UpgradePremiumAsync()
     {
-        // Ayarları kaydet
-        StatusMessage = "Ayarlar kaydedildi";
+        await _dialogService.ShowUpsellAsync();
+    }
+
+    [RelayCommand]
+    private async Task SignOutAsync()
+    {
+        var confirmed = await _dialogService.ShowConfirmationAsync(
+            "Çıkış Yap",
+            "Bu profilden çıkmak istediğinize emin misiniz?"
+        );
+
+        if (confirmed)
+        {
+            RequestClose?.Invoke();
+        }
+    }
+
+    public event Action? RequestClose;
+
+    private async Task SaveToStorageAsync(UserSettings settings)
+    {
+        await Task.CompletedTask;
     }
 }

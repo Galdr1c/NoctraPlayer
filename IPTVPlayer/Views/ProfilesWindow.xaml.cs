@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Windows;
 using IPTVPlayer.ViewModels;
 using Microsoft.EntityFrameworkCore;
@@ -108,6 +109,15 @@ public partial class ProfilesWindow : Window
         using (var scope = _scopeFactory.CreateScope())
         {
             var settingsVm = scope.ServiceProvider.GetRequiredService<SettingsViewModel>();
+            if (DataContext is ProfilesViewModel profilesViewModel)
+            {
+                var activeProfile = profilesViewModel.Profiles.FirstOrDefault();
+                if (activeProfile != null)
+                {
+                    settingsVm.Initialize(activeProfile);
+                }
+            }
+
             var settingsWindow = new SettingsWindow(settingsVm);
             settingsWindow.Owner = this;
             settingsWindow.ShowDialog();

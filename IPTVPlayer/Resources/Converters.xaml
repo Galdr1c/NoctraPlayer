@@ -34,5 +34,7 @@
     <converters:ProgressToVisibilityConverter x:Key="ProgressToVisibilityConverter"/>
     <converters:ProgressToWidthConverter x:Key="ProgressToWidthConverter"/>
     <converters:ChannelTypeToVisibilityConverter x:Key="ChannelTypeToVisibilityConverter"/>
+    <converters:BoolToColorConverter x:Key="BoolToColorConverter"/>
+    <converters:PercentToOpacityConverter x:Key="PercentToOpacityConverter"/>
 
 </ResourceDictionary>

@@ -1,79 +1,745 @@
 <Window x:Class="IPTVPlayer.Views.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:viewmodels="clr-namespace:IPTVPlayer.ViewModels;assembly=IPTVPlayer.Core"
-        xmlns:helper="clr-namespace:IPTVPlayer.Helpers"
-        mc:Ignorable="d"
-        Title="Ayarlar" Height="400" Width="600"
+        Title="Ayarlar" 
+        Height="750" Width="1100"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         ResizeMode="NoResize"
         AllowsTransparency="True"
         Background="Transparent"
-        FontFamily="Segoe UI">
+        FontFamily="Segoe UI Variable, Segoe UI">
 
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Resources/Colors.xaml"/>
+                <ResourceDictionary Source="/Resources/Converters.xaml"/>
                 <ResourceDictionary Source="/Resources/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
 
-    <Border Background="{StaticResource BackgroundBrush}" CornerRadius="12" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
-        <Grid Margin="24">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/> <!-- Header -->
-                <RowDefinition Height="*"/>    <!-- Content -->
-                <RowDefinition Height="Auto"/> <!-- Footer -->
-            </Grid.RowDefinitions>
+    <Border Background="#141414" 
+            CornerRadius="12" 
+            BorderBrush="#333333" 
+            BorderThickness="1">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="280"/> <!-- Sidebar -->
+                <ColumnDefinition Width="*"/>   <!-- Content -->
+            </Grid.ColumnDefinitions>
 
-            <!-- Header -->
-            <Grid Grid.Row="0" Margin="0,0,0,24">
-                <TextBlock Text="Ayarlar" FontSize="24" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                <Button HorizontalAlignment="Right" Content="✕" 
-                        Click="CloseButton_Click"
-                        FontSize="18"
-                        Style="{StaticResource IconButton}" 
-                        Foreground="{StaticResource TextSecondaryBrush}"/>
-            </Grid>
+            <!-- ==========================================
+                 SIDEBAR - Categories
+                 ========================================== -->
+            <Border Grid.Column="0" 
+                    Background="#0D0D0D" 
+                    CornerRadius="12,0,0,12">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/> <!-- Header -->
+                        <RowDefinition Height="*"/>    <!-- Menu -->
+                        <RowDefinition Height="Auto"/> <!-- Footer -->
+                    </Grid.RowDefinitions>
 
-            <!-- Content -->
-            <StackPanel Grid.Row="1">
-                
-                <!-- Theme Toggle -->
-                <Border Background="{StaticResource SurfaceBrush}" CornerRadius="8" Padding="16" Margin="0,0,0,16">
-                    <Grid>
-                        <StackPanel>
-                            <TextBlock Text="Görünüm" FontWeight="SemiBold" FontSize="16" Foreground="{StaticResource TextPrimaryBrush}"/>
-                            <TextBlock Text="Koyu veya açık tema arasında geçiş yapın" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                    <!-- Header -->
+                    <StackPanel Grid.Row="0" Margin="24,24,24,32">
+                        <TextBlock Text="Ayarlar" 
+                                   FontSize="28" 
+                                   FontWeight="Bold" 
+                                   Foreground="White"/>
+                        <TextBlock Text="{Binding CurrentProfile.Name}" 
+                                   FontSize="14" 
+                                   Foreground="#808080"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+
+                    <!-- Menu Items -->
+                    <ScrollViewer Grid.Row="1" 
+                                  VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="12,0">
+                            
+                            <!-- Account -->
+                            <RadioButton x:Name="AccountTab"
+                                       Content="Hesap"
+                                       GroupName="SettingsTab"
+                                       IsChecked="True"
+                                       Style="{StaticResource SettingsTabRadioButton}">
+                                <RadioButton.Tag>
+                                    <Path Data="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z" 
+                                          Fill="White"/>
+                                </RadioButton.Tag>
+                            </RadioButton>
+
+                            <!-- Playback -->
+                            <RadioButton x:Name="PlaybackTab"
+                                       Content="Oynatma"
+                                       GroupName="SettingsTab"
+                                       Style="{StaticResource SettingsTabRadioButton}">
+                                <RadioButton.Tag>
+                                    <Path Data="M8,5.14V19.14L19,12.14L8,5.14Z" 
+                                          Fill="White"/>
+                                </RadioButton.Tag>
+                            </RadioButton>
+
+                            <!-- Subtitles & Audio -->
+                            <RadioButton x:Name="SubtitlesTab"
+                                       Content="Altyazı ve Ses"
+                                       GroupName="SettingsTab"
+                                       Style="{StaticResource SettingsTabRadioButton}">
+                                <RadioButton.Tag>
+                                    <Path Data="M20,4H4A2,2 0 0,0 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6A2,2 0 0,0 20,4M4,12H6V14H4V12M20,18H4V16H20V18M4,6H20V11H4V6M7,12H9V14H7V12M10,12H12V14H10V12Z" 
+                                          Fill="White"/>
+                                </RadioButton.Tag>
+                            </RadioButton>
+
+                            <!-- Display & Quality -->
+                            <RadioButton x:Name="DisplayTab"
+                                       Content="Görüntü ve Kalite"
+                                       GroupName="SettingsTab"
+                                       Style="{StaticResource SettingsTabRadioButton}">
+                                <RadioButton.Tag>
+                                    <Path Data="M21,16H3V4H21M21,2H3C1.89,2 1,2.89 1,4V16A2,2 0 0,0 3,18H10V20H8V22H16V20H14V18H21A2,2 0 0,0 23,16V4C23,2.89 22.1,2 21,2Z" 
+                                          Fill="White"/>
+                                </RadioButton.Tag>
+                            </RadioButton>
+
+                            <!-- Parental Controls -->
+                            <RadioButton x:Name="ParentalTab"
+                                       Content="Ebeveyn Kontrolleri"
+                                       GroupName="SettingsTab"
+                                       Style="{StaticResource SettingsTabRadioButton}">
+                                <RadioButton.Tag>
+                                    <Path Data="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,7C13.4,7 14.8,8.1 14.8,9.5V11C15.4,11 16,11.6 16,12.3V15.8C16,16.4 15.4,17 14.7,17H9.2C8.6,17 8,16.4 8,15.7V12.2C8,11.6 8.6,11 9.2,11V9.5C9.2,8.1 10.6,7 12,7M12,8.2C11.2,8.2 10.5,8.7 10.5,9.5V11H13.5V9.5C13.5,8.7 12.8,8.2 12,8.2Z" 
+                                          Fill="White"/>
+                                </RadioButton.Tag>
+                            </RadioButton>
+
+                            <!-- Privacy -->
+                            <RadioButton x:Name="PrivacyTab"
+                                       Content="Gizlilik"
+                                       GroupName="SettingsTab"
+                                       Style="{StaticResource SettingsTabRadioButton}">
+                                <RadioButton.Tag>
+                                    <Path Data="M12,17C10.89,17 10,16.1 10,15C10,13.89 10.89,13 12,13A2,2 0 0,1 14,15A2,2 0 0,1 12,17M18,20V10H6V20H18M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6C4.89,22 4,21.1 4,20V10C4,8.89 4.89,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z" 
+                                          Fill="White"/>
+                                </RadioButton.Tag>
+                            </RadioButton>
+
+                            <Separator Background="#333333" 
+                                      Margin="12,16" 
+                                      Height="1"/>
+
+                            <!-- About -->
+                            <RadioButton x:Name="AboutTab"
+                                       Content="Hakkında"
+                                       GroupName="SettingsTab"
+                                       Style="{StaticResource SettingsTabRadioButton}">
+                                <RadioButton.Tag>
+                                    <Path Data="M11,9H13V7H11M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,17H13V11H11V17Z" 
+                                          Fill="White"/>
+                                </RadioButton.Tag>
+                            </RadioButton>
+
                         </StackPanel>
-                        
-                        <Button HorizontalAlignment="Right" Command="{Binding ToggleThemeCommand}" 
-                                Style="{StaticResource SecondaryButton}" Padding="16,8">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding IsDarkTheme, Converter={StaticResource InverseBoolConverter}, ConverterParameter=Koyu}" 
-                                           TextDecorations="None"/> 
-                                <!-- Placeholder text toggle logic: "Koyu Tema" -> "Açık Tema" -->
-                                <TextBlock Text=" Tema Değiştir 🌓"/>
-                            </StackPanel>
-                        </Button>
-                    </Grid>
-                </Border>
+                    </ScrollViewer>
 
-                <!-- About/Version -->
-                <Border Background="{StaticResource SurfaceBrush}" CornerRadius="8" Padding="16">
-                    <StackPanel>
-                        <TextBlock Text="Hakkında" FontWeight="SemiBold" FontSize="16" Foreground="{StaticResource TextPrimaryBrush}"/>
-                        <TextBlock Text="Noctra v1.0.0" FontSize="14" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
-                        <TextBlock Text="© 2026 Tüm Hakları Saklıdır" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"/>
+                    <!-- Footer - Sign Out -->
+                    <Border Grid.Row="2" 
+                            Padding="24"
+                            BorderBrush="#333333"
+                            BorderThickness="0,1,0,0">
+                        <Button Command="{Binding SignOutCommand}"
+                                HorizontalAlignment="Stretch"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Padding="12"
+                                Cursor="Hand">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="M16,17V14H9V10H16V7L21,12L16,17M14,2A2,2 0 0,1 16,4V6H14V4H5V20H14V18H16V20A2,2 0 0,1 14,22H5A2,2 0 0,1 3,20V4A2,2 0 0,1 5,2H14Z"
+                                      Fill="#E87C03"
+                                      Stretch="Uniform"
+                                      Width="20" Height="20"
+                                      VerticalAlignment="Center"/>
+                                <TextBlock Text="Çıkış Yap"
+                                          FontSize="16"
+                                          Foreground="#E87C03"
+                                          Margin="12,0,0,0"
+                                          VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#1A1A1A"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- ==========================================
+                 CONTENT AREA
+                 ========================================== -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/> <!-- Header -->
+                    <RowDefinition Height="*"/>    <!-- Content -->
+                    <RowDefinition Height="Auto"/> <!-- Footer Actions -->
+                </Grid.RowDefinitions>
+
+                <!-- Header with Close Button -->
+                <Grid Grid.Row="0" 
+                      Margin="32,24,32,0"
+                      Height="48">
+                    <Button Content="×"
+                            HorizontalAlignment="Right"
+                            Click="CloseButton_Click"
+                            FontSize="32"
+                            Foreground="#999999"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Width="48" Height="48"
+                            Cursor="Hand">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Border"
+                                        Background="{TemplateBinding Background}"
+                                        CornerRadius="24">
+                                    <ContentPresenter HorizontalAlignment="Center" 
+                                                    VerticalAlignment="Center"
+                                                    Margin="0,-4,0,0"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Border" Property="Background" Value="#1A1A1A"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </Grid>
+
+                <!-- Content ScrollViewer -->
+                <ScrollViewer Grid.Row="1" 
+                             VerticalScrollBarVisibility="Auto"
+                             Padding="32,24">
+                    
+                    <!-- Tab Content Container -->
+                    <Grid x:Name="ContentContainer">
+                        
+                        <!-- ACCOUNT TAB -->
+                        <StackPanel x:Name="AccountContent"
+                                   Visibility="{Binding IsChecked, ElementName=AccountTab, Converter={StaticResource BoolToVisibilityConverter}}">
+                            
+                            <TextBlock Text="Hesap Ayarları" 
+                                       FontSize="32" 
+                                       FontWeight="Bold" 
+                                       Foreground="White"
+                                       Margin="0,0,0,32"/>
+
+                            <!-- Profile Info Section -->
+                            <Border Background="#1A1A1A" 
+                                    CornerRadius="8" 
+                                    Padding="24"
+                                    Margin="0,0,0,24">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Avatar -->
+                                    <Border Width="80" Height="80"
+                                            CornerRadius="8"
+                                            ClipToBounds="True"
+                                            Background="{Binding CurrentProfile.Avatar, Converter={StaticResource ProfileColorConverter}}">
+                                        <Image Source="{Binding CurrentProfile.Avatar, Converter={StaticResource AvatarPathConverter}}"
+                                               Stretch="UniformToFill"/>
+                                    </Border>
+
+                                    <!-- Profile Details -->
+                                    <StackPanel Grid.Column="1" 
+                                               Margin="24,0,0,0"
+                                               VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding CurrentProfile.Name}"
+                                                   FontSize="24"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="White"/>
+                                        <Button Content="Profili Düzenle"
+                                                Command="{Binding EditProfileCommand}"
+                                                Style="{StaticResource TextButtonStyle}"
+                                                Foreground="#7C3AED"
+                                                FontSize="14"
+                                                HorizontalAlignment="Left"
+                                                Margin="0,8,0,0"
+                                                Cursor="Hand"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Account Provider Info -->
+                            <Border Background="#1A1A1A" 
+                                    CornerRadius="8" 
+                                    Padding="24"
+                                    Margin="0,0,0,24">
+                                <StackPanel>
+                                    <TextBlock Text="Sağlayıcı Bilgileri" 
+                                               FontSize="18" 
+                                               FontWeight="SemiBold"
+                                               Foreground="White"
+                                               Margin="0,0,0,16"/>
+                                    
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="200"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Text="Hesap Adı:" Foreground="#808080" Margin="0,0,0,12"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding CurrentProfile.ProviderAccount.Name}" Foreground="White" Margin="0,0,0,12"/>
+
+                                        <TextBlock Grid.Row="1" Text="Tip:" Foreground="#808080" Margin="0,0,0,12"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding CurrentProfile.ProviderAccount.Type}" Foreground="White" Margin="0,0,0,12"/>
+
+                                        <TextBlock Grid.Row="2" Text="Sunucu:" Foreground="#808080"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding CurrentProfile.ProviderAccount.Url}" Foreground="White" TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
+
+                                    <Button Content="Sağlayıcıyı Değiştir"
+                                            Command="{Binding ChangeProviderCommand}"
+                                            Style="{StaticResource SecondaryButton}"
+                                            HorizontalAlignment="Left"
+                                            Margin="0,16,0,0"
+                                            Padding="20,10"
+                                            Cursor="Hand"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Premium Status -->
+                            <Border Background="#1A1A1A" 
+                                    CornerRadius="8" 
+                                    Padding="24">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="Premium Durum: " 
+                                                       FontSize="18"
+                                                       Foreground="#808080"/>
+                                            <TextBlock Text="{Binding IsPremium, Converter={StaticResource BoolToStringConverter}, ConverterParameter='Premium|Free'}"
+                                                       FontSize="18"
+                                                       FontWeight="Bold"
+                                                       Foreground="{Binding IsPremium, Converter={StaticResource BoolToColorConverter}}"/>
+                                        </StackPanel>
+                                        <TextBlock Text="Tüm özelliklerin kilidini açın"
+                                                   FontSize="14"
+                                                   Foreground="#808080"
+                                                   Margin="0,4,0,0"
+                                                   Visibility="{Binding IsPremium, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
+                                    </StackPanel>
+
+                                    <Button Grid.Column="1"
+                                            Content="Premium'a Yükselt"
+                                            Command="{Binding UpgradePremiumCommand}"
+                                            Style="{StaticResource PrimaryButtonStyle}"
+                                            Padding="24,12"
+                                            Visibility="{Binding IsPremium, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
+                                </Grid>
+                            </Border>
+
+                        </StackPanel>
+
+                        <!-- PLAYBACK TAB -->
+                        <StackPanel x:Name="PlaybackContent"
+                                   Visibility="{Binding IsChecked, ElementName=PlaybackTab, Converter={StaticResource BoolToVisibilityConverter}}">
+                            
+                            <TextBlock Text="Oynatma Ayarları" 
+                                       FontSize="32" 
+                                       FontWeight="Bold" 
+                                       Foreground="White"
+                                       Margin="0,0,0,32"/>
+
+                            <!-- Auto-play Settings -->
+                            <Border Background="#1A1A1A" 
+                                    CornerRadius="8" 
+                                    Padding="24"
+                                    Margin="0,0,0,16">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Auto-play next episode -->
+                                    <Grid Grid.Row="0" Margin="0,0,0,20">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel>
+                                            <TextBlock Text="Sonraki bölümü otomatik oynat"
+                                                       FontSize="16"
+                                                       Foreground="White"/>
+                                            <TextBlock Text="Bir bölüm bittiğinde seriyi otomatik devam ettirir"
+                                                       FontSize="13"
+                                                       Foreground="#808080"
+                                                       Margin="0,4,0,0"/>
+                                        </StackPanel>
+
+                                        <ToggleButton Grid.Column="1"
+                                                     IsChecked="{Binding Settings.AutoPlayNext}"
+                                                     Style="{StaticResource ModernToggleSwitch}"/>
+                                    </Grid>
+
+                                    <!-- Auto-skip intro -->
+                                    <Grid Grid.Row="1" Margin="0,0,0,20">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel>
+                                            <TextBlock Text="İntro'yu otomatik geç"
+                                                       FontSize="16"
+                                                       Foreground="White"/>
+                                            <TextBlock Text="Tespit edildiğinde açılış jeneriğini atlar"
+                                                       FontSize="13"
+                                                       Foreground="#808080"
+                                                       Margin="0,4,0,0"/>
+                                        </StackPanel>
+
+                                        <ToggleButton Grid.Column="1"
+                                                     IsChecked="{Binding Settings.AutoSkipIntro}"
+                                                     Style="{StaticResource ModernToggleSwitch}"/>
+                                    </Grid>
+
+                                    <!-- Auto-play previews -->
+                                    <Grid Grid.Row="2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel>
+                                            <TextBlock Text="Önizlemeleri otomatik oynat"
+                                                       FontSize="16"
+                                                       Foreground="White"/>
+                                            <TextBlock Text="Kartlara geldiğinizde teaser videoları oynatır"
+                                                       FontSize="13"
+                                                       Foreground="#808080"
+                                                       Margin="0,4,0,0"/>
+                                        </StackPanel>
+
+                                        <ToggleButton Grid.Column="1"
+                                                     IsChecked="{Binding Settings.AutoPlayPreviews}"
+                                                     Style="{StaticResource ModernToggleSwitch}"/>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+
+                            <!-- Data Usage -->
+                            <Border Background="#1A1A1A" 
+                                    CornerRadius="8" 
+                                    Padding="24">
+                                <StackPanel>
+                                    <TextBlock Text="Veri Kullanımı"
+                                               FontSize="18"
+                                               FontWeight="SemiBold"
+                                               Foreground="White"
+                                               Margin="0,0,0,16"/>
+                                    
+                                    <TextBlock Text="Yayın kalitesi ve veri kullanımını ayarlayın"
+                                               FontSize="14"
+                                               Foreground="#808080"
+                                               Margin="0,0,0,16"/>
+
+                                    <!-- Quality options -->
+                                    <RadioButton Content="Düşük (480p) - Daha az veri kullanır"
+                                               GroupName="Quality"
+                                               IsChecked="{Binding Settings.Quality, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter=Low}"
+                                               Style="{StaticResource QualityRadioButton}"
+                                               Margin="0,0,0,12"/>
+                                    
+                                    <RadioButton Content="Orta (720p) - Dengeli kalite ve veri"
+                                               GroupName="Quality"
+                                               IsChecked="{Binding Settings.Quality, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter=Medium}"
+                                               Style="{StaticResource QualityRadioButton}"
+                                               Margin="0,0,0,12"/>
+                                    
+                                    <RadioButton Content="Yüksek (1080p) - En iyi kalite"
+                                               GroupName="Quality"
+                                               IsChecked="{Binding Settings.Quality, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter=High}"
+                                               Style="{StaticResource QualityRadioButton}"
+                                               Margin="0,0,0,12"/>
+                                    
+                                    <RadioButton Content="Otomatik - Bağlantıya göre ayarla"
+                                               GroupName="Quality"
+                                               IsChecked="{Binding Settings.Quality, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter=Auto}"
+                                               Style="{StaticResource QualityRadioButton}"/>
+                                </StackPanel>
+                            </Border>
+
+                        </StackPanel>
+
+                        <!-- SUBTITLES & AUDIO TAB -->
+                        <StackPanel x:Name="SubtitlesContent"
+                                   Visibility="{Binding IsChecked, ElementName=SubtitlesTab, Converter={StaticResource BoolToVisibilityConverter}}">
+                            
+                            <TextBlock Text="Altyazı ve Ses Ayarları" 
+                                       FontSize="32" 
+                                       FontWeight="Bold" 
+                                       Foreground="White"
+                                       Margin="0,0,0,32"/>
+
+                            <!-- Subtitle Appearance -->
+                            <Border Background="#1A1A1A" 
+                                    CornerRadius="8" 
+                                    Padding="24"
+                                    Margin="0,0,0,16">
+                                <StackPanel>
+                                    <TextBlock Text="Altyazı Görünümü"
+                                               FontSize="18"
+                                               FontWeight="SemiBold"
+                                               Foreground="White"
+                                               Margin="0,0,0,20"/>
+
+                                    <!-- Font Size -->
+                                    <Grid Margin="0,0,0,20">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="200"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Text="Yazı Boyutu"
+                                                   Foreground="White"
+                                                   VerticalAlignment="Center"/>
+                                        
+                                        <Slider Grid.Column="1"
+                                               Minimum="12"
+                                               Maximum="48"
+                                               Value="{Binding Settings.SubtitleFontSize}"
+                                               TickFrequency="4"
+                                               IsSnapToTickEnabled="True"
+                                               Style="{StaticResource ModernSlider}"
+                                               Margin="20,0"/>
+                                        
+                                        <TextBlock Grid.Column="2"
+                                                  Text="{Binding Settings.SubtitleFontSize, StringFormat='{}{0}px'}"
+                                                  Foreground="#808080"
+                                                  MinWidth="50"
+                                                  TextAlignment="Right"
+                                                  VerticalAlignment="Center"/>
+                                    </Grid>
+
+                                    <!-- Background Opacity -->
+                                    <Grid Margin="0,0,0,20">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="200"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Text="Arka Plan Opaklığı"
+                                                   Foreground="White"
+                                                   VerticalAlignment="Center"/>
+                                        
+                                        <Slider Grid.Column="1"
+                                               Minimum="0"
+                                               Maximum="100"
+                                               Value="{Binding Settings.SubtitleBackgroundOpacity}"
+                                               Style="{StaticResource ModernSlider}"
+                                               Margin="20,0"/>
+                                        
+                                        <TextBlock Grid.Column="2"
+                                                  Text="{Binding Settings.SubtitleBackgroundOpacity, StringFormat='{}{0}%'}"
+                                                  Foreground="#808080"
+                                                  MinWidth="50"
+                                                  TextAlignment="Right"
+                                                  VerticalAlignment="Center"/>
+                                    </Grid>
+
+                                    <!-- Preview -->
+                                    <Border Background="#000000"
+                                            CornerRadius="4"
+                                            Padding="20"
+                                            HorizontalAlignment="Center">
+                                        <TextBlock Text="Örnek altyazı metni"
+                                                   FontSize="{Binding Settings.SubtitleFontSize}"
+                                                   Foreground="White"
+                                                   HorizontalAlignment="Center">
+                                            <TextBlock.Background>
+                                                <SolidColorBrush Color="Black" Opacity="{Binding Settings.SubtitleBackgroundOpacity, Converter={StaticResource PercentToOpacityConverter}}"/>
+                                            </TextBlock.Background>
+                                        </TextBlock>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Language Preferences -->
+                            <Border Background="#1A1A1A" 
+                                    CornerRadius="8" 
+                                    Padding="24">
+                                <StackPanel>
+                                    <TextBlock Text="Dil Tercihleri"
+                                               FontSize="18"
+                                               FontWeight="SemiBold"
+                                               Foreground="White"
+                                               Margin="0,0,0,20"/>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="200"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0"
+                                                  Text="Varsayılan Ses Dili"
+                                                  Foreground="White"
+                                                  VerticalAlignment="Center"
+                                                  Margin="0,0,0,16"/>
+                                        <ComboBox Grid.Row="0" Grid.Column="1"
+                                                 SelectedValue="{Binding Settings.DefaultAudioLanguage}"
+                                                 Style="{StaticResource ModernComboBox}"
+                                                 Margin="0,0,0,16">
+                                            <ComboBoxItem Content="Türkçe" Tag="tr"/>
+                                            <ComboBoxItem Content="İngilizce" Tag="en"/>
+                                            <ComboBoxItem Content="Orijinal" Tag="original"/>
+                                        </ComboBox>
+
+                                        <TextBlock Grid.Row="1"
+                                                  Text="Varsayılan Altyazı Dili"
+                                                  Foreground="White"
+                                                  VerticalAlignment="Center"/>
+                                        <ComboBox Grid.Row="1" Grid.Column="1"
+                                                 SelectedValue="{Binding Settings.DefaultSubtitleLanguage}"
+                                                 Style="{StaticResource ModernComboBox}">
+                                            <ComboBoxItem Content="Kapalı" Tag="off"/>
+                                            <ComboBoxItem Content="Türkçe" Tag="tr"/>
+                                            <ComboBoxItem Content="İngilizce" Tag="en"/>
+                                        </ComboBox>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                        </StackPanel>
+
+                        <!-- ABOUT TAB -->
+                        <StackPanel x:Name="AboutContent"
+                                   Visibility="{Binding IsChecked, ElementName=AboutTab, Converter={StaticResource BoolToVisibilityConverter}}">
+                            
+                            <TextBlock Text="Hakkında" 
+                                       FontSize="32" 
+                                       FontWeight="Bold" 
+                                       Foreground="White"
+                                       Margin="0,0,0,32"/>
+
+                            <Border Background="#1A1A1A" 
+                                    CornerRadius="8" 
+                                    Padding="32"
+                                    HorizontalAlignment="Center">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <!-- App Icon -->
+                                    <Border Width="120" Height="120"
+                                            Background="{StaticResource PrimaryGradientBrush}"
+                                            CornerRadius="20"
+                                            Margin="0,0,0,24"
+                                            HorizontalAlignment="Center">
+                                        <TextBlock Text="📺"
+                                                   FontSize="64"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+
+                                    <TextBlock Text="IPTV Player"
+                                               FontSize="28"
+                                               FontWeight="Bold"
+                                               Foreground="White"
+                                               HorizontalAlignment="Center"/>
+                                    
+                                    <TextBlock Text="Sürüm 1.0.0"
+                                               FontSize="16"
+                                               Foreground="#808080"
+                                               HorizontalAlignment="Center"
+                                               Margin="0,8,0,24"/>
+
+                                    <TextBlock Text="© 2026 Tüm Hakları Saklıdır"
+                                               FontSize="14"
+                                               Foreground="#808080"
+                                               HorizontalAlignment="Center"
+                                               Margin="0,0,0,32"/>
+
+                                    <!-- Links -->
+                                    <StackPanel Orientation="Horizontal"
+                                               HorizontalAlignment="Center"
+                                               Spacing="16">
+                                        <Button Content="Gizlilik Politikası"
+                                               Style="{StaticResource TextButtonStyle}"
+                                               Foreground="#7C3AED"
+                                               Cursor="Hand"/>
+                                        <TextBlock Text="•" Foreground="#404040" VerticalAlignment="Center"/>
+                                        <Button Content="Kullanım Şartları"
+                                               Style="{StaticResource TextButtonStyle}"
+                                               Foreground="#7C3AED"
+                                               Cursor="Hand"/>
+                                        <TextBlock Text="•" Foreground="#404040" VerticalAlignment="Center"/>
+                                        <Button Content="Destek"
+                                               Style="{StaticResource TextButtonStyle}"
+                                               Foreground="#7C3AED"
+                                               Cursor="Hand"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                        </StackPanel>
+
+                    </Grid>
+                </ScrollViewer>
+
+                <!-- Footer Actions (only show on dirty state) -->
+                <Border Grid.Row="2"
+                        Background="#0D0D0D"
+                        Padding="32,16"
+                        BorderBrush="#333333"
+                        BorderThickness="0,1,0,0"
+                        Visibility="{Binding HasUnsavedChanges, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel Orientation="Horizontal"
+                               HorizontalAlignment="Right">
+                        <Button Content="İptal"
+                                Command="{Binding CancelChangesCommand}"
+                                Style="{StaticResource SecondaryButton}"
+                                Width="120"
+                                Margin="0,0,16,0"/>
+                        <Button Content="Değişiklikleri Kaydet"
+                                Command="{Binding SaveSettingsCommand}"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Width="200"/>
                     </StackPanel>
                 </Border>
-            </StackPanel>
 
+            </Grid>
         </Grid>
     </Border>
 </Window>
