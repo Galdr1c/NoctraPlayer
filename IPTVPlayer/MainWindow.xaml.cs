@@ -22,6 +22,9 @@ public partial class MainWindow : Window
     private bool _isDarkTheme = true;
     private WindowState _previousWindowState;
     private bool _isPlayerMode;
+    private AppView _previousActiveView;
+    private bool _previousSearchOverlayVisible;
+    private bool _previousSeriesDetailVisible;
 
     public MainWindow(MainViewModel viewModel, PlayerViewModel playerViewModel, 
                       IVideoPlayerService videoPlayerService,
@@ -91,6 +94,11 @@ public partial class MainWindow : Window
                     WindowState = WindowState.Maximized;
                 else
                     WindowState = WindowState.Normal;
+            }
+
+            if (e.PropertyName == nameof(_playerViewModel.IsVisible) && PlayerArea.Visibility == Visibility.Visible)
+            {
+                Cursor = _playerViewModel.IsVisible ? Cursors.Arrow : Cursors.None;
             }
         };
 
@@ -214,6 +222,9 @@ public partial class MainWindow : Window
 
         _isPlayerMode = true;
         _previousWindowState = WindowState;
+        _previousActiveView = _viewModel.ActiveView;
+        _previousSearchOverlayVisible = _viewModel.IsSearchOverlayVisible;
+        _previousSeriesDetailVisible = _viewModel.IsSeriesDetailVisible;
         WindowState = WindowState.Maximized;
     }
 
@@ -225,6 +236,9 @@ public partial class MainWindow : Window
         }
 
         WindowState = _previousWindowState;
+        _viewModel.ActiveView = _previousActiveView;
+        _viewModel.IsSearchOverlayVisible = _previousSearchOverlayVisible;
+        _viewModel.IsSeriesDetailVisible = _previousSeriesDetailVisible;
         _isPlayerMode = false;
     }
 

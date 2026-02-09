@@ -42,7 +42,10 @@
         <!-- ==========================================
              OVERLAY CONTENT (Visible when interacting) 
              ========================================== -->
-        <Grid x:Name="OverlayRoot" Opacity="0" IsHitTestVisible="False">
+        <Grid x:Name="OverlayRoot"
+              Opacity="0"
+              IsHitTestVisible="False"
+              Visibility="{Binding IsBuffering, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}">
             <Grid.Style>
                 <Style TargetType="Grid">
                     <Style.Triggers>
@@ -105,14 +108,19 @@
                         Content="←" FontSize="20" Margin="0,0,24,0"/>
 
                 <!-- Content Info -->
-                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <StackPanel Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding IsBuffering, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}">
                     <TextBlock Text="{Binding CurrentChannel.Name}" FontSize="24" FontWeight="Bold" Foreground="White"/>
                     <TextBlock Text="{Binding CurrentProgram.Title}" FontSize="16" Foreground="#DDDDDD" 
                                Visibility="{Binding CurrentProgram.Title, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
                 </StackPanel>
 
                 <!-- System Info (Clock/Network) -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding IsBuffering, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}">
                     <TextBlock Text="{Binding NetworkStatus}" FontSize="12" Foreground="#88FFFFFF" VerticalAlignment="Center" Margin="0,0,16,0"/>
                     <TextBlock Text="{Binding CurrentTimeStr}" FontSize="18" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
                 </StackPanel>
@@ -351,7 +359,8 @@
                 VerticalAlignment="Center"
                 IsHitTestVisible="False"
                 Panel.ZIndex="1000"
-                Opacity="0">
+                Opacity="0"
+                Visibility="{Binding IsBuffering, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}">
             <Border.Style>
                 <Style TargetType="Border">
                     <Style.Triggers>
@@ -397,11 +406,21 @@
         </Border>
 
         <!-- 5. Ephemeral UI (Always visible/floating) -->
-        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" 
-                    Visibility="{Binding IsBuffering, Converter={StaticResource BoolToVisibilityConverter}}">
-            <ProgressBar Style="{StaticResource CircularProgressStyle}" Width="60" Height="60"/>
-            <TextBlock Text="Yükleniyor..." Foreground="White" HorizontalAlignment="Center" Margin="0,16,0,0"/>
-        </StackPanel>
+        <Grid x:Name="LoadingOverlay"
+              Background="Black"
+              Visibility="{Binding IsBuffering, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Button Command="{Binding ClosePlayerCommand}"
+                    Style="{StaticResource CircleButtonStyle}"
+                    Content="←"
+                    FontSize="20"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Margin="32,24"/>
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <ProgressBar Style="{StaticResource CircularProgressStyle}" Width="60" Height="60"/>
+                <TextBlock Text="Yükleniyor..." Foreground="White" HorizontalAlignment="Center" Margin="0,16,0,0"/>
+            </StackPanel>
+        </Grid>
 
     </Grid>
 </UserControl>
