@@ -153,27 +153,49 @@
                     <TextBlock Text="{Binding PositionText}" Foreground="#CCCCCC" FontSize="13" Margin="0,0,12,0" VerticalAlignment="Center"
                                Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
                     
-                    <Slider Grid.Column="1" 
+                    <Slider x:Name="TimelineSlider"
+                            Grid.Column="1"
                             Style="{StaticResource MediaSliderStyle}" 
                             Minimum="0" Maximum="{Binding Duration}" 
                             Value="{Binding Position}"
                             IsMoveToPointEnabled="True"
                             Thumb.DragStarted="Slider_DragStarted"
                             Thumb.DragCompleted="Slider_DragCompleted"
+                            ValueChanged="TimelineSlider_ValueChanged"
                             Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
 
-                    <!-- LIVE Badge for Live Streams -->
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center"
-                                Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <Border Width="8" Height="8" Background="#E50914" CornerRadius="4" Margin="0,0,8,0">
-                            <Border.Triggers>
-                                <EventTrigger RoutedEvent="Loaded">
-                                    <BeginStoryboard Storyboard="{StaticResource LiveDotPulse}"/>
-                                </EventTrigger>
-                            </Border.Triggers>
+                    <Popup IsOpen="{Binding IsScrubbing}"
+                           Placement="MousePoint"
+                           AllowsTransparency="True"
+                           PopupAnimation="Fade">
+                        <Border Background="#CC000000" CornerRadius="6" Padding="8,4">
+                            <TextBlock Text="{Binding ScrubPreviewText}" Foreground="White" FontSize="12"/>
                         </Border>
-                        <TextBlock Text="CANLI" FontSize="12" FontWeight="Bold" Foreground="White"/>
-                    </StackPanel>
+                    </Popup>
+
+                    <!-- LIVE Badge for Live Streams -->
+                    <Border Grid.Column="1"
+                            Background="#E50914"
+                            CornerRadius="4"
+                            Padding="8,4"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <StackPanel Orientation="Horizontal">
+                            <Border Width="8" Height="8" Background="White" CornerRadius="4" Margin="0,0,8,0">
+                                <Border.Triggers>
+                                    <EventTrigger RoutedEvent="Loaded">
+                                        <BeginStoryboard Storyboard="{StaticResource LiveDotPulse}"/>
+                                    </EventTrigger>
+                                </Border.Triggers>
+                            </Border>
+                            <TextBlock FontSize="12" FontWeight="Bold" Foreground="White">
+                                <Run Text="CANLI"/>
+                                <Run Text=" • "/>
+                                <Run Text="{Binding CurrentChannel.Name}"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
                             
                     <TextBlock Grid.Column="2" Text="{Binding DurationText}" Foreground="#CCCCCC" FontSize="13" Margin="12,0,0,0" VerticalAlignment="Center"
                                Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>

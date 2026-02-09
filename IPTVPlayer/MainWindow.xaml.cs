@@ -53,6 +53,19 @@ public partial class MainWindow : Window
             // Ensure cursor is visible when leaving player
             Cursor = Cursors.Arrow;
         };
+        _playerViewModel.NextEpisodeRequested += (s, e) =>
+        {
+            if (_viewModel.SelectedEpisode == null)
+            {
+                return;
+            }
+
+            var nextEpisode = _viewModel.GetNextEpisode(_viewModel.SelectedEpisode);
+            if (nextEpisode != null)
+            {
+                _viewModel.PlayEpisodeCommand.Execute(nextEpisode);
+            }
+        };
 
         // Video player'ı bağla
         VideoView.MediaPlayer = _videoPlayerService.GetMediaPlayer();

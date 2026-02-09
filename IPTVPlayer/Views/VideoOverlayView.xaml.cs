@@ -52,6 +52,7 @@ public partial class VideoOverlayView : UserControl
     {
         if (DataContext is PlayerViewModel vm)
         {
+            vm.IsScrubbing = true;
             vm.ToggleLockCommand.Execute(null);
         }
     }
@@ -60,6 +61,7 @@ public partial class VideoOverlayView : UserControl
     {
         if (DataContext is PlayerViewModel vm)
         {
+            vm.IsScrubbing = false;
             vm.ToggleLockCommand.Execute(null);
             
             // Perform seek
@@ -68,5 +70,16 @@ public partial class VideoOverlayView : UserControl
                 // Position is updated via TwoWay binding
             }
         }
+    }
+
+    private void TimelineSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (DataContext is not PlayerViewModel vm || !vm.IsScrubbing)
+        {
+            return;
+        }
+
+        var seconds = e.NewValue;
+        vm.ScrubPreviewText = TimeSpan.FromSeconds(seconds).ToString(@"hh\:mm\:ss");
     }
 }

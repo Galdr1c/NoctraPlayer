@@ -65,6 +65,9 @@ public partial class MainViewModel : ObservableObject
     private Series? _selectedSeries;
 
     [ObservableProperty]
+    private Episode? _selectedEpisode;
+
+    [ObservableProperty]
     private bool _isSeriesDetailVisible;
 
     [ObservableProperty]
@@ -524,6 +527,7 @@ public partial class MainViewModel : ObservableObject
         };
         
         SelectChannel(channel);
+        SelectedEpisode = episode;
         OnMediaSelected?.Invoke(channel);
         IsSeriesDetailVisible = false;
     }
@@ -544,6 +548,68 @@ public partial class MainViewModel : ObservableObject
         }
 
         IsSeriesDetailVisible = true;
+    }
+
+    public Episode? GetNextEpisode(Episode current)
+    {
+        if (SelectedSeries == null)
+        {
+            return null;
+        }
+
+        var orderedSeasons = SelectedSeries.Seasons
+            .OrderBy(season => season.SeasonNumber)
+            .ToList();
+
+        if (orderedSeasons.Count == 0)
+        {
+            return null;
+        }
+
+        for (var seasonIndex = 0; seasonIndex < orderedSeasons.Count; seasonIndex++)
+        {
+            var season = orderedSeasons[seasonIndex];
+            var orderedEpisodes = season.Episodes
+                .OrderBy(episode => episode.EpisodeNumber)
+                .ToList();
+
+            if (orderedEpisodes.Count == 0)
+            {
+                continue;
+            }
+
+            var episodeIndex = orderedEpisodes.FindIndex(episode => episode.Id == current.Id);
+            if (episodeIndex == -1)
+            {
+                continue;
+            }
+
+            if (episodeIndex + 1 < orderedEpisodes.Count)
+            {
+                return orderedEpisodes[episodeIndex + 1];
+            }
+
+            for (var nextSeasonIndex = seasonIndex + 1; nextSeasonIndex < orderedSeasons.Count; nextSeasonIndex++)
+            {
+                var nextSeasonEpisodes = orderedSeasons[nextSeasonIndex]
+                    .Episodes
+                    .OrderBy(episode => episode.EpisodeNumber)
+                    .ToList();
+
+                if (nextSeasonEpisodes.Count > 0)
+                {
+                    return nextSeasonEpisodes[0];
+                }
+            }
+
+            return null;
+        }
+
+        return orderedSeasons
+            .SelectMany(season => season.Episodes)
+            .OrderBy(episode => episode.Season?.SeasonNumber ?? int.MaxValue)
+            .ThenBy(episode => episode.EpisodeNumber)
+            .FirstOrDefault();
     }
 
     [RelayCommand]

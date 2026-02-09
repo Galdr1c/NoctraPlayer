@@ -119,6 +119,12 @@ public partial class PlayerViewModel : ObservableObject
     [ObservableProperty]
     private bool _isNextEpisodePromptVisible;
 
+    [ObservableProperty]
+    private bool _isScrubbing;
+
+    [ObservableProperty]
+    private string _scrubPreviewText = "00:00:00";
+
     private readonly IDispatcherService _dispatcherService;
     private readonly IWatchHistoryService? _watchHistoryService;
     private readonly System.Timers.Timer _autoHideTimer;
@@ -412,6 +418,10 @@ public partial class PlayerViewModel : ObservableObject
             // For now, just hide the prompt and simulate
             IsNextEpisodePromptVisible = false;
             ChannelName = NextEpisode.Name; // Mock update
+            if (IsSeriesContent)
+            {
+                NextEpisodeRequested?.Invoke(this, EventArgs.Empty);
+            }
         }
     }
 
@@ -515,6 +525,7 @@ public partial class PlayerViewModel : ObservableObject
     }
 
     public event EventHandler? CloseRequested;
+    public event EventHandler? NextEpisodeRequested;
 
     [RelayCommand]
     private void UserInteraction() => RestartAutoHideTimer();
