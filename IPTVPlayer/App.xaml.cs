@@ -208,6 +208,7 @@ public partial class App : Application
         // ViewModels - Singleton for instant profile switching
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<PlayerViewModel>();
+        services.AddTransient<GlobalSettingsViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddScoped<ProfilesViewModel>();
         services.AddScoped<AddProfileViewModel>();
@@ -220,6 +221,7 @@ public partial class App : Application
         services.AddTransient<ProfilesWindow>();
         services.AddTransient<AddProfileWindow>();
         services.AddTransient<AvatarPickerWindow>();
+        services.AddTransient<GlobalSettingsWindow>();
     }
 
 
