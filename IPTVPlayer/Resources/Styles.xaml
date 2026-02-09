@@ -920,6 +920,69 @@
         </Setter>
     </Style>
 
+    <!-- Rail Navigation Button -->
+    <Style x:Key="RailNavigationButton" TargetType="Button">
+        <Setter Property="Background" Value="#33FFFFFF"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Border"
+                           Background="{TemplateBinding Background}"
+                           CornerRadius="24">
+                        <ContentPresenter HorizontalAlignment="Center" 
+                                        VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Border" Property="Background" Value="#55FFFFFF"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Circle Icon Button (Card Actions) -->
+    <Style x:Key="CircleIconButton" TargetType="Button">
+        <Setter Property="Background" Value="White"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Border"
+                           Background="{TemplateBinding Background}"
+                           CornerRadius="18"
+                           BorderBrush="#333333"
+                           BorderThickness="2">
+                        <ContentPresenter HorizontalAlignment="Center" 
+                                        VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Border" Property="BorderBrush" Value="White"/>
+                            <Setter TargetName="Border" Property="Opacity" Value="0.9"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Text Drop Shadow Effect -->
+    <DropShadowEffect x:Key="TextDropShadow"
+                     BlurRadius="8"
+                     ShadowDepth="2"
+                     Direction="270"
+                     Color="Black"
+                     Opacity="0.8"/>
+
+    <!-- Easing Functions -->
+    <QuadraticEase x:Key="QuadraticEaseOut" EasingMode="EaseOut"/>
+    <QuadraticEase x:Key="QuadraticEaseIn" EasingMode="EaseIn"/>
+
     <!-- Series & Movie Rail Style (Portrait 2:3) -->
     <Style x:Key="SeriesRailListBoxStyle" TargetType="ListBox" BasedOn="{StaticResource RailListBoxStyle}">
         <Setter Property="ItemTemplate">

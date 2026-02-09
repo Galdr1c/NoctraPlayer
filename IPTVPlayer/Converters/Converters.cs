@@ -219,6 +219,59 @@ public class ErrorColorConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
 }
 
+public class ProgressToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is double percent)
+        {
+            return percent > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        return Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+}
+
+public class ProgressToWidthConverter : IMultiValueConverter
+{
+    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (values.Length < 2)
+        {
+            return 0.0;
+        }
+
+        if (values[0] is double percent && values[1] is double totalWidth)
+        {
+            return (percent / 100.0) * totalWidth;
+        }
+
+        return 0.0;
+    }
+
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture) => throw new NotImplementedException();
+}
+
+public class ChannelTypeToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is ChannelType channelType && parameter is string expectedType)
+        {
+            if (Enum.TryParse<ChannelType>(expectedType, true, out var parsed))
+            {
+                return channelType == parsed ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+
+        return Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+}
+
 public class ObjectToVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)

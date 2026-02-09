@@ -31,5 +31,8 @@
     <converters:BoolToIconConverter x:Key="BoolToIconConverter"/>
     <converters:PercentToWidthConverter x:Key="PercentToWidthConverter"/>
     <converters:DoubleToFloatConverter x:Key="DoubleToFloatConverter"/>
+    <converters:ProgressToVisibilityConverter x:Key="ProgressToVisibilityConverter"/>
+    <converters:ProgressToWidthConverter x:Key="ProgressToWidthConverter"/>
+    <converters:ChannelTypeToVisibilityConverter x:Key="ChannelTypeToVisibilityConverter"/>
 
 </ResourceDictionary>
