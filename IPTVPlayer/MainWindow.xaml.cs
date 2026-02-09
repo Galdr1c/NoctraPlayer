@@ -7,6 +7,7 @@ using IPTVPlayer.Models;
 using IPTVPlayer.Services;
 using IPTVPlayer.Services.Interfaces;
 using IPTVPlayer.ViewModels;
+using IPTVPlayer.Views;
 
 namespace IPTVPlayer;
 
@@ -41,6 +42,8 @@ public partial class MainWindow : Window
         // Set DataContext explicitly
         OverlayView.DataContext = _playerViewModel;
         Panel.SetZIndex(OverlayView, 1000);
+
+        PlayerControls.DataContext = _playerViewModel;
         
         PlayerArea.DataContext = _playerViewModel;
         _playerViewModel.CloseRequested += (s, e) =>
@@ -374,6 +377,12 @@ public partial class MainWindow : Window
             // Fade out the hero section as we scroll down
             HeroGrid.Opacity = Math.Max(0.2, 1.0 - (e.VerticalOffset / 800));
         }
+
+        if (TopBarBackground != null)
+        {
+            var opacity = Math.Min(0.95, 0.6 + (e.VerticalOffset / 400));
+            TopBarBackground.Opacity = opacity;
+        }
     }
 
     private void MinimizeButton_Click(object sender, RoutedEventArgs e)
@@ -391,6 +400,13 @@ public partial class MainWindow : Window
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
         Application.Current.Shutdown();
+    }
+
+    private void ProfilesButton_Click(object sender, RoutedEventArgs e)
+    {
+        var profilesWindow = App.Current.Services.GetRequiredService<ProfilesWindow>();
+        profilesWindow.Show();
+        Close();
     }
 
     private void CloseMiniPlayer_Click(object sender, RoutedEventArgs e)

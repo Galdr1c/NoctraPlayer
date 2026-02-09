@@ -35,10 +35,19 @@ public partial class MainViewModel : ObservableObject
     private List<Channel> _continueWatching = new();
 
     [ObservableProperty]
+    private List<Channel> _top10Channels = new();
+
+    [ObservableProperty]
+    private List<CategoryRail> _categoryRails = new();
+
+    [ObservableProperty]
     private List<Channel> _latestMovies = new();
 
     [ObservableProperty]
     private List<Series> _latestSeries = new();
+
+    [ObservableProperty]
+    private List<Channel> _latestSeriesChannels = new();
 
     [ObservableProperty]
     private Channel? _featuredChannel;
@@ -81,6 +90,9 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isSearchOverlayVisible;
+
+    [ObservableProperty]
+    private bool _isSearchExpanded;
 
     [ObservableProperty]
     private string _searchQuery = string.Empty;
@@ -254,10 +266,19 @@ public partial class MainViewModel : ObservableObject
         TrendingChannels = Channels.Where(c => c.Type == ChannelType.Live).Take(10).ToList();
         LatestMovies = Channels.Where(c => c.Type == ChannelType.VOD).Take(10).ToList();
         LatestSeries = await _mediaService.GetSeriesAsync(SelectedPlaylist?.Id ?? 0);
+        LatestSeriesChannels = Channels.Where(c => c.Type == ChannelType.Series).Take(10).ToList();
         ContinueWatching = Channels.Where(c => c.LastWatched.HasValue).OrderByDescending(c => c.LastWatched).Take(10).ToList();
+        Top10Channels = TrendingChannels.Take(10).ToList();
 
         // Hero içeriği
         FeaturedChannel = TrendingChannels.FirstOrDefault() ?? LatestMovies.FirstOrDefault();
+
+        CategoryRails = Channels
+            .Where(c => !string.IsNullOrWhiteSpace(c.GroupTitle))
+            .GroupBy(c => c.GroupTitle!)
+            .Take(6)
+            .Select(group => new CategoryRail(group.Key, group.Take(12).ToList()))
+            .ToList();
     }
 
     private CancellationTokenSource? _filterCts;
@@ -469,6 +490,17 @@ public partial class MainViewModel : ObservableObject
         IsSearchOverlayVisible = false;
         SearchQuery = string.Empty;
         SearchResults.Clear();
+        IsSearchExpanded = false;
+    }
+
+    [RelayCommand]
+    private void ToggleSearchBar()
+    {
+        IsSearchExpanded = !IsSearchExpanded;
+        if (!IsSearchExpanded)
+        {
+            SearchText = string.Empty;
+        }
     }
 
     partial void OnSearchQueryChanged(string value)
@@ -644,3 +676,5 @@ public partial class MainViewModel : ObservableObject
         }
     }
 }
+
+public record CategoryRail(string Title, List<Channel> Items);

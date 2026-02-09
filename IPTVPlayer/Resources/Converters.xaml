@@ -36,5 +36,6 @@
     <converters:ChannelTypeToVisibilityConverter x:Key="ChannelTypeToVisibilityConverter"/>
     <converters:BoolToColorConverter x:Key="BoolToColorConverter"/>
     <converters:PercentToOpacityConverter x:Key="PercentToOpacityConverter"/>
+    <converters:IndexToRankConverter x:Key="IndexToRankConverter"/>
 
 </ResourceDictionary>

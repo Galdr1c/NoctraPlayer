@@ -71,6 +71,11 @@
                 <!-- Player Controls Overlay -->
                 <!-- Video Overlay (Controls, Scrim, Info) -->
                 <views:VideoOverlayView x:Name="OverlayView" Panel.ZIndex="2000"/>
+                <views:PlayerControls x:Name="PlayerControls"
+                                      Panel.ZIndex="2001"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Bottom"
+                                      Margin="40"/>
 
                 <!-- Next Episode Prompt -->
                 <Border x:Name="NextEpisodePrompt"
@@ -205,7 +210,7 @@
             <!-- ==========================================
                  HEADER BAR
                  ========================================== -->
-            <Border Grid.Row="0" Background="{StaticResource HeaderGradientBrush}" CornerRadius="12,12,0,0">
+            <Border x:Name="TopBarBackground" Grid.Row="0" Background="{StaticResource HeaderGradientBrush}" CornerRadius="12,12,0,0">
                 <Grid Margin="24,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -213,77 +218,118 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Logo -->
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
-                        <Image Source="Assets/Logo.png" Height="32" Stretch="Uniform" VerticalAlignment="Center"/>
+                        <Image Source="Assets/Logo.png" Height="28" Stretch="Uniform" VerticalAlignment="Center"/>
                         <TextBlock Text="Noctra" 
-                                   FontSize="22" FontWeight="Bold"
+                                   FontSize="20" FontWeight="Bold"
                                    Foreground="{StaticResource TextPrimaryBrush}"
-                                   VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                   VerticalAlignment="Center" Margin="12,0,20,0"/>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <RadioButton Content="Ana Sayfa"
+                                         IsChecked="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Home}}"
+                                         Command="{Binding NavigateCommand}"
+                                         CommandParameter="{x:Static vm:AppView.Home}"
+                                         Style="{StaticResource TopNavRadioButton}"/>
+                            <RadioButton Content="Canlı"
+                                         IsChecked="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Live}}"
+                                         Command="{Binding NavigateCommand}"
+                                         CommandParameter="{x:Static vm:AppView.Live}"
+                                         Style="{StaticResource TopNavRadioButton}"/>
+                            <RadioButton Content="Filmler"
+                                         IsChecked="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Movies}}"
+                                         Command="{Binding NavigateCommand}"
+                                         CommandParameter="{x:Static vm:AppView.Movies}"
+                                         Style="{StaticResource TopNavRadioButton}"/>
+                            <RadioButton Content="Diziler"
+                                         IsChecked="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Series}}"
+                                         Command="{Binding NavigateCommand}"
+                                         CommandParameter="{x:Static vm:AppView.Series}"
+                                         Style="{StaticResource TopNavRadioButton}"/>
+                            <RadioButton Content="Listem"
+                                         IsChecked="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.MyList}}"
+                                         Command="{Binding NavigateCommand}"
+                                         CommandParameter="{x:Static vm:AppView.MyList}"
+                                         Style="{StaticResource TopNavRadioButton}"/>
+                        </StackPanel>
                     </StackPanel>
 
-                    <!-- Search Box -->
-                    <!-- Search Button -->
-                    <Border Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,24,0"
+                    <Border Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right"
+                            Background="#1A1A1A"
+                            CornerRadius="20"
+                            Padding="8,4"
                             WindowChrome.IsHitTestVisibleInChrome="True">
-                        <Button Command="{Binding OpenSearchCommand}"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                Cursor="Hand"
-                                Padding="8"
-                                WindowChrome.IsHitTestVisibleInChrome="True">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="🔍" FontSize="18" Foreground="#B3B3B3" Margin="0,0,8,0"/>
-                                <TextBlock Text="Ara" FontSize="16" FontWeight="SemiBold" Foreground="#B3B3B3"/>
-                            </StackPanel>
-                            <Button.Style>
-                                <Style TargetType="Button">
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="Button">
-                                                <Border Background="{TemplateBinding Background}" CornerRadius="4">
-                                                    <ContentPresenter/>
-                                                </Border>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                    <Style.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Foreground" Value="White"/>
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Width" Value="56"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsSearchExpanded}" Value="True">
+                                        <Setter Property="Width" Value="400"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Command="{Binding ToggleSearchBarCommand}"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Cursor="Hand">
+                                <TextBlock Text="🔍" FontSize="16" Foreground="#B3B3B3"/>
+                            </Button>
+                            <TextBox Grid.Column="1"
+                                     Margin="8,0,0,0"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     Foreground="White"
+                                     FontSize="14"
+                                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     Visibility="{Binding IsSearchExpanded, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        </Grid>
                     </Border>
 
-                    <!-- Header Actions -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button x:Name="SettingsButton" Content="⚙️" FontSize="18" 
-                                Background="Transparent" BorderThickness="0" 
-                                Foreground="{StaticResource TextMutedBrush}" 
-                                Padding="12" Cursor="Hand" Click="SettingsButton_Click"
+                        <ToggleButton x:Name="ProfileMenuButton"
+                                      Width="40" Height="40"
+                                      Background="#1F1F1F"
+                                      BorderThickness="0"
+                                      Cursor="Hand">
+                            <TextBlock Text="👤" FontSize="18" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </ToggleButton>
+                        <Popup PlacementTarget="{Binding ElementName=ProfileMenuButton}"
+                               Placement="Bottom"
+                               StaysOpen="False"
+                               IsOpen="{Binding IsChecked, ElementName=ProfileMenuButton}">
+                            <Border Background="#141414" CornerRadius="12" Padding="8" BorderBrush="#333333" BorderThickness="1">
+                                <StackPanel>
+                                    <Button Content="Profil Yönetimi"
+                                            Style="{StaticResource ProfileMenuItemButton}"
+                                            Click="ProfilesButton_Click"/>
+                                    <Button Content="Ayarlar"
+                                            Style="{StaticResource ProfileMenuItemButton}"
+                                            Click="SettingsButton_Click"/>
+                                    <Button Content="Çıkış"
+                                            Style="{StaticResource ProfileMenuItemButton}"
+                                            Click="CloseButton_Click"/>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+
+                        <Border Width="1" Background="{StaticResource BorderBrush}" Margin="12,12"/>
+                        <Button x:Name="MinimizeButton" Content="─"
+                                Style="{StaticResource WindowControlButton}"
+                                Click="MinimizeButton_Click"
                                 WindowChrome.IsHitTestVisibleInChrome="True"/>
-                        <Button x:Name="ThemeButton" Content="🌙" FontSize="18" 
-                                Background="Transparent" BorderThickness="0" 
-                                Foreground="{StaticResource TextMutedBrush}" 
-                                Padding="12" Cursor="Hand" Click="ThemeButton_Click"
+                        <Button x:Name="MaximizeButton" Content="□"
+                                Style="{StaticResource WindowControlButton}"
+                                Click="MaximizeButton_Click"
                                 WindowChrome.IsHitTestVisibleInChrome="True"/>
-                        <Border Width="1" Background="{StaticResource BorderBrush}" Margin="8,12"/>
-                        <Button x:Name="MinimizeButton" Content="─" FontSize="14" 
-                                Background="Transparent" BorderThickness="0" 
-                                Foreground="{StaticResource TextMutedBrush}" 
-                                Padding="14,12" Cursor="Hand" Click="MinimizeButton_Click"
-                                WindowChrome.IsHitTestVisibleInChrome="True"/>
-                        <Button x:Name="MaximizeButton" Content="□" FontSize="14" 
-                                Background="Transparent" BorderThickness="0" 
-                                Foreground="{StaticResource TextMutedBrush}" 
-                                Padding="14,12" Cursor="Hand" Click="MaximizeButton_Click"
-                                WindowChrome.IsHitTestVisibleInChrome="True"/>
-                        <Button x:Name="CloseButton" Content="✕" FontSize="14" 
-                                Background="Transparent" BorderThickness="0" 
-                                Foreground="{StaticResource ErrorBrush}" 
-                                Padding="14,12" Cursor="Hand" Click="CloseButton_Click"
+                        <Button x:Name="CloseButton" Content="✕"
+                                Style="{StaticResource WindowControlButton}"
+                                Foreground="{StaticResource ErrorBrush}"
+                                Click="CloseButton_Click"
                                 WindowChrome.IsHitTestVisibleInChrome="True"/>
                     </StackPanel>
                 </Grid>
@@ -470,7 +516,7 @@
                                 <!-- Global styles from Styles.xaml are used instead -->
                             </StackPanel.Resources>
                             <!-- HERO SECTION -->
-                            <Border Height="500" CornerRadius="16" Margin="0,0,0,40" ClipToBounds="True">
+                            <Border Height="600" CornerRadius="16" Margin="0,0,0,40" ClipToBounds="True">
                                 <Grid x:Name="HeroGrid">
                                     <Grid.RenderTransform>
                                         <TransformGroup>
@@ -527,35 +573,14 @@
                                         <StackPanel Orientation="Horizontal">
                                             <!-- Play Button -->
                                             <Button Command="{Binding PlayFeaturedCommand}"
-                                                    Height="56" Padding="32,0"
+                                                    Height="56"
                                                     Background="White"
-                                                    BorderThickness="0"
-                                                    Cursor="Hand"
-                                                    Margin="0,0,16,0">
+                                                    Margin="0,0,16,0"
+                                                    Style="{StaticResource HeroActionButton}">
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text="▶" FontSize="20" Foreground="Black" Margin="0,0,12,0" VerticalAlignment="Center"/>
                                                     <TextBlock Text="İzle" FontSize="18" Foreground="Black" FontWeight="Bold" VerticalAlignment="Center"/>
                                                 </StackPanel>
-                                                <Button.Style>
-                                                    <Style TargetType="Button">
-                                                        <Setter Property="Template">
-                                                            <Setter.Value>
-                                                                <ControlTemplate TargetType="Button">
-                                                                    <Border x:Name="Border" 
-                                                                            Background="{TemplateBinding Background}"
-                                                                            CornerRadius="8" Padding="{TemplateBinding Padding}">
-                                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                                    </Border>
-                                                                    <ControlTemplate.Triggers>
-                                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                                            <Setter TargetName="Border" Property="Background" Value="#E5E5E5"/>
-                                                                        </Trigger>
-                                                                    </ControlTemplate.Triggers>
-                                                                </ControlTemplate>
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </Style>
-                                                </Button.Style>
                                             </Button>
                                             
                                             <!-- My List Button -->
@@ -592,196 +617,53 @@
                                             </Button>
 
                                             <!-- More Info Button -->
-                                            <Button Height="56" Padding="32,0"
+                                            <Button Height="56"
                                                     Background="#A06D6D6E"
-                                                    BorderThickness="0"
-                                                    Cursor="Hand">
+                                                    Style="{StaticResource HeroActionButton}">
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text="ℹ" FontSize="20" Foreground="White" Margin="0,0,12,0"/>
                                                     <TextBlock Text="Daha Fazla Bilgi" FontSize="18" Foreground="White"/>
                                                 </StackPanel>
-                                                 <Button.Style>
-                                                    <Style TargetType="Button">
-                                                        <Setter Property="Template">
-                                                            <Setter.Value>
-                                                                <ControlTemplate TargetType="Button">
-                                                                    <Border x:Name="Border" 
-                                                                            Background="{TemplateBinding Background}"
-                                                                            CornerRadius="8" Padding="{TemplateBinding Padding}">
-                                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                                    </Border>
-                                                                    <ControlTemplate.Triggers>
-                                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                                            <Setter TargetName="Border" Property="Background" Value="#505050"/>
-                                                                        </Trigger>
-                                                                    </ControlTemplate.Triggers>
-                                                                </ControlTemplate>
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </Style>
-                                                </Button.Style>
                                             </Button>
                                         </StackPanel>
                                     </StackPanel>
                                 </Grid>
                             </Border>
 
+                            <views:HorizontalRail Title="İzlemeye Devam Et"
+                                                  ItemsSource="{Binding ContinueWatching}"
+                                                  ShowSeeAll="False"
+                                                  Margin="0,0,0,40"/>
 
+                            <views:HorizontalRail Title="Şu An Trend"
+                                                  ItemsSource="{Binding TrendingChannels}"
+                                                  ShowSeeAll="True"
+                                                  Margin="0,0,0,40"/>
 
-                            <!-- Rail: İzlemeye Devam Et -->
-                            <StackPanel Visibility="{Binding ContinueWatching.Count, Converter={StaticResource CountToVisibilityConverter}}" Margin="0,0,0,40">
-                                <TextBlock Text="İzlemeye Devam Et" 
-                                           FontSize="24" FontWeight="SemiBold" 
-                                           Foreground="White"
-                                           Margin="0,0,0,16"/>
-                                <ListBox ItemsSource="{Binding ContinueWatching}"
-                                         Style="{StaticResource RailListBoxStyle}">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border x:Name="Card" Width="{StaticResource RatioLandscapeWidth}" Height="{StaticResource RatioLandscapeHeight}" 
-                                                    Style="{StaticResource NoctraCard}" ClipToBounds="True" Cursor="Hand"
-                                                    MouseEnter="MediaCard_MouseEnter" MouseLeave="MediaCard_MouseLeave">
-                                                <Border.InputBindings>
-                                                    <MouseBinding MouseAction="LeftClick" 
-                                                                  Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                                                  CommandParameter="{Binding}"/>
-                                                </Border.InputBindings>
-                                                <Grid>
-                                                    <Image Source="{Binding LogoUrl}" Stretch="UniformToFill" Opacity="0.8"/>
-                                                    <Border Background="{StaticResource HeroOverlayBrush}"/>
-                                                    
-                                                    <!-- Preview Container -->
-                                                    <Border x:Name="PreviewContainer" Background="Black" Visibility="Collapsed">
-                                                        <vlc:VideoView x:Name="PreviewVideoView" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                    </Border>
-                                                    
-                                                    <StackPanel VerticalAlignment="Bottom" Margin="12">
-                                                        <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis"/>
-                                                        <TextBlock Text="{Binding GroupTitle}" Foreground="{StaticResource TextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
-                                                    </StackPanel>
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                            </StackPanel>
+                            <views:Top10Rail Title="Türkiye'de İlk 10"
+                                             ItemsSource="{Binding Top10Channels}"
+                                             Margin="0,0,0,40"/>
 
-                            <!-- Rail: Şu An Trend -->
-                            <StackPanel Margin="0,0,0,40">
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                                    <TextBlock Text="Şu An Trend" 
-                                               FontSize="24" FontWeight="SemiBold" 
-                                               Foreground="White"/>
-                                    <TextBlock Text=" ›" 
-                                               FontSize="24" 
-                                               Foreground="#7C3AED" 
-                                               Margin="8,0,0,0"
-                                               Cursor="Hand"/>
-                                </StackPanel>
-                                <ListBox ItemsSource="{Binding TrendingChannels}"
-                                         Style="{StaticResource RailListBoxStyle}">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border x:Name="Card" Width="{StaticResource RatioLandscapeWidth}" Height="{StaticResource RatioLandscapeHeight}" 
-                                                    Style="{StaticResource NoctraCard}" ClipToBounds="True" Cursor="Hand"
-                                                    MouseEnter="MediaCard_MouseEnter" MouseLeave="MediaCard_MouseLeave">
-                                                <Border.InputBindings>
-                                                    <MouseBinding MouseAction="LeftClick" 
-                                                                  Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                                                  CommandParameter="{Binding}"/>
-                                                </Border.InputBindings>
-                                                <Grid>
-                                                    <Image Source="{Binding LogoUrl}" Stretch="UniformToFill" Opacity="0.8"/>
-                                                    <Border Background="{StaticResource HeroOverlayBrush}"/>
-                                                    
-                                                    <Border x:Name="PreviewContainer" Background="Black" Visibility="Collapsed">
-                                                        <vlc:VideoView x:Name="PreviewVideoView" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                    </Border>
-                                                    
-                                                    <StackPanel VerticalAlignment="Bottom" Margin="12">
-                                                        <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis"/>
-                                                        <TextBlock Text="{Binding GroupTitle}" Foreground="{StaticResource TextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
-                                                    </StackPanel>
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                            </StackPanel>
+                            <views:HorizontalRail Title="Popüler Filmler"
+                                                  ItemsSource="{Binding LatestMovies}"
+                                                  ShowSeeAll="False"
+                                                  Margin="0,0,0,40"/>
 
-                            <!-- Rail: Popüler Filmler -->
-                            <StackPanel Margin="0,0,0,40">
-                                <TextBlock Text="Popüler Filmler" 
-                                           FontSize="24" FontWeight="SemiBold" 
-                                           Foreground="White"
-                                           Margin="0,0,0,16"/>
-                                <ListBox ItemsSource="{Binding LatestMovies}"
-                                         Style="{StaticResource SeriesRailListBoxStyle}">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border x:Name="Card" Width="{StaticResource RatioPortraitWidth}" Height="{StaticResource RatioPortraitHeight}" 
-                                                    Style="{StaticResource NoctraCard}" ClipToBounds="True" Cursor="Hand"
-                                                    MouseEnter="MediaCard_MouseEnter" MouseLeave="MediaCard_MouseLeave">
-                                                <Border.InputBindings>
-                                                    <MouseBinding MouseAction="LeftClick" 
-                                                                  Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                                                  CommandParameter="{Binding}"/>
-                                                </Border.InputBindings>
-                                                <Grid>
-                                                    <Image Source="{Binding CoverUrl}" Stretch="UniformToFill"/>
-                                                    <Border Background="{StaticResource HeroOverlayBrush}"/>
-                                                    
-                                                    <Border x:Name="PreviewContainer" Background="Black" Visibility="Collapsed">
-                                                        <vlc:VideoView x:Name="PreviewVideoView" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                    </Border>
-                                                    
-                                                    <StackPanel VerticalAlignment="Bottom" Margin="12">
-                                                        <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="Bold" FontSize="14" TextTrimming="CharacterEllipsis"/>
-                                                        <TextBlock Text="{Binding Genre}" Foreground="{StaticResource TextMutedBrush}" FontSize="11"/>
-                                                    </StackPanel>
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                            </StackPanel>
+                            <views:HorizontalRail Title="Yeni Diziler"
+                                                  ItemsSource="{Binding LatestSeriesChannels}"
+                                                  ShowSeeAll="False"
+                                                  Margin="0,0,0,40"/>
 
-                            <!-- Rail: Yeni Diziler -->
-                            <StackPanel Margin="0,0,0,40">
-                                <TextBlock Text="Yeni Diziler" 
-                                           FontSize="24" FontWeight="SemiBold" 
-                                           Foreground="White"
-                                           Margin="0,0,0,16"/>
-                                <ListBox ItemsSource="{Binding LatestSeries}"
-                                         Style="{StaticResource SeriesRailListBoxStyle}">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border x:Name="Card" Width="{StaticResource RatioPortraitWidth}" Height="{StaticResource RatioPortraitHeight}" 
-                                                    Style="{StaticResource NoctraCard}" ClipToBounds="True" Cursor="Hand"
-                                                    MouseEnter="MediaCard_MouseEnter" MouseLeave="MediaCard_MouseLeave">
-                                                <Border.InputBindings>
-                                                    <MouseBinding MouseAction="LeftClick" 
-                                                                  Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                                                  CommandParameter="{Binding}"/>
-                                                </Border.InputBindings>
-                                                <Grid>
-                                                    <Image Source="{Binding CoverUrl}" Stretch="UniformToFill"/>
-                                                    <Border Background="{StaticResource HeroOverlayBrush}"/>
-                                                    
-                                                    <Border x:Name="PreviewContainer" Background="Black" Visibility="Collapsed">
-                                                        <vlc:VideoView x:Name="PreviewVideoView" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                    </Border>
-                                                    
-                                                    <StackPanel VerticalAlignment="Bottom" Margin="12">
-                                                        <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="Bold" FontSize="14" TextTrimming="CharacterEllipsis"/>
-                                                        <TextBlock Text="{Binding Genre}" Foreground="{StaticResource TextMutedBrush}" FontSize="11"/>
-                                                    </StackPanel>
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                            </StackPanel>
+                            <ItemsControl ItemsSource="{Binding CategoryRails}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <views:HorizontalRail Title="{Binding Title}"
+                                                              ItemsSource="{Binding Items}"
+                                                              ShowSeeAll="False"
+                                                              Margin="0,0,0,40"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
                     </ScrollViewer>
 

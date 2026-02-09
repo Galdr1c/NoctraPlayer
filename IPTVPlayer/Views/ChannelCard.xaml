@@ -7,6 +7,12 @@
              MouseLeave="Card_MouseLeave"
              Cursor="Hand">
 
+    <UserControl.InputBindings>
+        <MouseBinding MouseAction="LeftClick"
+                      Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                      CommandParameter="{Binding Channel, ElementName=CardRoot}"/>
+    </UserControl.InputBindings>
+
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
