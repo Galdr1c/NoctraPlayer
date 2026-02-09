@@ -1,5 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using IPTVPlayer.Models;
+using IPTVPlayer.Services;
 using IPTVPlayer.Services.Interfaces;
 
 namespace IPTVPlayer.ViewModels;
@@ -9,13 +11,57 @@ namespace IPTVPlayer.ViewModels;
 /// </summary>
 public partial class SettingsViewModel : ObservableObject
 {
+    private readonly ISettingsService _settingsService;
     private readonly IPlaylistService _playlistService;
     private readonly IEpgService _epgService;
     private readonly IThemeService _themeService;
 
+    // ============ Oynatma Ayarları ============
+    
     [ObservableProperty]
-    private bool _isDarkTheme = true;
-
+    private bool _autoPlayNext;
+    
+    [ObservableProperty]
+    private bool _autoSkipIntro;
+    
+    [ObservableProperty]
+    private int _selectedDataUsage;
+    
+    [ObservableProperty]
+    private int _defaultVolume;
+    
+    [ObservableProperty]
+    private bool _rememberLastChannel;
+    
+    // ============ Altyazı Ayarları ============
+    
+    [ObservableProperty]
+    private int _selectedSubtitleLanguage;
+    
+    [ObservableProperty]
+    private int _subtitleFontSize;
+    
+    [ObservableProperty]
+    private int _subtitleBackgroundOpacity;
+    
+    // ============ İndirme Ayarları ============
+    
+    [ObservableProperty]
+    private int _selectedDownloadQuality;
+    
+    [ObservableProperty]
+    private bool _downloadWifiOnly;
+    
+    [ObservableProperty]
+    private string _downloadPath = string.Empty;
+    
+    // ============ Görünüm ============
+    
+    [ObservableProperty]
+    private bool _isDarkTheme;
+    
+    // ============ EPG & Playlist ============
+    
     [ObservableProperty]
     private string _newPlaylistName = string.Empty;
 
@@ -30,18 +76,19 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private string _statusMessage = string.Empty;
-
+    
+    // ============ TMDB ============
+    
     [ObservableProperty]
-    private int _defaultVolume = 100;
+    private string _tmdbApiKey = string.Empty;
 
-    [ObservableProperty]
-    private bool _autoPlay = true;
-
-    [ObservableProperty]
-    private bool _rememberLastChannel = true;
-
-    public SettingsViewModel(IPlaylistService playlistService, IEpgService epgService, IThemeService themeService)
+    public SettingsViewModel(
+        ISettingsService settingsService,
+        IPlaylistService playlistService, 
+        IEpgService epgService, 
+        IThemeService themeService)
     {
+        _settingsService = settingsService;
         _playlistService = playlistService;
         _epgService = epgService;
         _themeService = themeService;
@@ -51,8 +98,72 @@ public partial class SettingsViewModel : ObservableObject
 
     private void LoadSettings()
     {
-        // Uygulama ayarlarını yükle (örn. Properties.Settings veya JSON config)
-        // Şimdilik varsayılan değerler kullanılıyor
+        var s = _settingsService.Settings;
+        
+        // Playback
+        AutoPlayNext = s.AutoPlayNext;
+        AutoSkipIntro = s.AutoSkipIntro;
+        SelectedDataUsage = (int)s.DataUsage;
+        DefaultVolume = s.DefaultVolume;
+        RememberLastChannel = s.RememberLastChannel;
+        
+        // Subtitles
+        SelectedSubtitleLanguage = s.SubtitleLanguage switch
+        {
+            "tr" => 0,
+            "en" => 1,
+            _ => 2  // none
+        };
+        SubtitleFontSize = s.SubtitleFontSize;
+        SubtitleBackgroundOpacity = s.SubtitleBackgroundOpacity;
+        
+        // Downloads
+        SelectedDownloadQuality = (int)s.DownloadQuality;
+        DownloadWifiOnly = s.DownloadWifiOnly;
+        DownloadPath = s.DownloadPath;
+        
+        // Appearance
+        IsDarkTheme = s.IsDarkTheme;
+        
+        // TMDB
+        TmdbApiKey = s.TmdbApiKey ?? string.Empty;
+    }
+
+    [RelayCommand]
+    private async Task SaveSettingsAsync()
+    {
+        var s = _settingsService.Settings;
+        
+        // Playback
+        s.AutoPlayNext = AutoPlayNext;
+        s.AutoSkipIntro = AutoSkipIntro;
+        s.DataUsage = (DataUsageLevel)SelectedDataUsage;
+        s.DefaultVolume = DefaultVolume;
+        s.RememberLastChannel = RememberLastChannel;
+        
+        // Subtitles
+        s.SubtitleLanguage = SelectedSubtitleLanguage switch
+        {
+            0 => "tr",
+            1 => "en",
+            _ => "none"
+        };
+        s.SubtitleFontSize = SubtitleFontSize;
+        s.SubtitleBackgroundOpacity = SubtitleBackgroundOpacity;
+        
+        // Downloads
+        s.DownloadQuality = (DownloadQuality)SelectedDownloadQuality;
+        s.DownloadWifiOnly = DownloadWifiOnly;
+        s.DownloadPath = DownloadPath;
+        
+        // Appearance
+        s.IsDarkTheme = IsDarkTheme;
+        
+        // TMDB
+        s.TmdbApiKey = string.IsNullOrWhiteSpace(TmdbApiKey) ? null : TmdbApiKey;
+        
+        await _settingsService.SaveAsync();
+        StatusMessage = "Ayarlar kaydedildi ✓";
     }
 
     [RelayCommand]
@@ -111,12 +222,14 @@ public partial class SettingsViewModel : ObservableObject
     {
         IsDarkTheme = !IsDarkTheme;
         _themeService.SetTheme(IsDarkTheme);
+        _ = SaveSettingsAsync();
     }
-
+    
     [RelayCommand]
-    private void SaveSettings()
+    private void ResetToDefaults()
     {
-        // Ayarları kaydet
-        StatusMessage = "Ayarlar kaydedildi";
+        _settingsService.ResetToDefaults();
+        LoadSettings();
+        StatusMessage = "Ayarlar varsayılana sıfırlandı";
     }
 }

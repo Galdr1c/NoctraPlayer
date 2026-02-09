@@ -1,0 +1,138 @@
+using System.Text.Json.Serialization;
+
+namespace IPTVPlayer.Models;
+
+/// <summary>
+/// TMDB API search response wrapper
+/// </summary>
+public class TmdbSearchResponse
+{
+    [JsonPropertyName("page")]
+    public int Page { get; set; }
+    
+    [JsonPropertyName("results")]
+    public List<TmdbResult> Results { get; set; } = new();
+    
+    [JsonPropertyName("total_results")]
+    public int TotalResults { get; set; }
+    
+    [JsonPropertyName("total_pages")]
+    public int TotalPages { get; set; }
+}
+
+/// <summary>
+/// Individual TMDB search result (movie or TV show)
+/// </summary>
+public class TmdbResult
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+    
+    [JsonPropertyName("media_type")]
+    public string? MediaType { get; set; }
+    
+    [JsonPropertyName("title")]
+    public string? Title { get; set; }  // For movies
+    
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }  // For TV shows
+    
+    [JsonPropertyName("original_title")]
+    public string? OriginalTitle { get; set; }
+    
+    [JsonPropertyName("original_name")]
+    public string? OriginalName { get; set; }
+    
+    [JsonPropertyName("overview")]
+    public string? Overview { get; set; }
+    
+    [JsonPropertyName("poster_path")]
+    public string? PosterPath { get; set; }
+    
+    [JsonPropertyName("backdrop_path")]
+    public string? BackdropPath { get; set; }
+    
+    [JsonPropertyName("vote_average")]
+    public double VoteAverage { get; set; }
+    
+    [JsonPropertyName("vote_count")]
+    public int VoteCount { get; set; }
+    
+    [JsonPropertyName("release_date")]
+    public string? ReleaseDate { get; set; }  // For movies (YYYY-MM-DD)
+    
+    [JsonPropertyName("first_air_date")]
+    public string? FirstAirDate { get; set; }  // For TV shows (YYYY-MM-DD)
+    
+    [JsonPropertyName("genre_ids")]
+    public List<int> GenreIds { get; set; } = new();
+    
+    [JsonPropertyName("popularity")]
+    public double Popularity { get; set; }
+    
+    [JsonPropertyName("adult")]
+    public bool Adult { get; set; }
+    
+    [JsonPropertyName("original_language")]
+    public string? OriginalLanguage { get; set; }
+    
+    /// <summary>
+    /// Gets the display title (movie title or TV show name)
+    /// </summary>
+    public string DisplayTitle => Title ?? Name ?? OriginalTitle ?? OriginalName ?? "Unknown";
+    
+    /// <summary>
+    /// Gets the release year from the date string
+    /// </summary>
+    public int? ReleaseYear
+    {
+        get
+        {
+            var dateStr = ReleaseDate ?? FirstAirDate;
+            if (string.IsNullOrEmpty(dateStr) || dateStr.Length < 4)
+                return null;
+            
+            if (int.TryParse(dateStr[..4], out var year))
+                return year;
+            
+            return null;
+        }
+    }
+}
+
+/// <summary>
+/// TMDB genre response
+/// </summary>
+public class TmdbGenreResponse
+{
+    [JsonPropertyName("genres")]
+    public List<TmdbGenre> Genres { get; set; } = new();
+}
+
+/// <summary>
+/// Individual TMDB genre
+/// </summary>
+public class TmdbGenre
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+    
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Domain model for enriched channel metadata
+/// </summary>
+public class ChannelMetadata
+{
+    public string Title { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string? PosterUrl { get; set; }
+    public string? BackdropUrl { get; set; }
+    public double? Rating { get; set; }
+    public int? ReleaseYear { get; set; }
+    public List<string> Genres { get; set; } = new();
+    public string? MediaType { get; set; }
+    public int? TmdbId { get; set; }
+}

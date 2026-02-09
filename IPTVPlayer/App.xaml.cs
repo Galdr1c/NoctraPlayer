@@ -189,6 +189,7 @@ public partial class App : Application
         // HTTP Client
         services.AddHttpClient<IM3UParser, M3UParser>();
         services.AddHttpClient<IEpgService, EpgService>();
+        services.AddHttpClient<IMetadataService, MetadataService>();
 
         // Services
         services.AddScoped<IPlaylistService, PlaylistService>();
@@ -198,6 +199,7 @@ public partial class App : Application
         services.AddScoped<IChannelService, ChannelService>();
         services.AddScoped<IWatchHistoryService, WatchHistoryService>();
         services.AddSingleton<Services.Interfaces.IAvatarService, Services.Interfaces.AvatarService>();
+        services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<HoverPreviewService>();
         
         // UI Services (WPF Implementations)
@@ -213,6 +215,7 @@ public partial class App : Application
         services.AddScoped<AddProfileViewModel>();
         services.AddTransient<AvatarPickerViewModel>();
         services.AddTransient<WatermarkViewModel>();
+        services.AddTransient<GlobalSettingsViewModel>();
 
         // Windows - Singleton MainWindow for instant loading
         services.AddSingleton<MainWindow>();
@@ -220,6 +223,7 @@ public partial class App : Application
         services.AddTransient<ProfilesWindow>();
         services.AddTransient<AddProfileWindow>();
         services.AddTransient<AvatarPickerWindow>();
+        services.AddTransient<GlobalSettingsWindow>();
     }
 
 

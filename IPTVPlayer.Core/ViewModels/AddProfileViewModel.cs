@@ -269,6 +269,15 @@ public partial class AddProfileViewModel : ObservableObject
     private bool _hasError;
 
     [ObservableProperty]
+    private string? _urlError;
+
+    [ObservableProperty]
+    private string? _profileNameError;
+
+    [ObservableProperty]
+    private bool _isSaving;
+
+    [ObservableProperty]
     private Profile? _editingProfile;
 
     public event EventHandler? RequestClose;
@@ -368,42 +377,73 @@ public partial class AddProfileViewModel : ObservableObject
         }
     }
 
+    private bool ValidateUrl()
+    {
+        if (string.IsNullOrWhiteSpace(Url))
+        {
+            UrlError = "URL gereklidir";
+            return false;
+        }
+        
+        // Basic URL format check
+        if (!Uri.TryCreate(Url, UriKind.Absolute, out var uri))
+        {
+            UrlError = "Geçersiz URL formatı";
+            return false;
+        }
+        
+        // M3U specific validation
+        if (IsM3U)
+        {
+            var lower = Url.ToLower();
+            if (!lower.Contains(".m3u") && !lower.Contains(".m3u8") && !lower.Contains("get.php"))
+            {
+                UrlError = "M3U URL'i .m3u, .m3u8 veya get.php içermelidir";
+                return false;
+            }
+        }
+        
+        // Xtream specific validation
+        if (IsXtream)
+        {
+            if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
+            {
+                UrlError = "Xtream için kullanıcı adı ve şifre gereklidir";
+                return false;
+            }
+        }
+        
+        UrlError = null;
+        return true;
+    }
+
     [RelayCommand]
     private async Task SaveAsync()
     {
-        // Validation logic
-        if (string.IsNullOrWhiteSpace(Url) || (IsXtream && (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))))
+        // Clear previous errors
+        ProfileNameError = null;
+        UrlError = null;
+        HasError = false;
+        StatusMessage = string.Empty;
+
+        // Validate profile name
+        if (string.IsNullOrWhiteSpace(ProfileName))
         {
-            StatusMessage = "Lütfen hesap bilgilerini eksiksiz girin";
-            HasError = true;
+            ProfileNameError = "Profil adı gereklidir";
             return;
         }
 
-        // URL Validation for M3U as requested
-        if (IsM3U)
+        // Validate URL
+        if (!ValidateUrl())
         {
-            var lowerUrl = Url.ToLower();
-            bool isValidM3U = lowerUrl.Contains(".m3u") || lowerUrl.Contains(".m3u8") || lowerUrl.Contains("get.php");
-            
-            if (!isValidM3U)
-            {
-                StatusMessage = "Geçerli bir M3U adresi girin (m3u, m3u8 veya get.php içermeli)";
-                HasError = true;
-                return;
-            }
-        }
-
-        if (string.IsNullOrWhiteSpace(ProfileName))
-        {
-            StatusMessage = "Profil adı gereklidir";
-            HasError = true;
             return;
         }
 
         try
         {
-            HasError = false;
+            // Show saving indicator
             StatusMessage = "Kaydediliyor...";
+            IsSaving = true;
 
             using var transaction = await _context.Database.BeginTransactionAsync();
             ProviderAccount account;
@@ -478,6 +518,10 @@ public partial class AddProfileViewModel : ObservableObject
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
+            // Success feedback
+            StatusMessage = "✓ Profil kaydedildi";
+            await Task.Delay(400);
+
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
@@ -485,6 +529,10 @@ public partial class AddProfileViewModel : ObservableObject
             HasError = true;
             string detail = ex.InnerException?.Message ?? ex.Message;
             StatusMessage = $"Hata: {detail}";
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 

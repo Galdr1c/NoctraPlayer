@@ -3,10 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:viewmodels="clr-namespace:IPTVPlayer.ViewModels;assembly=IPTVPlayer.Core"
-        xmlns:helper="clr-namespace:IPTVPlayer.Helpers"
         mc:Ignorable="d"
-        Title="Ayarlar" Height="400" Width="600"
+        Title="Ayarlar" Height="700" Width="800"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         ResizeMode="NoResize"
@@ -20,11 +18,48 @@
                 <ResourceDictionary Source="/Resources/Colors.xaml"/>
                 <ResourceDictionary Source="/Resources/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+            
+            <!-- Settings Section Style -->
+            <Style x:Key="SettingsSection" TargetType="Border">
+                <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+                <Setter Property="CornerRadius" Value="8"/>
+                <Setter Property="Padding" Value="16"/>
+                <Setter Property="Margin" Value="0,0,0,12"/>
+            </Style>
+            
+            <!-- Settings Label -->
+            <Style x:Key="SettingsLabel" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="Margin" Value="0,12,0,6"/>
+            </Style>
+            
+            <!-- Settings Title -->
+            <Style x:Key="SettingsTitle" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                <Setter Property="FontSize" Value="15"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+            </Style>
+            
+            <!-- Toggle Style -->
+            <Style x:Key="SettingsToggle" TargetType="CheckBox">
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                <Setter Property="FontSize" Value="14"/>
+                <Setter Property="Margin" Value="0,8,0,0"/>
+                <Setter Property="Cursor" Value="Hand"/>
+            </Style>
+            
+            <!-- Slider Style -->
+            <Style x:Key="SettingsSlider" TargetType="Slider">
+                <Setter Property="Height" Value="20"/>
+                <Setter Property="Margin" Value="0,4,0,0"/>
+            </Style>
         </ResourceDictionary>
     </Window.Resources>
 
-    <Border Background="{StaticResource BackgroundBrush}" CornerRadius="12" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
-        <Grid Margin="24">
+    <Border Background="{StaticResource BackgroundBrush}" CornerRadius="12" 
+            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+        <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Header -->
                 <RowDefinition Height="*"/>    <!-- Content -->
@@ -32,8 +67,9 @@
             </Grid.RowDefinitions>
 
             <!-- Header -->
-            <Grid Grid.Row="0" Margin="0,0,0,24">
-                <TextBlock Text="Ayarlar" FontSize="24" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+            <Grid Grid.Row="0" Margin="24,20,24,0">
+                <TextBlock Text="⚙️ Ayarlar" FontSize="22" FontWeight="Bold" 
+                           Foreground="{StaticResource TextPrimaryBrush}"/>
                 <Button HorizontalAlignment="Right" Content="✕" 
                         Click="CloseButton_Click"
                         FontSize="18"
@@ -41,39 +77,277 @@
                         Foreground="{StaticResource TextSecondaryBrush}"/>
             </Grid>
 
-            <!-- Content -->
-            <StackPanel Grid.Row="1">
+            <!-- Tab Container -->
+            <TabControl Grid.Row="1" Margin="24,16,24,0" 
+                        Background="Transparent" BorderThickness="0">
                 
-                <!-- Theme Toggle -->
-                <Border Background="{StaticResource SurfaceBrush}" CornerRadius="8" Padding="16" Margin="0,0,0,16">
-                    <Grid>
+                <TabItem Header="🎬 Oynatma">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,16,0,0">
                         <StackPanel>
-                            <TextBlock Text="Görünüm" FontWeight="SemiBold" FontSize="16" Foreground="{StaticResource TextPrimaryBrush}"/>
-                            <TextBlock Text="Koyu veya açık tema arasında geçiş yapın" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                            <!-- Auto-play settings -->
+                            <Border Style="{StaticResource SettingsSection}">
+                                <StackPanel>
+                                    <TextBlock Text="Otomatik Oynatma" Style="{StaticResource SettingsTitle}" Margin="0,0,0,16"/>
+                                    
+                                    <!-- Auto-play next episode -->
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="Sonraki bölümü otomatik oynat" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="Bir bölüm bittiğinde seriyi otomatik devam ettirir" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <ToggleButton Grid.Column="1" IsChecked="{Binding AutoPlayNext}" Style="{StaticResource ModernToggleSwitch}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    
+                                    <!-- Auto-skip intro -->
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="İntro'yu otomatik geç" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="Tespit edildiğinde açılış jeneriğini atlar" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <ToggleButton Grid.Column="1" IsChecked="{Binding AutoSkipIntro}" Style="{StaticResource ModernToggleSwitch}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                    
+                                    <!-- Remember last channel -->
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="Son kanalı hatırla" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="Uygulama açıldığında son izlenen kanalı yükler" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <ToggleButton Grid.Column="1" IsChecked="{Binding RememberLastChannel}" Style="{StaticResource ModernToggleSwitch}" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                            
+                            <!-- Data usage -->
+                            <Border Style="{StaticResource SettingsSection}">
+                                <StackPanel>
+                                    <TextBlock Text="Veri Kullanımı" Style="{StaticResource SettingsTitle}"/>
+                                    <TextBlock Text="Video kalitesi tercihi" Style="{StaticResource SettingsLabel}" Margin="0,4,0,8"/>
+                                    
+                                    <ComboBox SelectedIndex="{Binding SelectedDataUsage}" Width="200" HorizontalAlignment="Left">
+                                        <ComboBoxItem Content="Düşük (480p)"/>
+                                        <ComboBoxItem Content="Orta (720p)"/>
+                                        <ComboBoxItem Content="Yüksek (1080p)"/>
+                                        <ComboBoxItem Content="Otomatik"/>
+                                    </ComboBox>
+                                </StackPanel>
+                            </Border>
+                            
+                            <!-- Volume -->
+                            <Border Style="{StaticResource SettingsSection}">
+                                <StackPanel>
+                                    <Grid>
+                                        <TextBlock Text="Varsayılan Ses Seviyesi" Style="{StaticResource SettingsTitle}"/>
+                                        <TextBlock HorizontalAlignment="Right" 
+                                                   Text="{Binding DefaultVolume, StringFormat={}{0}%}"
+                                                   Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold"/>
+                                    </Grid>
+                                    <Slider Minimum="0" Maximum="100" 
+                                            Value="{Binding DefaultVolume}" 
+                                            Style="{StaticResource SettingsSlider}"/>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
-                        
-                        <Button HorizontalAlignment="Right" Command="{Binding ToggleThemeCommand}" 
-                                Style="{StaticResource SecondaryButton}" Padding="16,8">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding IsDarkTheme, Converter={StaticResource InverseBoolConverter}, ConverterParameter=Koyu}" 
-                                           TextDecorations="None"/> 
-                                <!-- Placeholder text toggle logic: "Koyu Tema" -> "Açık Tema" -->
-                                <TextBlock Text=" Tema Değiştir 🌓"/>
-                            </StackPanel>
-                        </Button>
-                    </Grid>
-                </Border>
+                    </ScrollViewer>
+                </TabItem>
+                
+                <!-- Altyazı Tab -->
+                <TabItem Header="💬 Altyazı">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,16,0,0">
+                        <StackPanel>
+                            <!-- Language -->
+                            <Border Style="{StaticResource SettingsSection}">
+                                <StackPanel>
+                                    <TextBlock Text="Varsayılan Altyazı Dili" Style="{StaticResource SettingsTitle}"/>
+                                    <ComboBox SelectedIndex="{Binding SelectedSubtitleLanguage}" 
+                                              Width="200" HorizontalAlignment="Left" Margin="0,12,0,0">
+                                        <ComboBoxItem Content="🇹🇷 Türkçe"/>
+                                        <ComboBoxItem Content="🇬🇧 İngilizce"/>
+                                        <ComboBoxItem Content="❌ Yok"/>
+                                    </ComboBox>
+                                </StackPanel>
+                            </Border>
+                            
+                            <!-- Font size -->
+                            <Border Style="{StaticResource SettingsSection}">
+                                <StackPanel>
+                                    <Grid>
+                                        <TextBlock Text="Yazı Boyutu" Style="{StaticResource SettingsTitle}"/>
+                                        <TextBlock HorizontalAlignment="Right" 
+                                                   Text="{Binding SubtitleFontSize, StringFormat={}{0}px}"
+                                                   Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold"/>
+                                    </Grid>
+                                    <Slider Minimum="12" Maximum="32" 
+                                            Value="{Binding SubtitleFontSize}"
+                                            Style="{StaticResource SettingsSlider}"/>
+                                    
+                                    <!-- Preview -->
+                                    <Border Background="#1A1A1A" CornerRadius="4" Padding="16" Margin="0,12,0,0">
+                                        <TextBlock Text="Örnek Altyazı Metni" 
+                                                   FontSize="{Binding SubtitleFontSize}"
+                                                   Foreground="White" HorizontalAlignment="Center"/>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                            
+                            <!-- Background opacity -->
+                            <Border Style="{StaticResource SettingsSection}">
+                                <StackPanel>
+                                    <Grid>
+                                        <TextBlock Text="Arka Plan Opaklığı" Style="{StaticResource SettingsTitle}"/>
+                                        <TextBlock HorizontalAlignment="Right" 
+                                                   Text="{Binding SubtitleBackgroundOpacity, StringFormat={}{0}%}"
+                                                   Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold"/>
+                                    </Grid>
+                                    <Slider Minimum="0" Maximum="100" 
+                                            Value="{Binding SubtitleBackgroundOpacity}"
+                                            Style="{StaticResource SettingsSlider}"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+                
+                <!-- İndirme Tab -->
+                <TabItem Header="📥 İndirme">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,16,0,0">
+                        <StackPanel>
+                            <!-- Download quality -->
+                            <Border Style="{StaticResource SettingsSection}">
+                                <StackPanel>
+                                    <TextBlock Text="İndirme Kalitesi" Style="{StaticResource SettingsTitle}"/>
+                                    <ComboBox SelectedIndex="{Binding SelectedDownloadQuality}" 
+                                              Width="200" HorizontalAlignment="Left" Margin="0,12,0,0">
+                                        <ComboBoxItem Content="Standart"/>
+                                        <ComboBoxItem Content="Yüksek"/>
+                                    </ComboBox>
+                                </StackPanel>
+                            </Border>
+                            
+                            <!-- Wi-Fi only -->
+                            <Border Style="{StaticResource SettingsSection}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Text="Sadece Wi-Fi ile indir" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <TextBlock Text="Mobil veri kullanımını engeller" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                    <ToggleButton Grid.Column="1" IsChecked="{Binding DownloadWifiOnly}" Style="{StaticResource ModernToggleSwitch}" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            
+                            <!-- Storage location -->
+                            <Border Style="{StaticResource SettingsSection}">
+                                <StackPanel>
+                                    <TextBlock Text="Kayıt Konumu" Style="{StaticResource SettingsTitle}"/>
+                                    <Grid Margin="0,12,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Text="{Binding DownloadPath}" 
+                                                 IsReadOnly="True" 
+                                                 Padding="8" 
+                                                 Background="{StaticResource BackgroundBrush}"
+                                                 Foreground="{StaticResource TextSecondaryBrush}"
+                                                 BorderBrush="{StaticResource BorderBrush}"/>
+                                        <Button Grid.Column="1" Content="📂 Değiştir" 
+                                                Click="ChangeDownloadPath_Click"
+                                                Style="{StaticResource SecondaryButton}"
+                                                Margin="8,0,0,0" Padding="12,8"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+                
+                <!-- Görünüm Tab -->
+                <TabItem Header="🎨 Görünüm">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,16,0,0">
+                        <StackPanel>
+                            <!-- Theme -->
+                            <Border Style="{StaticResource SettingsSection}">
+                                <Grid>
+                                    <StackPanel>
+                                        <TextBlock Text="Tema" Style="{StaticResource SettingsTitle}"/>
+                                        <TextBlock Text="Koyu veya açık tema arasında geçiş yapın" 
+                                                   Style="{StaticResource SettingsLabel}"/>
+                                    </StackPanel>
+                                    <Button HorizontalAlignment="Right" VerticalAlignment="Center"
+                                            Command="{Binding ToggleThemeCommand}" 
+                                            Style="{StaticResource SecondaryButton}" Padding="16,10">
+                                        <TextBlock Text="🌓 Tema Değiştir"/>
+                                    </Button>
+                                </Grid>
+                            </Border>
+                            
+                            <!-- TMDB API Key -->
+                            <Border Style="{StaticResource SettingsSection}">
+                                <StackPanel>
+                                    <TextBlock Text="TMDB API Anahtarı" Style="{StaticResource SettingsTitle}"/>
+                                    <TextBlock Text="Film ve dizi bilgileri için gerekli" 
+                                               Style="{StaticResource SettingsLabel}"/>
+                                    <TextBox Text="{Binding TmdbApiKey, UpdateSourceTrigger=PropertyChanged}" 
+                                             Padding="10" Margin="0,8,0,0"
+                                             Background="{StaticResource BackgroundBrush}"
+                                             Foreground="{StaticResource TextPrimaryBrush}"
+                                             BorderBrush="{StaticResource BorderBrush}"/>
+                                </StackPanel>
+                            </Border>
+                            
+                            <!-- About -->
+                            <Border Style="{StaticResource SettingsSection}">
+                                <StackPanel>
+                                    <TextBlock Text="Hakkında" Style="{StaticResource SettingsTitle}"/>
+                                    <TextBlock Text="Noctra v1.0.0" FontSize="14" 
+                                               Foreground="{StaticResource TextSecondaryBrush}" Margin="0,8,0,0"/>
+                                    <TextBlock Text="© 2026 Tüm Hakları Saklıdır" FontSize="12" 
+                                               Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+            </TabControl>
 
-                <!-- About/Version -->
-                <Border Background="{StaticResource SurfaceBrush}" CornerRadius="8" Padding="16">
-                    <StackPanel>
-                        <TextBlock Text="Hakkında" FontWeight="SemiBold" FontSize="16" Foreground="{StaticResource TextPrimaryBrush}"/>
-                        <TextBlock Text="Noctra v1.0.0" FontSize="14" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
-                        <TextBlock Text="© 2026 Tüm Hakları Saklıdır" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0"/>
+            <!-- Footer -->
+            <Border Grid.Row="2" Padding="24,16">
+                <Grid>
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Varsayılana Sıfırla" 
+                                Command="{Binding ResetToDefaultsCommand}"
+                                Style="{StaticResource SecondaryButton}" 
+                                Padding="16,10"/>
                     </StackPanel>
-                </Border>
-            </StackPanel>
-
+                    
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <TextBlock Text="{Binding StatusMessage}" 
+                                   VerticalAlignment="Center" 
+                                   Foreground="{StaticResource AccentBrush}"
+                                   Margin="0,0,16,0"/>
+                        <Button Content="💾 Kaydet" 
+                                Command="{Binding SaveSettingsCommand}"
+                                Style="{StaticResource PrimaryButtonStyle}" 
+                                Padding="24,10"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
         </Grid>
     </Border>
 </Window>

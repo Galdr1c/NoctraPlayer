@@ -33,10 +33,6 @@ public partial class MainWindow : Window
         _hoverPreviewService = hoverPreviewService;
         DataContext = _viewModel;
         
-        // Set DataContext explicitly
-        OverlayView.DataContext = _playerViewModel;
-        Panel.SetZIndex(OverlayView, 1000);
-        
         PlayerArea.DataContext = _playerViewModel;
         _playerViewModel.CloseRequested += (s, e) =>
         {
@@ -267,6 +263,26 @@ public partial class MainWindow : Window
         // TODO: Tema değişikliği uygulanacak
     }
 
+    private void EpisodesButton_Click(object sender, RoutedEventArgs e)
+    {
+        // TODO: Bölüm listesini göster/gizle
+    }
+
+    private void AudioButton_Click(object sender, RoutedEventArgs e)
+    {
+        _playerViewModel.OpenAudioSettingsCommand.Execute(null);
+    }
+
+    private void SubtitleButton_Click(object sender, RoutedEventArgs e)
+    {
+        _playerViewModel.OpenAudioSettingsCommand.Execute(null);
+    }
+
+    private void QualityButton_Click(object sender, RoutedEventArgs e)
+    {
+        _playerViewModel.OpenQualitySettingsCommand.Execute(null);
+    }
+
     private void SearchInput_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter)
@@ -366,6 +382,8 @@ public partial class MainWindow : Window
         base.OnKeyDown(e);
 
         // Keyboard shortcuts
+        bool isLive = _playerViewModel.IsLiveContent;
+
         switch (e.Key)
         {
             case Key.Space:
@@ -379,12 +397,18 @@ public partial class MainWindow : Window
                 break;
             // Escape is handled in PreviewKeyDown
             case Key.Left:
-                _playerViewModel.SkipBackwardCommand.Execute(null);
-                e.Handled = true;
+                if (!isLive)
+                {
+                    _playerViewModel.SkipBackwardCommand.Execute(null);
+                    e.Handled = true;
+                }
                 break;
             case Key.Right:
-                _playerViewModel.SkipForwardCommand.Execute(null);
-                e.Handled = true;
+                if (!isLive)
+                {
+                    _playerViewModel.SkipForwardCommand.Execute(null);
+                    e.Handled = true;
+                }
                 break;
             case Key.Up:
                 _playerViewModel.Volume = Math.Min(100, _playerViewModel.Volume + 5);
@@ -397,6 +421,13 @@ public partial class MainWindow : Window
             case Key.M:
                 _playerViewModel.ToggleMuteCommand.Execute(null);
                 e.Handled = true;
+                break;
+            case Key.N:
+                if (_viewModel.SelectedChannel?.Type == ChannelType.Series)
+                {
+                    _playerViewModel.PlayNextEpisodeCommand.Execute(null);
+                    e.Handled = true;
+                }
                 break;
         }
     }

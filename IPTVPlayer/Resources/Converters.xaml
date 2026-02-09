@@ -32,4 +32,9 @@
     <converters:PercentToWidthConverter x:Key="PercentToWidthConverter"/>
     <converters:DoubleToFloatConverter x:Key="DoubleToFloatConverter"/>
 
+    <!-- Player Separation Converters -->
+    <converters:PlayPauseIconConverter x:Key="PlayPauseIconConverter"/>
+    <converters:VolumeIconConverter x:Key="VolumeIconConverter"/>
+    <converters:ChannelTypeToVisibilityConverter x:Key="ChannelTypeToVisibilityConverter"/>
+
 </ResourceDictionary>

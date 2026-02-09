@@ -18,6 +18,9 @@ public partial class PlayerViewModel : ObservableObject
     private bool _isVisible = true;
 
     [ObservableProperty]
+    private bool _isLiveContent;
+
+    [ObservableProperty]
     private bool _isLocked;
 
     [ObservableProperty]
@@ -186,21 +189,49 @@ public partial class PlayerViewModel : ObservableObject
         };
     }
 
+    partial void OnCurrentChannelChanged(Channel? value)
+    {
+        if (value != null)
+        {
+            // Canlı TV kontrolü
+            IsLiveContent = value.Type == ChannelType.Live;
+
+            // VOD/Series için zamanlayıcıyı başlat
+            if (!IsLiveContent)
+            {
+                // VOD işlemleri
+            }
+            else
+            {
+                // Live için position sıfırla
+                Position = 0;
+                PositionText = "00:00:00";
+                DurationText = "00:00:00";
+                RemainingTime = "00:00:00";
+            }
+        }
+    }
+
     public async Task PlayChannelAsync(Channel channel)
     {
         CurrentChannel = channel;
+        IsLiveContent = channel.Type == ChannelType.Live;
         IsBuffering = true;
         BufferingProgress = 0;
         await _videoPlayerService.PlayAsync(channel.StreamUrl);
 
         // Start watch history tracking for VOD content
-        if (channel.Type != ChannelType.Live)
+        if (!IsLiveContent)
         {
             _watchHistoryTimer.Start();
         }
+        else
+        {
+            _watchHistoryTimer.Stop();
+        }
 
         // Zapping göster
-        ShowZapping(channel.Name, channel.LogoUrl, channel.Type == ChannelType.Live);
+        ShowZapping(channel.Name, channel.LogoUrl, IsLiveContent);
 
         // EPG bilgisini al
         if (!string.IsNullOrEmpty(channel.TvgId) && _epgService.IsLoaded)
@@ -383,8 +414,8 @@ public partial class PlayerViewModel : ObservableObject
         Task.Delay(10000).ContinueWith(_ => IsNextEpisodePromptVisible = false);
     }
 
-    [RelayCommand]
-    private void PlayNextEpisode()
+    [RelayCommand(CanExecute = nameof(CanPlayNextEpisode))]
+    private async Task PlayNextEpisode()
     {
         if (NextEpisode != null)
         {
@@ -393,6 +424,13 @@ public partial class PlayerViewModel : ObservableObject
             IsNextEpisodePromptVisible = false;
             ChannelName = NextEpisode.Name; // Mock update
         }
+
+        await Task.CompletedTask;
+    }
+
+    private bool CanPlayNextEpisode()
+    {
+        return CurrentChannel?.Type == ChannelType.Series && !IsLiveContent;
     }
 
     [RelayCommand]

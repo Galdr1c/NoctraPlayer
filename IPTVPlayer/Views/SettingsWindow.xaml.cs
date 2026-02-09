@@ -1,4 +1,5 @@
 using System.Windows;
+using Microsoft.Win32;
 using IPTVPlayer.ViewModels;
 
 namespace IPTVPlayer.Views;
@@ -18,5 +19,19 @@ public partial class SettingsWindow : Window
     {
         DialogResult = true;
         Close();
+    }
+    
+    private void ChangeDownloadPath_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFolderDialog
+        {
+            Title = "İndirme Klasörünü Seçin",
+            InitialDirectory = _viewModel.DownloadPath
+        };
+        
+        if (dialog.ShowDialog() == true)
+        {
+            _viewModel.DownloadPath = dialog.FolderName;
+        }
     }
 }

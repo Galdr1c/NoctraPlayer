@@ -125,10 +125,10 @@ public partial class ProfilesWindow : Window
     {
         using (var scope = _scopeFactory.CreateScope())
         {
-            var settingsVm = scope.ServiceProvider.GetRequiredService<SettingsViewModel>();
-            var settingsWindow = new SettingsWindow(settingsVm);
-            settingsWindow.Owner = this;
-            settingsWindow.ShowDialog();
+            var globalSettingsVm = scope.ServiceProvider.GetRequiredService<GlobalSettingsViewModel>();
+            var globalSettingsWindow = new GlobalSettingsWindow(globalSettingsVm);
+            globalSettingsWindow.Owner = this;
+            globalSettingsWindow.ShowDialog();
         }
     }
     
