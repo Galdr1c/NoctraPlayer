@@ -1,7 +1,5 @@
 using System.Windows;
 using IPTVPlayer.ViewModels;
-using IPTVPlayer.Services;
-using IPTVPlayer.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -74,22 +72,6 @@ public partial class ProfilesWindow : Window
         {
             using (var scope = _scopeFactory.CreateScope())
             {
-                var licenseService = scope.ServiceProvider.GetRequiredService<ILicenseService>();
-                var profilesViewModel = DataContext as ProfilesViewModel;
-                
-                // Check profile limit (only for new profiles)
-                if (profileToEdit == null && profilesViewModel != null)
-                {
-                    int currentProfileCount = profilesViewModel.Profiles.Count;
-                    if (!licenseService.IsWithinLimit(LicenseService.Limits.Profiles, currentProfileCount))
-                    {
-                        var upsellWindow = new UpsellWindow(licenseService);
-                        upsellWindow.Owner = this;
-                        upsellWindow.ShowDialog();
-                        return;
-                    }
-                }
-
                 var addProfileVm = scope.ServiceProvider.GetRequiredService<AddProfileViewModel>();
                 
                 if (profileToEdit != null)

@@ -254,6 +254,9 @@ public partial class AddProfileViewModel : ObservableObject
     // Profile Details
     [ObservableProperty]
     private string _profileName = string.Empty;
+
+    [ObservableProperty]
+    private string? _profileNameError;
     
     [ObservableProperty]
     private string _selectedAvatar = "default";
@@ -267,6 +270,12 @@ public partial class AddProfileViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _hasError;
+
+    [ObservableProperty]
+    private bool _isSaving;
+
+    [ObservableProperty]
+    private string? _urlError;
 
     [ObservableProperty]
     private Profile? _editingProfile;
@@ -332,6 +341,40 @@ public partial class AddProfileViewModel : ObservableObject
         SelectedAvatar = avatar;
     }
 
+    private bool ValidateUrl()
+    {
+        if (string.IsNullOrWhiteSpace(Url))
+        {
+            UrlError = "URL gereklidir";
+            return false;
+        }
+
+        if (!Uri.TryCreate(Url, UriKind.Absolute, out _))
+        {
+            UrlError = "Geçersiz URL formatı";
+            return false;
+        }
+
+        if (IsM3U)
+        {
+            var lower = Url.ToLowerInvariant();
+            if (!lower.Contains(".m3u") && !lower.Contains(".m3u8") && !lower.Contains("get.php"))
+            {
+                UrlError = "M3U URL'i .m3u, .m3u8 veya get.php içermelidir";
+                return false;
+            }
+        }
+
+        if (IsXtream && (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password)))
+        {
+            UrlError = "Xtream için kullanıcı adı ve şifre gereklidir";
+            return false;
+        }
+
+        UrlError = null;
+        return true;
+    }
+
     [RelayCommand]
     private async Task DeleteProfile(Profile? profile)
     {
@@ -371,39 +414,25 @@ public partial class AddProfileViewModel : ObservableObject
     [RelayCommand]
     private async Task SaveAsync()
     {
-        // Validation logic
-        if (string.IsNullOrWhiteSpace(Url) || (IsXtream && (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))))
-        {
-            StatusMessage = "Lütfen hesap bilgilerini eksiksiz girin";
-            HasError = true;
-            return;
-        }
-
-        // URL Validation for M3U as requested
-        if (IsM3U)
-        {
-            var lowerUrl = Url.ToLower();
-            bool isValidM3U = lowerUrl.Contains(".m3u") || lowerUrl.Contains(".m3u8") || lowerUrl.Contains("get.php");
-            
-            if (!isValidM3U)
-            {
-                StatusMessage = "Geçerli bir M3U adresi girin (m3u, m3u8 veya get.php içermeli)";
-                HasError = true;
-                return;
-            }
-        }
+        ProfileNameError = null;
+        UrlError = null;
+        HasError = false;
 
         if (string.IsNullOrWhiteSpace(ProfileName))
         {
-            StatusMessage = "Profil adı gereklidir";
-            HasError = true;
+            ProfileNameError = "Profil adı gereklidir";
+            return;
+        }
+
+        if (!ValidateUrl())
+        {
             return;
         }
 
         try
         {
-            HasError = false;
             StatusMessage = "Kaydediliyor...";
+            IsSaving = true;
 
             using var transaction = await _context.Database.BeginTransactionAsync();
             ProviderAccount account;
@@ -478,6 +507,8 @@ public partial class AddProfileViewModel : ObservableObject
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
+            StatusMessage = "✓ Profil kaydedildi";
+            await Task.Delay(500);
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
@@ -485,6 +516,10 @@ public partial class AddProfileViewModel : ObservableObject
             HasError = true;
             string detail = ex.InnerException?.Message ?? ex.Message;
             StatusMessage = $"Hata: {detail}";
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 

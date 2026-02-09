@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.EntityFrameworkCore;
 using IPTVPlayer.Data;
 using IPTVPlayer.Models;
+using IPTVPlayer.Services;
 using IPTVPlayer.Services.Interfaces;
 
 namespace IPTVPlayer.ViewModels;
@@ -13,6 +14,7 @@ public partial class ProfilesViewModel : ObservableObject
     private readonly IDialogService _dialogService;
     private readonly AppDbContext _context;
     private readonly IDispatcherService _dispatcherService;
+    private readonly ILicenseService _licenseService;
     
     [ObservableProperty]
     private ObservableCollection<Profile> _profiles = new();
@@ -25,11 +27,12 @@ public partial class ProfilesViewModel : ObservableObject
     public event Action<Profile>? OnProfileEditRequested;
     public event Action? RequestClose;
 
-    public ProfilesViewModel(AppDbContext context, IDialogService dialogService, IDispatcherService dispatcherService)
+    public ProfilesViewModel(AppDbContext context, IDialogService dialogService, IDispatcherService dispatcherService, ILicenseService licenseService)
     {
         _context = context;
         _dialogService = dialogService;
         _dispatcherService = dispatcherService;
+        _licenseService = licenseService;
         RefreshProfiles();
     }
 
@@ -66,8 +69,26 @@ public partial class ProfilesViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void AddProfile()
+    private async Task AddProfileAsync()
     {
+        if (!_licenseService.IsWithinLimit(LicenseService.Limits.Profiles, Profiles.Count))
+        {
+            await _dialogService.ShowMessageAsync(
+                "Profil Limiti",
+                $"Free sürümde maksimum {_licenseService.GetLimit(LicenseService.Limits.Profiles)} profil oluşturabilirsiniz. Premium'a geçin!");
+
+            var result = await _dialogService.ShowConfirmationAsync(
+                "Premium'a Yükselt",
+                "Sınırsız profil için Premium satın almak ister misiniz?");
+
+            if (result)
+            {
+                await _dialogService.ShowUpsellAsync();
+            }
+
+            return;
+        }
+
         OnProfileAddRequested?.Invoke(null!);
     }
 

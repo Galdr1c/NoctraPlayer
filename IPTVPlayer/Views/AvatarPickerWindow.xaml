@@ -17,6 +17,7 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Resources/Colors.xaml"/>
+                <ResourceDictionary Source="/Resources/Converters.xaml"/>
                 <ResourceDictionary Source="/Resources/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
@@ -41,28 +42,66 @@
             </Grid>
 
             <!-- Avatar Grid -->
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24">
                 <ItemsControl ItemsSource="{Binding Avatars}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center"/>
+                            <UniformGrid Columns="6" HorizontalAlignment="Center"/>
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Button Margin="10" 
+                            <Button Margin="12"
                                     Command="{Binding DataContext.SelectAvatarCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
                                     CommandParameter="{Binding}"
-                                    Style="{StaticResource ImageButtonStyle}">
-                                <Border Width="100" Height="100" CornerRadius="4" BorderBrush="Transparent" BorderThickness="2" x:Name="AvatarBorder" 
-                                        Background="{Binding Converter={StaticResource ProfileColorConverter}}">
-                                    <Grid>
-                                        <Image Source="{Binding Converter={StaticResource AvatarPathConverter}}" 
-                                               Stretch="UniformToFill" 
+                                    Style="{StaticResource ImageButtonStyle}"
+                                    Width="120" Height="120">
+                                <Grid>
+                                    <Border Width="120" Height="120"
+                                            CornerRadius="12"
+                                            ClipToBounds="True"
+                                            Background="{Binding Converter={StaticResource ProfileColorConverter}}">
+                                        <Image Source="{Binding Converter={StaticResource AvatarPathConverter}}"
+                                               Stretch="UniformToFill"
                                                RenderOptions.BitmapScalingMode="HighQuality"/>
-                                    </Grid>
-                                </Border>
+                                    </Border>
+                                    
+                                    <Border x:Name="SelectionBorder"
+                                            BorderBrush="Transparent"
+                                            BorderThickness="4"
+                                            CornerRadius="12"/>
+                                    
+                                    <Border x:Name="Checkmark"
+                                            Width="32" Height="32"
+                                            Background="#7C3AED"
+                                            CornerRadius="16"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Top"
+                                            Margin="8"
+                                            Visibility="Collapsed">
+                                        <Path Data="M9,16.2L4.8,12l-1.4,1.4L9,19L21,7l-1.4-1.4L9,16.2z"
+                                              Fill="White"
+                                              Stretch="Uniform"
+                                              Width="16" Height="16"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                                    </Border>
+                                </Grid>
                             </Button>
+                            
+                            <DataTemplate.Triggers>
+                                <DataTrigger Value="True">
+                                    <DataTrigger.Binding>
+                                        <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                                            <Binding/>
+                                            <Binding Path="DataContext.SelectedAvatar" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                        </MultiBinding>
+                                    </DataTrigger.Binding>
+                                    <Setter TargetName="Checkmark" Property="Visibility" Value="Visible"/>
+                                    <Setter TargetName="SelectionBorder" Property="BorderBrush" Value="#7C3AED"/>
+                                    <Setter TargetName="SelectionBorder" Property="BorderThickness" Value="4"/>
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

@@ -7,7 +7,7 @@
         xmlns:converters="clr-namespace:IPTVPlayer.Converters"
         xmlns:helper="clr-namespace:IPTVPlayer.Helpers"
         mc:Ignorable="d"
-        Title="Profil Ayarları" Height="750" Width="1000"
+        Title="Profil Ayarları" Height="700" Width="950"
         MinHeight="600" MinWidth="800"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
@@ -71,31 +71,69 @@
             <Button Style="{StaticResource ImageButtonStyle}" Command="{Binding OpenAvatarPickerCommand}" 
                     Cursor="Hand" VerticalAlignment="Top" Margin="0,0,50,0"
                     Background="Transparent" BorderThickness="0">
-                <Grid x:Name="AvatarRoot" Width="180" Height="180">
-                    <!-- 1. Background & Animation Preview (Clipped) -->
-                    <Border CornerRadius="14" ClipToBounds="True"
-                            Background="{Binding SelectedAvatar, Converter={StaticResource ProfileColorConverter}, FallbackValue='#E50914'}">
+                <Grid Width="200" Height="200">
+                    <!-- Glow Effect -->
+                    <Border x:Name="AvatarGlow"
+                            Background="{Binding SelectedAvatar, Converter={StaticResource ProfileColorConverter}}"
+                            CornerRadius="100"
+                            Opacity="0"
+                            RenderTransformOrigin="0.5,0.5">
+                        <Border.RenderTransform>
+                            <ScaleTransform ScaleX="1.2" ScaleY="1.2"/>
+                        </Border.RenderTransform>
+                        <Border.Effect>
+                            <BlurEffect Radius="40"/>
+                        </Border.Effect>
+                    </Border>
+                    
+                    <!-- Avatar -->
+                    <Border Width="200" Height="200" 
+                            CornerRadius="14" 
+                            ClipToBounds="True">
                         <Grid>
+                            <Border Background="{Binding SelectedAvatar, Converter={StaticResource ProfileColorConverter}}"/>
                             <Image Source="{Binding SelectedAvatar, Converter={StaticResource AvatarPathConverter}}" 
-                                   Stretch="UniformToFill" 
-                                   RenderOptions.BitmapScalingMode="HighQuality">
-                                <Image.Clip>
-                                    <RectangleGeometry Rect="0,0,180,180" RadiusX="14" RadiusY="14"/>
-                                </Image.Clip>
-                            </Image>
-
-                            <!-- Edit Overlay -->
-                            <Border Background="#CC000000" Width="44" Height="44" 
-                                    HorizontalAlignment="Left" VerticalAlignment="Bottom"
-                                    CornerRadius="22" Margin="10">
-                                <TextBlock Text="✎" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="24" Margin="0,0,0,2"/>
+                                   Stretch="UniformToFill"
+                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                                   
+                            <!-- Edit Icon -->
+                            <Border Width="56" Height="56"
+                                    Background="#DD000000"
+                                    CornerRadius="28"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Bottom"
+                                    Margin="16">
+                                <Path Data="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"
+                                      Fill="White"
+                                      Stretch="Uniform"
+                                      Width="24" Height="24"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"/>
                             </Border>
                         </Grid>
                     </Border>
-                    
-                    <!-- 2. Static Frame (Optional for Add window, but kept for consistency) -->
-                    <Border x:Name="AvatarBorder" CornerRadius="14" BorderThickness="0" Background="Transparent"/>
                 </Grid>
+                
+                <Button.Triggers>
+                    <EventTrigger RoutedEvent="MouseEnter">
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="AvatarGlow"
+                                               Storyboard.TargetProperty="Opacity"
+                                               To="0.3" Duration="0:0:0.2"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger>
+                    <EventTrigger RoutedEvent="MouseLeave">
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="AvatarGlow"
+                                               Storyboard.TargetProperty="Opacity"
+                                               To="0" Duration="0:0:0.2"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger>
+                </Button.Triggers>
             </Button>
 
             <!-- Info Column -->
@@ -106,6 +144,11 @@
                          Style="{StaticResource ModernTextBox}" 
                          Height="52"
                          helper:TextBoxHelper.Watermark="İsim girin"/>
+                <TextBlock Text="{Binding ProfileNameError}"
+                           Foreground="#E87C03"
+                           FontSize="13"
+                           Margin="16,8,0,0"
+                           Visibility="{Binding ProfileNameError, Converter={StaticResource StringToVisibilityConverter}}"/>
 
                 <CheckBox Content="Çocuk Profili" 
                           IsChecked="{Binding IsChild}"
@@ -150,7 +193,7 @@
                     </TextBlock>
                     
                     <TextBox Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}" 
-                             Height="52" Margin="0,0,0,20">
+                             Height="52" Margin="0,0,0,8">
                         <TextBox.Style>
                             <Style TargetType="TextBox" BasedOn="{StaticResource ModernTextBox}">
                                 <Setter Property="helper:TextBoxHelper.Watermark" Value="http://server.com:8080"/>
@@ -163,6 +206,11 @@
                             </Style>
                         </TextBox.Style>
                     </TextBox>
+                    <TextBlock Text="{Binding UrlError}"
+                               Foreground="#E87C03"
+                               FontSize="13"
+                               Margin="16,0,0,20"
+                               Visibility="{Binding UrlError, Converter={StaticResource StringToVisibilityConverter}}"/>
                     
                     <!-- Credentials Grid - Shows for both Xtream and M3U with get.php -->
                     <Grid Margin="0,0,0,20">
@@ -256,18 +304,111 @@
                        FontSize="14" HorizontalAlignment="Center" Margin="0,0,0,20"
                        Visibility="{Binding StatusMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
 
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button Content="PROFİLİ SİL" 
-                        Style="{StaticResource DangerButtonStyle}"
-                        Command="{Binding DeleteProfileCommand}"
-                        CommandParameter="{Binding EditingProfile}"
-                        Visibility="{Binding EditingProfile, Converter={StaticResource NullToVisibilityConverter}}"
-                        Margin="0,0,80,0"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,40,0,0">
+                <Button Content="İptal"
+                        Click="CancelButton_Click"
+                        Width="120" Height="48"
+                        Background="Transparent"
+                        Foreground="#B3B3B3"
+                        BorderBrush="#404040"
+                        BorderThickness="1"
+                        FontSize="16"
+                        Cursor="Hand"
+                        Margin="0,0,16,0">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="Border"
+                                                Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                CornerRadius="4">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Border" Property="BorderBrush" Value="White"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                
+                <Button Content="Kaydet"
+                        Command="{Binding SaveCommand}"
+                        Width="140" Height="48"
+                        Background="White"
+                        Foreground="Black"
+                        BorderThickness="0"
+                        FontSize="16"
+                        FontWeight="SemiBold"
+                        Cursor="Hand">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="Border"
+                                                Background="{TemplateBinding Background}"
+                                                CornerRadius="4">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Border" Property="Background" Value="#E5E5E5"/>
+                                            </Trigger>
+                                            <Trigger Property="IsEnabled" Value="False">
+                                                <Setter TargetName="Border" Property="Background" Value="#404040"/>
+                                                <Setter Property="Foreground" Value="#808080"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </StackPanel>
 
-                <Button Content="KAYDET" Command="{Binding SaveCommand}" 
-                        Style="{StaticResource PrimaryButtonStyle}" Width="160" Height="56" FontSize="16" FontWeight="Bold"/>
-                <Button Content="İPTAL" Click="CancelButton_Click" 
-                        Style="{StaticResource SecondaryButton}" Width="140" Height="56" FontSize="16" FontWeight="Bold" Margin="20,0,0,0"/>
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Left"
+                        Margin="0,24,0,0"
+                        Visibility="{Binding EditingProfile, Converter={StaticResource NullToVisibilityConverter}}">
+                <Button Command="{Binding DeleteProfileCommand}"
+                        CommandParameter="{Binding EditingProfile}"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+                              Fill="#E87C03"
+                              Stretch="Uniform"
+                              Width="20" Height="20"
+                              VerticalAlignment="Center"
+                              Margin="0,0,8,0"/>
+                        <TextBlock Text="Profili Sil"
+                                   FontSize="16"
+                                   Foreground="#E87C03"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Opacity" Value="0.8"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
             </StackPanel>
         </StackPanel>
         </Grid>
