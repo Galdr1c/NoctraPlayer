@@ -29,6 +29,15 @@
                 </DoubleAnimation.EasingFunction>
             </DoubleAnimation>
         </Storyboard>
+
+        <Storyboard x:Key="LiveDotPulse">
+            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                             From="0.4"
+                             To="1"
+                             Duration="0:0:0.8"
+                             AutoReverse="True"
+                             RepeatBehavior="Forever"/>
+        </Storyboard>
         
         <!-- Add other converters if needed or rely on App.xaml -->
     </UserControl.Resources>
@@ -142,7 +151,7 @@
                     </Grid.ColumnDefinitions>
                     
                     <TextBlock Text="{Binding PositionText}" Foreground="#CCCCCC" FontSize="13" Margin="0,0,12,0" VerticalAlignment="Center"
-                               Visibility="{Binding IsLive, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
+                               Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
                     
                     <Slider Grid.Column="1" 
                             Style="{StaticResource MediaSliderStyle}" 
@@ -151,19 +160,23 @@
                             IsMoveToPointEnabled="True"
                             Thumb.DragStarted="Slider_DragStarted"
                             Thumb.DragCompleted="Slider_DragCompleted"
-                            Visibility="{Binding IsLive, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
+                            Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
 
                     <!-- LIVE Badge for Live Streams -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center"
-                                Visibility="{Binding IsLive, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <Border Background="#E50914" CornerRadius="4" Padding="8,4" Margin="0,0,12,0">
-                            <TextBlock Text="CANLI" FontSize="12" FontWeight="Bold" Foreground="White"/>
+                                Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Border Width="8" Height="8" Background="#E50914" CornerRadius="4" Margin="0,0,8,0">
+                            <Border.Triggers>
+                                <EventTrigger RoutedEvent="Loaded">
+                                    <BeginStoryboard Storyboard="{StaticResource LiveDotPulse}"/>
+                                </EventTrigger>
+                            </Border.Triggers>
                         </Border>
-                        <TextBlock Text="{Binding ChannelName}" Foreground="White" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <TextBlock Text="CANLI" FontSize="12" FontWeight="Bold" Foreground="White"/>
                     </StackPanel>
                             
-                    <TextBlock Grid.Column="2" Text="{Binding RemainingTime}" Foreground="#CCCCCC" FontSize="13" Margin="12,0,0,0" VerticalAlignment="Center"
-                               Visibility="{Binding IsLive, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
+                    <TextBlock Grid.Column="2" Text="{Binding DurationText}" Foreground="#CCCCCC" FontSize="13" Margin="12,0,0,0" VerticalAlignment="Center"
+                               Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
                 </Grid>
 
                 <!-- Transport Controls -->
@@ -184,7 +197,12 @@
 
                     <!-- Center: Play/Pause (Noctra style large button) -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Button Command="{Binding SkipBackwardCommand}" Style="{StaticResource IconButtonStyle}" Content="⏪" Margin="0,0,32,0"/>
+                        <Button Command="{Binding SkipBackwardCommand}"
+                                CommandParameter="10"
+                                Style="{StaticResource IconButtonStyle}"
+                                Content="⏪"
+                                Margin="0,0,32,0"
+                                Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
                         
                         <Button Command="{Binding PlayPauseCommand}" 
                                 Style="{StaticResource PlayPauseButtonStyle}"
@@ -192,12 +210,25 @@
                             <TextBlock Text="{Binding IsPlaying, Converter={StaticResource BoolToPlayPauseIconConverter}}" FontSize="28"/>
                         </Button>
                         
-                        <Button Command="{Binding SkipForwardCommand}" Style="{StaticResource IconButtonStyle}" Content="⏩" Margin="32,0,0,0"/>
+                        <Button Command="{Binding SkipForwardCommand}"
+                                CommandParameter="10"
+                                Style="{StaticResource IconButtonStyle}"
+                                Content="⏩"
+                                Margin="32,0,0,0"
+                                Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
                     </StackPanel>
 
                     <!-- Right: Options -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal">
-                        <Button Style="{StaticResource PremiumTextButtonStyle}" Content="Sıradaki Bölüm" Margin="0,0,24,0"/>
+                        <Button Style="{StaticResource PremiumTextButtonStyle}"
+                                Content="Bölümler"
+                                Margin="0,0,16,0"
+                                Command="{Binding DataContext.OpenSeriesDetailCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                Visibility="{Binding IsSeriesContent, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        <Button Style="{StaticResource PremiumTextButtonStyle}"
+                                Content="Sıradaki Bölüm"
+                                Margin="0,0,24,0"
+                                Visibility="{Binding IsSeriesContent, Converter={StaticResource BoolToVisibilityConverter}}"/>
                         <Button Command="{Binding OpenAudioSettingsCommand}" Style="{StaticResource IconButtonStyle}" Content="💬" Margin="0,0,16,0"/> <!-- Audio/Sub -->
                         <Button Command="{Binding OpenQualitySettingsCommand}" Style="{StaticResource IconButtonStyle}" Content="⚙️" Margin="0,0,16,0"/> <!-- Quality -->
                         <Button Command="{Binding ToggleFullScreenCommand}" Style="{StaticResource IconButtonStyle}" Content="⛶"/>

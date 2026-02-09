@@ -419,12 +419,18 @@ public partial class MainWindow : Window
                 break;
             // Escape is handled in PreviewKeyDown
             case Key.Left:
-                _playerViewModel.SkipBackwardCommand.Execute(null);
-                e.Handled = true;
+                if (!_playerViewModel.IsLiveContent)
+                {
+                    _playerViewModel.SkipBackwardCommand.Execute("10");
+                    e.Handled = true;
+                }
                 break;
             case Key.Right:
-                _playerViewModel.SkipForwardCommand.Execute(null);
-                e.Handled = true;
+                if (!_playerViewModel.IsLiveContent)
+                {
+                    _playerViewModel.SkipForwardCommand.Execute("10");
+                    e.Handled = true;
+                }
                 break;
             case Key.Up:
                 _playerViewModel.Volume = Math.Min(100, _playerViewModel.Volume + 5);

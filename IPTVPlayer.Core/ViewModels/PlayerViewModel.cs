@@ -48,6 +48,12 @@ public partial class PlayerViewModel : ObservableObject
     private bool _isLive;
 
     [ObservableProperty]
+    private bool _isLiveContent;
+
+    [ObservableProperty]
+    private bool _isSeriesContent;
+
+    [ObservableProperty]
     private bool _isAudioSettingsOpen;
 
     [ObservableProperty]
@@ -189,6 +195,9 @@ public partial class PlayerViewModel : ObservableObject
     public async Task PlayChannelAsync(Channel channel)
     {
         CurrentChannel = channel;
+        IsLiveContent = channel.Type == ChannelType.Live;
+        IsSeriesContent = channel.Type == ChannelType.Series;
+        IsLive = IsLiveContent;
         IsBuffering = true;
         BufferingProgress = 0;
         await _videoPlayerService.PlayAsync(channel.StreamUrl);
@@ -324,6 +333,9 @@ public partial class PlayerViewModel : ObservableObject
         _videoPlayerService.Stop();
         CurrentChannel = null;
         CurrentProgram = null;
+        IsLiveContent = false;
+        IsSeriesContent = false;
+        IsLive = false;
         IsVisible = true;
     }
 
@@ -347,22 +359,30 @@ public partial class PlayerViewModel : ObservableObject
     [RelayCommand]
     private void Seek(double position)
     {
+        if (IsLiveContent)
+        {
+            return;
+        }
+
         _videoPlayerService.Position = position;
         RestartAutoHideTimer();
     }
 
     [RelayCommand]
-    private void SkipForward(double seconds = 10)
+    private void SkipForward(object? parameter)
     {
-        var newPos = Math.Min(Position + seconds, Duration);
-        _videoPlayerService.Position = newPos;
-        RestartAutoHideTimer();
+        if (IsLiveContent)
+        {
+            return;
+        }
+
+        SkipForwardInternal(ParseSeconds(parameter, 10));
     }
 
     [RelayCommand]
     private void SkipIntro()
     {
-        SkipForward(85); // Skip 1:25 typical intro length
+        SkipForwardInternal(85); // Skip 1:25 typical intro length
         IsIntroDetected = false;
         
         // Mock Next Episode Prompt appearing after skip
@@ -396,11 +416,53 @@ public partial class PlayerViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void SkipBackward(double seconds = 10)
+    private void SkipBackward(object? parameter)
+    {
+        if (IsLiveContent)
+        {
+            return;
+        }
+
+        SkipBackwardInternal(ParseSeconds(parameter, 10));
+    }
+
+    private void SkipForwardInternal(double seconds)
+    {
+        var newPos = Math.Min(Position + seconds, Duration);
+        _videoPlayerService.Position = newPos;
+        RestartAutoHideTimer();
+    }
+
+    private void SkipBackwardInternal(double seconds)
     {
         var newPos = Math.Max(Position - seconds, 0);
         _videoPlayerService.Position = newPos;
         RestartAutoHideTimer();
+    }
+
+    private static double ParseSeconds(object? parameter, double defaultValue)
+    {
+        if (parameter == null)
+        {
+            return defaultValue;
+        }
+
+        if (parameter is double doubleValue)
+        {
+            return doubleValue;
+        }
+
+        if (parameter is int intValue)
+        {
+            return intValue;
+        }
+
+        if (parameter is string stringValue && double.TryParse(stringValue, out var parsed))
+        {
+            return parsed;
+        }
+
+        return defaultValue;
     }
 
     partial void OnSelectedAudioTrackChanged(int value)

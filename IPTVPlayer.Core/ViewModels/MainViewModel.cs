@@ -536,6 +536,17 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void OpenSeriesDetail()
+    {
+        if (SelectedSeries == null)
+        {
+            return;
+        }
+
+        IsSeriesDetailVisible = true;
+    }
+
+    [RelayCommand]
     private void PlayFeatured()
     {
         if (FeaturedChannel != null)
