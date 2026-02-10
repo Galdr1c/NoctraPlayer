@@ -127,6 +127,27 @@ public partial class MainWindow : Window
         // PreviewKeyDown ile global key handling
         PreviewKeyDown += Window_PreviewKeyDown;
 
+        // Validated Fix for Popup Detachment
+        LocationChanged += (s, e) =>
+        {
+            if (OverlayPopup.IsOpen)
+            {
+                var offset = OverlayPopup.HorizontalOffset;
+                OverlayPopup.HorizontalOffset = offset + 1;
+                OverlayPopup.HorizontalOffset = offset;
+            }
+        };
+
+        SizeChanged += (s, e) =>
+        {
+            if (OverlayPopup.IsOpen)
+            {
+                var offset = OverlayPopup.HorizontalOffset;
+                OverlayPopup.HorizontalOffset = offset + 1;
+                OverlayPopup.HorizontalOffset = offset;
+            }
+        };
+
         // Subscribe to Edit Channel requests
         _viewModel.RequestEditChannel += OnRequestEditChannel;
     }

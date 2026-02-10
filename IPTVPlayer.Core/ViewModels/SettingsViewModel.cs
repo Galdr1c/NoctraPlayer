@@ -327,7 +327,7 @@ public partial class SettingsViewModel : ObservableObject
             IsEpgLoading = true;
             StatusMessage = "EPG yükleniyor...";
             
-            await _epgService.LoadEpgAsync(EpgUrl);
+            await _epgService.LoadEpgAsync(EpgUrl, isPrimary: true);
             StatusMessage = $"EPG yüklendi (Son güncelleme: {_epgService.LastUpdated:HH:mm})";
         }
         catch (Exception ex)

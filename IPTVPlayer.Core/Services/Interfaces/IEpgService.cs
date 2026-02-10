@@ -11,7 +11,9 @@ public interface IEpgService
     /// EPG URL'sinden program bilgilerini yükler
     /// </summary>
     /// <param name="epgUrl">EPG XML URL</param>
-    Task LoadEpgAsync(string epgUrl);
+    /// <param name="isPrimary">Ana EPG mi? (Evet ise veritabanını temizler)</param>
+    /// <param name="channelsForMapping">Yedek EPG için isim eşleşmesi yapılacak kanallar</param>
+    Task LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null);
     
     /// <summary>
     /// Kanal için mevcut programı getirir

@@ -24,10 +24,12 @@ public class EpgService : IEpgService
         _httpClient = httpClient;
     }
 
-    public async Task LoadEpgAsync(string epgUrl)
+    public async Task LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null)
     {
         try
         {
+            if (string.IsNullOrEmpty(epgUrl)) return;
+
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
             using var response = await _httpClient.GetAsync(epgUrl, HttpCompletionOption.ResponseHeadersRead, cts.Token);
             response.EnsureSuccessStatusCode();
@@ -35,68 +37,145 @@ public class EpgService : IEpgService
             using var stream = await response.Content.ReadAsStreamAsync(cts.Token);
             using var reader = System.Xml.XmlReader.Create(stream, new System.Xml.XmlReaderSettings { Async = true });
 
-            // Clear existing programs (consider optimization if this is too slow for very large DBs)
-            await _context.Database.ExecuteSqlRawAsync("DELETE FROM EpgPrograms");
+            if (isPrimary)
+            {
+                // Clear existing programs only if primary
+                await _context.Database.ExecuteSqlRawAsync("DELETE FROM EpgPrograms");
+            }
+
+            // Build mapping dictionary for secondary EPG (Name -> TvggId)
+            var channelMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var xmlChannelIdToDbTvgId = new Dictionary<string, string>();
+
+            if (!isPrimary && channelsForMapping != null)
+            {
+                foreach (var channel in channelsForMapping)
+                {
+                    if (!string.IsNullOrEmpty(channel.Name))
+                    {
+                        var normalizedName = NormalizeName(channel.Name);
+                        if (!channelMap.ContainsKey(normalizedName))
+                        {
+                            channelMap[normalizedName] = channel.TvgId ?? channel.Id.ToString(); // Fallback to internal ID if needed? No, EpgProgram needs TvgId usually. 
+                            // Actually EpgProgam uses "ChannelId" string which usually matches Channel.TvgId
+                            // If Channel.TvgId is missing, we can't Link easily unless we update Channel too.
+                            // For now assume matched channel has TvgId or we use its Name as ID?
+                            // Better: The UI looks up EPG by Channel.TvgId. 
+                            // So we need to store EPG with that TvgId.
+                            if (!string.IsNullOrEmpty(channel.TvgId))
+                            {
+                                channelMap[normalizedName] = channel.TvgId;
+                            }
+                        }
+                    }
+                }
+            }
 
             var programs = new List<EpgProgram>();
             var batchSize = 500;
             var now = DateTime.UtcNow;
             var cutoffDate = now.AddDays(-1);
-            var maxFutureDate = now.AddDays(14); // Limit storage to 14 days
+            var maxFutureDate = now.AddDays(7); // Limit storage to 7 days for performance
 
             while (await reader.ReadAsync())
             {
-                if (reader.NodeType == System.Xml.XmlNodeType.Element && reader.Name == "programme")
+                if (reader.NodeType == System.Xml.XmlNodeType.Element)
                 {
-                    var start = reader.GetAttribute("start");
-                    var stop = reader.GetAttribute("stop");
-                    var channel = reader.GetAttribute("channel");
-
-                    var startTime = ParseXmlTvDate(start);
-                    var endTime = ParseXmlTvDate(stop);
-
-                    // Skip old or too far future programs
-                    if (endTime < cutoffDate || startTime > maxFutureDate)
-                        continue;
-
-                    var program = new EpgProgram
+                    if (reader.Name == "channel") 
                     {
-                        ChannelId = channel ?? "",
-                        StartTime = startTime,
-                        EndTime = endTime
-                    };
-
-                    // Read inner elements
-                    using var subReader = reader.ReadSubtree();
-                    while (await subReader.ReadAsync())
-                    {
-                        if (subReader.NodeType == System.Xml.XmlNodeType.Element)
+                        // Map XML channel ID to DB TvgId for secondary EPG
+                        if (!isPrimary && channelMap.Count > 0)
                         {
-                            switch (subReader.Name)
+                            var xmlId = reader.GetAttribute("id");
+                            if (xmlId != null)
                             {
-                                case "title":
-                                    program.Title = await subReader.ReadElementContentAsStringAsync();
-                                    break;
-                                case "desc":
-                                    program.Description = await subReader.ReadElementContentAsStringAsync();
-                                    break;
-                                case "category":
-                                    program.Category = await subReader.ReadElementContentAsStringAsync();
-                                    break;
-                                case "icon":
-                                    program.IconUrl = subReader.GetAttribute("src");
-                                    break;
+                                // Read display-name
+                                using var subReader = reader.ReadSubtree();
+                                while (await subReader.ReadAsync())
+                                {
+                                    if (subReader.NodeType == System.Xml.XmlNodeType.Element && subReader.Name == "display-name")
+                                    {
+                                        var displayName = await subReader.ReadElementContentAsStringAsync();
+                                        var normalized = NormalizeName(displayName);
+                                        if (channelMap.TryGetValue(normalized, out var dbTvgId))
+                                        {
+                                            xmlChannelIdToDbTvgId[xmlId] = dbTvgId;
+                                            break; // Found match
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
-
-                    programs.Add(program);
-
-                    if (programs.Count >= batchSize)
+                    else if (reader.Name == "programme")
                     {
-                        await _context.EpgPrograms.AddRangeAsync(programs);
-                        await _context.SaveChangesAsync();
-                        programs.Clear();
+                        var start = reader.GetAttribute("start");
+                        var stop = reader.GetAttribute("stop");
+                        var channel = reader.GetAttribute("channel");
+
+                        if (string.IsNullOrEmpty(channel)) continue;
+
+                        // Determine target ChannelId
+                        string targetChannelId = channel;
+                        if (!isPrimary)
+                        {
+                            if (xmlChannelIdToDbTvgId.TryGetValue(channel, out var mappedId))
+                            {
+                                targetChannelId = mappedId;
+                            }
+                            else
+                            {
+                                // No match found for this channel in our DB, skip it to save space
+                                continue;
+                            }
+                        }
+
+                        var startTime = ParseXmlTvDate(start);
+                        var endTime = ParseXmlTvDate(stop);
+
+                        // Skip old or too far future programs
+                        if (endTime < cutoffDate || startTime > maxFutureDate)
+                            continue;
+
+                        var program = new EpgProgram
+                        {
+                            ChannelId = targetChannelId,
+                            StartTime = startTime,
+                            EndTime = endTime
+                        };
+
+                        // Read inner elements
+                        using var subReader = reader.ReadSubtree();
+                        while (await subReader.ReadAsync())
+                        {
+                            if (subReader.NodeType == System.Xml.XmlNodeType.Element)
+                            {
+                                switch (subReader.Name)
+                                {
+                                    case "title":
+                                        program.Title = await subReader.ReadElementContentAsStringAsync();
+                                        break;
+                                    case "desc":
+                                        program.Description = await subReader.ReadElementContentAsStringAsync();
+                                        break;
+                                    case "category":
+                                        program.Category = await subReader.ReadElementContentAsStringAsync();
+                                        break;
+                                    case "icon":
+                                        program.IconUrl = subReader.GetAttribute("src");
+                                        break;
+                                }
+                            }
+                        }
+
+                        programs.Add(program);
+
+                        if (programs.Count >= batchSize)
+                        {
+                            await _context.EpgPrograms.AddRangeAsync(programs);
+                            await _context.SaveChangesAsync();
+                            programs.Clear();
+                        }
                     }
                 }
             }
@@ -114,8 +193,22 @@ public class EpgService : IEpgService
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"EPG Load Error: {ex}");
-            throw;
+            // Don't throw if secondary
+            if (isPrimary) throw;
         }
+    }
+
+    private string NormalizeName(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return "";
+        return name.ToLowerInvariant()
+            .Replace(" ", "")
+            .Replace("hd", "")
+            .Replace("fhd", "")
+            .Replace("4k", "")
+            .Replace("tr", "") // Remove country codes? Maybe risky.
+            .Replace("-", "")
+            .Replace(".", "");
     }
 
     public async Task<EpgProgram?> GetCurrentProgramAsync(string channelId)

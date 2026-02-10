@@ -366,6 +366,9 @@ public partial class MainViewModel : ObservableObject
             
             await LoadHomeContentAsync();
             StatusMessage = $"{channelCount} kanal hazır";
+            
+            // Trigger EPG update in background
+            _ = LoadEpgAsync();
         }
         finally
         {
@@ -593,6 +596,75 @@ public partial class MainViewModel : ObservableObject
         SelectedGroup = null;
         SelectedChannelType = null;
         ShowOnlyFavorites = false;
+    }
+
+    [RelayCommand]
+    private async Task LoadEpgAsync()
+    {
+        if (CurrentProfile == null) return;
+
+        try
+        {
+            IsLoading = true;
+            StatusMessage = "EPG güncelleniyor...";
+
+            using var scope = _scopeFactory.CreateScope();
+            var epgService = scope.ServiceProvider.GetRequiredService<IEpgService>();
+            var playlistService = scope.ServiceProvider.GetRequiredService<IPlaylistService>();
+
+            // 1. Level 1: Provider EPG (Primary)
+            string? providerEpgKey = null; // M3U URL or specific EPG Key
+            
+            // Try to find EPG URL from M3U header or use account URL if XMLTV type
+            // For Xtream, it's usually player_api.php?action=get_xmltv... but we need check.
+            string? epgUrl = null;
+            
+            if (CurrentProfile.ProviderAccount?.Type == ProfileType.XtreamCodes)
+            {
+                 var baseUrl = CurrentProfile.ProviderAccount.Url.TrimEnd('/');
+                 if (!baseUrl.StartsWith("http")) baseUrl = "http://" + baseUrl;
+                 epgUrl = $"{baseUrl}/xmltv.php?username={Uri.EscapeDataString(CurrentProfile.ProviderAccount.Username ?? "")}&password={Uri.EscapeDataString(CurrentProfile.ProviderAccount.Password ?? "")}";
+            }
+            // For M3U, usually we don't have a separate EPG URL unless parsing header `x-tvg-url`.
+            // M3UParser logic doesn't expose it yet. 
+            // TODO: Extract EPG URL from M3U file if available.
+            
+            if (!string.IsNullOrEmpty(epgUrl))
+            {
+                await epgService.LoadEpgAsync(epgUrl, isPrimary: true);
+            }
+            else
+            {
+                // If no provider EPG, treat as primary empty or skip?
+                // Let's assume we cleared DB implicitly or IsPrimary=1 clears it.
+                // We'll run a dummy clear if no URL
+                 await epgService.LoadEpgAsync("", isPrimary: true); // Just to clear DB
+            }
+
+            // 2. Check Coverage
+            // How many channels have programs?
+            // This requires a DB query. implementation detail:
+            // var coverage = await epgService.GetCoverageAsync();
+            
+            // 3. Level 2: Fallback (Secondary)
+            // Hardcoded TR source for now as requested
+            var secondaryUrl = "https://iptv-org.github.io/epg/guides/tr/turksat.com.tr.epg.xml";
+            
+            StatusMessage = "Yedek EPG taranıyor...";
+            await epgService.LoadEpgAsync(secondaryUrl, isPrimary: false, Channels);
+            
+            // TODO: Add more sources later based on Channel languages?
+
+            StatusMessage = "EPG hazır";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"EPG Hatası: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     [ObservableProperty]

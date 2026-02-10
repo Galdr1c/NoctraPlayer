@@ -145,7 +145,11 @@ public partial class PlayerViewModel : ObservableObject
 
         // Clock timer
         _clockTimer = new System.Timers.Timer(1000);
-        _clockTimer.Elapsed += (s, e) => _dispatcherService.Invoke(() => CurrentTimeStr = DateTime.Now.ToString("HH:mm"));
+        _clockTimer.Elapsed += async (s, e) => 
+        {
+            _dispatcherService.Invoke(() => CurrentTimeStr = DateTime.Now.ToString("HH:mm"));
+            await CheckForEpgUpdateAsync();
+        };
         _clockTimer.Start();
         CurrentTimeStr = DateTime.Now.ToString("HH:mm");
 
@@ -163,6 +167,7 @@ public partial class PlayerViewModel : ObservableObject
                 {
                     IsBuffering = false;
                     UpdateMediaInfo();
+                    RestartAutoHideTimer(); // Ensure controls stay visible for a few seconds after playback starts
                 }
             });
         };
@@ -265,6 +270,24 @@ public partial class PlayerViewModel : ObservableObject
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Watch history tracking error: {ex.Message}");
+        }
+    }
+
+    private async Task CheckForEpgUpdateAsync()
+    {
+        if (CurrentChannel == null || !IsLiveContent || CurrentProgram == null) return;
+
+        if (DateTime.Now > CurrentProgram.EndTime)
+        {
+            // Program finished, fetch next
+            if (!string.IsNullOrEmpty(CurrentChannel.TvgId) && _epgService.IsLoaded)
+            {
+                 var newProgram = await _epgService.GetCurrentProgramAsync(CurrentChannel.TvgId);
+                 if (newProgram != null && newProgram.Title != CurrentProgram.Title)
+                 {
+                     _dispatcherService.Invoke(() => CurrentProgram = newProgram);
+                 }
+            }
         }
     }
 
