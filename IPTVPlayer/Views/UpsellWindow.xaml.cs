@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Input;
 using IPTVPlayer.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,13 +13,18 @@ public partial class UpsellWindow : Window
     {
         InitializeComponent();
         _licenseService = licenseService;
+
+        // Window sürükleme
+        MouseLeftButtonDown += (s, e) =>
+        {
+            if (e.ButtonState == MouseButtonState.Pressed)
+                DragMove();
+        };
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
-        // Kapatınca uygulamadan çıkmak mı yoksa free devam etmek mi?
-        // Genelde pencereyi kapatmak uygulamayı kapatır.
-        Application.Current.Shutdown();
+        Close();
     }
 
     private void BuyButton_Click(object sender, RoutedEventArgs e)

@@ -350,6 +350,9 @@ public partial class MainViewModel : ObservableObject
         // Update last watched
         channel.LastWatched = DateTime.Now;
         _ = _channelService.UpdateChannelAsync(channel);
+
+        // Notify UI to play
+        OnMediaSelected?.Invoke(channel);
     }
 
     [RelayCommand]

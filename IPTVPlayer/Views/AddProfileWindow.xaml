@@ -12,7 +12,7 @@
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
         WindowStyle="None"
-        Background="{StaticResource Bg0Brush}" 
+        Background="{DynamicResource Bg0Brush}" 
         FontFamily="Segoe UI">
     
     <Window.Resources>
@@ -44,7 +44,7 @@
 
         <!-- Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,40">
-            <TextBlock x:Name="TitleText" FontSize="56" FontWeight="Medium" Foreground="White" HorizontalAlignment="Center">
+            <TextBlock x:Name="TitleText" FontSize="56" FontWeight="Medium" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center">
                 <TextBlock.Style>
                     <Style TargetType="TextBlock">
                         <Setter Property="Text" Value="Profil Ekle"/>
@@ -56,8 +56,8 @@
                     </Style>
                 </TextBlock.Style>
             </TextBlock>
-            <TextBlock Text="Noctra izleyen başka bir kişi için profil ekleyin." FontSize="18" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" Margin="0,5,0,0"/>
-            <Rectangle Height="1" Fill="{StaticResource BorderBrush}" Margin="0,30,0,0" Width="800"/>
+            <TextBlock Text="Noctra izleyen başka bir kişi için profil ekleyin." FontSize="18" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+            <Rectangle Height="1" Fill="{DynamicResource BorderBrush}" Margin="0,30,0,0" Width="800"/>
         </StackPanel>
 
         <!-- Main Content (Horizontal Split: Avatar | Info) -->
@@ -100,13 +100,14 @@
 
                             <!-- Edit Icon -->
                             <Border Width="56" Height="56"
-                                    Background="#DD000000"
+                                    Background="{DynamicResource Surface1Brush}"
                                     CornerRadius="28"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Bottom"
-                                    Margin="12">
+                                    Margin="12"
+                                    Opacity="0.8">
                                 <Path Data="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
-                                      Fill="White"
+                                      Fill="{DynamicResource TextPrimaryBrush}"
                                       Stretch="Uniform"
                                       Width="24" Height="24"
                                       HorizontalAlignment="Center"
@@ -141,7 +142,7 @@
             <!-- Info Column -->
             <StackPanel Grid.Column="1" VerticalAlignment="Top">
                 <!-- Profile Name -->
-                <TextBlock Text="Profil Adı" Foreground="#AAAAAA" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"/>
+                <TextBlock Text="Profil Adı" Foreground="{DynamicResource TextMutedBrush}" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"/>
                 <TextBox Text="{Binding ProfileName, UpdateSourceTrigger=PropertyChanged}" 
                          Style="{StaticResource ModernTextBox}" 
                          Height="52"
@@ -152,10 +153,10 @@
                           Style="{StaticResource NoctraCheckBox}"
                           Margin="4,16,0,0"/>
                 
-                <Separator Height="1" Background="#333" Margin="0,32"/>
+                <Separator Height="1" Background="{DynamicResource BorderBrush}" Margin="0,32"/>
                 
                 <!-- Provider Account -->
-                <TextBlock Text="Hesap Ayarları" Foreground="White" FontSize="20" FontWeight="Bold" Margin="0,0,0,16"/>
+                <TextBlock Text="Hesap Ayarları" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="20" FontWeight="Bold" Margin="0,0,0,16"/>
                 
 
                 <!-- Connection Details -->
@@ -176,7 +177,7 @@
                     </StackPanel.Style>
 
                     <!-- URL Field with Smart Label -->
-                    <TextBlock Foreground="#AAAAAA" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold">
+                    <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Text" Value="Sunucu URL"/>
@@ -232,14 +233,14 @@
                         </Grid.ColumnDefinitions>
                         
                         <StackPanel Margin="0,0,10,0">
-                            <TextBlock Text="Kullanıcı Adı" Foreground="#AAAAAA" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"/>
+                            <TextBlock Text="Kullanıcı Adı" Foreground="{DynamicResource TextMutedBrush}" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"/>
                             <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" 
                                      Style="{StaticResource ModernTextBox}" Height="52"
                                      helper:TextBoxHelper.Watermark="Kullanıcı adı"/>
                         </StackPanel>
                         
                         <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                            <TextBlock Text="Şifre" Foreground="#AAAAAA" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"/>
+                            <TextBlock Text="Şifre" Foreground="{DynamicResource TextMutedBrush}" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"/>
                             <TextBox Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}" 
                                      Style="{StaticResource ModernTextBox}" Height="52"
                                      helper:TextBoxHelper.Watermark="Şifre"/>
@@ -259,7 +260,7 @@
                     </StackPanel>
                     
                     <!-- ✨ Info Banner - M3U → Xtream Conversion -->
-                    <Border Background="#1A7C3AED" BorderBrush="{StaticResource AccentBrush}" 
+                    <Border Background="{DynamicResource PremiumCardBackgroundBrush}" BorderBrush="{DynamicResource AccentBrush}" 
                             BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,10,0,0">
                         <Border.Style>
                             <Style TargetType="Border">
@@ -279,7 +280,7 @@
                         
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="💡" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBlock FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap">
+                            <TextBlock FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap">
                                 <Run Text="M3U linkiniz Xtream formatına dönüştürüldü."/>
                                 <Run Text="Sunucu, kullanıcı adı ve şifre otomatik ayrıştırıldı." FontWeight="SemiBold"/>
                             </TextBlock>
@@ -306,14 +307,14 @@
                     <ControlTemplate TargetType="Button">
                         <StackPanel x:Name="DeletePanel" Orientation="Horizontal" Opacity="1">
                             <Path Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
-                                  Fill="#E87C03"
+                                  Fill="{DynamicResource ErrorBrush}"
                                   Stretch="Uniform"
                                   Width="20" Height="20"
                                   VerticalAlignment="Center"
                                   Margin="0,0,10,0"/>
                             <TextBlock Text="Profili Sil"
                                        FontSize="16"
-                                       Foreground="#E87C03"
+                                       Foreground="{DynamicResource ErrorBrush}"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
                         <ControlTemplate.Triggers>
@@ -339,16 +340,16 @@
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="CancelBorder"
                                     Background="Transparent"
-                                    BorderBrush="#555555"
+                                    BorderBrush="{DynamicResource BorderBrush}"
                                     BorderThickness="1"
                                     CornerRadius="4">
-                                <TextBlock Text="İptal" FontSize="16" Foreground="#B3B3B3"
+                                <TextBlock Text="İptal" FontSize="16" Foreground="{DynamicResource TextMutedBrush}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="CancelBorder" Property="BorderBrush" Value="White"/>
-                                    <Setter TargetName="CancelBorder" Property="TextBlock.Foreground" Value="White"/>
+                                    <Setter TargetName="CancelBorder" Property="BorderBrush" Value="{DynamicResource TextPrimaryBrush}"/>
+                                    <Setter TargetName="CancelBorder" Property="TextBlock.Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -360,19 +361,19 @@
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="SaveBorder"
-                                    Background="White"
+                                    Background="{DynamicResource TextPrimaryBrush}"
                                     CornerRadius="4">
                                 <TextBlock Text="Kaydet" FontSize="16" FontWeight="SemiBold" 
-                                           Foreground="Black"
+                                           Foreground="{DynamicResource Bg0Brush}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="SaveBorder" Property="Background" Value="#E5E5E5"/>
+                                    <Setter TargetName="SaveBorder" Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
                                 </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
-                                    <Setter TargetName="SaveBorder" Property="Background" Value="#404040"/>
-                                    <Setter TargetName="SaveBorder" Property="TextBlock.Foreground" Value="#808080"/>
+                                    <Setter TargetName="SaveBorder" Property="Background" Value="{DynamicResource Surface1Brush}"/>
+                                    <Setter TargetName="SaveBorder" Property="TextBlock.Foreground" Value="{DynamicResource TextMutedBrush}"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>

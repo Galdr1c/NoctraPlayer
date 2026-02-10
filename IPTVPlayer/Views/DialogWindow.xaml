@@ -6,8 +6,8 @@
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
         Topmost="True">
     
-    <Border Background="{StaticResource BackgroundBrush}" 
-            BorderBrush="#333" BorderThickness="1" CornerRadius="12">
+    <Border Background="{DynamicResource BackgroundBrush}" 
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12">
         <Border.Effect>
             <DropShadowEffect BlurRadius="20" ShadowDepth="0" Opacity="0.5"/>
         </Border.Effect>
@@ -20,7 +20,7 @@
             </Grid.RowDefinitions>
 
             <!-- Title -->
-            <TextBlock Text="{Binding Title}" Foreground="White" FontSize="18" FontWeight="Bold" Margin="0,0,0,16"/>
+            <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="18" FontWeight="Bold" Margin="0,0,0,16"/>
 
             <!-- Content Area -->
             <Grid Grid.Row="1">
@@ -33,7 +33,7 @@
                 <TextBlock x:Name="IconText" Text="ℹ️" FontSize="32" VerticalAlignment="Center" Margin="0,0,20,0"/>
 
                 <!-- Message -->
-                <TextBlock Grid.Column="1" Text="{Binding Message}" Foreground="#AAA" 
+                <TextBlock Grid.Column="1" Text="{Binding Message}" Foreground="{DynamicResource TextMutedBrush}" 
                            FontSize="15" VerticalAlignment="Center" TextWrapping="Wrap"/>
             </Grid>
 

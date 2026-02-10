@@ -21,7 +21,7 @@
             
             <!-- Settings Section Style -->
             <Style x:Key="SettingsSection" TargetType="Border">
-                <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+                <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
                 <Setter Property="CornerRadius" Value="8"/>
                 <Setter Property="Padding" Value="16"/>
                 <Setter Property="Margin" Value="0,0,0,12"/>
@@ -29,21 +29,21 @@
             
             <!-- Settings Label -->
             <Style x:Key="SettingsLabel" TargetType="TextBlock">
-                <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
                 <Setter Property="FontSize" Value="13"/>
                 <Setter Property="Margin" Value="0,12,0,6"/>
             </Style>
             
             <!-- Settings Title -->
             <Style x:Key="SettingsTitle" TargetType="TextBlock">
-                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                 <Setter Property="FontSize" Value="15"/>
                 <Setter Property="FontWeight" Value="SemiBold"/>
             </Style>
             
             <!-- Toggle Style -->
             <Style x:Key="SettingsToggle" TargetType="CheckBox">
-                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                 <Setter Property="FontSize" Value="14"/>
                 <Setter Property="Margin" Value="0,8,0,0"/>
                 <Setter Property="Cursor" Value="Hand"/>
@@ -57,8 +57,8 @@
         </ResourceDictionary>
     </Window.Resources>
 
-    <Border Background="{StaticResource BackgroundBrush}" CornerRadius="12" 
-            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+    <Border Background="{DynamicResource BackgroundBrush}" CornerRadius="12" 
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Header -->
@@ -69,12 +69,12 @@
             <!-- Header -->
             <Grid Grid.Row="0" Margin="24,20,24,0">
                 <TextBlock Text="⚙️ Ayarlar" FontSize="22" FontWeight="Bold" 
-                           Foreground="{StaticResource TextPrimaryBrush}"/>
+                           Foreground="{DynamicResource TextPrimaryBrush}"/>
                 <Button HorizontalAlignment="Right" Content="✕" 
                         Click="CloseButton_Click"
                         FontSize="18"
                         Style="{StaticResource IconButton}" 
-                        Foreground="{StaticResource TextSecondaryBrush}"/>
+                        Foreground="{DynamicResource TextSecondaryBrush}"/>
             </Grid>
 
             <!-- Tab Container -->
@@ -96,8 +96,8 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <StackPanel>
-                                            <TextBlock Text="Sonraki bölümü otomatik oynat" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                            <TextBlock Text="Bir bölüm bittiğinde seriyi otomatik devam ettirir" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                                            <TextBlock Text="Sonraki bölümü otomatik oynat" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="Bir bölüm bittiğinde seriyi otomatik devam ettirir" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
                                         </StackPanel>
                                         <ToggleButton Grid.Column="1" IsChecked="{Binding AutoPlayNext}" Style="{StaticResource ModernToggleSwitch}" VerticalAlignment="Center"/>
                                     </Grid>
@@ -109,8 +109,8 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <StackPanel>
-                                            <TextBlock Text="İntro'yu otomatik geç" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                            <TextBlock Text="Tespit edildiğinde açılış jeneriğini atlar" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                                            <TextBlock Text="İntro'yu otomatik geç" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="Tespit edildiğinde açılış jeneriğini atlar" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
                                         </StackPanel>
                                         <ToggleButton Grid.Column="1" IsChecked="{Binding AutoSkipIntro}" Style="{StaticResource ModernToggleSwitch}" VerticalAlignment="Center"/>
                                     </Grid>
@@ -122,8 +122,8 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <StackPanel>
-                                            <TextBlock Text="Son kanalı hatırla" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                            <TextBlock Text="Uygulama açıldığında son izlenen kanalı yükler" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                                            <TextBlock Text="Son kanalı hatırla" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="Uygulama açıldığında son izlenen kanalı yükler" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
                                         </StackPanel>
                                         <ToggleButton Grid.Column="1" IsChecked="{Binding RememberLastChannel}" Style="{StaticResource ModernToggleSwitch}" VerticalAlignment="Center"/>
                                     </Grid>
@@ -152,7 +152,7 @@
                                         <TextBlock Text="Varsayılan Ses Seviyesi" Style="{StaticResource SettingsTitle}"/>
                                         <TextBlock HorizontalAlignment="Right" 
                                                    Text="{Binding DefaultVolume, StringFormat={}{0}%}"
-                                                   Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold"/>
+                                                   Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold"/>
                                     </Grid>
                                     <Slider Minimum="0" Maximum="100" 
                                             Value="{Binding DefaultVolume}" 
@@ -187,17 +187,17 @@
                                         <TextBlock Text="Yazı Boyutu" Style="{StaticResource SettingsTitle}"/>
                                         <TextBlock HorizontalAlignment="Right" 
                                                    Text="{Binding SubtitleFontSize, StringFormat={}{0}px}"
-                                                   Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold"/>
+                                                   Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold"/>
                                     </Grid>
                                     <Slider Minimum="12" Maximum="32" 
                                             Value="{Binding SubtitleFontSize}"
                                             Style="{StaticResource SettingsSlider}"/>
                                     
                                     <!-- Preview -->
-                                    <Border Background="#1A1A1A" CornerRadius="4" Padding="16" Margin="0,12,0,0">
+                                    <Border Background="{DynamicResource Surface1Brush}" CornerRadius="4" Padding="16" Margin="0,12,0,0">
                                         <TextBlock Text="Örnek Altyazı Metni" 
                                                    FontSize="{Binding SubtitleFontSize}"
-                                                   Foreground="White" HorizontalAlignment="Center"/>
+                                                   Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
                                     </Border>
                                 </StackPanel>
                             </Border>
@@ -209,7 +209,7 @@
                                         <TextBlock Text="Arka Plan Opaklığı" Style="{StaticResource SettingsTitle}"/>
                                         <TextBlock HorizontalAlignment="Right" 
                                                    Text="{Binding SubtitleBackgroundOpacity, StringFormat={}{0}%}"
-                                                   Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold"/>
+                                                   Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold"/>
                                     </Grid>
                                     <Slider Minimum="0" Maximum="100" 
                                             Value="{Binding SubtitleBackgroundOpacity}"
@@ -244,8 +244,8 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <StackPanel>
-                                        <TextBlock Text="Sadece Wi-Fi ile indir" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                        <TextBlock Text="Mobil veri kullanımını engeller" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                                        <TextBlock Text="Sadece Wi-Fi ile indir" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                        <TextBlock Text="Mobil veri kullanımını engeller" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
                                     </StackPanel>
                                     <ToggleButton Grid.Column="1" IsChecked="{Binding DownloadWifiOnly}" Style="{StaticResource ModernToggleSwitch}" VerticalAlignment="Center"/>
                                 </Grid>
@@ -263,9 +263,9 @@
                                         <TextBox Text="{Binding DownloadPath}" 
                                                  IsReadOnly="True" 
                                                  Padding="8" 
-                                                 Background="{StaticResource BackgroundBrush}"
-                                                 Foreground="{StaticResource TextSecondaryBrush}"
-                                                 BorderBrush="{StaticResource BorderBrush}"/>
+                                                 Background="{DynamicResource BackgroundBrush}"
+                                                 Foreground="{DynamicResource TextSecondaryBrush}"
+                                                 BorderBrush="{DynamicResource BorderBrush}"/>
                                         <Button Grid.Column="1" Content="📂 Değiştir" 
                                                 Click="ChangeDownloadPath_Click"
                                                 Style="{StaticResource SecondaryButton}"
@@ -305,9 +305,9 @@
                                                Style="{StaticResource SettingsLabel}"/>
                                     <TextBox Text="{Binding TmdbApiKey, UpdateSourceTrigger=PropertyChanged}" 
                                              Padding="10" Margin="0,8,0,0"
-                                             Background="{StaticResource BackgroundBrush}"
-                                             Foreground="{StaticResource TextPrimaryBrush}"
-                                             BorderBrush="{StaticResource BorderBrush}"/>
+                                             Background="{DynamicResource BackgroundBrush}"
+                                             Foreground="{DynamicResource TextPrimaryBrush}"
+                                             BorderBrush="{DynamicResource BorderBrush}"/>
                                 </StackPanel>
                             </Border>
                             
@@ -316,9 +316,9 @@
                                 <StackPanel>
                                     <TextBlock Text="Hakkında" Style="{StaticResource SettingsTitle}"/>
                                     <TextBlock Text="Noctra v1.0.0" FontSize="14" 
-                                               Foreground="{StaticResource TextSecondaryBrush}" Margin="0,8,0,0"/>
+                                               Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,8,0,0"/>
                                     <TextBlock Text="© 2026 Tüm Hakları Saklıdır" FontSize="12" 
-                                               Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                                               Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
                                 </StackPanel>
                             </Border>
                         </StackPanel>
@@ -339,7 +339,7 @@
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <TextBlock Text="{Binding StatusMessage}" 
                                    VerticalAlignment="Center" 
-                                   Foreground="{StaticResource AccentBrush}"
+                                   Foreground="{DynamicResource AccentBrush}"
                                    Margin="0,0,16,0"/>
                         <Button Content="💾 Kaydet" 
                                 Command="{Binding SaveSettingsCommand}"

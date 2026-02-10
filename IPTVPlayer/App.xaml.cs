@@ -79,8 +79,8 @@ public partial class App : Application
     {
         try
         {
-            string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "noctra_crash_log.txt");
-            string logContent = $"[{DateTime.Now}] {message}\n{ex?.ToString()}\n--------------------------------------------------\n";
+            string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash_log.txt");
+            string logContent = $"[{DateTime.Now}] {message}\n{ex?.GetType().Name}: {ex?.Message}\nStack Trace:\n{ex?.StackTrace}\nInner Exception: {ex?.InnerException?.Message}\n--------------------------------------------------\n";
             File.AppendAllText(logPath, logContent);
         }
         catch { /* Logging fail shouldn't crash app */ }

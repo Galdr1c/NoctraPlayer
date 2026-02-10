@@ -21,6 +21,9 @@ public partial class PlayerViewModel : ObservableObject
     private bool _isLiveContent;
 
     [ObservableProperty]
+    private bool _isSeriesContent;
+
+    [ObservableProperty]
     private bool _isLocked;
 
     [ObservableProperty]
@@ -216,6 +219,7 @@ public partial class PlayerViewModel : ObservableObject
     {
         CurrentChannel = channel;
         IsLiveContent = channel.Type == ChannelType.Live;
+        IsSeriesContent = channel.Type == ChannelType.Series;
         IsBuffering = true;
         BufferingProgress = 0;
         await _videoPlayerService.PlayAsync(channel.StreamUrl);
@@ -378,13 +382,24 @@ public partial class PlayerViewModel : ObservableObject
     [RelayCommand]
     private void Seek(double position)
     {
+        if (IsLiveContent) return;
         _videoPlayerService.Position = position;
         RestartAutoHideTimer();
     }
 
     [RelayCommand]
-    private void SkipForward(double seconds = 10)
+    private void SkipForward(object? parameter)
     {
+        if (IsLiveContent) return;
+
+        double seconds = 10;
+        if (parameter != null)
+        {
+            if (parameter is int i) seconds = i;
+            else if (parameter is double d) seconds = d;
+            else if (parameter is string s && double.TryParse(s, out double parsed)) seconds = parsed;
+        }
+
         var newPos = Math.Min(Position + seconds, Duration);
         _videoPlayerService.Position = newPos;
         RestartAutoHideTimer();
@@ -393,15 +408,21 @@ public partial class PlayerViewModel : ObservableObject
     [RelayCommand]
     private void SkipIntro()
     {
-        SkipForward(85); // Skip 1:25 typical intro length
+        if (IsLiveContent) return;
+        
+        // Use generic SkipForward logic or direct service call?
+        // Direct safe service call
+        var newPos = Math.Min(Position + 85, Duration);
+        _videoPlayerService.Position = newPos;
         IsIntroDetected = false;
         
-        // Mock Next Episode Prompt appearing after skip
         ShowNextEpisodePromptMock();
     }
 
     private void ShowNextEpisodePromptMock()
     {
+        if (IsLiveContent) return;
+
         NextEpisode = new Episode
         {
             Name = "The One With The Mock Episode",
@@ -410,7 +431,6 @@ public partial class PlayerViewModel : ObservableObject
         };
         IsNextEpisodePromptVisible = true;
         
-        // Auto-hide after 10 seconds
         Task.Delay(10000).ContinueWith(_ => IsNextEpisodePromptVisible = false);
     }
 
@@ -419,12 +439,10 @@ public partial class PlayerViewModel : ObservableObject
     {
         if (NextEpisode != null)
         {
-            // Logic to play next episode would go here
-            // For now, just hide the prompt and simulate
             IsNextEpisodePromptVisible = false;
-            ChannelName = NextEpisode.Name; // Mock update
+            ChannelName = NextEpisode.Name; 
+            // In real app, this would trigger MainViewModel to play the next episode
         }
-
         await Task.CompletedTask;
     }
 
@@ -434,11 +452,29 @@ public partial class PlayerViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void SkipBackward(double seconds = 10)
+    private void SkipBackward(object? parameter)
     {
+        if (IsLiveContent) return;
+
+        double seconds = 10;
+        if (parameter != null)
+        {
+            if (parameter is int i) seconds = i;
+            else if (parameter is double d) seconds = d;
+            else if (parameter is string s && double.TryParse(s, out double parsed)) seconds = parsed;
+        }
+
         var newPos = Math.Max(Position - seconds, 0);
         _videoPlayerService.Position = newPos;
         RestartAutoHideTimer();
+    }
+
+    public event EventHandler? OpenEpisodesRequested;
+
+    [RelayCommand]
+    private void OpenEpisodes()
+    {
+        OpenEpisodesRequested?.Invoke(this, EventArgs.Empty);
     }
 
     partial void OnSelectedAudioTrackChanged(int value)

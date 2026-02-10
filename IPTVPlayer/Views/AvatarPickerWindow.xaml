@@ -22,7 +22,7 @@
         </ResourceDictionary>
     </Window.Resources>
 
-    <Border CornerRadius="12" Background="{StaticResource BackgroundBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+    <Border CornerRadius="12" Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
         <Grid Margin="20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Header -->
@@ -32,12 +32,12 @@
 
             <!-- Header -->
             <Grid Grid.Row="0" Margin="0,0,0,20">
-                <TextBlock Text="Profil Resmi Seç" FontSize="24" FontWeight="Bold" Foreground="White"/>
+                <TextBlock Text="Profil Resmi Seç" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                 <Button HorizontalAlignment="Right" Content="✕" 
                         Click="CloseButton_Click"
                         FontSize="20"
                         Style="{StaticResource IconButton}" 
-                        Foreground="{StaticResource TextSecondaryBrush}"/>
+                        Foreground="{DynamicResource TextSecondaryBrush}"/>
             </Grid>
 
             <!-- Avatar Grid -->
@@ -68,7 +68,7 @@
                 </ItemsControl>
             </ScrollViewer>
             
-            <TextBlock Grid.Row="2" Text="İpucu: İstediğiniz avatarın üzerine tıklayın." Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" Margin="0,20,0,0"/>
+            <TextBlock Grid.Row="2" Text="İpucu: İstediğiniz avatarın üzerine tıklayın." Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" Margin="0,20,0,0"/>
         </Grid>
     </Border>
 </Window>

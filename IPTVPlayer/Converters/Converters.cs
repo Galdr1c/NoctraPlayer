@@ -13,7 +13,12 @@ public class BoolToVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        bool isVisible = (bool)value;
+        bool isVisible = false;
+        if (value is bool b) 
+            isVisible = b;
+        else if (value is bool?) 
+            isVisible = ((bool?)value).GetValueOrDefault();
+            
         if (parameter?.ToString() == "Invert") isVisible = !isVisible;
         return isVisible ? Visibility.Visible : Visibility.Collapsed;
     }

@@ -116,6 +116,13 @@
         <GradientStop Color="#333333" Offset="0.0"/>
         <GradientStop Color="#404040" Offset="1.0"/>
     </LinearGradientBrush>
+
+    <!-- Premium Card Brushes -->
+    <LinearGradientBrush x:Key="PremiumCardBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="{StaticResource Surface0Color}" Offset="0.0"/>
+        <GradientStop Color="#1E1636" Offset="1.0"/>
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="PremiumCardForegroundBrush" Color="White"/>
     
     <!-- ==========================================
          EFFECTS

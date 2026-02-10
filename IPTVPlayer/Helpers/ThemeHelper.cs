@@ -9,19 +9,36 @@ public static class ThemeHelper
 
     public static void SetTheme(bool isDark)
     {
-        var dictionary = new ResourceDictionary
+        var newTheme = new ResourceDictionary
         {
             Source = new Uri(isDark ? DarkThemeSource : LightThemeSource, UriKind.Relative)
         };
 
-        // Colors.xaml usually merges theme at index 0
-        var colorsDictionary = Application.Current.Resources.MergedDictionaries
-            .FirstOrDefault(d => d.Source != null && d.Source.OriginalString.Contains("Colors.xaml"));
-
-        if (colorsDictionary != null)
+        var appResources = Application.Current.Resources.MergedDictionaries;
+        
+        // Find and remove existing theme dictionary (it's the first one that contains Theme in the path)
+        ResourceDictionary? existingTheme = null;
+        foreach (var dict in appResources)
         {
-            colorsDictionary.MergedDictionaries.Clear();
-            colorsDictionary.MergedDictionaries.Add(dictionary);
+            if (dict.Source != null && 
+                (dict.Source.OriginalString.Contains("DarkTheme.xaml") || 
+                 dict.Source.OriginalString.Contains("LightTheme.xaml")))
+            {
+                existingTheme = dict;
+                break;
+            }
+        }
+
+        if (existingTheme != null)
+        {
+            int index = appResources.IndexOf(existingTheme);
+            appResources.RemoveAt(index);
+            appResources.Insert(index, newTheme);
+        }
+        else
+        {
+            // If not found, insert at the beginning
+            appResources.Insert(0, newTheme);
         }
     }
 }

@@ -26,6 +26,7 @@ public partial class MainWindow : Window
                       HoverPreviewService hoverPreviewService)
     {
         InitializeComponent();
+        try { System.IO.File.AppendAllText(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_log.txt"), $"[{DateTime.Now}] MainWindow initialized.\n"); } catch { }
         
         _viewModel = viewModel;
         _playerViewModel = playerViewModel;
@@ -36,12 +37,8 @@ public partial class MainWindow : Window
         PlayerArea.DataContext = _playerViewModel;
         _playerViewModel.CloseRequested += (s, e) =>
         {
-            PlayerArea.Visibility = Visibility.Collapsed;
-            VideoView.MediaPlayer = null; // Detach to reset HWND hook
-            ShowMainContent();
-            
-            // Ensure cursor is visible when leaving player
-            Cursor = Cursors.Arrow;
+            try { System.IO.File.AppendAllText(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_log.txt"), $"[{DateTime.Now}] CloseRequested event received.\n"); } catch { }
+            ExitPlayerMode();
         };
 
         // Video player'ı bağla
@@ -78,12 +75,28 @@ public partial class MainWindow : Window
 
         _playerViewModel.PropertyChanged += (s, e) =>
         {
-            if (e.PropertyName == nameof(_playerViewModel.IsFullScreen))
+            if (e.PropertyName == nameof(PlayerViewModel.IsFullScreen))
             {
                 if (_playerViewModel.IsFullScreen)
+                {
                     WindowState = WindowState.Maximized;
+                    ResizeMode = ResizeMode.NoResize;
+                }
                 else
+                {
+                    // Restore to normal (user can maximize manually if desired)
                     WindowState = WindowState.Normal;
+                    ResizeMode = ResizeMode.CanResize;
+                }
+            }
+        };
+
+        _playerViewModel.OpenEpisodesRequested += (s, e) =>
+        {
+            if (_viewModel.SelectedSeries != null)
+            {
+                ExitPlayerMode();
+                _viewModel.IsSeriesDetailVisible = true;
             }
         };
 
@@ -116,11 +129,7 @@ public partial class MainWindow : Window
             }
             else if (PlayerArea.Visibility == Visibility.Visible)
             {
-                PlayerArea.Visibility = Visibility.Collapsed;
-                VideoView.MediaPlayer = null; // Detach to reset HWND hook
-                ShowMainContent();
-                Cursor = Cursors.Arrow;
-                _playerViewModel.ClosePlayerCommand.Execute(null);
+                ExitPlayerMode();
                 e.Handled = true;
             }
         }
@@ -158,6 +167,90 @@ public partial class MainWindow : Window
         }
     }
 
+    private void EnterPlayerMode()
+    {
+        try { System.IO.File.AppendAllText(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_log.txt"), $"[{DateTime.Now}] EnterPlayerMode called.\n"); } catch { }
+
+        // 1. Show Player Area (covers the window content)
+        PlayerArea.Visibility = Visibility.Visible;
+        
+        // 2. Hide Mini Player (if active)
+        MiniPlayer.Visibility = Visibility.Collapsed;
+        MiniVideoView.MediaPlayer = null;
+        
+        // 3. Hide other overlays if any
+        _viewModel.IsSearchOverlayVisible = false;
+        
+        // 4. Attach Player
+        if (VideoView.MediaPlayer == null)
+        {
+            if (VideoView.IsLoaded)
+            {
+                VideoView.MediaPlayer = _videoPlayerService.GetMediaPlayer();
+            }
+            else
+            {
+                RoutedEventHandler? loadedHandler = null;
+                loadedHandler = (s, e) => 
+                {
+                    VideoView.Loaded -= loadedHandler; // Run only once
+                    if (VideoView.MediaPlayer == null)
+                        VideoView.MediaPlayer = _videoPlayerService.GetMediaPlayer();
+                };
+                VideoView.Loaded += loadedHandler;
+            }
+        }
+    }
+
+    private async void ExitPlayerMode()
+    {
+        try
+        {
+            try { System.IO.File.AppendAllText(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_log.txt"), $"[{DateTime.Now}] ExitPlayerMode called.\n"); } catch { }
+
+            // 1. Hide Player Area FIRST to stop rendering logic in VideoView
+            PlayerArea.Visibility = Visibility.Collapsed;
+
+            // Allow UI to update and VideoView to realize it's hidden
+            await Task.Delay(50);
+
+            // 2. Stop Player Logic
+            if (_playerViewModel != null)
+            {
+                // Reset FullScreen state if active (before stopping, to ensure proper window restoration)
+                if (_playerViewModel.IsFullScreen)
+                    _playerViewModel.IsFullScreen = false;
+                
+                _playerViewModel.StopCommand.Execute(null);
+            }
+
+            // 3. Detach MediaPlayer safely
+            // Ensure we are on UI thread (we are)
+            if (VideoView != null)
+            {
+                VideoView.MediaPlayer = null; // Detach to reset HWND hook
+            }
+            
+            // 4. Restore Window State (handled by IsFullScreen property change mostly, but ensure here)
+            if (WindowState == WindowState.Maximized && ResizeMode == ResizeMode.NoResize)
+            {
+                 WindowState = WindowState.Normal;
+                 ResizeMode = ResizeMode.CanResize;
+            }
+            
+            // 5. Show Main Content & Mini Player
+            ShowMainContent();
+            
+            // 6. Reset Cursor
+            Cursor = Cursors.Arrow;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"ExitPlayerMode Error: {ex}");
+            // Prevent crash
+        }
+    }
+
     private void PlayChannel(Channel channel)
     {
         try
@@ -166,30 +259,11 @@ public partial class MainWindow : Window
             if (_viewModel != null)
                 _playerViewModel.CurrentProfileId = _viewModel.CurrentProfileId;
             
-            // Tek otorite: PlayerViewModel
+            // Start Playback via ViewModel
             _ = _playerViewModel.PlayChannelAsync(channel);
             
-            // Video player'ı göster
-            PlayerArea.Visibility = Visibility.Visible;
-            MiniPlayer.Visibility = Visibility.Collapsed;
-            MiniVideoView.MediaPlayer = null;
-            
-            // ALways re-attach to ensure HWND is hooked correctly
-            // Detach first just in case
-            VideoView.MediaPlayer = null; 
-
-            if (VideoView.IsLoaded)
-            {
-                VideoView.MediaPlayer = _videoPlayerService.GetMediaPlayer();
-            }
-            else
-            {
-                VideoView.Loaded += (s, e) => 
-                {
-                    if (VideoView.MediaPlayer == null)
-                        VideoView.MediaPlayer = _videoPlayerService.GetMediaPlayer();
-                };
-            }
+            // Enter Full Window Mode
+            EnterPlayerMode();
         }
         catch (Exception ex)
         {
@@ -215,8 +289,8 @@ public partial class MainWindow : Window
         else if (_viewModel.ActiveView == AppView.Search) SearchView.Visibility = Visibility.Visible;
         if (LiveView != null && _viewModel.ActiveView == AppView.Live) LiveView.Visibility = Visibility.Visible;
 
-        // PiP logic: If video is playing, show mini player
-        if (_playerViewModel.IsPlaying)
+        // PiP logic: If video is playing AND PlayerArea is closed, show mini player
+        if (_playerViewModel.IsPlaying && PlayerArea.Visibility != Visibility.Visible)
         {
             MiniPlayer.Visibility = Visibility.Visible;
             MiniVideoView.MediaPlayer = _videoPlayerService.GetMediaPlayer();

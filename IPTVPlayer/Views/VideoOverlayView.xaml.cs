@@ -38,42 +38,40 @@ public partial class VideoOverlayView : UserControl
     {
         if (DataContext is PlayerViewModel vm)
         {
-            // Toggle visibility if not interacting with controls
-            // Actually, if we click on "background", we want to toggle.
-            // But if control is visible, maybe just show it?
-            // Noctra behavior: Click on video pauses/plays OR shows overlay.
-            // Here let's just show it. Or toggle play/pause if double click?
-            
-            // For now, assume single click wakes up overlay.
-            vm.UserInteractionCommand.Execute(null);
-            
-            // If overlay was already visible, maybe toggle play/pause?
-            if (vm.IsVisible)
+            if (e.ClickCount == 2)
             {
-                vm.PlayPauseCommand.Execute(null);
+                // Double click: Toggle Fullscreen
+                vm.ToggleFullScreenCommand.Execute(null);
+            }
+            else
+            {
+                // Single click: Wake up UI (Show overlay / Reset timer)
+                // User requested: "Tek tık pause/play yapmıyor... Tek tık: UI’ı uyandırır"
+                vm.UserInteractionCommand.Execute(null);
             }
         }
     }
 
-    private void Slider_DragStarted(object sender, DragStartedEventArgs e)
-    {
-        if (DataContext is PlayerViewModel vm)
+        private void Slider_DragStarted(object sender, DragStartedEventArgs e)
         {
-            vm.ToggleLockCommand.Execute(null);
-        }
-    }
-
-    private void Slider_DragCompleted(object sender, DragCompletedEventArgs e)
-    {
-        if (DataContext is PlayerViewModel vm)
-        {
-            vm.ToggleLockCommand.Execute(null);
-            
-            // Perform seek
-            if (sender is Slider slider)
+            if (DataContext is PlayerViewModel vm)
             {
-                // Position is updated via TwoWay binding
+                vm.ToggleLockCommand.Execute(null);
             }
         }
-    }
+
+        private void Slider_DragCompleted(object sender, DragCompletedEventArgs e)
+        {
+            if (DataContext is PlayerViewModel vm)
+            {
+                vm.ToggleLockCommand.Execute(null);
+                
+                // Perform seek
+                if (sender is Slider slider)
+                {
+                    // Position is updated via TwoWay binding, but we might want to ensure VM updates
+                    vm.SeekCommand.Execute(slider.Value);
+                }
+            }
+        }
 }

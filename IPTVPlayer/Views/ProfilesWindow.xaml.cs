@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Input;
 using IPTVPlayer.ViewModels;
 using IPTVPlayer.Services;
 using IPTVPlayer.Services.Interfaces;
@@ -21,6 +22,13 @@ public partial class ProfilesWindow : Window
         viewModel.OnProfileAddRequested += ViewModel_OnProfileAddRequested;
         viewModel.OnProfileEditRequested += ViewModel_OnProfileEditRequested;
         viewModel.OnProfileSelected += ViewModel_OnProfileSelected;
+
+        // Window sürükleme
+        MouseLeftButtonDown += (s, e) =>
+        {
+            if (e.ButtonState == MouseButtonState.Pressed)
+                DragMove();
+        };
     }
 
     private async void ViewModel_OnProfileSelected(IPTVPlayer.Models.Profile profile)
@@ -54,7 +62,10 @@ public partial class ProfilesWindow : Window
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Profil yüklenirken hata: {ex.Message}");
+            var msg = $"CRASH IN PROFILE SELECTION: {ex.GetType().Name} - {ex.Message}\n{ex.StackTrace}";
+            System.Diagnostics.Debug.WriteLine(msg);
+            try { System.IO.File.AppendAllText(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_log.txt"), $"[{DateTime.Now}] {msg}\n\n"); } catch { }
+            MessageBox.Show($"Kritik Hata: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

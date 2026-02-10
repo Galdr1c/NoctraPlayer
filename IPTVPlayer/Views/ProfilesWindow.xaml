@@ -61,14 +61,8 @@
         </ResourceDictionary>
     </Window.Resources>
 
-    <Border CornerRadius="{StaticResource RadiusMedium}" ClipToBounds="True">
-        <Border.Background>
-            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="{StaticResource Bg0Color}" Offset="0.0"/>
-                <GradientStop Color="{StaticResource Bg1Color}" Offset="0.6"/>
-                <GradientStop Color="#1a0a2e" Offset="1.0"/>
-            </LinearGradientBrush>
-        </Border.Background>
+    <Border CornerRadius="{DynamicResource RadiusMedium}" ClipToBounds="True"
+            Background="{DynamicResource BackgroundGradientBrush}">
         
         <Grid>
             <Grid.RowDefinitions>
@@ -88,7 +82,7 @@
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Image Source="/Assets/Logo.png" Height="24" Stretch="Uniform" VerticalAlignment="Center"/>
                     <TextBlock Text="Noctra" FontSize="18" FontWeight="SemiBold" 
-                               Foreground="{StaticResource TextMutedBrush}" 
+                               Foreground="{DynamicResource TextMutedBrush}" 
                                VerticalAlignment="Center" Margin="12,0,0,0"/>
                 </StackPanel>
                 
@@ -103,7 +97,7 @@
                                 <Border x:Name="SettingsBg" Background="Transparent" CornerRadius="24">
                                     <Path x:Name="SettingsIcon"
                                           Data="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"
-                                          Fill="#999999"
+                                          Fill="{DynamicResource TextMutedBrush}"
                                           Stretch="Uniform"
                                           Width="22" Height="22"
                                           HorizontalAlignment="Center"
@@ -116,8 +110,8 @@
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="SettingsBg" Property="Background" Value="#333333"/>
-                                        <Setter TargetName="SettingsIcon" Property="Fill" Value="White"/>
+                                        <Setter TargetName="SettingsBg" Property="Background" Value="{DynamicResource Surface1Brush}"/>
+                                        <Setter TargetName="SettingsIcon" Property="Fill" Value="{DynamicResource TextPrimaryBrush}"/>
                                     </Trigger>
                                     <EventTrigger RoutedEvent="MouseEnter">
                                         <BeginStoryboard>
@@ -153,14 +147,14 @@
                             <ControlTemplate TargetType="Button">
                                 <Border x:Name="CloseBg" Background="Transparent" CornerRadius="24">
                                     <TextBlock Text="×" FontSize="32" FontWeight="Light"
-                                               Foreground="#999999"
+                                               Foreground="{DynamicResource TextMutedBrush}"
                                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                                Margin="0,-4,0,0"/>
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="CloseBg" Property="Background" Value="#333333"/>
-                                        <Setter TargetName="CloseBg" Property="TextBlock.Foreground" Value="White"/>
+                                        <Setter TargetName="CloseBg" Property="Background" Value="{DynamicResource Surface1Brush}"/>
+                                        <Setter TargetName="CloseBg" Property="TextBlock.Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -174,10 +168,10 @@
                 
                 <!-- Titles -->
                 <TextBlock Text="Kim izliyor?" 
-                           FontSize="64" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"
+                           FontSize="64" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"
                            HorizontalAlignment="Center"/>
                 <TextBlock Text="Profil seçin" 
-                           FontSize="18" Foreground="{StaticResource TextMutedBrush}"
+                           FontSize="18" Foreground="{DynamicResource TextMutedBrush}"
                            HorizontalAlignment="Center" Margin="0,12,0,56"/>
 
                 <!-- Profile Grid -->
@@ -210,19 +204,19 @@
                                                     <Grid x:Name="AvatarRoot" Width="{StaticResource RatioSquareSize}" Height="{StaticResource RatioSquareSize}">
                                                         <!-- 1. Background & Content (Clipped) -->
                                                         <Border CornerRadius="14" ClipToBounds="True"
-                                                                Background="{StaticResource IconGradientBrush}">
+                                                                Background="{DynamicResource IconGradientBrush}">
                                                             <Grid>
-                                                                <!-- Actual Avatar Image -->
-                                                                <Image Source="{Binding Avatar, Converter={StaticResource AvatarPathConverter}}"
-                                                                       Stretch="UniformToFill" 
-                                                                       RenderOptions.BitmapScalingMode="HighQuality">
-                                                                    <Image.Clip>
-                                                                        <RectangleGeometry Rect="0,0,120,120" RadiusX="14" RadiusY="14"/>
-                                                                    </Image.Clip>
-                                                                </Image>
+                                                                <!-- Actual Avatar (Using ImageBrush for perfect rounded corners) -->
+                                                                <Border CornerRadius="14">
+                                                                    <Border.Background>
+                                                                        <ImageBrush ImageSource="{Binding Avatar, Converter={StaticResource AvatarPathConverter}}"
+                                                                                    Stretch="UniformToFill"
+                                                                                    RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                                    </Border.Background>
+                                                                </Border>
 
-                                                                <!-- Manage Mode Overlay -->
-                                                                <Border Background="#E6000000" CornerRadius="14"
+                                                                <!-- Manage Mode Overlay (Reduced opacity to 60% for better visibility) -->
+                                                                <Border Background="#99000000" CornerRadius="14"
                                                                         Visibility="{Binding DataContext.IsManageMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}">
                                                                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                                                                         <!-- Pencil Icon in Circle -->
@@ -257,7 +251,7 @@
 
                                                 <!-- Name -->
                                                 <TextBlock x:Name="ProfileName" Grid.Row="1" Text="{Binding Name}" 
-                                                           Foreground="{StaticResource TextMutedBrush}" 
+                                                           Foreground="{DynamicResource TextMutedBrush}" 
                                                            FontSize="15" FontWeight="Medium"
                                                            HorizontalAlignment="Center" 
                                                            TextTrimming="CharacterEllipsis" MaxWidth="120"/>
@@ -265,13 +259,13 @@
                                             <ControlTemplate.Triggers>
                                                 <!-- Focus State (Keyboard) -->
                                                 <Trigger Property="IsFocused" Value="True">
-                                                    <Setter TargetName="AvatarBorder" Property="BorderBrush" Value="{StaticResource AccentLightBrush}"/>
+                                                    <Setter TargetName="AvatarBorder" Property="BorderBrush" Value="{DynamicResource AccentLightBrush}"/>
                                                     <Setter TargetName="AvatarBorder" Property="BorderThickness" Value="3"/>
-                                                    <Setter TargetName="ProfileName" Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                                                    <Setter TargetName="ProfileName" Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                                                     <!-- Focus glow effect -->
                                                     <Setter TargetName="AvatarBorder" Property="Effect">
                                                         <Setter.Value>
-                                                            <DropShadowEffect Color="{StaticResource Accent500Color}" 
+                                                            <DropShadowEffect Color="{DynamicResource Accent500Color}" 
                                                                               BlurRadius="20" ShadowDepth="0" Opacity="0.6"/>
                                                         </Setter.Value>
                                                     </Setter>
@@ -310,7 +304,7 @@
                                     </Grid.RowDefinitions>
 
                                     <!-- Plus Icon Box (Dashed Border) -->
-                                    <Border x:Name="AddBorder" Width="{StaticResource RatioSquareSize}" Height="{StaticResource RatioSquareSize}" CornerRadius="{StaticResource RadiusMedium}" 
+                                    <Border x:Name="AddBorder" Width="{StaticResource RatioSquareSize}" Height="{StaticResource RatioSquareSize}" CornerRadius="{DynamicResource RadiusMedium}" 
                                             Grid.Row="0" Margin="0,0,0,12" 
                                             Background="Transparent"
                                             BorderThickness="2">
@@ -318,7 +312,7 @@
                                             <VisualBrush>
                                                 <VisualBrush.Visual>
                                                     <Rectangle StrokeDashArray="4 2" 
-                                                               Stroke="{StaticResource BorderBrush}" 
+                                                               Stroke="{DynamicResource BorderBrush}" 
                                                                StrokeThickness="2"
                                                                Width="{StaticResource RatioSquareSize}" Height="{StaticResource RatioSquareSize}"
                                                                RadiusX="14" RadiusY="14"/>
@@ -329,9 +323,9 @@
                                         <!-- Circle with Plus -->
                                         <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
                                             <Ellipse x:Name="PlusCircle" Width="60" Height="60" 
-                                                     Stroke="{StaticResource TextMutedBrush}" StrokeThickness="2" Fill="Transparent"/>
+                                                     Stroke="{DynamicResource TextMutedBrush}" StrokeThickness="2" Fill="Transparent"/>
                                             <TextBlock x:Name="PlusIcon" Text="+" FontSize="36" FontWeight="Light"
-                                                       Foreground="{StaticResource TextMutedBrush}"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                                        Margin="0,-4,0,0"/>
                                         </Grid>
@@ -339,7 +333,7 @@
                                     
                                     <!-- Label -->
                                     <TextBlock x:Name="AddLabel" Grid.Row="1" Text="Profil Ekle" 
-                                               Foreground="{StaticResource TextMutedBrush}" 
+                                               Foreground="{DynamicResource TextMutedBrush}" 
                                                FontSize="15" FontWeight="Medium"
                                                HorizontalAlignment="Center"/>
                                 </Grid>
@@ -350,7 +344,7 @@
                                                 <VisualBrush>
                                                     <VisualBrush.Visual>
                                                         <Rectangle StrokeDashArray="4 2" 
-                                                                   Stroke="White" 
+                                                                   Stroke="{DynamicResource TextPrimaryBrush}" 
                                                                    StrokeThickness="2"
                                                                    Width="{StaticResource RatioSquareSize}" Height="{StaticResource RatioSquareSize}"
                                                                    RadiusX="14" RadiusY="14"/>
@@ -358,10 +352,10 @@
                                                 </VisualBrush>
                                             </Setter.Value>
                                         </Setter>
-                                        <Setter TargetName="PlusCircle" Property="Stroke" Value="White"/>
-                                        <Setter TargetName="PlusCircle" Property="Fill" Value="{StaticResource AccentBrush}"/>
+                                        <Setter TargetName="PlusCircle" Property="Stroke" Value="{DynamicResource TextPrimaryBrush}"/>
+                                        <Setter TargetName="PlusCircle" Property="Fill" Value="{DynamicResource AccentBrush}"/>
                                         <Setter TargetName="PlusIcon" Property="Foreground" Value="White"/>
-                                        <Setter TargetName="AddLabel" Property="Foreground" Value="White"/>
+                                        <Setter TargetName="AddLabel" Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -382,21 +376,21 @@
             <StackPanel Grid.Row="2" HorizontalAlignment="Center" Margin="0,0,0,40">
                 <Button x:Name="ManageProfilesButton" Content="{Binding IsManageMode, Converter={StaticResource BoolToStringConverter}, ConverterParameter='Bitti|Profilleri Yönet'}" 
                         Command="{Binding ToggleManageModeCommand}"
-                        Background="Transparent" BorderBrush="{StaticResource TextSecondaryBrush}" BorderThickness="1"
-                        Foreground="{StaticResource TextSecondaryBrush}"
+                        Background="Transparent" BorderBrush="{DynamicResource TextSecondaryBrush}" BorderThickness="1"
+                        Foreground="{DynamicResource TextSecondaryBrush}"
                         FontSize="14" FontWeight="Medium" Padding="24,12" Cursor="Hand"
                         Visibility="{Binding Profiles.Count, Converter={StaticResource CountToVisibilityConverter}}">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource PlainButton}">
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsManageMode}" Value="True">
-                                    <Setter Property="Background" Value="White"/>
-                                    <Setter Property="Foreground" Value="Black"/>
+                                    <Setter Property="Background" Value="{DynamicResource TextPrimaryBrush}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource Bg0Brush}"/>
                                     <Setter Property="BorderThickness" Value="0"/>
                                 </DataTrigger>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-                                    <Setter Property="BorderBrush" Value="{StaticResource AccentLightBrush}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource AccentLightBrush}"/>
                                 </Trigger>
                             </Style.Triggers>
                         </Style>

@@ -20,9 +20,9 @@
         </ResourceDictionary>
     </Window.Resources>
 
-    <Border Background="#141414" 
+    <Border Background="{DynamicResource Bg0Brush}" 
             CornerRadius="12" 
-            BorderBrush="#333333" 
+            BorderBrush="{DynamicResource BorderBrush}" 
             BorderThickness="1">
         <Grid>
             <Grid.RowDefinitions>
@@ -39,7 +39,7 @@
                 <TextBlock Text="Ayarlar" 
                            FontSize="28" 
                            FontWeight="Bold" 
-                           Foreground="White"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
                            VerticalAlignment="Center"/>
                 
                 <!-- Close Button -->
@@ -47,7 +47,7 @@
                         HorizontalAlignment="Right"
                         Click="CloseButton_Click"
                         FontSize="32"
-                        Foreground="#999999"
+                        Foreground="{DynamicResource TextMutedBrush}"
                         Background="Transparent"
                         BorderThickness="0"
                         Width="48" Height="48"
@@ -63,8 +63,8 @@
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Border" Property="Background" Value="#1A1A1A"/>
-                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter TargetName="Border" Property="Background" Value="{DynamicResource Surface0Brush}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -76,12 +76,12 @@
                  CONTENT
                  ========================================== -->
             <ScrollViewer Grid.Row="1" 
-                         VerticalScrollBarVisibility="Auto"
-                         Padding="32,0,32,32">
+                          VerticalScrollBarVisibility="Auto"
+                          Padding="32,0,32,32">
                 <StackPanel MaxWidth="650">
 
                     <!-- APPEARANCE SECTION -->
-                    <Border Background="#1A1A1A" 
+                    <Border Background="{DynamicResource Surface0Brush}" 
                             CornerRadius="8" 
                             Padding="24"
                             Margin="0,0,0,16">
@@ -89,7 +89,7 @@
                             <TextBlock Text="Görünüm" 
                                        FontSize="20" 
                                        FontWeight="SemiBold" 
-                                       Foreground="White"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
                                        Margin="0,0,0,20"/>
 
                             <!-- Theme Selection -->
@@ -102,10 +102,10 @@
                                 <StackPanel>
                                     <TextBlock Text="Tema"
                                                FontSize="16"
-                                               Foreground="White"/>
+                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
                                     <TextBlock Text="Uygulamanın renklerini değiştirin"
                                                FontSize="13"
-                                               Foreground="#808080"
+                                               Foreground="{DynamicResource TextMutedBrush}"
                                                Margin="0,4,0,0"/>
                                 </StackPanel>
 
@@ -118,7 +118,7 @@
                                             Width="120" Height="80"
                                             CornerRadius="8"
                                             BorderThickness="3"
-                                            BorderBrush="#7C3AED"
+                                            BorderBrush="{DynamicResource AccentBrush}"
                                             Cursor="Hand"
                                             MouseLeftButtonDown="DarkTheme_Click"
                                             Margin="0,0,12,0">
@@ -138,18 +138,19 @@
                                                     </Border>
                                                     
                                                     <!-- Checkmark -->
-                                                    <Border Width="24" Height="24"
-                                                           Background="#7C3AED"
+                                                    <Border x:Name="DarkCheckmark"
+                                                           Width="24" Height="24"
+                                                           Background="{DynamicResource AccentBrush}"
                                                            CornerRadius="12"
                                                            HorizontalAlignment="Right"
                                                            VerticalAlignment="Top"
                                                            Margin="8">
                                                         <Path Data="M9,16.2L4.8,12l-1.4,1.4L9,19L21,7l-1.4-1.4L9,16.2z"
-                                                             Fill="White"
-                                                             Stretch="Uniform"
-                                                             Width="14" Height="14"
-                                                             HorizontalAlignment="Center"
-                                                             VerticalAlignment="Center"/>
+                                                              Fill="White"
+                                                              Stretch="Uniform"
+                                                              Width="14" Height="14"
+                                                              HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center"/>
                                                     </Border>
                                                 </Grid>
                                             </Border>
@@ -188,18 +189,18 @@
                                                     <!-- Checkmark (hidden by default) -->
                                                     <Border x:Name="LightCheckmark"
                                                            Width="24" Height="24"
-                                                           Background="#7C3AED"
+                                                           Background="{DynamicResource AccentBrush}"
                                                            CornerRadius="12"
                                                            HorizontalAlignment="Right"
                                                            VerticalAlignment="Top"
                                                            Margin="8"
                                                            Visibility="Collapsed">
                                                         <Path Data="M9,16.2L4.8,12l-1.4,1.4L9,19L21,7l-1.4-1.4L9,16.2z"
-                                                             Fill="White"
-                                                             Stretch="Uniform"
-                                                             Width="14" Height="14"
-                                                             HorizontalAlignment="Center"
-                                                             VerticalAlignment="Center"/>
+                                                              Fill="White"
+                                                              Stretch="Uniform"
+                                                              Width="14" Height="14"
+                                                              HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center"/>
                                                     </Border>
                                                 </Grid>
                                             </Border>
@@ -215,7 +216,7 @@
                             </Grid>
 
                             <Rectangle Height="1" 
-                                      Fill="#333333" 
+                                      Fill="{DynamicResource BorderBrush}" 
                                       Margin="0,16"/>
 
                             <!-- Language Selection -->
@@ -228,10 +229,10 @@
                                 <StackPanel>
                                     <TextBlock Text="Uygulama Dili"
                                                FontSize="16"
-                                               Foreground="White"/>
+                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
                                     <TextBlock Text="Arayüz dilini değiştirin"
                                                FontSize="13"
-                                               Foreground="#808080"
+                                               Foreground="{DynamicResource TextMutedBrush}"
                                                Margin="0,4,0,0"/>
                                 </StackPanel>
 
@@ -250,7 +251,7 @@
                     </Border>
 
                     <!-- GENERAL SECTION -->
-                    <Border Background="#1A1A1A" 
+                    <Border Background="{DynamicResource Surface0Brush}" 
                             CornerRadius="8" 
                             Padding="24"
                             Margin="0,0,0,16">
@@ -258,7 +259,7 @@
                             <TextBlock Text="Genel" 
                                        FontSize="20" 
                                        FontWeight="SemiBold" 
-                                       Foreground="White"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
                                        Margin="0,0,0,20"/>
 
                             <!-- Auto-update -->
@@ -271,10 +272,10 @@
                                 <StackPanel>
                                     <TextBlock Text="Otomatik güncellemeler"
                                                FontSize="16"
-                                               Foreground="White"/>
+                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
                                     <TextBlock Text="Yeni sürümler otomatik indirilsin"
                                                FontSize="13"
-                                               Foreground="#808080"
+                                               Foreground="{DynamicResource TextMutedBrush}"
                                                Margin="0,4,0,0"/>
                                 </StackPanel>
 
@@ -293,10 +294,10 @@
                                 <StackPanel>
                                     <TextBlock Text="Donanım hızlandırma"
                                                FontSize="16"
-                                               Foreground="White"/>
+                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
                                     <TextBlock Text="GPU ile video kodlama (önerilir)"
                                                FontSize="13"
-                                               Foreground="#808080"
+                                               Foreground="{DynamicResource TextMutedBrush}"
                                                Margin="0,4,0,0"/>
                                 </StackPanel>
 
@@ -315,10 +316,10 @@
                                 <StackPanel>
                                     <TextBlock Text="Kullanım istatistikleri"
                                                FontSize="16"
-                                               Foreground="White"/>
+                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
                                     <TextBlock Text="Uygulamayı geliştirmemize yardımcı olun"
                                                FontSize="13"
-                                               Foreground="#808080"
+                                               Foreground="{DynamicResource TextMutedBrush}"
                                                Margin="0,4,0,0"/>
                                 </StackPanel>
 
@@ -330,7 +331,7 @@
                     </Border>
 
                     <!-- DATA & CACHE SECTION -->
-                    <Border Background="#1A1A1A" 
+                    <Border Background="{DynamicResource Surface0Brush}" 
                             CornerRadius="8" 
                             Padding="24"
                             Margin="0,0,0,16">
@@ -338,7 +339,7 @@
                             <TextBlock Text="Veri ve Önbellek" 
                                        FontSize="20" 
                                        FontWeight="SemiBold" 
-                                       Foreground="White"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
                                        Margin="0,0,0,20"/>
 
                             <!-- Cache info -->
@@ -351,17 +352,17 @@
                                 <StackPanel>
                                     <TextBlock Text="Önbellek boyutu"
                                                FontSize="16"
-                                               Foreground="White"/>
+                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
                                     <TextBlock Text="Geçici dosyalar ve görüntüler"
                                                FontSize="13"
-                                               Foreground="#808080"
+                                               Foreground="{DynamicResource TextMutedBrush}"
                                                Margin="0,4,0,0"/>
                                 </StackPanel>
 
                                 <TextBlock Grid.Column="1"
                                           Text="234 MB"
                                           FontSize="16"
-                                          Foreground="#808080"
+                                          Foreground="{DynamicResource TextMutedBrush}"
                                           VerticalAlignment="Center"/>
                             </Grid>
 
@@ -374,27 +375,27 @@
                                     <ControlTemplate TargetType="Button">
                                         <Border x:Name="Border"
                                                 Background="Transparent"
-                                                BorderBrush="#333333"
+                                                BorderBrush="{DynamicResource BorderBrush}"
                                                 BorderThickness="1"
                                                 CornerRadius="8"
                                                 Padding="{TemplateBinding Padding}">
                                             <StackPanel Orientation="Horizontal">
                                                 <Path Data="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"
-                                                      Fill="#E87C03"
+                                                      Fill="{DynamicResource WarningBrush}"
                                                       Stretch="Uniform"
                                                       Width="18" Height="18"
                                                       VerticalAlignment="Center"
                                                       Margin="0,0,8,0"/>
                                                 <TextBlock Text="Önbelleği Temizle"
                                                           FontSize="15"
-                                                          Foreground="#E87C03"
+                                                          Foreground="{DynamicResource WarningBrush}"
                                                           VerticalAlignment="Center"/>
                                             </StackPanel>
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
                                                 <Setter TargetName="Border" Property="Background" Value="#1A0D0D0D"/>
-                                                <Setter TargetName="Border" Property="BorderBrush" Value="#E87C03"/>
+                                                <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource WarningBrush}"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -404,14 +405,14 @@
                     </Border>
 
                     <!-- ABOUT SECTION -->
-                    <Border Background="#1A1A1A" 
+                    <Border Background="{DynamicResource Surface0Brush}" 
                             CornerRadius="8" 
                             Padding="24">
                         <StackPanel>
                             <TextBlock Text="Hakkında" 
                                        FontSize="20" 
                                        FontWeight="SemiBold" 
-                                       Foreground="White"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
                                        Margin="0,0,0,20"/>
 
                             <Grid>
@@ -422,7 +423,7 @@
 
                                 <!-- App Icon -->
                                 <Border Width="64" Height="64"
-                                        Background="{StaticResource PrimaryGradientBrush}"
+                                        Background="{DynamicResource PrimaryGradientBrush}"
                                         CornerRadius="12"
                                         Margin="0,0,20,0">
                                     <TextBlock Text="📺"
@@ -437,20 +438,20 @@
                                     <TextBlock Text="IPTV Player"
                                                FontSize="18"
                                                FontWeight="SemiBold"
-                                               Foreground="White"/>
+                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
                                     <TextBlock Text="Sürüm 1.0.0"
                                                FontSize="14"
-                                               Foreground="#808080"
+                                               Foreground="{DynamicResource TextMutedBrush}"
                                                Margin="0,4,0,0"/>
                                     <TextBlock Text="© 2026 Tüm Hakları Saklıdır"
                                                FontSize="13"
-                                               Foreground="#666666"
+                                               Foreground="{DynamicResource TextMutedBrush}"
                                                Margin="0,4,0,0"/>
                                 </StackPanel>
                             </Grid>
 
                             <Rectangle Height="1" 
-                                      Fill="#333333" 
+                                      Fill="{DynamicResource BorderBrush}" 
                                       Margin="0,20"/>
 
                             <!-- Links -->
@@ -459,25 +460,25 @@
                                        Margin="0,12,0,0">
                                 <Button Content="Gizlilik Politikası"
                                        Style="{StaticResource TextButtonStyle}"
-                                       Foreground="#7C3AED"
+                                       Foreground="{DynamicResource AccentBrush}"
                                        FontSize="14"
                                        Cursor="Hand"/>
                                 <TextBlock Text=" • " 
-                                          Foreground="#404040" 
+                                          Foreground="{DynamicResource BorderBrush}" 
                                           VerticalAlignment="Center"
                                           Margin="8,0"/>
                                 <Button Content="Kullanım Şartları"
                                        Style="{StaticResource TextButtonStyle}"
-                                       Foreground="#7C3AED"
+                                       Foreground="{DynamicResource AccentBrush}"
                                        FontSize="14"
                                        Cursor="Hand"/>
                                 <TextBlock Text=" • " 
-                                          Foreground="#404040" 
+                                          Foreground="{DynamicResource BorderBrush}" 
                                           VerticalAlignment="Center"
                                           Margin="8,0"/>
                                 <Button Content="Destek"
                                        Style="{StaticResource TextButtonStyle}"
-                                       Foreground="#7C3AED"
+                                       Foreground="{DynamicResource AccentBrush}"
                                        FontSize="14"
                                        Cursor="Hand"/>
                             </StackPanel>

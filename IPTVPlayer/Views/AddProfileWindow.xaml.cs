@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Input;
 using IPTVPlayer.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -21,6 +22,13 @@ public partial class AddProfileWindow : Window
         };
 
         viewModel.RequestAvatarPicker += ViewModel_RequestAvatarPicker;
+
+        // Window sürükleme
+        MouseLeftButtonDown += (s, e) =>
+        {
+            if (e.ButtonState == MouseButtonState.Pressed)
+                DragMove();
+        };
     }
 
     private void ViewModel_RequestAvatarPicker(object? sender, EventArgs e)

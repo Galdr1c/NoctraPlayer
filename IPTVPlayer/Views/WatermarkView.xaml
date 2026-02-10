@@ -20,7 +20,7 @@
                 <TranslateTransform X="{Binding TranslateX}" Y="{Binding TranslateY}"/>
             </Border.RenderTransform>
             
-            <TextBlock Text="Kynora Player • Free" 
+            <TextBlock Text="Noctra MP • Free" 
                        FontFamily="Segoe UI" FontWeight="SemiBold" FontSize="12" 
                        Foreground="White"/>
         </Border>

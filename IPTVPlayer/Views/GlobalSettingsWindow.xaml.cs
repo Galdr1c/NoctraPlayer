@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 using IPTVPlayer.ViewModels;
 
 namespace IPTVPlayer.Views;
@@ -15,6 +16,13 @@ public partial class GlobalSettingsWindow : Window
 
         // Set initial theme selection
         UpdateThemeSelection(_viewModel.Settings.IsDarkTheme);
+
+        // Window sürükleme
+        MouseLeftButtonDown += (s, e) =>
+        {
+            if (e.ButtonState == System.Windows.Input.MouseButtonState.Pressed)
+                DragMove();
+        };
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)
@@ -41,16 +49,16 @@ public partial class GlobalSettingsWindow : Window
     {
         if (isDark)
         {
-            DarkThemeButton.BorderBrush = new System.Windows.Media.SolidColorBrush(
-                (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#7C3AED"));
+            DarkThemeButton.SetResourceReference(Border.BorderBrushProperty, "AccentBrush");
             LightThemeButton.BorderBrush = System.Windows.Media.Brushes.Transparent;
+            DarkCheckmark.Visibility = Visibility.Visible;
             LightCheckmark.Visibility = Visibility.Collapsed;
         }
         else
         {
             DarkThemeButton.BorderBrush = System.Windows.Media.Brushes.Transparent;
-            LightThemeButton.BorderBrush = new System.Windows.Media.SolidColorBrush(
-                (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#7C3AED"));
+            LightThemeButton.SetResourceReference(Border.BorderBrushProperty, "AccentBrush");
+            DarkCheckmark.Visibility = Visibility.Collapsed;
             LightCheckmark.Visibility = Visibility.Visible;
         }
     }

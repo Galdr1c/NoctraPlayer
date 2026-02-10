@@ -21,13 +21,13 @@
         </ResourceDictionary>
     </Window.Resources>
 
-    <Border CornerRadius="16" Background="{StaticResource BackgroundGradientBrush}" 
-            BorderBrush="{StaticResource AccentBrush}" BorderThickness="1">
+    <Border CornerRadius="16" Background="{DynamicResource BackgroundGradientBrush}" 
+            BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
         <Grid>
             <!-- Decorative Elements -->
-            <Ellipse Width="400" Height="400" Fill="{StaticResource AccentBrush}" Opacity="0.1" 
+            <Ellipse Width="400" Height="400" Fill="{DynamicResource AccentBrush}" Opacity="0.08" 
                      VerticalAlignment="Top" HorizontalAlignment="Right" Margin="-100"/>
-            <Ellipse Width="300" Height="300" Fill="{StaticResource GlowBrush}" Opacity="0.05" 
+            <Ellipse Width="300" Height="300" Fill="{DynamicResource GlowBrush}" Opacity="0.04" 
                      VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="-50"/>
 
             <Grid Margin="40">
@@ -42,9 +42,9 @@
                     <TextBlock Text="👑 PREMIUM" FontSize="16" FontWeight="Bold" 
                                Foreground="{StaticResource AccentLightBrush}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
                     <TextBlock Text="Sınırları Kaldırın" FontSize="36" FontWeight="Bold" 
-                               Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+                               Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
                     <TextBlock Text="Tüm özelliklere erişin ve IPTV deneyiminizi yükseltin" 
-                               FontSize="16" Foreground="{StaticResource TextMutedBrush}" 
+                               FontSize="16" Foreground="{DynamicResource TextMutedBrush}" 
                                HorizontalAlignment="Center" Margin="0,8,0,0"/>
                 </StackPanel>
 
@@ -57,53 +57,48 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- FREE CARD -->
-                    <Border Grid.Column="0" Background="{StaticResource Surface0Brush}" CornerRadius="12" Padding="24">
+                    <Border Grid.Column="0" Background="{DynamicResource Surface0Brush}" CornerRadius="12" Padding="24">
                         <StackPanel>
-                            <TextBlock Text="Free" FontSize="24" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                            <TextBlock Text="Temel Kullanım" FontSize="14" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,20"/>
+                            <TextBlock Text="Free" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Text="Temel Kullanım" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20"/>
                             
                             <StackPanel Margin="0,0,0,8">
-                                <TextBlock Text="✓ 1 Profil" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,4"/>
-                                <TextBlock Text="✓ 1 M3U Hesabı" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,4"/>
-                                <TextBlock Text="✓ 24 Saatlik EPG" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,4"/>
-                                <TextBlock Text="✓ 50 Favori Kanal" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,4"/>
-                                <TextBlock Text="✗ Kynora Filigranı" Foreground="{StaticResource TextMutedBrush}" Margin="0,4"/>
-                                <TextBlock Text="✗ Kanal Yönetimi Yok" Foreground="{StaticResource TextMutedBrush}" Margin="0,4"/>
+                                <TextBlock Text="✓ 1 Profil" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,4"/>
+                                <TextBlock Text="✓ 1 M3U Hesabı" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,4"/>
+                                <TextBlock Text="✓ 24 Saatlik EPG" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,4"/>
+                                <TextBlock Text="✓ 50 Favori Kanal" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,4"/>
+                                <TextBlock Text="✗ Kynora Filigranı" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4"/>
+                                <TextBlock Text="✗ Kanal Yönetimi Yok" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
 
                     <!-- PREMIUM CARD -->
-                    <Border Grid.Column="2" CornerRadius="12" Padding="24" BorderThickness="2" BorderBrush="{StaticResource AccentBrush}">
-                        <Border.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="{StaticResource Surface0Color}" Offset="0"/>
-                                <GradientStop Color="#1E1636" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.Background>
+                    <Border Grid.Column="2" CornerRadius="12" Padding="24" BorderThickness="2" BorderBrush="{DynamicResource AccentBrush}"
+                            Background="{DynamicResource PremiumCardBackgroundBrush}">
                         <Border.Effect>
-                            <DropShadowEffect Color="{StaticResource GlowColor}" BlurRadius="30" Opacity="0.3" ShadowDepth="0"/>
+                            <DropShadowEffect Color="{DynamicResource GlowColor}" BlurRadius="30" Opacity="0.2" ShadowDepth="0"/>
                         </Border.Effect>
                         
                         <StackPanel>
                             <Grid>
                                 <StackPanel>
-                                    <TextBlock Text="Premium" FontSize="24" FontWeight="Bold" Foreground="{StaticResource AccentLightBrush}"/>
-                                    <TextBlock Text="Lifetime Lisans" FontSize="14" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,20"/>
+                                    <TextBlock Text="Premium" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
+                                    <TextBlock Text="Lifetime Lisans" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20"/>
                                 </StackPanel>
                                 <Border HorizontalAlignment="Right" VerticalAlignment="Top" 
-                                        Background="{StaticResource AccentBrush}" CornerRadius="4" Padding="8,4">
+                                        Background="{DynamicResource AccentBrush}" CornerRadius="4" Padding="8,4">
                                     <TextBlock Text="EN İYİ DEĞER" FontSize="10" FontWeight="Bold" Foreground="White"/>
                                 </Border>
                             </Grid>
                             
                             <StackPanel Margin="0,0,0,8">
-                                <TextBlock Text="✓ Sınırsız Profil" Foreground="White" FontWeight="SemiBold" Margin="0,4"/>
-                                <TextBlock Text="✓ Sınırsız M3U Hesabı" Foreground="White" FontWeight="SemiBold" Margin="0,4"/>
-                                <TextBlock Text="✓ 2 Haftalık EPG + Grid" Foreground="White" FontWeight="SemiBold" Margin="0,4"/>
-                                <TextBlock Text="✓ Filigransız İzleme" Foreground="White" FontWeight="SemiBold" Margin="0,4"/>
-                                <TextBlock Text="✓ Kanal Gizleme/Sıralama" Foreground="White" FontWeight="SemiBold" Margin="0,4"/>
-                                <TextBlock Text="✓ Tüm Temalar &amp; Animasyonlar" Foreground="White" FontWeight="SemiBold" Margin="0,4"/>
+                                <TextBlock Text="✓ Sınırsız Profil" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" Margin="0,4"/>
+                                <TextBlock Text="✓ Sınırsız M3U Hesabı" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" Margin="0,4"/>
+                                <TextBlock Text="✓ 2 Haftalık EPG + Grid" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" Margin="0,4"/>
+                                <TextBlock Text="✓ Filigransız İzleme" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" Margin="0,4"/>
+                                <TextBlock Text="✓ Kanal Gizleme/Sıralama" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" Margin="0,4"/>
+                                <TextBlock Text="✓ Tüm Temalar &amp; Animasyonlar" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" Margin="0,4"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -122,7 +117,7 @@
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="BtnBorder" Property="Background" Value="{StaticResource AccentBrush}"/>
+                                        <Setter TargetName="BtnBorder" Property="Background" Value="{DynamicResource AccentBrush}"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -130,13 +125,13 @@
                     </Button>
                     
                     <Button Content="Hayır, teşekkürler" Click="ContinueFree_Click"
-                            Foreground="{StaticResource TextMutedBrush}" Background="Transparent" 
+                            Foreground="{DynamicResource TextMutedBrush}" Background="Transparent" 
                             BorderThickness="0" Margin="0,20,0,0" Cursor="Hand" FontSize="14">
                         <Button.Style>
                             <Style TargetType="Button" BasedOn="{StaticResource PlainButton}">
                                 <Style.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                                     </Trigger>
                                 </Style.Triggers>
                             </Style>
@@ -147,13 +142,13 @@
             
             <!-- Close Button -->
             <Button Content="✕" Click="CloseButton_Click" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="20"
-                    Foreground="{StaticResource TextMutedBrush}" Background="Transparent" BorderThickness="0"
+                    Foreground="{DynamicResource TextMutedBrush}" Background="Transparent" BorderThickness="0"
                     FontSize="20" Padding="10" Cursor="Hand">
                 <Button.Style>
                      <Style TargetType="Button" BasedOn="{StaticResource PlainButton}">
                         <Style.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>

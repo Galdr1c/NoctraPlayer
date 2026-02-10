@@ -13,7 +13,7 @@
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         AllowsTransparency="False"
-        Background="{StaticResource Bg0Brush}"
+        Background="{DynamicResource Bg0Brush}"
         FontFamily="Segoe UI Variable, Segoe UI">
 
     <WindowChrome.WindowChrome>
@@ -29,9 +29,9 @@
                 <Setter.Value>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                         <GradientBrush.GradientStops>
-                            <GradientStop Color="#1E1636" Offset="0"/>
-                            <GradientStop Color="#2D1B4E" Offset="0.5"/>
-                            <GradientStop Color="#1E1636" Offset="1"/>
+                            <GradientStop Color="{DynamicResource Bg1Color}" Offset="0"/>
+                            <GradientStop Color="{DynamicResource Surface0Color}" Offset="0.5"/>
+                            <GradientStop Color="{DynamicResource Bg1Color}" Offset="1"/>
                         </GradientBrush.GradientStops>
                         <LinearGradientBrush.Transform>
                             <TranslateTransform X="-300"/>
@@ -53,7 +53,7 @@
         </Style>
     </Window.Resources>
 
-    <Border CornerRadius="{StaticResource RadiusMedium}" Background="{StaticResource Bg0Brush}">
+    <Border CornerRadius="{DynamicResource RadiusMedium}" Background="{DynamicResource Bg0Brush}">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="64"/>   <!-- Header -->
@@ -64,7 +64,7 @@
             <!-- ==========================================
                  HEADER BAR
                  ========================================== -->
-            <Border Grid.Row="0" Background="{StaticResource HeaderGradientBrush}" CornerRadius="12,12,0,0">
+            <Border Grid.Row="0" Background="{DynamicResource HeaderGradientBrush}" CornerRadius="12,12,0,0">
                 <Grid Margin="24,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -77,7 +77,7 @@
                         <Image Source="Assets/Logo.png" Height="32" Stretch="Uniform" VerticalAlignment="Center"/>
                         <TextBlock Text="Noctra" 
                                    FontSize="22" FontWeight="Bold"
-                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
                                    VerticalAlignment="Center" Margin="12,0,0,0"/>
                     </StackPanel>
 
@@ -92,8 +92,8 @@
                                 Padding="8"
                                 WindowChrome.IsHitTestVisibleInChrome="True">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="🔍" FontSize="18" Foreground="#B3B3B3" Margin="0,0,8,0"/>
-                                <TextBlock Text="Ara" FontSize="16" FontWeight="SemiBold" Foreground="#B3B3B3"/>
+                                <TextBlock Text="🔍" FontSize="18" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,8,0"/>
+                                <TextBlock Text="Ara" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}"/>
                             </StackPanel>
                             <Button.Style>
                                 <Style TargetType="Button">
@@ -120,23 +120,23 @@
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Button x:Name="SettingsButton" Content="⚙️" FontSize="18" 
                                 Background="Transparent" BorderThickness="0" 
-                                Foreground="{StaticResource TextMutedBrush}" 
+                                Foreground="{DynamicResource TextMutedBrush}" 
                                 Padding="12" Cursor="Hand" Click="SettingsButton_Click"
                                 WindowChrome.IsHitTestVisibleInChrome="True"/>
                         <Button x:Name="ThemeButton" Content="🌙" FontSize="18" 
                                 Background="Transparent" BorderThickness="0" 
-                                Foreground="{StaticResource TextMutedBrush}" 
+                                Foreground="{DynamicResource TextMutedBrush}" 
                                 Padding="12" Cursor="Hand" Click="ThemeButton_Click"
                                 WindowChrome.IsHitTestVisibleInChrome="True"/>
-                        <Border Width="1" Background="{StaticResource BorderBrush}" Margin="8,12"/>
+                        <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="8,12"/>
                         <Button x:Name="MinimizeButton" Content="─" FontSize="14" 
                                 Background="Transparent" BorderThickness="0" 
-                                Foreground="{StaticResource TextMutedBrush}" 
+                                Foreground="{DynamicResource TextMutedBrush}" 
                                 Padding="14,12" Cursor="Hand" Click="MinimizeButton_Click"
                                 WindowChrome.IsHitTestVisibleInChrome="True"/>
                         <Button x:Name="MaximizeButton" Content="□" FontSize="14" 
                                 Background="Transparent" BorderThickness="0" 
-                                Foreground="{StaticResource TextMutedBrush}" 
+                                Foreground="{DynamicResource TextMutedBrush}" 
                                 Padding="14,12" Cursor="Hand" Click="MaximizeButton_Click"
                                 WindowChrome.IsHitTestVisibleInChrome="True"/>
                         <Button x:Name="CloseButton" Content="✕" FontSize="14" 
@@ -158,7 +158,7 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- SIDEBAR -->
-                <Border Grid.Column="0" Background="{StaticResource Bg1Brush}" CornerRadius="0,0,0,12">
+                <Border Grid.Column="0" Background="{DynamicResource Bg1Brush}" CornerRadius="0,0,0,12">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -182,7 +182,7 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="🏠" FontSize="18" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                    <TextBlock Grid.Column="1" Text="Ana Sayfa" Foreground="{StaticResource TextPrimaryBrush}" 
+                                    <TextBlock Grid.Column="1" Text="Ana Sayfa" Foreground="{DynamicResource TextPrimaryBrush}" 
                                                FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                 </Grid>
                             </Border>
@@ -201,7 +201,7 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="📺" FontSize="18" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                    <TextBlock Grid.Column="1" Text="Canlı TV" Foreground="{StaticResource TextPrimaryBrush}" 
+                                    <TextBlock Grid.Column="1" Text="Canlı TV" Foreground="{DynamicResource TextPrimaryBrush}" 
                                                FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                 </Grid>
                             </Border>
@@ -220,7 +220,7 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="🎬" FontSize="18" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                    <TextBlock Grid.Column="1" Text="Filmler" Foreground="{StaticResource TextPrimaryBrush}" 
+                                    <TextBlock Grid.Column="1" Text="Filmler" Foreground="{DynamicResource TextPrimaryBrush}" 
                                                FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                 </Grid>
                             </Border>
@@ -239,7 +239,7 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="📺" FontSize="18" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                    <TextBlock Grid.Column="1" Text="Diziler" Foreground="{StaticResource TextPrimaryBrush}" 
+                                    <TextBlock Grid.Column="1" Text="Diziler" Foreground="{DynamicResource TextPrimaryBrush}" 
                                                FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                 </Grid>
                             </Border>
@@ -258,13 +258,13 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="➕" FontSize="18" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                    <TextBlock Grid.Column="1" Text="Listem" Foreground="{StaticResource TextPrimaryBrush}" 
+                                    <TextBlock Grid.Column="1" Text="Listem" Foreground="{DynamicResource TextPrimaryBrush}" 
                                                FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                 </Grid>
                             </Border>
 
                             <!-- Divider -->
-                            <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,20"/>
+                            <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,20"/>
 
                             <!-- Favorites -->
                             <Border Background="Transparent" CornerRadius="{StaticResource RadiusSmall}" 
@@ -275,7 +275,7 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="⭐" FontSize="16" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                    <TextBlock Grid.Column="1" Text="Favoriler" Foreground="{StaticResource TextSecondaryBrush}" 
+                                    <TextBlock Grid.Column="1" Text="Favoriler" Foreground="{DynamicResource TextSecondaryBrush}" 
                                                FontSize="14" VerticalAlignment="Center"/>
                                 </Grid>
                             </Border>
@@ -289,7 +289,7 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="📜" FontSize="16" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                    <TextBlock Grid.Column="1" Text="Geçmiş" Foreground="{StaticResource TextSecondaryBrush}" 
+                                    <TextBlock Grid.Column="1" Text="Geçmiş" Foreground="{DynamicResource TextSecondaryBrush}" 
                                                FontSize="14" VerticalAlignment="Center"/>
                                 </Grid>
                             </Border>
@@ -298,7 +298,7 @@
                         <!-- Groups Header -->
                         <TextBlock Grid.Row="1" Text="GRUPLAR" 
                                    FontSize="11" FontWeight="Bold"
-                                   Foreground="{StaticResource TextMutedBrush}"
+                                   Foreground="{DynamicResource TextMutedBrush}"
                                    Margin="20,8,16,12"/>
 
                         <!-- Groups List -->
@@ -308,7 +308,7 @@
                                     <DataTemplate>
                                         <Border Background="Transparent" CornerRadius="6" Margin="0,2" Cursor="Hand"
                                                 MouseLeftButtonDown="GroupItem_Click">
-                                            <TextBlock Text="{Binding}" Foreground="{StaticResource TextMutedBrush}" 
+                                            <TextBlock Text="{Binding}" Foreground="{DynamicResource TextMutedBrush}" 
                                                        FontSize="13" Padding="12,10" TextTrimming="CharacterEllipsis"/>
                                         </Border>
                                     </DataTemplate>
@@ -320,271 +320,7 @@
 
                 <!-- MAIN CONTENT -->
                 <Grid Grid.Column="1">
-                    <!-- Video Player Area (Hidden by default) -->
-                    <Grid x:Name="PlayerArea" Background="Black" Visibility="Collapsed">
-                        <vlc:VideoView x:Name="VideoView"/>
-                        
-                        <!-- Watermark Overlay (Free Tier Only) -->
-                        <views:WatermarkView DataContext="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=WatermarkViewModel}" Panel.ZIndex="999" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,100"/>
-                        
-                        <!-- Player Controls Overlay -->
-                        <Grid x:Name="PlayerControls" Panel.ZIndex="2000">
-                            <!-- Bottom Scrim -->
-                            <Border VerticalAlignment="Bottom" Height="200" IsHitTestVisible="False">
-                                <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                        <GradientStop Color="Transparent" Offset="0"/>
-                                        <GradientStop Color="#CC000000" Offset="0.5"/>
-                                        <GradientStop Color="#FF000000" Offset="1"/>
-                                    </LinearGradientBrush>
-                                </Border.Background>
-                            </Border>
 
-                            <!-- Controls Container -->
-                            <StackPanel VerticalAlignment="Bottom" Margin="40">
-                                
-                                <!-- 1. PROGRESS BAR / LIVE BADGE -->
-                                <Grid Margin="0,0,0,24">
-                                    <!-- VOD/Series: Linear Timeline -->
-                                    <Grid Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter='Invert'}">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-                                        
-                                        <Slider Style="{StaticResource MediaSliderStyle}" 
-                                                Value="{Binding Position}" 
-                                                Maximum="{Binding Duration}"
-                                                Margin="0,0,0,8"/>
-                                        
-                                        <Grid Grid.Row="1">
-                                            <TextBlock Text="{Binding PositionText}" Foreground="White" Opacity="0.7" FontSize="14"/>
-                                            <TextBlock Text="{Binding DurationText}" Foreground="White" Opacity="0.7" FontSize="14" HorizontalAlignment="Right"/>
-                                        </Grid>
-                                    </Grid>
-
-                                    <!-- Live TV: Pulse Badge + Program Info -->
-                                    <StackPanel Orientation="Horizontal" 
-                                                Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}}">
-                                        <Border Background="#E50914" CornerRadius="4" Padding="8,4" Margin="0,0,16,0">
-                                            <StackPanel Orientation="Horizontal">
-                                                <Ellipse x:Name="LiveDot" Width="8" Height="8" Fill="White" Margin="0,0,8,0">
-                                                    <Ellipse.Triggers>
-                                                        <EventTrigger RoutedEvent="Loaded">
-                                                            <BeginStoryboard>
-                                                                <Storyboard>
-                                                                    <DoubleAnimation Storyboard.TargetName="LiveDot" 
-                                                                                     Storyboard.TargetProperty="Opacity" 
-                                                                                     From="1" To="0.3" Duration="0:0:0.8" 
-                                                                                     AutoReverse="True" RepeatBehavior="Forever">
-                                                                        <DoubleAnimation.EasingFunction>
-                                                                            <SineEase EasingMode="EaseInOut"/>
-                                                                        </DoubleAnimation.EasingFunction>
-                                                                    </DoubleAnimation>
-                                                                </Storyboard>
-                                                            </BeginStoryboard>
-                                                        </EventTrigger>
-                                                    </Ellipse.Triggers>
-                                                </Ellipse>
-                                                <TextBlock Text="CANLI" Foreground="White" FontWeight="Bold" FontSize="12"/>
-                                            </StackPanel>
-                                        </Border>
-                                        <TextBlock Text="{Binding CurrentProgram.Title, FallbackValue='Canlı Yayın'}" 
-                                                   Foreground="White" FontWeight="SemiBold" FontSize="16" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Grid>
-
-                                <!-- 2. CONTROL BUTTONS -->
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <!-- Left: Back, Play/Pause, Forward -->
-                                    <StackPanel Orientation="Horizontal">
-                                        <!-- Skip Backward (Only VOD) -->
-                                        <Button Style="{StaticResource IconButtonStyle}" 
-                                                Command="{Binding SkipBackwardCommand}"
-                                                Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter='Invert'}"
-                                                Margin="0,0,16,0">
-                                            <Path Data="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z" Fill="White" Width="24" Height="24" Stretch="Uniform"/>
-                                        </Button>
-
-                                        <!-- Play/Pause -->
-                                        <Button Style="{StaticResource PlayPauseButtonStyle}" 
-                                                Width="64" Height="64"
-                                                Command="{Binding PlayPauseCommand}">
-                                            <Path Data="{Binding IsPlaying, Converter={StaticResource PlayPauseIconConverter}}" 
-                                                  Fill="Black" Width="24" Height="24" Stretch="Uniform"/>
-                                        </Button>
-
-                                        <!-- Skip Forward (Only VOD) -->
-                                        <Button Style="{StaticResource IconButtonStyle}" 
-                                                Command="{Binding SkipForwardCommand}"
-                                                Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter='Invert'}"
-                                                Margin="16,0,0,0">
-                                            <Path Data="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z" Fill="White" Width="24" Height="24" Stretch="Uniform"/>
-                                        </Button>
-                                    </StackPanel>
-
-                                    <!-- Center: Episode Controls (Series Only) -->
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal"
-                                                Visibility="{Binding CurrentChannel.Type, Converter={StaticResource ChannelTypeToVisibilityConverter}, ConverterParameter='Series'}">
-                                        <Button Content="Bölüm Listesi" Style="{StaticResource TextButtonStyle}" Click="EpisodesButton_Click" Margin="0,0,12,0"/>
-                                        <Button Content="Sonraki Bölüm" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding PlayNextEpisodeCommand}"/>
-                                    </StackPanel>
-
-                                    <!-- Right: Options (Audio, Subtitle, Quality, Fullscreen) -->
-                                    <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                                        <Button Style="{StaticResource IconButtonStyle}" Click="AudioButton_Click" Margin="0,0,16,0">
-                                            <Path Data="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" Fill="White" Width="20" Height="20" Stretch="Uniform"/>
-                                        </Button>
-                                        <Button Style="{StaticResource IconButtonStyle}" Click="SubtitleButton_Click" Margin="0,0,16,0">
-                                            <Path Data="M19 4H5c-1.11 0-2 .9-2 2v12c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 7H9.5V9.5h2V11zm4 0h-2V9.5h2V11zM7 11h2v2H7v-2zm10 4H7v-2h10v2zm0-4h-2v2h2v-2z" Fill="White" Width="20" Height="20" Stretch="Uniform"/>
-                                        </Button>
-                                        <Button Style="{StaticResource IconButtonStyle}" Click="QualityButton_Click" Margin="0,0,16,0">
-                                            <Path Data="M19.43 12.98c.04-.32.07-.64.07-.98 0-.34-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.12.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98 0 .33.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.41 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z" Fill="White" Width="20" Height="20" Stretch="Uniform"/>
-                                        </Button>
-                                        <Button Style="{StaticResource IconButtonStyle}" 
-                                                Command="{Binding ToggleFullScreenCommand}">
-                                            <Path Data="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" Fill="White" Width="20" Height="20" Stretch="Uniform"/>
-                                        </Button>
-                                    </StackPanel>
-                                </Grid>
-                            </StackPanel>
-                        </Grid>
-
-                        <!-- Next Episode Prompt -->
-                        <Border x:Name="NextEpisodePrompt"
-                                Background="#DD000000"
-                                CornerRadius="12"
-                                Padding="24"
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Bottom"
-                                Margin="0,0,40,40"
-                                Width="350"
-                                Visibility="Collapsed">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsNextEpisodePromptVisible}" Value="True">
-                                            <DataTrigger.EnterActions>
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="Visible"/>
-                                                        </ObjectAnimationUsingKeyFrames>
-                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                                       To="1" Duration="0:0:0.3"/>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </DataTrigger.EnterActions>
-                                            <DataTrigger.ExitActions>
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                                       To="0" Duration="0:0:0.3"/>
-                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                                                            <DiscreteObjectKeyFrame KeyTime="0:0:0.3" Value="Collapsed"/>
-                                                        </ObjectAnimationUsingKeyFrames>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </DataTrigger.ExitActions>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-                                
-                                <TextBlock Text="Sonraki Bölüm" 
-                                           FontSize="14" 
-                                           Foreground="#B3B3B3"
-                                           Margin="0,0,0,8"/>
-                                
-                                <StackPanel Grid.Row="1" Margin="0,0,0,16">
-                                    <TextBlock Text="{Binding NextEpisode.Name}"
-                                               FontSize="18"
-                                               FontWeight="SemiBold"
-                                               Foreground="White"
-                                               TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding NextEpisode.Plot}"
-                                               FontSize="14"
-                                               Foreground="#B3B3B3"
-                                               TextTrimming="CharacterEllipsis"
-                                               MaxHeight="40"
-                                               Margin="0,4,0,0"/>
-                                </StackPanel>
-                                
-                                <Button Grid.Row="2"
-                                        Content="▶ Şimdi İzle"
-                                        Command="{Binding PlayNextEpisodeCommand}"
-                                        Background="White"
-                                        Foreground="Black"
-                                        FontSize="16"
-                                        FontWeight="Bold"
-                                        Padding="20,12"
-                                        BorderThickness="0"
-                                        HorizontalAlignment="Stretch"
-                                        Cursor="Hand"/>
-                            </Grid>
-                        </Border>
-
-                        <!-- Skip Intro Button -->
-                        <Button x:Name="SkipIntroButton"
-                                Command="{Binding SkipIntroCommand}"
-                                Content="İntro'yu Geç ›"
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Bottom"
-                                Margin="0,0,100,120"
-                                Padding="24,12"
-                                Background="#E5E5E5"
-                                Foreground="Black"
-                                FontSize="16"
-                                FontWeight="Bold"
-                                BorderThickness="0"
-
-                                Cursor="Hand"
-                                Opacity="0"
-                                Visibility="Collapsed">
-                            <Button.Style>
-                                <Style TargetType="Button">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsIntroDetected}" Value="True">
-                                            <DataTrigger.EnterActions>
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                                                            <DiscreteObjectKeyFrame KeyTime="0" Value="Visible"/>
-                                                        </ObjectAnimationUsingKeyFrames>
-                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                                       To="1" Duration="0:0:0.3"/>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </DataTrigger.EnterActions>
-                                            <DataTrigger.ExitActions>
-                                                <BeginStoryboard>
-                                                    <Storyboard>
-                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                                       To="0" Duration="0:0:0.3"/>
-                                                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                                                            <DiscreteObjectKeyFrame KeyTime="0:0:0.3" Value="Collapsed"/>
-                                                        </ObjectAnimationUsingKeyFrames>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </DataTrigger.ExitActions>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                    </Grid>
 
                     <!-- 1. HOME VIEW (Hero + Rails) -->
                     <ScrollViewer x:Name="HomeView" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
@@ -757,7 +493,7 @@
                             <StackPanel Visibility="{Binding ContinueWatching.Count, Converter={StaticResource CountToVisibilityConverter}}" Margin="0,0,0,40">
                                 <TextBlock Text="İzlemeye Devam Et" 
                                            FontSize="24" FontWeight="SemiBold" 
-                                           Foreground="White"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"
                                            Margin="0,0,0,16"/>
                                 <ListBox ItemsSource="{Binding ContinueWatching}"
                                          Style="{StaticResource RailListBoxStyle}">
@@ -782,7 +518,7 @@
                                                     
                                                     <StackPanel VerticalAlignment="Bottom" Margin="12">
                                                         <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis"/>
-                                                        <TextBlock Text="{Binding GroupTitle}" Foreground="{StaticResource TextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
                                                     </StackPanel>
                                                 </Grid>
                                             </Border>
@@ -796,7 +532,7 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                                     <TextBlock Text="Şu An Trend" 
                                                FontSize="24" FontWeight="SemiBold" 
-                                               Foreground="White"/>
+                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
                                     <TextBlock Text=" ›" 
                                                FontSize="24" 
                                                Foreground="#7C3AED" 
@@ -825,7 +561,7 @@
                                                     
                                                     <StackPanel VerticalAlignment="Bottom" Margin="12">
                                                         <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis"/>
-                                                        <TextBlock Text="{Binding GroupTitle}" Foreground="{StaticResource TextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
                                                     </StackPanel>
                                                 </Grid>
                                             </Border>
@@ -838,7 +574,7 @@
                             <StackPanel Margin="0,0,0,40">
                                 <TextBlock Text="Popüler Filmler" 
                                            FontSize="24" FontWeight="SemiBold" 
-                                           Foreground="White"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"
                                            Margin="0,0,0,16"/>
                                 <ListBox ItemsSource="{Binding LatestMovies}"
                                          Style="{StaticResource SeriesRailListBoxStyle}">
@@ -862,7 +598,7 @@
                                                     
                                                     <StackPanel VerticalAlignment="Bottom" Margin="12">
                                                         <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="Bold" FontSize="14" TextTrimming="CharacterEllipsis"/>
-                                                        <TextBlock Text="{Binding Genre}" Foreground="{StaticResource TextMutedBrush}" FontSize="11"/>
+                                                        <TextBlock Text="{Binding Genre}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
                                                     </StackPanel>
                                                 </Grid>
                                             </Border>
@@ -875,7 +611,7 @@
                             <StackPanel Margin="0,0,0,40">
                                 <TextBlock Text="Yeni Diziler" 
                                            FontSize="24" FontWeight="SemiBold" 
-                                           Foreground="White"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"
                                            Margin="0,0,0,16"/>
                                 <ListBox ItemsSource="{Binding LatestSeries}"
                                          Style="{StaticResource SeriesRailListBoxStyle}">
@@ -899,7 +635,7 @@
                                                     
                                                     <StackPanel VerticalAlignment="Bottom" Margin="12">
                                                         <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="Bold" FontSize="14" TextTrimming="CharacterEllipsis"/>
-                                                        <TextBlock Text="{Binding Genre}" Foreground="{StaticResource TextMutedBrush}" FontSize="11"/>
+                                                        <TextBlock Text="{Binding Genre}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
                                                     </StackPanel>
                                                 </Grid>
                                             </Border>
@@ -914,7 +650,7 @@
                     <ScrollViewer x:Name="MoviesView" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                   Visibility="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Movies}}">
                         <StackPanel Margin="24">
-                            <TextBlock Text="Filmler" FontSize="24" FontWeight="Bold" Foreground="White" Margin="0,0,0,24"/>
+                            <TextBlock Text="Filmler" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
                             <ListBox ItemsSource="{Binding FilteredChannels}" Style="{StaticResource GridListBoxStyle}"/>
                         </StackPanel>
                     </ScrollViewer>
@@ -923,7 +659,7 @@
                     <ScrollViewer x:Name="SeriesView" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                   Visibility="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Series}}">
                         <StackPanel Margin="24">
-                            <TextBlock Text="Diziler" FontSize="24" FontWeight="Bold" Foreground="White" Margin="0,0,0,24"/>
+                            <TextBlock Text="Diziler" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
                             <ListBox ItemsSource="{Binding FilteredChannels}" Style="{StaticResource GridListBoxStyle}"/>
                         </StackPanel>
                     </ScrollViewer>
@@ -932,7 +668,7 @@
                     <ScrollViewer x:Name="SearchView" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                   Visibility="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Search}}">
                         <StackPanel Margin="24">
-                            <TextBlock Text="Arama Sonuçları" FontSize="24" FontWeight="Bold" Foreground="White" Margin="0,0,0,24"/>
+                            <TextBlock Text="Arama Sonuçları" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
                             <ListBox ItemsSource="{Binding FilteredChannels}" Style="{StaticResource GridListBoxStyle}"/>
                         </StackPanel>
                     </ScrollViewer>
@@ -945,7 +681,7 @@
 
                     <!-- Loading Skeleton State -->
                     <Grid x:Name="LoadingSkeletons" 
-                          Background="{StaticResource Bg0Brush}"
+                          Background="{DynamicResource Bg0Brush}"
                           Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"
                           d:IsHidden="True">
                         <StackPanel Margin="24">
@@ -985,7 +721,7 @@
             <!-- ==========================================
                  STATUS BAR
                  ========================================== -->
-            <Border Grid.Row="2" Background="{StaticResource HeaderGradientBrush}" CornerRadius="0,0,12,12">
+            <Border Grid.Row="2" Background="{DynamicResource HeaderGradientBrush}" CornerRadius="0,0,12,12">
                 <Grid Margin="24,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -993,10 +729,10 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="{Binding StatusMessage}"
                                FontSize="13"
-                               Foreground="{StaticResource TextMutedBrush}"
+                               Foreground="{DynamicResource TextMutedBrush}"
                                VerticalAlignment="Center"/>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border Background="{StaticResource AccentBrush}" CornerRadius="{StaticResource RadiusPill}" 
+                        <Border Background="{DynamicResource AccentBrush}" CornerRadius="{DynamicResource RadiusPill}" 
                                 Padding="14,6">
                             <TextBlock Text="{Binding FilteredChannels.Count, StringFormat='{}{0} kanal'}"
                                        FontSize="12" FontWeight="SemiBold"
@@ -1009,7 +745,7 @@
         <!-- Enhanced Search Overlay -->
         <Grid x:Name="SearchOverlay" 
               Grid.RowSpan="3"
-              Background="#EE141414"
+              Background="{DynamicResource HeroOverlayBrush}"
               Visibility="{Binding IsSearchOverlayVisible, Converter={StaticResource BoolToVisibilityConverter}}"
               Panel.ZIndex="1000">
             
@@ -1018,9 +754,9 @@
                         Margin="0,100,0,0">
                 
                 <!-- Search Input -->
-                <Border Background="#2A2A2A" 
+                <Border Background="{DynamicResource Bg1Brush}" 
                         CornerRadius="8"
-                        BorderBrush="#7C3AED"
+                        BorderBrush="{DynamicResource AccentBrush}"
                         BorderThickness="2">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -1030,11 +766,11 @@
                         
                         <TextBox x:Name="SearchInput"
                                  FontSize="24"
-                                 Foreground="White"
+                                 Foreground="{DynamicResource TextPrimaryBrush}"
                                  Background="Transparent"
                                  BorderThickness="0"
                                  Padding="20"
-                                 CaretBrush="White"
+                                 CaretBrush="{DynamicResource TextPrimaryBrush}"
                                  Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
                                  KeyDown="SearchInput_KeyDown"
                                  AcceptsReturn="False">
@@ -1046,7 +782,7 @@
                         
                         <TextBlock Text="Film, dizi veya kanal ara..."
                                    FontSize="24"
-                                   Foreground="#666"
+                                   Foreground="{DynamicResource TextMutedBrush}"
                                    Padding="20"
                                    IsHitTestVisible="False"
                                    Visibility="{Binding SearchQuery, Converter={StaticResource StringToVisibilityConverter}, ConverterParameter=invert}"/>
@@ -1070,7 +806,7 @@
                     <ItemsControl ItemsSource="{Binding SearchResults}">
                         <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Background="#2A2A2A"
+                            <Border Background="{DynamicResource Surface1Brush}"
                                     CornerRadius="8"
                                     Padding="16"
                                     Margin="0,0,0,12"
@@ -1089,7 +825,7 @@
                                     <!-- Thumbnail -->
                                     <Border Width="100" Height="56"
                                             CornerRadius="4"
-                                            Background="{StaticResource Surface1Brush}">
+                                            Background="{DynamicResource Surface1Brush}">
                                         <Image Source="{Binding Converter={StaticResource MediaThumbnailConverter}}" Stretch="UniformToFill"/>
                                     </Border>
                                     
@@ -1098,10 +834,10 @@
                                         <TextBlock Text="{Binding Name}"
                                                    FontSize="16"
                                                    FontWeight="SemiBold"
-                                                   Foreground="White"/>
+                                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
                                         <TextBlock Text="{Binding GroupTitle}"
                                                    FontSize="14"
-                                                   Foreground="#B3B3B3"
+                                                   Foreground="{DynamicResource TextMutedBrush}"
                                                    Margin="0,4,0,0"/>
 
                                         <!-- Progress Bar -->
@@ -1149,7 +885,7 @@
             <!-- Series Detail Overlay -->
             <Grid x:Name="SeriesDetailOverlay" 
                   Grid.RowSpan="3"
-                  Background="#F2141414"
+                  Background="{DynamicResource BackgroundGradientBrush}"
                   Visibility="{Binding IsSeriesDetailVisible, Converter={StaticResource BoolToVisibilityConverter}}"
                   Panel.ZIndex="998">
                 
@@ -1163,8 +899,8 @@
                          <Button Command="{Binding CloseSeriesDetailCommand}" 
                                 Style="{StaticResource CircleButtonStyle}" 
                                 Content="←" FontSize="20" HorizontalAlignment="Left" Margin="0,0,0,24"/>
-                        <TextBlock Text="{Binding SelectedSeries.Name}" FontSize="48" FontWeight="Bold" Foreground="White"/>
-                        <TextBlock Text="{Binding SelectedSeries.Genre}" FontSize="18" Foreground="#B3B3B3" Margin="0,8,0,0"/>
+                        <TextBlock Text="{Binding SelectedSeries.Name}" FontSize="48" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Text="{Binding SelectedSeries.Genre}" FontSize="18" Foreground="{DynamicResource TextMutedBrush}" Margin="0,8,0,0"/>
                     </StackPanel>
 
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
@@ -1172,7 +908,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel Margin="0,0,0,40">
-                                        <TextBlock Text="{Binding SeasonNumber, StringFormat='Sezon {0}'}" FontSize="24" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,20"/>
+                                        <TextBlock Text="{Binding SeasonNumber, StringFormat='Sezon {0}'}" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
                                         <ItemsControl ItemsSource="{Binding Episodes}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
@@ -1181,7 +917,7 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Margin="0,0,16,24" Background="#1A1A1A" CornerRadius="8" Cursor="Hand">
+                                                    <Border Margin="0,0,16,24" Background="{DynamicResource Bg1Brush}" CornerRadius="8" Cursor="Hand">
                                                         <Border.InputBindings>
                                                             <MouseBinding MouseAction="LeftClick" 
                                                                           Command="{Binding DataContext.PlayEpisodeCommand, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -1203,7 +939,7 @@
                                                             
                                                             <Border Grid.Row="1" Padding="12">
                                                                 <StackPanel>
-                                                                    <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis"/>
+                                                                    <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis"/>
                                                                     
                                                                     <!-- Episode Progress Bar -->
                                                                     <Border Height="3" Background="#33FFFFFF" Margin="0,12,0,0"
@@ -1264,6 +1000,153 @@
                 </Grid>
             </Border>
         </Grid>
+
+            <!-- ==========================================
+                 PLAYER AREA (FULL WINDOW)
+                 ========================================== -->
+            <Grid x:Name="PlayerArea" Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Grid.ColumnSpan="3" 
+                  Background="Black" Visibility="Collapsed" Panel.ZIndex="2000">
+                
+                <vlc:VideoView x:Name="VideoView"/>
+                
+
+
+                <views:VideoOverlayView x:Name="VideoOverlay" DataContext="{Binding}"/>
+                
+                <views:WatermarkView DataContext="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=WatermarkViewModel}" 
+                                     Panel.ZIndex="1999" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,100"/>
+
+                <!-- Next Episode Prompt -->
+                <Border x:Name="NextEpisodePrompt"
+                        Background="{DynamicResource SurfaceBrush}"
+                        CornerRadius="12"
+                        Padding="24"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,40,40"
+                        Width="350"
+                        Visibility="Collapsed"
+                        Panel.ZIndex="3000">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsNextEpisodePromptVisible}" Value="True">
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="Visible"/>
+                                                </ObjectAnimationUsingKeyFrames>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                               To="1" Duration="0:0:0.3"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
+                                    <DataTrigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                               To="0" Duration="0:0:0.3"/>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+                                                    <DiscreteObjectKeyFrame KeyTime="0:0:0.3" Value="Collapsed"/>
+                                                </ObjectAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.ExitActions>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Text="Sonraki Bölüm" 
+                                   FontSize="14" 
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   Margin="0,0,0,8"/>
+                        
+                        <StackPanel Grid.Row="1" Margin="0,0,0,16">
+                            <TextBlock Text="{Binding NextEpisode.Name}"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding NextEpisode.Plot}"
+                                       FontSize="14"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxHeight="40"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+                        
+                        <Button Grid.Row="2"
+                                Content="▶ Şimdi İzle"
+                                Command="{Binding PlayNextEpisodeCommand}"
+                                Background="{DynamicResource AccentBrush}"
+                                Foreground="{DynamicResource TextPrimaryBrush}"
+                                FontSize="16"
+                                FontWeight="Bold"
+                                Padding="20,12"
+                                BorderThickness="0"
+                                HorizontalAlignment="Stretch"
+                                Cursor="Hand"/>
+                    </Grid>
+                </Border>
+
+                <!-- Skip Intro Button -->
+                <Button x:Name="SkipIntroButton"
+                        Command="{Binding SkipIntroCommand}"
+                        Content="İntro'yu Geç ›"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,100,120"
+                        Padding="24,12"
+                        Background="{DynamicResource Surface1Brush}"
+                        Foreground="{DynamicResource TextPrimaryBrush}"
+                        FontSize="16"
+                        FontWeight="Bold"
+                        BorderThickness="1"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        Cursor="Hand"
+                        Opacity="0"
+                        Visibility="Collapsed"
+                        Panel.ZIndex="3000">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsIntroDetected}" Value="True">
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="Visible"/>
+                                                </ObjectAnimationUsingKeyFrames>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                               To="1" Duration="0:0:0.3"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
+                                    <DataTrigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                               To="0" Duration="0:0:0.3"/>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
+                                                    <DiscreteObjectKeyFrame KeyTime="0:0:0.3" Value="Collapsed"/>
+                                                </ObjectAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.ExitActions>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </Grid>
     </Grid>
     </Border>
 </Window>

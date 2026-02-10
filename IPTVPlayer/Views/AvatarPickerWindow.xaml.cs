@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Controls;
 using IPTVPlayer.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,6 +14,13 @@ public partial class AvatarPickerWindow : Window
         DataContext = viewModel;
         
         viewModel.AvatarSelected += ViewModel_AvatarSelected;
+
+        // Window sürükleme
+        MouseLeftButtonDown += (s, e) =>
+        {
+            if (e.ButtonState == MouseButtonState.Pressed)
+                DragMove();
+        };
     }
 
     private void ViewModel_AvatarSelected(object? sender, string avatar)
