@@ -177,10 +177,7 @@ public partial class SettingsViewModel : ObservableObject
 
     private void ProviderAccount_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ProviderAccount.ExpirationDate))
-        {
-            LoadProfileInfo();
-        }
+        LoadProfileInfo();
     }
     
     private void LoadProfileInfo()

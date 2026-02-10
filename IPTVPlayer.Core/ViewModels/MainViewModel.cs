@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text.Json;
 using IPTVPlayer.Services.Interfaces;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace IPTVPlayer.ViewModels;
 
@@ -23,10 +24,9 @@ public enum AppView
 /// </summary>
 public partial class MainViewModel : ObservableObject
 {
-    private readonly IPlaylistService _playlistService;
-    private readonly IEpgService _epgService;
-    private readonly IMediaService _mediaService;
-    private readonly IChannelService _channelService;
+    private readonly IDispatcherService _dispatcherService;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly Microsoft.Extensions.DependencyInjection.IServiceScopeFactory _scopeFactory;
 
     [ObservableProperty]
     private AppView _activeView = AppView.Home;
@@ -103,27 +103,18 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _newPlaylistUrl = string.Empty;
 
-    private readonly IDispatcherService _dispatcherService;
-    private readonly IServiceProvider _serviceProvider; // For creating child view models
-
     public WatermarkViewModel WatermarkViewModel { get; }
 
     public MainViewModel(
-        IPlaylistService playlistService,
-        IEpgService epgService,
+        IServiceProvider serviceProvider,
+        Microsoft.Extensions.DependencyInjection.IServiceScopeFactory scopeFactory,
         IDispatcherService dispatcherService,
-        WatermarkViewModel watermarkViewModel,
-        IMediaService mediaService,
-        IChannelService channelService,
-        IServiceProvider serviceProvider)
+        WatermarkViewModel watermarkViewModel)
     {
-        _playlistService = playlistService;
-        _epgService = epgService;
+        _serviceProvider = serviceProvider;
+        _scopeFactory = scopeFactory;
         _dispatcherService = dispatcherService;
         WatermarkViewModel = watermarkViewModel;
-        _mediaService = mediaService;
-        _channelService = channelService;
-        _serviceProvider = serviceProvider;
     }
 
     public async Task InitializeAsync()
@@ -146,6 +137,9 @@ public partial class MainViewModel : ObservableObject
         CurrentProfileId = profile.Id;
         CurrentProfile = profile;
         
+        using var scope = _scopeFactory.CreateScope();
+        var playlistService = scope.ServiceProvider.GetRequiredService<IPlaylistService>();
+        
         try
         {
             // Ensure provider account is loaded
@@ -156,7 +150,7 @@ public partial class MainViewModel : ObservableObject
             }
 
             // Check if playlist already exists (cache-first approach)
-            var existingPlaylists = await _playlistService.GetAllAsync(profile.Id);
+            var existingPlaylists = await playlistService.GetAllAsync(profile.Id);
             
             if (existingPlaylists.Count > 0)
             {
@@ -191,7 +185,7 @@ public partial class MainViewModel : ObservableObject
                 }
                 
                 StatusMessage = "Kanal listesi indiriliyor...";
-                await _playlistService.AddFromUrlAsync(profile.Name, m3uUrl, profile.Id);
+                await playlistService.AddFromUrlAsync(profile.Name, m3uUrl, profile.Id);
                 await LoadPlaylistsAsync();
             }
         }
@@ -252,10 +246,12 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
-            var apiUrl = $"{baseUrl}/player_api.php?username={username}&password={password}";
+            var apiUrl = $"{baseUrl}/player_api.php?username={Uri.EscapeDataString(username ?? "")}&password={Uri.EscapeDataString(password ?? "")}";
             System.Diagnostics.Debug.WriteLine($"[CheckExpiration] Checking: {apiUrl}");
 
             using var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+            
             var response = await client.GetAsync(apiUrl);
             
             if (!response.IsSuccessStatusCode)
@@ -265,12 +261,11 @@ public partial class MainViewModel : ObservableObject
             }
 
             var json = await response.Content.ReadAsStringAsync();
-            System.Diagnostics.Debug.WriteLine($"[CheckExpiration] Response: {json}");
-            
             using var doc = System.Text.Json.JsonDocument.Parse(json);
+            
             if (doc.RootElement.TryGetProperty("user_info", out var userInfo))
             {
-                if (userInfo.TryGetProperty("exp_date", out var expDateElement)) // 17877...
+                if (userInfo.TryGetProperty("exp_date", out var expDateElement)) 
                 {
                     long? expTimestamp = null;
                     
@@ -287,25 +282,25 @@ public partial class MainViewModel : ObservableObject
                         }
                         else if (DateTime.TryParse(str, out var dt))
                         {
-                             // Some providers return actual date string?
                              expTimestamp = new DateTimeOffset(dt).ToUnixTimeSeconds();
                         }
                     }
 
-                    if (expTimestamp.HasValue)
+                    if (expTimestamp.HasValue && expTimestamp > 0)
                     {
                         var expirationDate = DateTimeOffset.FromUnixTimeSeconds(expTimestamp.Value).DateTime;
-                         if (expTimestamp > 0)
-                         {
-                            await _playlistService.UpdateProviderExpirationAsync(accountId, expirationDate);
-                            
-                            // Ensure UI update by creating a new object reference if needed or just notifying
-                            // But since Profile.ProviderAccount is ObservableObject now, we just set the property
+                        
+                        using var scope = _scopeFactory.CreateScope();
+                        var playlistService = scope.ServiceProvider.GetRequiredService<IPlaylistService>();
+                        await playlistService.UpdateProviderExpirationAsync(accountId, expirationDate);
+                        
+                        _dispatcherService.Invoke(() => 
+                        {
                             if (CurrentProfile?.ProviderAccount?.Id == accountId)
                             {
                                 CurrentProfile.ProviderAccount.ExpirationDate = expirationDate;
                             }
-                         }
+                        });
                     }
                 }
             }
@@ -319,10 +314,13 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task LoadPlaylistsAsync()
     {
+        using var scope = _scopeFactory.CreateScope();
+        var playlistService = scope.ServiceProvider.GetRequiredService<IPlaylistService>();
+        
         try
         {
             IsLoading = true;
-            Playlists = await _playlistService.GetAllAsync(CurrentProfileId);
+            Playlists = await playlistService.GetAllAsync(CurrentProfileId);
             
             if (Playlists.Count > 0 && SelectedPlaylist == null)
             {
@@ -350,17 +348,20 @@ public partial class MainViewModel : ObservableObject
 
     private async Task LoadChannelsAsync(int playlistId)
     {
+        using var scope = _scopeFactory.CreateScope();
+        var playlistService = scope.ServiceProvider.GetRequiredService<IPlaylistService>();
+        
         try
         {
             IsLoading = true;
             StatusMessage = "Kanallar yükleniyor...";
             
             // FAST: Only load groups and channel count initially
-            Groups = await _playlistService.GetGroupsAsync(playlistId);
-            var channelCount = await _playlistService.GetChannelCountAsync(playlistId);
+            Groups = await playlistService.GetGroupsAsync(playlistId);
+            var channelCount = await playlistService.GetChannelCountAsync(playlistId);
             
             // Load filtered channels (limited to 1000 for fast UI)
-            Channels = await _playlistService.GetChannelsFilteredAsync(playlistId, limit: 100);
+            Channels = await playlistService.GetChannelsFilteredAsync(playlistId, limit: 100);
             FilteredChannels = Channels;
             
             await LoadHomeContentAsync();
@@ -374,10 +375,13 @@ public partial class MainViewModel : ObservableObject
 
     private async Task LoadHomeContentAsync()
     {
+        using var scope = _scopeFactory.CreateScope();
+        var mediaService = scope.ServiceProvider.GetRequiredService<IMediaService>();
+        
         // Rail içeriklerini yükle
         TrendingChannels = Channels.Where(c => c.Type == ChannelType.Live).Take(10).ToList();
         LatestMovies = Channels.Where(c => c.Type == ChannelType.VOD).Take(10).ToList();
-        LatestSeries = await _mediaService.GetSeriesAsync(SelectedPlaylist?.Id ?? 0);
+        LatestSeries = await mediaService.GetSeriesAsync(SelectedPlaylist?.Id ?? 0);
         ContinueWatching = Channels.Where(c => c.LastWatched.HasValue).OrderByDescending(c => c.LastWatched).Take(10).ToList();
 
         // Hero içeriği
@@ -440,8 +444,11 @@ public partial class MainViewModel : ObservableObject
         
         try
         {
+            using var scope = _scopeFactory.CreateScope();
+            var playlistService = scope.ServiceProvider.GetRequiredService<IPlaylistService>();
+            
             // Use database-level filtering for performance
-            var filtered = await _playlistService.GetChannelsFilteredAsync(
+            var filtered = await playlistService.GetChannelsFilteredAsync(
                 SelectedPlaylist.Id,
                 searchText: SearchText,
                 group: SelectedGroup,
@@ -491,12 +498,15 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void SelectChannel(Channel channel)
     {
+        using var scope = _scopeFactory.CreateScope();
+        var channelService = scope.ServiceProvider.GetRequiredService<IChannelService>();
+        
         SelectedChannel = channel;
         StatusMessage = $"Seçildi: {channel.Name}";
         
         // Update last watched
         channel.LastWatched = DateTime.Now;
-        _ = _channelService.UpdateChannelAsync(channel);
+        _ = channelService.UpdateChannelAsync(channel);
 
         // Notify UI to play
         OnMediaSelected?.Invoke(channel);
@@ -505,8 +515,11 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task ToggleFavoriteAsync(Channel channel)
     {
+        using var scope = _scopeFactory.CreateScope();
+        var channelService = scope.ServiceProvider.GetRequiredService<IChannelService>();
+        
         channel.IsFavorite = !channel.IsFavorite;
-        await _channelService.UpdateChannelAsync(channel);
+        await channelService.UpdateChannelAsync(channel);
         ApplyFilters();
     }
 
@@ -521,10 +534,13 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
+            using var scope = _scopeFactory.CreateScope();
+            var playlistService = scope.ServiceProvider.GetRequiredService<IPlaylistService>();
+            
             IsLoading = true;
             StatusMessage = "Playlist ekleniyor...";
             
-            var playlist = await _playlistService.AddFromUrlAsync(NewPlaylistName, NewPlaylistUrl, CurrentProfileId);
+            var playlist = await playlistService.AddFromUrlAsync(NewPlaylistName, NewPlaylistUrl, CurrentProfileId);
             await LoadPlaylistsAsync();
             SelectedPlaylist = playlist;
             
@@ -549,10 +565,13 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
+            using var scope = _scopeFactory.CreateScope();
+            var playlistService = scope.ServiceProvider.GetRequiredService<IPlaylistService>();
+            
             IsLoading = true;
             StatusMessage = "Playlist güncelleniyor...";
             
-            await _playlistService.RefreshAsync(SelectedPlaylist.Id);
+            await playlistService.RefreshAsync(SelectedPlaylist.Id);
             await LoadChannelsAsync(SelectedPlaylist.Id);
             
             StatusMessage = "Playlist güncellendi";
@@ -666,15 +685,19 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task AddToMyList(object media)
     {
+        using var scope = _scopeFactory.CreateScope();
+        var channelService = scope.ServiceProvider.GetRequiredService<IChannelService>();
+        var mediaService = scope.ServiceProvider.GetRequiredService<IMediaService>();
+        
         if (media is Channel channel)
         {
             channel.IsInMyList = !channel.IsInMyList;
-            await _channelService.UpdateChannelAsync(channel);
+            await channelService.UpdateChannelAsync(channel);
         }
         else if (media is Series series)
         {
             series.IsInMyList = !series.IsInMyList;
-            await _mediaService.UpdateSeriesAsync(series);
+            await mediaService.UpdateSeriesAsync(series);
         }
     }
 

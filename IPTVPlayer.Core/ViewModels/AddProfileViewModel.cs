@@ -510,6 +510,7 @@ public partial class AddProfileViewModel : ObservableObject
                  selectedAccount.Username = Username;
                  selectedAccount.Password = Password;
                  selectedAccount.Type = IsXtream ? ProfileType.XtreamCodes : ProfileType.M3U;
+                 selectedAccount.ExpirationDate = null; // Reset date on credential change
                  
                  _context.Entry(selectedAccount).State = EntityState.Modified;
                  account = selectedAccount;

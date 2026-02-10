@@ -9,17 +9,42 @@ public partial class ProviderAccount : ObservableObject
     [Key]
     public int Id { get; set; }
 
+    private string _name = string.Empty;
     [Required]
-    public string Name { get; set; } = string.Empty; // User friendly name e.g. "My Xtream Sub"
+    public string Name 
+    {
+        get => _name;
+        set => SetProperty(ref _name, value);
+    }
 
-    public ProfileType Type { get; set; }
+    private ProfileType _type;
+    public ProfileType Type 
+    {
+        get => _type;
+        set => SetProperty(ref _type, value);
+    }
 
-    // Connection Details
-    public string Url { get; set; } = string.Empty;
-    public string? Username { get; set; }
-    public string? Password { get; set; }
+    private string _url = string.Empty;
+    public string Url 
+    {
+        get => _url;
+        set => SetProperty(ref _url, value);
+    }
+
+    private string? _username;
+    public string? Username 
+    {
+        get => _username;
+        set => SetProperty(ref _username, value);
+    }
+
+    private string? _password;
+    public string? Password 
+    {
+        get => _password;
+        set => SetProperty(ref _password, value);
+    }
     
-    // Explicit backing field for notification
     private DateTime? _expirationDate;
     public DateTime? ExpirationDate 
     {
