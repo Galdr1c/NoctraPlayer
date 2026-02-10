@@ -11,8 +11,9 @@ public interface IMetadataService
     /// Fetches metadata for a search query from TMDB
     /// </summary>
     /// <param name="searchQuery">Movie or TV show name to search</param>
+    /// <param name="type">Optional channel type to filter (Movie/Series)</param>
     /// <returns>Metadata if found, null otherwise</returns>
-    Task<ChannelMetadata?> FetchMetadataAsync(string searchQuery);
+    Task<ChannelMetadata?> FetchMetadataAsync(string searchQuery, ChannelType? type = null);
     
     /// <summary>
     /// Enriches a channel with metadata from TMDB

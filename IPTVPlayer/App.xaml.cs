@@ -29,11 +29,35 @@ public partial class App : Application
         ConfigureServices(services);
         _serviceProvider = services.BuildServiceProvider();
 
-        // Veritabanını oluştur/güncelle
+        // Veritabanını oluştur/güncelle ve Temayı Uygula
         using (var scope = _serviceProvider.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             context.Database.EnsureCreated();
+
+            // Kayıtlı temayı uygula
+            var settingsService = scope.ServiceProvider.GetRequiredService<ISettingsService>();
+            var themeService = scope.ServiceProvider.GetRequiredService<IThemeService>();
+            bool isDark = settingsService.Settings.IsDarkTheme;
+            themeService.SetTheme(isDark);
+            
+            // Veritabanı şema güncellemesi (Migration)
+            
+            // 1. ProviderAccounts -> ExpirationDate
+            try
+            {
+                var command = "ALTER TABLE ProviderAccounts ADD COLUMN ExpirationDate TEXT;";
+                context.Database.ExecuteSqlRaw(command);
+            }
+            catch { /* Sütun zaten varsa hata verir, yoksay */ }
+
+            // 2. Profiles -> CreatedAt
+            try
+            {
+                var commandProfile = "ALTER TABLE Profiles ADD COLUMN CreatedAt TEXT NOT NULL DEFAULT '0001-01-01 00:00:00';";
+                context.Database.ExecuteSqlRaw(commandProfile);
+            }
+            catch { /* Sütun zaten varsa hata verir, yoksay */ }
         }
 
         // Global exception handling
@@ -223,7 +247,12 @@ public partial class App : Application
         services.AddTransient<ProfilesWindow>();
         services.AddTransient<AddProfileWindow>();
         services.AddTransient<AvatarPickerWindow>();
+        services.AddTransient<AvatarPickerWindow>();
         services.AddTransient<GlobalSettingsWindow>();
+        services.AddTransient<SettingsWindow>();
+        services.AddTransient<EditChannelWindow>();
+
+        services.AddTransient<EditChannelViewModel>();
     }
 
 

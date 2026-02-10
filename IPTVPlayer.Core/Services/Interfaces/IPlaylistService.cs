@@ -51,4 +51,6 @@ public interface IPlaylistService
     /// Kanal sayısını getirir (tümünü yüklemeden)
     /// </summary>
     Task<int> GetChannelCountAsync(int playlistId);
+    
+    Task UpdateProviderExpirationAsync(int providerId, DateTime expirationDate);
 }

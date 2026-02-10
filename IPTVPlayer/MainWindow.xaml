@@ -11,7 +11,7 @@
         Height="800" Width="1400"
         MinHeight="600" MinWidth="1000"
         WindowStartupLocation="CenterScreen"
-        WindowStyle="None"
+        WindowStyle="SingleBorderWindow"
         AllowsTransparency="False"
         Background="{DynamicResource Bg0Brush}"
         FontFamily="Segoe UI Variable, Segoe UI">
@@ -19,7 +19,7 @@
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="64"
                       GlassFrameThickness="0"
-                      CornerRadius="12"
+                      CornerRadius="0"
                       ResizeBorderThickness="8"/>
     </WindowChrome.WindowChrome>
 
@@ -51,9 +51,86 @@
                 </EventTrigger>
             </Style.Triggers>
         </Style>
+
+        <!-- Window Control Style -->
+        <Style x:Key="WindowControlButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="Bg" Background="{TemplateBinding Background}">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Trigger.EnterActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <ColorAnimation Storyboard.TargetName="Bg" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)" To="#26FFFFFF" Duration="0:0:0.15"/>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </Trigger.EnterActions>
+                                                <Trigger.ExitActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <ColorAnimation Storyboard.TargetName="Bg" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)" To="Transparent" Duration="0:0:0.2"/>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </Trigger.ExitActions>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+        </Style>
+
+        <Style x:Key="WindowCloseButtonStyle" TargetType="Button" BasedOn="{StaticResource WindowControlButtonStyle}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="Bg" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)" To="#E81123" Duration="0:0:0.1"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="Bg" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)" To="Transparent" Duration="0:0:0.2"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
-    <Border CornerRadius="{DynamicResource RadiusMedium}" Background="{DynamicResource Bg0Brush}">
+    <Border x:Name="MainBorder" Background="{DynamicResource Bg0Brush}">
+        <Border.Style>
+            <Style TargetType="Border">
+                <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}"/>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType=Window}}" Value="Maximized">
+                        <Setter Property="CornerRadius" Value="0"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Border.Style>
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="64"/>   <!-- Header -->
@@ -118,32 +195,95 @@
 
                     <!-- Header Actions -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button x:Name="SettingsButton" Content="⚙️" FontSize="18" 
-                                Background="Transparent" BorderThickness="0" 
-                                Foreground="{DynamicResource TextMutedBrush}" 
-                                Padding="12" Cursor="Hand" Click="SettingsButton_Click"
-                                WindowChrome.IsHitTestVisibleInChrome="True"/>
-                        <Button x:Name="ThemeButton" Content="🌙" FontSize="18" 
-                                Background="Transparent" BorderThickness="0" 
-                                Foreground="{DynamicResource TextMutedBrush}" 
-                                Padding="12" Cursor="Hand" Click="ThemeButton_Click"
-                                WindowChrome.IsHitTestVisibleInChrome="True"/>
-                        <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="8,12"/>
-                        <Button x:Name="MinimizeButton" Content="─" FontSize="14" 
-                                Background="Transparent" BorderThickness="0" 
-                                Foreground="{DynamicResource TextMutedBrush}" 
-                                Padding="14,12" Cursor="Hand" Click="MinimizeButton_Click"
-                                WindowChrome.IsHitTestVisibleInChrome="True"/>
-                        <Button x:Name="MaximizeButton" Content="□" FontSize="14" 
-                                Background="Transparent" BorderThickness="0" 
-                                Foreground="{DynamicResource TextMutedBrush}" 
-                                Padding="14,12" Cursor="Hand" Click="MaximizeButton_Click"
-                                WindowChrome.IsHitTestVisibleInChrome="True"/>
-                        <Button x:Name="CloseButton" Content="✕" FontSize="14" 
-                                Background="Transparent" BorderThickness="0" 
-                                Foreground="{StaticResource ErrorBrush}" 
-                                Padding="14,12" Cursor="Hand" Click="CloseButton_Click"
-                                WindowChrome.IsHitTestVisibleInChrome="True"/>
+                        <!-- Settings Button -->
+                    <Button Click="SettingsButton_Click" Cursor="Hand" ToolTip="Ayarlar"
+                            Width="48" Height="48" VerticalAlignment="Center" Margin="0,0,8,0"
+                            WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="SettingsBg" Background="Transparent" CornerRadius="24">
+                                    <Path x:Name="SettingsIcon"
+                                          Data="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"
+                                          Fill="{DynamicResource TextMutedBrush}"
+                                          Stretch="Uniform"
+                                          Width="22" Height="22"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          RenderTransformOrigin="0.5,0.5">
+                                        <Path.RenderTransform>
+                                            <RotateTransform x:Name="GearRotation" Angle="0"/>
+                                        </Path.RenderTransform>
+                                    </Path>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="SettingsBg" Property="Background" Value="{DynamicResource Surface1Brush}"/>
+                                        <Setter TargetName="SettingsIcon" Property="Fill" Value="{DynamicResource TextPrimaryBrush}"/>
+                                    </Trigger>
+                                    <EventTrigger RoutedEvent="MouseEnter">
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="GearRotation"
+                                                               Storyboard.TargetProperty="Angle"
+                                                               To="90" Duration="0:0:0.3">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut"/>
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </EventTrigger>
+                                    <EventTrigger RoutedEvent="MouseLeave">
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="GearRotation"
+                                                               Storyboard.TargetProperty="Angle"
+                                                               To="0" Duration="0:0:0.3"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </EventTrigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                        <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="8,8" Opacity="0.5"/>
+                        
+                        <Button x:Name="MinimizeButton" Style="{StaticResource WindowControlButtonStyle}" Click="MinimizeButton_Click" WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Küçült">
+                            <Path x:Name="MinimizeIcon" Data="M0,8 H12 V10 H0 Z" Fill="{DynamicResource TextMutedBrush}" Width="12" Height="10" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        </Button>
+
+                        <Button x:Name="MaximizeButton" Style="{StaticResource WindowControlButtonStyle}" Click="MaximizeButton_Click" WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Ekranı Kapla">
+                            <Grid>
+                                <Path x:Name="MaximizeIcon" Data="M1,1 H11 V11 H1 V1 M1,1 H11 V2 H1 V1" Fill="{DynamicResource TextMutedBrush}" Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center" Stroke="{DynamicResource TextMutedBrush}" StrokeThickness="1.2">
+                                    <Path.Style>
+                                        <Style TargetType="Path">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType=Window}}" Value="Maximized">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Path.Style>
+                                </Path>
+                                <Path x:Name="RestoreIcon" Data="M3,3 H11 V11 H3 V3 M5,3 V1 H13 V9 H11" Fill="Transparent" Stroke="{DynamicResource TextMutedBrush}" StrokeThickness="1.2" Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <Path.Style>
+                                        <Style TargetType="Path">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType=Window}}" Value="Maximized">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Path.Style>
+                                </Path>
+                            </Grid>
+                        </Button>
+
+                        <Button x:Name="CloseButton" Style="{StaticResource WindowCloseButtonStyle}" Click="CloseButton_Click" WindowChrome.IsHitTestVisibleInChrome="True" ToolTip="Kapat">
+                            <Path x:Name="CloseIcon" Data="M1.1,1.1 L10.9,10.9 M10.9,1.1 L1.1,10.9" Stroke="{DynamicResource TextMutedBrush}" StrokeThickness="1.5" Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        </Button>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -545,7 +685,16 @@
                                         <DataTemplate>
                                             <Border x:Name="Card" Width="{StaticResource RatioLandscapeWidth}" Height="{StaticResource RatioLandscapeHeight}" 
                                                     Style="{StaticResource NoctraCard}" ClipToBounds="True" Cursor="Hand"
-                                                    MouseEnter="MediaCard_MouseEnter" MouseLeave="MediaCard_MouseLeave">
+                                                    MouseEnter="MediaCard_MouseEnter" MouseLeave="MediaCard_MouseLeave"
+                                                    Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                                                <Border.ContextMenu>
+                                                    <ContextMenu>
+                                                        <MenuItem Header="Listem'e Ekle/Çıkar" Command="{Binding PlacementTarget.Tag.AddToMyListCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
+                                                        <MenuItem Header="Favorilere Ekle/Çıkar" Command="{Binding PlacementTarget.Tag.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
+                                                        <Separator/>
+                                                        <MenuItem Header="Düzenle..." Command="{Binding PlacementTarget.Tag.EditChannelCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
+                                                    </ContextMenu>
+                                                </Border.ContextMenu>
                                                 <Border.InputBindings>
                                                     <MouseBinding MouseAction="LeftClick" 
                                                                   Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
@@ -583,6 +732,14 @@
                                             <Border x:Name="Card" Width="{StaticResource RatioPortraitWidth}" Height="{StaticResource RatioPortraitHeight}" 
                                                     Style="{StaticResource NoctraCard}" ClipToBounds="True" Cursor="Hand"
                                                     MouseEnter="MediaCard_MouseEnter" MouseLeave="MediaCard_MouseLeave">
+                                                <Border.ContextMenu>
+                                                    <ContextMenu>
+                                                        <MenuItem Header="Listem'e Ekle/Çıkar" Command="{Binding DataContext.AddToMyListCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                                        <MenuItem Header="Favorilere Ekle/Çıkar" Command="{Binding DataContext.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                                        <Separator/>
+                                                        <MenuItem Header="Düzenle..." Command="{Binding DataContext.EditChannelCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                                    </ContextMenu>
+                                                </Border.ContextMenu>
                                                 <Border.InputBindings>
                                                     <MouseBinding MouseAction="LeftClick" 
                                                                   Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
@@ -619,7 +776,16 @@
                                         <DataTemplate>
                                             <Border x:Name="Card" Width="{StaticResource RatioPortraitWidth}" Height="{StaticResource RatioPortraitHeight}" 
                                                     Style="{StaticResource NoctraCard}" ClipToBounds="True" Cursor="Hand"
-                                                    MouseEnter="MediaCard_MouseEnter" MouseLeave="MediaCard_MouseLeave">
+                                                    MouseEnter="MediaCard_MouseEnter" MouseLeave="MediaCard_MouseLeave"
+                                                    Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                                                <Border.ContextMenu>
+                                                    <ContextMenu>
+                                                        <MenuItem Header="Listem'e Ekle/Çıkar" Command="{Binding PlacementTarget.Tag.AddToMyListCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
+                                                        <MenuItem Header="Favorilere Ekle/Çıkar" Command="{Binding PlacementTarget.Tag.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
+                                                        <Separator/>
+                                                        <MenuItem Header="Düzenle..." Command="{Binding PlacementTarget.Tag.EditChannelCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
+                                                    </ContextMenu>
+                                                </Border.ContextMenu>
                                                 <Border.InputBindings>
                                                     <MouseBinding MouseAction="LeftClick" 
                                                                   Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
@@ -673,11 +839,65 @@
                         </StackPanel>
                     </ScrollViewer>
                     
+                    <!-- 5. MY LIST VIEW -->
+                    <ScrollViewer x:Name="MyListView" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  Visibility="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.MyList}}">
+                        <StackPanel Margin="24">
+                            <TextBlock Text="Listem" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
+                            <ListBox ItemsSource="{Binding MyList}" Style="{StaticResource GridListBoxStyle}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="Card" Margin="0,0,16,16" Background="{DynamicResource Surface0Brush}" 
+                                                CornerRadius="{StaticResource RadiusMedium}" Cursor="Hand"
+                                                Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                                            <Border.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Listem'e Ekle/Çıkar" Command="{Binding PlacementTarget.Tag.AddToMyListCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
+                                                    <MenuItem Header="Favorilere Ekle/Çıkar" Command="{Binding PlacementTarget.Tag.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
+                                                    <Separator/>
+                                                    <MenuItem Header="Düzenle..." Command="{Binding PlacementTarget.Tag.EditChannelCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
+                                                </ContextMenu>
+                                            </Border.ContextMenu>
+                                            <Border.InputBindings>
+                                                <MouseBinding MouseAction="LeftClick" 
+                                                              Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                              CommandParameter="{Binding}"/>
+                                            </Border.InputBindings>
+                                            <StackPanel Margin="12">
+                                                <Border Height="100" Background="{StaticResource IconGradientBrush}" CornerRadius="{StaticResource RadiusSmall}" Margin="0,0,0,12">
+                                                    <Image Source="{Binding LogoUrl}" Width="60" Stretch="Uniform"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <!-- Empty State -->
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,100,0,0"
+                                        Visibility="{Binding MyList.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=invert}">
+                                <TextBlock Text="Henüz listenize bir şey eklemediniz." 
+                                           FontSize="16" Foreground="{DynamicResource TextMutedBrush}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+
                     <!-- 3. LIVE TV VIEW (Specialized for EPG) -->
-                    <Grid x:Name="LiveView" Visibility="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Live}}">
-                        <!-- EPG + Channel List specialized for Live -->
-                        <TextBlock Text="Canlı TV Modu (EPG Yakında)" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Grid>
+                    <!-- 3. LIVE TV VIEW -->
+                    <ScrollViewer x:Name="LiveView" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  Visibility="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Live}}">
+                        <StackPanel Margin="24">
+                            <TextBlock Text="Canlı TV" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
+                            <ListBox ItemsSource="{Binding FilteredChannels}" Style="{StaticResource GridListBoxStyle}"/>
+                            
+                            <!-- Empty State -->
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,100,0,0"
+                                        Visibility="{Binding FilteredChannels.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=invert}">
+                                <TextBlock Text="Bu kategoride kanal bulunamadı." 
+                                           FontSize="16" Foreground="{DynamicResource TextMutedBrush}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
 
                     <!-- Loading Skeleton State -->
                     <Grid x:Name="LoadingSkeletons" 

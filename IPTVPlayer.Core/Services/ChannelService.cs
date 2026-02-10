@@ -29,6 +29,7 @@ public class ChannelService : IChannelService
         if (dbChannel != null)
         {
             dbChannel.IsFavorite = channel.IsFavorite;
+            dbChannel.IsInMyList = channel.IsInMyList;
             dbChannel.LastWatched = channel.LastWatched;
             
             _context.Channels.Update(dbChannel);

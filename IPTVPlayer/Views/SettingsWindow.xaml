@@ -3,14 +3,16 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:IPTVPlayer.ViewModels;assembly=IPTVPlayer.Core"
+        xmlns:helpers="clr-namespace:IPTVPlayer.Helpers"
         mc:Ignorable="d"
-        Title="Ayarlar" Height="700" Width="800"
+        Title="Ayarlar" Height="750" Width="850"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         ResizeMode="NoResize"
         AllowsTransparency="True"
         Background="Transparent"
-        FontFamily="Segoe UI">
+        FontFamily="Segoe UI Variable, Segoe UI">
 
     <Window.Resources>
         <ResourceDictionary>
@@ -18,47 +20,52 @@
                 <ResourceDictionary Source="/Resources/Colors.xaml"/>
                 <ResourceDictionary Source="/Resources/Styles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
-            
-            <!-- Settings Section Style -->
-            <Style x:Key="SettingsSection" TargetType="Border">
-                <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
-                <Setter Property="CornerRadius" Value="8"/>
-                <Setter Property="Padding" Value="16"/>
-                <Setter Property="Margin" Value="0,0,0,12"/>
+
+            <!-- Custom TabItem Style -->
+            <Style x:Key="SettingsTabItem" TargetType="TabItem">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="TabItem">
+                            <Border x:Name="Border" Padding="20,12" Background="Transparent" BorderThickness="0,0,0,2" BorderBrush="Transparent" Margin="0,0,8,0">
+                                <ContentPresenter x:Name="ContentSite" ContentSource="Header" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="False">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
-            
-            <!-- Settings Label -->
-            <Style x:Key="SettingsLabel" TargetType="TextBlock">
-                <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-                <Setter Property="FontSize" Value="13"/>
-                <Setter Property="Margin" Value="0,12,0,6"/>
-            </Style>
-            
-            <!-- Settings Title -->
-            <Style x:Key="SettingsTitle" TargetType="TextBlock">
-                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-                <Setter Property="FontSize" Value="15"/>
-                <Setter Property="FontWeight" Value="SemiBold"/>
-            </Style>
-            
-            <!-- Toggle Style -->
-            <Style x:Key="SettingsToggle" TargetType="CheckBox">
-                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-                <Setter Property="FontSize" Value="14"/>
-                <Setter Property="Margin" Value="0,8,0,0"/>
-                <Setter Property="Cursor" Value="Hand"/>
-            </Style>
-            
-            <!-- Slider Style -->
-            <Style x:Key="SettingsSlider" TargetType="Slider">
-                <Setter Property="Height" Value="20"/>
-                <Setter Property="Margin" Value="0,4,0,0"/>
+
+            <!-- Settings Item Path Geometries -->
+            <Geometry x:Key="IconPlayback">M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M10,16.5V7.5L16,12L10,16.5Z</Geometry>
+            <Geometry x:Key="IconSubtitles">M19,4H5A2,2 0 0,0 3,6V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V6A2,2 0 0,0 19,4M11,11H8.5V10.5H7V13.5H8.5V13H11V14A1,1 0 0,1 10,15H7A1,1 0 0,1 6,14V10A1,1 0 0,1 7,9H10A1,1 0 0,1 11,10V11M18,11H15.5V10.5H14V13.5H15.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10V11Z</Geometry>
+            <Geometry x:Key="IconDownloads">M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z</Geometry>
+            <Geometry x:Key="IconAppearance">M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 15,19A2,2 0 0,1 17,17H19A3,3 0 0,0 22,14C22,8.48 17,4 12,2M6.5,10A1.5,1.5 0 0,1 5,8.5A1.5,1.5 0 0,1 6.5,7A1.5,1.5 0 0,1 8,8.5A1.5,1.5 0 0,1 6.5,10M9.5,14A1.5,1.5 0 0,1 8,12.5A1.5,1.5 0 0,1 9.5,11A1.5,1.5 0 0,1 11,12.5A1.5,1.5 0 0,1 9.5,14M14.5,14A1.5,1.5 0 0,1 13,12.5A1.5,1.5 0 0,1 14.5,11A1.5,1.5 0 0,1 16,12.5A1.5,1.5 0 0,1 14.5,14M17.5,10A1.5,1.5 0 0,1 16,8.5A1.5,1.5 0 0,1 17.5,7A1.5,1.5 0 0,1 19,8.5A1.5,1.5 0 0,1 17.5,10Z</Geometry>
+
+            <!-- Settings Group Card -->
+            <Style x:Key="SettingsCard" TargetType="Border">
+                <Setter Property="Background" Value="{DynamicResource Surface0Brush}"/>
+                <Setter Property="CornerRadius" Value="12"/>
+                <Setter Property="Padding" Value="24"/>
+                <Setter Property="Margin" Value="0,0,0,16"/>
             </Style>
         </ResourceDictionary>
     </Window.Resources>
 
-    <Border Background="{DynamicResource BackgroundBrush}" CornerRadius="12" 
-            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+    <Border Background="{DynamicResource Bg0Brush}" 
+            CornerRadius="16" 
+            BorderBrush="{DynamicResource BorderBrush}" 
+            BorderThickness="1">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Header -->
@@ -66,77 +73,175 @@
                 <RowDefinition Height="Auto"/> <!-- Footer -->
             </Grid.RowDefinitions>
 
-            <!-- Header -->
-            <Grid Grid.Row="0" Margin="24,20,24,0">
-                <TextBlock Text="⚙️ Ayarlar" FontSize="22" FontWeight="Bold" 
-                           Foreground="{DynamicResource TextPrimaryBrush}"/>
-                <Button HorizontalAlignment="Right" Content="✕" 
-                        Click="CloseButton_Click"
-                        FontSize="18"
-                        Style="{StaticResource IconButton}" 
-                        Foreground="{DynamicResource TextSecondaryBrush}"/>
+            <!-- HEADER -->
+            <Grid Grid.Row="0" Margin="32,24,32,12">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Path Data="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"
+                          Fill="{DynamicResource TextPrimaryBrush}" Width="24" Height="24" Margin="0,0,12,0" Stretch="Uniform"/>
+                    <TextBlock Text="Ayarlar" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                </StackPanel>
+
+                <Button Content="×" HorizontalAlignment="Right" Click="CloseButton_Click"
+                        FontSize="32" Foreground="{DynamicResource TextMutedBrush}"
+                        Background="Transparent" BorderThickness="0" Width="40" Height="40" Cursor="Hand">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Border" Background="{TemplateBinding Background}" CornerRadius="20">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-4,0,0"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Border" Property="Background" Value="{DynamicResource Surface1Brush}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
             </Grid>
 
-            <!-- Tab Container -->
-            <TabControl Grid.Row="1" Margin="24,16,24,0" 
-                        Background="Transparent" BorderThickness="0">
+            <!-- CONTENT -->
+            <TabControl Grid.Row="1" Margin="32,0,32,0" Background="Transparent" BorderThickness="0">
+                <TabControl.Resources>
+                    <Style TargetType="TabPanel">
+                        <Setter Property="Margin" Value="0,0,0,16"/>
+                    </Style>
+                </TabControl.Resources>
                 
-                <TabItem Header="🎬 Oynatma">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,16,0,0">
-                        <StackPanel>
-                            <!-- Auto-play settings -->
-                            <Border Style="{StaticResource SettingsSection}">
+                <!-- PROFILE TAB -->
+                <TabItem Style="{StaticResource SettingsTabItem}">
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z" 
+                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,8,0"/>
+                            <TextBlock Text="Profil" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,16,32">
+                        <StackPanel HorizontalAlignment="Stretch">
+                            
+                            <!-- Current Profile Card -->
+                            <Border Style="{StaticResource SettingsCard}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <!-- Avatar -->
+                                    <Border Width="80" Height="80" CornerRadius="40" Margin="0,0,24,0" Background="{DynamicResource PrimaryGradientBrush}">
+                                        <Grid>
+                                            <Border CornerRadius="40">
+                                                <Border.Background>
+                                                    <ImageBrush ImageSource="{Binding CurrentProfileAvatar, Converter={StaticResource AvatarPathConverter}}" Stretch="UniformToFill"/>
+                                                </Border.Background>
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                    
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding CurrentProfileName}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                            <TextBlock Text="Aktif Profil" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
+                                            <TextBlock Text=" • " FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
+                                            <TextBlock Text="{Binding ProfileCreatedAt, StringFormat='Oluşturulma: {0:dd.MM.yyyy}'}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Subscription Details -->
+                            <Border Style="{StaticResource SettingsCard}">
                                 <StackPanel>
-                                    <TextBlock Text="Otomatik Oynatma" Style="{StaticResource SettingsTitle}" Margin="0,0,0,16"/>
+                                    <TextBlock Text="Hesap Bilgileri" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
                                     
-                                    <!-- Auto-play next episode -->
                                     <Grid Margin="0,0,0,16">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel>
-                                            <TextBlock Text="Sonraki bölümü otomatik oynat" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                            <TextBlock Text="Bir bölüm bittiğinde seriyi otomatik devam ettirir" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" SharedSizeGroup="Label"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="URL:" FontSize="15" Foreground="{DynamicResource TextMutedBrush}" Width="100"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding ProviderUrl}" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" SharedSizeGroup="Label"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="Kullanıcı Adı:" FontSize="15" Foreground="{DynamicResource TextMutedBrush}" Width="100"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding ProviderUsername}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" SharedSizeGroup="Label"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="Şifre:" FontSize="15" Foreground="{DynamicResource TextMutedBrush}" Width="100"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <TextBlock Text="{Binding ProviderPassword}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" FontFamily="Courier New"/>
                                         </StackPanel>
-                                        <ToggleButton Grid.Column="1" IsChecked="{Binding AutoPlayNext}" Style="{StaticResource ModernToggleSwitch}" VerticalAlignment="Center"/>
                                     </Grid>
                                     
-                                    <!-- Auto-skip intro -->
-                                    <Grid Margin="0,0,0,16">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel>
-                                            <TextBlock Text="İntro'yu otomatik geç" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                            <TextBlock Text="Tespit edildiğinde açılış jeneriğini atlar" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
-                                        </StackPanel>
-                                        <ToggleButton Grid.Column="1" IsChecked="{Binding AutoSkipIntro}" Style="{StaticResource ModernToggleSwitch}" VerticalAlignment="Center"/>
-                                    </Grid>
-                                    
-                                    <!-- Remember last channel -->
+                                    <Rectangle Height="1" Fill="{DynamicResource BorderBrush}" Margin="0,4,0,16"/>
+
                                     <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel>
-                                            <TextBlock Text="Son kanalı hatırla" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                            <TextBlock Text="Uygulama açıldığında son izlenen kanalı yükler" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" SharedSizeGroup="Label"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="Bitiş Tarihi:" FontSize="15" Foreground="{DynamicResource TextMutedBrush}" Width="100" VerticalAlignment="Center"/>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding ExpirationDate, StringFormat=dd MMMM yyyy}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{Binding ExpirationStatus}" FontSize="14" Foreground="{DynamicResource AccentBrush}" Margin="0,4,0,0"/>
                                         </StackPanel>
-                                        <ToggleButton Grid.Column="1" IsChecked="{Binding RememberLastChannel}" Style="{StaticResource ModernToggleSwitch}" VerticalAlignment="Center"/>
                                     </Grid>
+
                                 </StackPanel>
                             </Border>
                             
-                            <!-- Data usage -->
-                            <Border Style="{StaticResource SettingsSection}">
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <!-- PLAYBACK TAB -->
+                <TabItem Style="{StaticResource SettingsTabItem}">
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource IconPlayback}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,8,0"/>
+                            <TextBlock Text="Oynatma" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,16,32">
+                        <StackPanel HorizontalAlignment="Stretch">
+                            
+                            <Border Style="{StaticResource SettingsCard}">
                                 <StackPanel>
-                                    <TextBlock Text="Veri Kullanımı" Style="{StaticResource SettingsTitle}"/>
-                                    <TextBlock Text="Video kalitesi tercihi" Style="{StaticResource SettingsLabel}" Margin="0,4,0,8"/>
+                                    <TextBlock Text="Otomatik Oynatma" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
                                     
-                                    <ComboBox SelectedIndex="{Binding SelectedDataUsage}" Width="200" HorizontalAlignment="Left">
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="Sonraki bölümü otomatik oynat" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="Bir bölüm bittiğinde seriyi otomatik devam ettirir" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <ToggleButton Grid.Column="1" IsChecked="{Binding AutoPlayNext}" Style="{StaticResource ModernToggleSwitch}"/>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="İntro'yu otomatik geç" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="Tespit edildiğinde açılış jeneriğini atlar" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <ToggleButton Grid.Column="1" IsChecked="{Binding AutoSkipIntro}" Style="{StaticResource ModernToggleSwitch}"/>
+                                    </Grid>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="Son kanalı hatırla" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="Uygulama açıldığında son izlenen kanalı yükler" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <ToggleButton Grid.Column="1" IsChecked="{Binding RememberLastChannel}" Style="{StaticResource ModernToggleSwitch}"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource SettingsCard}">
+                                <StackPanel>
+                                    <TextBlock Text="Görüntü Kalitesi" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
+                                    <TextBlock Text="Video kalitesi tercihi" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,12"/>
+                                    <ComboBox SelectedIndex="{Binding SelectedDataUsage}" Style="{StaticResource ModernComboBox}" Width="250" HorizontalAlignment="Left">
                                         <ComboBoxItem Content="Düşük (480p)"/>
                                         <ComboBoxItem Content="Orta (720p)"/>
                                         <ComboBoxItem Content="Yüksek (1080p)"/>
@@ -144,207 +249,222 @@
                                     </ComboBox>
                                 </StackPanel>
                             </Border>
-                            
-                            <!-- Volume -->
-                            <Border Style="{StaticResource SettingsSection}">
+
+                            <Border Style="{StaticResource SettingsCard}">
                                 <StackPanel>
-                                    <Grid>
-                                        <TextBlock Text="Varsayılan Ses Seviyesi" Style="{StaticResource SettingsTitle}"/>
-                                        <TextBlock HorizontalAlignment="Right" 
-                                                   Text="{Binding DefaultVolume, StringFormat={}{0}%}"
-                                                   Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold"/>
+                                    <Grid Margin="0,0,0,16">
+                                        <TextBlock Text="Varsayılan Ses Seviyesi" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                        <TextBlock HorizontalAlignment="Right" Text="{Binding DefaultVolume, StringFormat={}{0}%}" 
+                                                   Foreground="{DynamicResource AccentBrush}" FontSize="16" FontWeight="Bold"/>
                                     </Grid>
-                                    <Slider Minimum="0" Maximum="100" 
-                                            Value="{Binding DefaultVolume}" 
-                                            Style="{StaticResource SettingsSlider}"/>
+                                    <Slider Minimum="0" Maximum="100" Value="{Binding DefaultVolume}" Style="{StaticResource ModernSlider}"/>
                                 </StackPanel>
                             </Border>
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>
-                
-                <!-- Altyazı Tab -->
-                <TabItem Header="💬 Altyazı">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,16,0,0">
-                        <StackPanel>
-                            <!-- Language -->
-                            <Border Style="{StaticResource SettingsSection}">
+
+                <!-- SUBTITLES TAB -->
+                <TabItem Style="{StaticResource SettingsTabItem}">
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource IconSubtitles}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,8,0" SnapsToDevicePixels="True"/>
+                            <TextBlock Text="Altyazı" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,16,32">
+                        <StackPanel HorizontalAlignment="Stretch">
+                            <Border Style="{StaticResource SettingsCard}">
                                 <StackPanel>
-                                    <TextBlock Text="Varsayılan Altyazı Dili" Style="{StaticResource SettingsTitle}"/>
-                                    <ComboBox SelectedIndex="{Binding SelectedSubtitleLanguage}" 
-                                              Width="200" HorizontalAlignment="Left" Margin="0,12,0,0">
+                                    <TextBlock Text="Dil ve Yazı Tipi" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
+                                    
+                                    <TextBlock Text="Varsayılan altyazı dili" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                                    <ComboBox SelectedIndex="{Binding SelectedSubtitleLanguage}" Style="{StaticResource ModernComboBox}" Width="250" HorizontalAlignment="Left" Margin="0,0,0,24">
                                         <ComboBoxItem Content="🇹🇷 Türkçe"/>
                                         <ComboBoxItem Content="🇬🇧 İngilizce"/>
                                         <ComboBoxItem Content="❌ Yok"/>
                                     </ComboBox>
-                                </StackPanel>
-                            </Border>
-                            
-                            <!-- Font size -->
-                            <Border Style="{StaticResource SettingsSection}">
-                                <StackPanel>
-                                    <Grid>
-                                        <TextBlock Text="Yazı Boyutu" Style="{StaticResource SettingsTitle}"/>
-                                        <TextBlock HorizontalAlignment="Right" 
-                                                   Text="{Binding SubtitleFontSize, StringFormat={}{0}px}"
+
+                                    <Grid Margin="0,0,0,16">
+                                        <TextBlock Text="Yazı Boyutu" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                        <TextBlock HorizontalAlignment="Right" Text="{Binding SubtitleFontSize, StringFormat={}{0}px}" 
                                                    Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold"/>
                                     </Grid>
-                                    <Slider Minimum="12" Maximum="32" 
-                                            Value="{Binding SubtitleFontSize}"
-                                            Style="{StaticResource SettingsSlider}"/>
-                                    
-                                    <!-- Preview -->
-                                    <Border Background="{DynamicResource Surface1Brush}" CornerRadius="4" Padding="16" Margin="0,12,0,0">
-                                        <TextBlock Text="Örnek Altyazı Metni" 
-                                                   FontSize="{Binding SubtitleFontSize}"
-                                                   Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+                                    <Slider Minimum="12" Maximum="32" Value="{Binding SubtitleFontSize}" Style="{StaticResource ModernSlider}" Margin="0,0,0,24"/>
+
+                                    <Grid Margin="0,0,0,16">
+                                        <TextBlock Text="Arka Plan Opaklığı" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                        <TextBlock HorizontalAlignment="Right" Text="{Binding SubtitleBackgroundOpacity, StringFormat={}{0}%}" 
+                                                   Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold"/>
+                                    </Grid>
+                                    <Slider Minimum="0" Maximum="100" Value="{Binding SubtitleBackgroundOpacity}" Style="{StaticResource ModernSlider}" Margin="0,0,0,24"/>
+
+                                    <TextBlock Text="Önizleme" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                                    <Border Background="{DynamicResource Surface1Brush}" CornerRadius="8" Padding="24" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                        <TextBlock Text="Altyazılar bu şekilde görünecek." 
+                                                   FontSize="{Binding SubtitleFontSize}" 
+                                                   Foreground="White" 
+                                                   HorizontalAlignment="Center">
+                                            <TextBlock.Effect>
+                                                <DropShadowEffect BlurRadius="4" ShadowDepth="2" Opacity="0.8"/>
+                                            </TextBlock.Effect>
+                                        </TextBlock>
                                     </Border>
-                                </StackPanel>
-                            </Border>
-                            
-                            <!-- Background opacity -->
-                            <Border Style="{StaticResource SettingsSection}">
-                                <StackPanel>
-                                    <Grid>
-                                        <TextBlock Text="Arka Plan Opaklığı" Style="{StaticResource SettingsTitle}"/>
-                                        <TextBlock HorizontalAlignment="Right" 
-                                                   Text="{Binding SubtitleBackgroundOpacity, StringFormat={}{0}%}"
-                                                   Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold"/>
-                                    </Grid>
-                                    <Slider Minimum="0" Maximum="100" 
-                                            Value="{Binding SubtitleBackgroundOpacity}"
-                                            Style="{StaticResource SettingsSlider}"/>
                                 </StackPanel>
                             </Border>
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>
-                
-                <!-- İndirme Tab -->
-                <TabItem Header="📥 İndirme">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,16,0,0">
-                        <StackPanel>
-                            <!-- Download quality -->
-                            <Border Style="{StaticResource SettingsSection}">
+
+                <!-- DOWNLOADS TAB -->
+                <TabItem Style="{StaticResource SettingsTabItem}">
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource IconDownloads}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,8,0"/>
+                            <TextBlock Text="İndirme" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,16,32">
+                        <StackPanel HorizontalAlignment="Stretch">
+                            <Border Style="{StaticResource SettingsCard}">
                                 <StackPanel>
-                                    <TextBlock Text="İndirme Kalitesi" Style="{StaticResource SettingsTitle}"/>
-                                    <ComboBox SelectedIndex="{Binding SelectedDownloadQuality}" 
-                                              Width="200" HorizontalAlignment="Left" Margin="0,12,0,0">
+                                    <TextBlock Text="İndirme Tercihleri" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
+
+                                    <Grid Margin="0,0,0,20">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="Sadece Wi-Fi ile indir" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="Mobil veri kullanımını engeller" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <ToggleButton Grid.Column="1" IsChecked="{Binding DownloadWifiOnly}" Style="{StaticResource ModernToggleSwitch}"/>
+                                    </Grid>
+
+                                    <TextBlock Text="İndirme kalitesi" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                                    <ComboBox SelectedIndex="{Binding SelectedDownloadQuality}" Style="{StaticResource ModernComboBox}" Width="250" HorizontalAlignment="Left" Margin="0,0,0,24">
                                         <ComboBoxItem Content="Standart"/>
                                         <ComboBoxItem Content="Yüksek"/>
                                     </ComboBox>
+                                    
+                                    <TextBlock Text="Kayıt Konumu" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <TextBox Text="{Binding DownloadPath}" IsReadOnly="True" Style="{StaticResource ModernTextBox}" Padding="12"/>
+                                        <Button Grid.Column="1" Content="📂 Değiştir" Click="ChangeDownloadPath_Click" 
+                                                Style="{StaticResource SecondaryButton}" Margin="12,0,0,0" Padding="16,0"/>
+                                    </Grid>
                                 </StackPanel>
                             </Border>
-                            
-                            <!-- Wi-Fi only -->
-                            <Border Style="{StaticResource SettingsSection}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel>
-                                        <TextBlock Text="Sadece Wi-Fi ile indir" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                        <TextBlock Text="Mobil veri kullanımını engeller" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
-                                    </StackPanel>
-                                    <ToggleButton Grid.Column="1" IsChecked="{Binding DownloadWifiOnly}" Style="{StaticResource ModernToggleSwitch}" VerticalAlignment="Center"/>
-                                </Grid>
-                            </Border>
-                            
-                            <!-- Storage location -->
-                            <Border Style="{StaticResource SettingsSection}">
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <!-- APPEARANCE TAB -->
+                <TabItem Style="{StaticResource SettingsTabItem}">
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource IconAppearance}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,8,0"/>
+                            <TextBlock Text="Görünüm" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,16,32">
+                        <StackPanel HorizontalAlignment="Stretch">
+                            <Border Style="{StaticResource SettingsCard}">
                                 <StackPanel>
-                                    <TextBlock Text="Kayıt Konumu" Style="{StaticResource SettingsTitle}"/>
-                                    <Grid Margin="0,12,0,0">
+                                    <TextBlock Text="Kişiselleştirme" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
+
+                                    <!-- Theme Selection -->
+                                    <Grid Margin="0,0,0,24">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBox Text="{Binding DownloadPath}" 
-                                                 IsReadOnly="True" 
-                                                 Padding="8" 
-                                                 Background="{DynamicResource BackgroundBrush}"
-                                                 Foreground="{DynamicResource TextSecondaryBrush}"
-                                                 BorderBrush="{DynamicResource BorderBrush}"/>
-                                        <Button Grid.Column="1" Content="📂 Değiştir" 
-                                                Click="ChangeDownloadPath_Click"
-                                                Style="{StaticResource SecondaryButton}"
-                                                Margin="8,0,0,0" Padding="12,8"/>
+
+                                        <StackPanel>
+                                            <TextBlock Text="Tema" FontSize="16" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="Uygulamanın renklerini değiştirin" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+
+                                        <!-- Theme Options -->
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <!-- Dark Theme Button -->
+                                            <Border x:Name="DarkThemeButton" Width="130" Height="85" CornerRadius="10" BorderThickness="3" BorderBrush="Transparent" Cursor="Hand" MouseLeftButtonDown="DarkTheme_Click" Margin="0,0,16,0">
+                                                <Grid>
+                                                    <Border Background="#141414" CornerRadius="7">
+                                                        <Grid>
+                                                            <Border Background="#1A1A1A" Width="95" Height="50" CornerRadius="6" Margin="12">
+                                                                <StackPanel Margin="10,8">
+                                                                    <Rectangle Fill="White" Height="4" Width="40" HorizontalAlignment="Left" Margin="0,0,0,6"/>
+                                                                    <Rectangle Fill="#404040" Height="3" Width="55" HorizontalAlignment="Left" Margin="0,0,0,4"/>
+                                                                    <Rectangle Fill="#404040" Height="3" Width="45" HorizontalAlignment="Left"/>
+                                                                </StackPanel>
+                                                            </Border>
+                                                            <Border x:Name="DarkCheckmark" Width="22" Height="22" Background="{DynamicResource AccentBrush}" CornerRadius="11" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6">
+                                                                <Path Data="M9,16.2L4.8,12l-1.4,1.4L9,19L21,7l-1.4-1.4L9,16.2z" Fill="White" Stretch="Uniform" Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                            </Border>
+                                                        </Grid>
+                                                    </Border>
+                                                    <TextBlock Text="Koyu" FontSize="12" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
+                                                </Grid>
+                                            </Border>
+
+                                            <!-- Light Theme Button -->
+                                            <Border x:Name="LightThemeButton" Width="130" Height="85" CornerRadius="10" BorderThickness="3" BorderBrush="Transparent" Cursor="Hand" MouseLeftButtonDown="LightTheme_Click">
+                                                <Grid>
+                                                    <Border Background="#F5F5F5" CornerRadius="7">
+                                                        <Grid>
+                                                            <Border Background="White" Width="95" Height="50" CornerRadius="6" Margin="12">
+                                                                <StackPanel Margin="10,8">
+                                                                    <Rectangle Fill="#141414" Height="4" Width="40" HorizontalAlignment="Left" Margin="0,0,0,6"/>
+                                                                    <Rectangle Fill="#CCCCCC" Height="3" Width="55" HorizontalAlignment="Left" Margin="0,0,0,4"/>
+                                                                    <Rectangle Fill="#CCCCCC" Height="3" Width="45" HorizontalAlignment="Left"/>
+                                                                </StackPanel>
+                                                            </Border>
+                                                            <Border x:Name="LightCheckmark" Width="22" Height="22" Background="{DynamicResource AccentBrush}" CornerRadius="11" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6" Visibility="Collapsed">
+                                                                <Path Data="M9,16.2L4.8,12l-1.4,1.4L9,19L21,7l-1.4-1.4L9,16.2z" Fill="White" Stretch="Uniform" Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                            </Border>
+                                                        </Grid>
+                                                    </Border>
+                                                    <TextBlock Text="Açık" FontSize="12" Foreground="#666666" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
+                                                </Grid>
+                                            </Border>
+                                        </StackPanel>
                                     </Grid>
+
+                                    <Rectangle Height="1" Fill="{DynamicResource BorderBrush}" Margin="0,0,0,24"/>
+
+                                    <TextBlock Text="TMDB API Anahtarı" FontSize="16" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="Film ve dizi bilgileri ve kapak resimleri için gereklidir." FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,12"/>
+                                    <TextBox Text="{Binding TmdbApiKey}" Style="{StaticResource ModernTextBox}" Padding="12" helpers:TextBoxHelper.Watermark="API Key girin..."/>
                                 </StackPanel>
                             </Border>
-                        </StackPanel>
-                    </ScrollViewer>
-                </TabItem>
-                
-                <!-- Görünüm Tab -->
-                <TabItem Header="🎨 Görünüm">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,16,0,0">
-                        <StackPanel>
-                            <!-- Theme -->
-                            <Border Style="{StaticResource SettingsSection}">
+
+                            <Border Style="{StaticResource SettingsCard}">
                                 <Grid>
-                                    <StackPanel>
-                                        <TextBlock Text="Tema" Style="{StaticResource SettingsTitle}"/>
-                                        <TextBlock Text="Koyu veya açık tema arasında geçiş yapın" 
-                                                   Style="{StaticResource SettingsLabel}"/>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <Border Width="60" Height="60" Background="{DynamicResource PrimaryGradientBrush}" CornerRadius="12" Margin="0,0,20,0">
+                                        <TextBlock Text="📺" FontSize="32" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="IPTV Player Premium" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                        <TextBlock Text="Sürüm 1.0.0 (Noctra Suite)" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
                                     </StackPanel>
-                                    <Button HorizontalAlignment="Right" VerticalAlignment="Center"
-                                            Command="{Binding ToggleThemeCommand}" 
-                                            Style="{StaticResource SecondaryButton}" Padding="16,10">
-                                        <TextBlock Text="🌓 Tema Değiştir"/>
-                                    </Button>
                                 </Grid>
-                            </Border>
-                            
-                            <!-- TMDB API Key -->
-                            <Border Style="{StaticResource SettingsSection}">
-                                <StackPanel>
-                                    <TextBlock Text="TMDB API Anahtarı" Style="{StaticResource SettingsTitle}"/>
-                                    <TextBlock Text="Film ve dizi bilgileri için gerekli" 
-                                               Style="{StaticResource SettingsLabel}"/>
-                                    <TextBox Text="{Binding TmdbApiKey, UpdateSourceTrigger=PropertyChanged}" 
-                                             Padding="10" Margin="0,8,0,0"
-                                             Background="{DynamicResource BackgroundBrush}"
-                                             Foreground="{DynamicResource TextPrimaryBrush}"
-                                             BorderBrush="{DynamicResource BorderBrush}"/>
-                                </StackPanel>
-                            </Border>
-                            
-                            <!-- About -->
-                            <Border Style="{StaticResource SettingsSection}">
-                                <StackPanel>
-                                    <TextBlock Text="Hakkında" Style="{StaticResource SettingsTitle}"/>
-                                    <TextBlock Text="Noctra v1.0.0" FontSize="14" 
-                                               Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,8,0,0"/>
-                                    <TextBlock Text="© 2026 Tüm Hakları Saklıdır" FontSize="12" 
-                                               Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0"/>
-                                </StackPanel>
                             </Border>
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>
             </TabControl>
 
-            <!-- Footer -->
-            <Border Grid.Row="2" Padding="24,16">
+            <!-- FOOTER -->
+            <Border Grid.Row="2" Padding="32,16" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
                 <Grid>
-                    <StackPanel Orientation="Horizontal">
-                        <Button Content="Varsayılana Sıfırla" 
-                                Command="{Binding ResetToDefaultsCommand}"
-                                Style="{StaticResource SecondaryButton}" 
-                                Padding="16,10"/>
-                    </StackPanel>
+                    <Button Content="Varsayılanlara Sıfırla" Command="{Binding ResetToDefaultsCommand}" 
+                            Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Padding="20,10"/>
                     
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <TextBlock Text="{Binding StatusMessage}" 
-                                   VerticalAlignment="Center" 
-                                   Foreground="{DynamicResource AccentBrush}"
-                                   Margin="0,0,16,0"/>
-                        <Button Content="💾 Kaydet" 
-                                Command="{Binding SaveSettingsCommand}"
-                                Style="{StaticResource PrimaryButtonStyle}" 
-                                Padding="24,10"/>
+                        <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,20,0" FontWeight="SemiBold"/>
+                        <Button Content="💾 Ayarları Kaydet" Command="{Binding SaveSettingsCommand}" 
+                                Style="{StaticResource PrimaryButtonStyle}" Padding="32,12" FontSize="15"/>
                     </StackPanel>
                 </Grid>
             </Border>

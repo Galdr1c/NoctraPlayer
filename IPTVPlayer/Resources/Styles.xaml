@@ -1016,7 +1016,16 @@
             <Setter.Value>
                 <DataTemplate>
                     <Border x:Name="Card" Margin="0,0,16,16" Background="{DynamicResource Surface0Brush}" 
-                            CornerRadius="{StaticResource RadiusMedium}" Cursor="Hand">
+                            CornerRadius="{StaticResource RadiusMedium}" Cursor="Hand"
+                            Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                        <Border.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Listem'e Ekle/Çıkar" Command="{Binding PlacementTarget.Tag.AddToMyListCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
+                                <MenuItem Header="Favorilere Ekle/Çıkar" Command="{Binding PlacementTarget.Tag.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
+                                <Separator/>
+                                <MenuItem Header="Düzenle..." Command="{Binding PlacementTarget.Tag.EditChannelCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
+                            </ContextMenu>
+                        </Border.ContextMenu>
                         <Border.InputBindings>
                             <MouseBinding MouseAction="LeftClick" 
                                           Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
@@ -1024,7 +1033,7 @@
                         </Border.InputBindings>
                         <StackPanel Margin="12">
                             <Border Height="100" Background="{StaticResource IconGradientBrush}" CornerRadius="{StaticResource RadiusSmall}" Margin="0,0,0,12">
-                                <Image Source="{Binding LogoUrl}" Width="60" Stretch="Uniform"/>
+                                <Image Source="{Binding LogoUrl, IsAsync=True}" Width="60" Stretch="Uniform"/>
                             </Border>
                             <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
@@ -1231,10 +1240,24 @@
         </Setter>
     </Style>
 
-
     <!-- ==========================================
          MODERN SCROLLBAR STYLE
          ========================================== -->
+    
+    <Style x:Key="ScrollBarPageButton" TargetType="RepeatButton">
+        <Setter Property="OverridesDefaultStyle" Value="true"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Focusable" Value="false"/>
+        <Setter Property="IsTabStop" Value="false"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RepeatButton">
+                    <Rectangle Fill="{TemplateBinding Background}" Width="{TemplateBinding Width}" Height="{TemplateBinding Height}"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="ScrollBarThumb" TargetType="{x:Type Thumb}">
         <Setter Property="OverridesDefaultStyle" Value="true"/>
         <Setter Property="IsTabStop" Value="false"/>
@@ -1242,16 +1265,16 @@
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Thumb}">
                     <Border x:Name="rectangle"
-                            Background="{DynamicResource BorderBrush}"
-                            CornerRadius="3"
+                            Background="{DynamicResource TextSecondaryBrush}"
+                            CornerRadius="6"
                             Margin="2"
                             BorderThickness="0"/>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="true">
-                            <Setter TargetName="rectangle" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                            <Setter TargetName="rectangle" Property="Background" Value="#FFFFFF"/>
                         </Trigger>
                         <Trigger Property="IsDragging" Value="true">
-                            <Setter TargetName="rectangle" Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+                            <Setter TargetName="rectangle" Property="Background" Value="{DynamicResource AccentBrush}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -1262,16 +1285,19 @@
     <Style x:Key="ModernScrollBar" TargetType="{x:Type ScrollBar}">
         <Setter Property="Stylus.IsPressAndHoldEnabled" Value="false"/>
         <Setter Property="Stylus.IsFlicksEnabled" Value="false"/>
-        <Setter Property="Width" Value="8"/>
-        <Setter Property="MinWidth" Value="8"/>
-        <Setter Property="Opacity" Value="0.6"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Opacity" Value="1"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type ScrollBar}">
                     <Grid x:Name="Bg" Background="Transparent" SnapsToDevicePixels="true">
-                        <Track x:Name="PART_Track"
-                               IsDirectionReversed="true"
-                               IsEnabled="{TemplateBinding IsEnabled}">
+                        <Track x:Name="PART_Track" IsDirectionReversed="true" IsEnabled="{TemplateBinding IsEnabled}">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Style="{StaticResource ScrollBarPageButton}"/>
+                            </Track.DecreaseRepeatButton>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Style="{StaticResource ScrollBarPageButton}"/>
+                            </Track.IncreaseRepeatButton>
                             <Track.Thumb>
                                 <Thumb Style="{StaticResource ScrollBarThumb}"/>
                             </Track.Thumb>
@@ -1281,8 +1307,13 @@
             </Setter.Value>
         </Setter>
         <Style.Triggers>
-            <Trigger Property="IsMouseOver" Value="true">
-                <Setter Property="Opacity" Value="1"/>
+            <Trigger Property="Orientation" Value="Vertical">
+                <Setter Property="Width" Value="12"/>
+                <Setter Property="MinWidth" Value="12"/>
+            </Trigger>
+            <Trigger Property="Orientation" Value="Horizontal">
+                <Setter Property="Height" Value="12"/>
+                <Setter Property="MinHeight" Value="12"/>
             </Trigger>
         </Style.Triggers>
     </Style>

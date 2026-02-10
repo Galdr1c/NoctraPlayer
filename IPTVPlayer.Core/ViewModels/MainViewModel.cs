@@ -1,7 +1,10 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using IPTVPlayer.Models;
+using System.Net.Http;
+using System.Text.Json;
 using IPTVPlayer.Services.Interfaces;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace IPTVPlayer.ViewModels;
 
@@ -101,6 +104,7 @@ public partial class MainViewModel : ObservableObject
     private string _newPlaylistUrl = string.Empty;
 
     private readonly IDispatcherService _dispatcherService;
+    private readonly IServiceProvider _serviceProvider; // For creating child view models
 
     public WatermarkViewModel WatermarkViewModel { get; }
 
@@ -110,7 +114,8 @@ public partial class MainViewModel : ObservableObject
         IDispatcherService dispatcherService,
         WatermarkViewModel watermarkViewModel,
         IMediaService mediaService,
-        IChannelService channelService)
+        IChannelService channelService,
+        IServiceProvider serviceProvider)
     {
         _playlistService = playlistService;
         _epgService = epgService;
@@ -118,6 +123,7 @@ public partial class MainViewModel : ObservableObject
         WatermarkViewModel = watermarkViewModel;
         _mediaService = mediaService;
         _channelService = channelService;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task InitializeAsync()
@@ -128,6 +134,9 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private int? _currentProfileId;
 
+    [ObservableProperty]
+    private Profile? _currentProfile;
+
     public async Task LoadProfileAsync(Profile profile)
     {
         if (profile == null) return;
@@ -135,6 +144,7 @@ public partial class MainViewModel : ObservableObject
         IsLoading = true;
         StatusMessage = $"{profile.Name} yükleniyor...";
         CurrentProfileId = profile.Id;
+        CurrentProfile = profile;
         
         try
         {
@@ -164,13 +174,20 @@ public partial class MainViewModel : ObservableObject
                 if (profile.ProviderAccount.Type == ProfileType.M3U)
                 {
                     m3uUrl = profile.ProviderAccount.Url;
+                    
+                    // Try to extract Xtream credentials from M3U URL
+                    _ = CheckM3UExpirationAsync(profile.ProviderAccount);
                 }
                 else // XtreamCodes
                 {
                     StatusMessage = "Xtream bağlantısı kuruluyor...";
                     var baseUrl = profile.ProviderAccount.Url.TrimEnd('/');
                     if (!baseUrl.StartsWith("http")) baseUrl = "http://" + baseUrl;
-                    m3uUrl = $"{baseUrl}/get.php?username={profile.ProviderAccount.Username}&password={profile.ProviderAccount.Password}&type=m3u_plus&output=ts";
+                    
+                    // Check expiration in background
+                    _ = CheckXtreamExpirationAsync(profile.ProviderAccount);
+
+                    m3uUrl = $"{baseUrl}/get.php?username={Uri.EscapeDataString(profile.ProviderAccount.Username ?? "")}&password={Uri.EscapeDataString(profile.ProviderAccount.Password ?? "")}&type=m3u_plus&output=ts";
                 }
                 
                 StatusMessage = "Kanal listesi indiriliyor...";
@@ -186,6 +203,116 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    private async Task CheckM3UExpirationAsync(ProviderAccount account)
+    {
+        try
+        {
+            // Try to find username and password in URL
+            var uri = new Uri(account.Url);
+            var query = QueryHelpers.ParseQuery(uri.Query);
+            
+            string? username = null;
+            string? password = null;
+
+            if (query.TryGetValue("username", out var u)) username = u.ToString();
+            if (query.TryGetValue("password", out var p)) password = p.ToString();
+
+            if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
+            {
+                // Construct base URL (scheme + host + port)
+                var baseUrl = $"{uri.Scheme}://{uri.Host}";
+                if (!uri.IsDefaultPort) baseUrl += $":{uri.Port}";
+                
+                await CheckExpirationInternalAsync(account.Id, baseUrl, username, password);
+                
+                // Update local model with found credentials if missing? 
+                // Maybe not strictly necessary to overwrite, but good for display
+                if (string.IsNullOrEmpty(account.Username))
+                {
+                     account.Username = username;
+                     // We don't save this change to DB here to avoid changing user input, 
+                     // but we could if we wanted to convert it to a proper Xtream account in the future.
+                }
+            }
+        }
+        catch { /* Parsing failed, not an Xtream URL */ }
+    }
+
+    private async Task CheckXtreamExpirationAsync(ProviderAccount account)
+    {
+        var baseUrl = account.Url.TrimEnd('/');
+        if (!baseUrl.StartsWith("http")) baseUrl = "http://" + baseUrl;
+        await CheckExpirationInternalAsync(account.Id, baseUrl, account.Username, account.Password);
+    }
+
+    private async Task CheckExpirationInternalAsync(int accountId, string baseUrl, string? username, string? password)
+    {
+        try
+        {
+            var apiUrl = $"{baseUrl}/player_api.php?username={username}&password={password}";
+            System.Diagnostics.Debug.WriteLine($"[CheckExpiration] Checking: {apiUrl}");
+
+            using var client = new HttpClient();
+            var response = await client.GetAsync(apiUrl);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                System.Diagnostics.Debug.WriteLine($"[CheckExpiration] Failed with status: {response.StatusCode}");
+                return;
+            }
+
+            var json = await response.Content.ReadAsStringAsync();
+            System.Diagnostics.Debug.WriteLine($"[CheckExpiration] Response: {json}");
+            
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("user_info", out var userInfo))
+            {
+                if (userInfo.TryGetProperty("exp_date", out var expDateElement)) // 17877...
+                {
+                    long? expTimestamp = null;
+                    
+                    if (expDateElement.ValueKind == System.Text.Json.JsonValueKind.Number)
+                    {
+                        expTimestamp = expDateElement.GetInt64();
+                    }
+                    else if (expDateElement.ValueKind == System.Text.Json.JsonValueKind.String)
+                    {
+                        var str = expDateElement.GetString();
+                        if (long.TryParse(str, out var val)) 
+                        {
+                            expTimestamp = val;
+                        }
+                        else if (DateTime.TryParse(str, out var dt))
+                        {
+                             // Some providers return actual date string?
+                             expTimestamp = new DateTimeOffset(dt).ToUnixTimeSeconds();
+                        }
+                    }
+
+                    if (expTimestamp.HasValue)
+                    {
+                        var expirationDate = DateTimeOffset.FromUnixTimeSeconds(expTimestamp.Value).DateTime;
+                         if (expTimestamp > 0)
+                         {
+                            await _playlistService.UpdateProviderExpirationAsync(accountId, expirationDate);
+                            
+                            // Ensure UI update by creating a new object reference if needed or just notifying
+                            // But since Profile.ProviderAccount is ObservableObject now, we just set the property
+                            if (CurrentProfile?.ProviderAccount?.Id == accountId)
+                            {
+                                CurrentProfile.ProviderAccount.ExpirationDate = expirationDate;
+                            }
+                         }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"CheckExpiration Error: {ex}");
         }
     }
 
@@ -233,7 +360,7 @@ public partial class MainViewModel : ObservableObject
             var channelCount = await _playlistService.GetChannelCountAsync(playlistId);
             
             // Load filtered channels (limited to 1000 for fast UI)
-            Channels = await _playlistService.GetChannelsFilteredAsync(playlistId, limit: 1000);
+            Channels = await _playlistService.GetChannelsFilteredAsync(playlistId, limit: 100);
             FilteredChannels = Channels;
             
             await LoadHomeContentAsync();
@@ -303,6 +430,11 @@ public partial class MainViewModel : ObservableObject
     private async void ApplyFilters()
     {
         if (SelectedPlaylist == null) return;
+
+        // Cancel previous filter operation
+        _filterCts?.Cancel();
+        _filterCts = new CancellationTokenSource();
+        var token = _filterCts.Token;
         
         IsLoading = true;
         
@@ -314,8 +446,11 @@ public partial class MainViewModel : ObservableObject
                 searchText: SearchText,
                 group: SelectedGroup,
                 type: SelectedChannelType,
-                limit: 1000
+                limit: 100
             );
+
+            // Check cancellation before processing results
+            if (token.IsCancellationRequested) return;
 
             // Apply favorites filter (in-memory since it's a local property)
             if (ShowOnlyFavorites)
@@ -323,21 +458,33 @@ public partial class MainViewModel : ObservableObject
                 filtered = filtered.Where(c => c.IsFavorite).ToList();
             }
 
+            // Check cancellation again
+            if (token.IsCancellationRequested) return;
+
             // UI Thread update
             _dispatcherService.Invoke(() =>
             {
-                Channels = filtered;
-                FilteredChannels = filtered;
+                if (!token.IsCancellationRequested)
+                {
+                    Channels = filtered;
+                    FilteredChannels = filtered;
+                }
             });
         }
         catch (Exception ex)
         {
+             // Ignore task cancellation exceptions
+             if (ex is OperationCanceledException) return;
+
              System.Diagnostics.Debug.WriteLine($"ApplyFilters error: {ex}");
              StatusMessage = "Filtreleme sırasında hata oluştu";
         }
         finally
         {
-            IsLoading = false;
+            if (!token.IsCancellationRequested)
+            {
+                IsLoading = false;
+            }
         }
     }
 
@@ -429,6 +576,9 @@ public partial class MainViewModel : ObservableObject
         ShowOnlyFavorites = false;
     }
 
+    [ObservableProperty]
+    private List<Channel> _myList = new();
+
     [RelayCommand]
     private void Navigate(AppView view)
     {
@@ -436,9 +586,24 @@ public partial class MainViewModel : ObservableObject
         if (view == AppView.Live) SelectedChannelType = ChannelType.Live;
         else if (view == AppView.Movies) SelectedChannelType = ChannelType.VOD;
         else if (view == AppView.Series) SelectedChannelType = ChannelType.Series;
+        else if (view == AppView.MyList)
+        {
+            SelectedChannelType = null;
+            UpdateMyList();
+        }
         else SelectedChannelType = null;
         
         ApplyFilters();
+    }
+
+    private void UpdateMyList()
+    {
+        var list = new List<Channel>();
+        list.AddRange(Channels.Where(c => c.IsInMyList));
+        // Series logic needs specific handling if we want to show series in My List
+        // For now, let's assume Channels covers series if they are in the main list
+        // Or we might need to add logic to fetch series marked as favorite/mylist
+        MyList = list;
     }
 
     [RelayCommand]
@@ -509,7 +674,7 @@ public partial class MainViewModel : ObservableObject
         else if (media is Series series)
         {
             series.IsInMyList = !series.IsInMyList;
-            // TODO: Series persistence service update
+            await _mediaService.UpdateSeriesAsync(series);
         }
     }
 
@@ -545,6 +710,21 @@ public partial class MainViewModel : ObservableObject
             SelectMedia(FeaturedChannel);
         }
     }
+
+    [RelayCommand]
+    private void EditChannel(Channel channel)
+    {
+        if (channel == null) return;
+        
+        // This requires UI interaction (opening a window). 
+        // In clean MVVM, we'd use a DialogService. 
+        // For simplicity here, we'll raise an event or use a service if available.
+        // Let's assume a DialogService interface or event.
+        
+        RequestEditChannel?.Invoke(channel);
+    }
+
+    public event Action<Channel>? RequestEditChannel;
 
     // Event for media selection - MainWindow subscribes to this for video playback
     public event Action<object>? OnMediaSelected;

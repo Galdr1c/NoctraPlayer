@@ -59,6 +59,18 @@ public partial class SettingsViewModel : ObservableObject
     
     [ObservableProperty]
     private bool _isDarkTheme;
+
+    partial void OnIsDarkThemeChanged(bool value)
+    {
+        _themeService.SetTheme(value);
+        
+        // Tema değiştiği an kaydet (user request)
+        if (_settingsService != null)
+        {
+            _settingsService.Settings.IsDarkTheme = value;
+            _ = _settingsService.SaveAsync();
+        }
+    }
     
     // ============ EPG & Playlist ============
     
@@ -82,18 +94,132 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _tmdbApiKey = string.Empty;
 
+    private readonly MainViewModel _mainViewModel;
+
+    [ObservableProperty]
+    private string _currentProfileName = string.Empty;
+    
+    [ObservableProperty]
+    private string _currentProfileAvatar = string.Empty;
+
+    [ObservableProperty]
+    private string _providerName = string.Empty;
+    
+    [ObservableProperty]
+    private string _providerUrl = string.Empty;
+    
+    [ObservableProperty]
+    private string _providerUsername = string.Empty;
+    
+    [ObservableProperty]
+    private string _providerPassword = string.Empty;
+    
+    [ObservableProperty]
+    private DateTime? _expirationDate;
+    
+    [ObservableProperty]
+    private string _expirationStatus = string.Empty;
+    
+    [ObservableProperty]
+    private DateTime _profileCreatedAt;
+
     public SettingsViewModel(
         ISettingsService settingsService,
         IPlaylistService playlistService, 
         IEpgService epgService, 
-        IThemeService themeService)
+        IThemeService themeService,
+        MainViewModel mainViewModel)
     {
         _settingsService = settingsService;
         _playlistService = playlistService;
         _epgService = epgService;
         _themeService = themeService;
+        _mainViewModel = mainViewModel;
+        
+        _mainViewModel.PropertyChanged += MainViewModel_PropertyChanged;
         
         LoadSettings();
+        LoadProfileInfo();
+    }
+
+    private void MainViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.CurrentProfile))
+        {
+            // If the profile object itself changed
+            if (_mainViewModel.CurrentProfile != null)
+            {
+                _mainViewModel.CurrentProfile.PropertyChanged -= CurrentProfile_PropertyChanged;
+                _mainViewModel.CurrentProfile.PropertyChanged += CurrentProfile_PropertyChanged;
+                
+                if (_mainViewModel.CurrentProfile.ProviderAccount != null)
+                {
+                   _mainViewModel.CurrentProfile.ProviderAccount.PropertyChanged -= ProviderAccount_PropertyChanged;
+                   _mainViewModel.CurrentProfile.ProviderAccount.PropertyChanged += ProviderAccount_PropertyChanged;
+                }
+            }
+            LoadProfileInfo();
+        }
+    }
+
+    private void CurrentProfile_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(Profile.ProviderAccount))
+        {
+             if (_mainViewModel.CurrentProfile?.ProviderAccount != null)
+             {
+                 _mainViewModel.CurrentProfile.ProviderAccount.PropertyChanged -= ProviderAccount_PropertyChanged;
+                 _mainViewModel.CurrentProfile.ProviderAccount.PropertyChanged += ProviderAccount_PropertyChanged;
+             }
+             LoadProfileInfo();
+        }
+    }
+
+    private void ProviderAccount_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ProviderAccount.ExpirationDate))
+        {
+            LoadProfileInfo();
+        }
+    }
+    
+    private void LoadProfileInfo()
+    {
+        if (_mainViewModel.CurrentProfile != null)
+        {
+            CurrentProfileName = _mainViewModel.CurrentProfile.Name;
+            CurrentProfileAvatar = _mainViewModel.CurrentProfile.Avatar;
+            ProfileCreatedAt = _mainViewModel.CurrentProfile.CreatedAt;
+            
+            // If CreatedAt is default (min value), set it to Now for display or handle it
+            if (ProfileCreatedAt == DateTime.MinValue) ProfileCreatedAt = DateTime.Now;
+
+            if (_mainViewModel.CurrentProfile.ProviderAccount != null)
+            {
+                var account = _mainViewModel.CurrentProfile.ProviderAccount;
+                ProviderName = account.Name;
+                ProviderUrl = account.Url;
+                ProviderUsername = account.Username ?? "Yok";
+                
+                // Mask password
+                var pass = account.Password;
+                ProviderPassword = !string.IsNullOrEmpty(pass) ? new string('*', 10) : "Yok";
+                
+                ExpirationDate = account.ExpirationDate;
+                
+                if (ExpirationDate.HasValue)
+                {
+                    var daysLeft = (ExpirationDate.Value - DateTime.Now).TotalDays;
+                    if (daysLeft < 0) ExpirationStatus = "Süresi Dolmuş";
+                    else if (daysLeft < 7) ExpirationStatus = $"{Math.Ceiling(daysLeft)} Gün Kaldı (Yakında Bitiyor)";
+                    else ExpirationStatus = $"{Math.Ceiling(daysLeft)} Gün Kaldı";
+                }
+                else
+                {
+                    ExpirationStatus = "Süresiz / Bilinmiyor";
+                }
+            }
+        }
     }
 
     private void LoadSettings()
@@ -221,7 +347,6 @@ public partial class SettingsViewModel : ObservableObject
     private void ToggleTheme()
     {
         IsDarkTheme = !IsDarkTheme;
-        _themeService.SetTheme(IsDarkTheme);
         _ = SaveSettingsAsync();
     }
     

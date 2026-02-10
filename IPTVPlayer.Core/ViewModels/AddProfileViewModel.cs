@@ -13,6 +13,7 @@ public partial class AddProfileViewModel : ObservableObject
     private readonly IDispatcherService _dispatcherService;
     private readonly IAvatarService _avatarService;
     private readonly IDialogService _dialogService;
+    private readonly IPlaylistService _playlistService;
 
     // Simplified Account Details
     [ObservableProperty]
@@ -283,12 +284,18 @@ public partial class AddProfileViewModel : ObservableObject
     public event EventHandler? RequestClose;
     public event EventHandler? RequestAvatarPicker;
 
-    public AddProfileViewModel(AppDbContext context, IDispatcherService dispatcherService, IAvatarService avatarService, IDialogService dialogService)
+    public AddProfileViewModel(
+        AppDbContext context, 
+        IDispatcherService dispatcherService, 
+        IAvatarService avatarService, 
+        IDialogService dialogService,
+        IPlaylistService playlistService)
     {
         _context = context;
         _dispatcherService = dispatcherService;
         _avatarService = avatarService;
         _dialogService = dialogService;
+        _playlistService = playlistService;
 
         // Initialize with default avatar
         var avatars = _avatarService.GetAvatarsByCategory().Values.FirstOrDefault();
@@ -302,11 +309,11 @@ public partial class AddProfileViewModel : ObservableObject
         SelectedAvatar = profile.Avatar ?? "default";
         IsChild = profile.IsChild;
         
-        // Use a background task to set account
-        _ = InitializeEditAsync(profile);
+        // Set account
+        InitializeEdit(profile);
     }
 
-    private async Task InitializeEditAsync(Profile profile)
+    private void InitializeEdit(Profile profile)
     {
         if (profile.ProviderAccount != null)
         {
@@ -355,19 +362,56 @@ public partial class AddProfileViewModel : ObservableObject
         {
             var dbProfile = await _context.Profiles
                 .Include(p => p.ProviderAccount)
+                .AsNoTracking() // Use tracking in the explicit load below
                 .FirstOrDefaultAsync(p => p.Id == EditingProfile.Id);
 
-            if (dbProfile != null)
+            if (dbProfile == null) return;
+            
+            // Re-fetch with tracking
+            var profileToDelete = await _context.Profiles
+                .Include(p => p.ProviderAccount)
+                .FirstAsync(p => p.Id == EditingProfile.Id);
+
+            // 1. Manually delete Playlists (to avoid FK constraints if cascade is missing/restricted)
+            var playlists = await _context.Playlists.Where(p => p.ProfileId == profileToDelete.Id).ToListAsync();
+            if (playlists.Any())
             {
-                // Delete the account first if it's uniquely linked
-                if (dbProfile.ProviderAccount != null)
-                {
-                    _context.ProviderAccounts.Remove(dbProfile.ProviderAccount);
-                }
-                
-                _context.Profiles.Remove(dbProfile);
-                await _context.SaveChangesAsync();
+                // Channels are set to Cascade delete in AppDbContext, so removing playlists should work
+                _context.Playlists.RemoveRange(playlists);
             }
+
+            // 2. Manually delete WatchHistory
+            var history = await _context.WatchHistories.Where(h => h.ProfileId == profileToDelete.Id).ToListAsync();
+            if (history.Any())
+            {
+                _context.WatchHistories.RemoveRange(history);
+            }
+
+            // 3. Check if ProviderAccount is shared
+            bool shouldDeleteAccount = false;
+            if (profileToDelete.ProviderAccount != null)
+            {
+                var otherProfilesUsingAccount = await _context.Profiles
+                    .AnyAsync(p => p.ProviderAccountId == profileToDelete.ProviderAccountId && p.Id != profileToDelete.Id);
+                
+                shouldDeleteAccount = !otherProfilesUsingAccount;
+            }
+
+            // 4. Delete Profile FIRST
+            // If we delete Account first (and it cascades), it might be blocked by Profile's children.
+            // But we cleaned up children. 
+            // However, standard foreign key logic: Delete children, then parent.
+            
+            // If we delete profile first, ProviderAccount (parent) remains.
+            _context.Profiles.Remove(profileToDelete);
+            
+            // 5. Delete ProviderAccount if orphaned
+            if (shouldDeleteAccount && profileToDelete.ProviderAccount != null)
+            {
+                _context.ProviderAccounts.Remove(profileToDelete.ProviderAccount);
+            }
+
+            await _context.SaveChangesAsync();
             
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
@@ -487,6 +531,21 @@ public partial class AddProfileViewModel : ObservableObject
             {
                 // Update existing profile
                 
+                // FORCE REFRESH: Delete existing playlists for this profile
+                // This ensures the main view re-downloads the list with new credentials/URL
+                try 
+                {
+                    var existingPlaylists = await _playlistService.GetAllAsync(EditingProfile.Id);
+                    foreach (var pl in existingPlaylists)
+                    {
+                        await _playlistService.DeleteAsync(pl.Id);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error clearing cache: {ex.Message}");
+                }
+
                 // Check if profile is tracked
                 var trackedProfile = _context.Profiles.Local.FirstOrDefault(p => p.Id == EditingProfile.Id);
                 if (trackedProfile != null && trackedProfile != EditingProfile)

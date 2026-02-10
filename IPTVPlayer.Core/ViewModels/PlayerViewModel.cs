@@ -111,6 +111,9 @@ public partial class PlayerViewModel : ObservableObject
     private bool _isQualitySettingsOpen;
 
     [ObservableProperty]
+    private bool _isInfoPanelOpen;
+
+    [ObservableProperty]
     private bool _isIntroDetected;
 
     [ObservableProperty]
@@ -325,10 +328,18 @@ public partial class PlayerViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void OpenInfoPanel()
+    {
+        IsInfoPanelOpen = !IsInfoPanelOpen;
+        if (IsInfoPanelOpen) IsLocked = true;
+    }
+
+    [RelayCommand]
     private void ClosePanels()
     {
         IsAudioSettingsOpen = false;
         IsQualitySettingsOpen = false;
+        IsInfoPanelOpen = false;
         IsLocked = false;
         RestartAutoHideTimer();
     }

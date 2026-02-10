@@ -100,6 +100,12 @@ public class TmdbResult
     }
 }
 
+public class TmdbDetail : TmdbResult
+{
+    [JsonPropertyName("credits")]
+    public TmdbCredits? Credits { get; set; }
+}
+
 /// <summary>
 /// TMDB genre response
 /// </summary>
@@ -135,4 +141,36 @@ public class ChannelMetadata
     public List<string> Genres { get; set; } = new();
     public string? MediaType { get; set; }
     public int? TmdbId { get; set; }
+    public string? Director { get; set; }
+    public string? Cast { get; set; }
+}
+
+public class TmdbCredits
+{
+    [JsonPropertyName("cast")]
+    public List<TmdbCast> Cast { get; set; } = new();
+
+    [JsonPropertyName("crew")]
+    public List<TmdbCrew> Crew { get; set; } = new();
+}
+
+public class TmdbCast
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+    
+    [JsonPropertyName("character")]
+    public string? Character { get; set; }
+    
+    [JsonPropertyName("order")]
+    public int Order { get; set; }
+}
+
+public class TmdbCrew
+{
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+    
+    [JsonPropertyName("job")]
+    public string? Job { get; set; } // Director, Producer, etc.
 }

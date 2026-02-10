@@ -90,4 +90,14 @@ public class MediaService : IMediaService
             .Where(s => s.PlaylistId == playlistId)
             .ToListAsync();
     }
+    public async Task UpdateSeriesAsync(Series series)
+    {
+        var dbSeries = await _context.Series.FindAsync(series.Id);
+        if (dbSeries != null)
+        {
+            dbSeries.IsInMyList = series.IsInMyList;
+            _context.Series.Update(dbSeries);
+            await _context.SaveChangesAsync();
+        }
+    }
 }

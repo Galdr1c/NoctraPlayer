@@ -16,6 +16,7 @@ public partial class M3UParser : IM3UParser
     public M3UParser(HttpClient httpClient)
     {
         _httpClient = httpClient;
+        _httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
         _httpClient.Timeout = TimeSpan.FromSeconds(30); // Global timeout
     }
 
@@ -142,33 +143,85 @@ public partial class M3UParser : IM3UParser
     /// </summary>
     private static ChannelType DetectChannelType(string url, string name, string? groupTitle)
     {
-        var lowerUrl = url.ToLower();
-        var lowerGroup = groupTitle?.ToLower() ?? "";
-        var lowerName = name.ToLower();
+        var lowerUrl = url.ToLowerInvariant();
+        var lowerGroup = groupTitle?.ToLowerInvariant() ?? "";
+        var lowerName = name.ToLowerInvariant();
 
-        // Series tespiti (Regex ile S01E01 veya 1x01 ara)
+        // 1. URL Pattern Analizi (Kesin Belirteçler)
+        if (lowerUrl.Contains("/series/") || lowerUrl.Contains("/tv_show/") || lowerUrl.Contains("type=series"))
+            return ChannelType.Series;
+
+        if (lowerUrl.Contains("/movie/") || lowerUrl.Contains("/vod/") || lowerUrl.Contains("type=vod") || lowerUrl.Contains("type=movie"))
+            return ChannelType.VOD;
+
+        if (lowerUrl.Contains("/live/") || lowerUrl.Contains("type=live"))
+            return ChannelType.Live;
+
+        // 2. Başlık ve İsim Analizi (Regex + Keywords)
+        // Dizi: S01E01, 1x01, Sezon 1, Bölüm 1
         if (SeriesPattern1().IsMatch(name) || 
             SeriesPattern2().IsMatch(name) ||
-            lowerUrl.Contains("/series/") ||
-            lowerGroup.Contains("series") ||
-            lowerGroup.Contains("dizi"))
+            SeriesPattern3().IsMatch(name) || 
+            lowerName.Contains("sezon") || 
+            lowerName.Contains("bolum") ||
+            lowerName.Contains("episode"))
         {
             return ChannelType.Series;
         }
 
-        // VOD tespiti
-        if (lowerUrl.Contains("/movie/") || 
-            lowerUrl.Contains("/vod/") ||
-            lowerGroup.Contains("movie") ||
-            lowerGroup.Contains("film") ||
-            lowerUrl.EndsWith(".mp4") ||
-            lowerUrl.EndsWith(".mkv") ||
-            lowerUrl.EndsWith(".avi"))
+        // Film: Yıl (1990-2030), Çözünürlük ve Kaynak (BluRay vs)
+        // Not: Live TV kanallarında da bazen 1080p yazabilir, o yüzden diğer sinyallerle birleştirmek gerekebilir.
+        // Ancak genellikle VOD isimlendirmesi "Film Adı (2023) 1080p" şeklindedir.
+        if (VodPatternYear().IsMatch(name) && 
+            (lowerName.Contains("bluray") || lowerName.Contains("web-dl") || lowerName.Contains("webrip") || lowerName.Contains("dvdrip")))
         {
             return ChannelType.VOD;
         }
 
-        // Varsayılan olarak Live
+        // 3. Grup Başlığı Analizi (En Güçlü İkinci Sinyal)
+        if (lowerGroup.Contains("series") || 
+            lowerGroup.Contains("dizi") || 
+            lowerGroup.Contains("tv show") || 
+            lowerGroup.Contains("belgesel serisi")) // Belgesel serileri de dizi mantığında olabilir
+        {
+            return ChannelType.Series;
+        }
+
+        if (lowerGroup.Contains("movie") || 
+            lowerGroup.Contains("film") || 
+            lowerGroup.Contains("vod") || 
+            lowerGroup.Contains("cinema") || 
+            lowerGroup.Contains("sinema") ||
+            lowerGroup.Contains("yerli film") ||
+            lowerGroup.Contains("yabanci film"))
+        {
+            return ChannelType.VOD;
+        }
+
+        if (lowerGroup.Contains("live") || 
+            lowerGroup.Contains("canli") || 
+            lowerGroup.Contains("tv") ||
+            lowerGroup.Contains("ulusal") ||
+            lowerGroup.Contains("spor") ||
+            lowerGroup.Contains("belgesel")) // Tekil belgesel kanalları Live kabul edilir
+        {
+            return ChannelType.Live;
+        }
+
+        // 4. Uzantı ve Diğer Karakteristikler (Son Çare)
+        if (lowerUrl.EndsWith(".mp4") || lowerUrl.EndsWith(".mkv") || lowerUrl.EndsWith(".avi") || lowerUrl.EndsWith(".mov"))
+        {
+            // Uzantı video dosyası ise ve Live/IPTV sinyali yoksa VOD varsay
+            return ChannelType.VOD;
+        }
+        
+        if (lowerUrl.EndsWith(".m3u8") || lowerUrl.EndsWith(".ts"))
+        {
+            // Genellikle stream, ama VOD da olabilir. Varsayılan Live.
+            return ChannelType.Live;
+        }
+
+        // Varsayılan
         return ChannelType.Live;
     }
 
@@ -177,6 +230,12 @@ public partial class M3UParser : IM3UParser
 
     [GeneratedRegex(@"(\d{1,2})x(\d{1,2})", RegexOptions.IgnoreCase)]
     private static partial Regex SeriesPattern2();
+    
+    [GeneratedRegex(@"S(\d{1,2})\s*-\s*E(\d{1,2})", RegexOptions.IgnoreCase)]
+    private static partial Regex SeriesPattern3(); // S01 - E01 formatı
+
+    [GeneratedRegex(@"\((19|20)\d{2}\)", RegexOptions.IgnoreCase)]
+    private static partial Regex VodPatternYear(); // (1990) - (2099) arası yıllar
 
     // Regex pattern'ları
     [GeneratedRegex(@"tvg-id=""([^""]*)""", RegexOptions.IgnoreCase)]

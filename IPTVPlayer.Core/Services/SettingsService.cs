@@ -57,6 +57,7 @@ public class SettingsService : ISettingsService
             if (loaded != null)
             {
                 _settings = loaded;
+                System.Diagnostics.Debug.WriteLine($"[SettingsService] Settings loaded: IsDarkTheme={_settings.IsDarkTheme}");
                 _logger?.LogInformation("Settings loaded from {Path}", _settingsPath);
             }
         }

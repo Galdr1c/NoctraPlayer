@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using IPTVPlayer.Services.Interfaces;
+using IPTVPlayer.Services;
 using System;
 using System.Threading.Tasks;
 
@@ -10,30 +11,34 @@ public partial class GlobalSettingsViewModel : ObservableObject
 {
     private readonly IThemeService _themeService;
     private readonly IDialogService _dialogService;
+    private readonly ISettingsService _settingsService;
 
     [ObservableProperty]
     private GlobalSettings _settings = new();
 
     public GlobalSettingsViewModel(
         IThemeService themeService,
-        IDialogService dialogService)
+        IDialogService dialogService,
+        ISettingsService settingsService)
     {
         _themeService = themeService;
         _dialogService = dialogService;
+        _settingsService = settingsService;
         
         LoadSettings();
+        Settings.SetOnChanged(SaveSettings);
     }
 
     private void LoadSettings()
     {
-        // Load from storage (Mock for now, real implementation would use ISettingsService)
+        var s = _settingsService.Settings;
         Settings = new GlobalSettings
         {
-            IsDarkTheme = _themeService.IsDarkTheme,
-            Language = "tr",
-            AutoUpdate = true,
-            HardwareAcceleration = true,
-            Analytics = false
+            IsDarkTheme = s.IsDarkTheme,
+            Language = s.Language,
+            AutoUpdate = s.AutoUpdate,
+            HardwareAcceleration = s.HardwareAcceleration,
+            Analytics = s.Analytics
         };
     }
 
@@ -77,18 +82,30 @@ public partial class GlobalSettingsViewModel : ObservableObject
 
     private void SaveSettings()
     {
-        // Save to storage (JSON file, registry, etc.)
+        var s = _settingsService.Settings;
+        s.IsDarkTheme = Settings.IsDarkTheme;
+        s.Language = Settings.Language;
+        s.AutoUpdate = Settings.AutoUpdate;
+        s.HardwareAcceleration = Settings.HardwareAcceleration;
+        s.Analytics = Settings.Analytics;
+        
+        _ = _settingsService.SaveAsync();
     }
 
-    partial void OnSettingsChanged(GlobalSettings value)
-    {
-        SaveSettings();
-    }
+    // Bu metod GlobalSettings içindeki bir property değiştiğinde tetiklenmez.
+    // XAML bindingleri genellikle Settings.IsDarkTheme gibi yapıldığı için 
+    // GlobalSettings modelinin içinde de PropertyChanged yakalamalıyız veya 
+    // UI'daki toggle'lar ViewModel'deki bir komutu tetiklemeli.
+    // GlobalSettingsWindow.xaml.cs 'deki DarkTheme_Click ApplyThemeCommand'i çağırıyor, bu iyi.
+    // ToggleSwitch'ler ise Bindings kullanıyor. GlobalSettings modeline de hook ekleyelim.
 }
 
 // Global Settings Model
 public partial class GlobalSettings : ObservableObject
 {
+    private Action? _onChanged;
+    public void SetOnChanged(Action onChanged) => _onChanged = onChanged;
+
     [ObservableProperty]
     private bool _isDarkTheme = true;
 
@@ -103,4 +120,10 @@ public partial class GlobalSettings : ObservableObject
 
     [ObservableProperty]
     private bool _analytics = false;
+
+    partial void OnIsDarkThemeChanged(bool value) => _onChanged?.Invoke();
+    partial void OnLanguageChanged(string value) => _onChanged?.Invoke();
+    partial void OnAutoUpdateChanged(bool value) => _onChanged?.Invoke();
+    partial void OnHardwareAccelerationChanged(bool value) => _onChanged?.Invoke();
+    partial void OnAnalyticsChanged(bool value) => _onChanged?.Invoke();
 }

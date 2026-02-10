@@ -41,17 +41,36 @@ public partial class MetadataService : IMetadataService
         _apiKey = apiKey;
     }
     
-    public async Task<ChannelMetadata?> FetchMetadataAsync(string searchQuery)
+    public async Task<ChannelMetadata?> FetchMetadataAsync(string searchQuery, ChannelType? type = null)
     {
         if (string.IsNullOrWhiteSpace(searchQuery) || string.IsNullOrEmpty(_apiKey))
             return null;
         
         try
         {
-            // Clean up search query (remove year, quality tags, etc.)
+            // Clean up search query (remove year, quality tags, SxxExx, etc.)
             var cleanQuery = CleanSearchQuery(searchQuery);
             
-            var url = $"{TMDB_BASE_URL}/search/multi?api_key={_apiKey}&query={Uri.EscapeDataString(cleanQuery)}&include_adult=false&language=tr-TR";
+            // Eğer cleanQuery boş kaldıysa (örn: sadece "S01E01" ise), orijinali kullanmayı dene veya null dön
+            if (string.IsNullOrWhiteSpace(cleanQuery))
+                cleanQuery = searchQuery;
+
+            string url;
+            if (type == ChannelType.VOD)
+            {
+                // Sadece film ara
+                url = $"{TMDB_BASE_URL}/search/movie?api_key={_apiKey}&query={Uri.EscapeDataString(cleanQuery)}&include_adult=false&language=tr-TR";
+            }
+            else if (type == ChannelType.Series)
+            {
+                // Sadece dizi ara
+                url = $"{TMDB_BASE_URL}/search/tv?api_key={_apiKey}&query={Uri.EscapeDataString(cleanQuery)}&include_adult=false&language=tr-TR";
+            }
+            else
+            {
+                // Karışık ara (Multi search)
+                url = $"{TMDB_BASE_URL}/search/multi?api_key={_apiKey}&query={Uri.EscapeDataString(cleanQuery)}&include_adult=false&language=tr-TR";
+            }
             
             var response = await _httpClient.GetAsync(url);
             
@@ -66,19 +85,39 @@ public partial class MetadataService : IMetadataService
             if (data?.Results == null || data.Results.Count == 0)
                 return null;
             
-            // Get the best match (first result with highest popularity that's movie or TV)
-            var best = data.Results
-                .Where(r => r.MediaType == "movie" || r.MediaType == "tv")
-                .OrderByDescending(r => r.Popularity)
-                .FirstOrDefault();
+            // Sonuçları filtrele ve en iyisini seç
+            TmdbResult? best = null;
+
+            if (type == ChannelType.VOD)
+            {
+                 // Zaten movie endpoint'i kullandık, popülerliğe göre al
+                 best = data.Results.OrderByDescending(r => r.Popularity).FirstOrDefault();
+            }
+            else if (type == ChannelType.Series)
+            {
+                 // Zaten tv endpoint'i kullandık
+                 best = data.Results.OrderByDescending(r => r.Popularity).FirstOrDefault();
+            }
+            else
+            {
+                // Multi search sonuçlarında type'a göre önceliklendirme yapabiliriz ama type null ise:
+                best = data.Results
+                    .Where(r => r.MediaType == "movie" || r.MediaType == "tv")
+                    .OrderByDescending(r => r.Popularity)
+                    .FirstOrDefault();
+            }
             
             if (best == null)
                 return null;
             
+            // Get detailed info (Cast, Director, etc.)
+            var mediaType = best.MediaType ?? (type == ChannelType.VOD ? "movie" : "tv");
+            var details = await FetchDetailsAsync(best.Id, mediaType);
+            
             // Get genre names
             var genres = await GetGenresAsync(best.GenreIds);
             
-            return new ChannelMetadata
+            var metadata = new ChannelMetadata
             {
                 Title = best.DisplayTitle,
                 Description = best.Overview,
@@ -87,9 +126,24 @@ public partial class MetadataService : IMetadataService
                 Rating = best.VoteAverage,
                 ReleaseYear = best.ReleaseYear,
                 Genres = genres,
-                MediaType = best.MediaType,
+                MediaType = mediaType,
                 TmdbId = best.Id
             };
+
+            if (details?.Credits != null)
+            {
+                // Director
+                var director = details.Credits.Crew.FirstOrDefault(c => c.Job == "Director")?.Name;
+                if (!string.IsNullOrEmpty(director))
+                    metadata.Director = director;
+
+                // Cast (Top 5)
+                var castList = details.Credits.Cast.OrderBy(c => c.Order).Take(5).Select(c => c.Name).ToList();
+                if (castList.Any())
+                    metadata.Cast = string.Join(", ", castList);
+            }
+
+            return metadata;
         }
         catch (Exception ex)
         {
@@ -98,12 +152,29 @@ public partial class MetadataService : IMetadataService
         }
     }
     
+    private async Task<TmdbDetail?> FetchDetailsAsync(int id, string mediaType)
+    {
+        try
+        {
+            var endpoint = mediaType == "movie" ? "movie" : "tv";
+            var url = $"{TMDB_BASE_URL}/{endpoint}/{id}?api_key={_apiKey}&append_to_response=credits&language=tr-TR";
+            
+            return await _httpClient.GetFromJsonAsync<TmdbDetail>(url);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Error fetching details for {Id} ({Type})", id, mediaType);
+            return null;
+        }
+    }
+
     public async Task EnrichChannelAsync(Channel channel)
     {
         if (channel.Type == ChannelType.Live)
             return; // Don't enrich live channels
         
-        var metadata = await FetchMetadataAsync(channel.Name);
+        // Kanal türünü geçirerek aramayı daralt
+        var metadata = await FetchMetadataAsync(channel.Name, channel.Type);
         
         if (metadata == null)
             return;
@@ -113,8 +184,10 @@ public partial class MetadataService : IMetadataService
         channel.Rating = metadata.Rating;
         channel.ReleaseYear = metadata.ReleaseYear;
         channel.BackdropUrl = metadata.BackdropUrl;
+        channel.Director = metadata.Director;
+        channel.Cast = metadata.Cast;
         
-        // Use poster as logo if no logo exists
+        // Use poster as logo if no logo exists OR if default logo is generic
         if (string.IsNullOrEmpty(channel.LogoUrl) && !string.IsNullOrEmpty(metadata.PosterUrl))
             channel.LogoUrl = metadata.PosterUrl;
     }
@@ -201,7 +274,7 @@ public partial class MetadataService : IMetadataService
         
         return $"{TMDB_IMAGE_BASE_URL}/{size}{path}";
     }
-    
+
     /// <summary>
     /// Cleans up a search query by removing common tags
     /// </summary>
@@ -210,6 +283,11 @@ public partial class MetadataService : IMetadataService
         // Remove file extensions
         query = Path.GetFileNameWithoutExtension(query);
         
+        // Remove season/episode codes (S01E01, 1x01, S01 - E01)
+        query = SeriesCodeRegex().Replace(query, "");
+        query = SeriesCodeRegex2().Replace(query, "");
+        query = SeriesCodeRegex3().Replace(query, "");
+
         // Remove quality tags like 1080p, 720p, 4K, HDR, etc.
         query = QualityTagsRegex().Replace(query, "");
         
@@ -231,6 +309,15 @@ public partial class MetadataService : IMetadataService
     [GeneratedRegex(@"[\(\[]\d{4}[\)\]]")]
     private static partial Regex YearRegex();
     
+    [GeneratedRegex(@"S(\d{1,2})E(\d{1,2})", RegexOptions.IgnoreCase)]
+    private static partial Regex SeriesCodeRegex();
+
+    [GeneratedRegex(@"(\d{1,2})x(\d{1,2})", RegexOptions.IgnoreCase)]
+    private static partial Regex SeriesCodeRegex2();
+    
+    [GeneratedRegex(@"S(\d{1,2})\s*-\s*E(\d{1,2})", RegexOptions.IgnoreCase)]
+    private static partial Regex SeriesCodeRegex3();
+
     [GeneratedRegex(@"\s+")]
     private static partial Regex ExtraWhitespaceRegex();
 }

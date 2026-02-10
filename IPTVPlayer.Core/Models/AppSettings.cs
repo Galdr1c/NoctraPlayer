@@ -97,4 +97,11 @@ public class AppSettings
     /// TMDB API anahtarı
     /// </summary>
     public string? TmdbApiKey { get; set; }
+
+    // ============ Global Ayarlar ============
+    
+    public string Language { get; set; } = "tr";
+    public bool AutoUpdate { get; set; } = true;
+    public bool HardwareAcceleration { get; set; } = true;
+    public bool Analytics { get; set; } = false;
 }

@@ -269,4 +269,13 @@ public class PlaylistService : IPlaylistService
             .Where(c => c.PlaylistId == playlistId)
             .CountAsync();
     }
+    public async Task UpdateProviderExpirationAsync(int providerId, DateTime expirationDate)
+    {
+        var account = await _context.ProviderAccounts.FindAsync(providerId);
+        if (account != null)
+        {
+            account.ExpirationDate = expirationDate;
+            await _context.SaveChangesAsync();
+        }
+    }
 }

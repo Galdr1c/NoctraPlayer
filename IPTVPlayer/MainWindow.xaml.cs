@@ -7,6 +7,8 @@ using IPTVPlayer.Models;
 using IPTVPlayer.Services;
 using IPTVPlayer.Services.Interfaces;
 using IPTVPlayer.ViewModels;
+using IPTVPlayer.Views;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace IPTVPlayer;
 
@@ -19,11 +21,13 @@ public partial class MainWindow : Window
     private readonly PlayerViewModel _playerViewModel;
     private readonly IVideoPlayerService _videoPlayerService;
     private readonly HoverPreviewService _hoverPreviewService;
+    private readonly IServiceScopeFactory _scopeFactory;
     private bool _isDarkTheme = true;
 
     public MainWindow(MainViewModel viewModel, PlayerViewModel playerViewModel, 
                       IVideoPlayerService videoPlayerService,
-                      HoverPreviewService hoverPreviewService)
+                      HoverPreviewService hoverPreviewService,
+                      IServiceScopeFactory scopeFactory)
     {
         InitializeComponent();
         try { System.IO.File.AppendAllText(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_log.txt"), $"[{DateTime.Now}] MainWindow initialized.\n"); } catch { }
@@ -32,6 +36,7 @@ public partial class MainWindow : Window
         _playerViewModel = playerViewModel;
         _videoPlayerService = videoPlayerService;
         _hoverPreviewService = hoverPreviewService;
+        _scopeFactory = scopeFactory;
         DataContext = _viewModel;
         
         PlayerArea.DataContext = _playerViewModel;
@@ -54,6 +59,11 @@ public partial class MainWindow : Window
         Loaded += async (s, e) =>
         {
             await _viewModel.InitializeAsync();
+        };
+
+        StateChanged += (s, e) =>
+        {
+            // State changes are now handled via XAML DataTriggers for better performance
         };
 
         // Subscribe to DataContext changes to handle ViewModel reassignment from ProfilesWindow
@@ -116,6 +126,30 @@ public partial class MainWindow : Window
         
         // PreviewKeyDown ile global key handling
         PreviewKeyDown += Window_PreviewKeyDown;
+
+        // Subscribe to Edit Channel requests
+        _viewModel.RequestEditChannel += OnRequestEditChannel;
+    }
+
+    private void OnRequestEditChannel(Channel channel)
+    {
+        try
+        {
+            var window = App.Current.Services.GetRequiredService<EditChannelWindow>();
+            if (window.DataContext is EditChannelViewModel vm)
+            {
+                vm.Initialize(channel);
+                window.Owner = this;
+                if (window.ShowDialog() == true)
+                {
+                    // Refresh if needed, though ObservableObject should handle property updates
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Kanal düzenleme penceresi açılamadı: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -320,21 +354,19 @@ public partial class MainWindow : Window
 
     private void SettingsButton_Click(object sender, RoutedEventArgs e)
     {
-        // Ayarlar penceresini aç
-        // TODO: SettingsWindow oluşturulacak
+        using (var scope = _scopeFactory.CreateScope())
+        {
+            var settingsWindow = scope.ServiceProvider.GetRequiredService<SettingsWindow>();
+            settingsWindow.Owner = this;
+            settingsWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+            settingsWindow.ShowDialog();
+        }
     }
 
     private void Favorites_Click(object sender, MouseButtonEventArgs e)
     {
         _viewModel.ShowOnlyFavorites = !_viewModel.ShowOnlyFavorites;
         _viewModel.NavigateCommand.Execute(AppView.Home); // Favorileri şu an home üzerinden de gösterebiliriz veya Search
-    }
-
-    private void ThemeButton_Click(object sender, RoutedEventArgs e)
-    {
-        _isDarkTheme = !_isDarkTheme;
-        ThemeButton.Content = _isDarkTheme ? "🌙" : "☀️";
-        // TODO: Tema değişikliği uygulanacak
     }
 
     private void EpisodesButton_Click(object sender, RoutedEventArgs e)
@@ -415,19 +447,20 @@ public partial class MainWindow : Window
 
     private void MinimizeButton_Click(object sender, RoutedEventArgs e)
     {
-        WindowState = WindowState.Minimized;
+        SystemCommands.MinimizeWindow(this);
     }
 
     private void MaximizeButton_Click(object sender, RoutedEventArgs e)
     {
-        WindowState = WindowState == WindowState.Maximized 
-            ? WindowState.Normal 
-            : WindowState.Maximized;
+        if (WindowState == WindowState.Maximized)
+            SystemCommands.RestoreWindow(this);
+        else
+            SystemCommands.MaximizeWindow(this);
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
-        Application.Current.Shutdown();
+        SystemCommands.CloseWindow(this);
     }
 
     private void CloseMiniPlayer_Click(object sender, RoutedEventArgs e)
