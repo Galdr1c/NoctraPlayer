@@ -466,6 +466,16 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void ContentView_ScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+        if (sender is not ScrollViewer scrollViewer)
+        {
+            return;
+        }
+
+        await _viewModel.LoadMoreChannelsIfNeededAsync(scrollViewer.VerticalOffset, scrollViewer.ScrollableHeight);
+    }
+
     private void MinimizeButton_Click(object sender, RoutedEventArgs e)
     {
         SystemCommands.MinimizeWindow(this);

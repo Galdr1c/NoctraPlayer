@@ -18,7 +18,15 @@ namespace IPTVPlayer.Services
 
         public HoverPreviewService()
         {
-            _libVlc = new LibVLC("--quiet");
+            _libVlc = new LibVLC(
+                "--quiet",
+                "--avcodec-hw=dxva2",
+                "--ffmpeg-hw",
+                "--avcodec-fast",
+                "--network-caching=500",
+                "--clock-jitter=0",
+                "--drop-late-frames",
+                "--skip-frames");
         }
 
         public async Task StartPreviewAsync(string streamUrl, Border previewContainer, VideoView videoView)
@@ -46,6 +54,8 @@ namespace IPTVPlayer.Services
                 _activeVideoView.MediaPlayer = _mediaPlayer;
                 
                 var media = new Media(_libVlc, new Uri(streamUrl));
+                media.AddOption(":network-caching=500");
+                media.AddOption(":live-caching=500");
                 _mediaPlayer.Play(media);
 
                 // Show container

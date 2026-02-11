@@ -13,13 +13,13 @@ public interface IEpgService
     /// <param name="epgUrl">EPG XML URL</param>
     /// <param name="isPrimary">Ana EPG mi? (Evet ise veritabanını temizler)</param>
     /// <param name="channelsForMapping">Yedek EPG için isim eşleşmesi yapılacak kanallar</param>
-    Task LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null);
+    Task LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1);
     
     /// <summary>
-    /// Kanal için mevcut programı getirir
+    /// Verilen kanal için şu anki programı getirir (Fallback mekanizmasıyla)
     /// </summary>
-    /// <param name="channelId">tvg-id</param>
-    Task<EpgProgram?> GetCurrentProgramAsync(string channelId);
+    /// <param name="channel">Kanal nesnesi</param>
+    Task<EpgProgram?> GetCurrentProgramAsync(Channel channel);
     
     /// <summary>
     /// Kanal için program listesini getirir

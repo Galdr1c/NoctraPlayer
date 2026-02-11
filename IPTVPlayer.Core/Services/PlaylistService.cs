@@ -219,31 +219,26 @@ public class PlaylistService : IPlaylistService
     /// <summary>
     /// Get channels with filtering and pagination for fast loading
     /// </summary>
-    public async Task<List<Channel>> GetChannelsFilteredAsync(int playlistId, string? searchText = null, string? group = null, ChannelType? type = null, int limit = 1000)
+    public async Task<List<Channel>> GetChannelsFilteredAsync(int playlistId, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, int limit = 1000)
     {
-        var query = _context.Channels.Where(c => c.PlaylistId == playlistId);
-        
-        if (!string.IsNullOrWhiteSpace(searchText))
-        {
-            var search = searchText.ToLower();
-            query = query.Where(c => c.Name.ToLower().Contains(search) || 
-                                    (c.GroupTitle != null && c.GroupTitle.ToLower().Contains(search)));
-        }
-        
-        if (!string.IsNullOrEmpty(group))
-        {
-            query = query.Where(c => c.GroupTitle == group);
-        }
-        
-        if (type.HasValue)
-        {
-            query = query.Where(c => c.Type == type.Value);
-        }
+        var query = BuildFilteredChannelQuery(playlistId, searchText, group, type, onlyFavorites);
         
         return await query
             .OrderBy(c => c.GroupTitle)
             .ThenBy(c => c.Name)
             .Take(limit)
+            .ToListAsync();
+    }
+
+    public async Task<List<Channel>> GetChannelsFilteredPageAsync(int playlistId, int skip, int take, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false)
+    {
+        var query = BuildFilteredChannelQuery(playlistId, searchText, group, type, onlyFavorites);
+
+        return await query
+            .OrderBy(c => c.GroupTitle)
+            .ThenBy(c => c.Name)
+            .Skip(Math.Max(0, skip))
+            .Take(Math.Max(1, take))
             .ToListAsync();
     }
 
@@ -268,6 +263,35 @@ public class PlaylistService : IPlaylistService
         return await _context.Channels
             .Where(c => c.PlaylistId == playlistId)
             .CountAsync();
+    }
+
+    private IQueryable<Channel> BuildFilteredChannelQuery(int playlistId, string? searchText, string? group, ChannelType? type, bool onlyFavorites)
+    {
+        var query = _context.Channels.Where(c => c.PlaylistId == playlistId);
+
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            var search = searchText.ToLower();
+            query = query.Where(c => c.Name.ToLower().Contains(search) ||
+                                     (c.GroupTitle != null && c.GroupTitle.ToLower().Contains(search)));
+        }
+
+        if (!string.IsNullOrEmpty(group))
+        {
+            query = query.Where(c => c.GroupTitle == group);
+        }
+
+        if (type.HasValue)
+        {
+            query = query.Where(c => c.Type == type.Value);
+        }
+
+        if (onlyFavorites)
+        {
+            query = query.Where(c => c.IsFavorite);
+        }
+
+        return query;
     }
     public async Task UpdateProviderExpirationAsync(int providerId, DateTime expirationDate)
     {

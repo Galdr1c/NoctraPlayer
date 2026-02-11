@@ -10,6 +10,11 @@ public class WpfDispatcherService : IDispatcherService
         Application.Current.Dispatcher.Invoke(action);
     }
 
+    public void BeginInvoke(Action action)
+    {
+        Application.Current.Dispatcher.BeginInvoke(action);
+    }
+
     public Task InvokeAsync(Func<Task> function)
     {
         return Application.Current.Dispatcher.InvokeAsync(function).Task.Unwrap();

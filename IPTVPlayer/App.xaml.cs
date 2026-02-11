@@ -29,7 +29,7 @@ public partial class App : Application
         ConfigureServices(services);
         _serviceProvider = services.BuildServiceProvider();
 
-        // Veritabanını oluştur/güncelle ve Temayı Uygula
+        // Veritabanını oluştur ve hızlı tema ayarını uygula (kritik başlangıç işleri)
         using (var scope = _serviceProvider.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -40,24 +40,6 @@ public partial class App : Application
             var themeService = scope.ServiceProvider.GetRequiredService<IThemeService>();
             bool isDark = settingsService.Settings.IsDarkTheme;
             themeService.SetTheme(isDark);
-            
-            // Veritabanı şema güncellemesi (Migration)
-            
-            // 1. ProviderAccounts -> ExpirationDate
-            try
-            {
-                var command = "ALTER TABLE ProviderAccounts ADD COLUMN ExpirationDate TEXT;";
-                context.Database.ExecuteSqlRaw(command);
-            }
-            catch { /* Sütun zaten varsa hata verir, yoksay */ }
-
-            // 2. Profiles -> CreatedAt
-            try
-            {
-                var commandProfile = "ALTER TABLE Profiles ADD COLUMN CreatedAt TEXT NOT NULL DEFAULT '0001-01-01 00:00:00';";
-                context.Database.ExecuteSqlRaw(commandProfile);
-            }
-            catch { /* Sütun zaten varsa hata verir, yoksay */ }
         }
 
         // Global exception handling
@@ -71,6 +53,9 @@ public partial class App : Application
             // Ana pencere yerine Profiller penceresini başlat
             var profilesWindow = _serviceProvider.GetRequiredService<ProfilesWindow>();
             profilesWindow.Show();
+
+            // Heavy/non-critical startup jobs are deferred to background
+            _ = RunDeferredStartupTasksAsync();
 
             /* Premium check disabled for now - Noctra style flow
             var licenseService = _serviceProvider.GetRequiredService<ILicenseService>();
@@ -97,6 +82,65 @@ public partial class App : Application
             MessageBox.Show($"Uygulama başlatılırken bir hata oluştu:\n{ex.Message}\n\nDetay:\n{ex.InnerException?.Message}", "Kritik Hata", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown();
         }
+    }
+
+    private async Task RunDeferredStartupTasksAsync()
+    {
+        if (_serviceProvider == null) return;
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var imageCache = scope.ServiceProvider.GetService<IImageCacheService>();
+
+            await ApplySchemaFixupsAsync(context);
+            imageCache?.ClearExpiredMemoryEntries();
+            if (imageCache != null)
+            {
+                await PreloadPopularImagesAsync(context, imageCache);
+            }
+        }
+        catch (Exception ex)
+        {
+            LogError("DeferredStartupTasks", ex);
+        }
+    }
+
+    private static async Task ApplySchemaFixupsAsync(AppDbContext context)
+    {
+        // 1. ProviderAccounts -> ExpirationDate
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync("ALTER TABLE ProviderAccounts ADD COLUMN ExpirationDate TEXT;");
+        }
+        catch
+        {
+            // Column already exists
+        }
+
+        // 2. Profiles -> CreatedAt
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync("ALTER TABLE Profiles ADD COLUMN CreatedAt TEXT NOT NULL DEFAULT '0001-01-01 00:00:00';");
+        }
+        catch
+        {
+            // Column already exists
+        }
+    }
+
+    private static async Task PreloadPopularImagesAsync(AppDbContext context, IImageCacheService imageCache)
+    {
+        var urls = await context.Channels
+            .OrderByDescending(c => c.LastWatched)
+            .Select(c => c.CoverUrl ?? c.LogoUrl)
+            .Where(u => u != null && u != "")
+            .Select(u => u!)
+            .Take(30)
+            .ToListAsync();
+
+        await imageCache.PreloadAsync(urls, decodePixelWidth: 220);
     }
 
     private void LogError(string message, Exception? ex)
@@ -225,6 +269,7 @@ public partial class App : Application
         services.AddSingleton<Services.Interfaces.IAvatarService, Services.Interfaces.AvatarService>();
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<HoverPreviewService>();
+        services.AddSingleton<IImageCacheService, ImageCacheService>();
         
         // UI Services (WPF Implementations)
         services.AddSingleton<IDispatcherService, WpfDispatcherService>();

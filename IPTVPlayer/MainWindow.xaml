@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vlc="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
+        xmlns:cache="clr-namespace:IPTVPlayer.Behaviors"
         xmlns:views="clr-namespace:IPTVPlayer.Views"
         xmlns:vm="clr-namespace:IPTVPlayer.ViewModels;assembly=IPTVPlayer.Core"
         mc:Ignorable="d"
@@ -24,6 +25,18 @@
     </WindowChrome.WindowChrome>
 
     <Window.Resources>
+        <BitmapImage x:Key="DefaultRemoteImagePlaceholder" UriSource="/Assets/Logo.png"/>
+
+        <Style TargetType="{x:Type vlc:VideoView}">
+            <Setter Property="RenderOptions.BitmapScalingMode" Value="LowQuality"/>
+            <Setter Property="RenderOptions.EdgeMode" Value="Aliased"/>
+            <Setter Property="CacheMode">
+                <Setter.Value>
+                    <BitmapCache RenderAtScale="1"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="SkeletonCard" TargetType="Border">
             <Setter Property="Background">
                 <Setter.Value>
@@ -482,7 +495,9 @@
                                     <!-- Hero Background Image -->
                                     <Image x:Name="HeroImage" 
                                            Stretch="UniformToFill"
-                                           Source="{Binding FeaturedChannel.CoverUrl}"/>
+                                           cache:CachedImage.SourceUrl="{Binding FeaturedChannel.CoverUrl}"
+                                           cache:CachedImage.DecodePixelWidth="1400"
+                                           cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
                                     
                                     <!-- Gradient Overlay -->
                                     <Border>
@@ -648,7 +663,10 @@
                                                                   CommandParameter="{Binding}"/>
                                                 </Border.InputBindings>
                                                 <Grid>
-                                                    <Image Source="{Binding LogoUrl}" Stretch="UniformToFill" Opacity="0.8"/>
+                                                    <Image Stretch="UniformToFill" Opacity="0.8"
+                                                           cache:CachedImage.SourceUrl="{Binding LogoUrl}"
+                                                           cache:CachedImage.DecodePixelWidth="320"
+                                                           cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
                                                     <Border Background="{StaticResource HeroOverlayBrush}"/>
                                                     
                                                     <!-- Preview Container -->
@@ -701,7 +719,10 @@
                                                                   CommandParameter="{Binding}"/>
                                                 </Border.InputBindings>
                                                 <Grid>
-                                                    <Image Source="{Binding LogoUrl}" Stretch="UniformToFill" Opacity="0.8"/>
+                                                    <Image Stretch="UniformToFill" Opacity="0.8"
+                                                           cache:CachedImage.SourceUrl="{Binding LogoUrl}"
+                                                           cache:CachedImage.DecodePixelWidth="320"
+                                                           cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
                                                     <Border Background="{StaticResource HeroOverlayBrush}"/>
                                                     
                                                     <Border x:Name="PreviewContainer" Background="Black" Visibility="Collapsed">
@@ -746,7 +767,10 @@
                                                                   CommandParameter="{Binding}"/>
                                                 </Border.InputBindings>
                                                 <Grid>
-                                                    <Image Source="{Binding CoverUrl}" Stretch="UniformToFill"/>
+                                                    <Image Stretch="UniformToFill"
+                                                           cache:CachedImage.SourceUrl="{Binding CoverUrl}"
+                                                           cache:CachedImage.DecodePixelWidth="220"
+                                                           cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
                                                     <Border Background="{StaticResource HeroOverlayBrush}"/>
                                                     
                                                     <Border x:Name="PreviewContainer" Background="Black" Visibility="Collapsed">
@@ -792,7 +816,10 @@
                                                                   CommandParameter="{Binding}"/>
                                                 </Border.InputBindings>
                                                 <Grid>
-                                                    <Image Source="{Binding CoverUrl}" Stretch="UniformToFill"/>
+                                                    <Image Stretch="UniformToFill"
+                                                           cache:CachedImage.SourceUrl="{Binding CoverUrl}"
+                                                           cache:CachedImage.DecodePixelWidth="220"
+                                                           cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
                                                     <Border Background="{StaticResource HeroOverlayBrush}"/>
                                                     
                                                     <Border x:Name="PreviewContainer" Background="Black" Visibility="Collapsed">
@@ -814,6 +841,7 @@
 
                     <!-- 2. MOVIES VIEW -->
                     <ScrollViewer x:Name="MoviesView" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  ScrollChanged="ContentView_ScrollChanged"
                                   Visibility="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Movies}}">
                         <StackPanel Margin="24">
                             <TextBlock Text="Filmler" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
@@ -823,6 +851,7 @@
 
                     <!-- 3. SERIES VIEW -->
                     <ScrollViewer x:Name="SeriesView" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  ScrollChanged="ContentView_ScrollChanged"
                                   Visibility="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Series}}">
                         <StackPanel Margin="24">
                             <TextBlock Text="Diziler" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
@@ -832,6 +861,7 @@
 
                     <!-- 4. SEARCH VIEW -->
                     <ScrollViewer x:Name="SearchView" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  ScrollChanged="ContentView_ScrollChanged"
                                   Visibility="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Search}}">
                         <StackPanel Margin="24">
                             <TextBlock Text="Arama Sonuçları" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
@@ -865,7 +895,10 @@
                                             </Border.InputBindings>
                                             <StackPanel Margin="12">
                                                 <Border Height="100" Background="{StaticResource IconGradientBrush}" CornerRadius="{StaticResource RadiusSmall}" Margin="0,0,0,12">
-                                                    <Image Source="{Binding LogoUrl}" Width="60" Stretch="Uniform"/>
+                                                    <Image Width="60" Stretch="Uniform"
+                                                           cache:CachedImage.SourceUrl="{Binding LogoUrl}"
+                                                           cache:CachedImage.DecodePixelWidth="120"
+                                                           cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
                                                 </Border>
                                                 <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                             </StackPanel>
@@ -885,6 +918,7 @@
                     <!-- 3. LIVE TV VIEW (Specialized for EPG) -->
                     <!-- 3. LIVE TV VIEW -->
                     <ScrollViewer x:Name="LiveView" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  ScrollChanged="ContentView_ScrollChanged"
                                   Visibility="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Live}}">
                         <StackPanel Margin="24">
                             <TextBlock Text="Canlı TV" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
@@ -1046,7 +1080,10 @@
                                     <Border Width="100" Height="56"
                                             CornerRadius="4"
                                             Background="{DynamicResource Surface1Brush}">
-                                        <Image Source="{Binding Converter={StaticResource MediaThumbnailConverter}}" Stretch="UniformToFill"/>
+                                        <Image Stretch="UniformToFill"
+                                               cache:CachedImage.SourceUrl="{Binding Converter={StaticResource MediaThumbnailConverter}}"
+                                               cache:CachedImage.DecodePixelWidth="200"
+                                               cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
                                     </Border>
                                     
                                     <!-- Info -->
@@ -1151,7 +1188,10 @@
                                                             
                                                             <Border Height="100" CornerRadius="8,8,0,0" ClipToBounds="True">
                                                                 <Grid>
-                                                                    <Image Source="{Binding CoverUrl}" Stretch="UniformToFill"/>
+                                                                    <Image Stretch="UniformToFill"
+                                                                           cache:CachedImage.SourceUrl="{Binding CoverUrl}"
+                                                                           cache:CachedImage.DecodePixelWidth="240"
+                                                                           cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
                                                                     <Border Background="#44000000"/>
                                                                     <TextBlock Text="▶" Foreground="White" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.6"/>
                                                                 </Grid>

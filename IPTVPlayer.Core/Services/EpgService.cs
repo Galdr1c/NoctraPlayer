@@ -24,7 +24,7 @@ public class EpgService : IEpgService
         _httpClient = httpClient;
     }
 
-    public async Task LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null)
+    public async Task LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1)
     {
         try
         {
@@ -35,7 +35,12 @@ public class EpgService : IEpgService
             response.EnsureSuccessStatusCode();
 
             using var stream = await response.Content.ReadAsStreamAsync(cts.Token);
-            using var reader = System.Xml.XmlReader.Create(stream, new System.Xml.XmlReaderSettings { Async = true });
+            var settings = new System.Xml.XmlReaderSettings 
+            { 
+                Async = true, 
+                DtdProcessing = System.Xml.DtdProcessing.Ignore 
+            };
+            using var reader = System.Xml.XmlReader.Create(stream, settings);
 
             if (isPrimary)
             {
@@ -73,9 +78,8 @@ public class EpgService : IEpgService
 
             var programs = new List<EpgProgram>();
             var batchSize = 500;
-            var now = DateTime.UtcNow;
-            var cutoffDate = now.AddDays(-1);
-            var maxFutureDate = now.AddDays(7); // Limit storage to 7 days for performance
+            var windowStartUtc = DateTime.UtcNow.Date;
+            var windowEndUtc = windowStartUtc.AddDays(Math.Max(1, daysAhead) + 1);
 
             while (await reader.ReadAsync())
             {
@@ -133,8 +137,8 @@ public class EpgService : IEpgService
                         var startTime = ParseXmlTvDate(start);
                         var endTime = ParseXmlTvDate(stop);
 
-                        // Skip old or too far future programs
-                        if (endTime < cutoffDate || startTime > maxFutureDate)
+                        // Keep only the requested time window (today + N days)
+                        if (endTime <= windowStartUtc || startTime >= windowEndUtc)
                             continue;
 
                         var program = new EpgProgram
@@ -211,11 +215,25 @@ public class EpgService : IEpgService
             .Replace(".", "");
     }
 
-    public async Task<EpgProgram?> GetCurrentProgramAsync(string channelId)
+    public async Task<EpgProgram?> GetCurrentProgramAsync(Channel channel)
     {
         var now = DateTime.UtcNow;
+        
+        // Level 1: Try Primary TvgId
+        if (!string.IsNullOrEmpty(channel.TvgId))
+        {
+            var program = await _context.EpgPrograms
+                .Where(p => p.ChannelId == channel.TvgId && p.StartTime <= now && p.EndTime > now)
+                .FirstOrDefaultAsync();
+
+            if (program != null) return program;
+        }
+
+        // Level 2: Try Internal Id (Secondary EPG mapped by Name)
+        // If the secondary EPG loaded without TvgId match, we linked it via internal ID string
+        var internalId = channel.Id.ToString();
         return await _context.EpgPrograms
-            .Where(p => p.ChannelId == channelId && p.StartTime <= now && p.EndTime > now)
+            .Where(p => p.ChannelId == internalId && p.StartTime <= now && p.EndTime > now)
             .FirstOrDefaultAsync();
     }
 

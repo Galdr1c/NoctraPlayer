@@ -1,7 +1,8 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib"
-                    xmlns:helper="clr-namespace:IPTVPlayer.Helpers">
+                    xmlns:helper="clr-namespace:IPTVPlayer.Helpers"
+                    xmlns:cache="clr-namespace:IPTVPlayer.Behaviors">
     
     <ResourceDictionary.MergedDictionaries>
     </ResourceDictionary.MergedDictionaries>
@@ -14,6 +15,7 @@
     <sys:Double x:Key="RatioLandscapeWidth">280</sys:Double>
     <sys:Double x:Key="RatioLandscapeHeight">158</sys:Double>
     <sys:Double x:Key="RatioSquareSize">120</sys:Double>
+    <BitmapImage x:Key="DefaultRemoteImagePlaceholder" UriSource="/Assets/Logo.png"/>
 
     <!-- Butonlar -->
     <Style x:Key="PrimaryButtonStyle" TargetType="Button">
@@ -829,8 +831,14 @@
     <Style x:Key="RailListBoxStyle" TargetType="ListBox">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
         <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Hidden"/>
         <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled"/>
+        <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True"/>
+        <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling"/>
+        <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel"/>
+        <Setter Property="VirtualizingPanel.CacheLength" Value="2,2"/>
+        <Setter Property="VirtualizingPanel.CacheLengthUnit" Value="Page"/>
         <Setter Property="ItemsPanel">
             <Setter.Value>
                 <ItemsPanelTemplate>
@@ -868,7 +876,10 @@
                         </Border.InputBindings>
                         <Grid>
                             <!-- Thumbnail -->
-                            <Image Source="{Binding LogoUrl}" Stretch="UniformToFill" Opacity="0.8"/>
+                            <Image Stretch="UniformToFill" Opacity="0.8"
+                                   cache:CachedImage.SourceUrl="{Binding LogoUrl}"
+                                   cache:CachedImage.DecodePixelWidth="320"
+                                   cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
                             <Border Background="{StaticResource HeroOverlayBrush}"/>
                             
                             <!-- Preview Player Placeholder -->
@@ -931,7 +942,10 @@
                         </Border.InputBindings>
                         <Grid>
                             <!-- Thumbnail -->
-                            <Image Source="{Binding CoverUrl}" Stretch="UniformToFill"/>
+                            <Image Stretch="UniformToFill"
+                                   cache:CachedImage.SourceUrl="{Binding CoverUrl}"
+                                   cache:CachedImage.DecodePixelWidth="220"
+                                   cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
                             <Border Background="{StaticResource HeroOverlayBrush}"/>
                             
                             <Border x:Name="PreviewContainer" Background="Black" Visibility="Collapsed"/>
@@ -989,7 +1003,13 @@
     <Style x:Key="GridListBoxStyle" TargetType="ListBox">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
         <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+        <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True"/>
+        <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling"/>
+        <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel"/>
+        <Setter Property="VirtualizingPanel.CacheLength" Value="2,2"/>
+        <Setter Property="VirtualizingPanel.CacheLengthUnit" Value="Page"/>
         <Setter Property="ItemsPanel">
             <Setter.Value>
                 <ItemsPanelTemplate>
@@ -997,7 +1017,6 @@
                 </ItemsPanelTemplate>
             </Setter.Value>
         </Setter>
-        <Setter Property="ScrollViewer.CanContentScroll" Value="False"/>
         <Setter Property="ItemContainerStyle">
             <Setter.Value>
                 <Style TargetType="ListBoxItem">
@@ -1033,7 +1052,10 @@
                         </Border.InputBindings>
                         <StackPanel Margin="12">
                             <Border Height="100" Background="{StaticResource IconGradientBrush}" CornerRadius="{StaticResource RadiusSmall}" Margin="0,0,0,12">
-                                <Image Source="{Binding LogoUrl, IsAsync=True}" Width="60" Stretch="Uniform"/>
+                                <Image Width="60" Stretch="Uniform"
+                                       cache:CachedImage.SourceUrl="{Binding LogoUrl}"
+                                       cache:CachedImage.DecodePixelWidth="120"
+                                       cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
                             </Border>
                             <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
                         </StackPanel>

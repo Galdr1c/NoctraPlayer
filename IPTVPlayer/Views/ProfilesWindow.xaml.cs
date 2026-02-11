@@ -11,6 +11,7 @@ namespace IPTVPlayer.Views;
 public partial class ProfilesWindow : Window
 {
     private readonly IServiceScopeFactory _scopeFactory;
+    private bool _autoSelectTriggered;
 
     public ProfilesWindow(ProfilesViewModel viewModel, IServiceScopeFactory scopeFactory)
     {
@@ -29,6 +30,41 @@ public partial class ProfilesWindow : Window
             if (e.ButtonState == MouseButtonState.Pressed)
                 DragMove();
         };
+
+        Loaded += ProfilesWindow_Loaded;
+    }
+
+    private async void ProfilesWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not ProfilesViewModel vm)
+        {
+            return;
+        }
+
+        await vm.RefreshProfilesAsync();
+
+        try
+        {
+            var settingsService = App.Current.Services.GetRequiredService<ISettingsService>();
+            if (!settingsService.Settings.AutoSelectLastProfile || _autoSelectTriggered)
+            {
+                return;
+            }
+
+            var lastProfile = vm.Profiles.OrderByDescending(p => p.LastUsed).FirstOrDefault();
+            if (lastProfile == null)
+            {
+                return;
+            }
+
+            _autoSelectTriggered = true;
+            await Task.Delay(50);
+            vm.SelectProfileCommand.Execute(lastProfile);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Auto profile select failed: {ex.Message}");
+        }
     }
 
     private async void ViewModel_OnProfileSelected(IPTVPlayer.Models.Profile profile)
@@ -162,6 +198,7 @@ public partial class ProfilesWindow : Window
              vm.OnProfileAddRequested -= ViewModel_OnProfileAddRequested;
              vm.OnProfileSelected -= ViewModel_OnProfileSelected;
          }
+         Loaded -= ProfilesWindow_Loaded;
          base.OnClosed(e);
     }
 }

@@ -30,13 +30,17 @@ public partial class ProfilesViewModel : ObservableObject
         _context = context;
         _dialogService = dialogService;
         _dispatcherService = dispatcherService;
-        RefreshProfiles();
     }
 
     public void RefreshProfiles()
     {
         // Use a discarded task to run the async method
         _ = LoadProfilesAsync();
+    }
+
+    public Task RefreshProfilesAsync()
+    {
+        return LoadProfilesAsync();
     }
 
     private async Task LoadProfilesAsync()

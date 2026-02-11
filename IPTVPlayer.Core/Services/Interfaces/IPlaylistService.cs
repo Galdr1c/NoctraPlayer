@@ -40,7 +40,12 @@ public interface IPlaylistService
     /// <summary>
     /// Filtrelenmiş kanalları getirir (lazy loading için)
     /// </summary>
-    Task<List<Channel>> GetChannelsFilteredAsync(int playlistId, string? searchText = null, string? group = null, ChannelType? type = null, int limit = 1000);
+    Task<List<Channel>> GetChannelsFilteredAsync(int playlistId, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, int limit = 1000);
+
+    /// <summary>
+    /// Filtrelenmis kanallari sayfali getirir (incremental loading icin)
+    /// </summary>
+    Task<List<Channel>> GetChannelsFilteredPageAsync(int playlistId, int skip, int take, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false);
 
     /// <summary>
     /// Sadece grup isimlerini getirir (hızlı başlangıç için)

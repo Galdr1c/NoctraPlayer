@@ -8,6 +8,9 @@ namespace IPTVPlayer.Services;
 /// </summary>
 public class VideoPlayerService : IVideoPlayerService
 {
+    private const int NetworkCachingMs = 500;
+    private const int LiveCachingMs = 500;
+
     private readonly LibVLC _libVLC;
     private MediaPlayer? _mediaPlayer;
     private readonly IDispatcherService _dispatcherService;
@@ -29,13 +32,17 @@ public class VideoPlayerService : IVideoPlayerService
         var options = new string[]
         {
             // Hardware Acceleration
-            "--avcodec-hw=any",
+            "--avcodec-hw=dxva2",
+            "--ffmpeg-hw",
             "--vout=direct3d11",           // DirectX 11 renderer
+            "--avcodec-skip-frame=0",
+            "--avcodec-skip-idct=0",
+            "--avcodec-fast",
             
             // Network Options
-            "--network-caching=3000",
-            "--live-caching=1000",         // Canlı TV için daha az buffer
-            "--file-caching=3000",
+            $"--network-caching={NetworkCachingMs}",
+            $"--live-caching={LiveCachingMs}",         // Canlı TV için daha az buffer
+            "--file-caching=1000",
             
             // RTSP Options
             "--rtsp-tcp",                  // TCP kullan (UDP yerine, daha stabil)
@@ -66,19 +73,19 @@ public class VideoPlayerService : IVideoPlayerService
     {
         if (_mediaPlayer == null) return;
 
-        _mediaPlayer.Playing += (s, e) => _dispatcherService.Invoke(() => PlayingChanged?.Invoke(this, true));
-        _mediaPlayer.Paused += (s, e) => _dispatcherService.Invoke(() => PlayingChanged?.Invoke(this, false));
-        _mediaPlayer.Stopped += (s, e) => _dispatcherService.Invoke(() => PlayingChanged?.Invoke(this, false));
-        _mediaPlayer.EndReached += (s, e) => _dispatcherService.Invoke(() => PlayingChanged?.Invoke(this, false));
+        _mediaPlayer.Playing += (s, e) => _dispatcherService.BeginInvoke(() => PlayingChanged?.Invoke(this, true));
+        _mediaPlayer.Paused += (s, e) => _dispatcherService.BeginInvoke(() => PlayingChanged?.Invoke(this, false));
+        _mediaPlayer.Stopped += (s, e) => _dispatcherService.BeginInvoke(() => PlayingChanged?.Invoke(this, false));
+        _mediaPlayer.EndReached += (s, e) => _dispatcherService.BeginInvoke(() => PlayingChanged?.Invoke(this, false));
         
         _mediaPlayer.PositionChanged += (s, e) => 
-            _dispatcherService.Invoke(() => PositionChanged?.Invoke(this, e.Position * Duration));
+            _dispatcherService.BeginInvoke(() => PositionChanged?.Invoke(this, e.Position * Duration));
         
         _mediaPlayer.EncounteredError += (s, e) => 
-            _dispatcherService.Invoke(() => ErrorOccurred?.Invoke(this, "Video oynatma hatası oluştu"));
+            _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, "Video oynatma hatası oluştu"));
             
         _mediaPlayer.Buffering += (s, e) =>
-            _dispatcherService.Invoke(() => BufferingChanged?.Invoke(this, e.Cache));
+            _dispatcherService.BeginInvoke(() => BufferingChanged?.Invoke(this, e.Cache));
     }
 
     public event EventHandler<float>? BufferingChanged;
@@ -101,13 +108,19 @@ public class VideoPlayerService : IVideoPlayerService
 
     private async Task PlayWithRetryAsync(string url)
     {
+        if (_mediaPlayer == null)
+        {
+            _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, "Media player hazır değil."));
+            return;
+        }
+
         try
         {
             var media = new Media(_libVLC, new Uri(url));
             
             // Stream ayarları
-            media.AddOption(":network-caching=3000");
-            media.AddOption(":live-caching=1000");
+            media.AddOption($":network-caching={NetworkCachingMs}");
+            media.AddOption($":live-caching={LiveCachingMs}");
             
             _mediaPlayer.Media = media;
             
@@ -134,16 +147,16 @@ public class VideoPlayerService : IVideoPlayerService
             }
             else if (errorOccurred)
             {
-                _dispatcherService.Invoke(() => ErrorOccurred?.Invoke(this, "Stream bağlantısı kurulamadı. URL'yi kontrol edin."));
+                _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, "Stream bağlantısı kurulamadı. URL'yi kontrol edin."));
             }
         }
         catch (UriFormatException)
         {
-            _dispatcherService.Invoke(() => ErrorOccurred?.Invoke(this, "Geçersiz stream URL'si."));
+            _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, "Geçersiz stream URL'si."));
         }
         catch (Exception ex)
         {
-            _dispatcherService.Invoke(() => ErrorOccurred?.Invoke(this, $"Oynatma başlatılamadı: {ex.Message}"));
+            _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, $"Oynatma başlatılamadı: {ex.Message}"));
         }
     }
 
@@ -268,3 +281,4 @@ public class VideoPlayerService : IVideoPlayerService
         GC.SuppressFinalize(this);
     }
 }
+

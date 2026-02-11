@@ -246,9 +246,14 @@ public partial class PlayerViewModel : ObservableObject
         ShowZapping(channel.Name, channel.LogoUrl, IsLiveContent);
 
         // EPG bilgisini al
-        if (!string.IsNullOrEmpty(channel.TvgId) && _epgService.IsLoaded)
+        if (_epgService.IsLoaded)
         {
-            CurrentProgram = await _epgService.GetCurrentProgramAsync(channel.TvgId);
+            var program = await _epgService.GetCurrentProgramAsync(channel);
+            CurrentProgram = program ?? GetFallbackProgram();
+        }
+        else
+        {
+            CurrentProgram = GetFallbackProgram();
         }
     }
 
@@ -280,15 +285,29 @@ public partial class PlayerViewModel : ObservableObject
         if (DateTime.Now > CurrentProgram.EndTime)
         {
             // Program finished, fetch next
-            if (!string.IsNullOrEmpty(CurrentChannel.TvgId) && _epgService.IsLoaded)
+            if (_epgService.IsLoaded)
             {
-                 var newProgram = await _epgService.GetCurrentProgramAsync(CurrentChannel.TvgId);
-                 if (newProgram != null && newProgram.Title != CurrentProgram.Title)
+                 var newProgram = await _epgService.GetCurrentProgramAsync(CurrentChannel);
+                 newProgram ??= GetFallbackProgram();
+
+                 if (newProgram.Title != CurrentProgram.Title)
                  {
                      _dispatcherService.Invoke(() => CurrentProgram = newProgram);
                  }
             }
         }
+    }
+
+    private EpgProgram GetFallbackProgram()
+    {
+        var now = DateTime.Now;
+        return new EpgProgram 
+        { 
+            Title = "Program bilgisi yok",
+            StartTime = now,
+            EndTime = now.AddHours(1),
+            Description = "Yayın için program bilgisi bulunamadı."
+        };
     }
 
     public void ShowZapping(string name, string? logo, bool isLive)

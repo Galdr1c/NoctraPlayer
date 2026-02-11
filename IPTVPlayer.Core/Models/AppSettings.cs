@@ -51,6 +51,11 @@ public class AppSettings
     /// Son kanalı hatırla
     /// </summary>
     public bool RememberLastChannel { get; set; } = true;
+
+    /// <summary>
+    /// Son kullanilan profili acilista otomatik sec
+    /// </summary>
+    public bool AutoSelectLastProfile { get; set; } = true;
     
     // ============ Altyazı Ayarları ============
     
