@@ -31,16 +31,14 @@
         <!-- Add other converters if needed or rely on App.xaml -->
     </UserControl.Resources>
 
-    <Grid>
-        <!-- Mouse Interaction Surface (Detects movement/clicks to show overlay) -->
-        <Grid Background="#01000000" 
-              MouseLeftButtonDown="Root_MouseLeftButtonDown"
-              MouseMove="Root_MouseMove"/>
+    <Grid Background="Transparent"
+          MouseLeftButtonDown="Root_MouseLeftButtonDown"
+          MouseMove="Root_MouseMove">
 
         <!-- ==========================================
              OVERLAY CONTENT (Visible when interacting) 
              ========================================== -->
-        <Grid x:Name="OverlayRoot">
+        <Grid x:Name="OverlayRoot" IsHitTestVisible="{Binding IsVisible}">
             <Grid.Style>
                 <Style TargetType="Grid">
                     <Style.Triggers>
@@ -148,15 +146,27 @@
                             <Border Background="#8d09e5" CornerRadius="4" Padding="8,4" Margin="0,0,12,0">
                                 <StackPanel Orientation="Horizontal">
                                     <Ellipse Width="8" Height="8" Fill="White" Margin="0,0,6,0">
-                                        <Ellipse.Triggers>
-                                            <EventTrigger RoutedEvent="Loaded">
-                                                <BeginStoryboard>
-                                                    <Storyboard RepeatBehavior="Forever">
-                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="1" To="0.4" Duration="0:0:1" AutoReverse="True"/>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </EventTrigger>
-                                        </Ellipse.Triggers>
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsVisible" Value="True">
+                                                        <Trigger.EnterActions>
+                                                            <BeginStoryboard x:Name="LivePulseStoryboard">
+                                                                <Storyboard RepeatBehavior="Forever">
+                                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                                     From="1" To="0.4"
+                                                                                     Duration="0:0:1"
+                                                                                     AutoReverse="True"/>
+                                                                </Storyboard>
+                                                            </BeginStoryboard>
+                                                        </Trigger.EnterActions>
+                                                        <Trigger.ExitActions>
+                                                            <StopStoryboard BeginStoryboardName="LivePulseStoryboard"/>
+                                                        </Trigger.ExitActions>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
                                     </Ellipse>
                                     <TextBlock Text="CANLI" FontSize="12" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
                                 </StackPanel>

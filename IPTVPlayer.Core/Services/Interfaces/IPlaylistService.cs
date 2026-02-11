@@ -11,6 +11,11 @@ public interface IPlaylistService
     /// URL'den playlist ekler
     /// </summary>
     Task<Playlist> AddFromUrlAsync(string name, string url, int? profileId = null);
+
+    /// <summary>
+    /// Hazir kanal listesi ile playlist olusturur
+    /// </summary>
+    Task<Playlist> AddFromChannelsAsync(string name, string sourceUrl, IReadOnlyCollection<Channel> channels, int? profileId = null);
     
     /// <summary>
     /// Dosyadan playlist ekler

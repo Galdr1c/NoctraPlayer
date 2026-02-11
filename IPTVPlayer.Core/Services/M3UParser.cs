@@ -82,7 +82,9 @@ public partial class M3UParser : IM3UParser
         try
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-            var content = await _httpClient.GetStringAsync(url, cts.Token);
+            var content = await NetworkRetry.ExecuteAsync(
+                () => _httpClient.GetStringAsync(url, cts.Token),
+                cancellationToken: cts.Token);
             
             if (string.IsNullOrWhiteSpace(content))
                 throw new InvalidOperationException("M3U dosyası boş.");

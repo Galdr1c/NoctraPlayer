@@ -10,7 +10,7 @@ namespace IPTVPlayer.Services;
 
 public class ImageCacheService : IImageCacheService
 {
-    private static readonly HttpClient HttpClient = new();
+    private static readonly HttpClient HttpClient = CreateOptimizedClient();
     private static readonly TimeSpan MemoryTtl = TimeSpan.FromHours(1);
 
     private readonly ConcurrentDictionary<string, MemoryCacheEntry> _memoryCache = new();
@@ -103,7 +103,9 @@ public class ImageCacheService : IImageCacheService
     {
         try
         {
-            using var response = await HttpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            using var response = await NetworkRetry.ExecuteAsync(
+                () => HttpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken),
+                cancellationToken: cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 return null;
@@ -115,6 +117,22 @@ public class ImageCacheService : IImageCacheService
         {
             return null;
         }
+    }
+
+    private static HttpClient CreateOptimizedClient()
+    {
+        var handler = new SocketsHttpHandler
+        {
+            MaxConnectionsPerServer = 10,
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
+            AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate
+        };
+
+        return new HttpClient(handler)
+        {
+            Timeout = TimeSpan.FromSeconds(30)
+        };
     }
 
     private static async Task SaveToDiskAsync(string path, byte[] bytes, CancellationToken cancellationToken)

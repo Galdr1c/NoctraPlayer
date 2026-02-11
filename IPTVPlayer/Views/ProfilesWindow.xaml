@@ -28,6 +28,39 @@
             <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
             <converters:ProfileColorConverter x:Key="ProfileColorConverter"/>
             <converters:AvatarPathConverter x:Key="AvatarPathConverter"/>
+
+            <DrawingBrush x:Key="DashedProfileBorderBrush"
+                          Stretch="None"
+                          Viewport="0,0,8,8"
+                          ViewportUnits="Absolute"
+                          TileMode="Tile">
+                <DrawingBrush.Drawing>
+                    <GeometryDrawing Brush="Transparent">
+                        <GeometryDrawing.Pen>
+                            <Pen Brush="{DynamicResource BorderBrush}" Thickness="2" DashStyle="{x:Static DashStyles.Dash}"/>
+                        </GeometryDrawing.Pen>
+                        <GeometryDrawing.Geometry>
+                            <RectangleGeometry Rect="0,0,8,8"/>
+                        </GeometryDrawing.Geometry>
+                    </GeometryDrawing>
+                </DrawingBrush.Drawing>
+            </DrawingBrush>
+            <DrawingBrush x:Key="DashedProfileBorderHoverBrush"
+                          Stretch="None"
+                          Viewport="0,0,8,8"
+                          ViewportUnits="Absolute"
+                          TileMode="Tile">
+                <DrawingBrush.Drawing>
+                    <GeometryDrawing Brush="Transparent">
+                        <GeometryDrawing.Pen>
+                            <Pen Brush="{DynamicResource TextPrimaryBrush}" Thickness="2" DashStyle="{x:Static DashStyles.Dash}"/>
+                        </GeometryDrawing.Pen>
+                        <GeometryDrawing.Geometry>
+                            <RectangleGeometry Rect="0,0,8,8"/>
+                        </GeometryDrawing.Geometry>
+                    </GeometryDrawing>
+                </DrawingBrush.Drawing>
+            </DrawingBrush>
         
             <!-- Profile Card Hover Animation -->
             <Storyboard x:Key="CardHoverIn">
@@ -307,19 +340,9 @@
                                     <Border x:Name="AddBorder" Width="{StaticResource RatioSquareSize}" Height="{StaticResource RatioSquareSize}" CornerRadius="{DynamicResource RadiusMedium}" 
                                             Grid.Row="0" Margin="0,0,0,12" 
                                             Background="Transparent"
+                                            BorderBrush="{StaticResource DashedProfileBorderBrush}"
                                             BorderThickness="2">
-                                        <Border.BorderBrush>
-                                            <VisualBrush>
-                                                <VisualBrush.Visual>
-                                                    <Rectangle StrokeDashArray="4 2" 
-                                                               Stroke="{DynamicResource BorderBrush}" 
-                                                               StrokeThickness="2"
-                                                               Width="{StaticResource RatioSquareSize}" Height="{StaticResource RatioSquareSize}"
-                                                               RadiusX="14" RadiusY="14"/>
-                                                </VisualBrush.Visual>
-                                            </VisualBrush>
-                                        </Border.BorderBrush>
-                                        
+
                                         <!-- Circle with Plus -->
                                         <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
                                             <Ellipse x:Name="PlusCircle" Width="60" Height="60" 
@@ -339,19 +362,7 @@
                                 </Grid>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="AddBorder" Property="BorderBrush">
-                                            <Setter.Value>
-                                                <VisualBrush>
-                                                    <VisualBrush.Visual>
-                                                        <Rectangle StrokeDashArray="4 2" 
-                                                                   Stroke="{DynamicResource TextPrimaryBrush}" 
-                                                                   StrokeThickness="2"
-                                                                   Width="{StaticResource RatioSquareSize}" Height="{StaticResource RatioSquareSize}"
-                                                                   RadiusX="14" RadiusY="14"/>
-                                                    </VisualBrush.Visual>
-                                                </VisualBrush>
-                                            </Setter.Value>
-                                        </Setter>
+                                        <Setter TargetName="AddBorder" Property="BorderBrush" Value="{StaticResource DashedProfileBorderHoverBrush}"/>
                                         <Setter TargetName="PlusCircle" Property="Stroke" Value="{DynamicResource TextPrimaryBrush}"/>
                                         <Setter TargetName="PlusCircle" Property="Fill" Value="{DynamicResource AccentBrush}"/>
                                         <Setter TargetName="PlusIcon" Property="Foreground" Value="White"/>

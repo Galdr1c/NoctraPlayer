@@ -113,21 +113,38 @@ public partial class ProfilesViewModel : ObservableObject
         try
         {
             var profileId = profile.Id;
+            var providerAccountId = await _context.Profiles
+                .Where(p => p.Id == profileId)
+                .Select(p => p.ProviderAccountId)
+                .FirstOrDefaultAsync();
 
-            // 2. Find and Remove Profile & Account
-            var dbProfile = await _context.Profiles
-                .Include(p => p.ProviderAccount)
-                .FirstOrDefaultAsync(p => p.Id == profileId);
-
-            if (dbProfile != null)
+            if (providerAccountId != 0)
             {
-                if (dbProfile.ProviderAccount != null)
+                var hasOtherProfiles = await _context.Profiles
+                    .AnyAsync(p => p.ProviderAccountId == providerAccountId && p.Id != profileId);
+
+                await using var transaction = await _context.Database.BeginTransactionAsync();
+
+                await _context.WatchHistories
+                    .Where(h => h.ProfileId == profileId)
+                    .ExecuteDeleteAsync();
+
+                await _context.Playlists
+                    .Where(p => p.ProfileId == profileId)
+                    .ExecuteDeleteAsync();
+
+                await _context.Profiles
+                    .Where(p => p.Id == profileId)
+                    .ExecuteDeleteAsync();
+
+                if (!hasOtherProfiles)
                 {
-                    _context.ProviderAccounts.Remove(dbProfile.ProviderAccount);
+                    await _context.ProviderAccounts
+                        .Where(a => a.Id == providerAccountId)
+                        .ExecuteDeleteAsync();
                 }
-                
-                _context.Profiles.Remove(dbProfile);
-                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
             }
 
             // 4. Update UI

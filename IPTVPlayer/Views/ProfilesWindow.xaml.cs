@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Input;
 using IPTVPlayer.ViewModels;
 using IPTVPlayer.Services;
@@ -12,6 +12,8 @@ public partial class ProfilesWindow : Window
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private bool _autoSelectTriggered;
+    private bool _isAddProfileWindowOpen;
+    public bool DisableAutoSelect { get; set; }
 
     public ProfilesWindow(ProfilesViewModel viewModel, IServiceScopeFactory scopeFactory)
     {
@@ -24,7 +26,7 @@ public partial class ProfilesWindow : Window
         viewModel.OnProfileEditRequested += ViewModel_OnProfileEditRequested;
         viewModel.OnProfileSelected += ViewModel_OnProfileSelected;
 
-        // Window sürükleme
+        // Window sÃ¼rÃ¼kleme
         MouseLeftButtonDown += (s, e) =>
         {
             if (e.ButtonState == MouseButtonState.Pressed)
@@ -46,7 +48,7 @@ public partial class ProfilesWindow : Window
         try
         {
             var settingsService = App.Current.Services.GetRequiredService<ISettingsService>();
-            if (!settingsService.Settings.AutoSelectLastProfile || _autoSelectTriggered)
+            if (DisableAutoSelect || !settingsService.Settings.AutoSelectLastProfile || _autoSelectTriggered)
             {
                 return;
             }
@@ -89,7 +91,7 @@ public partial class ProfilesWindow : Window
 
             if (reloadedProfile == null)
             {
-                mainViewModel.StatusMessage = "Profil bulunamadı.";
+                mainViewModel.StatusMessage = "Profil bulunamadÄ±.";
                 return;
             }
             
@@ -117,13 +119,19 @@ public partial class ProfilesWindow : Window
 
     private void OpenAddProfileWindow(IPTVPlayer.Models.Profile? profileToEdit)
     {
+        if (_isAddProfileWindowOpen)
+        {
+            return;
+        }
+
+        _isAddProfileWindowOpen = true;
         try
         {
             using (var scope = _scopeFactory.CreateScope())
             {
                 var licenseService = scope.ServiceProvider.GetRequiredService<ILicenseService>();
                 var profilesViewModel = DataContext as ProfilesViewModel;
-                
+
                 // Check profile limit (only for new profiles)
                 if (profileToEdit == null && profilesViewModel != null)
                 {
@@ -138,31 +146,34 @@ public partial class ProfilesWindow : Window
                 }
 
                 var addProfileVm = scope.ServiceProvider.GetRequiredService<AddProfileViewModel>();
-                
+
                 if (profileToEdit != null)
                 {
                     addProfileVm.InitializeForEdit(profileToEdit);
                 }
 
                 var addProfileWin = new AddProfileWindow(addProfileVm, scope.ServiceProvider);
-                addProfileWin.Owner = this;
-                var result = addProfileWin.ShowDialog();
-                
-                if (result == true)
+                if (IsLoaded && !IsClosed())
                 {
-                    if (DataContext is ProfilesViewModel vm)
-                    {
-                        vm.RefreshProfiles();
-                    }
+                    addProfileWin.Owner = this;
+                }
+
+                var result = addProfileWin.ShowDialog();
+                if (result == true && DataContext is ProfilesViewModel vm)
+                {
+                    vm.RefreshProfiles();
                 }
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Pencere açılırken hata oluştu: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Pencere acilirken hata olustu: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            _isAddProfileWindowOpen = false;
         }
     }
-
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
         Application.Current.Shutdown();
@@ -174,7 +185,10 @@ public partial class ProfilesWindow : Window
         {
             var globalSettingsVm = scope.ServiceProvider.GetRequiredService<GlobalSettingsViewModel>();
             var globalSettingsWindow = new GlobalSettingsWindow(globalSettingsVm);
-            globalSettingsWindow.Owner = this;
+            if (IsLoaded && !IsClosed())
+            {
+                globalSettingsWindow.Owner = this;
+            }
             globalSettingsWindow.ShowDialog();
         }
     }
@@ -183,7 +197,7 @@ public partial class ProfilesWindow : Window
 
     private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        // Escape tuşu ile çıkış
+        // Escape tuÅŸu ile Ã§Ä±kÄ±ÅŸ
         if (e.Key == System.Windows.Input.Key.Escape)
         {
             Application.Current.Shutdown();
@@ -200,5 +214,10 @@ public partial class ProfilesWindow : Window
          }
          Loaded -= ProfilesWindow_Loaded;
          base.OnClosed(e);
+    }
+
+    private bool IsClosed()
+    {
+        return !IsVisible && PresentationSource.FromVisual(this) == null;
     }
 }

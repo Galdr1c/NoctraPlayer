@@ -53,15 +53,20 @@
                 </Setter.Value>
             </Setter>
             <Style.Triggers>
-                <EventTrigger RoutedEvent="Loaded">
-                    <BeginStoryboard>
-                        <Storyboard RepeatBehavior="Forever">
-                            <DoubleAnimation Storyboard.TargetProperty="(Border.Background).(Brush.Transform).(TranslateTransform.X)"
-                                           From="-300" To="300"
-                                           Duration="0:0:1.5"/>
-                        </Storyboard>
-                    </BeginStoryboard>
-                </EventTrigger>
+                <Trigger Property="IsVisible" Value="True">
+                    <Trigger.EnterActions>
+                        <BeginStoryboard x:Name="SkeletonShimmerStoryboard">
+                            <Storyboard RepeatBehavior="Forever">
+                                <DoubleAnimation Storyboard.TargetProperty="(Border.Background).(Brush.Transform).(TranslateTransform.X)"
+                                               From="-300" To="300"
+                                               Duration="0:0:1.5"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.EnterActions>
+                    <Trigger.ExitActions>
+                        <StopStoryboard BeginStoryboardName="SkeletonShimmerStoryboard"/>
+                    </Trigger.ExitActions>
+                </Trigger>
             </Style.Triggers>
         </Style>
 
@@ -81,20 +86,7 @@
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Trigger.EnterActions>
-                                                    <BeginStoryboard>
-                                                        <Storyboard>
-                                                            <ColorAnimation Storyboard.TargetName="Bg" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)" To="#26FFFFFF" Duration="0:0:0.15"/>
-                                                        </Storyboard>
-                                                    </BeginStoryboard>
-                                                </Trigger.EnterActions>
-                                                <Trigger.ExitActions>
-                                                    <BeginStoryboard>
-                                                        <Storyboard>
-                                                            <ColorAnimation Storyboard.TargetName="Bg" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)" To="Transparent" Duration="0:0:0.2"/>
-                                                        </Storyboard>
-                                                    </BeginStoryboard>
-                                                </Trigger.ExitActions>
+                                                <Setter TargetName="Bg" Property="Background" Value="#26FFFFFF"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -111,20 +103,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Trigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="Bg" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)" To="#E81123" Duration="0:0:0.1"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="Bg" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)" To="Transparent" Duration="0:0:0.2"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.ExitActions>
+                                <Setter TargetName="Bg" Property="Background" Value="#E81123"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -1264,27 +1243,25 @@
             <!-- ==========================================
                  PLAYER AREA (FULL WINDOW)
                  ========================================== -->
-            <Grid x:Name="PlayerArea" Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Grid.ColumnSpan="3" 
-                  Background="Black" Visibility="Collapsed" Panel.ZIndex="2000">
-                
-                <vlc:VideoView x:Name="VideoView"/>
-                
+            <Grid x:Name="PlayerArea" Grid.Row="0" Grid.RowSpan="3" Grid.Column="0" Grid.ColumnSpan="3"
+                  Background="Black" Visibility="Collapsed" ClipToBounds="True" Panel.ZIndex="2000">
 
+                <vlc:VideoView x:Name="VideoView" Panel.ZIndex="1"/>
 
-                <Popup x:Name="OverlayPopup" 
-                       Placement="Relative" 
+                <views:WatermarkView DataContext="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=WatermarkViewModel}"
+                                     Panel.ZIndex="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,100"/>
+
+                <Popup x:Name="OverlayPopup"
+                       Placement="Relative"
                        PlacementTarget="{Binding ElementName=PlayerArea}"
                        IsOpen="{Binding ElementName=PlayerArea, Path=IsVisible, Mode=OneWay}"
                        AllowsTransparency="True"
                        StaysOpen="True">
-                    <views:VideoOverlayView x:Name="VideoOverlay" 
+                    <views:VideoOverlayView x:Name="VideoOverlay"
                                             DataContext="{Binding DataContext, ElementName=PlayerArea}"
-                                            Width="{Binding ActualWidth, ElementName=PlayerArea}" 
+                                            Width="{Binding ActualWidth, ElementName=PlayerArea}"
                                             Height="{Binding ActualHeight, ElementName=PlayerArea}"/>
                 </Popup>
-                
-                <views:WatermarkView DataContext="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=WatermarkViewModel}" 
-                                     Panel.ZIndex="1999" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,100"/>
 
                 <!-- Next Episode Prompt -->
                 <Border x:Name="NextEpisodePrompt"

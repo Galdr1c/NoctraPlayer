@@ -7,6 +7,7 @@ using IPTVPlayer.Services;
 using IPTVPlayer.Services.Interfaces;
 using IPTVPlayer.ViewModels;
 using System.Net.Http;
+using System.Net;
 using System.Threading.Tasks;
 using IPTVPlayer.Views;
 
@@ -24,6 +25,10 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        ServicePointManager.DefaultConnectionLimit = 100;
+        ServicePointManager.MaxServicePointIdleTime = 1000;
+        ServicePointManager.DnsRefreshTimeout = 120000;
 
         var services = new ServiceCollection();
         ConfigureServices(services);
@@ -52,6 +57,7 @@ public partial class App : Application
         {
             // Ana pencere yerine Profiller penceresini başlat
             var profilesWindow = _serviceProvider.GetRequiredService<ProfilesWindow>();
+            profilesWindow.DisableAutoSelect = true;
             profilesWindow.Show();
 
             // Heavy/non-critical startup jobs are deferred to background
@@ -255,9 +261,25 @@ public partial class App : Application
             options.UseSqlite($"Data Source={dbPath}"), ServiceLifetime.Scoped);
 
         // HTTP Client
-        services.AddHttpClient<IM3UParser, M3UParser>();
-        services.AddHttpClient<IEpgService, EpgService>();
-        services.AddHttpClient<IMetadataService, MetadataService>();
+        services.AddHttpClient<IM3UParser, M3UParser>()
+            .ConfigurePrimaryHttpMessageHandler(CreateOptimizedHttpHandler)
+            .SetHandlerLifetime(TimeSpan.FromMinutes(10));
+
+        services.AddHttpClient<IEpgService, EpgService>()
+            .ConfigurePrimaryHttpMessageHandler(CreateOptimizedHttpHandler)
+            .SetHandlerLifetime(TimeSpan.FromMinutes(10));
+
+        services.AddHttpClient<IMetadataService, MetadataService>()
+            .ConfigurePrimaryHttpMessageHandler(CreateOptimizedHttpHandler)
+            .SetHandlerLifetime(TimeSpan.FromMinutes(10));
+
+        services.AddHttpClient<IXtreamCodesService, XtreamCodesService>()
+            .ConfigurePrimaryHttpMessageHandler(CreateOptimizedHttpHandler)
+            .SetHandlerLifetime(TimeSpan.FromMinutes(10));
+
+        services.AddHttpClient<IStalkerPortalService, StalkerPortalService>()
+            .ConfigurePrimaryHttpMessageHandler(CreateOptimizedHttpHandler)
+            .SetHandlerLifetime(TimeSpan.FromMinutes(10));
 
         // Services
         services.AddScoped<IPlaylistService, PlaylistService>();
@@ -298,6 +320,17 @@ public partial class App : Application
         services.AddTransient<EditChannelWindow>();
 
         services.AddTransient<EditChannelViewModel>();
+    }
+
+    private static HttpMessageHandler CreateOptimizedHttpHandler()
+    {
+        return new SocketsHttpHandler
+        {
+            MaxConnectionsPerServer = 10,
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+        };
     }
 
 

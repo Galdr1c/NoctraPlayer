@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Input;
 using IPTVPlayer.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,21 +14,22 @@ public partial class AddProfileWindow : Window
         InitializeComponent();
         DataContext = viewModel;
         _serviceProvider = serviceProvider;
-        
-        viewModel.RequestClose += (sender, args) => 
+
+        viewModel.RequestClose += (sender, args) =>
         {
             DialogResult = true;
             Close();
         };
 
         viewModel.RequestAvatarPicker += ViewModel_RequestAvatarPicker;
+    }
 
-        // Window sürükleme
-        MouseLeftButtonDown += (s, e) =>
+    private void DragBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ButtonState == MouseButtonState.Pressed)
         {
-            if (e.ButtonState == MouseButtonState.Pressed)
-                DragMove();
-        };
+            DragMove();
+        }
     }
 
     private void ViewModel_RequestAvatarPicker(object? sender, EventArgs e)

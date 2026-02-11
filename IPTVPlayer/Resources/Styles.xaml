@@ -669,16 +669,27 @@
                                 <Path Stroke="#33FFFFFF" StrokeThickness="8" Data="M 50,10 A 40,40 0 1 1 50,90 A 40,40 0 1 1 50,10"/>
                                 <Path Stroke="#E50914" StrokeThickness="8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                                       Data="M 50,10 A 40,40 0 0 1 90,50"/>
-                                <Canvas.Triggers>
-                                    <EventTrigger RoutedEvent="Loaded">
-                                        <BeginStoryboard>
-                                            <Storyboard>
-                                                <DoubleAnimation Storyboard.TargetName="Rotation" Storyboard.TargetProperty="Angle" 
-                                                                 From="0" To="360" Duration="0:0:1" RepeatBehavior="Forever"/>
-                                            </Storyboard>
-                                        </BeginStoryboard>
-                                    </EventTrigger>
-                                </Canvas.Triggers>
+                                <Canvas.Style>
+                                    <Style TargetType="Canvas">
+                                        <Style.Triggers>
+                                            <Trigger Property="IsVisible" Value="True">
+                                                <Trigger.EnterActions>
+                                                    <BeginStoryboard x:Name="SpinnerRotationStoryboard">
+                                                        <Storyboard>
+                                                            <DoubleAnimation Storyboard.TargetProperty="(Canvas.RenderTransform).(RotateTransform.Angle)"
+                                                                             From="0" To="360"
+                                                                             Duration="0:0:1"
+                                                                             RepeatBehavior="Forever"/>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </Trigger.EnterActions>
+                                                <Trigger.ExitActions>
+                                                    <StopStoryboard BeginStoryboardName="SpinnerRotationStoryboard"/>
+                                                </Trigger.ExitActions>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Canvas.Style>
                             </Canvas>
                         </Viewbox>
                     </Grid>

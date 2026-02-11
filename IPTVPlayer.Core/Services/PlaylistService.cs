@@ -40,55 +40,65 @@ public class PlaylistService : IPlaylistService
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] Downloading and parsing M3U from: {url}");
             var channels = await _parser.ParseFromUrlAsync(url);
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] Parsed {channels.Count} channels from M3U");
-            
-            var playlist = new Playlist
-            {
-                Name = name,
-                Url = url,
-                ProfileId = profileId,
-                CreatedAt = DateTime.Now,
-                LastUpdated = DateTime.Now,
-                ChannelCount = channels.Count,
-                IsActive = true
-            };
 
-            _context.ChangeTracker.AutoDetectChangesEnabled = false;
-            
-            try
-            {
-                _context.Playlists.Add(playlist);
-                await _context.SaveChangesAsync();
-                System.Diagnostics.Debug.WriteLine($"[PlaylistService] Created playlist with ID: {playlist.Id}");
-
-                // Add channels in batches - increased batch size for speed
-                const int batchSize = 1000;
-                for (int i = 0; i < channels.Count; i += batchSize)
-                {
-                    var batch = channels.Skip(i).Take(batchSize).ToList();
-                    foreach (var channel in batch)
-                    {
-                        channel.PlaylistId = playlist.Id;
-                    }
-                    _context.Channels.AddRange(batch);
-                    await _context.SaveChangesAsync();
-                    System.Diagnostics.Debug.WriteLine($"[PlaylistService] Saved batch {i / batchSize + 1}, total saved: {Math.Min(i + batchSize, channels.Count)}");
-                }
-                
-                // Aggregation for Series/VOD
-                await _mediaService.AggregateContentAsync(playlist.Id);
-                System.Diagnostics.Debug.WriteLine($"[PlaylistService] Completed aggregation");
-
-                return playlist;
-            }
-            finally
-            {
-                _context.ChangeTracker.AutoDetectChangesEnabled = true;
-            }
+            return await AddFromChannelsAsync(name, url, channels, profileId);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"AddFromUrlAsync error: {ex}");
             throw;
+        }
+    }
+
+    public async Task<Playlist> AddFromChannelsAsync(string name, string sourceUrl, IReadOnlyCollection<Channel> channels, int? profileId = null)
+    {
+        var existing = await _context.Playlists
+            .FirstOrDefaultAsync(p => p.Url == sourceUrl && p.ProfileId == profileId && p.IsActive);
+
+        if (existing != null)
+        {
+            return existing;
+        }
+
+        var playlist = new Playlist
+        {
+            Name = name,
+            Url = sourceUrl,
+            ProfileId = profileId,
+            CreatedAt = DateTime.Now,
+            LastUpdated = DateTime.Now,
+            ChannelCount = channels.Count,
+            IsActive = true
+        };
+
+        _context.ChangeTracker.AutoDetectChangesEnabled = false;
+
+        try
+        {
+            _context.Playlists.Add(playlist);
+            await _context.SaveChangesAsync();
+            System.Diagnostics.Debug.WriteLine($"[PlaylistService] Created playlist with ID: {playlist.Id}");
+
+            const int batchSize = 1000;
+            var channelList = channels.ToList();
+            for (int i = 0; i < channelList.Count; i += batchSize)
+            {
+                var batch = channelList.Skip(i).Take(batchSize).ToList();
+                foreach (var channel in batch)
+                {
+                    channel.PlaylistId = playlist.Id;
+                }
+
+                _context.Channels.AddRange(batch);
+                await _context.SaveChangesAsync();
+            }
+
+            await _mediaService.AggregateContentAsync(playlist.Id);
+            return playlist;
+        }
+        finally
+        {
+            _context.ChangeTracker.AutoDetectChangesEnabled = true;
         }
     }
 

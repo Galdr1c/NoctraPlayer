@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
 using IPTVPlayer.ViewModels;
+using IPTVPlayer;
 
 namespace IPTVPlayer.Views;
 
@@ -80,5 +81,14 @@ public partial class SettingsWindow : Window
             DarkCheckmark.Visibility = Visibility.Collapsed;
             LightCheckmark.Visibility = Visibility.Visible;
         }
+    }
+
+    private void BackToProfiles_Click(object sender, RoutedEventArgs e)
+    {
+        var ownerMainWindow = Owner as MainWindow ?? Application.Current.MainWindow as MainWindow;
+
+        Close();
+
+        ownerMainWindow?.OpenProfileSelection();
     }
 }

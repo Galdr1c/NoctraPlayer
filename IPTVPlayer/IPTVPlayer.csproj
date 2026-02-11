@@ -32,7 +32,6 @@
 
   <ItemGroup>
     <Resource Include="Assets\Avatars\*.png" />
-    <SplashScreen Include="Assets\Logo.png" />
   </ItemGroup>
 
 </Project>

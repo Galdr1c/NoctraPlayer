@@ -127,29 +127,23 @@ public partial class MainWindow : Window
         // PreviewKeyDown ile global key handling
         PreviewKeyDown += Window_PreviewKeyDown;
 
-        // Validated Fix for Popup Detachment
-        LocationChanged += (s, e) =>
-        {
-            if (OverlayPopup.IsOpen)
-            {
-                var offset = OverlayPopup.HorizontalOffset;
-                OverlayPopup.HorizontalOffset = offset + 1;
-                OverlayPopup.HorizontalOffset = offset;
-            }
-        };
-
-        SizeChanged += (s, e) =>
-        {
-            if (OverlayPopup.IsOpen)
-            {
-                var offset = OverlayPopup.HorizontalOffset;
-                OverlayPopup.HorizontalOffset = offset + 1;
-                OverlayPopup.HorizontalOffset = offset;
-            }
-        };
+        // Keep Popup overlay aligned with main window while moving/resizing.
+        LocationChanged += (_, _) => RefreshOverlayPopupPosition();
+        SizeChanged += (_, _) => RefreshOverlayPopupPosition();
+        StateChanged += (_, _) => RefreshOverlayPopupPosition();
 
         // Subscribe to Edit Channel requests
         _viewModel.RequestEditChannel += OnRequestEditChannel;
+    }
+
+    private void RefreshOverlayPopupPosition()
+    {
+        if (OverlayPopup.IsOpen)
+        {
+            var offset = OverlayPopup.HorizontalOffset;
+            OverlayPopup.HorizontalOffset = offset + 1;
+            OverlayPopup.HorizontalOffset = offset;
+        }
     }
 
     private void OnRequestEditChannel(Channel channel)
@@ -381,6 +375,39 @@ public partial class MainWindow : Window
             settingsWindow.Owner = this;
             settingsWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner;
             settingsWindow.ShowDialog();
+        }
+    }
+
+    public void OpenProfileSelection()
+    {
+        try
+        {
+            if (_playerViewModel.IsPlaying)
+            {
+                _playerViewModel.StopCommand.Execute(null);
+            }
+
+            if (PlayerArea.Visibility == Visibility.Visible)
+            {
+                PlayerArea.Visibility = Visibility.Collapsed;
+            }
+
+            var profilesWindow = App.Current.Services.GetRequiredService<ProfilesWindow>();
+            profilesWindow.DisableAutoSelect = true;
+            profilesWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+
+            Hide();
+            profilesWindow.ShowDialog();
+
+            if (!IsVisible && Application.Current.ShutdownMode != ShutdownMode.OnExplicitShutdown)
+            {
+                Show();
+            }
+        }
+        catch (Exception ex)
+        {
+            Show();
+            MessageBox.Show($"Profil secme ekrani acilamadi: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

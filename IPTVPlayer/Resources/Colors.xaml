@@ -1,11 +1,12 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options">
     
     <!-- Primary Color (uses Accent600 from theme - Main Purple) -->
     <Color x:Key="PrimaryColor">#8B5CF6</Color>
-    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}"/>
+    <SolidColorBrush po:Freeze="True" x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}"/>
     
     <!-- Noctra Specific Colors & Brushes -->
     <Color x:Key="NoctraRed">#E50914</Color>
-    <SolidColorBrush x:Key="NoctraRedBrush" Color="{StaticResource NoctraRed}"/>
+    <SolidColorBrush po:Freeze="True" x:Key="NoctraRedBrush" Color="{StaticResource NoctraRed}"/>
 </ResourceDictionary>

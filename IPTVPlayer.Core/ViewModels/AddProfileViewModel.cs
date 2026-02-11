@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using IPTVPlayer.Models;
 using IPTVPlayer.Services.Interfaces;
@@ -9,11 +9,15 @@ namespace IPTVPlayer.ViewModels;
 
 public partial class AddProfileViewModel : ObservableObject
 {
+    private const string StalkerMacPrefix = "00:1A:79:";
     private readonly AppDbContext _context;
     private readonly IDispatcherService _dispatcherService;
     private readonly IAvatarService _avatarService;
     private readonly IDialogService _dialogService;
     private readonly IPlaylistService _playlistService;
+    private readonly IM3UParser _m3uParser;
+    private readonly IXtreamCodesService _xtreamCodesService;
+    private readonly IStalkerPortalService _stalkerPortalService;
 
     // Simplified Account Details
     [ObservableProperty]
@@ -26,6 +30,8 @@ public partial class AddProfileViewModel : ObservableObject
 
     partial void OnUrlChanged(string value)
     {
+        PlaylistPreviewSummary = string.Empty;
+
         if (_isUpdatingUrl || string.IsNullOrEmpty(value)) return;
         
         try
@@ -39,8 +45,12 @@ public partial class AddProfileViewModel : ObservableObject
             {
                 if (!IsM3U) IsM3U = true;
             }
+            else if (lower.Contains("stalker_portal") || lower.Contains("/portal"))
+            {
+                if (!IsStalker) IsStalker = true;
+            }
 
-            // Extract credentials
+            // Extract credentials from query string without changing the selected provider type.
             if (value.Contains("?"))
             {
                 var uri = new Uri(value);
@@ -57,24 +67,6 @@ public partial class AddProfileViewModel : ObservableObject
                     Username = Uri.UnescapeDataString(usernameMatch.Groups[1].Value);
                 if (passwordMatch.Success) 
                     Password = Uri.UnescapeDataString(passwordMatch.Groups[1].Value);
-
-                // Extract base URL without triggering recursion
-                if (lower.Contains("get.php"))
-                {
-                    var parts = value.Split('?');
-                    if (parts.Length > 0)
-                    {
-                        var baseUrl = parts[0].Replace("/get.php", "");
-                        if (baseUrl != value)
-                        {
-                            // Use field directly to avoid triggering OnChanged
-                            _url = baseUrl;
-                            OnPropertyChanged(nameof(Url));
-                        }
-                    }
-                    
-                    if (!IsXtream) IsXtream = true;
-                }
             }
         }
         catch (Exception ex)
@@ -142,12 +134,12 @@ public partial class AddProfileViewModel : ObservableObject
             Url = baseUrl;
             _isUpdatingUrl = false;
 
-            StatusMessage = "M3U linki Xtream formatına dönüştürüldü";
+            StatusMessage = "M3U linki Xtream formatÄ±na dÃ¶nÃ¼ÅŸtÃ¼rÃ¼ldÃ¼";
             HasError = false;
         }
         catch (Exception ex)
         {
-            StatusMessage = $"URL parse hatası: {ex.Message}";
+            StatusMessage = $"URL parse hatasÄ±: {ex.Message}";
             HasError = true;
         }
     }
@@ -175,12 +167,12 @@ public partial class AddProfileViewModel : ObservableObject
             Url = m3uUrl;
             _isUpdatingUrl = false;
 
-            StatusMessage = "Xtream bilgileri M3U linkine dönüştürüldü";
+            StatusMessage = "Xtream bilgileri M3U linkine dÃ¶nÃ¼ÅŸtÃ¼rÃ¼ldÃ¼";
             HasError = false;
         }
         catch (Exception ex)
         {
-            StatusMessage = $"URL oluşturma hatası: {ex.Message}";
+            StatusMessage = $"URL oluÅŸturma hatasÄ±: {ex.Message}";
             HasError = true;
         }
     }
@@ -190,7 +182,23 @@ public partial class AddProfileViewModel : ObservableObject
 
     partial void OnUsernameChanged(string value)
     {
+        PlaylistPreviewSummary = string.Empty;
+
         if (_isUpdatingUrl) return;
+
+        if (IsStalker)
+        {
+            var suffix = value;
+            if (suffix.StartsWith(StalkerMacPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                suffix = suffix[StalkerMacPrefix.Length..];
+            }
+
+            _isUpdatingUrl = true;
+            Username = StalkerMacPrefix + NormalizeStalkerMacSuffix(suffix);
+            _isUpdatingUrl = false;
+            return;
+        }
         
         if (IsM3U && !string.IsNullOrWhiteSpace(Url) && !string.IsNullOrWhiteSpace(Password))
         {
@@ -203,6 +211,8 @@ public partial class AddProfileViewModel : ObservableObject
 
     partial void OnPasswordChanged(string value)
     {
+        PlaylistPreviewSummary = string.Empty;
+
         if (_isUpdatingUrl) return;
         
         if (IsM3U && !string.IsNullOrWhiteSpace(Url) && !string.IsNullOrWhiteSpace(Username))
@@ -211,18 +221,20 @@ public partial class AddProfileViewModel : ObservableObject
         }
     }
     
-    [ObservableProperty]
+        [ObservableProperty]
     private bool _isXtream = true;
 
     partial void OnIsXtreamChanged(bool value)
     {
+        PlaylistPreviewSummary = string.Empty;
+
         if (_isUpdatingUrl) return;
-        
+
         if (value)
         {
             IsM3U = false;
-            
-            // M3U URL'den Xtream'e geçiş - Parse et
+            IsStalker = false;
+
             if (!string.IsNullOrWhiteSpace(Url) && Url.Contains("get.php"))
             {
                 ParseCredentialsFromUrl(Url);
@@ -236,22 +248,77 @@ public partial class AddProfileViewModel : ObservableObject
 
     partial void OnIsM3UChanged(bool value)
     {
+        PlaylistPreviewSummary = string.Empty;
+
         if (_isUpdatingUrl) return;
-        
+
         if (value)
         {
             IsXtream = false;
-            
-            // Xtream'den M3U'ya geçiş - Rebuild URL
-            if (!string.IsNullOrWhiteSpace(Url) && 
-                !string.IsNullOrWhiteSpace(Username) && 
+            IsStalker = false;
+
+            if (!string.IsNullOrWhiteSpace(Url) &&
+                !string.IsNullOrWhiteSpace(Username) &&
                 !string.IsNullOrWhiteSpace(Password))
             {
                 ConvertXtreamToM3UUrl();
             }
         }
     }
-    
+
+    [ObservableProperty]
+    private bool _isStalker = false;
+
+    partial void OnIsStalkerChanged(bool value)
+    {
+        PlaylistPreviewSummary = string.Empty;
+
+        if (_isUpdatingUrl) return;
+
+        if (value)
+        {
+            IsXtream = false;
+            IsM3U = false;
+            _isUpdatingUrl = true;
+            Username = StalkerMacPrefix;
+            _isUpdatingUrl = false;
+        }
+    }
+
+    private static string NormalizeStalkerMacSuffix(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return string.Empty;
+        }
+
+        var hex = new string(input
+            .Where(c => Uri.IsHexDigit(c))
+            .Select(char.ToUpperInvariant)
+            .ToArray());
+
+        if (hex.Length > 6)
+        {
+            hex = hex[..6];
+        }
+
+        if (hex.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        var groups = Enumerable
+            .Range(0, (hex.Length + 1) / 2)
+            .Select(i =>
+            {
+                var start = i * 2;
+                var len = Math.Min(2, hex.Length - start);
+                return hex.Substring(start, len);
+            });
+
+        return string.Join(":", groups);
+    }
+
     // Profile Details
     [ObservableProperty]
     private string _profileName = string.Empty;
@@ -279,6 +346,12 @@ public partial class AddProfileViewModel : ObservableObject
     private bool _isSaving;
 
     [ObservableProperty]
+    private bool _isAnalyzingConnection;
+
+    [ObservableProperty]
+    private string _playlistPreviewSummary = string.Empty;
+
+    [ObservableProperty]
     private Profile? _editingProfile;
 
     public event EventHandler? RequestClose;
@@ -289,13 +362,19 @@ public partial class AddProfileViewModel : ObservableObject
         IDispatcherService dispatcherService, 
         IAvatarService avatarService, 
         IDialogService dialogService,
-        IPlaylistService playlistService)
+        IPlaylistService playlistService,
+        IM3UParser m3uParser,
+        IXtreamCodesService xtreamCodesService,
+        IStalkerPortalService stalkerPortalService)
     {
         _context = context;
         _dispatcherService = dispatcherService;
         _avatarService = avatarService;
         _dialogService = dialogService;
         _playlistService = playlistService;
+        _m3uParser = m3uParser;
+        _xtreamCodesService = xtreamCodesService;
+        _stalkerPortalService = stalkerPortalService;
 
         // Initialize with default avatar
         var avatars = _avatarService.GetAvatarsByCategory().Values.FirstOrDefault();
@@ -325,10 +404,11 @@ public partial class AddProfileViewModel : ObservableObject
             Password = profile.ProviderAccount.Password ?? string.Empty;
             IsXtream = profile.ProviderAccount.Type == ProfileType.XtreamCodes;
             IsM3U = profile.ProviderAccount.Type == ProfileType.M3U;
+            IsStalker = profile.ProviderAccount.Type == ProfileType.StalkerPortal;
 
             _isUpdatingUrl = false;
 
-            // Eğer M3U linkiyse ve credentials varsa, parse et
+            // EÄŸer M3U linkiyse ve credentials varsa, parse et
             if (IsM3U && Url.Contains("get.php"))
             {
                 ParseCredentialsFromUrl(Url);
@@ -353,71 +433,57 @@ public partial class AddProfileViewModel : ObservableObject
     {
         if (profile == null || EditingProfile == null) return;
 
-        var confirmed = await _dialogService.ShowConfirmationAsync("Profil Sil", 
-            $"'{profile.Name}' profilini silmek istediğinize emin misiniz?");
-            
+        var confirmed = await _dialogService.ShowConfirmationAsync("Profil Sil",
+            $"'{profile.Name}' profilini silmek istediginize emin misiniz?");
         if (!confirmed) return;
 
-        try 
+        try
         {
-            var dbProfile = await _context.Profiles
-                .Include(p => p.ProviderAccount)
-                .AsNoTracking() // Use tracking in the explicit load below
-                .FirstOrDefaultAsync(p => p.Id == EditingProfile.Id);
+            IsSaving = true;
+            StatusMessage = "Profil siliniyor...";
 
-            if (dbProfile == null) return;
-            
-            // Re-fetch with tracking
-            var profileToDelete = await _context.Profiles
-                .Include(p => p.ProviderAccount)
-                .FirstAsync(p => p.Id == EditingProfile.Id);
+            var profileId = EditingProfile.Id;
+            var providerAccountId = await _context.Profiles
+                .Where(p => p.Id == profileId)
+                .Select(p => p.ProviderAccountId)
+                .FirstOrDefaultAsync();
 
-            // 1. Manually delete Playlists (to avoid FK constraints if cascade is missing/restricted)
-            var playlists = await _context.Playlists.Where(p => p.ProfileId == profileToDelete.Id).ToListAsync();
-            if (playlists.Any())
+            if (providerAccountId == 0) return;
+
+            var hasOtherProfiles = await _context.Profiles
+                .AnyAsync(p => p.ProviderAccountId == providerAccountId && p.Id != profileId);
+
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            await _context.WatchHistories
+                .Where(h => h.ProfileId == profileId)
+                .ExecuteDeleteAsync();
+
+            await _context.Playlists
+                .Where(p => p.ProfileId == profileId)
+                .ExecuteDeleteAsync();
+
+            await _context.Profiles
+                .Where(p => p.Id == profileId)
+                .ExecuteDeleteAsync();
+
+            if (!hasOtherProfiles)
             {
-                // Channels are set to Cascade delete in AppDbContext, so removing playlists should work
-                _context.Playlists.RemoveRange(playlists);
+                await _context.ProviderAccounts
+                    .Where(a => a.Id == providerAccountId)
+                    .ExecuteDeleteAsync();
             }
 
-            // 2. Manually delete WatchHistory
-            var history = await _context.WatchHistories.Where(h => h.ProfileId == profileToDelete.Id).ToListAsync();
-            if (history.Any())
-            {
-                _context.WatchHistories.RemoveRange(history);
-            }
-
-            // 3. Check if ProviderAccount is shared
-            bool shouldDeleteAccount = false;
-            if (profileToDelete.ProviderAccount != null)
-            {
-                var otherProfilesUsingAccount = await _context.Profiles
-                    .AnyAsync(p => p.ProviderAccountId == profileToDelete.ProviderAccountId && p.Id != profileToDelete.Id);
-                
-                shouldDeleteAccount = !otherProfilesUsingAccount;
-            }
-
-            // 4. Delete Profile FIRST
-            // If we delete Account first (and it cascades), it might be blocked by Profile's children.
-            // But we cleaned up children. 
-            // However, standard foreign key logic: Delete children, then parent.
-            
-            // If we delete profile first, ProviderAccount (parent) remains.
-            _context.Profiles.Remove(profileToDelete);
-            
-            // 5. Delete ProviderAccount if orphaned
-            if (shouldDeleteAccount && profileToDelete.ProviderAccount != null)
-            {
-                _context.ProviderAccounts.Remove(profileToDelete.ProviderAccount);
-            }
-
-            await _context.SaveChangesAsync();
-            
+            await transaction.CommitAsync();
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
         {
-            await _dialogService.ShowErrorAsync("Hata", "Profil silinirken bir hata oluştu.", ex);
+            await _dialogService.ShowErrorAsync("Hata", "Profil silinirken bir hata olustu.", ex);
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 
@@ -428,39 +494,142 @@ public partial class AddProfileViewModel : ObservableObject
             UrlError = "URL gereklidir";
             return false;
         }
-        
-        // Basic URL format check
-        if (!Uri.TryCreate(Url, UriKind.Absolute, out var uri))
+
+        if (!Url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+            !Url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
-            UrlError = "Geçersiz URL formatı";
+            Url = "http://" + Url.Trim();
+        }
+
+        if (!Uri.TryCreate(Url, UriKind.Absolute, out _))
+        {
+            UrlError = "Gecersiz URL formati";
             return false;
         }
-        
-        // M3U specific validation
+
         if (IsM3U)
         {
-            var lower = Url.ToLower();
+            var lower = Url.ToLowerInvariant();
             if (!lower.Contains(".m3u") && !lower.Contains(".m3u8") && !lower.Contains("get.php"))
             {
-                UrlError = "M3U URL'i .m3u, .m3u8 veya get.php içermelidir";
+                UrlError = "M3U URL'i .m3u, .m3u8 veya get.php icermelidir";
                 return false;
             }
         }
-        
-        // Xtream specific validation
+
         if (IsXtream)
         {
             if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
             {
-                UrlError = "Xtream için kullanıcı adı ve şifre gereklidir";
+                UrlError = "Xtream icin kullanici adi ve sifre gereklidir";
                 return false;
             }
         }
-        
+
+        if (IsStalker)
+        {
+            if (string.IsNullOrWhiteSpace(Username))
+            {
+                UrlError = "Stalker Portal icin MAC adresi gereklidir";
+                return false;
+            }
+
+            var macRegex = new System.Text.RegularExpressions.Regex(
+                "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$",
+                System.Text.RegularExpressions.RegexOptions.Compiled);
+
+            if (!macRegex.IsMatch(Username.Trim()))
+            {
+                UrlError = "MAC adresi gecersiz. Ornek: 00:1A:79:AA:BB:CC";
+                return false;
+            }
+        }
+
         UrlError = null;
         return true;
     }
+    [RelayCommand]
+    private async Task AnalyzeConnectionAsync()
+    {
+        if (!ValidateUrl())
+        {
+            return;
+        }
 
+        IsAnalyzingConnection = true;
+        HasError = false;
+        StatusMessage = "Baglanti analiz ediliyor...";
+        PlaylistPreviewSummary = string.Empty;
+
+        try
+        {
+            var preview = await BuildImportPreviewAsync();
+            HasError = !preview.IsValid;
+            PlaylistPreviewSummary = preview.ToSummaryText();
+            StatusMessage = preview.IsValid ? "Baglanti analizi tamamlandi" : "Baglanti analizi basarisiz";
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            StatusMessage = $"Analiz hatasi: {ex.Message}";
+            PlaylistPreviewSummary = string.Empty;
+        }
+        finally
+        {
+            IsAnalyzingConnection = false;
+        }
+    }
+
+    private async Task<PlaylistImportPreview> BuildImportPreviewAsync()
+    {
+        try
+        {
+            var excludedProviderAccountId = EditingProfile != null ? EditingProfile.ProviderAccountId : 0;
+            var selectedType = IsStalker
+                ? ProfileType.StalkerPortal
+                : IsXtream
+                    ? ProfileType.XtreamCodes
+                    : ProfileType.M3U;
+
+            var existingAccountDuplicate = await _context.ProviderAccounts
+                .AnyAsync(a =>
+                    a.Id != excludedProviderAccountId &&
+                    a.Type == selectedType &&
+                    a.Url == Url &&
+                    (a.Username ?? string.Empty) == Username &&
+                    (a.Password ?? string.Empty) == Password);
+
+            IReadOnlyCollection<Channel> channels;
+            if (IsStalker)
+            {
+                channels = await _stalkerPortalService.GetChannelsAsync(
+                    Url,
+                    Username,
+                    includeVod: true);
+
+                return PlaylistImportPreview.FromChannels(channels, "Stalker Portal", existingAccountDuplicate);
+            }
+
+            if (IsXtream)
+            {
+                channels = await _xtreamCodesService.GetChannelsAsync(
+                    Url,
+                    Username,
+                    Password,
+                    includeSeriesEpisodes: false);
+
+                return PlaylistImportPreview.FromChannels(channels, "Xtream", existingAccountDuplicate);
+            }
+
+            channels = await _m3uParser.ParseFromUrlAsync(Url);
+            return PlaylistImportPreview.FromChannels(channels, "M3U", existingAccountDuplicate);
+        }
+        catch (Exception ex)
+        {
+            var sourceType = IsStalker ? "Stalker Portal" : IsXtream ? "Xtream" : "M3U";
+            return PlaylistImportPreview.Invalid(sourceType, ex.Message);
+        }
+    }
     [RelayCommand]
     private async Task SaveAsync()
     {
@@ -470,11 +639,18 @@ public partial class AddProfileViewModel : ObservableObject
         HasError = false;
         StatusMessage = string.Empty;
 
-        // Validate profile name
+        // If user did not type a name, generate one from URL host.
         if (string.IsNullOrWhiteSpace(ProfileName))
         {
-            ProfileNameError = "Profil adı gereklidir";
-            return;
+            if (Uri.TryCreate(Url, UriKind.Absolute, out var uri) && !string.IsNullOrWhiteSpace(uri.Host))
+            {
+                ProfileName = uri.Host;
+            }
+            else
+            {
+                ProfileNameError = "Profil adi gereklidir";
+                return;
+            }
         }
 
         // Validate URL
@@ -509,7 +685,11 @@ public partial class AddProfileViewModel : ObservableObject
                  selectedAccount.Url = Url;
                  selectedAccount.Username = Username;
                  selectedAccount.Password = Password;
-                 selectedAccount.Type = IsXtream ? ProfileType.XtreamCodes : ProfileType.M3U;
+                 selectedAccount.Type = IsStalker
+                     ? ProfileType.StalkerPortal
+                     : IsXtream
+                        ? ProfileType.XtreamCodes
+                        : ProfileType.M3U;
                  selectedAccount.ExpirationDate = null; // Reset date on credential change
                  
                  _context.Entry(selectedAccount).State = EntityState.Modified;
@@ -519,8 +699,12 @@ public partial class AddProfileViewModel : ObservableObject
             {
                 account = new ProviderAccount
                 {
-                    Name = ProfileName + " Hesabı",
-                    Type = IsXtream ? ProfileType.XtreamCodes : ProfileType.M3U,
+                    Name = ProfileName + " HesabÄ±",
+                    Type = IsStalker
+                        ? ProfileType.StalkerPortal
+                        : IsXtream
+                            ? ProfileType.XtreamCodes
+                            : ProfileType.M3U,
                     Url = Url,
                     Username = Username,
                     Password = Password
@@ -579,7 +763,7 @@ public partial class AddProfileViewModel : ObservableObject
             await transaction.CommitAsync();
 
             // Success feedback
-            StatusMessage = "✓ Profil kaydedildi";
+            StatusMessage = "âœ“ Profil kaydedildi";
             await Task.Delay(400);
 
             RequestClose?.Invoke(this, EventArgs.Empty);

@@ -31,7 +31,9 @@ public class EpgService : IEpgService
             if (string.IsNullOrEmpty(epgUrl)) return;
 
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-            using var response = await _httpClient.GetAsync(epgUrl, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+            using var response = await NetworkRetry.ExecuteAsync(
+                () => _httpClient.GetAsync(epgUrl, HttpCompletionOption.ResponseHeadersRead, cts.Token),
+                cancellationToken: cts.Token);
             response.EnsureSuccessStatusCode();
 
             using var stream = await response.Content.ReadAsStreamAsync(cts.Token);

@@ -150,6 +150,21 @@
                                 </Grid>
                             </Border>
 
+                            <Border Style="{StaticResource SettingsCard}">
+                                <StackPanel>
+                                    <TextBlock Text="Profil Yönetimi" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+                                    <TextBlock Text="Kim İzliyor ekranına dönerek aktif profili değiştirebilirsiniz."
+                                               FontSize="13"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               Margin="0,0,0,14"/>
+                                    <Button Content="Profil Seçme Ekranına Dön"
+                                            Click="BackToProfiles_Click"
+                                            Style="{StaticResource SecondaryButton}"
+                                            HorizontalAlignment="Left"
+                                            Padding="18,10"/>
+                                </StackPanel>
+                            </Border>
+
                             <!-- Subscription Details -->
                             <Border Style="{StaticResource SettingsCard}">
                                 <StackPanel>

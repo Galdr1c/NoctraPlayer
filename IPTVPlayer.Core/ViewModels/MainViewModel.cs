@@ -167,29 +167,72 @@ public partial class MainViewModel : ObservableObject
                 // No cache - download and parse M3U
                 System.Diagnostics.Debug.WriteLine($"[MainViewModel] No cache found, downloading playlist for profile {profile.Id}");
                 
-                string m3uUrl;
-                if (profile.ProviderAccount.Type == ProfileType.M3U)
+                switch (profile.ProviderAccount.Type)
                 {
-                    m3uUrl = profile.ProviderAccount.Url;
-                    
-                    // Try to extract Xtream credentials from M3U URL
-                    _ = CheckM3UExpirationAsync(profile.ProviderAccount);
-                }
-                else // XtreamCodes
-                {
-                    StatusMessage = "Xtream baÄŸlantÄ±sÄ± kuruluyor...";
-                    var baseUrl = profile.ProviderAccount.Url.TrimEnd('/');
-                    if (!baseUrl.StartsWith("http")) baseUrl = "http://" + baseUrl;
-                    
-                    // Check expiration in background
-                    _ = CheckXtreamExpirationAsync(profile.ProviderAccount);
+                    case ProfileType.M3U:
+                    {
+                        var m3uUrl = profile.ProviderAccount.Url;
+                        _ = CheckM3UExpirationAsync(profile.ProviderAccount);
+                        StatusMessage = "Kanal listesi indiriliyor...";
+                        await playlistService.AddFromUrlAsync(profile.Name, m3uUrl, profile.Id);
+                        await LoadPlaylistsAsync();
+                        break;
+                    }
+                    case ProfileType.XtreamCodes:
+                    {
+                        StatusMessage = "Xtream baglantisi kuruluyor...";
+                        var baseUrl = profile.ProviderAccount.Url.TrimEnd('/');
+                        if (!baseUrl.StartsWith("http")) baseUrl = "http://" + baseUrl;
 
-                    m3uUrl = $"{baseUrl}/get.php?username={Uri.EscapeDataString(profile.ProviderAccount.Username ?? "")}&password={Uri.EscapeDataString(profile.ProviderAccount.Password ?? "")}&type=m3u_plus&output=ts";
+                        _ = CheckXtreamExpirationAsync(profile.ProviderAccount);
+                        var username = profile.ProviderAccount.Username ?? string.Empty;
+                        var password = profile.ProviderAccount.Password ?? string.Empty;
+                        var xtreamService = scope.ServiceProvider.GetRequiredService<IXtreamCodesService>();
+
+                        try
+                        {
+                            StatusMessage = "Xtream API'den kanallar aliniyor...";
+                            var xtreamChannels = await xtreamService.GetChannelsAsync(
+                                baseUrl,
+                                username,
+                                password,
+                                includeSeriesEpisodes: true);
+
+                            var sourceUrl = $"{baseUrl}/get.php?username={Uri.EscapeDataString(username)}&password={Uri.EscapeDataString(password)}&type=m3u_plus&output=ts";
+                            await playlistService.AddFromChannelsAsync(profile.Name, sourceUrl, xtreamChannels, profile.Id);
+                            await LoadPlaylistsAsync();
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[MainViewModel] Xtream API fallback to M3U: {ex.Message}");
+                            var fallbackM3uUrl = $"{baseUrl}/get.php?username={Uri.EscapeDataString(username)}&password={Uri.EscapeDataString(password)}&type=m3u_plus&output=ts";
+                            StatusMessage = "Kanal listesi indiriliyor...";
+                            await playlistService.AddFromUrlAsync(profile.Name, fallbackM3uUrl, profile.Id);
+                            await LoadPlaylistsAsync();
+                        }
+
+                        break;
+                    }
+                    case ProfileType.StalkerPortal:
+                    {
+                        StatusMessage = "Stalker Portal baglantisi kuruluyor...";
+                        var stalkerService = scope.ServiceProvider.GetRequiredService<IStalkerPortalService>();
+                        var portalUrl = profile.ProviderAccount.Url;
+                        var macAddress = profile.ProviderAccount.Username ?? string.Empty;
+
+                        var stalkerChannels = await stalkerService.GetChannelsAsync(
+                            portalUrl,
+                            macAddress,
+                            includeVod: true);
+
+                        var sourceUrl = $"{portalUrl.TrimEnd('/')}/stalker_portal#{macAddress}";
+                        await playlistService.AddFromChannelsAsync(profile.Name, sourceUrl, stalkerChannels, profile.Id);
+                        await LoadPlaylistsAsync();
+                        break;
+                    }
+                    default:
+                        throw new NotSupportedException($"Desteklenmeyen profil tipi: {profile.ProviderAccount.Type}");
                 }
-                
-                StatusMessage = "Kanal listesi indiriliyor...";
-                await playlistService.AddFromUrlAsync(profile.Name, m3uUrl, profile.Id);
-                await LoadPlaylistsAsync();
             }
         }
         catch (Exception ex)

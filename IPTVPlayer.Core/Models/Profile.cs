@@ -7,7 +7,8 @@ namespace IPTVPlayer.Models;
 public enum ProfileType
 {
     M3U,
-    XtreamCodes
+    XtreamCodes,
+    StalkerPortal
 }
 
 public partial class Profile : ObservableObject
