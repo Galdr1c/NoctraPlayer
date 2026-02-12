@@ -309,24 +309,20 @@ public class PlaylistService : IPlaylistService
     /// <summary>
     /// Get channels with filtering and pagination for fast loading
     /// </summary>
-    public async Task<List<Channel>> GetChannelsFilteredAsync(int playlistId, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, int limit = 1000)
+    public async Task<List<Channel>> GetChannelsFilteredAsync(int playlistId, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, int limit = 1000, ChannelSortOrder sortOrder = ChannelSortOrder.NewestFirst)
     {
         var query = BuildFilteredChannelQuery(playlistId, searchText, group, type, onlyFavorites);
         
-        return await query
-            .OrderBy(c => c.GroupTitle)
-            .ThenBy(c => c.Name)
+        return await ApplySort(query, sortOrder)
             .Take(limit)
             .ToListAsync();
     }
 
-    public async Task<List<Channel>> GetChannelsFilteredPageAsync(int playlistId, int skip, int take, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false)
+    public async Task<List<Channel>> GetChannelsFilteredPageAsync(int playlistId, int skip, int take, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, ChannelSortOrder sortOrder = ChannelSortOrder.NewestFirst)
     {
         var query = BuildFilteredChannelQuery(playlistId, searchText, group, type, onlyFavorites);
 
-        return await query
-            .OrderBy(c => c.GroupTitle)
-            .ThenBy(c => c.Name)
+        return await ApplySort(query, sortOrder)
             .Skip(Math.Max(0, skip))
             .Take(Math.Max(1, take))
             .ToListAsync();
@@ -353,6 +349,17 @@ public class PlaylistService : IPlaylistService
         return await _context.Channels
             .Where(c => c.PlaylistId == playlistId)
             .CountAsync();
+    }
+
+    private static IOrderedQueryable<Channel> ApplySort(IQueryable<Channel> query, ChannelSortOrder sortOrder)
+    {
+        return sortOrder switch
+        {
+            ChannelSortOrder.OldestFirst => query.OrderBy(c => c.Id),
+            ChannelSortOrder.NameAsc => query.OrderBy(c => c.Name).ThenBy(c => c.Id),
+            ChannelSortOrder.NameDesc => query.OrderByDescending(c => c.Name).ThenByDescending(c => c.Id),
+            _ => query.OrderByDescending(c => c.Id)
+        };
     }
 
     private IQueryable<Channel> BuildFilteredChannelQuery(int playlistId, string? searchText, string? group, ChannelType? type, bool onlyFavorites)

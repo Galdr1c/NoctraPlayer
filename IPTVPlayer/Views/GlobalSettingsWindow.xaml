@@ -237,14 +237,15 @@
                                 </StackPanel>
 
                                 <ComboBox Grid.Column="1"
-                                         SelectedIndex="0"
-                                         Style="{StaticResource ModernComboBox}"
-                                         Width="180">
-                                    <ComboBoxItem Content="Türkçe 🇹🇷"/>
-                                    <ComboBoxItem Content="English 🇺🇸"/>
-                                    <ComboBoxItem Content="Deutsch 🇩🇪"/>
-                                    <ComboBoxItem Content="Français 🇫🇷"/>
-                                    <ComboBoxItem Content="Español 🇪🇸"/>
+                                          SelectedValue="{Binding Settings.Language, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          SelectedValuePath="Tag"
+                                          Style="{StaticResource ModernComboBox}"
+                                          Width="180">
+                                    <ComboBoxItem Content="Türkçe" Tag="tr"/>
+                                    <ComboBoxItem Content="English" Tag="en"/>
+                                    <ComboBoxItem Content="Deutsch" Tag="de"/>
+                                    <ComboBoxItem Content="Français" Tag="fr"/>
+                                    <ComboBoxItem Content="Español" Tag="es"/>
                                 </ComboBox>
                             </Grid>
                         </StackPanel>
@@ -426,7 +427,7 @@
                                         Background="{DynamicResource PrimaryGradientBrush}"
                                         CornerRadius="12"
                                         Margin="0,0,20,0">
-                                    <TextBlock Text="📺"
+                                    <TextBlock Text="TV"
                                                FontSize="32"
                                                HorizontalAlignment="Center"
                                                VerticalAlignment="Center"/>
@@ -443,7 +444,7 @@
                                                FontSize="14"
                                                Foreground="{DynamicResource TextMutedBrush}"
                                                Margin="0,4,0,0"/>
-                                    <TextBlock Text="© 2026 Tüm Hakları Saklıdır"
+                                    <TextBlock Text="(c) 2026 Tum Haklari Saklidir"
                                                FontSize="13"
                                                Foreground="{DynamicResource TextMutedBrush}"
                                                Margin="0,4,0,0"/>
@@ -463,7 +464,7 @@
                                        Foreground="{DynamicResource AccentBrush}"
                                        FontSize="14"
                                        Cursor="Hand"/>
-                                <TextBlock Text=" • " 
+                                <TextBlock Text=" | " 
                                           Foreground="{DynamicResource BorderBrush}" 
                                           VerticalAlignment="Center"
                                           Margin="8,0"/>
@@ -472,7 +473,7 @@
                                        Foreground="{DynamicResource AccentBrush}"
                                        FontSize="14"
                                        Cursor="Hand"/>
-                                <TextBlock Text=" • " 
+                                <TextBlock Text=" | " 
                                           Foreground="{DynamicResource BorderBrush}" 
                                           VerticalAlignment="Center"
                                           Margin="8,0"/>

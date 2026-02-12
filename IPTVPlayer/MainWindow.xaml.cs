@@ -394,6 +394,11 @@ public partial class MainWindow : Window
         }
     }
 
+    private void ClearGroupSelection_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.SelectedGroup = null;
+    }
+
     private void FavoriteButton_Click(object sender, RoutedEventArgs e)
     {
         e.Handled = true; // Card click'i tetiklememesi için

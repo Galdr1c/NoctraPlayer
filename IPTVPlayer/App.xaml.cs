@@ -9,6 +9,8 @@ using IPTVPlayer.ViewModels;
 using System.Net.Http;
 using System.Net;
 using System.Threading.Tasks;
+using System.Globalization;
+using System.Threading;
 using IPTVPlayer.Views;
 
 namespace IPTVPlayer;
@@ -46,9 +48,17 @@ public partial class App : Application
             // Kayıtlı temayı uygula
             var settingsService = scope.ServiceProvider.GetRequiredService<ISettingsService>();
             var themeService = scope.ServiceProvider.GetRequiredService<IThemeService>();
+            ApplyApplicationLanguage(settingsService.Settings.Language);
             bool isDark = settingsService.Settings.IsDarkTheme;
             themeService.SetTheme(isDark);
         }
+
+        // Listen for runtime language changes from settings.
+        var appSettings = _serviceProvider.GetRequiredService<ISettingsService>();
+        appSettings.SettingsChanged += () =>
+        {
+            Dispatcher.Invoke(() => ApplyApplicationLanguage(appSettings.Settings.Language));
+        };
 
         // Global exception handling
         this.DispatcherUnhandledException += App_DispatcherUnhandledException;
@@ -347,6 +357,25 @@ public partial class App : Application
             PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
             AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
         };
+    }
+
+    private static void ApplyApplicationLanguage(string? languageCode)
+    {
+        var normalized = (languageCode ?? "tr").Trim().ToLowerInvariant();
+        var cultureName = normalized switch
+        {
+            "en" => "en-US",
+            "de" => "de-DE",
+            "fr" => "fr-FR",
+            "es" => "es-ES",
+            _ => "tr-TR"
+        };
+
+        var culture = new CultureInfo(cultureName);
+        Thread.CurrentThread.CurrentCulture = culture;
+        Thread.CurrentThread.CurrentUICulture = culture;
+        CultureInfo.DefaultThreadCurrentCulture = culture;
+        CultureInfo.DefaultThreadCurrentUICulture = culture;
     }
 
 

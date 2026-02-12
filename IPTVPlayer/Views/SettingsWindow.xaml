@@ -459,6 +459,32 @@
 
                                     <Rectangle Height="1" Fill="{DynamicResource BorderBrush}" Margin="0,0,0,24"/>
 
+                                    <Grid Margin="0,0,0,24">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel>
+                                            <TextBlock Text="Uygulama Dili" FontSize="16" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="Arayüz dilini değiştirin" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+
+                                        <ComboBox Grid.Column="1"
+                                                  SelectedValue="{Binding AppLanguage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                  SelectedValuePath="Tag"
+                                                  Style="{StaticResource ModernComboBox}"
+                                                  Width="180">
+                                            <ComboBoxItem Content="Türkçe" Tag="tr"/>
+                                            <ComboBoxItem Content="English" Tag="en"/>
+                                            <ComboBoxItem Content="Deutsch" Tag="de"/>
+                                            <ComboBoxItem Content="Français" Tag="fr"/>
+                                            <ComboBoxItem Content="Español" Tag="es"/>
+                                        </ComboBox>
+                                    </Grid>
+
+                                    <Rectangle Height="1" Fill="{DynamicResource BorderBrush}" Margin="0,0,0,24"/>
+
                                     <TextBlock Text="TMDB API Anahtarı" FontSize="16" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,4"/>
                                     <TextBlock Text="Film ve dizi bilgileri ve kapak resimleri için gereklidir." FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,12"/>
                                     <TextBox Text="{Binding TmdbApiKey}" Style="{StaticResource ModernTextBox}" Padding="12" helpers:TextBoxHelper.Watermark="API Key girin..."/>

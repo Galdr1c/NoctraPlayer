@@ -298,7 +298,6 @@
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
 
@@ -431,26 +430,6 @@
                             </Border>
                         </StackPanel>
 
-                        <!-- Groups Header -->
-                        <TextBlock Grid.Row="1" Text="GRUPLAR" 
-                                   FontSize="11" FontWeight="Bold"
-                                   Foreground="{DynamicResource TextMutedBrush}"
-                                   Margin="20,8,16,12"/>
-
-                        <!-- Groups List -->
-                        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="12,0,12,12">
-                            <ItemsControl ItemsSource="{Binding Groups}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Background="Transparent" CornerRadius="6" Margin="0,2" Cursor="Hand"
-                                                MouseLeftButtonDown="GroupItem_Click">
-                                            <TextBlock Text="{Binding}" Foreground="{DynamicResource TextMutedBrush}" 
-                                                       FontSize="13" Padding="12,10" TextTrimming="CharacterEllipsis"/>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
                     </Grid>
                 </Border>
 
@@ -827,7 +806,28 @@
                                   ScrollChanged="ContentView_ScrollChanged"
                                   Visibility="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Movies}}">
                         <StackPanel Margin="24">
-                            <TextBlock Text="Filmler" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
+                            <Grid Margin="0,0,0,24">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Filmler" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <ComboBox Width="260"
+                                              Margin="0,0,10,0"
+                                              ItemsSource="{Binding Groups}"
+                                              SelectedItem="{Binding SelectedGroup, Mode=TwoWay}"/>
+                                    <Button Content="Tümü"
+                                            Width="64"
+                                            Margin="0,0,10,0"
+                                            Click="ClearGroupSelection_Click"/>
+                                    <ComboBox Width="240"
+                                              ItemsSource="{Binding SortOptions}"
+                                              SelectedValue="{Binding SelectedSortOrder, Mode=TwoWay}"
+                                              SelectedValuePath="Key"
+                                              DisplayMemberPath="Value"/>
+                                </StackPanel>
+                            </Grid>
                             <ListBox ItemsSource="{Binding FilteredChannels}" Style="{StaticResource GridListBoxStyle}"/>
                         </StackPanel>
                     </ScrollViewer>
@@ -837,7 +837,28 @@
                                   ScrollChanged="ContentView_ScrollChanged"
                                   Visibility="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Series}}">
                         <StackPanel Margin="24">
-                            <TextBlock Text="Diziler" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
+                            <Grid Margin="0,0,0,24">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Diziler" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <ComboBox Width="260"
+                                              Margin="0,0,10,0"
+                                              ItemsSource="{Binding Groups}"
+                                              SelectedItem="{Binding SelectedGroup, Mode=TwoWay}"/>
+                                    <Button Content="Tümü"
+                                            Width="64"
+                                            Margin="0,0,10,0"
+                                            Click="ClearGroupSelection_Click"/>
+                                    <ComboBox Width="240"
+                                              ItemsSource="{Binding SortOptions}"
+                                              SelectedValue="{Binding SelectedSortOrder, Mode=TwoWay}"
+                                              SelectedValuePath="Key"
+                                              DisplayMemberPath="Value"/>
+                                </StackPanel>
+                            </Grid>
                             <ListBox ItemsSource="{Binding FilteredChannels}" Style="{StaticResource GridListBoxStyle}"/>
                         </StackPanel>
                     </ScrollViewer>
@@ -904,7 +925,28 @@
                                   ScrollChanged="ContentView_ScrollChanged"
                                   Visibility="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Live}}">
                         <StackPanel Margin="24">
-                            <TextBlock Text="Canlı TV" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
+                            <Grid Margin="0,0,0,24">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Canlı TV" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <ComboBox Width="260"
+                                              Margin="0,0,10,0"
+                                              ItemsSource="{Binding Groups}"
+                                              SelectedItem="{Binding SelectedGroup, Mode=TwoWay}"/>
+                                    <Button Content="Tümü"
+                                            Width="64"
+                                            Margin="0,0,10,0"
+                                            Click="ClearGroupSelection_Click"/>
+                                    <ComboBox Width="240"
+                                              ItemsSource="{Binding SortOptions}"
+                                              SelectedValue="{Binding SelectedSortOrder, Mode=TwoWay}"
+                                              SelectedValuePath="Key"
+                                              DisplayMemberPath="Value"/>
+                                </StackPanel>
+                            </Grid>
                             <ListBox ItemsSource="{Binding FilteredChannels}" Style="{StaticResource GridListBoxStyle}"/>
                             
                             <!-- Empty State -->

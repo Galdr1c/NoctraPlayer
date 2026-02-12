@@ -15,6 +15,17 @@ public enum ChannelType
 /// <summary>
 /// IPTV kanalını temsil eder
 /// </summary>
+public enum ChannelSortOrder
+{
+    NewestFirst,
+    OldestFirst,
+    NameAsc,
+    NameDesc
+}
+
+/// <summary>
+/// IPTV channel entity.
+/// </summary>
 public partial class Channel : ObservableObject
 {
     public int Id { get; set; }

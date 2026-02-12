@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using IPTVPlayer.Models;
 using IPTVPlayer.Data;
@@ -66,6 +66,9 @@ public partial class SettingsViewModel : ObservableObject
     
     [ObservableProperty]
     private bool _isDarkTheme;
+
+    [ObservableProperty]
+    private string _appLanguage = "tr";
 
     partial void OnIsDarkThemeChanged(bool value)
     {
@@ -284,6 +287,7 @@ public partial class SettingsViewModel : ObservableObject
         
         // Appearance
         IsDarkTheme = s.IsDarkTheme;
+        AppLanguage = string.IsNullOrWhiteSpace(s.Language) ? "tr" : s.Language;
         
         // TMDB
         TmdbApiKey = s.TmdbApiKey ?? string.Empty;
@@ -319,6 +323,7 @@ public partial class SettingsViewModel : ObservableObject
         
         // Appearance
         s.IsDarkTheme = IsDarkTheme;
+        s.Language = string.IsNullOrWhiteSpace(AppLanguage) ? "tr" : AppLanguage;
         
         // TMDB
         s.TmdbApiKey = string.IsNullOrWhiteSpace(TmdbApiKey) ? null : TmdbApiKey;
@@ -450,5 +455,3 @@ public partial class SettingsViewModel : ObservableObject
         StatusMessage = "Ayarlar varsayılana sıfırlandı";
     }
 }
-
-

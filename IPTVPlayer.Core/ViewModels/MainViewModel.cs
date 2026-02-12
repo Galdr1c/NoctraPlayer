@@ -4,6 +4,7 @@ using IPTVPlayer.Models;
 using System.Net.Http;
 using System.Text.Json;
 using IPTVPlayer.Services.Interfaces;
+using IPTVPlayer.Services;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
@@ -32,6 +33,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IDispatcherService _dispatcherService;
     private readonly IServiceProvider _serviceProvider;
     private readonly Microsoft.Extensions.DependencyInjection.IServiceScopeFactory _scopeFactory;
+    private readonly ISettingsService _settingsService;
 
     [ObservableProperty]
     private AppView _activeView = AppView.Home;
@@ -79,6 +81,9 @@ public partial class MainViewModel : ObservableObject
     private string? _selectedGroup;
 
     [ObservableProperty]
+    private ChannelSortOrder _selectedSortOrder = ChannelSortOrder.NewestFirst;
+
+    [ObservableProperty]
     private string _searchText = string.Empty;
 
     [ObservableProperty]
@@ -110,14 +115,24 @@ public partial class MainViewModel : ObservableObject
 
     public WatermarkViewModel WatermarkViewModel { get; }
 
+    public IReadOnlyList<KeyValuePair<ChannelSortOrder, string>> SortOptions { get; } = new List<KeyValuePair<ChannelSortOrder, string>>
+    {
+        new(ChannelSortOrder.NewestFirst, "Son eklenen (Yeni > Eski)"),
+        new(ChannelSortOrder.OldestFirst, "En eski (Eski > Yeni)"),
+        new(ChannelSortOrder.NameAsc, "Alfabetik A -> Z"),
+        new(ChannelSortOrder.NameDesc, "Alfabetik Z -> A")
+    };
+
     public MainViewModel(
         IServiceProvider serviceProvider,
         Microsoft.Extensions.DependencyInjection.IServiceScopeFactory scopeFactory,
+        ISettingsService settingsService,
         IDispatcherService dispatcherService,
         WatermarkViewModel watermarkViewModel)
     {
         _serviceProvider = serviceProvider;
         _scopeFactory = scopeFactory;
+        _settingsService = settingsService;
         _dispatcherService = dispatcherService;
         WatermarkViewModel = watermarkViewModel;
     }
@@ -471,7 +486,8 @@ public partial class MainViewModel : ObservableObject
             // Same DbContext cannot execute multiple operations in parallel.
             var groups = await playlistService.GetGroupsAsync(playlistId);
             var channelCount = await playlistService.GetChannelCountAsync(playlistId);
-            Groups = groups;
+            Groups = OrderGroupsByLanguagePreference(groups);
+            EnsurePreferredDefaultGroupSelected();
             ResetIncrementalState();
             await LoadMoreChannelsAsync();
             
@@ -524,6 +540,7 @@ public partial class MainViewModel : ObservableObject
     private bool _isLoadingMoreChannels;
     private Timer? _epgSyncTimer;
     private int _isBackgroundEpgSyncRunning;
+    private bool _suppressFilterRefresh;
 
     private void ResetIncrementalState()
     {
@@ -560,7 +577,8 @@ public partial class MainViewModel : ObservableObject
                 searchText: SearchText,
                 group: SelectedGroup,
                 type: SelectedChannelType,
-                onlyFavorites: ShowOnlyFavorites);
+                onlyFavorites: ShowOnlyFavorites,
+                sortOrder: SelectedSortOrder);
 
             if (cancellationToken.IsCancellationRequested)
             {
@@ -614,6 +632,11 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSelectedGroupChanged(string? value)
     {
+        if (_suppressFilterRefresh)
+        {
+            return;
+        }
+
         ScheduleImmediateFilter();
     }
 
@@ -623,6 +646,107 @@ public partial class MainViewModel : ObservableObject
     }
 
     partial void OnShowOnlyFavoritesChanged(bool value)
+    {
+        ScheduleImmediateFilter();
+    }
+
+    private List<string> OrderGroupsByLanguagePreference(List<string> groups)
+    {
+        if (groups.Count == 0)
+        {
+            return groups;
+        }
+
+        var preferredCountry = GetPreferredCountryCodeFromLanguage(_settingsService.Settings.Language);
+        if (string.IsNullOrWhiteSpace(preferredCountry))
+        {
+            return groups;
+        }
+
+        var preferred = new List<string>();
+        var others = new List<string>();
+
+        foreach (var group in groups)
+        {
+            if (IsCountryPreferredGroup(group, preferredCountry))
+            {
+                preferred.Add(group);
+            }
+            else
+            {
+                others.Add(group);
+            }
+        }
+
+        preferred.AddRange(others);
+        return preferred;
+    }
+
+    private void EnsurePreferredDefaultGroupSelected()
+    {
+        if (Groups.Count == 0)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(SelectedGroup) && Groups.Contains(SelectedGroup))
+        {
+            return;
+        }
+
+        var preferredCountry = GetPreferredCountryCodeFromLanguage(_settingsService.Settings.Language);
+        if (string.IsNullOrWhiteSpace(preferredCountry))
+        {
+            return;
+        }
+
+        var preferred = Groups.FirstOrDefault(g => IsCountryPreferredGroup(g, preferredCountry));
+        if (string.IsNullOrWhiteSpace(preferred))
+        {
+            return;
+        }
+
+        _suppressFilterRefresh = true;
+        try
+        {
+            SelectedGroup = preferred;
+        }
+        finally
+        {
+            _suppressFilterRefresh = false;
+        }
+    }
+
+    private static bool IsCountryPreferredGroup(string group, string countryCode)
+    {
+        if (string.IsNullOrWhiteSpace(group) || string.IsNullOrWhiteSpace(countryCode))
+        {
+            return false;
+        }
+
+        var normalized = group.Trim();
+        return normalized.StartsWith(countryCode + "/", StringComparison.OrdinalIgnoreCase)
+            || normalized.StartsWith(countryCode + " |", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals(countryCode, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string GetPreferredCountryCodeFromLanguage(string? language)
+    {
+        var lang = (language ?? string.Empty).Trim().ToLowerInvariant();
+        return lang switch
+        {
+            "tr" => "TR",
+            "en" => "US",
+            "de" => "DE",
+            "fr" => "FR",
+            "es" => "ES",
+            "it" => "IT",
+            "ar" => "SA",
+            _ => "TR"
+        };
+    }
+
+    partial void OnSelectedSortOrderChanged(ChannelSortOrder value)
     {
         ScheduleImmediateFilter();
     }
