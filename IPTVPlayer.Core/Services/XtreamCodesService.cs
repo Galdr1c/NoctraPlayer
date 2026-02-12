@@ -271,7 +271,7 @@ public class XtreamCodesService : IXtreamCodesService
     {
         foreach (var ep in episodeArray.EnumerateArray())
         {
-            var id = ParseInt(GetStringOrNull(ep, "id") ?? GetStringOrNull(ep, "episode_id"));
+            var id = ParseLong(GetStringOrNull(ep, "id") ?? GetStringOrNull(ep, "episode_id"));
             if (id is null or <= 0)
             {
                 continue;
@@ -291,7 +291,7 @@ public class XtreamCodesService : IXtreamCodesService
             yield return new Channel
             {
                 Name = $"{prefix} {episodeTitle}".Trim(),
-                StreamUrl = $"{baseUrl}/series/{Uri.EscapeDataString(username)}/{Uri.EscapeDataString(password)}/{id}.{extension}",
+                StreamUrl = $"{baseUrl}/series/{Uri.EscapeDataString(username)}/{Uri.EscapeDataString(password)}/{id.Value}.{extension}",
                 LogoUrl = series.Cover,
                 GroupTitle = ResolveCategory(series.CategoryId, null, categories, "Series"),
                 Type = ChannelType.Series,
@@ -413,6 +413,12 @@ public class XtreamCodesService : IXtreamCodesService
         return null;
     }
 
+    private static long? ParseLong(string? input)
+    {
+        if (long.TryParse(input, out var v)) return v;
+        return null;
+    }
+
     private static double? ParseDouble(string? input)
     {
         if (double.TryParse(input, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var v))
@@ -467,7 +473,7 @@ public class XtreamCodesService : IXtreamCodesService
         public string? Name { get; set; }
 
         [JsonPropertyName("stream_id")]
-        public int StreamId { get; set; }
+        public long StreamId { get; set; }
 
         [JsonPropertyName("stream_icon")]
         public string? StreamIcon { get; set; }
@@ -488,7 +494,7 @@ public class XtreamCodesService : IXtreamCodesService
         public string? Name { get; set; }
 
         [JsonPropertyName("stream_id")]
-        public int StreamId { get; set; }
+        public long StreamId { get; set; }
 
         [JsonPropertyName("stream_icon")]
         public string? StreamIcon { get; set; }
@@ -515,7 +521,7 @@ public class XtreamCodesService : IXtreamCodesService
     private sealed class XtreamSeriesDto
     {
         [JsonPropertyName("series_id")]
-        public int SeriesId { get; set; }
+        public long SeriesId { get; set; }
 
         [JsonPropertyName("name")]
         public string? Name { get; set; }

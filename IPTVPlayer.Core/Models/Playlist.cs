@@ -14,6 +14,11 @@ public class Playlist
     public bool IsActive { get; set; } = true;
     public int ChannelCount { get; set; }
 
+    // EPG fields
+    public string? EpgUrl { get; set; }
+    public string? DetectedCountry { get; set; }
+    public DateTime? EpgLastUpdated { get; set; }
+
     public int? ProfileId { get; set; }
     public Profile? Profile { get; set; }
     

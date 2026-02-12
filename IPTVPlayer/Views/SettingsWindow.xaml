@@ -74,7 +74,10 @@
             </Grid.RowDefinitions>
 
             <!-- HEADER -->
-            <Grid Grid.Row="0" Margin="32,24,32,12">
+            <Grid Grid.Row="0"
+                  Margin="32,24,32,12"
+                  Background="Transparent"
+                  MouseLeftButtonDown="Header_MouseLeftButtonDown">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Path Data="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"
                           Fill="{DynamicResource TextPrimaryBrush}" Width="24" Height="24" Margin="0,0,12,0" Stretch="Uniform"/>
@@ -117,7 +120,7 @@
                             <TextBlock Text="Profil" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,16,32">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,0,32">
                         <StackPanel HorizontalAlignment="Stretch">
                             
                             <!-- Current Profile Card -->
@@ -196,7 +199,7 @@
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" SharedSizeGroup="Label"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                         <TextBlock Text="Bitiş Tarihi:" FontSize="15" Foreground="{DynamicResource TextMutedBrush}" Width="100" VerticalAlignment="Center"/>
                                         <StackPanel Grid.Column="1">
-                                            <TextBlock Text="{Binding ExpirationDate, StringFormat=dd MMMM yyyy}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{Binding ExpirationDate, StringFormat=dd MMMM yyyy, TargetNullValue=Bilgi yok}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                             <TextBlock Text="{Binding ExpirationStatus}" FontSize="14" Foreground="{DynamicResource AccentBrush}" Margin="0,4,0,0"/>
                                         </StackPanel>
                                     </Grid>
@@ -216,7 +219,7 @@
                             <TextBlock Text="Oynatma" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,16,32">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,0,32">
                         <StackPanel HorizontalAlignment="Stretch">
                             
                             <Border Style="{StaticResource SettingsCard}">
@@ -239,6 +242,15 @@
                                             <TextBlock Text="Tespit edildiğinde açılış jeneriğini atlar" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
                                         </StackPanel>
                                         <ToggleButton Grid.Column="1" IsChecked="{Binding AutoSkipIntro}" Style="{StaticResource ModernToggleSwitch}"/>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="Jenerik bitince sonraki bölüme geç" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="Kapanış jeneriğinde otomatik olarak sonraki bölümü başlatır" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <ToggleButton Grid.Column="1" IsChecked="{Binding AutoSkipCredits}" Style="{StaticResource ModernToggleSwitch}"/>
                                     </Grid>
 
                                     <Grid>
@@ -287,7 +299,7 @@
                             <TextBlock Text="Altyazı" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,16,32">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,0,32">
                         <StackPanel HorizontalAlignment="Stretch">
                             <Border Style="{StaticResource SettingsCard}">
                                 <StackPanel>
@@ -339,7 +351,7 @@
                             <TextBlock Text="İndirme" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,16,32">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,0,32">
                         <StackPanel HorizontalAlignment="Stretch">
                             <Border Style="{StaticResource SettingsCard}">
                                 <StackPanel>
@@ -381,7 +393,7 @@
                             <TextBlock Text="Görünüm" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,16,32">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,0,32">
                         <StackPanel HorizontalAlignment="Stretch">
                             <Border Style="{StaticResource SettingsCard}">
                                 <StackPanel>
@@ -464,6 +476,64 @@
                                         <TextBlock Text="Sürüm 1.0.0 (Noctra Suite)" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
                                     </StackPanel>
                                 </Grid>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <!-- ADVANCED / ADMIN TAB -->
+                <TabItem Style="{StaticResource SettingsTabItem}">
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource IconAppearance}" 
+                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" 
+                                  Width="18" Height="18" Stretch="Uniform" Margin="0,0,8,0"/>
+                            <TextBlock Text="Gelişmiş" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,0,32">
+                        <StackPanel>
+                            <Border Style="{StaticResource SettingsCard}">
+                                <StackPanel>
+                                     <TextBlock Text="EPG Durumu (Admin Panel)" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                     
+                                     <Grid Margin="0,0,0,8">
+                                         <Grid.ColumnDefinitions>
+                                             <ColumnDefinition Width="*"/>
+                                             <ColumnDefinition Width="Auto"/>
+                                         </Grid.ColumnDefinitions>
+                                         <TextBlock Text="Toplam Program Sayısı" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                         <TextBlock Grid.Column="1" Text="{Binding TotalEpgPrograms}" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                     </Grid>
+
+                                     <Grid Margin="0,0,0,8">
+                                         <Grid.ColumnDefinitions>
+                                             <ColumnDefinition Width="*"/>
+                                             <ColumnDefinition Width="Auto"/>
+                                         </Grid.ColumnDefinitions>
+                                         <TextBlock Text="Eşleşen Kanal Sayısı" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                         <TextBlock Grid.Column="1" Text="{Binding TotalEpgChannels}" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                     </Grid>
+
+                                     <Grid Margin="0,0,0,16">
+                                         <Grid.ColumnDefinitions>
+                                             <ColumnDefinition Width="*"/>
+                                             <ColumnDefinition Width="Auto"/>
+                                         </Grid.ColumnDefinitions>
+                                         <TextBlock Text="Son Güncelleme" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                         <TextBlock Grid.Column="1" Text="{Binding LastEpgUpdate, TargetNullValue='-'}" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                     </Grid>
+
+                                     <!-- Error Message -->
+                                     <TextBlock Text="{Binding EpgLastError}" 
+                                                Foreground="#FF5252" 
+                                                TextWrapping="Wrap" 
+                                                Margin="0,0,0,16" 
+                                                Visibility="{Binding EpgLastError, Converter={StaticResource NullToVisibilityConverter}}"/>
+
+                                     <Button Content="EPG'yi İndir ve Yenile (Zorla)" Command="{Binding ForceUpdateEpgCommand}" Style="{StaticResource PrimaryButtonStyle}"/>
+                                </StackPanel>
                             </Border>
                         </StackPanel>
                     </ScrollViewer>

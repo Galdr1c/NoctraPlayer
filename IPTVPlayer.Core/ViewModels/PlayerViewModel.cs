@@ -12,7 +12,7 @@ public partial class PlayerViewModel : ObservableObject
 {
     private readonly IVideoPlayerService _videoPlayerService;
     private readonly IEpgService _epgService;
-    private Timer? _positionTimer;
+    private int _playRequestVersion;
 
     [ObservableProperty]
     private bool _isVisible = true;
@@ -111,6 +111,9 @@ public partial class PlayerViewModel : ObservableObject
     private bool _isQualitySettingsOpen;
 
     [ObservableProperty]
+    private Models.StreamQualityInfo? _streamQuality;
+
+    [ObservableProperty]
     private bool _isInfoPanelOpen;
 
     [ObservableProperty]
@@ -121,6 +124,13 @@ public partial class PlayerViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isNextEpisodePromptVisible;
+
+    [ObservableProperty]
+    private bool _isCreditsZone;
+
+    private Episode? _currentEpisode;
+    private bool _introSkipped;
+    private bool _creditsTriggered;
 
     private readonly IDispatcherService _dispatcherService;
     private readonly IWatchHistoryService? _watchHistoryService;
@@ -172,12 +182,27 @@ public partial class PlayerViewModel : ObservableObject
             });
         };
 
+        _videoPlayerService.QualityDetected += (s, quality) =>
+        {
+            _dispatcherService.Invoke(() => StreamQuality = quality);
+        };
+
         _videoPlayerService.BufferingChanged += (s, progress) =>
         {
             _dispatcherService.Invoke(() =>
             {
                 BufferingProgress = progress;
                 IsBuffering = progress < 100;
+            });
+        };
+
+        _videoPlayerService.ErrorOccurred += (s, errorMessage) =>
+        {
+            _dispatcherService.Invoke(() =>
+            {
+                ConnectionStatus = errorMessage;
+                IsBuffering = false;
+                BufferingProgress = 0;
             });
         };
 
@@ -193,8 +218,8 @@ public partial class PlayerViewModel : ObservableObject
                     var remaining = Math.Max(0, Duration - pos);
                     RemainingTime = "-" + TimeSpan.FromSeconds(remaining).ToString(@"hh\:mm\:ss");
 
-                    // Intro Detection Stub: Detects intro between 0:30 and 2:00
-                    IsIntroDetected = pos > 30 && pos < 120;
+                    // Intro/Credits detection from episode timestamps
+                    CheckIntroCreditsPosition(pos);
                 }
             });
         };
@@ -225,12 +250,33 @@ public partial class PlayerViewModel : ObservableObject
 
     public async Task PlayChannelAsync(Channel channel)
     {
+        var requestVersion = Interlocked.Increment(ref _playRequestVersion);
+
         CurrentChannel = channel;
+        CurrentProgram = GetFallbackProgram();
         IsLiveContent = channel.Type == ChannelType.Live;
         IsSeriesContent = channel.Type == ChannelType.Series;
         IsBuffering = true;
         BufferingProgress = 0;
-        await _videoPlayerService.PlayAsync(channel.StreamUrl);
+        try
+        {
+            await _videoPlayerService.PlayAsync(channel.StreamUrl);
+        }
+        catch
+        {
+            if (requestVersion == _playRequestVersion && CurrentChannel?.Id == channel.Id)
+            {
+                IsBuffering = false;
+                BufferingProgress = 0;
+            }
+
+            throw;
+        }
+
+        if (requestVersion != _playRequestVersion || CurrentChannel?.Id != channel.Id)
+        {
+            return;
+        }
 
         // Start watch history tracking for VOD content
         if (!IsLiveContent)
@@ -245,15 +291,11 @@ public partial class PlayerViewModel : ObservableObject
         // Zapping göster
         ShowZapping(channel.Name, channel.LogoUrl, IsLiveContent);
 
-        // EPG bilgisini al
-        if (_epgService.IsLoaded)
+        // Always query DB-backed EPG; IsLoaded flag may belong to another service instance.
+        var program = await _epgService.GetCurrentProgramAsync(channel);
+        if (requestVersion == _playRequestVersion && CurrentChannel?.Id == channel.Id)
         {
-            var program = await _epgService.GetCurrentProgramAsync(channel);
             CurrentProgram = program ?? GetFallbackProgram();
-        }
-        else
-        {
-            CurrentProgram = GetFallbackProgram();
         }
     }
 
@@ -282,18 +324,18 @@ public partial class PlayerViewModel : ObservableObject
     {
         if (CurrentChannel == null || !IsLiveContent || CurrentProgram == null) return;
 
-        if (DateTime.Now > CurrentProgram.EndTime)
-        {
-            // Program finished, fetch next
-            if (_epgService.IsLoaded)
-            {
-                 var newProgram = await _epgService.GetCurrentProgramAsync(CurrentChannel);
-                 newProgram ??= GetFallbackProgram();
+        // Retry if we have fallback "Program bilgisi yok"
+        bool isFallback = CurrentProgram.Title == "Program bilgisi yok";
 
-                 if (newProgram.Title != CurrentProgram.Title)
-                 {
-                     _dispatcherService.Invoke(() => CurrentProgram = newProgram);
-                 }
+        if (DateTime.Now > CurrentProgram.EndTime || isFallback)
+        {
+            // Program finished or fallback exists, fetch updated program
+            var newProgram = await _epgService.GetCurrentProgramAsync(CurrentChannel);
+            newProgram ??= GetFallbackProgram();
+
+            if (newProgram.Title != CurrentProgram.Title)
+            {
+                _dispatcherService.Invoke(() => CurrentProgram = newProgram);
             }
         }
     }
@@ -463,28 +505,123 @@ public partial class PlayerViewModel : ObservableObject
     {
         if (IsLiveContent) return;
         
-        // Use generic SkipForward logic or direct service call?
-        // Direct safe service call
-        var newPos = Math.Min(Position + 85, Duration);
-        _videoPlayerService.Position = newPos;
-        IsIntroDetected = false;
+        if (_currentEpisode?.IntroEndSec != null)
+        {
+            // Jump to intro end timestamp
+            var newPos = Math.Min(_currentEpisode.IntroEndSec.Value, Duration);
+            _videoPlayerService.Position = newPos;
+        }
+        else
+        {
+            // Fallback: skip 85 seconds
+            var newPos = Math.Min(Position + 85, Duration);
+            _videoPlayerService.Position = newPos;
+        }
         
-        ShowNextEpisodePromptMock();
+        IsIntroDetected = false;
+        _introSkipped = true;
     }
 
-    private void ShowNextEpisodePromptMock()
+    /// <summary>
+    /// Mevcut bölümü ayarlar (dizi oynatma başlatıldığında çağrılır)
+    /// </summary>
+    public void SetCurrentEpisode(Episode? episode, Episode? nextEpisode = null)
     {
-        if (IsLiveContent) return;
+        _currentEpisode = episode;
+        NextEpisode = nextEpisode;
+        _introSkipped = false;
+        _creditsTriggered = false;
+        IsIntroDetected = false;
+        IsCreditsZone = false;
+        IsNextEpisodePromptVisible = false;
+    }
 
-        NextEpisode = new Episode
+    /// <summary>
+    /// Position bazlı intro/credits tespiti
+    /// </summary>
+    private void CheckIntroCreditsPosition(double pos)
+    {
+        if (_currentEpisode == null || IsLiveContent) return;
+
+        // ── INTRO DETECTION ──
+        if (!_introSkipped && _currentEpisode.IntroStartSec != null && _currentEpisode.IntroEndSec != null)
         {
-            Name = "The One With The Mock Episode",
-            Plot = "This is a test description for the next episode prompt. Joey eats a pizza.",
-            Duration = TimeSpan.FromMinutes(22)
-        };
-        IsNextEpisodePromptVisible = true;
-        
-        Task.Delay(10000).ContinueWith(_ => IsNextEpisodePromptVisible = false);
+            var inIntro = pos >= _currentEpisode.IntroStartSec.Value && pos < _currentEpisode.IntroEndSec.Value;
+            
+            if (inIntro && !IsIntroDetected)
+            {
+                IsIntroDetected = true;
+                
+                // Auto-skip if setting enabled
+                if (GetAutoSkipIntroSetting())
+                {
+                    SkipIntro();
+                    return;
+                }
+            }
+            else if (!inIntro && IsIntroDetected)
+            {
+                IsIntroDetected = false;
+            }
+        }
+
+        // ── CREDITS DETECTION ──
+        if (!_creditsTriggered && _currentEpisode.CreditsStartSec != null)
+        {
+            if (pos >= _currentEpisode.CreditsStartSec.Value)
+            {
+                _creditsTriggered = true;
+                IsCreditsZone = true;
+
+                // Show next episode prompt if available
+                if (NextEpisode != null)
+                {
+                    IsNextEpisodePromptVisible = true;
+
+                    // Auto-skip to next episode if setting enabled
+                    if (GetAutoSkipCreditsSetting())
+                    {
+                        _ = PlayNextEpisodeCommand.ExecuteAsync(null);
+                    }
+                }
+            }
+        }
+    }
+
+    private bool GetAutoSkipIntroSetting()
+    {
+        try
+        {
+            var settingsPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "IPTVPlayer", "settings.json");
+            if (File.Exists(settingsPath))
+            {
+                var json = File.ReadAllText(settingsPath);
+                var settings = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(json);
+                return settings?.AutoSkipIntro ?? false;
+            }
+        }
+        catch { /* ignore */ }
+        return false;
+    }
+
+    private bool GetAutoSkipCreditsSetting()
+    {
+        try
+        {
+            var settingsPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "IPTVPlayer", "settings.json");
+            if (File.Exists(settingsPath))
+            {
+                var json = File.ReadAllText(settingsPath);
+                var settings = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(json);
+                return settings?.AutoSkipCredits ?? false;
+            }
+        }
+        catch { /* ignore */ }
+        return false;
     }
 
     [RelayCommand(CanExecute = nameof(CanPlayNextEpisode))]

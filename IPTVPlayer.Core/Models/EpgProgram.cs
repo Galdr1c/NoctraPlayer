@@ -13,11 +13,13 @@ public class EpgProgram
     public DateTime EndTime { get; set; }
     public string? Category { get; set; }
     public string? IconUrl { get; set; }
+
+    public string TimeRange => $"{StartTime.ToLocalTime():HH:mm} - {EndTime.ToLocalTime():HH:mm}";
     
     /// <summary>
     /// Programın şu an yayında olup olmadığını kontrol eder
     /// </summary>
-    public bool IsNowPlaying => DateTime.Now >= StartTime && DateTime.Now <= EndTime;
+    public bool IsNowPlaying => DateTime.UtcNow >= StartTime && DateTime.UtcNow <= EndTime;
     
     /// <summary>
     /// Programın ilerleme yüzdesini hesaplar
@@ -28,7 +30,7 @@ public class EpgProgram
         {
             if (!IsNowPlaying) return 0;
             var total = (EndTime - StartTime).TotalMinutes;
-            var elapsed = (DateTime.Now - StartTime).TotalMinutes;
+            var elapsed = (DateTime.UtcNow - StartTime).TotalMinutes;
             return Math.Min(100, (elapsed / total) * 100);
         }
     }

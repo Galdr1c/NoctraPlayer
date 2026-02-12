@@ -1,8 +1,11 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using IPTVPlayer.Models;
+using IPTVPlayer.Data;
 using IPTVPlayer.Services;
 using IPTVPlayer.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace IPTVPlayer.ViewModels;
 
@@ -15,6 +18,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IPlaylistService _playlistService;
     private readonly IEpgService _epgService;
     private readonly IThemeService _themeService;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     // ============ Oynatma Ayarları ============
     
@@ -23,6 +27,9 @@ public partial class SettingsViewModel : ObservableObject
     
     [ObservableProperty]
     private bool _autoSkipIntro;
+
+    [ObservableProperty]
+    private bool _autoSkipCredits;
     
     [ObservableProperty]
     private int _selectedDataUsage;
@@ -128,18 +135,22 @@ public partial class SettingsViewModel : ObservableObject
         IPlaylistService playlistService, 
         IEpgService epgService, 
         IThemeService themeService,
-        MainViewModel mainViewModel)
+        MainViewModel mainViewModel,
+        IServiceScopeFactory scopeFactory)
     {
         _settingsService = settingsService;
         _playlistService = playlistService;
         _epgService = epgService;
         _themeService = themeService;
         _mainViewModel = mainViewModel;
+        _scopeFactory = scopeFactory;
         
         _mainViewModel.PropertyChanged += MainViewModel_PropertyChanged;
         
         LoadSettings();
         LoadProfileInfo();
+        _ = ScanEpgStatsAsync();
+        _ = _mainViewModel.RefreshCurrentProfileExpirationAsync();
     }
 
     private void MainViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -159,6 +170,7 @@ public partial class SettingsViewModel : ObservableObject
                 }
             }
             LoadProfileInfo();
+            _ = _mainViewModel.RefreshCurrentProfileExpirationAsync();
         }
     }
 
@@ -195,7 +207,7 @@ public partial class SettingsViewModel : ObservableObject
             {
                 var account = _mainViewModel.CurrentProfile.ProviderAccount;
                 ProviderName = account.Name;
-                ProviderUrl = account.Url;
+                ProviderUrl = GetProviderBaseUrl(account.Url);
                 ProviderUsername = account.Username ?? "Yok";
                 
                 // Mask password
@@ -213,10 +225,34 @@ public partial class SettingsViewModel : ObservableObject
                 }
                 else
                 {
-                    ExpirationStatus = "Süresiz / Bilinmiyor";
+                    ExpirationStatus = "Bilinmiyor";
                 }
             }
         }
+    }
+
+    private static string GetProviderBaseUrl(string? rawUrl)
+    {
+        if (string.IsNullOrWhiteSpace(rawUrl))
+        {
+            return string.Empty;
+        }
+
+        var normalized = rawUrl.Trim();
+        if (!normalized.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+            !normalized.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = "http://" + normalized;
+        }
+
+        if (Uri.TryCreate(normalized, UriKind.Absolute, out var uri))
+        {
+            return uri.IsDefaultPort
+                ? $"{uri.Scheme}://{uri.Host}"
+                : $"{uri.Scheme}://{uri.Host}:{uri.Port}";
+        }
+
+        return rawUrl;
     }
 
     private void LoadSettings()
@@ -226,6 +262,7 @@ public partial class SettingsViewModel : ObservableObject
         // Playback
         AutoPlayNext = s.AutoPlayNext;
         AutoSkipIntro = s.AutoSkipIntro;
+        AutoSkipCredits = s.AutoSkipCredits;
         SelectedDataUsage = (int)s.DataUsage;
         DefaultVolume = s.DefaultVolume;
         RememberLastChannel = s.RememberLastChannel;
@@ -260,6 +297,7 @@ public partial class SettingsViewModel : ObservableObject
         // Playback
         s.AutoPlayNext = AutoPlayNext;
         s.AutoSkipIntro = AutoSkipIntro;
+        s.AutoSkipCredits = AutoSkipCredits;
         s.DataUsage = (DataUsageLevel)SelectedDataUsage;
         s.DefaultVolume = DefaultVolume;
         s.RememberLastChannel = RememberLastChannel;
@@ -286,7 +324,7 @@ public partial class SettingsViewModel : ObservableObject
         s.TmdbApiKey = string.IsNullOrWhiteSpace(TmdbApiKey) ? null : TmdbApiKey;
         
         await _settingsService.SaveAsync();
-        StatusMessage = "Ayarlar kaydedildi ✓";
+        StatusMessage = "Ayarlar kaydedildi";
     }
 
     [RelayCommand]
@@ -313,26 +351,83 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
-    private async Task LoadEpgAsync()
-    {
-        if (string.IsNullOrWhiteSpace(EpgUrl))
-        {
-            StatusMessage = "Lütfen EPG URL'sini girin";
-            return;
-        }
+    [ObservableProperty]
+    private int _totalEpgPrograms;
 
-        try
+    [ObservableProperty]
+    private int _totalEpgChannels;
+
+    [ObservableProperty]
+    private DateTime? _lastEpgUpdate;
+
+    [ObservableProperty]
+    private string? _epgLastError;
+
+    [RelayCommand]
+    private async Task ScanEpgStatsAsync()
+    {
+        try 
         {
-            IsEpgLoading = true;
-            StatusMessage = "EPG yükleniyor...";
+            StatusMessage = "İstatistikler okunuyor...";
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            TotalEpgPrograms = await db.EpgPrograms.CountAsync();
+            TotalEpgChannels = await db.EpgPrograms
+                .Select(p => p.ChannelId)
+                .Distinct()
+                .CountAsync();
+
+            LastEpgUpdate = await db.Playlists
+                .AsNoTracking()
+                .Where(p => p.IsActive && p.EpgLastUpdated != null)
+                .OrderByDescending(p => p.EpgLastUpdated)
+                .Select(p => p.EpgLastUpdated)
+                .FirstOrDefaultAsync();
+
+            EpgLastError = _epgService.LastError;
             
-            await _epgService.LoadEpgAsync(EpgUrl, isPrimary: true);
-            StatusMessage = $"EPG yüklendi (Son güncelleme: {_epgService.LastUpdated:HH:mm})";
+            if (!string.IsNullOrEmpty(EpgLastError))
+            {
+                StatusMessage = "EPG Hatası bulundu (Gelişmiş sekmesine bakın)";
+            }
+            else
+            {
+                StatusMessage = "EPG istatistikleri güncellendi";
+            }
         }
         catch (Exception ex)
         {
-            StatusMessage = $"EPG yüklenemedi: {ex.Message}";
+            StatusMessage = $"Hata: {ex.Message}";
+        }
+    }
+
+        [RelayCommand]
+    private Task ForceUpdateEpgAsync()
+    {
+        if (IsEpgLoading)
+        {
+            StatusMessage = "EPG zaten arka planda indiriliyor...";
+            return Task.CompletedTask;
+        }
+
+        IsEpgLoading = true;
+        StatusMessage = "EPG arka planda indiriliyor...";
+        _ = ForceUpdateEpgInBackgroundAsync();
+        return Task.CompletedTask;
+    }
+
+    private async Task ForceUpdateEpgInBackgroundAsync()
+    {
+        try
+        {
+            await _mainViewModel.ForceRefreshEpgAsync();
+            await ScanEpgStatsAsync();
+            StatusMessage = "EPG indirme tamamlandi (arka plan).";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"EPG Indirme Hatasi: {ex.Message}";
         }
         finally
         {
@@ -355,3 +450,5 @@ public partial class SettingsViewModel : ObservableObject
         StatusMessage = "Ayarlar varsayılana sıfırlandı";
     }
 }
+
+

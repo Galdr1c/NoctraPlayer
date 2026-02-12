@@ -20,6 +20,24 @@ public partial class SettingsWindow : Window
         UpdateThemeSelection(_viewModel.IsDarkTheme);
     }
 
+    private void Header_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != System.Windows.Input.MouseButton.Left)
+        {
+            return;
+        }
+
+        try
+        {
+            DragMove();
+            e.Handled = true;
+        }
+        catch
+        {
+            // Ignore DragMove edge cases.
+        }
+    }
+
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
         DialogResult = true;

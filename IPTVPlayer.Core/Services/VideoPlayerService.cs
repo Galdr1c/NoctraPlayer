@@ -1,4 +1,5 @@
 using LibVLCSharp.Shared;
+using IPTVPlayer.Models;
 using IPTVPlayer.Services.Interfaces;
 
 namespace IPTVPlayer.Services;
@@ -22,6 +23,9 @@ public class VideoPlayerService : IVideoPlayerService
     public event EventHandler<bool>? PlayingChanged;
     public event EventHandler<double>? PositionChanged;
     public event EventHandler<string>? ErrorOccurred;
+    public event EventHandler<StreamQualityInfo>? QualityDetected;
+
+    public StreamQualityInfo? StreamQuality { get; private set; }
 
     public VideoPlayerService(IDispatcherService dispatcherService)
     {
@@ -73,7 +77,12 @@ public class VideoPlayerService : IVideoPlayerService
     {
         if (_mediaPlayer == null) return;
 
-        _mediaPlayer.Playing += (s, e) => _dispatcherService.BeginInvoke(() => PlayingChanged?.Invoke(this, true));
+        _mediaPlayer.Playing += (s, e) =>
+        {
+            _dispatcherService.BeginInvoke(() => PlayingChanged?.Invoke(this, true));
+            // Detect quality 1 second after playback starts (tracks need time to populate)
+            _ = DetectStreamQualityAsync();
+        };
         _mediaPlayer.Paused += (s, e) => _dispatcherService.BeginInvoke(() => PlayingChanged?.Invoke(this, false));
         _mediaPlayer.Stopped += (s, e) => _dispatcherService.BeginInvoke(() => PlayingChanged?.Invoke(this, false));
         _mediaPlayer.EndReached += (s, e) => _dispatcherService.BeginInvoke(() => PlayingChanged?.Invoke(this, false));
@@ -267,6 +276,76 @@ public class VideoPlayerService : IVideoPlayerService
     {
         if (_mediaPlayer != null)
             _mediaPlayer.SetSpu(trackId);
+    }
+
+    private async Task DetectStreamQualityAsync()
+    {
+        try
+        {
+            // Wait for media tracks to populate
+            await Task.Delay(1500);
+
+            if (_mediaPlayer?.Media == null) return;
+
+            // Parse the media to get track info
+            await _mediaPlayer.Media.Parse(MediaParseOptions.ParseNetwork, timeout: 5000);
+
+            var quality = new StreamQualityInfo();
+
+            foreach (var track in _mediaPlayer.Media.Tracks)
+            {
+                if (track.TrackType == TrackType.Video)
+                {
+                    var videoTrack = track.Data.Video;
+                    quality.Width = (int)videoTrack.Width;
+                    quality.Height = (int)videoTrack.Height;
+                    quality.Fps = videoTrack.FrameRateNum > 0 && videoTrack.FrameRateDen > 0
+                        ? (int)(videoTrack.FrameRateNum / videoTrack.FrameRateDen)
+                        : 0;
+                    quality.VideoCodec = track.Codec > 0 
+                        ? FourCCToString(track.Codec) 
+                        : track.Description ?? "";
+                    quality.VideoBitrate = (int)track.Bitrate;
+                }
+                else if (track.TrackType == TrackType.Audio)
+                {
+                    var audioTrack = track.Data.Audio;
+                    quality.AudioChannels = (int)audioTrack.Channels;
+                    quality.AudioCodec = track.Codec > 0 
+                        ? FourCCToString(track.Codec)
+                        : track.Description ?? "";
+                    quality.AudioBitrate = (int)(track.Bitrate / 1000); // bps → kbps
+                }
+            }
+
+            StreamQuality = quality;
+
+            System.Diagnostics.Debug.WriteLine(
+                $"[VideoPlayerService] Quality detected: {quality.Width}x{quality.Height} " +
+                $"@{quality.Fps}fps, {quality.VideoCodec}, {quality.VideoBitrate}bps | " +
+                $"Audio: {quality.AudioCodec} {quality.AudioChannels}ch {quality.AudioBitrate}kbps");
+
+            _dispatcherService.BeginInvoke(() => QualityDetected?.Invoke(this, quality));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[VideoPlayerService] Quality detection error: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// FourCC codec code → human-readable string
+    /// </summary>
+    private static string FourCCToString(uint fourcc)
+    {
+        if (fourcc == 0) return "";
+        var bytes = BitConverter.GetBytes(fourcc);
+        var chars = new char[4];
+        for (int i = 0; i < 4; i++)
+        {
+            chars[i] = bytes[i] >= 32 && bytes[i] < 127 ? (char)bytes[i] : '?';
+        }
+        return new string(chars).TrimEnd('?', '\0').Trim();
     }
 
     public void Dispose()

@@ -49,13 +49,6 @@ public partial class MainWindow : Window
         // Video player'ı bağla
         VideoView.MediaPlayer = _videoPlayerService.GetMediaPlayer();
 
-        // Window sürükleme
-        MouseLeftButtonDown += (s, e) =>
-        {
-            if (e.ButtonState == MouseButtonState.Pressed)
-                DragMove();
-        };
-
         Loaded += async (s, e) =>
         {
             await _viewModel.InitializeAsync();
@@ -72,16 +65,20 @@ public partial class MainWindow : Window
             if (e.OldValue is MainViewModel oldVm)
             {
                 oldVm.OnMediaSelected -= OnMediaSelected;
+                oldVm.PropertyChanged -= ViewModel_PropertyChanged;
             }
             if (e.NewValue is MainViewModel newVm)
             {
                 _viewModel = newVm;
                 newVm.OnMediaSelected += OnMediaSelected;
+                newVm.PropertyChanged += ViewModel_PropertyChanged;
+                UpdateActiveViewVisibility();
             }
         };
 
         // Initial subscription
         _viewModel.OnMediaSelected += OnMediaSelected;
+        _viewModel.PropertyChanged += ViewModel_PropertyChanged;
 
         _playerViewModel.PropertyChanged += (s, e) =>
         {
@@ -110,17 +107,7 @@ public partial class MainWindow : Window
             }
         };
 
-        _viewModel.PropertyChanged += (s, e) =>
-        {
-            if (e.PropertyName == nameof(_viewModel.IsSearchOverlayVisible))
-            {
-                if (_viewModel.IsSearchOverlayVisible)
-                {
-                    // Focus search box after UI updates
-                    Dispatcher.BeginInvoke(() => SearchInput.Focus(), DispatcherPriority.Input);
-                }
-            }
-        };
+        UpdateActiveViewVisibility();
 
         // InitializeControlsTimer(); // Conflict with PlayerViewModel logic
         
@@ -181,6 +168,24 @@ public partial class MainWindow : Window
                 ExitPlayerMode();
                 e.Handled = true;
             }
+        }
+    }
+
+    private void HeaderBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left)
+        {
+            return;
+        }
+
+        try
+        {
+            DragMove();
+            e.Handled = true;
+        }
+        catch
+        {
+            // Ignore DragMove edge-case exceptions.
         }
     }
 
@@ -323,20 +328,7 @@ public partial class MainWindow : Window
 
     private void ShowMainContent()
     {
-        // Force visibility of views based on ViewModel state
-        // This is necessary because we stopped collapsing them in PlayChannel, but if we did, we need to restore.
-        // Also, if navigation state is messed up, this fixes it.
-        
-        // Ensure Home/Etc are visible if ActiveView matches
-        // Binding should handle it, but let's trigger update
-        // _viewModel.OnPropertyChanged(nameof(_viewModel.ActiveView)); // Protected, removed
-        
-        // Manual visibility restore just in case
-        if (_viewModel.ActiveView == AppView.Home) HomeView.Visibility = Visibility.Visible;
-        else if (_viewModel.ActiveView == AppView.Movies) MoviesView.Visibility = Visibility.Visible;
-        else if (_viewModel.ActiveView == AppView.Series) SeriesView.Visibility = Visibility.Visible;
-        else if (_viewModel.ActiveView == AppView.Search) SearchView.Visibility = Visibility.Visible;
-        if (LiveView != null && _viewModel.ActiveView == AppView.Live) LiveView.Visibility = Visibility.Visible;
+        UpdateActiveViewVisibility();
 
         // PiP logic: If video is playing AND PlayerArea is closed, show mini player
         if (_playerViewModel.IsPlaying && PlayerArea.Visibility != Visibility.Visible)
@@ -347,6 +339,50 @@ public partial class MainWindow : Window
         else
         {
             MiniPlayer.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.IsSearchOverlayVisible) && _viewModel.IsSearchOverlayVisible)
+        {
+            Dispatcher.BeginInvoke(() => SearchInput.Focus(), DispatcherPriority.Input);
+        }
+        else if (e.PropertyName == nameof(MainViewModel.ActiveView))
+        {
+            UpdateActiveViewVisibility();
+        }
+    }
+
+    private void UpdateActiveViewVisibility()
+    {
+        HomeView.Visibility = Visibility.Collapsed;
+        MoviesView.Visibility = Visibility.Collapsed;
+        SeriesView.Visibility = Visibility.Collapsed;
+        SearchView.Visibility = Visibility.Collapsed;
+        MyListView.Visibility = Visibility.Collapsed;
+        LiveView.Visibility = Visibility.Collapsed;
+
+        switch (_viewModel.ActiveView)
+        {
+            case AppView.Home:
+                HomeView.Visibility = Visibility.Visible;
+                break;
+            case AppView.Movies:
+                MoviesView.Visibility = Visibility.Visible;
+                break;
+            case AppView.Series:
+                SeriesView.Visibility = Visibility.Visible;
+                break;
+            case AppView.Search:
+                SearchView.Visibility = Visibility.Visible;
+                break;
+            case AppView.MyList:
+                MyListView.Visibility = Visibility.Visible;
+                break;
+            case AppView.Live:
+                LiveView.Visibility = Visibility.Visible;
+                break;
         }
     }
 

@@ -40,6 +40,9 @@ public partial class App : Application
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             context.Database.EnsureCreated();
 
+            // Schema fixups must run BEFORE any queries (profile loading etc.)
+            ApplySchemaFixupsAsync(context).GetAwaiter().GetResult();
+
             // Kayıtlı temayı uygula
             var settingsService = scope.ServiceProvider.GetRequiredService<ISettingsService>();
             var themeService = scope.ServiceProvider.GetRequiredService<IThemeService>();
@@ -134,6 +137,16 @@ public partial class App : Application
         {
             // Column already exists
         }
+
+        // 3. Playlists -> EPG fields
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Playlists ADD COLUMN EpgUrl TEXT;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Playlists ADD COLUMN DetectedCountry TEXT;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Playlists ADD COLUMN EpgLastUpdated TEXT;"); } catch { }
+
+        // 4. Episodes -> Intro/Credits fields
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN IntroStartSec REAL;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN IntroEndSec REAL;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN CreditsStartSec REAL;"); } catch { }
     }
 
     private static async Task PreloadPopularImagesAsync(AppDbContext context, IImageCacheService imageCache)
@@ -283,6 +296,7 @@ public partial class App : Application
 
         // Services
         services.AddScoped<IPlaylistService, PlaylistService>();
+        services.AddScoped<IPlaylistOrganizerService, PlaylistOrganizerService>();
         services.AddSingleton<IVideoPlayerService, VideoPlayerService>();
         services.AddSingleton<ILicenseService, LicenseService>();
         services.AddScoped<IMediaService, MediaService>();
@@ -292,6 +306,8 @@ public partial class App : Application
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<HoverPreviewService>();
         services.AddSingleton<IImageCacheService, ImageCacheService>();
+        services.AddSingleton<LanguageDetectionService>();
+        services.AddSingleton<EpgSourceResolver>();
         
         // UI Services (WPF Implementations)
         services.AddSingleton<IDispatcherService, WpfDispatcherService>();

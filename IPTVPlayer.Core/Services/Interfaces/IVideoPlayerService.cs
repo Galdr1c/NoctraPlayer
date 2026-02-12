@@ -97,4 +97,14 @@ public interface IVideoPlayerService : IDisposable
     /// Hata oluştuğunda
     /// </summary>
     event EventHandler<string>? ErrorOccurred;
+
+    /// <summary>
+    /// Tespit edilen stream kalite bilgisi
+    /// </summary>
+    IPTVPlayer.Models.StreamQualityInfo? StreamQuality { get; }
+
+    /// <summary>
+    /// Stream kalitesi tespit edildiğinde
+    /// </summary>
+    event EventHandler<IPTVPlayer.Models.StreamQualityInfo>? QualityDetected;
 }

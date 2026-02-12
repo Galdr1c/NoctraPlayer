@@ -134,12 +134,12 @@ public partial class AddProfileViewModel : ObservableObject
             Url = baseUrl;
             _isUpdatingUrl = false;
 
-            StatusMessage = "M3U linki Xtream formatÄ±na dÃ¶nÃ¼ÅŸtÃ¼rÃ¼ldÃ¼";
+            StatusMessage = "M3U linki Xtream formatına dönüştürüldü";
             HasError = false;
         }
         catch (Exception ex)
         {
-            StatusMessage = $"URL parse hatasÄ±: {ex.Message}";
+            StatusMessage = $"URL parse hatası: {ex.Message}";
             HasError = true;
         }
     }
@@ -167,12 +167,12 @@ public partial class AddProfileViewModel : ObservableObject
             Url = m3uUrl;
             _isUpdatingUrl = false;
 
-            StatusMessage = "Xtream bilgileri M3U linkine dÃ¶nÃ¼ÅŸtÃ¼rÃ¼ldÃ¼";
+            StatusMessage = "Xtream bilgileri M3U linkine dönüştürüldü";
             HasError = false;
         }
         catch (Exception ex)
         {
-            StatusMessage = $"URL oluÅŸturma hatasÄ±: {ex.Message}";
+            StatusMessage = $"URL oluşturma hatası: {ex.Message}";
             HasError = true;
         }
     }
@@ -408,7 +408,7 @@ public partial class AddProfileViewModel : ObservableObject
 
             _isUpdatingUrl = false;
 
-            // EÄŸer M3U linkiyse ve credentials varsa, parse et
+            // Eğer M3U linkiyse ve credentials varsa, parse et
             if (IsM3U && Url.Contains("get.php"))
             {
                 ParseCredentialsFromUrl(Url);
@@ -699,7 +699,7 @@ public partial class AddProfileViewModel : ObservableObject
             {
                 account = new ProviderAccount
                 {
-                    Name = ProfileName + " HesabÄ±",
+                    Name = ProfileName + " Hesabı",
                     Type = IsStalker
                         ? ProfileType.StalkerPortal
                         : IsXtream
@@ -763,7 +763,7 @@ public partial class AddProfileViewModel : ObservableObject
             await transaction.CommitAsync();
 
             // Success feedback
-            StatusMessage = "âœ“ Profil kaydedildi";
+            StatusMessage = "Profil kaydedildi";
             await Task.Delay(400);
 
             RequestClose?.Invoke(this, EventArgs.Empty);
@@ -786,3 +786,4 @@ public partial class AddProfileViewModel : ObservableObject
         RequestClose?.Invoke(this, EventArgs.Empty);
     }
 }
+

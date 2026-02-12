@@ -1,24 +1,43 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using IPTVPlayer.Data;
 using IPTVPlayer.Models;
 using IPTVPlayer.Services.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace IPTVPlayer.Services;
 
 /// <summary>
-/// Playlist yönetim servisi
+/// Playlist yÃ¶netim servisi
 /// </summary>
 public class PlaylistService : IPlaylistService
 {
     private readonly AppDbContext _context;
     private readonly IM3UParser _parser;
     private readonly IMediaService _mediaService;
+    private readonly IPlaylistOrganizerService _organizer;
+    private readonly LanguageDetectionService _languageDetection;
+    private readonly EpgSourceResolver _epgSourceResolver;
+    private readonly IEpgService _epgService;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public PlaylistService(AppDbContext context, IM3UParser parser, IMediaService mediaService)
+    public PlaylistService(
+        AppDbContext context, 
+        IM3UParser parser, 
+        IMediaService mediaService, 
+        IPlaylistOrganizerService organizer,
+        LanguageDetectionService languageDetection,
+        EpgSourceResolver epgSourceResolver,
+        IEpgService epgService,
+        IServiceScopeFactory scopeFactory)
     {
         _context = context;
         _parser = parser;
         _mediaService = mediaService;
+        _organizer = organizer;
+        _languageDetection = languageDetection;
+        _epgSourceResolver = epgSourceResolver;
+        _epgService = epgService;
+        _scopeFactory = scopeFactory;
     }
 
     public async Task<Playlist> AddFromUrlAsync(string name, string url, int? profileId = null)
@@ -41,7 +60,11 @@ public class PlaylistService : IPlaylistService
             var channels = await _parser.ParseFromUrlAsync(url);
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] Parsed {channels.Count} channels from M3U");
 
-            return await AddFromChannelsAsync(name, url, channels, profileId);
+            // Otomatik organizasyon: dedup, kategorize, sÄ±ralama
+            var organized = _organizer.Organize(channels);
+            System.Diagnostics.Debug.WriteLine($"[PlaylistService] Organized: {channels.Count} â†’ {organized.Count} channels");
+
+            return await AddFromChannelsAsync(name, url, organized, profileId);
         }
         catch (Exception ex)
         {
@@ -94,6 +117,59 @@ public class PlaylistService : IPlaylistService
             }
 
             await _mediaService.AggregateContentAsync(playlist.Id);
+
+            // AUTO EPG in isolated scope to avoid DbContext cross-thread usage.
+            var playlistId = playlist.Id;
+            var channelSnapshot = channels.ToList();
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = _scopeFactory.CreateScope();
+                    var scopedEpgService = scope.ServiceProvider.GetRequiredService<IEpgService>();
+                    var scopedDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+                    var channelNames = channelSnapshot.Select(c => c.Name ?? "").ToList();
+                    var detectedCountry = _languageDetection.DetectCountry(channelNames);
+                    var epgSources = _epgSourceResolver.ResolveEpgSources(detectedCountry);
+
+                    string? usedEpgUrl = null;
+                    foreach (var source in epgSources)
+                    {
+                        try
+                        {
+                            if (source.ClearBeforeLoad)
+                            {
+                                await scopedEpgService.ClearEpgAsync();
+                            }
+
+                            System.Diagnostics.Debug.WriteLine($"[AutoEPG] Loading from {source.Url}");
+                            await scopedEpgService.LoadEpgAsync(source.Url, source.IsPrimary, channelSnapshot);
+                            usedEpgUrl = source.Url;
+                            System.Diagnostics.Debug.WriteLine($"[PlaylistService] EPG loaded from {source.Type}");
+                            break;
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[PlaylistService] EPG source failed: {source.Type} - {ex.Message}");
+                        }
+                    }
+
+                    var playlistToUpdate = await scopedDb.Playlists.FirstOrDefaultAsync(p => p.Id == playlistId);
+                    if (playlistToUpdate != null)
+                    {
+                        playlistToUpdate.DetectedCountry = detectedCountry;
+                        playlistToUpdate.EpgUrl = usedEpgUrl;
+                        playlistToUpdate.EpgLastUpdated = DateTime.Now;
+                        await scopedDb.SaveChangesAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PlaylistService] Auto-EPG error: {ex.Message}");
+                }
+            });
+
             return playlist;
         }
         finally
@@ -106,7 +182,8 @@ public class PlaylistService : IPlaylistService
     {
         try 
         {
-            var channels = await _parser.ParseFromFileAsync(filePath);
+            var rawChannels = await _parser.ParseFromFileAsync(filePath);
+            var channels = _organizer.Organize(rawChannels);
             
             var playlist = new Playlist
             {
@@ -167,12 +244,12 @@ public class PlaylistService : IPlaylistService
             .FirstOrDefaultAsync(p => p.Id == playlistId);
 
         if (playlist == null)
-            throw new KeyNotFoundException($"Playlist bulunamadı: {playlistId}");
+            throw new KeyNotFoundException($"Playlist bulunamadÄ±: {playlistId}");
 
-        // Mevcut kanalları sil
+        // Mevcut kanallarÄ± sil
         _context.Channels.RemoveRange(playlist.Channels);
 
-        // Yeni kanalları parse et
+        // Yeni kanallarÄ± parse et
         List<Channel> newChannels;
         if (!string.IsNullOrEmpty(playlist.Url))
         {
@@ -187,14 +264,17 @@ public class PlaylistService : IPlaylistService
             throw new InvalidOperationException("Playlist'in URL veya dosya yolu yok");
         }
 
-        // Yeni kanalları ekle
-        foreach (var channel in newChannels)
+        // Organizasyon pipeline'Ä± uygula
+        var organizedChannels = _organizer.Organize(newChannels);
+
+        // Yeni kanallarÄ± ekle
+        foreach (var channel in organizedChannels)
         {
             channel.PlaylistId = playlist.Id;
             _context.Channels.Add(channel);
         }
 
-        playlist.ChannelCount = newChannels.Count;
+        playlist.ChannelCount = organizedChannels.Count;
         playlist.LastUpdated = DateTime.Now;
 
         await _context.SaveChangesAsync();
@@ -310,6 +390,53 @@ public class PlaylistService : IPlaylistService
         {
             account.ExpirationDate = expirationDate;
             await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task RefreshEpgAsync(int playlistId)
+    {
+        var playlist = await _context.Playlists
+            .Include(p => p.Channels)
+            .FirstOrDefaultAsync(p => p.Id == playlistId);
+        
+        if (playlist == null) return;
+
+        var channels = playlist.Channels.ToList();
+        
+        // Ãœlke tespiti (yoksa yap)
+        if (string.IsNullOrEmpty(playlist.DetectedCountry))
+        {
+            var channelNames = channels.Select(c => c.Name ?? "").ToList();
+            playlist.DetectedCountry = _languageDetection.DetectCountry(channelNames);
+        }
+
+        // EPG kaynaklarÄ±nÄ± Ã§Ã¶z
+        var epgSources = _epgSourceResolver.ResolveEpgSources(
+            playlist.DetectedCountry ?? "TR",
+            m3uEpgUrl: playlist.EpgUrl);
+
+        foreach (var source in epgSources)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[PlaylistService] RefreshEpg trying: {source.Type} - {source.Url}");
+                // EÄŸer temizlik gerekiyorsa
+                if (source.ClearBeforeLoad)
+                {
+                    await _epgService.ClearEpgAsync();
+                }
+
+                await _epgService.LoadEpgAsync(source.Url, source.IsPrimary, channels);
+                playlist.EpgUrl = source.Url;
+                playlist.EpgLastUpdated = DateTime.Now;
+                await _context.SaveChangesAsync();
+                System.Diagnostics.Debug.WriteLine($"[PlaylistService] RefreshEpg success: {source.Type}");
+                return;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PlaylistService] RefreshEpg failed: {source.Type} - {ex.Message}");
+            }
         }
     }
 }

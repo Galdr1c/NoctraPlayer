@@ -26,7 +26,7 @@ public partial class ProfilesWindow : Window
         viewModel.OnProfileEditRequested += ViewModel_OnProfileEditRequested;
         viewModel.OnProfileSelected += ViewModel_OnProfileSelected;
 
-        // Window sÃ¼rÃ¼kleme
+        // Window sürükleme
         MouseLeftButtonDown += (s, e) =>
         {
             if (e.ButtonState == MouseButtonState.Pressed)
@@ -91,7 +91,7 @@ public partial class ProfilesWindow : Window
 
             if (reloadedProfile == null)
             {
-                mainViewModel.StatusMessage = "Profil bulunamadÄ±.";
+                mainViewModel.StatusMessage = "Profil bulunamadı.";
                 return;
             }
             
@@ -197,7 +197,7 @@ public partial class ProfilesWindow : Window
 
     private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        // Escape tuÅŸu ile Ã§Ä±kÄ±ÅŸ
+        // Escape tuşu ile çıkış
         if (e.Key == System.Windows.Input.Key.Escape)
         {
             Application.Current.Shutdown();
@@ -221,3 +221,4 @@ public partial class ProfilesWindow : Window
         return !IsVisible && PresentationSource.FromVisual(this) == null;
     }
 }
+

@@ -63,4 +63,9 @@ public interface IPlaylistService
     Task<int> GetChannelCountAsync(int playlistId);
     
     Task UpdateProviderExpirationAsync(int providerId, DateTime expirationDate);
+
+    /// <summary>
+    /// Playlist'in EPG verisini yeniler
+    /// </summary>
+    Task RefreshEpgAsync(int playlistId);
 }

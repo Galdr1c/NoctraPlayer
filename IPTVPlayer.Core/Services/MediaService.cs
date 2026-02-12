@@ -39,14 +39,14 @@ public class MediaService : IMediaService
                 if (match.Groups[1].Success) // S01E01 format
                 {
                     seriesName = match.Groups[1].Value.Trim();
-                    seasonNum = int.Parse(match.Groups[2].Value);
-                    episodeNum = int.Parse(match.Groups[3].Value);
+                    seasonNum = ParseSafeInt(match.Groups[2].Value, fallback: 1);
+                    episodeNum = ParseSafeInt(match.Groups[3].Value, fallback: 1);
                 }
                 else // 1x01 format
                 {
                     seriesName = match.Groups[4].Value.Trim();
-                    seasonNum = int.Parse(match.Groups[5].Value);
-                    episodeNum = int.Parse(match.Groups[6].Value);
+                    seasonNum = ParseSafeInt(match.Groups[5].Value, fallback: 1);
+                    episodeNum = ParseSafeInt(match.Groups[6].Value, fallback: 1);
                 }
             }
             else
@@ -80,6 +80,21 @@ public class MediaService : IMediaService
         }
 
         await _context.SaveChangesAsync();
+    }
+
+    private static int ParseSafeInt(string? value, int fallback)
+    {
+        if (int.TryParse(value, out var parsed) && parsed > 0)
+        {
+            return parsed;
+        }
+
+        if (long.TryParse(value, out var parsedLong) && parsedLong > 0)
+        {
+            return parsedLong > int.MaxValue ? int.MaxValue : (int)parsedLong;
+        }
+
+        return fallback;
     }
 
     public async Task<List<Series>> GetSeriesAsync(int playlistId)

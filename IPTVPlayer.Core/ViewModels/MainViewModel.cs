@@ -6,6 +6,8 @@ using System.Text.Json;
 using IPTVPlayer.Services.Interfaces;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
+using IPTVPlayer.Data;
 
 namespace IPTVPlayer.ViewModels;
 
@@ -98,7 +100,7 @@ public partial class MainViewModel : ObservableObject
     private bool _showOnlyFavorites;
 
     [ObservableProperty]
-    private string _statusMessage = "HazÄ±r";
+    private string _statusMessage = "Hazır";
 
     [ObservableProperty]
     private string _newPlaylistName = string.Empty;
@@ -122,7 +124,7 @@ public partial class MainViewModel : ObservableObject
 
     public async Task InitializeAsync()
     {
-        // Otomatik yÃ¼kleme yerine profil yÃ¼klenmesini bekle
+        // Otomatik yükleme yerine profil yüklenmesini bekle
     }
 
     [ObservableProperty]
@@ -136,7 +138,7 @@ public partial class MainViewModel : ObservableObject
         if (profile == null) return;
 
         IsLoading = true;
-        StatusMessage = $"{profile.Name} yÃ¼kleniyor...";
+        StatusMessage = $"{profile.Name} yükleniyor...";
         CurrentProfileId = profile.Id;
         CurrentProfile = profile;
         
@@ -148,7 +150,7 @@ public partial class MainViewModel : ObservableObject
             // Ensure provider account is loaded
             if (profile.ProviderAccount == null)
             {
-                StatusMessage = "Hesap bilgileri yÃ¼klenemedi";
+                StatusMessage = "Hesap bilgileri yüklenemedi";
                 return;
             }
 
@@ -159,7 +161,7 @@ public partial class MainViewModel : ObservableObject
             {
                 // Use cached playlist - much faster!
                 System.Diagnostics.Debug.WriteLine($"[MainViewModel] Using cached playlist for profile {profile.Id}");
-                StatusMessage = "Ã–nbellekten yÃ¼kleniyor...";
+                StatusMessage = "Önbellekten yükleniyor...";
                 await LoadPlaylistsAsync();
             }
             else
@@ -180,7 +182,7 @@ public partial class MainViewModel : ObservableObject
                     }
                     case ProfileType.XtreamCodes:
                     {
-                        StatusMessage = "Xtream baglantisi kuruluyor...";
+                        StatusMessage = "Xtream bağlantısı kuruluyor...";
                         var baseUrl = profile.ProviderAccount.Url.TrimEnd('/');
                         if (!baseUrl.StartsWith("http")) baseUrl = "http://" + baseUrl;
 
@@ -191,7 +193,7 @@ public partial class MainViewModel : ObservableObject
 
                         try
                         {
-                            StatusMessage = "Xtream API'den kanallar aliniyor...";
+                            StatusMessage = "Xtream API'den kanallar alınıyor...";
                             var xtreamChannels = await xtreamService.GetChannelsAsync(
                                 baseUrl,
                                 username,
@@ -215,7 +217,7 @@ public partial class MainViewModel : ObservableObject
                     }
                     case ProfileType.StalkerPortal:
                     {
-                        StatusMessage = "Stalker Portal baglantisi kuruluyor...";
+                        StatusMessage = "Stalker Portal bağlantısı kuruluyor...";
                         var stalkerService = scope.ServiceProvider.GetRequiredService<IStalkerPortalService>();
                         var portalUrl = profile.ProviderAccount.Url;
                         var macAddress = profile.ProviderAccount.Username ?? string.Empty;
@@ -237,13 +239,29 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Profil yÃ¼klenirken hata oluÅŸtu: {ex.Message}";
+            StatusMessage = $"Profil yüklenirken hata oluştu: {ex.Message}";
             System.Diagnostics.Debug.WriteLine($"LoadProfile Error: {ex}");
         }
         finally
         {
             IsLoading = false;
         }
+    }
+
+    public Task RefreshCurrentProfileExpirationAsync()
+    {
+        var account = CurrentProfile?.ProviderAccount;
+        if (account == null)
+        {
+            return Task.CompletedTask;
+        }
+
+        return account.Type switch
+        {
+            ProfileType.M3U => CheckM3UExpirationAsync(account),
+            ProfileType.XtreamCodes => CheckXtreamExpirationAsync(account),
+            _ => Task.CompletedTask
+        };
     }
 
     private async Task CheckM3UExpirationAsync(ProviderAccount account)
@@ -253,6 +271,13 @@ public partial class MainViewModel : ObservableObject
             // Try to find username and password in URL
             var uri = new Uri(account.Url);
             var query = QueryHelpers.ParseQuery(uri.Query);
+
+            // Some providers append expiry directly in M3U URL query.
+            var queryExpiration = TryParseExpirationFromQuery(query);
+            if (queryExpiration.HasValue)
+            {
+                await UpdateProviderExpirationAsync(account.Id, queryExpiration.Value);
+            }
             
             string? username = null;
             string? password = null;
@@ -279,6 +304,57 @@ public partial class MainViewModel : ObservableObject
             }
         }
         catch { /* Parsing failed, not an Xtream URL */ }
+    }
+
+    private async Task UpdateProviderExpirationAsync(int accountId, DateTime expirationDate)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var playlistService = scope.ServiceProvider.GetRequiredService<IPlaylistService>();
+        await playlistService.UpdateProviderExpirationAsync(accountId, expirationDate);
+
+        _dispatcherService.BeginInvoke(() =>
+        {
+            if (CurrentProfile?.ProviderAccount?.Id == accountId)
+            {
+                CurrentProfile.ProviderAccount.ExpirationDate = expirationDate;
+            }
+        });
+    }
+
+    private static DateTime? TryParseExpirationFromQuery(Dictionary<string, Microsoft.Extensions.Primitives.StringValues> query)
+    {
+        var candidateKeys = new[] { "exp", "expires", "expiry", "expiration", "expire", "exp_date" };
+        foreach (var key in candidateKeys)
+        {
+            if (!query.TryGetValue(key, out var value))
+            {
+                continue;
+            }
+
+            var raw = value.ToString();
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                continue;
+            }
+
+            if (long.TryParse(raw, out var unix) && unix > 0)
+            {
+                // Handle both seconds and milliseconds epochs.
+                if (unix > 9999999999)
+                {
+                    unix /= 1000;
+                }
+
+                return DateTimeOffset.FromUnixTimeSeconds(unix).DateTime;
+            }
+
+            if (DateTime.TryParse(raw, out var parsed))
+            {
+                return parsed;
+            }
+        }
+
+        return null;
     }
 
     private async Task CheckXtreamExpirationAsync(ProviderAccount account)
@@ -336,17 +412,7 @@ public partial class MainViewModel : ObservableObject
                     {
                         var expirationDate = DateTimeOffset.FromUnixTimeSeconds(expTimestamp.Value).DateTime;
                         
-                        using var scope = _scopeFactory.CreateScope();
-                        var playlistService = scope.ServiceProvider.GetRequiredService<IPlaylistService>();
-                        await playlistService.UpdateProviderExpirationAsync(accountId, expirationDate);
-                        
-                        _dispatcherService.BeginInvoke(() => 
-                        {
-                            if (CurrentProfile?.ProviderAccount?.Id == accountId)
-                            {
-                                CurrentProfile.ProviderAccount.ExpirationDate = expirationDate;
-                            }
-                        });
+                        await UpdateProviderExpirationAsync(accountId, expirationDate);
                     }
                 }
             }
@@ -400,25 +466,27 @@ public partial class MainViewModel : ObservableObject
         try
         {
             IsLoading = true;
-            StatusMessage = "Kanallar yÃ¼kleniyor...";
+            StatusMessage = "Kanallar yükleniyor...";
             
-            // Load metadata first, then first incremental page.
-            var groupsTask = playlistService.GetGroupsAsync(playlistId);
-            var channelCountTask = playlistService.GetChannelCountAsync(playlistId);
-            await Task.WhenAll(groupsTask, channelCountTask);
-
-            Groups = await groupsTask;
-            var channelCount = await channelCountTask;
+            // Same DbContext cannot execute multiple operations in parallel.
+            var groups = await playlistService.GetGroupsAsync(playlistId);
+            var channelCount = await playlistService.GetChannelCountAsync(playlistId);
+            Groups = groups;
             ResetIncrementalState();
             await LoadMoreChannelsAsync();
             
             await Task.WhenAll(
                 LoadHomeContentAsync(),
                 LoadFavoritesAsync());
-            StatusMessage = $"{channelCount} kanal hazÄ±r";
+            StatusMessage = $"{channelCount} kanal hazır";
             
             // Trigger EPG update in background
             _ = LoadEpgAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"LoadChannels error: {ex}");
+            StatusMessage = $"Kanallar yüklenemedi: {ex.Message}";
         }
         finally
         {
@@ -431,13 +499,13 @@ public partial class MainViewModel : ObservableObject
         using var scope = _scopeFactory.CreateScope();
         var mediaService = scope.ServiceProvider.GetRequiredService<IMediaService>();
         
-        // Rail iÃ§eriklerini yÃ¼kle
+        // Rail içeriklerini yükle
         TrendingChannels = Channels.Where(c => c.Type == ChannelType.Live).Take(10).ToList();
         LatestMovies = Channels.Where(c => c.Type == ChannelType.VOD).Take(10).ToList();
         LatestSeries = await mediaService.GetSeriesAsync(SelectedPlaylist?.Id ?? 0);
         ContinueWatching = Channels.Where(c => c.LastWatched.HasValue).OrderByDescending(c => c.LastWatched).Take(10).ToList();
 
-        // Hero iÃ§eriÄŸi
+        // Hero içeriği
         FeaturedChannel = TrendingChannels.FirstOrDefault() ?? LatestMovies.FirstOrDefault();
     }
 
@@ -466,8 +534,13 @@ public partial class MainViewModel : ObservableObject
         FilteredChannels = new List<Channel>();
     }
 
-    public async Task LoadMoreChannelsAsync()
+    public async Task LoadMoreChannelsAsync(CancellationToken cancellationToken = default)
     {
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
         if (SelectedPlaylist == null || !_hasMoreChannels || _isLoadingMoreChannels)
         {
             return;
@@ -488,6 +561,11 @@ public partial class MainViewModel : ObservableObject
                 group: SelectedGroup,
                 type: SelectedChannelType,
                 onlyFavorites: ShowOnlyFavorites);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
 
             if (page.Count == 0)
             {
@@ -526,18 +604,8 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSearchTextChanged(string value)
     {
-        if (!string.IsNullOrWhiteSpace(value) && ActiveView != AppView.Search)
-        {
-            ActiveView = AppView.Search;
-        }
-        else if (string.IsNullOrWhiteSpace(value) && ActiveView == AppView.Search)
-        {
-            ActiveView = AppView.Home;
-        }
-
         // Debounce logic
         _filterCts?.Cancel();
-        _filterCts?.Dispose();
         _filterCts = new CancellationTokenSource();
         var token = _filterCts.Token;
 
@@ -562,7 +630,6 @@ public partial class MainViewModel : ObservableObject
     private void ScheduleImmediateFilter()
     {
         _filterCts?.Cancel();
-        _filterCts?.Dispose();
         _filterCts = new CancellationTokenSource();
         var token = _filterCts.Token;
 
@@ -580,6 +647,10 @@ public partial class MainViewModel : ObservableObject
         {
             // Expected for debounce scenarios.
         }
+        catch (ObjectDisposedException)
+        {
+            // Ignore races from rapid filter token replacement.
+        }
     }
 
     private async Task ApplyFiltersAsync(CancellationToken token)
@@ -593,21 +664,18 @@ public partial class MainViewModel : ObservableObject
             if (token.IsCancellationRequested) return;
             ResetIncrementalState();
             if (token.IsCancellationRequested) return;
-            await LoadMoreChannelsAsync();
+            await LoadMoreChannelsAsync(token);
         }
         catch (Exception ex)
         {
             if (ex is OperationCanceledException) return;
 
             System.Diagnostics.Debug.WriteLine($"ApplyFilters error: {ex}");
-            StatusMessage = "Filtreleme sÄ±rasÄ±nda hata oluÅŸtu";
+            StatusMessage = "Filtreleme sırasında hata oluştu";
         }
         finally
         {
-            if (!token.IsCancellationRequested)
-            {
-                IsLoading = false;
-            }
+            IsLoading = false;
         }
     }
 
@@ -618,7 +686,7 @@ public partial class MainViewModel : ObservableObject
         var channelService = scope.ServiceProvider.GetRequiredService<IChannelService>();
         
         SelectedChannel = channel;
-        StatusMessage = $"SeÃ§ildi: {channel.Name}";
+        StatusMessage = $"Seçildi: {channel.Name}";
         
         // Update last watched
         channel.LastWatched = DateTime.Now;
@@ -644,7 +712,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(NewPlaylistName) || string.IsNullOrWhiteSpace(NewPlaylistUrl))
         {
-            StatusMessage = "LÃ¼tfen playlist adÄ± ve URL'sini girin";
+            StatusMessage = "Lütfen playlist adı ve URL'sini girin";
             return;
         }
 
@@ -685,16 +753,16 @@ public partial class MainViewModel : ObservableObject
             var playlistService = scope.ServiceProvider.GetRequiredService<IPlaylistService>();
             
             IsLoading = true;
-            StatusMessage = "Playlist gÃ¼ncelleniyor...";
+            StatusMessage = "Playlist güncelleniyor...";
             
             await playlistService.RefreshAsync(SelectedPlaylist.Id);
             await LoadChannelsAsync(SelectedPlaylist.Id);
             
-            StatusMessage = "Playlist gÃ¼ncellendi";
+            StatusMessage = "Playlist güncellendi";
         }
         catch (Exception ex)
         {
-            StatusMessage = $"GÃ¼ncelleme hatasÄ±: {ex.Message}";
+            StatusMessage = $"Güncelleme hatası: {ex.Message}";
         }
         finally
         {
@@ -712,60 +780,221 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task LoadEpgAsync()
+    public async Task LoadEpgAsync(bool isBackgroundSync = false)
     {
-        await LoadEpgInternalAsync(isBackgroundSync: false);
+        await LoadEpgInternalAsync(isBackgroundSync, forceRefresh: false, setBusyState: true);
     }
 
-    private async Task LoadEpgInternalAsync(bool isBackgroundSync)
+    public async Task ForceRefreshEpgAsync()
+    {
+        // Force refresh should not lock the whole UI.
+        await LoadEpgInternalAsync(isBackgroundSync: false, forceRefresh: true, setBusyState: false);
+    }
+
+    private async Task LoadEpgInternalAsync(bool isBackgroundSync, bool forceRefresh = false, bool setBusyState = true)
     {
         if (CurrentProfile == null) return;
 
         try
         {
-            if (!isBackgroundSync)
+            if (!isBackgroundSync && setBusyState)
             {
                 IsLoading = true;
-                StatusMessage = "EPG guncelleniyor...";
+                StatusMessage = "EPG güncelleniyor...";
             }
 
             using var scope = _scopeFactory.CreateScope();
             var epgService = scope.ServiceProvider.GetRequiredService<IEpgService>();
+            var languageDetection = scope.ServiceProvider.GetRequiredService<Services.LanguageDetectionService>();
+            var epgSourceResolver = scope.ServiceProvider.GetRequiredService<Services.EpgSourceResolver>();
+            var playlistService = scope.ServiceProvider.GetRequiredService<IPlaylistService>();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            string? epgUrl = null;
+            // Use full playlist channels for EPG mapping (not only currently paged UI channels)
+            var channelsForMapping = Channels;
+            if (SelectedPlaylist != null)
+            {
+                channelsForMapping = await playlistService.GetChannelsAsync(SelectedPlaylist.Id);
+            }
+
+            // EPG is relevant for live channels only.
+            channelsForMapping = channelsForMapping
+                .Where(c => c.Type == ChannelType.Live)
+                .ToList();
+
+            if (channelsForMapping.Count == 0)
+            {
+                if (!isBackgroundSync)
+                {
+                    StatusMessage = "Canlı kanal bulunamadı, EPG atlandı";
+                }
+                return;
+            }
+
+            // Daily cache: if today's EPG already exists for this playlist and user didn't force refresh, skip download.
+            if (!forceRefresh && SelectedPlaylist != null)
+            {
+                var playlistState = await db.Playlists
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.Id == SelectedPlaylist.Id);
+
+                var alreadyUpdatedToday = playlistState?.EpgLastUpdated?.Date == DateTime.Now.Date;
+                var hasCachedPrograms = await HasEpgForChannelsAsync(db, channelsForMapping);
+
+                if (alreadyUpdatedToday && hasCachedPrograms)
+                {
+                    if (!isBackgroundSync)
+                    {
+                        StatusMessage = "EPG önbellekten kullanılıyor";
+                    }
+                    return;
+                }
+            }
+
+            // 1. Provider EPG URL (Xtream)
+            string? providerEpgUrl = null;
             if (CurrentProfile.ProviderAccount?.Type == ProfileType.XtreamCodes)
             {
                 var baseUrl = CurrentProfile.ProviderAccount.Url.TrimEnd('/');
                 if (!baseUrl.StartsWith("http")) baseUrl = "http://" + baseUrl;
-                epgUrl = $"{baseUrl}/xmltv.php?username={Uri.EscapeDataString(CurrentProfile.ProviderAccount.Username ?? "")}&password={Uri.EscapeDataString(CurrentProfile.ProviderAccount.Password ?? "")}";
+                providerEpgUrl = $"{baseUrl}/xmltv.php?username={Uri.EscapeDataString(CurrentProfile.ProviderAccount.Username ?? "")}&password={Uri.EscapeDataString(CurrentProfile.ProviderAccount.Password ?? "")}";
             }
 
-            // Incremental strategy: only today + tomorrow (daysAhead = 1)
-            if (!string.IsNullOrEmpty(epgUrl))
+            // 2. Çoklu ülke tespiti (Loop through top countries)
+            var channelNames = channelsForMapping.Select(c => c.Name ?? "").ToList();
+            // Detect top countries (limit to top 3 to avoid excessive downloads)
+            var detectedCountries = languageDetection.DetectCountries(channelNames)
+                .Where(c => c.Percentage > 10 || c.ChannelCount > 5) // Min threshold
+                .Take(3)
+                .ToList();
+
+            if (detectedCountries.Count == 0)
+                detectedCountries.Add(("TR", 0, 0));
+
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] Detected countries: {string.Join(", ", detectedCountries.Select(c => c.CountryCode))}");
+
+            // 3. EPG kaynaklarını topla
+            var distinctSources = new List<Services.EpgSource>();
+            
+            // a) Provider Source (Primary) - Only once
+            if (!string.IsNullOrEmpty(providerEpgUrl))
             {
-                await epgService.LoadEpgAsync(epgUrl, isPrimary: true, daysAhead: 1);
+                distinctSources.Add(new Services.EpgSource 
+                { 
+                    Url = providerEpgUrl, 
+                    Priority = 1, 
+                    Type = Services.EpgSourceType.Provider,
+                    IsPrimary = true 
+                });
             }
 
-            var secondaryUrl = "https://iptv-org.github.io/epg/guides/tr/turksat.com.tr.epg.xml";
+            // b) Country-specific sources (iptv-epg.org etc)
+            foreach (var (countryCode, _, _) in detectedCountries)
+            {
+                var countrySources = epgSourceResolver.ResolveEpgSources(countryCode);
+                foreach (var source in countrySources)
+                {
+                    // Skip if provider (already added) or if already in list
+                    if (source.Type == Services.EpgSourceType.Provider) continue;
+                    
+                    // Avoid duplicates based on URL
+                    if (!distinctSources.Any(s => s.Url == source.Url))
+                    {
+                        distinctSources.Add(source);
+                    }
+                }
+            }
+
+            // Sort by priority
+            var epgSources = distinctSources.OrderBy(s => s.Priority).ToList();
+
+            // Ensure we only clear the DB once (at the start), not for every source
+            for (int i = 0; i < epgSources.Count; i++)
+            {
+                epgSources[i].ClearBeforeLoad = (i == 0);
+            }
+
             if (!isBackgroundSync)
             {
-                StatusMessage = "Yedek EPG taraniyor...";
+                StatusMessage = "EPG kaynakları deneniyor...";
             }
 
-            await epgService.LoadEpgAsync(secondaryUrl, isPrimary: false, Channels, daysAhead: 1);
+            // 4. Her kaynağı indirmeyi dene
+            bool anySuccess = false;
+            string? lastSourceError = null;
+            
+            foreach (var source in epgSources)
+            {
+                try
+                {
+                    
+                    if (!isBackgroundSync)
+                    {
+                        StatusMessage = $"EPG: {source.Type} yükleniyor...";
+                    }
+
+                    // Eğer bu kaynak için temizlik gerekiyorsa
+                    if (source.ClearBeforeLoad)
+                    {
+                        System.Diagnostics.Debug.WriteLine("[MainViewModel] Clearing existing EPG data...");
+                        await epgService.ClearEpgAsync();
+                    }
+
+                    var beforeCount = await epgService.GetTotalProgramCountAsync();
+                    await epgService.LoadEpgAsync(source.Url, source.IsPrimary, channelsForMapping, daysAhead: 1);
+                    var afterCount = await epgService.GetTotalProgramCountAsync();
+                    var loadedPrograms = afterCount - beforeCount;
+
+                    if (loadedPrograms > 0)
+                    {
+                        anySuccess = true;
+                        System.Diagnostics.Debug.WriteLine($"[MainViewModel] EPG loaded from {source.Type} ({loadedPrograms} programs) - URL: {source.Url}");
+                        lastSourceError = null;
+                    }
+                    else
+                    {
+                        // Don't overwrite last error if we already had success
+                        if (!anySuccess) 
+                        {
+                            lastSourceError = $"{source.Type}: 0 program";
+                        }
+                        System.Diagnostics.Debug.WriteLine($"[MainViewModel] EPG source returned 0 programs: {source.Type}");
+                    }
+                    
+                    // Do NOT break here; continue to load other countries/sources
+                }
+                catch (Exception ex)
+                {
+                    lastSourceError = $"{source.Type}: {ex.Message}";
+                    System.Diagnostics.Debug.WriteLine($"[MainViewModel] EPG source failed: {source.Type} - {ex.Message}");
+                }
+            }
 
             EnsureEpgBackgroundSync();
 
             if (!isBackgroundSync)
             {
-                StatusMessage = "EPG hazir";
+                StatusMessage = anySuccess
+                    ? "EPG hazır"
+                    : $"EPG yüklenemedi{(string.IsNullOrWhiteSpace(lastSourceError) ? "" : $" ({lastSourceError})")}";
+            }
+
+            if (anySuccess && SelectedPlaylist != null)
+            {
+                var playlistToUpdate = await db.Playlists.FirstOrDefaultAsync(p => p.Id == SelectedPlaylist.Id);
+                if (playlistToUpdate != null)
+                {
+                    playlistToUpdate.EpgLastUpdated = DateTime.Now;
+                    await db.SaveChangesAsync();
+                    SelectedPlaylist.EpgLastUpdated = playlistToUpdate.EpgLastUpdated;
+                }
             }
         }
         catch (Exception ex)
         {
             if (!isBackgroundSync)
             {
-                StatusMessage = $"EPG Hatasi: {ex.Message}";
+                StatusMessage = $"EPG Hatası: {ex.Message}";
             }
             else
             {
@@ -774,11 +1003,29 @@ public partial class MainViewModel : ObservableObject
         }
         finally
         {
-            if (!isBackgroundSync)
+            if (!isBackgroundSync && setBusyState)
             {
                 IsLoading = false;
             }
         }
+    }
+
+    private static async Task<bool> HasEpgForChannelsAsync(AppDbContext db, List<Channel> channels)
+    {
+        if (channels.Count == 0) return false;
+
+        var channelIds = new HashSet<string>(channels.Select(c => c.Id.ToString()), StringComparer.Ordinal);
+        foreach (var tvgId in channels.Select(c => c.TvgId).Where(s => !string.IsNullOrWhiteSpace(s)))
+        {
+            channelIds.Add(tvgId!);
+        }
+
+        var from = DateTime.UtcNow.Date;
+        var to = from.AddDays(2);
+        return await db.EpgPrograms.AnyAsync(p =>
+            channelIds.Contains(p.ChannelId) &&
+            p.StartTime < to &&
+            p.EndTime > from);
     }
 
     private void EnsureEpgBackgroundSync()
@@ -797,7 +1044,7 @@ public partial class MainViewModel : ObservableObject
 
             try
             {
-                await LoadEpgInternalAsync(isBackgroundSync: true);
+                await LoadEpgInternalAsync(isBackgroundSync: true, forceRefresh: false);
             }
             finally
             {
@@ -812,6 +1059,15 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void Navigate(AppView view)
     {
+        IsSearchOverlayVisible = false;
+        SearchQuery = string.Empty;
+        SearchResults = new List<object>();
+
+        if (view != AppView.Search && !string.IsNullOrWhiteSpace(SearchText))
+        {
+            SearchText = string.Empty;
+        }
+
         ActiveView = view;
         if (view == AppView.Live) SelectedChannelType = ChannelType.Live;
         else if (view == AppView.Movies) SelectedChannelType = ChannelType.VOD;
@@ -869,7 +1125,6 @@ public partial class MainViewModel : ObservableObject
     partial void OnSearchQueryChanged(string value)
     {
         _searchCts?.Cancel();
-        _searchCts?.Dispose();
 
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -922,6 +1177,10 @@ public partial class MainViewModel : ObservableObject
         catch (OperationCanceledException)
         {
             // Expected while typing quickly.
+        }
+        catch (ObjectDisposedException)
+        {
+            // Ignore races from rapid search token replacement.
         }
     }
 
@@ -1003,16 +1262,17 @@ public partial class MainViewModel : ObservableObject
         if (media is Channel channel)
         {
             SelectedChannel = channel;
-            StatusMessage = $"SeÃ§ildi: {channel.Name}";
+            StatusMessage = $"Seçildi: {channel.Name}";
             OnMediaSelected?.Invoke(channel);
         }
         else if (media is Series series)
         {
             SelectedSeries = series;
             IsSeriesDetailVisible = true;
-            StatusMessage = $"SeÃ§ildi: {series.Name}";
+            StatusMessage = $"Seçildi: {series.Name}";
             OnMediaSelected?.Invoke(series);
         }
     }
 }
+
 

@@ -12,6 +12,7 @@ public partial class VideoOverlayView : UserControl
     {
         InitializeComponent();
         
+        InfoPanel.IsVisibleChanged += Panel_IsVisibleChanged;
         AudioSettingsPanel.IsVisibleChanged += Panel_IsVisibleChanged;
         QualitySettingsPanel.IsVisibleChanged += Panel_IsVisibleChanged;
     }

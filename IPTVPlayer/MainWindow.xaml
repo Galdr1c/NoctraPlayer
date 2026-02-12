@@ -18,7 +18,7 @@
         FontFamily="Segoe UI Variable, Segoe UI">
 
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="64"
+        <WindowChrome CaptionHeight="0"
                       GlassFrameThickness="0"
                       CornerRadius="0"
                       ResizeBorderThickness="8"/>
@@ -133,7 +133,11 @@
             <!-- ==========================================
                  HEADER BAR
                  ========================================== -->
-            <Border Grid.Row="0" Background="{DynamicResource HeaderGradientBrush}" CornerRadius="12,12,0,0">
+            <Border x:Name="HeaderBar"
+                    Grid.Row="0"
+                    Background="{DynamicResource HeaderGradientBrush}"
+                    CornerRadius="12,12,0,0"
+                    MouseLeftButtonDown="HeaderBar_MouseLeftButtonDown">
                 <Grid Margin="24,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -1006,19 +1010,14 @@
                                  CaretBrush="{DynamicResource TextPrimaryBrush}"
                                  Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
                                  KeyDown="SearchInput_KeyDown"
-                                 AcceptsReturn="False">
-                            <TextBox.InputBindings>
-                                <KeyBinding Key="Enter" Command="{Binding CommitSearchCommand}"/>
-                                <KeyBinding Key="Escape" Command="{Binding CloseSearchCommand}"/>
-                            </TextBox.InputBindings>
-                        </TextBox>
+                                 AcceptsReturn="False"/>
                         
                         <TextBlock Text="Film, dizi veya kanal ara..."
                                    FontSize="24"
                                    Foreground="{DynamicResource TextMutedBrush}"
                                    Padding="20"
                                    IsHitTestVisible="False"
-                                   Visibility="{Binding SearchQuery, Converter={StaticResource StringToVisibilityConverter}, ConverterParameter=invert}"/>
+                                   Visibility="{Binding Text, ElementName=SearchInput, Converter={StaticResource StringToVisibilityConverter}, ConverterParameter=invert}"/>
 
                         <Button Grid.Column="1"
                                 Command="{Binding CommitSearchCommand}"

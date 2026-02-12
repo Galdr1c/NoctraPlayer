@@ -38,6 +38,11 @@ public class AppSettings
     public bool AutoSkipIntro { get; set; } = false;
     
     /// <summary>
+    /// Jenerik bittiğinde sonraki bölüme otomatik geç
+    /// </summary>
+    public bool AutoSkipCredits { get; set; } = false;
+    
+    /// <summary>
     /// Veri kullanımı / video kalitesi
     /// </summary>
     public DataUsageLevel DataUsage { get; set; } = DataUsageLevel.Auto;

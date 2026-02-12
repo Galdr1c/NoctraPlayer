@@ -54,6 +54,11 @@ public class Episode
     public DateTime? LastWatched { get; set; }
     public TimeSpan? WatchedPosition { get; set; }
     public int SeasonId { get; set; }
+
+    // Intro/Credits timestamps (seconds)
+    public double? IntroStartSec { get; set; }
+    public double? IntroEndSec { get; set; }
+    public double? CreditsStartSec { get; set; }
     
     // Navigation property
     public Season? Season { get; set; }
