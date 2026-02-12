@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using IPTVPlayer.Models;
+using IPTVPlayer.Services;
 using IPTVPlayer.Services.Interfaces;
 
 namespace IPTVPlayer.ViewModels;
@@ -12,6 +13,7 @@ public partial class PlayerViewModel : ObservableObject
 {
     private readonly IVideoPlayerService _videoPlayerService;
     private readonly IEpgService _epgService;
+    private readonly IMetadataService _metadataService;
     private int _playRequestVersion;
 
     [ObservableProperty]
@@ -67,6 +69,9 @@ public partial class PlayerViewModel : ObservableObject
 
     [ObservableProperty]
     private EpgProgram? _currentProgram;
+    
+    [ObservableProperty]
+    private string _overlaySecondaryText = string.Empty;
 
     [ObservableProperty]
     private bool _isPlaying;
@@ -141,10 +146,16 @@ public partial class PlayerViewModel : ObservableObject
 
     public int? CurrentProfileId { get; set; }
 
-    public PlayerViewModel(IVideoPlayerService videoPlayerService, IEpgService epgService, IDispatcherService dispatcherService, IWatchHistoryService? watchHistoryService = null)
+    public PlayerViewModel(
+        IVideoPlayerService videoPlayerService,
+        IEpgService epgService,
+        IMetadataService metadataService,
+        IDispatcherService dispatcherService,
+        IWatchHistoryService? watchHistoryService = null)
     {
         _videoPlayerService = videoPlayerService;
         _epgService = epgService;
+        _metadataService = metadataService;
         _dispatcherService = dispatcherService;
         _watchHistoryService = watchHistoryService;
 
@@ -246,6 +257,18 @@ public partial class PlayerViewModel : ObservableObject
                 RemainingTime = "00:00:00";
             }
         }
+
+        UpdateOverlaySecondaryText();
+    }
+
+    partial void OnCurrentProgramChanged(EpgProgram? value)
+    {
+        UpdateOverlaySecondaryText();
+    }
+
+    partial void OnIsLiveContentChanged(bool value)
+    {
+        UpdateOverlaySecondaryText();
     }
 
     public async Task PlayChannelAsync(Channel channel)
@@ -256,6 +279,7 @@ public partial class PlayerViewModel : ObservableObject
         CurrentProgram = GetFallbackProgram();
         IsLiveContent = channel.Type == ChannelType.Live;
         IsSeriesContent = channel.Type == ChannelType.Series;
+        UpdateOverlaySecondaryText();
         IsBuffering = true;
         BufferingProgress = 0;
         try
@@ -296,7 +320,67 @@ public partial class PlayerViewModel : ObservableObject
         if (requestVersion == _playRequestVersion && CurrentChannel?.Id == channel.Id)
         {
             CurrentProgram = program ?? GetFallbackProgram();
+            UpdateOverlaySecondaryText();
         }
+
+        // VOD / Dizi için TMDB metadata'yı doğrudan zenginleştir.
+        if (!IsLiveContent)
+        {
+            _ = EnrichCurrentChannelMetadataAsync(channel, requestVersion);
+        }
+    }
+
+    private async Task EnrichCurrentChannelMetadataAsync(Channel channel, int requestVersion)
+    {
+        try
+        {
+            await _metadataService.EnrichChannelAsync(channel);
+
+            if (requestVersion != _playRequestVersion || CurrentChannel?.Id != channel.Id)
+            {
+                return;
+            }
+
+            _dispatcherService.Invoke(UpdateOverlaySecondaryText);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PlayerViewModel] Metadata enrich failed: {ex.Message}");
+        }
+    }
+
+    private void UpdateOverlaySecondaryText()
+    {
+        if (IsLiveContent)
+        {
+            OverlaySecondaryText = CurrentProgram?.Title ?? string.Empty;
+            return;
+        }
+
+        if (CurrentChannel == null)
+        {
+            OverlaySecondaryText = string.Empty;
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(CurrentChannel.Plot))
+        {
+            OverlaySecondaryText = CurrentChannel.Plot!;
+            return;
+        }
+
+        var parts = new List<string>();
+        if (CurrentChannel.ReleaseYear.HasValue)
+        {
+            parts.Add(CurrentChannel.ReleaseYear.Value.ToString());
+        }
+
+        if (!string.IsNullOrWhiteSpace(CurrentChannel.Cast))
+        {
+            parts.Add(CurrentChannel.Cast!);
+        }
+
+        OverlaySecondaryText = string.Join(" • ", parts);
     }
 
     private async Task TrackWatchHistoryAsync()

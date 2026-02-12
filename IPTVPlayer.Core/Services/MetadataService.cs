@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using IPTVPlayer.Models;
+using IPTVPlayer.Services.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace IPTVPlayer.Services;
@@ -11,6 +12,7 @@ namespace IPTVPlayer.Services;
 public partial class MetadataService : IMetadataService
 {
     private readonly HttpClient _httpClient;
+    private readonly ISettingsService? _settingsService;
     private readonly ILogger<MetadataService>? _logger;
     
     private const string TMDB_BASE_URL = "https://api.themoviedb.org/3";
@@ -24,9 +26,13 @@ public partial class MetadataService : IMetadataService
     private Dictionary<int, string>? _tvGenres;
     private readonly SemaphoreSlim _genreLock = new(1, 1);
     
-    public MetadataService(HttpClient httpClient, ILogger<MetadataService>? logger = null)
+    public MetadataService(
+        HttpClient httpClient,
+        ISettingsService? settingsService = null,
+        ILogger<MetadataService>? logger = null)
     {
         _httpClient = httpClient;
+        _settingsService = settingsService;
         _logger = logger;
         
         // Try to get API key from environment or use a placeholder
@@ -43,6 +49,8 @@ public partial class MetadataService : IMetadataService
     
     public async Task<ChannelMetadata?> FetchMetadataAsync(string searchQuery, ChannelType? type = null)
     {
+        EnsureApiKeyLoaded();
+
         if (string.IsNullOrWhiteSpace(searchQuery) || string.IsNullOrEmpty(_apiKey))
             return null;
         
@@ -320,4 +328,25 @@ public partial class MetadataService : IMetadataService
 
     [GeneratedRegex(@"\s+")]
     private static partial Regex ExtraWhitespaceRegex();
+
+    private void EnsureApiKeyLoaded()
+    {
+        if (!string.IsNullOrWhiteSpace(_apiKey))
+        {
+            return;
+        }
+
+        var fromSettings = _settingsService?.Settings?.TmdbApiKey;
+        if (!string.IsNullOrWhiteSpace(fromSettings))
+        {
+            _apiKey = fromSettings.Trim();
+            return;
+        }
+
+        var fromEnv = Environment.GetEnvironmentVariable("TMDB_API_KEY");
+        if (!string.IsNullOrWhiteSpace(fromEnv))
+        {
+            _apiKey = fromEnv.Trim();
+        }
+    }
 }
