@@ -84,6 +84,9 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _isSeriesDetailVisible;
 
+    public Episode? CurrentEpisodePlaybackContext { get; private set; }
+    public Episode? NextEpisodePlaybackContext { get; private set; }
+
     [ObservableProperty]
     private string? _selectedSeriesPosterUrl;
 
@@ -995,6 +998,15 @@ public partial class MainViewModel : ObservableObject
     {
         using var scope = _scopeFactory.CreateScope();
         var channelService = scope.ServiceProvider.GetRequiredService<IChannelService>();
+
+        var isEpisodeContext = channel.Type == ChannelType.Series &&
+                               CurrentEpisodePlaybackContext != null &&
+                               string.Equals(CurrentEpisodePlaybackContext.StreamUrl, channel.StreamUrl, StringComparison.OrdinalIgnoreCase);
+        if (!isEpisodeContext)
+        {
+            CurrentEpisodePlaybackContext = null;
+            NextEpisodePlaybackContext = null;
+        }
         
         SelectedChannel = channel;
         StatusMessage = $"Seçildi: {channel.Name}";
@@ -1486,6 +1498,15 @@ public partial class MainViewModel : ObservableObject
     private List<Channel> _historyChannels = new();
 
     [ObservableProperty]
+    private List<Channel> _historyLiveChannels = new();
+
+    [ObservableProperty]
+    private List<Channel> _historySeriesChannels = new();
+
+    [ObservableProperty]
+    private List<Channel> _historyVodChannels = new();
+
+    [ObservableProperty]
     private List<Channel> _searchLiveChannels = new();
 
     [ObservableProperty]
@@ -1588,6 +1609,16 @@ public partial class MainViewModel : ObservableObject
             .Where(c => c.LastWatched.HasValue)
             .OrderByDescending(c => c.LastWatched)
             .ToList();
+        UpdateHistoryBuckets();
+
+        _ = RefreshHistoryChannelsOnlyAsync();
+    }
+
+    private void UpdateHistoryBuckets()
+    {
+        HistoryLiveChannels = HistoryChannels.Where(c => c.Type == ChannelType.Live).ToList();
+        HistorySeriesChannels = HistoryChannels.Where(c => c.Type == ChannelType.Series).ToList();
+        HistoryVodChannels = HistoryChannels.Where(c => c.Type == ChannelType.VOD).ToList();
         ShowHistoryEmptyState = HistoryChannels.Count == 0;
     }
 
@@ -1598,6 +1629,9 @@ public partial class MainViewModel : ObservableObject
             MyList = new List<Channel>();
             FavoriteChannels = new List<Channel>();
             HistoryChannels = new List<Channel>();
+            HistoryLiveChannels = new List<Channel>();
+            HistorySeriesChannels = new List<Channel>();
+            HistoryVodChannels = new List<Channel>();
             ShowMyListEmptyState = true;
             ShowFavoritesEmptyState = true;
             ShowHistoryEmptyState = true;
@@ -1606,6 +1640,8 @@ public partial class MainViewModel : ObservableObject
 
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var watchHistoryService = scope.ServiceProvider.GetRequiredService<IWatchHistoryService>();
+        await watchHistoryService.CleanupOlderThanDaysAsync(CurrentProfileId.Value, 7);
         var profilePlaylistIds = await db.Playlists
             .AsNoTracking()
             .Where(p => p.ProfileId == CurrentProfileId.Value && p.IsActive)
@@ -1617,6 +1653,9 @@ public partial class MainViewModel : ObservableObject
             MyList = new List<Channel>();
             FavoriteChannels = new List<Channel>();
             HistoryChannels = new List<Channel>();
+            HistoryLiveChannels = new List<Channel>();
+            HistorySeriesChannels = new List<Channel>();
+            HistoryVodChannels = new List<Channel>();
             ShowMyListEmptyState = true;
             ShowFavoritesEmptyState = true;
             ShowHistoryEmptyState = true;
@@ -1635,15 +1674,140 @@ public partial class MainViewModel : ObservableObject
             .OrderBy(c => c.Name)
             .ToListAsync();
 
-        HistoryChannels = await db.Channels
-            .AsNoTracking()
-            .Where(c => profilePlaylistIds.Contains(c.PlaylistId) && c.LastWatched.HasValue)
-            .OrderByDescending(c => c.LastWatched)
-            .ToListAsync();
+        HistoryChannels = await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds);
+        UpdateHistoryBuckets();
 
         ShowMyListEmptyState = MyList.Count == 0;
         ShowFavoritesEmptyState = FavoriteChannels.Count == 0;
-        ShowHistoryEmptyState = HistoryChannels.Count == 0;
+    }
+
+    private async Task RefreshHistoryChannelsOnlyAsync()
+    {
+        if (!CurrentProfileId.HasValue)
+        {
+            return;
+        }
+
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var watchHistoryService = scope.ServiceProvider.GetRequiredService<IWatchHistoryService>();
+        await watchHistoryService.CleanupOlderThanDaysAsync(CurrentProfileId.Value, 7);
+        var profilePlaylistIds = await db.Playlists
+            .AsNoTracking()
+            .Where(p => p.ProfileId == CurrentProfileId.Value && p.IsActive)
+            .Select(p => p.Id)
+            .ToListAsync();
+
+        if (profilePlaylistIds.Count == 0)
+        {
+            HistoryChannels = new List<Channel>();
+            HistoryLiveChannels = new List<Channel>();
+            HistorySeriesChannels = new List<Channel>();
+            HistoryVodChannels = new List<Channel>();
+            ShowHistoryEmptyState = true;
+            return;
+        }
+
+        HistoryChannels = await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds);
+        UpdateHistoryBuckets();
+    }
+
+    private async Task<List<Channel>> GetHistoryChannelsFromWatchHistoryAsync(AppDbContext db, List<int> profilePlaylistIds)
+    {
+        if (!CurrentProfileId.HasValue)
+        {
+            return new List<Channel>();
+        }
+
+        var profileId = CurrentProfileId.Value;
+        var histories = await db.WatchHistories
+            .AsNoTracking()
+            .Include(h => h.Channel)
+            .Include(h => h.Episode)
+                .ThenInclude(e => e!.Season)
+                .ThenInclude(s => s!.Series)
+            .Where(h => h.ProfileId == profileId &&
+                        ((h.ChannelId.HasValue && h.Channel != null && profilePlaylistIds.Contains(h.Channel.PlaylistId)) ||
+                         (h.EpisodeId.HasValue && h.Episode != null && h.Episode.Season != null && h.Episode.Season.Series != null &&
+                          profilePlaylistIds.Contains(h.Episode.Season.Series.PlaylistId))))
+            .OrderByDescending(h => h.WatchedAt)
+            .ToListAsync();
+
+        var result = new List<Channel>(histories.Count);
+        foreach (var history in histories)
+        {
+            var resolvedPosition = ResolveHistoryPosition(history.StoppedAt, history.WatchedDuration);
+
+            if (history.Channel != null)
+            {
+                var channelItem = history.Channel;
+                channelItem.LastWatched = history.WatchedAt;
+                if (resolvedPosition.HasValue && resolvedPosition.Value > TimeSpan.Zero)
+                {
+                    channelItem.WatchedPosition = resolvedPosition.Value;
+                }
+                if ((!channelItem.Duration.HasValue || channelItem.Duration.Value.TotalSeconds <= 0) &&
+                    channelItem.WatchedPosition.HasValue &&
+                    channelItem.WatchedPosition.Value.TotalSeconds > 0)
+                {
+                    // Unknown total duration: keep a visible partial progress instead of zero.
+                    channelItem.Duration = channelItem.WatchedPosition.Value + TimeSpan.FromMinutes(30);
+                }
+                result.Add(channelItem);
+                continue;
+            }
+
+            if (history.Episode?.Season?.Series == null)
+            {
+                continue;
+            }
+
+            var series = history.Episode.Season.Series;
+            result.Add(new Channel
+            {
+                Id = 0,
+                Name = history.Episode.Name,
+                StreamUrl = history.Episode.StreamUrl,
+                LogoUrl = history.Episode.CoverUrl ?? series.CoverUrl,
+                Type = ChannelType.Series,
+                PlaylistId = series.PlaylistId,
+                LastWatched = history.WatchedAt,
+                WatchedPosition = resolvedPosition ?? history.Episode.WatchedPosition,
+                Duration = ResolveHistoryDuration(history.Episode.Duration, resolvedPosition ?? history.Episode.WatchedPosition)
+            });
+        }
+
+        return result;
+    }
+
+    private static TimeSpan? ResolveHistoryDuration(TimeSpan? duration, TimeSpan? watchedPosition)
+    {
+        if (duration.HasValue && duration.Value.TotalSeconds > 0)
+        {
+            return duration;
+        }
+
+        if (watchedPosition.HasValue && watchedPosition.Value.TotalSeconds > 0)
+        {
+            return watchedPosition.Value + TimeSpan.FromMinutes(30);
+        }
+
+        return duration;
+    }
+
+    private static TimeSpan? ResolveHistoryPosition(TimeSpan stoppedAt, TimeSpan watchedDuration)
+    {
+        if (stoppedAt > TimeSpan.Zero)
+        {
+            return stoppedAt;
+        }
+
+        if (watchedDuration > TimeSpan.Zero)
+        {
+            return watchedDuration;
+        }
+
+        return null;
     }
 
     private void UpdateSearchBuckets()
@@ -2206,15 +2370,9 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void PlayEpisode(Episode episode)
     {
-        // Convert Episode to Channel for playing
-        var channel = new Channel
-        {
-            Name = episode.Name,
-            StreamUrl = episode.StreamUrl,
-            LogoUrl = episode.CoverUrl,
-            Type = ChannelType.Series,
-            PlaylistId = SelectedPlaylist?.Id ?? 0
-        };
+        var channel = BuildSeriesEpisodeChannel(episode);
+        CurrentEpisodePlaybackContext = episode;
+        NextEpisodePlaybackContext = FindNextEpisode(episode);
         
         SelectChannel(channel);
         IsSeriesDetailVisible = false;
@@ -2232,11 +2390,11 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void PlayFeatured()
+    private async Task PlayFeatured()
     {
         if (FeaturedChannel != null)
         {
-            SelectMedia(FeaturedChannel);
+            await SelectMedia(FeaturedChannel);
         }
     }
 
@@ -2259,7 +2417,7 @@ public partial class MainViewModel : ObservableObject
     public event Action<object>? OnMediaSelected;
 
     [RelayCommand]
-    private void SelectMedia(object? media)
+    private async Task SelectMedia(object? media)
     {
         if (media == null) return;
 
@@ -2275,19 +2433,21 @@ public partial class MainViewModel : ObservableObject
         }
         else if (media is Series series)
         {
+            var selectedSeries = series;
             try
             {
-                EnsureSeriesEpisodes(series);
+                selectedSeries = await LoadSeriesWithProfileProgressAsync(series);
+                EnsureSeriesEpisodes(selectedSeries);
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"EnsureSeriesEpisodes failed: {ex.Message}");
             }
-            SelectedSeries = series;
+            SelectedSeries = selectedSeries;
             IsSeriesDetailVisible = true;
-            StatusMessage = $"Seçildi: {series.Name}";
-            OnMediaSelected?.Invoke(series);
-            _ = LoadSelectedSeriesMetadataAsync(series);
+            StatusMessage = $"Seçildi: {selectedSeries.Name}";
+            OnMediaSelected?.Invoke(selectedSeries);
+            _ = LoadSelectedSeriesMetadataAsync(selectedSeries);
         }
     }
 
@@ -2487,6 +2647,132 @@ public partial class MainViewModel : ObservableObject
         normalized = Regex.Replace(normalized, @"\b(4k|2160p|1080p|720p|x264|x265|h264|h265|webrip|web-dl|bluray)\b", " ");
         normalized = Regex.Replace(normalized, @"\s+", " ").Trim();
         return normalized;
+    }
+
+    private async Task<Series> LoadSeriesWithProfileProgressAsync(Series series)
+    {
+        if (SelectedPlaylist == null)
+        {
+            return series;
+        }
+
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var dbSeries = await db.Series
+            .Include(s => s.Seasons)
+            .ThenInclude(sn => sn.Episodes)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s =>
+                s.PlaylistId == SelectedPlaylist.Id &&
+                (s.Id == series.Id || s.Name == series.Name));
+
+        var source = dbSeries ?? series;
+        await ApplyProfileProgressAsync(source, db);
+        return source;
+    }
+
+    private async Task ApplyProfileProgressAsync(Series series, AppDbContext db)
+    {
+        var episodes = series.Seasons.SelectMany(s => s.Episodes).ToList();
+        if (episodes.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var episode in episodes)
+        {
+            episode.IsCompleted = false;
+        }
+
+        if (!CurrentProfileId.HasValue)
+        {
+            return;
+        }
+
+        var episodeIds = episodes
+            .Where(e => e.Id > 0)
+            .Select(e => e.Id)
+            .Distinct()
+            .ToList();
+
+        if (episodeIds.Count == 0)
+        {
+            return;
+        }
+
+        var latestEpisodeHistories = await db.WatchHistories
+            .Where(h => h.ProfileId == CurrentProfileId.Value && h.EpisodeId.HasValue && episodeIds.Contains(h.EpisodeId.Value))
+            .GroupBy(h => h.EpisodeId!.Value)
+            .Select(g => g.OrderByDescending(x => x.WatchedAt).First())
+            .ToListAsync();
+
+        if (latestEpisodeHistories.Count == 0)
+        {
+            return;
+        }
+
+        var historyByEpisodeId = latestEpisodeHistories.ToDictionary(h => h.EpisodeId!.Value);
+        foreach (var episode in episodes)
+        {
+            if (!historyByEpisodeId.TryGetValue(episode.Id, out var history))
+            {
+                continue;
+            }
+
+            episode.LastWatched = history.WatchedAt;
+            episode.WatchedPosition = history.StoppedAt;
+            episode.IsCompleted = history.Completed;
+        }
+    }
+
+    private Channel BuildSeriesEpisodeChannel(Episode episode)
+    {
+        var matchedChannel = Channels.FirstOrDefault(c =>
+            c.Type == ChannelType.Series &&
+            !string.IsNullOrWhiteSpace(c.StreamUrl) &&
+            string.Equals(c.StreamUrl, episode.StreamUrl, StringComparison.OrdinalIgnoreCase));
+
+        if (matchedChannel != null)
+        {
+            return matchedChannel;
+        }
+
+        return new Channel
+        {
+            Id = 0,
+            Name = episode.Name,
+            StreamUrl = episode.StreamUrl,
+            LogoUrl = episode.CoverUrl,
+            Type = ChannelType.Series,
+            PlaylistId = SelectedPlaylist?.Id ?? 0
+        };
+    }
+
+    private Episode? FindNextEpisode(Episode episode)
+    {
+        var series = SelectedSeries;
+        if (series == null)
+        {
+            return null;
+        }
+
+        var orderedEpisodes = series.Seasons
+            .OrderBy(s => s.SeasonNumber)
+            .SelectMany(s => s.Episodes.OrderBy(e => e.EpisodeNumber))
+            .ToList();
+
+        var currentIndex = orderedEpisodes.FindIndex(e =>
+            e.Id > 0 && episode.Id > 0
+                ? e.Id == episode.Id
+                : string.Equals(e.StreamUrl, episode.StreamUrl, StringComparison.OrdinalIgnoreCase));
+
+        if (currentIndex < 0 || currentIndex + 1 >= orderedEpisodes.Count)
+        {
+            return null;
+        }
+
+        return orderedEpisodes[currentIndex + 1];
     }
 }
 

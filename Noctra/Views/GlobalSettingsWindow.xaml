@@ -5,6 +5,7 @@
         Title="Ayarlar" 
         Height="600" Width="800"
         WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="False"
         WindowStyle="None"
         ResizeMode="NoResize"
         AllowsTransparency="True"

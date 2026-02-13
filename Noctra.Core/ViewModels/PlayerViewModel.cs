@@ -136,6 +136,11 @@ public partial class PlayerViewModel : ObservableObject
     private Episode? _currentEpisode;
     private bool _introSkipped;
     private bool _creditsTriggered;
+    private double _lastPausedPosition;
+    private long _lastPausedTimeMs;
+    private double _pendingResumeSeekPosition;
+    private int _pendingResumeSeekAttempts;
+    private int _isPlayPauseInProgress;
 
     private readonly IDispatcherService _dispatcherService;
     private readonly IWatchHistoryService? _watchHistoryService;
@@ -236,6 +241,7 @@ public partial class PlayerViewModel : ObservableObject
             {
                 Position = pos;
                 PositionText = TimeSpan.FromSeconds(pos).ToString(@"hh\:mm\:ss");
+                TryApplyPendingResumeSeek();
                 
                 if (Duration > 0)
                 {
@@ -395,15 +401,54 @@ public partial class PlayerViewModel : ObservableObject
         if (_watchHistoryService == null || CurrentProfileId == null || CurrentChannel == null || !IsPlaying)
             return;
 
+        await FlushWatchHistoryAsync(force: false);
+    }
+
+    private async Task FlushWatchHistoryAsync(bool force)
+    {
+        if (_watchHistoryService == null || CurrentProfileId == null || CurrentChannel == null)
+        {
+            return;
+        }
+
+        if (!force && !IsPlaying)
+        {
+            return;
+        }
+
         try
         {
+            var isEpisodePlayback = CurrentChannel.Type == ChannelType.Series && _currentEpisode?.Id > 0;
+            var channelId = !isEpisodePlayback && CurrentChannel.Id > 0 ? CurrentChannel.Id : (int?)null;
+            var livePosition = Math.Max(0, _videoPlayerService.Position);
+            var currentPosition = TimeSpan.FromSeconds(Math.Max(Position, livePosition));
+            var currentDuration = Duration > 0 ? TimeSpan.FromSeconds(Duration) : (TimeSpan?)null;
+            var isCompleted = Duration > 0 && Position >= Duration - 30;
+
             await _watchHistoryService.TrackWatchAsync(
                 CurrentProfileId.Value,
-                CurrentChannel.Id,
-                null, // EpisodeId - null for channels
-                TimeSpan.FromSeconds(Position),
-                Position >= Duration - 30 // Completed if within 30 seconds of end
+                channelId,
+                isEpisodePlayback ? _currentEpisode!.Id : null,
+                currentPosition,
+                isCompleted, // Completed if within 30 seconds of end
+                currentDuration
             );
+
+            if (isEpisodePlayback && _currentEpisode != null)
+            {
+                _dispatcherService.BeginInvoke(() =>
+                {
+                    _currentEpisode.LastWatched = DateTime.Now;
+                    _currentEpisode.WatchedPosition = isCompleted && currentDuration.HasValue
+                        ? currentDuration.Value
+                        : currentPosition;
+                    _currentEpisode.IsCompleted = isCompleted;
+                    if (currentDuration.HasValue)
+                    {
+                        _currentEpisode.Duration = currentDuration.Value;
+                    }
+                });
+            }
         }
         catch (Exception ex)
         {
@@ -541,25 +586,215 @@ public partial class PlayerViewModel : ObservableObject
     {
         Duration = _videoPlayerService.Duration;
         DurationText = TimeSpan.FromSeconds(Duration).ToString(@"hh\:mm\:ss");
+        TryApplyPendingResumeSeek();
         
         AudioTracks = _videoPlayerService.AudioTracks.ToList();
         SubtitleTracks = _videoPlayerService.SubtitleTracks.ToList();
     }
 
     [RelayCommand]
-    private void PlayPause()
+    private async Task PlayPause()
     {
+        if (Interlocked.Exchange(ref _isPlayPauseInProgress, 1) == 1)
+        {
+            return;
+        }
+
+        try
+        {
         if (IsPlaying)
+        {
+            var mediaPlayer = _videoPlayerService.GetMediaPlayer();
+            _lastPausedTimeMs = mediaPlayer?.Time ?? 0;
+            _lastPausedPosition = _lastPausedTimeMs > 0 ? _lastPausedTimeMs / 1000.0 : Position;
             _videoPlayerService.Pause();
+        }
         else if (CurrentChannel != null)
-            _ = _videoPlayerService.PlayAsync(CurrentChannel.StreamUrl);
+        {
+            var mediaPlayer = _videoPlayerService.GetMediaPlayer();
+            var hasLoadedMedia = mediaPlayer?.Media != null;
+            await ResumePlaybackAsync(CurrentChannel.StreamUrl, hasLoadedMedia);
+        }
         
         RestartAutoHideTimer();
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _isPlayPauseInProgress, 0);
+        }
+    }
+
+    private async Task ResumePlaybackAsync(string streamUrl, bool hasLoadedMedia)
+    {
+        if (IsLiveContent || _lastPausedPosition <= 1)
+        {
+            if (hasLoadedMedia)
+            {
+                _videoPlayerService.Resume();
+            }
+            else
+            {
+                await _videoPlayerService.PlayAsync(streamUrl);
+            }
+
+            return;
+        }
+
+        var targetPosition = _lastPausedPosition;
+        // Slight forward compensation to offset keyframe-based resume landing behind target.
+        var targetTimeMs = (_lastPausedTimeMs > 0 ? _lastPausedTimeMs : (long)(targetPosition * 1000)) + 350;
+        _pendingResumeSeekPosition = targetPosition;
+        _pendingResumeSeekAttempts = 0;
+
+        // Prefer native resume for smoothness. Only force seek when drift is significant.
+        if (hasLoadedMedia)
+        {
+            _videoPlayerService.Resume();
+            await Task.Delay(220);
+
+            var resumePlayer = _videoPlayerService.GetMediaPlayer();
+            var resumedMs = resumePlayer?.Time ?? 0;
+            if (resumedMs > 0)
+            {
+                var driftMs = targetTimeMs - resumedMs;
+                if (driftMs <= 1000)
+                {
+                    _pendingResumeSeekPosition = 0;
+                    _pendingResumeSeekAttempts = 0;
+                    await EnsurePlaybackStartedAsync(streamUrl);
+                    return;
+                }
+            }
+            else if (Position + 1 >= targetPosition)
+            {
+                _pendingResumeSeekPosition = 0;
+                _pendingResumeSeekAttempts = 0;
+                await EnsurePlaybackStartedAsync(streamUrl);
+                return;
+            }
+        }
+        else
+        {
+            await _videoPlayerService.PlayAsync(streamUrl);
+        }
+
+        for (var attempt = 0; attempt < 12; attempt++)
+        {
+            await Task.Delay(220 + (attempt * 60));
+            if (IsLiveContent || CurrentChannel == null)
+            {
+                return;
+            }
+
+            var mediaPlayer = _videoPlayerService.GetMediaPlayer();
+            if (mediaPlayer != null && targetTimeMs > 0)
+            {
+                mediaPlayer.Time = targetTimeMs;
+            }
+            else
+            {
+                _videoPlayerService.Position = targetPosition;
+            }
+            await Task.Delay(120);
+
+            var currentTimeMs = mediaPlayer?.Time ?? 0;
+            if (currentTimeMs > 0 && currentTimeMs + 1200 >= targetTimeMs)
+            {
+                _pendingResumeSeekPosition = 0;
+                _pendingResumeSeekAttempts = 0;
+                await EnsurePlaybackStartedAsync(streamUrl);
+                return;
+            }
+
+            if (Position + 1 >= targetPosition)
+            {
+                _pendingResumeSeekPosition = 0;
+                _pendingResumeSeekAttempts = 0;
+                await EnsurePlaybackStartedAsync(streamUrl);
+                return;
+            }
+        }
+
+        await EnsurePlaybackStartedAsync(streamUrl);
+    }
+
+    private async Task EnsurePlaybackStartedAsync(string streamUrl)
+    {
+        if (IsPlaying || CurrentChannel == null || IsLiveContent)
+        {
+            return;
+        }
+
+        await Task.Delay(280);
+        if (IsPlaying)
+        {
+            return;
+        }
+
+        await _videoPlayerService.PlayAsync(streamUrl);
+    }
+
+    private void TryApplyPendingResumeSeek()
+    {
+        if (IsLiveContent || _pendingResumeSeekPosition <= 1)
+        {
+            return;
+        }
+
+        var mediaPlayer = _videoPlayerService.GetMediaPlayer();
+        var pendingTimeMs = _lastPausedTimeMs > 0 ? _lastPausedTimeMs : (long)(_pendingResumeSeekPosition * 1000);
+        if (mediaPlayer != null && pendingTimeMs > 0)
+        {
+            if (mediaPlayer.Time + 1000 >= pendingTimeMs)
+            {
+                _pendingResumeSeekPosition = 0;
+                _pendingResumeSeekAttempts = 0;
+                return;
+            }
+        }
+
+        if (Position + 1 >= _pendingResumeSeekPosition)
+        {
+            _pendingResumeSeekPosition = 0;
+            _pendingResumeSeekAttempts = 0;
+            return;
+        }
+
+        if (_pendingResumeSeekAttempts >= 20)
+        {
+            _pendingResumeSeekPosition = 0;
+            _pendingResumeSeekAttempts = 0;
+            return;
+        }
+
+        _pendingResumeSeekAttempts++;
+        // Avoid micro-corrections that make resume feel jumpy.
+        if (mediaPlayer != null && pendingTimeMs > 0)
+        {
+            var driftMs = pendingTimeMs - mediaPlayer.Time;
+            if (driftMs <= 1000)
+            {
+                _pendingResumeSeekPosition = 0;
+                _pendingResumeSeekAttempts = 0;
+                return;
+            }
+        }
+
+        if (mediaPlayer != null && pendingTimeMs > 0)
+        {
+            mediaPlayer.Time = pendingTimeMs;
+        }
+        else
+        {
+            _videoPlayerService.Position = _pendingResumeSeekPosition;
+        }
     }
 
     [RelayCommand]
-    private void Stop()
+    private async Task Stop()
     {
+        _watchHistoryTimer.Stop();
+        await FlushWatchHistoryAsync(force: true);
         _videoPlayerService.Stop();
         CurrentChannel = null;
         CurrentProgram = null;
@@ -819,9 +1054,9 @@ public partial class PlayerViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ClosePlayer()
+    private async Task ClosePlayer()
     {
-        Stop();
+        await Stop();
         CloseRequested?.Invoke(this, EventArgs.Empty);
     }
 

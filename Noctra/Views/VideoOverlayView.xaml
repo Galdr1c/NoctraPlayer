@@ -122,16 +122,6 @@
 
                 <!-- Timeline Slider -->
                 <Grid Grid.Row="0" Margin="0,0,0,16">
-                    <Grid.Style>
-                        <Style TargetType="Grid">
-                            <Setter Property="Visibility" Value="Visible"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsBuffering}" Value="True">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Grid.Style>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
@@ -146,6 +136,8 @@
                             Minimum="0" Maximum="{Binding Duration}" 
                             Value="{Binding Position}"
                             IsMoveToPointEnabled="True"
+                            PreviewMouseLeftButtonDown="Slider_PreviewMouseLeftButtonDown"
+                            PreviewMouseLeftButtonUp="Slider_PreviewMouseLeftButtonUp"
                             Thumb.DragStarted="Slider_DragStarted"
                             Thumb.DragCompleted="Slider_DragCompleted"
                             Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>

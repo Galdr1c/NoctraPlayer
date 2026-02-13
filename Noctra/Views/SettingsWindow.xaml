@@ -8,6 +8,7 @@
         mc:Ignorable="d"
         Title="Ayarlar" Height="750" Width="850"
         WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="False"
         WindowStyle="None"
         ResizeMode="NoResize"
         AllowsTransparency="True"

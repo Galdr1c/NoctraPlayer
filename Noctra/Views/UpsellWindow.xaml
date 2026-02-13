@@ -6,6 +6,7 @@
         mc:Ignorable="d"
         Title="Premium'a Yükselt" Height="650" Width="900"
         WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="False"
         WindowStyle="None"
         ResizeMode="NoResize"
         AllowsTransparency="True"
@@ -164,4 +165,3 @@
         </Grid>
     </Border>
 </Window>
-

@@ -8,6 +8,8 @@ namespace Noctra.Views;
 
 public partial class VideoOverlayView : UserControl
 {
+    private bool _isTimelineDragActive;
+
     public VideoOverlayView()
     {
         InitializeComponent();
@@ -53,28 +55,53 @@ public partial class VideoOverlayView : UserControl
         }
     }
 
-        private void Slider_DragStarted(object sender, DragStartedEventArgs e)
+    private void Slider_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _isTimelineDragActive = false;
+    }
+
+    private void Slider_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_isTimelineDragActive)
         {
-            if (DataContext is PlayerViewModel vm)
-            {
-                vm.ToggleLockCommand.Execute(null);
-            }
+            return;
         }
 
-        private void Slider_DragCompleted(object sender, DragCompletedEventArgs e)
+        if (DataContext is not PlayerViewModel vm || sender is not Slider slider)
         {
-            if (DataContext is PlayerViewModel vm)
+            return;
+        }
+
+        if (!vm.IsLiveContent)
+        {
+            vm.SeekCommand.Execute(slider.Value);
+            vm.UserInteractionCommand.Execute(null);
+        }
+    }
+
+    private void Slider_DragStarted(object sender, DragStartedEventArgs e)
+    {
+        _isTimelineDragActive = true;
+        if (DataContext is PlayerViewModel vm)
+        {
+            vm.ToggleLockCommand.Execute(null);
+        }
+    }
+
+    private void Slider_DragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        _isTimelineDragActive = false;
+        if (DataContext is PlayerViewModel vm)
+        {
+            vm.ToggleLockCommand.Execute(null);
+
+            if (!vm.IsLiveContent && sender is Slider slider)
             {
-                vm.ToggleLockCommand.Execute(null);
-                
-                // Perform seek
-                if (sender is Slider slider)
-                {
-                    // Position is updated via TwoWay binding, but we might want to ensure VM updates
-                    vm.SeekCommand.Execute(slider.Value);
-                }
+                vm.SeekCommand.Execute(slider.Value);
+                vm.UserInteractionCommand.Execute(null);
             }
         }
+    }
 }
 
 

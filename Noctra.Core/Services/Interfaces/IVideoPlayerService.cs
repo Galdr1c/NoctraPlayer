@@ -17,6 +17,11 @@ public interface IVideoPlayerService : IDisposable
     /// Oynatmayı duraklatır
     /// </summary>
     void Pause();
+
+    /// <summary>
+    /// Duraklatılan oynatmayı devam ettirir
+    /// </summary>
+    void Resume();
     
     /// <summary>
     /// Oynatmayı durdurur

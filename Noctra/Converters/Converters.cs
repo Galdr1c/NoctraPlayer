@@ -93,7 +93,16 @@ public class CountToVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        var isVisible = value is int count && count > 0;
+        var isVisible = value switch
+        {
+            int count => count > 0,
+            long count => count > 0,
+            double count => count > 0,
+            float count => count > 0,
+            decimal count => count > 0,
+            System.Collections.ICollection collection => collection.Count > 0,
+            _ => false
+        };
         if (string.Equals(parameter?.ToString(), "invert", StringComparison.OrdinalIgnoreCase))
         {
             isVisible = !isVisible;
@@ -103,6 +112,173 @@ public class CountToVisibilityConverter : IValueConverter
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+}
+
+public class PercentageThresholdToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value == null)
+        {
+            return Visibility.Collapsed;
+        }
+
+        var threshold = 95d;
+        if (parameter != null &&
+            double.TryParse(parameter.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedThreshold))
+        {
+            threshold = parsedThreshold;
+        }
+
+        var percentage = value switch
+        {
+            double d => d,
+            float f => f,
+            int i => i,
+            _ => double.TryParse(value.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedValue)
+                ? parsedValue
+                : 0d
+        };
+
+        return percentage >= threshold ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
+
+public class PercentageRangeToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value == null)
+        {
+            return Visibility.Collapsed;
+        }
+
+        var percentage = value switch
+        {
+            double d => d,
+            float f => f,
+            int i => i,
+            decimal m => (double)m,
+            _ => double.TryParse(value.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+                ? parsed
+                : 0d
+        };
+
+        var min = 0d;
+        var max = 90d;
+
+        if (parameter is string raw && !string.IsNullOrWhiteSpace(raw))
+        {
+            var parts = raw.Split('|', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 2)
+            {
+                if (double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedMin))
+                {
+                    min = parsedMin;
+                }
+
+                if (double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedMax))
+                {
+                    max = parsedMax;
+                }
+            }
+        }
+
+        return percentage > min && percentage < max ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
+
+public class WatchedProgressVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is not Channel channel)
+        {
+            return Visibility.Collapsed;
+        }
+
+        if (channel.Type == ChannelType.Live)
+        {
+            return Visibility.Collapsed;
+        }
+
+        if (!channel.WatchedPosition.HasValue || channel.WatchedPosition.Value.TotalSeconds <= 0)
+        {
+            return Visibility.Collapsed;
+        }
+
+        if (channel.Duration.HasValue && channel.Duration.Value.TotalSeconds > 0)
+        {
+            var watchedSeconds = channel.WatchedPosition.Value.TotalSeconds;
+            var totalSeconds = channel.Duration.Value.TotalSeconds;
+            var percent = (watchedSeconds / totalSeconds) * 100d;
+            var remainingSeconds = Math.Max(0d, totalSeconds - watchedSeconds);
+
+            // Hide progress near completion: either >=90% watched or last 5 minutes.
+            if (percent >= 90d || remainingSeconds <= TimeSpan.FromMinutes(5).TotalSeconds)
+            {
+                return Visibility.Collapsed;
+            }
+
+            return Visibility.Visible;
+        }
+
+        return Visibility.Visible;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
+
+public class WatchedProgressWidthConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is not Channel channel)
+        {
+            return 0d;
+        }
+
+        if (channel.Type == ChannelType.Live)
+        {
+            return 0d;
+        }
+
+        var maxWidth = 160d;
+        if (parameter != null &&
+            double.TryParse(parameter.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedWidth))
+        {
+            maxWidth = parsedWidth;
+        }
+
+        if (!channel.WatchedPosition.HasValue || channel.WatchedPosition.Value.TotalSeconds <= 0)
+        {
+            return 0d;
+        }
+
+        double percent;
+        if (channel.Duration.HasValue && channel.Duration.Value.TotalSeconds > 0)
+        {
+            percent = (channel.WatchedPosition.Value.TotalSeconds / channel.Duration.Value.TotalSeconds) * 100d;
+        }
+        else
+        {
+            var watchedMinutes = channel.WatchedPosition.Value.TotalMinutes;
+            percent = Math.Clamp(8d + watchedMinutes * 2.2d, 8d, 88d);
+        }
+
+        percent = Math.Clamp(percent, 0d, 100d);
+        return maxWidth * (percent / 100d);
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotImplementedException();
 }
 
 public class BitrateDisplayConverter : IValueConverter

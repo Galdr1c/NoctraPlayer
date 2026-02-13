@@ -16,6 +16,10 @@
     <!-- New Converters -->
     <converters:WidthToColumnsConverter x:Key="WidthToColumnsConverter"/>
     <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
+    <converters:PercentageThresholdToVisibilityConverter x:Key="PercentageThresholdToVisibilityConverter"/>
+    <converters:PercentageRangeToVisibilityConverter x:Key="PercentageRangeToVisibilityConverter"/>
+    <converters:WatchedProgressVisibilityConverter x:Key="WatchedProgressVisibilityConverter"/>
+    <converters:WatchedProgressWidthConverter x:Key="WatchedProgressWidthConverter"/>
     <converters:BoolToStringConverter x:Key="BoolToStringConverter"/>
     <converters:EqualityToBoolConverter x:Key="EqualityToBoolConverter"/>
     <converters:EqualityToBrushConverter x:Key="EqualityToBrushConverter" TrueBrush="{StaticResource AccentBrush}" FalseBrush="Transparent"/>

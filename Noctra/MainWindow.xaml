@@ -1195,7 +1195,10 @@
                                   Visibility="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.History}}">
                         <StackPanel Margin="24">
                             <TextBlock Text="Geçmiş" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
-                            <ListBox ItemsSource="{Binding HistoryChannels}" Style="{StaticResource GridListBoxStyle}">
+                            <TextBlock Text="Canlı TV" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"
+                                       Visibility="{Binding HistoryLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
+                            <ListBox ItemsSource="{Binding HistoryLiveChannels}" Style="{StaticResource GridListBoxStyle}"
+                                     Visibility="{Binding HistoryLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <Border x:Name="Card" Margin="0,0,16,16" Background="{DynamicResource Surface0Brush}" 
@@ -1227,11 +1230,112 @@
                                                 <TextBlock Text="{Binding LastWatched, StringFormat='Son izleme: {0:dd.MM.yyyy HH:mm}'}"
                                                            Foreground="{DynamicResource TextMutedBrush}" FontSize="12"
                                                            TextTrimming="CharacterEllipsis" TextAlignment="Center"/>
+                                                <Border Height="3" Background="#33FFFFFF" Margin="0,10,0,0"
+                                                        Visibility="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}">
+                                                    <Border Width="{Binding ., Converter={StaticResource WatchedProgressWidthConverter}, ConverterParameter=160}"
+                                                            Background="{DynamicResource AccentBrush}"
+                                                            HorizontalAlignment="Left"/>
+                                                </Border>
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
+
+                            <TextBlock Text="Diziler" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,12"
+                                       Visibility="{Binding HistorySeriesChannels.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
+                            <ListBox ItemsSource="{Binding HistorySeriesChannels}" Style="{StaticResource GridListBoxStyle}"
+                                     Visibility="{Binding HistorySeriesChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="CardSeriesHistory" Margin="0,0,16,16" Background="{DynamicResource Surface0Brush}" 
+                                                CornerRadius="{StaticResource RadiusMedium}" Cursor="Hand"
+                                                Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                                            <Border.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Listem'e Ekle/Çıkar"
+                                                              Command="{Binding PlacementTarget.Tag.AddToMyListCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                    <MenuItem Header="Favorilere Ekle/Çıkar"
+                                                              Command="{Binding PlacementTarget.Tag.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                </ContextMenu>
+                                            </Border.ContextMenu>
+                                            <Border.InputBindings>
+                                                <MouseBinding MouseAction="LeftClick" 
+                                                              Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                              CommandParameter="{Binding}"/>
+                                            </Border.InputBindings>
+                                            <StackPanel Margin="12">
+                                                <Border Height="100" Background="{StaticResource IconGradientBrush}" CornerRadius="{StaticResource RadiusSmall}" Margin="0,0,0,12">
+                                                    <Image Width="60" Stretch="Uniform"
+                                                           cache:CachedImage.SourceUrl="{Binding LogoUrl}"
+                                                           cache:CachedImage.DecodePixelWidth="120"
+                                                           cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding LastWatched, StringFormat='Son izleme: {0:dd.MM.yyyy HH:mm}'}"
+                                                           Foreground="{DynamicResource TextMutedBrush}" FontSize="12"
+                                                           TextTrimming="CharacterEllipsis" TextAlignment="Center"/>
+                                                <Border Height="3" Background="#33FFFFFF" Margin="0,10,0,0"
+                                                        Visibility="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}">
+                                                    <Border Width="{Binding ., Converter={StaticResource WatchedProgressWidthConverter}, ConverterParameter=160}"
+                                                            Background="{DynamicResource AccentBrush}"
+                                                            HorizontalAlignment="Left"/>
+                                                </Border>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <TextBlock Text="Filmler" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,12"
+                                       Visibility="{Binding HistoryVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
+                            <ListBox ItemsSource="{Binding HistoryVodChannels}" Style="{StaticResource GridListBoxStyle}"
+                                     Visibility="{Binding HistoryVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="CardVodHistory" Margin="0,0,16,16" Background="{DynamicResource Surface0Brush}" 
+                                                CornerRadius="{StaticResource RadiusMedium}" Cursor="Hand"
+                                                Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                                            <Border.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Listem'e Ekle/Çıkar"
+                                                              Command="{Binding PlacementTarget.Tag.AddToMyListCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                    <MenuItem Header="Favorilere Ekle/Çıkar"
+                                                              Command="{Binding PlacementTarget.Tag.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                </ContextMenu>
+                                            </Border.ContextMenu>
+                                            <Border.InputBindings>
+                                                <MouseBinding MouseAction="LeftClick" 
+                                                              Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                              CommandParameter="{Binding}"/>
+                                            </Border.InputBindings>
+                                            <StackPanel Margin="12">
+                                                <Border Height="100" Background="{StaticResource IconGradientBrush}" CornerRadius="{StaticResource RadiusSmall}" Margin="0,0,0,12">
+                                                    <Image Width="60" Stretch="Uniform"
+                                                           cache:CachedImage.SourceUrl="{Binding LogoUrl}"
+                                                           cache:CachedImage.DecodePixelWidth="120"
+                                                           cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding LastWatched, StringFormat='Son izleme: {0:dd.MM.yyyy HH:mm}'}"
+                                                           Foreground="{DynamicResource TextMutedBrush}" FontSize="12"
+                                                           TextTrimming="CharacterEllipsis" TextAlignment="Center"/>
+                                                <Border Height="3" Background="#33FFFFFF" Margin="0,10,0,0"
+                                                        Visibility="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}">
+                                                    <Border Width="{Binding ., Converter={StaticResource WatchedProgressWidthConverter}, ConverterParameter=160}"
+                                                            Background="{DynamicResource AccentBrush}"
+                                                            HorizontalAlignment="Left"/>
+                                                </Border>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
                             <StackPanel Style="{StaticResource EmptyStateContainerStyle}"
                                         Visibility="{Binding ShowHistoryEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
                                 <Image Source="Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>
@@ -1575,6 +1679,22 @@
                                                                            cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
                                                                     <Border Background="#44000000"/>
                                                                     <TextBlock Text="▶" Foreground="White" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.6"/>
+
+                                                                    <Border Width="24"
+                                                                            Height="24"
+                                                                            CornerRadius="12"
+                                                                            HorizontalAlignment="Right"
+                                                                            VerticalAlignment="Top"
+                                                                            Margin="8"
+                                                                            Background="{DynamicResource AccentBrush}"
+                                                                            Visibility="{Binding IsCompleted, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                        <TextBlock Text="✓"
+                                                                                   Foreground="White"
+                                                                                   FontSize="14"
+                                                                                   FontWeight="Bold"
+                                                                                   HorizontalAlignment="Center"
+                                                                                   VerticalAlignment="Center"/>
+                                                                    </Border>
                                                                 </Grid>
                                                             </Border>
                                                             
@@ -1586,7 +1706,7 @@
                                                                     <Border Height="3" Background="#33FFFFFF" Margin="0,12,0,0"
                                                                             Visibility="{Binding WatchedPercentage, Converter={StaticResource CountToVisibilityConverter}}">
                                                                         <Border Width="{Binding WatchedPercentage, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=150}"
-                                                                                Background="#8D09E5"
+                                                                                Background="{DynamicResource AccentBrush}"
                                                                                 HorizontalAlignment="Left"/>
                                                                     </Border>
                                                                 </StackPanel>

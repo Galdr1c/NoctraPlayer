@@ -116,4 +116,7 @@ public class Episode
             return Math.Clamp(percent, 0, 100);
         }
     }
+
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public bool IsCompleted { get; set; }
 }

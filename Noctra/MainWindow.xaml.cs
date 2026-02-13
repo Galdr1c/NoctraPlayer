@@ -330,6 +330,17 @@ public partial class MainWindow : Window
             // Sync profile ID for watch history
             if (_viewModel != null)
                 _playerViewModel.CurrentProfileId = _viewModel.CurrentProfileId;
+
+            if (channel.Type == ChannelType.Series && _viewModel.CurrentEpisodePlaybackContext != null)
+            {
+                _playerViewModel.SetCurrentEpisode(
+                    _viewModel.CurrentEpisodePlaybackContext,
+                    _viewModel.NextEpisodePlaybackContext);
+            }
+            else
+            {
+                _playerViewModel.SetCurrentEpisode(null, null);
+            }
             
             // Start Playback via ViewModel
             _ = _playerViewModel.PlayChannelAsync(channel);

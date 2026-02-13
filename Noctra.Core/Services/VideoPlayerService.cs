@@ -227,7 +227,18 @@ public class VideoPlayerService : IVideoPlayerService
 
     public void Pause()
     {
-        _mediaPlayer?.Pause();
+        if (_mediaPlayer != null)
+        {
+            _mediaPlayer.SetPause(true);
+        }
+    }
+
+    public void Resume()
+    {
+        if (_mediaPlayer != null)
+        {
+            _mediaPlayer.SetPause(false);
+        }
     }
 
     public void Stop()

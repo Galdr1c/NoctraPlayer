@@ -8,6 +8,7 @@
         mc:Ignorable="d"
         Title="Kanal Düzenle" Height="600" Width="500"
         WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
         ResizeMode="CanResize"
         Background="Transparent"
         AllowsTransparency="True"
