@@ -470,7 +470,7 @@
                         <ContentPresenter Name="ContentSite" IsHitTestVisible="False"  Content="{TemplateBinding SelectionBoxItem}"
                                           ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                           ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
-                                          Margin="16,0,32,0"
+                                          Margin="16,12,32,12"
                                           VerticalAlignment="Center"
                                           HorizontalAlignment="Left" />
                         <TextBox x:Name="PART_EditableTextBox"
@@ -629,7 +629,7 @@
                                     </RepeatButton>
                                 </Track.IncreaseRepeatButton>
                                 <Track.Thumb>
-                                    <Thumb x:Name="Thumb" Background="{DynamicResource TextPrimaryBrush}" Width="15" Height="15" VerticalAlignment="Center">
+                                    <Thumb x:Name="Thumb" Background="{TemplateBinding Foreground}" Width="16" Height="16" VerticalAlignment="Center">
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
                                                 <Grid>
@@ -639,9 +639,19 @@
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsMouseOver" Value="True">
                                                         <Setter TargetName="Shadow" Property="Opacity" Value="0.4"/>
+                                                        <Setter Property="RenderTransform">
+                                                            <Setter.Value>
+                                                                <ScaleTransform ScaleX="1.2" ScaleY="1.2" CenterX="8" CenterY="8"/> 
+                                                            </Setter.Value>
+                                                        </Setter>
                                                     </Trigger>
                                                     <Trigger Property="IsDragging" Value="True">
                                                         <Setter TargetName="Shadow" Property="Opacity" Value="0.6"/>
+                                                        <Setter Property="RenderTransform">
+                                                            <Setter.Value>
+                                                                <ScaleTransform ScaleX="1.1" ScaleY="1.1" CenterX="8" CenterY="8"/> 
+                                                            </Setter.Value>
+                                                        </Setter>
                                                     </Trigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>

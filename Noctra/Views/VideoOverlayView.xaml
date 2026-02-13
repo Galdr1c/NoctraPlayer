@@ -9,6 +9,14 @@
              d:DesignHeight="800" d:DesignWidth="1200">
 
     <UserControl.Resources>
+        <Style TargetType="{x:Type Button}">
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+
+        <Style TargetType="{x:Type Slider}">
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+
         <Storyboard x:Key="ShowOverlayAnim">
             <DoubleAnimation Storyboard.TargetProperty="Opacity"
                              To="1" Duration="0:0:0.25"/>
@@ -32,6 +40,7 @@
     </UserControl.Resources>
 
     <Grid Background="Transparent"
+          Cursor="Arrow"
           MouseLeftButtonDown="Root_MouseLeftButtonDown"
           MouseMove="Root_MouseMove">
 
@@ -100,10 +109,21 @@
                 <!-- Content Info -->
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                     <TextBlock Text="{Binding CurrentChannel.Name}" FontSize="24" FontWeight="Bold" Foreground="White"/>
-                    <TextBlock Text="{Binding OverlaySecondaryText}" FontSize="16" Foreground="#DDDDDD"
-                               TextTrimming="CharacterEllipsis"
-                               MaxWidth="760"
-                               Visibility="{Binding OverlaySecondaryText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+                    <WrapPanel Margin="0,8,0,0"
+                               Visibility="{Binding HasTopQualityBadgesReady, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Border Background="#5B0B9E" CornerRadius="5" Padding="8,3" Margin="0,0,8,0">
+                            <Border.Opacity>0.75</Border.Opacity>
+                            <TextBlock Text="{Binding StreamQuality.ResolutionOnlyLabel}" FontSize="11" FontWeight="SemiBold" Foreground="White"/>
+                        </Border>
+                        <Border Background="#5B0B9E" CornerRadius="5" Padding="8,3" Margin="0,0,8,0">
+                            <Border.Opacity>0.75</Border.Opacity>
+                            <TextBlock Text="{Binding StreamQuality.Fps, StringFormat='{}{0} FPS'}" FontSize="11" FontWeight="SemiBold" Foreground="White"/>
+                        </Border>
+                        <Border Background="#5B0B9E" CornerRadius="5" Padding="8,3">
+                            <Border.Opacity>0.75</Border.Opacity>
+                            <TextBlock Text="{Binding StreamQuality.VideoCodecDisplay}" FontSize="11" FontWeight="SemiBold" Foreground="White"/>
+                        </Border>
+                    </WrapPanel>
                 </StackPanel>
 
                 <!-- System Info (Clock/Network) -->
@@ -142,7 +162,6 @@
                             Thumb.DragCompleted="Slider_DragCompleted"
                             Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
 
-                    <!-- LIVE Badge for Live Streams -->
                     <!-- LIVE Badge for Live Streams -->
                     <StackPanel Grid.Column="1" Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Center"
                                 Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -184,7 +203,7 @@
                             <TextBlock Text="{Binding CurrentProgram.Title}" Foreground="#E0E0E0" FontSize="14" FontWeight="Normal" 
                                        Visibility="{Binding CurrentProgram.Title, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
                             <TextBlock Text="{Binding CurrentProgram.TimeRange, StringFormat='{} • {0}'}" Foreground="#AAAAAA" FontSize="13" Margin="8,1,0,0" VerticalAlignment="Bottom"
-                                       Visibility="{Binding CurrentProgram.Title, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+                                       Visibility="{Binding HasCurrentProgramInfo, Converter={StaticResource BoolToVisibilityConverter}}"/>
                         </StackPanel>
                     </StackPanel>
                             
@@ -298,7 +317,7 @@
                                 <TextBlock Text="{Binding CurrentProgram.Title}" FontSize="16" FontWeight="SemiBold" Foreground="White" Margin="0,6,0,0"
                                            Visibility="{Binding CurrentProgram.Title, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
                                 <TextBlock Text="{Binding CurrentProgram.TimeRange}" Foreground="#A8A8A8" FontSize="12" Margin="0,4,0,0"
-                                           Visibility="{Binding CurrentProgram.Title, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+                                           Visibility="{Binding HasCurrentProgramInfo, Converter={StaticResource BoolToVisibilityConverter}}"/>
                                 <TextBlock Text="{Binding CurrentProgram.Description}" Foreground="#D0D0D0" FontSize="13" TextWrapping="Wrap" LineHeight="18" Margin="0,10,0,0"
                                            Visibility="{Binding CurrentProgram.Description, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
                             </StackPanel>
@@ -543,6 +562,22 @@
             
         </Grid>
         
+        <!-- Buffer Shield: Keep screen black while stream reconnects/buffers -->
+        <Border Background="Black"
+                IsHitTestVisible="False"
+                Panel.ZIndex="900">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsBuffering}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+        </Border>
+
         <!-- 6. Volume Toast Indicator -->
         <Border x:Name="VolumeToast"
                 Background="#DD000000"
@@ -602,6 +637,7 @@
             <StackPanel.Style>
                 <Style TargetType="StackPanel">
                     <Setter Property="Visibility" Value="Collapsed"/>
+                    <Setter Property="Panel.ZIndex" Value="950"/>
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding IsBuffering}" Value="True">
                             <Setter Property="Visibility" Value="Visible"/>

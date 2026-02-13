@@ -11,6 +11,9 @@ public class StreamQualityInfo
     public int Fps { get; set; }
     public int VideoBitrate { get; set; }
     public string VideoCodec { get; set; } = string.Empty;
+    public string VideoCodecDisplay => string.IsNullOrWhiteSpace(VideoCodec)
+        ? string.Empty
+        : VideoCodec.ToUpperInvariant();
 
     // Audio
     public int AudioBitrate { get; set; }
@@ -39,6 +42,28 @@ public class StreamQualityInfo
 
             if (Fps > 30) label += Fps.ToString();
             return label;
+        }
+    }
+
+    /// <summary>
+    /// FPS eklenmeden çözünürlük etiketi (örn: "1080p")
+    /// </summary>
+    public string ResolutionOnlyLabel
+    {
+        get
+        {
+            if (Height <= 0) return "Bilinmiyor";
+
+            return Height switch
+            {
+                >= 2160 => "4K",
+                >= 1440 => "1440p",
+                >= 1080 => "1080p",
+                >= 720 => "720p",
+                >= 480 => "480p",
+                >= 360 => "360p",
+                _ => $"{Height}p"
+            };
         }
     }
 

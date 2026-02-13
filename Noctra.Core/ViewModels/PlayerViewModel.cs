@@ -69,6 +69,11 @@ public partial class PlayerViewModel : ObservableObject
 
     [ObservableProperty]
     private EpgProgram? _currentProgram;
+
+    public bool HasCurrentProgramInfo =>
+        CurrentProgram != null &&
+        !string.IsNullOrWhiteSpace(CurrentProgram.Title) &&
+        !string.Equals(CurrentProgram.Title, "Program bilgisi yok", StringComparison.OrdinalIgnoreCase);
     
     [ObservableProperty]
     private string _overlaySecondaryText = string.Empty;
@@ -118,6 +123,12 @@ public partial class PlayerViewModel : ObservableObject
     [ObservableProperty]
     private Models.StreamQualityInfo? _streamQuality;
 
+    public bool HasTopQualityBadgesReady =>
+        StreamQuality != null &&
+        StreamQuality.Height > 0 &&
+        StreamQuality.Fps > 0 &&
+        !string.IsNullOrWhiteSpace(StreamQuality.VideoCodecDisplay);
+
     [ObservableProperty]
     private bool _isInfoPanelOpen;
 
@@ -141,6 +152,15 @@ public partial class PlayerViewModel : ObservableObject
     private double _pendingResumeSeekPosition;
     private int _pendingResumeSeekAttempts;
     private int _isPlayPauseInProgress;
+    private bool _livePauseRequiresHardRestart;
+    private double _lastLiveObservedPosition = -1;
+    private DateTime _lastLiveProgressAtUtc = DateTime.MinValue;
+    private DateTime _lastLivePositionEventAtUtc = DateTime.MinValue;
+    private int _isLiveAutoRecoverInProgress;
+    private DateTime _lastLiveAutoRecoverAttemptAtUtc = DateTime.MinValue;
+    private DateTime _liveRecoveryWindowStartUtc = DateTime.MinValue;
+    private int _liveRecoveryAttemptsInWindow;
+    private int _liveStallScore;
 
     private readonly IDispatcherService _dispatcherService;
     private readonly IWatchHistoryService? _watchHistoryService;
@@ -173,8 +193,16 @@ public partial class PlayerViewModel : ObservableObject
         _clockTimer = new System.Timers.Timer(1000);
         _clockTimer.Elapsed += async (s, e) => 
         {
-            _dispatcherService.Invoke(() => CurrentTimeStr = DateTime.Now.ToString("HH:mm"));
-            await CheckForEpgUpdateAsync();
+            try
+            {
+                _dispatcherService.Invoke(() => CurrentTimeStr = DateTime.Now.ToString("HH:mm"));
+                await CheckForEpgUpdateAsync();
+                await MonitorLivePlaybackHealthAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PlayerViewModel] Clock tick failed: {ex.Message}");
+            }
         };
         _clockTimer.Start();
         CurrentTimeStr = DateTime.Now.ToString("HH:mm");
@@ -239,6 +267,7 @@ public partial class PlayerViewModel : ObservableObject
         {
             _dispatcherService.Invoke(() =>
             {
+                _lastLivePositionEventAtUtc = DateTime.UtcNow;
                 Position = pos;
                 PositionText = TimeSpan.FromSeconds(pos).ToString(@"hh\:mm\:ss");
                 TryApplyPendingResumeSeek();
@@ -261,6 +290,13 @@ public partial class PlayerViewModel : ObservableObject
         {
             // Canlı TV kontrolü
             IsLiveContent = value.Type == ChannelType.Live;
+            _livePauseRequiresHardRestart = false;
+            _lastLiveObservedPosition = -1;
+            _lastLiveProgressAtUtc = DateTime.UtcNow;
+            _lastLivePositionEventAtUtc = DateTime.UtcNow;
+            _liveRecoveryWindowStartUtc = DateTime.MinValue;
+            _liveRecoveryAttemptsInWindow = 0;
+            _liveStallScore = 0;
             // Kanal geçişinde eski timeline değerleri görünmesin.
             Position = 0;
             PositionText = "00:00:00";
@@ -270,11 +306,19 @@ public partial class PlayerViewModel : ObservableObject
         }
 
         UpdateOverlaySecondaryText();
+        OnPropertyChanged(nameof(HasCurrentProgramInfo));
     }
 
     partial void OnCurrentProgramChanged(EpgProgram? value)
     {
         UpdateOverlaySecondaryText();
+        OnPropertyChanged(nameof(HasCurrentProgramInfo));
+    }
+
+    partial void OnStreamQualityChanged(StreamQualityInfo? value)
+    {
+        OnPropertyChanged(nameof(HasTopQualityBadgesReady));
+        UpdateStreamInfoFromQuality();
     }
 
     partial void OnIsLiveContentChanged(bool value)
@@ -476,6 +520,142 @@ public partial class PlayerViewModel : ObservableObject
         }
     }
 
+    private async Task MonitorLivePlaybackHealthAsync()
+    {
+        var channel = CurrentChannel;
+        if (channel == null)
+        {
+            return;
+        }
+
+        var isLivePlayback =
+            IsLiveContent ||
+            channel.Type == ChannelType.Live ||
+            LooksLikeLiveStreamUrl(channel.StreamUrl);
+        if (!isLivePlayback)
+        {
+            return;
+        }
+
+        // Kullanıcı canlı yayını manuel pause etmişse auto-recover devreye girmez.
+        if (_livePauseRequiresHardRestart)
+        {
+            return;
+        }
+
+        var nowUtc = DateTime.UtcNow;
+        var currentPos = Position;
+
+        if (_lastLiveObservedPosition < 0)
+        {
+            _lastLiveObservedPosition = currentPos;
+            _lastLiveProgressAtUtc = nowUtc;
+            _lastLivePositionEventAtUtc = nowUtc;
+            return;
+        }
+
+        var hasProgress = Math.Abs(currentPos - _lastLiveObservedPosition) > 0.35;
+        if (hasProgress)
+        {
+            _lastLiveObservedPosition = currentPos;
+            _lastLiveProgressAtUtc = nowUtc;
+            _liveStallScore = 0;
+            if (nowUtc - _lastLiveAutoRecoverAttemptAtUtc > TimeSpan.FromSeconds(30))
+            {
+                _liveRecoveryAttemptsInWindow = 0;
+            }
+            return;
+        }
+
+        // Donma sinyali:
+        // 1) Position ilerlemiyor
+        // 2) PositionChanged olayı kesilmiş
+        var stalledFor = nowUtc - _lastLiveProgressAtUtc;
+        var noEventFor = nowUtc - _lastLivePositionEventAtUtc;
+        var isStalled =
+            noEventFor >= TimeSpan.FromSeconds(5) ||
+            (stalledFor >= TimeSpan.FromSeconds(5) && noEventFor >= TimeSpan.FromSeconds(3));
+        if (!isStalled)
+        {
+            _liveStallScore = 0;
+            return;
+        }
+
+        // Tek örneklem hatalarına karşı kısa doğrulama.
+        _liveStallScore = Math.Min(_liveStallScore + 1, 3);
+        if (_liveStallScore < 2)
+        {
+            return;
+        }
+
+        if (IsBuffering && stalledFor < TimeSpan.FromSeconds(10))
+        {
+            return;
+        }
+
+        // Flapping önleme: reconnect denemeleri arasında cooldown.
+        if (nowUtc - _lastLiveAutoRecoverAttemptAtUtc < TimeSpan.FromSeconds(15))
+        {
+            return;
+        }
+
+        // Flapping önleme: 2 dakikalık pencerede en fazla 3 auto-reconnect.
+        if (_liveRecoveryWindowStartUtc == DateTime.MinValue || nowUtc - _liveRecoveryWindowStartUtc > TimeSpan.FromMinutes(2))
+        {
+            _liveRecoveryWindowStartUtc = nowUtc;
+            _liveRecoveryAttemptsInWindow = 0;
+        }
+
+        if (_liveRecoveryAttemptsInWindow >= 3)
+        {
+            ConnectionStatus = "Yayın kararsız, bağlantı bekleniyor...";
+            return;
+        }
+
+        if (Interlocked.Exchange(ref _isLiveAutoRecoverInProgress, 1) == 1)
+        {
+            return;
+        }
+
+        try
+        {
+            if (CurrentChannel == null || CurrentChannel.Id != channel.Id)
+            {
+                return;
+            }
+
+            _lastLiveAutoRecoverAttemptAtUtc = nowUtc;
+            _liveRecoveryAttemptsInWindow++;
+            IsBuffering = true;
+            BufferingProgress = 0;
+            ConnectionStatus = "Yayın tekrar bağlanıyor...";
+            IsVisible = true;
+            RestartAutoHideTimer();
+
+            _videoPlayerService.Stop();
+            await Task.Delay(220);
+
+            if (CurrentChannel == null || CurrentChannel.Id != channel.Id)
+            {
+                return;
+            }
+
+            await _videoPlayerService.PlayAsync(channel.StreamUrl);
+            _lastLiveObservedPosition = -1;
+            _lastLiveProgressAtUtc = DateTime.UtcNow;
+            _lastLivePositionEventAtUtc = DateTime.UtcNow;
+            _liveStallScore = 0;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PlayerViewModel] Live auto-recover failed: {ex.Message}");
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _isLiveAutoRecoverInProgress, 0);
+        }
+    }
+
     private EpgProgram GetFallbackProgram()
     {
         var now = DateTime.Now;
@@ -490,35 +670,9 @@ public partial class PlayerViewModel : ObservableObject
 
     public void ShowZapping(string name, string? logo, bool isLive)
     {
-        ChannelName = name;
-        ChannelLogo = logo ?? string.Empty;
-        IsLive = isLive;
-        ConnectionStatus = "Bağlanıyor...";
-        BufferingProgress = 0;
-        StreamInfo = "Kalite tespit ediliyor...";
-        IsZappingVisible = true;
-
-        _zappingTimer?.Stop();
-        _zappingTimer ??= new System.Timers.Timer(4000);
-        _zappingTimer.AutoReset = false;
-        _zappingTimer.AutoReset = false;
-        _zappingTimer.Elapsed += (s, e) => _dispatcherService.Invoke(() => IsZappingVisible = false);
-        
-        // Simüle progress
-        var progressTimer = new System.Timers.Timer(100);
-        progressTimer.Elapsed += (s, e) => _dispatcherService.Invoke(() => {
-            if (BufferingProgress < 100) BufferingProgress += 5;
-            else progressTimer.Stop();
-        });
-        progressTimer.Start();
-        _zappingTimer.Start();
-        
-        RestartAutoHideTimer();
-    }
-
-    partial void OnStreamQualityChanged(StreamQualityInfo? value)
-    {
-        UpdateStreamInfoFromQuality();
+        // Disabled by UX request:
+        // "Bağlanıyor / Kalite tespit ediliyor" mini zapping penceresini göstermiyoruz.
+        IsZappingVisible = false;
     }
 
     private void UpdateStreamInfoFromQuality()
@@ -602,8 +756,22 @@ public partial class PlayerViewModel : ObservableObject
 
         try
         {
+        var treatAsLivePlayback =
+            IsLiveContent ||
+            CurrentChannel?.Type == ChannelType.Live ||
+            LooksLikeLiveStreamUrl(CurrentChannel?.StreamUrl);
+
         if (IsPlaying)
         {
+            if (treatAsLivePlayback)
+            {
+                // Live içeriği duraklatınca son kare ekranda kalsın (beyaz ekran olmasın).
+                // Tekrar play'de hard restart ile canlı uca dönüyoruz.
+                _videoPlayerService.Pause();
+                _livePauseRequiresHardRestart = true;
+                return;
+            }
+
             var mediaPlayer = _videoPlayerService.GetMediaPlayer();
             _lastPausedTimeMs = mediaPlayer?.Time ?? 0;
             _lastPausedPosition = _lastPausedTimeMs > 0 ? _lastPausedTimeMs / 1000.0 : Position;
@@ -626,7 +794,40 @@ public partial class PlayerViewModel : ObservableObject
 
     private async Task ResumePlaybackAsync(string streamUrl, bool hasLoadedMedia)
     {
-        if (IsLiveContent || _lastPausedPosition <= 1)
+        var treatAsLivePlayback =
+            IsLiveContent ||
+            CurrentChannel?.Type == ChannelType.Live ||
+            LooksLikeLiveStreamUrl(streamUrl);
+
+        if (treatAsLivePlayback)
+        {
+            _pendingResumeSeekPosition = 0;
+            _pendingResumeSeekAttempts = 0;
+            _lastPausedPosition = 0;
+            _lastPausedTimeMs = 0;
+            if (_livePauseRequiresHardRestart)
+            {
+                _videoPlayerService.Stop();
+                await Task.Delay(120);
+                IsBuffering = true;
+                BufferingProgress = 0;
+                await _videoPlayerService.PlayAsync(streamUrl);
+                _livePauseRequiresHardRestart = false;
+            }
+            else if (hasLoadedMedia)
+            {
+                _videoPlayerService.Resume();
+            }
+            else
+            {
+                IsBuffering = true;
+                BufferingProgress = 0;
+                await _videoPlayerService.PlayAsync(streamUrl);
+            }
+            return;
+        }
+
+        if (_lastPausedPosition <= 1)
         {
             if (hasLoadedMedia)
             {
@@ -734,6 +935,22 @@ public partial class PlayerViewModel : ObservableObject
         await _videoPlayerService.PlayAsync(streamUrl);
     }
 
+    private static bool LooksLikeLiveStreamUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return false;
+        }
+
+        var normalized = url.ToLowerInvariant();
+        if (normalized.Contains("/movie/") || normalized.Contains("/series/") || normalized.Contains("/vod/"))
+        {
+            return false;
+        }
+
+        return normalized.Contains("/live/");
+    }
+
     private void TryApplyPendingResumeSeek()
     {
         if (IsLiveContent || _pendingResumeSeekPosition <= 1)
@@ -796,6 +1013,14 @@ public partial class PlayerViewModel : ObservableObject
         _watchHistoryTimer.Stop();
         await FlushWatchHistoryAsync(force: true);
         _videoPlayerService.Stop();
+        _livePauseRequiresHardRestart = false;
+        _lastLiveObservedPosition = -1;
+        _lastLiveProgressAtUtc = DateTime.MinValue;
+        _lastLivePositionEventAtUtc = DateTime.MinValue;
+        _lastLiveAutoRecoverAttemptAtUtc = DateTime.MinValue;
+        _liveRecoveryWindowStartUtc = DateTime.MinValue;
+        _liveRecoveryAttemptsInWindow = 0;
+        _liveStallScore = 0;
         CurrentChannel = null;
         CurrentProgram = null;
         IsVisible = true;

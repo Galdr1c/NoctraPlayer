@@ -361,7 +361,7 @@
                         </Grid.RowDefinitions>
 
                         <!-- Category Navigation -->
-                        <StackPanel Grid.Row="0" Margin="16,24,16,16">
+                        <StackPanel Grid.Row="0" Margin="16,24,16,16" TextElement.Foreground="{DynamicResource TextPrimaryBrush}">
                             <!-- Home -->
                             <Border x:Name="HomeNav" CornerRadius="{StaticResource RadiusSmall}" 
                                     Margin="0,4" Cursor="Hand"
@@ -474,7 +474,7 @@
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="⭐" FontSize="16" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                    <TextBlock Text="⭐" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="16" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                     <TextBlock Grid.Column="1" Text="Favoriler" Foreground="{DynamicResource TextSecondaryBrush}" 
                                                FontSize="14" VerticalAlignment="Center"/>
                                 </Grid>
@@ -494,7 +494,7 @@
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="📜" FontSize="16" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                    <TextBlock Text="📜" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="16" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                     <TextBlock Grid.Column="1" Text="Geçmiş" Foreground="{DynamicResource TextSecondaryBrush}" 
                                                FontSize="14" VerticalAlignment="Center"/>
                                 </Grid>
