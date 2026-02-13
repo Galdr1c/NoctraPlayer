@@ -163,7 +163,7 @@ public partial class App : Application
     {
         var urls = await context.Channels
             .OrderByDescending(c => c.LastWatched)
-            .Select(c => c.CoverUrl ?? c.LogoUrl)
+            .Select(c => c.BackdropUrl ?? c.LogoUrl)
             .Where(u => u != null && u != "")
             .Select(u => u!)
             .Take(30)

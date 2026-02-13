@@ -107,7 +107,21 @@ public class MediaService : IMediaService
     }
     public async Task UpdateSeriesAsync(Series series)
     {
-        var dbSeries = await _context.Series.FindAsync(series.Id);
+        Series? dbSeries = null;
+
+        if (series.Id > 0)
+        {
+            dbSeries = await _context.Series.FindAsync(series.Id);
+        }
+
+        if (dbSeries == null)
+        {
+            dbSeries = await _context.Series
+                .FirstOrDefaultAsync(s =>
+                    s.PlaylistId == series.PlaylistId &&
+                    s.Name == series.Name);
+        }
+
         if (dbSeries != null)
         {
             dbSeries.IsInMyList = series.IsInMyList;

@@ -21,11 +21,22 @@ public class ChannelService : IChannelService
 
     public async Task UpdateChannelAsync(Channel channel)
     {
-        // Context tracking issues can occur if we just attach, 
-        // especially with navigation properties like Playlist.
-        // Safer to find and update only specific fields or use EntityState.Modified.
-        
-        var dbChannel = await _context.Channels.FindAsync(channel.Id);
+        Channel? dbChannel = null;
+
+        if (channel.Id > 0)
+        {
+            dbChannel = await _context.Channels.FindAsync(channel.Id);
+        }
+
+        if (dbChannel == null)
+        {
+            dbChannel = await _context.Channels
+                .FirstOrDefaultAsync(c =>
+                    c.PlaylistId == channel.PlaylistId &&
+                    c.StreamUrl == channel.StreamUrl &&
+                    c.Name == channel.Name);
+        }
+
         if (dbChannel != null)
         {
             dbChannel.IsFavorite = channel.IsFavorite;

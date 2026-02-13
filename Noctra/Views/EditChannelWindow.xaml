@@ -14,7 +14,7 @@
         WindowStyle="None">
 
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="40" ResizeBorderThickness="5" GlassFrameThickness="0" CornerRadius="0"/>
+        <WindowChrome CaptionHeight="40" ResizeBorderThickness="5" GlassFrameThickness="0" CornerRadius="8"/>
     </WindowChrome.WindowChrome>
 
     <Window.Resources>
@@ -25,7 +25,11 @@
         </ResourceDictionary>
     </Window.Resources>
 
-    <Border Background="{DynamicResource BackgroundGradientBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8">
+    <Border Background="{DynamicResource BackgroundGradientBrush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{DynamicResource RadiusSmall}"
+            ClipToBounds="True">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Title Bar -->

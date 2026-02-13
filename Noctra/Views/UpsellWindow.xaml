@@ -21,8 +21,11 @@
         </ResourceDictionary>
     </Window.Resources>
 
-    <Border CornerRadius="16" Background="{DynamicResource BackgroundGradientBrush}" 
-            BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
+    <Border CornerRadius="{DynamicResource RadiusLarge}"
+            ClipToBounds="True"
+            Background="{DynamicResource BackgroundGradientBrush}" 
+            BorderBrush="{DynamicResource AccentBrush}"
+            BorderThickness="1">
         <Grid>
             <!-- Decorative Elements -->
             <Ellipse Width="400" Height="400" Fill="{DynamicResource AccentBrush}" Opacity="0.08" 

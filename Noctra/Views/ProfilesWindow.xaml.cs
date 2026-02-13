@@ -156,6 +156,11 @@ public partial class ProfilesWindow : Window
                 if (IsLoaded && !IsClosed())
                 {
                     addProfileWin.Owner = this;
+                    addProfileWin.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+                }
+                else
+                {
+                    addProfileWin.WindowStartupLocation = WindowStartupLocation.CenterScreen;
                 }
 
                 var result = addProfileWin.ShowDialog();
@@ -210,6 +215,7 @@ public partial class ProfilesWindow : Window
          {
              vm.RequestClose -= Close;
              vm.OnProfileAddRequested -= ViewModel_OnProfileAddRequested;
+             vm.OnProfileEditRequested -= ViewModel_OnProfileEditRequested;
              vm.OnProfileSelected -= ViewModel_OnProfileSelected;
          }
          Loaded -= ProfilesWindow_Loaded;

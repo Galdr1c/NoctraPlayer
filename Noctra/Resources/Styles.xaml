@@ -657,6 +657,7 @@
     </Style>
     <!-- Circular Progress Style -->
     <Style x:Key="CircularProgressStyle" TargetType="ProgressBar">
+        <Setter Property="Foreground" Value="#8D09E5"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ProgressBar">
@@ -667,7 +668,7 @@
                                     <RotateTransform x:Name="Rotation" Angle="0"/>
                                 </Canvas.RenderTransform>
                                 <Path Stroke="#33FFFFFF" StrokeThickness="8" Data="M 50,10 A 40,40 0 1 1 50,90 A 40,40 0 1 1 50,10"/>
-                                <Path Stroke="#E50914" StrokeThickness="8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                <Path Stroke="{TemplateBinding Foreground}" StrokeThickness="8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                                       Data="M 50,10 A 40,40 0 0 1 90,50"/>
                                 <Canvas.Style>
                                     <Style TargetType="Canvas">
@@ -700,7 +701,7 @@
 
     <!-- Media Slider Style -->
     <Style x:Key="MediaSliderStyle" TargetType="Slider" BasedOn="{StaticResource ModernSlider}">
-        <Setter Property="Foreground" Value="#E50914"/>
+        <Setter Property="Foreground" Value="#8D09E5"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Slider">
@@ -719,13 +720,13 @@
                                     <RepeatButton Command="{x:Static Slider.DecreaseLarge}">
                                         <RepeatButton.Template>
                                             <ControlTemplate TargetType="RepeatButton">
-                                                <Border Background="#E50914" CornerRadius="2" Height="4"/>
+                                                <Border Background="#8D09E5" CornerRadius="2" Height="4"/>
                                             </ControlTemplate>
                                         </RepeatButton.Template>
                                     </RepeatButton>
                                 </Track.DecreaseRepeatButton>
                                 <Track.Thumb>
-                                    <Thumb x:Name="Thumb" Background="#E50914" Width="16" Height="16" VerticalAlignment="Center">
+                                    <Thumb x:Name="Thumb" Background="#8D09E5" Width="16" Height="16" VerticalAlignment="Center">
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
                                                 <Grid>
@@ -1050,10 +1051,12 @@
                             Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
                         <Border.ContextMenu>
                             <ContextMenu>
-                                <MenuItem Header="Listem'e Ekle/Çıkar" Command="{Binding PlacementTarget.Tag.AddToMyListCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
-                                <MenuItem Header="Favorilere Ekle/Çıkar" Command="{Binding PlacementTarget.Tag.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
-                                <Separator/>
-                                <MenuItem Header="Düzenle..." Command="{Binding PlacementTarget.Tag.EditChannelCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" CommandParameter="{Binding}"/>
+                                <MenuItem Header="Listem'e Ekle/Çıkar"
+                                          Command="{Binding PlacementTarget.Tag.AddToMyListCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                <MenuItem Header="Favorilere Ekle/Çıkar"
+                                          Command="{Binding PlacementTarget.Tag.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                             </ContextMenu>
                         </Border.ContextMenu>
                         <Border.InputBindings>

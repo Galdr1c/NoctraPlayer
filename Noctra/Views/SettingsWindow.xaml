@@ -63,7 +63,10 @@
     </Window.Resources>
 
     <Border Background="{DynamicResource Bg0Brush}" 
-            CornerRadius="16" 
+            CornerRadius="{DynamicResource RadiusLarge}" 
+            ClipToBounds="True"
+            SnapsToDevicePixels="True"
+            Margin="1"
             BorderBrush="{DynamicResource BorderBrush}" 
             BorderThickness="1">
         <Grid>

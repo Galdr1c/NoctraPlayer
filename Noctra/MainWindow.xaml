@@ -20,7 +20,7 @@
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="0"
                       GlassFrameThickness="0"
-                      CornerRadius="0"
+                      CornerRadius="12"
                       ResizeBorderThickness="8"/>
     </WindowChrome.WindowChrome>
 
@@ -110,9 +110,48 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style TargetType="{x:Type ContextMenu}">
+            <Setter Property="Background" Value="{DynamicResource Surface0Brush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="6"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+
+        <Style TargetType="{x:Type MenuItem}">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type MenuItem}">
+                        <Border x:Name="MenuItemBorder"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter ContentSource="Header"
+                                              RecognizesAccessKey="True"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="MenuItemBorder" Property="Background" Value="{DynamicResource Surface1Brush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="MenuItemBorder" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
-    <Border x:Name="MainBorder" Background="{DynamicResource Bg0Brush}">
+    <Border x:Name="MainBorder" Background="{DynamicResource Bg0Brush}" ClipToBounds="True">
         <Border.Style>
             <Style TargetType="Border">
                 <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}"/>
@@ -402,8 +441,14 @@
                             <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,20"/>
 
                             <!-- Favorites -->
-                            <Border Background="Transparent" CornerRadius="{StaticResource RadiusSmall}" 
-                                    Margin="0,4" Cursor="Hand" MouseLeftButtonDown="Favorites_Click">
+                            <Border x:Name="FavoritesNav"
+                                    Background="{Binding ActiveView, Converter={StaticResource EqualityToBrushConverter}, ConverterParameter={x:Static vm:AppView.Favorites}}"
+                                    CornerRadius="{StaticResource RadiusSmall}" 
+                                    Margin="0,4" Cursor="Hand">
+                                <Border.InputBindings>
+                                    <MouseBinding MouseAction="LeftClick" Command="{Binding NavigateCommand}" 
+                                                  CommandParameter="{x:Static vm:AppView.Favorites}"/>
+                                </Border.InputBindings>
                                 <Grid Margin="16,12">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
@@ -416,8 +461,14 @@
                             </Border>
                             
                             <!-- History -->
-                            <Border Background="Transparent" CornerRadius="{StaticResource RadiusSmall}" 
+                            <Border x:Name="HistoryNav"
+                                    Background="{Binding ActiveView, Converter={StaticResource EqualityToBrushConverter}, ConverterParameter={x:Static vm:AppView.History}}"
+                                    CornerRadius="{StaticResource RadiusSmall}" 
                                     Margin="0,4" Cursor="Hand">
+                                <Border.InputBindings>
+                                    <MouseBinding MouseAction="LeftClick" Command="{Binding NavigateCommand}" 
+                                                  CommandParameter="{x:Static vm:AppView.History}"/>
+                                </Border.InputBindings>
                                 <Grid Margin="16,12">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
@@ -876,7 +927,29 @@
                                   Visibility="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Search}}">
                         <StackPanel Margin="24">
                             <TextBlock Text="Arama Sonuçları" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
-                            <ListBox ItemsSource="{Binding FilteredChannels}" Style="{StaticResource GridListBoxStyle}"/>
+
+                            <StackPanel Margin="0,0,0,24"
+                                        Visibility="{Binding SearchLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                                <TextBlock Text="Canlı TV" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+                                <ListBox ItemsSource="{Binding SearchLiveChannels}" Style="{StaticResource GridListBoxStyle}"/>
+                            </StackPanel>
+
+                            <StackPanel Margin="0,0,0,24"
+                                        Visibility="{Binding SearchSeriesChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                                <TextBlock Text="Dizi" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+                                <ListBox ItemsSource="{Binding SearchSeriesChannels}" Style="{StaticResource GridListBoxStyle}"/>
+                            </StackPanel>
+
+                            <StackPanel Margin="0,0,0,24"
+                                        Visibility="{Binding SearchVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                                <TextBlock Text="VOD" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+                                <ListBox ItemsSource="{Binding SearchVodChannels}" Style="{StaticResource GridListBoxStyle}"/>
+                            </StackPanel>
+
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,100,0,0"
+                                        Visibility="{Binding ShowSearchEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock Text="Sonuç bulunamadı." FontSize="16" Foreground="{DynamicResource TextMutedBrush}"/>
+                            </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
                     
@@ -886,6 +959,95 @@
                         <StackPanel Margin="24">
                             <TextBlock Text="Listem" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
                             <ListBox ItemsSource="{Binding MyList}" Style="{StaticResource GridListBoxStyle}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="Card" Margin="0,0,16,16" Background="{DynamicResource Surface0Brush}" 
+                                                CornerRadius="{StaticResource RadiusMedium}" Cursor="Hand"
+                                                Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                                            <Border.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Listemden Çıkar"
+                                                              Command="{Binding PlacementTarget.Tag.RemoveFromMyListCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                </ContextMenu>
+                                            </Border.ContextMenu>
+                                            <Border.InputBindings>
+                                                <MouseBinding MouseAction="LeftClick" 
+                                                              Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                              CommandParameter="{Binding}"/>
+                                            </Border.InputBindings>
+                                            <StackPanel Margin="12">
+                                                <Border Height="100" Background="{StaticResource IconGradientBrush}" CornerRadius="{StaticResource RadiusSmall}" Margin="0,0,0,12">
+                                                    <Image Width="60" Stretch="Uniform"
+                                                           cache:CachedImage.SourceUrl="{Binding LogoUrl}"
+                                                           cache:CachedImage.DecodePixelWidth="120"
+                                                           cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <!-- Empty State -->
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,100,0,0"
+                                        Visibility="{Binding ShowMyListEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock Text="Henüz listenize bir şey eklemediniz." 
+                                           FontSize="16" Foreground="{DynamicResource TextMutedBrush}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- 6. FAVORITES VIEW -->
+                    <ScrollViewer x:Name="FavoritesView" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  Visibility="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Favorites}}">
+                        <StackPanel Margin="24">
+                            <TextBlock Text="Favoriler" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
+                            <ListBox ItemsSource="{Binding FavoriteChannels}" Style="{StaticResource GridListBoxStyle}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="Card" Margin="0,0,16,16" Background="{DynamicResource Surface0Brush}" 
+                                                CornerRadius="{StaticResource RadiusMedium}" Cursor="Hand"
+                                                Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                                            <Border.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Favorilerden Çıkar"
+                                                              Command="{Binding PlacementTarget.Tag.RemoveFromFavoritesCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                                </ContextMenu>
+                                            </Border.ContextMenu>
+                                            <Border.InputBindings>
+                                                <MouseBinding MouseAction="LeftClick" 
+                                                              Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                              CommandParameter="{Binding}"/>
+                                            </Border.InputBindings>
+                                            <StackPanel Margin="12">
+                                                <Border Height="100" Background="{StaticResource IconGradientBrush}" CornerRadius="{StaticResource RadiusSmall}" Margin="0,0,0,12">
+                                                    <Image Width="60" Stretch="Uniform"
+                                                           cache:CachedImage.SourceUrl="{Binding LogoUrl}"
+                                                           cache:CachedImage.DecodePixelWidth="120"
+                                                           cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,100,0,0"
+                                        Visibility="{Binding ShowFavoritesEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock Text="Henüz favori içerik yok." 
+                                           FontSize="16" Foreground="{DynamicResource TextMutedBrush}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- 7. HISTORY VIEW -->
+                    <ScrollViewer x:Name="HistoryView" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  Visibility="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.History}}">
+                        <StackPanel Margin="24">
+                            <TextBlock Text="Geçmiş" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
+                            <ListBox ItemsSource="{Binding HistoryChannels}" Style="{StaticResource GridListBoxStyle}">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <Border x:Name="Card" Margin="0,0,16,16" Background="{DynamicResource Surface0Brush}" 
@@ -914,15 +1076,17 @@
                                                            cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
                                                 </Border>
                                                 <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding LastWatched, StringFormat='Son izleme: {0:dd.MM.yyyy HH:mm}'}"
+                                                           Foreground="{DynamicResource TextMutedBrush}" FontSize="12"
+                                                           TextTrimming="CharacterEllipsis" TextAlignment="Center"/>
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
-                            <!-- Empty State -->
                             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,100,0,0"
-                                        Visibility="{Binding MyList.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=invert}">
-                                <TextBlock Text="Henüz listenize bir şey eklemediniz." 
+                                        Visibility="{Binding ShowHistoryEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock Text="Henüz izleme geçmişi yok." 
                                            FontSize="16" Foreground="{DynamicResource TextMutedBrush}"/>
                             </StackPanel>
                         </StackPanel>
@@ -1301,16 +1465,21 @@
                 <views:WatermarkView DataContext="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=WatermarkViewModel}"
                                      Panel.ZIndex="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,100"/>
 
-                <Popup x:Name="OverlayPopup"
-                       Placement="Relative"
+                <Popup x:Name="PlayerOverlayPopup"
                        PlacementTarget="{Binding ElementName=PlayerArea}"
-                       IsOpen="{Binding ElementName=PlayerArea, Path=IsVisible, Mode=OneWay}"
+                       Placement="Center"
                        AllowsTransparency="True"
-                       StaysOpen="True">
-                    <views:VideoOverlayView x:Name="VideoOverlay"
-                                            DataContext="{Binding DataContext, ElementName=PlayerArea}"
-                                            Width="{Binding ActualWidth, ElementName=PlayerArea}"
-                                            Height="{Binding ActualHeight, ElementName=PlayerArea}"/>
+                       StaysOpen="True"
+                       PopupAnimation="None"
+                       IsOpen="False">
+                    <Border Background="Transparent"
+                            Width="{Binding ActualWidth, ElementName=PlayerArea}"
+                            Height="{Binding ActualHeight, ElementName=PlayerArea}">
+                        <views:VideoOverlayView x:Name="VideoOverlay"
+                                                DataContext="{Binding DataContext, ElementName=PlayerArea}"
+                                                HorizontalAlignment="Stretch"
+                                                VerticalAlignment="Stretch"/>
+                    </Border>
                 </Popup>
 
                 <!-- Next Episode Prompt -->

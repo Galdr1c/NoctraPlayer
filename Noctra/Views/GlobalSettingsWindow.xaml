@@ -21,7 +21,8 @@
     </Window.Resources>
 
     <Border Background="{DynamicResource Bg0Brush}" 
-            CornerRadius="12" 
+            CornerRadius="{DynamicResource RadiusMedium}" 
+            ClipToBounds="True"
             BorderBrush="{DynamicResource BorderBrush}" 
             BorderThickness="1">
         <Grid>

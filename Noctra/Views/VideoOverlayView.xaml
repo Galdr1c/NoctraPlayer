@@ -41,6 +41,7 @@
         <Grid x:Name="OverlayRoot" IsHitTestVisible="{Binding IsVisible}">
             <Grid.Style>
                 <Style TargetType="Grid">
+                    <Setter Property="Opacity" Value="1"/>
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding IsVisible}" Value="True">
                             <DataTrigger.EnterActions>
@@ -121,6 +122,16 @@
 
                 <!-- Timeline Slider -->
                 <Grid Grid.Row="0" Margin="0,0,0,16">
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsBuffering}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
@@ -435,7 +446,10 @@
                                 </StackPanel>
                                 <TextBlock Text="{Binding StreamQuality.DetailLabel, FallbackValue=''}" 
                                            FontSize="13" Foreground="#AAAAAA"
-                                           Visibility="{Binding StreamQuality.DetailLabel, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+                                           Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                <TextBlock Text="{Binding StreamQuality.VideoCodec, FallbackValue=''}" 
+                                           FontSize="13" Foreground="#AAAAAA"
+                                           Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
                             </StackPanel>
                         </Border>
 
@@ -465,8 +479,10 @@
                             <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding StreamQuality.Fps, StringFormat='{}{0} fps', FallbackValue='-'}" Foreground="White" FontSize="13" Margin="0,0,0,6"/>
                             <TextBlock Grid.Row="2" Grid.Column="0" Text="Codec" Foreground="#88FFFFFF" FontSize="13" Margin="0,0,16,6"/>
                             <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding StreamQuality.VideoCodec, FallbackValue='-'}" Foreground="White" FontSize="13" Margin="0,0,0,6"/>
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Bit Rate" Foreground="#88FFFFFF" FontSize="13" Margin="0,0,16,6"/>
-                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding StreamQuality.VideoBitrate, StringFormat='{}{0} bps', FallbackValue='-'}" Foreground="White" FontSize="13"/>
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Bit Rate" Foreground="#88FFFFFF" FontSize="13" Margin="0,0,16,6"
+                                       Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding StreamQuality.VideoBitrate, StringFormat='{}{0} bps', FallbackValue='-'}" Foreground="White" FontSize="13"
+                                       Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}}"/>
                         </Grid>
 
                         <!-- Audio Info -->
@@ -526,7 +542,7 @@
                         <!-- Buffering Progress -->
                         <Grid Grid.Row="1" Margin="0,20,0,0">
                             <ProgressBar Value="{Binding BufferingProgress}" Height="4" 
-                                         Background="#1AFFFFFF" Foreground="#E50914" 
+                                         Background="#1AFFFFFF" Foreground="#8D09E5" 
                                          BorderThickness="0"/>
                         </Grid>
                     </Grid>
@@ -590,9 +606,18 @@
         </Border>
 
         <!-- 5. Ephemeral UI (Always visible/floating) -->
-        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" 
-                    Visibility="{Binding IsBuffering, Converter={StaticResource BoolToVisibilityConverter}}">
-            <ProgressBar Style="{StaticResource CircularProgressStyle}" Width="60" Height="60"/>
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+            <StackPanel.Style>
+                <Style TargetType="StackPanel">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsBuffering}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </StackPanel.Style>
+            <ProgressBar Style="{StaticResource CircularProgressStyle}" Foreground="#8D09E5" Width="60" Height="60"/>
             <TextBlock Text="Yükleniyor..." Foreground="White" HorizontalAlignment="Center" Margin="0,16,0,0"/>
         </StackPanel>
 

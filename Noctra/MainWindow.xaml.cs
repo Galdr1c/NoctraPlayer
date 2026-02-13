@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using System.Windows.Media.Animation;
+using System.Windows.Media;
 using Noctra.Models;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
@@ -23,6 +24,8 @@ public partial class MainWindow : Window
     private readonly HoverPreviewService _hoverPreviewService;
     private readonly IServiceScopeFactory _scopeFactory;
     private bool _isDarkTheme = true;
+    private WindowState _windowStateBeforeFullScreen = WindowState.Normal;
+    private ResizeMode _resizeModeBeforeFullScreen = ResizeMode.CanResize;
 
     public MainWindow(MainViewModel viewModel, PlayerViewModel playerViewModel, 
                       IVideoPlayerService videoPlayerService,
@@ -86,15 +89,21 @@ public partial class MainWindow : Window
             {
                 if (_playerViewModel.IsFullScreen)
                 {
+                    _windowStateBeforeFullScreen = WindowState;
+                    _resizeModeBeforeFullScreen = ResizeMode;
+                    WindowStyle = WindowStyle.None;
                     WindowState = WindowState.Maximized;
                     ResizeMode = ResizeMode.NoResize;
                 }
                 else
                 {
-                    // Restore to normal (user can maximize manually if desired)
-                    WindowState = WindowState.Normal;
-                    ResizeMode = ResizeMode.CanResize;
+                    WindowStyle = WindowStyle.SingleBorderWindow;
+                    ResizeMode = _resizeModeBeforeFullScreen;
+                    WindowState = _windowStateBeforeFullScreen;
                 }
+
+                AnimateFullScreenTransition();
+                _playerViewModel.UserInteractionCommand.Execute(null);
             }
         };
 
@@ -115,23 +124,26 @@ public partial class MainWindow : Window
         PreviewKeyDown += Window_PreviewKeyDown;
         AddHandler(MouseWheelEvent, new MouseWheelEventHandler(Window_MouseWheel), true);
 
-        // Keep Popup overlay aligned with main window while moving/resizing.
-        LocationChanged += (_, _) => RefreshOverlayPopupPosition();
-        SizeChanged += (_, _) => RefreshOverlayPopupPosition();
-        StateChanged += (_, _) => RefreshOverlayPopupPosition();
-
         // Subscribe to Edit Channel requests
         _viewModel.RequestEditChannel += OnRequestEditChannel;
     }
 
-    private void RefreshOverlayPopupPosition()
+    private void AnimateFullScreenTransition()
     {
-        if (OverlayPopup.IsOpen)
+        if (PlayerArea.Visibility != Visibility.Visible)
         {
-            var offset = OverlayPopup.HorizontalOffset;
-            OverlayPopup.HorizontalOffset = offset + 1;
-            OverlayPopup.HorizontalOffset = offset;
+            return;
         }
+
+        var fade = new DoubleAnimation
+        {
+            From = 0.92,
+            To = 1.0,
+            Duration = TimeSpan.FromMilliseconds(180),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+
+        PlayerArea.BeginAnimation(UIElement.OpacityProperty, fade);
     }
 
     private void OnRequestEditChannel(Channel channel)
@@ -228,6 +240,7 @@ public partial class MainWindow : Window
 
         // 1. Show Player Area (covers the window content)
         PlayerArea.Visibility = Visibility.Visible;
+        PlayerOverlayPopup.IsOpen = true;
         
         // 2. Hide Mini Player (if active)
         MiniPlayer.Visibility = Visibility.Collapsed;
@@ -264,6 +277,7 @@ public partial class MainWindow : Window
             try { System.IO.File.AppendAllText(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_log.txt"), $"[{DateTime.Now}] ExitPlayerMode called.\n"); } catch { }
 
             // 1. Hide Player Area FIRST to stop rendering logic in VideoView
+            PlayerOverlayPopup.IsOpen = false;
             PlayerArea.Visibility = Visibility.Collapsed;
 
             // Allow UI to update and VideoView to realize it's hidden
@@ -362,6 +376,8 @@ public partial class MainWindow : Window
         SeriesView.Visibility = Visibility.Collapsed;
         SearchView.Visibility = Visibility.Collapsed;
         MyListView.Visibility = Visibility.Collapsed;
+        FavoritesView.Visibility = Visibility.Collapsed;
+        HistoryView.Visibility = Visibility.Collapsed;
         LiveView.Visibility = Visibility.Collapsed;
 
         switch (_viewModel.ActiveView)
@@ -380,6 +396,12 @@ public partial class MainWindow : Window
                 break;
             case AppView.MyList:
                 MyListView.Visibility = Visibility.Visible;
+                break;
+            case AppView.Favorites:
+                FavoritesView.Visibility = Visibility.Visible;
+                break;
+            case AppView.History:
+                HistoryView.Visibility = Visibility.Visible;
                 break;
             case AppView.Live:
                 LiveView.Visibility = Visibility.Visible;
@@ -431,6 +453,7 @@ public partial class MainWindow : Window
 
             if (PlayerArea.Visibility == Visibility.Visible)
             {
+                PlayerOverlayPopup.IsOpen = false;
                 PlayerArea.Visibility = Visibility.Collapsed;
             }
 
@@ -451,13 +474,6 @@ public partial class MainWindow : Window
             Show();
             MessageBox.Show($"Profil secme ekrani acilamadi: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
         }
-    }
-
-    private void Favorites_Click(object sender, MouseButtonEventArgs e)
-    {
-        e.Handled = true;
-        _viewModel.ShowOnlyFavorites = true;
-        _viewModel.NavigateCommand.Execute(AppView.Home);
     }
 
     private void Window_MouseWheel(object sender, MouseWheelEventArgs e)
@@ -498,6 +514,8 @@ public partial class MainWindow : Window
             AppView.Series => SeriesView,
             AppView.Search => SearchView,
             AppView.MyList => MyListView,
+            AppView.Favorites => FavoritesView,
+            AppView.History => HistoryView,
             AppView.Live => LiveView,
             _ => null
         };

@@ -7,7 +7,8 @@
         Topmost="True">
     
     <Border Background="{DynamicResource BackgroundBrush}" 
-            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12">
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+            CornerRadius="{DynamicResource RadiusMedium}" ClipToBounds="True">
         <Border.Effect>
             <DropShadowEffect BlurRadius="20" ShadowDepth="0" Opacity="0.5"/>
         </Border.Effect>

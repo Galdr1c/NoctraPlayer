@@ -195,7 +195,11 @@ public partial class PlayerViewModel : ObservableObject
 
         _videoPlayerService.QualityDetected += (s, quality) =>
         {
-            _dispatcherService.Invoke(() => StreamQuality = quality);
+            _dispatcherService.Invoke(() =>
+            {
+                StreamQuality = quality;
+                UpdateStreamInfoFromQuality();
+            });
         };
 
         _videoPlayerService.BufferingChanged += (s, progress) =>
@@ -203,7 +207,16 @@ public partial class PlayerViewModel : ObservableObject
             _dispatcherService.Invoke(() =>
             {
                 BufferingProgress = progress;
-                IsBuffering = progress < 100;
+                // Some streams never report 100 while playback is already running.
+                // Keep loading UI only before playback starts.
+                IsBuffering = progress < 100 && !IsPlaying;
+
+                // Buffering bittiğinde kontrol katmanını mutlaka geri getir.
+                if (!IsBuffering)
+                {
+                    IsVisible = true;
+                    RestartAutoHideTimer();
+                }
             });
         };
 
@@ -242,20 +255,12 @@ public partial class PlayerViewModel : ObservableObject
         {
             // Canlı TV kontrolü
             IsLiveContent = value.Type == ChannelType.Live;
-
-            // VOD/Series için zamanlayıcıyı başlat
-            if (!IsLiveContent)
-            {
-                // VOD işlemleri
-            }
-            else
-            {
-                // Live için position sıfırla
-                Position = 0;
-                PositionText = "00:00:00";
-                DurationText = "00:00:00";
-                RemainingTime = "00:00:00";
-            }
+            // Kanal geçişinde eski timeline değerleri görünmesin.
+            Position = 0;
+            PositionText = "00:00:00";
+            Duration = 0;
+            DurationText = "00:00:00";
+            RemainingTime = IsLiveContent ? "00:00:00" : "-00:00:00";
         }
 
         UpdateOverlaySecondaryText();
@@ -282,6 +287,8 @@ public partial class PlayerViewModel : ObservableObject
         UpdateOverlaySecondaryText();
         IsBuffering = true;
         BufferingProgress = 0;
+        StreamQuality = null;
+        StreamInfo = "Kalite tespit ediliyor...";
         try
         {
             await _videoPlayerService.PlayAsync(channel.StreamUrl);
@@ -443,7 +450,7 @@ public partial class PlayerViewModel : ObservableObject
         IsLive = isLive;
         ConnectionStatus = "Bağlanıyor...";
         BufferingProgress = 0;
-        StreamInfo = isLive ? "1080p | 60fps" : "4K | HDR | 24fps";
+        StreamInfo = "Kalite tespit ediliyor...";
         IsZappingVisible = true;
 
         _zappingTimer?.Stop();
@@ -462,6 +469,24 @@ public partial class PlayerViewModel : ObservableObject
         _zappingTimer.Start();
         
         RestartAutoHideTimer();
+    }
+
+    partial void OnStreamQualityChanged(StreamQualityInfo? value)
+    {
+        UpdateStreamInfoFromQuality();
+    }
+
+    private void UpdateStreamInfoFromQuality()
+    {
+        if (StreamQuality == null)
+        {
+            StreamInfo = "Kalite tespit ediliyor...";
+            return;
+        }
+
+        var resolution = StreamQuality.ResolutionLabel;
+        var fps = StreamQuality.Fps > 0 ? $" | {StreamQuality.Fps} fps" : string.Empty;
+        StreamInfo = $"{resolution}{fps}";
     }
 
     private void RestartAutoHideTimer()

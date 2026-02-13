@@ -19,6 +19,9 @@ public class VideoPlayerService : IVideoPlayerService
     
     private int _retryCount = 0;
     private const int MaxRetries = 3;
+    private readonly object _qualitySync = new();
+    private CancellationTokenSource? _qualityMonitorCts;
+    private long _playGeneration;
 
     public event EventHandler<bool>? PlayingChanged;
     public event EventHandler<double>? PositionChanged;
@@ -80,12 +83,23 @@ public class VideoPlayerService : IVideoPlayerService
         _mediaPlayer.Playing += (s, e) =>
         {
             _dispatcherService.BeginInvoke(() => PlayingChanged?.Invoke(this, true));
-            // Detect quality 1 second after playback starts (tracks need time to populate)
-            _ = DetectStreamQualityAsync();
+            StartQualityMonitoring();
         };
-        _mediaPlayer.Paused += (s, e) => _dispatcherService.BeginInvoke(() => PlayingChanged?.Invoke(this, false));
-        _mediaPlayer.Stopped += (s, e) => _dispatcherService.BeginInvoke(() => PlayingChanged?.Invoke(this, false));
-        _mediaPlayer.EndReached += (s, e) => _dispatcherService.BeginInvoke(() => PlayingChanged?.Invoke(this, false));
+        _mediaPlayer.Paused += (s, e) =>
+        {
+            StopQualityMonitoring();
+            _dispatcherService.BeginInvoke(() => PlayingChanged?.Invoke(this, false));
+        };
+        _mediaPlayer.Stopped += (s, e) =>
+        {
+            StopQualityMonitoring();
+            _dispatcherService.BeginInvoke(() => PlayingChanged?.Invoke(this, false));
+        };
+        _mediaPlayer.EndReached += (s, e) =>
+        {
+            StopQualityMonitoring();
+            _dispatcherService.BeginInvoke(() => PlayingChanged?.Invoke(this, false));
+        };
         
         _mediaPlayer.PositionChanged += (s, e) => 
             _dispatcherService.BeginInvoke(() => PositionChanged?.Invoke(this, e.Position * Duration));
@@ -112,6 +126,12 @@ public class VideoPlayerService : IVideoPlayerService
         }
         
         _retryCount = 0;
+        Interlocked.Increment(ref _playGeneration);
+        StopQualityMonitoring();
+        lock (_qualitySync)
+        {
+            StreamQuality = null;
+        }
         await PlayWithRetryAsync(url);
     }
 
@@ -176,6 +196,7 @@ public class VideoPlayerService : IVideoPlayerService
 
     public void Stop()
     {
+        StopQualityMonitoring();
         _mediaPlayer?.Stop();
     }
 
@@ -278,59 +299,146 @@ public class VideoPlayerService : IVideoPlayerService
             _mediaPlayer.SetSpu(trackId);
     }
 
-    private async Task DetectStreamQualityAsync()
+    private void StartQualityMonitoring()
+    {
+        StopQualityMonitoring();
+        var generation = Interlocked.Read(ref _playGeneration);
+        if (_mediaPlayer?.Media == null)
+        {
+            return;
+        }
+        _qualityMonitorCts = new CancellationTokenSource();
+        _ = MonitorStreamQualityAsync(_qualityMonitorCts.Token, generation);
+    }
+
+    private void StopQualityMonitoring()
+    {
+        if (_qualityMonitorCts == null) return;
+        try
+        {
+            _qualityMonitorCts.Cancel();
+            _qualityMonitorCts.Dispose();
+        }
+        catch
+        {
+            // no-op
+        }
+        finally
+        {
+            _qualityMonitorCts = null;
+        }
+    }
+
+    private async Task MonitorStreamQualityAsync(CancellationToken cancellationToken, long generation)
+    {
+        // Adaptive streamlerde ilk kalite yanlış/eksik gelebilir; birkaç kez yeniden ölç.
+        var delaysMs = new[] { 1500, 2500, 3000, 5000, 7000 };
+        for (var i = 0; i < delaysMs.Length; i++)
+        {
+            if (cancellationToken.IsCancellationRequested || _mediaPlayer == null || !_mediaPlayer.IsPlaying)
+            {
+                return;
+            }
+
+            if (generation != Interlocked.Read(ref _playGeneration))
+            {
+                return;
+            }
+
+            try
+            {
+                await Task.Delay(delaysMs[i], cancellationToken);
+            }
+            catch (TaskCanceledException)
+            {
+                return;
+            }
+
+            await DetectStreamQualitySnapshotAsync(cancellationToken, generation);
+        }
+    }
+
+    private async Task DetectStreamQualitySnapshotAsync(CancellationToken cancellationToken, long generation)
     {
         try
         {
-            // Wait for media tracks to populate
-            await Task.Delay(1500);
-
-            if (_mediaPlayer?.Media == null) return;
+            if (_mediaPlayer?.Media == null || cancellationToken.IsCancellationRequested) return;
+            if (generation != Interlocked.Read(ref _playGeneration)) return;
 
             // Parse the media to get track info
             await _mediaPlayer.Media.Parse(MediaParseOptions.ParseNetwork, timeout: 5000);
+            if (generation != Interlocked.Read(ref _playGeneration)) return;
 
-            var quality = new StreamQualityInfo();
+            var measured = new StreamQualityInfo();
 
             foreach (var track in _mediaPlayer.Media.Tracks)
             {
                 if (track.TrackType == TrackType.Video)
                 {
                     var videoTrack = track.Data.Video;
-                    quality.Width = (int)videoTrack.Width;
-                    quality.Height = (int)videoTrack.Height;
-                    quality.Fps = videoTrack.FrameRateNum > 0 && videoTrack.FrameRateDen > 0
-                        ? (int)(videoTrack.FrameRateNum / videoTrack.FrameRateDen)
+                    measured.Width = Math.Max(measured.Width, (int)videoTrack.Width);
+                    measured.Height = Math.Max(measured.Height, (int)videoTrack.Height);
+                    var trackFps = videoTrack.FrameRateNum > 0 && videoTrack.FrameRateDen > 0
+                        ? (int)Math.Round((double)videoTrack.FrameRateNum / videoTrack.FrameRateDen, MidpointRounding.AwayFromZero)
                         : 0;
-                    quality.VideoCodec = track.Codec > 0 
+                    measured.Fps = Math.Max(measured.Fps, trackFps);
+                    measured.VideoCodec = track.Codec > 0 
                         ? FourCCToString(track.Codec) 
                         : track.Description ?? "";
-                    quality.VideoBitrate = (int)track.Bitrate;
+                    measured.VideoBitrate = Math.Max(measured.VideoBitrate, (int)track.Bitrate);
                 }
                 else if (track.TrackType == TrackType.Audio)
                 {
                     var audioTrack = track.Data.Audio;
-                    quality.AudioChannels = (int)audioTrack.Channels;
-                    quality.AudioCodec = track.Codec > 0 
+                    measured.AudioChannels = Math.Max(measured.AudioChannels, (int)audioTrack.Channels);
+                    measured.AudioCodec = track.Codec > 0 
                         ? FourCCToString(track.Codec)
                         : track.Description ?? "";
-                    quality.AudioBitrate = (int)(track.Bitrate / 1000); // bps → kbps
+                    measured.AudioBitrate = Math.Max(measured.AudioBitrate, (int)(track.Bitrate / 1000)); // bps → kbps
                 }
             }
 
-            StreamQuality = quality;
+            var runtimeFps = _mediaPlayer.Fps;
+            if (runtimeFps > 0)
+            {
+                measured.Fps = Math.Max(measured.Fps, (int)Math.Round(runtimeFps, MidpointRounding.AwayFromZero));
+            }
+
+            StreamQualityInfo merged;
+            lock (_qualitySync)
+            {
+                merged = MergeQuality(StreamQuality, measured);
+                StreamQuality = merged;
+            }
 
             System.Diagnostics.Debug.WriteLine(
-                $"[VideoPlayerService] Quality detected: {quality.Width}x{quality.Height} " +
-                $"@{quality.Fps}fps, {quality.VideoCodec}, {quality.VideoBitrate}bps | " +
-                $"Audio: {quality.AudioCodec} {quality.AudioChannels}ch {quality.AudioBitrate}kbps");
+                $"[VideoPlayerService] Quality detected: {merged.Width}x{merged.Height} " +
+                $"@{merged.Fps}fps, {merged.VideoCodec}, {merged.VideoBitrate}bps | " +
+                $"Audio: {merged.AudioCodec} {merged.AudioChannels}ch {merged.AudioBitrate}kbps");
 
-            _dispatcherService.BeginInvoke(() => QualityDetected?.Invoke(this, quality));
+            _dispatcherService.BeginInvoke(() => QualityDetected?.Invoke(this, merged));
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[VideoPlayerService] Quality detection error: {ex.Message}");
         }
+    }
+
+    private static StreamQualityInfo MergeQuality(StreamQualityInfo? current, StreamQualityInfo measured)
+    {
+        if (current == null) return measured;
+
+        return new StreamQualityInfo
+        {
+            Width = Math.Max(current.Width, measured.Width),
+            Height = Math.Max(current.Height, measured.Height),
+            Fps = Math.Max(current.Fps, measured.Fps),
+            VideoBitrate = Math.Max(current.VideoBitrate, measured.VideoBitrate),
+            VideoCodec = !string.IsNullOrWhiteSpace(measured.VideoCodec) ? measured.VideoCodec : current.VideoCodec,
+            AudioBitrate = Math.Max(current.AudioBitrate, measured.AudioBitrate),
+            AudioChannels = Math.Max(current.AudioChannels, measured.AudioChannels),
+            AudioCodec = !string.IsNullOrWhiteSpace(measured.AudioCodec) ? measured.AudioCodec : current.AudioCodec
+        };
     }
 
     /// <summary>
@@ -352,6 +460,7 @@ public class VideoPlayerService : IVideoPlayerService
     {
         if (_disposed) return;
         
+        StopQualityMonitoring();
         _mediaPlayer?.Stop();
         _mediaPlayer?.Dispose();
         _libVLC.Dispose();

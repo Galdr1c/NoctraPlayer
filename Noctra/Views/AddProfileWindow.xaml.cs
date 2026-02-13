@@ -1,5 +1,8 @@
 ﻿using System.Windows;
 using System.Windows.Input;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Media;
 using Noctra.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -50,5 +53,48 @@ public partial class AddProfileWindow : Window
         DialogResult = false;
         Close();
     }
-}
 
+    private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left || e.ButtonState != MouseButtonState.Pressed)
+        {
+            return;
+        }
+
+        if (IsInteractiveElement(e.OriginalSource as DependencyObject))
+        {
+            return;
+        }
+
+        try
+        {
+            DragMove();
+            e.Handled = true;
+        }
+        catch
+        {
+            // Ignore DragMove edge-case exceptions.
+        }
+    }
+
+    private static bool IsInteractiveElement(DependencyObject? source)
+    {
+        while (source != null)
+        {
+            if (source is TextBoxBase ||
+                source is PasswordBox ||
+                source is ComboBox ||
+                source is ButtonBase ||
+                source is Selector ||
+                source is Slider ||
+                source is ScrollBar)
+            {
+                return true;
+            }
+
+            source = VisualTreeHelper.GetParent(source);
+        }
+
+        return false;
+    }
+}
