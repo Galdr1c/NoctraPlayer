@@ -604,6 +604,12 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (_viewModel.ActiveView == AppView.Series)
+        {
+            await _viewModel.LoadMoreSeriesIfNeededAsync(scrollViewer.VerticalOffset, scrollViewer.ScrollableHeight);
+            return;
+        }
+
         await _viewModel.LoadMoreChannelsIfNeededAsync(scrollViewer.VerticalOffset, scrollViewer.ScrollableHeight);
     }
 

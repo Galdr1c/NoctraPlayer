@@ -1,10 +1,13 @@
-﻿namespace Noctra.Models;
+namespace Noctra.Models;
 
 /// <summary>
 /// Dizi bilgilerini tutar
 /// </summary>
 public class Series
 {
+    private ICollection<Season> _seasons = new List<Season>();
+    private int? _cachedSeasonCount;
+
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? CoverUrl { get; set; }
@@ -17,10 +20,48 @@ public class Series
     
     // Navigation properties
     public Playlist? Playlist { get; set; }
-    public ICollection<Season> Seasons { get; set; } = new List<Season>();
+    public ICollection<Season> Seasons
+    {
+        get => _seasons;
+        set
+        {
+            _seasons = value ?? new List<Season>();
+            _cachedSeasonCount = null;
+        }
+    }
 
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public string? GroupTitle => Genre;
+
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public int SeasonCountSafe
+    {
+        get
+        {
+            if (_cachedSeasonCount.HasValue)
+            {
+                return _cachedSeasonCount.Value;
+            }
+
+            if (_seasons == null || _seasons.Count == 0)
+            {
+                _cachedSeasonCount = 1;
+                return 1;
+            }
+
+            var seasonNumbers = new HashSet<int>();
+            foreach (var season in _seasons)
+            {
+                if (season.SeasonNumber > 0)
+                {
+                    seasonNumbers.Add(season.SeasonNumber);
+                }
+            }
+
+            _cachedSeasonCount = seasonNumbers.Count > 0 ? seasonNumbers.Count : 1;
+            return _cachedSeasonCount.Value;
+        }
+    }
 }
 
 /// <summary>
@@ -76,5 +117,3 @@ public class Episode
         }
     }
 }
-
-

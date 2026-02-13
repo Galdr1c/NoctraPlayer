@@ -58,6 +58,11 @@ public interface IPlaylistService
     Task<List<string>> GetGroupsAsync(int playlistId);
 
     /// <summary>
+    /// Belirli içerik tipine göre grup isimlerini getirir.
+    /// </summary>
+    Task<List<string>> GetGroupsByTypeAsync(int playlistId, ChannelType type);
+
+    /// <summary>
     /// Kanal sayısını getirir (tümünü yüklemeden)
     /// </summary>
     Task<int> GetChannelCountAsync(int playlistId);

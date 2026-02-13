@@ -341,6 +341,16 @@ public class PlaylistService : IPlaylistService
             .ToListAsync();
     }
 
+    public async Task<List<string>> GetGroupsByTypeAsync(int playlistId, ChannelType type)
+    {
+        return await _context.Channels
+            .Where(c => c.PlaylistId == playlistId && c.Type == type && c.GroupTitle != null)
+            .Select(c => c.GroupTitle!)
+            .Distinct()
+            .OrderBy(g => g)
+            .ToListAsync();
+    }
+
     /// <summary>
     /// Get channel count without loading all channels
     /// </summary>

@@ -917,7 +917,36 @@
                                               DisplayMemberPath="Value"/>
                                 </StackPanel>
                             </Grid>
-                            <ListBox ItemsSource="{Binding FilteredChannels}" Style="{StaticResource GridListBoxStyle}"/>
+                            <ListBox ItemsSource="{Binding SeriesViewItems}" Style="{StaticResource GridListBoxStyle}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,16,16" Background="{DynamicResource Surface0Brush}" 
+                                                CornerRadius="{StaticResource RadiusMedium}" Cursor="Hand">
+                                            <Border.InputBindings>
+                                                <MouseBinding MouseAction="LeftClick"
+                                                              Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                              CommandParameter="{Binding}"/>
+                                            </Border.InputBindings>
+                                            <StackPanel Margin="12">
+                                                <Border Height="100" Background="{StaticResource IconGradientBrush}" CornerRadius="{StaticResource RadiusSmall}" Margin="0,0,0,12">
+                                                    <Image Width="60" Stretch="Uniform"
+                                                           cache:CachedImage.SourceUrl="{Binding CoverUrl}"
+                                                           cache:CachedImage.DecodePixelWidth="120"
+                                                           cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding SeasonCountSafe, StringFormat='Sezon: {0}'}"
+                                                           Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center" Margin="0,4,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,100,0,0"
+                                        Visibility="{Binding SeriesViewItems.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=invert}">
+                                <TextBlock Text="Bu aramaya uygun dizi bulunamadı." 
+                                           FontSize="16" Foreground="{DynamicResource TextMutedBrush}"/>
+                            </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
 
@@ -937,7 +966,32 @@
                             <StackPanel Margin="0,0,0,24"
                                         Visibility="{Binding SearchSeriesChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
                                 <TextBlock Text="Dizi" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
-                                <ListBox ItemsSource="{Binding SearchSeriesChannels}" Style="{StaticResource GridListBoxStyle}"/>
+                                <ListBox ItemsSource="{Binding SearchSeriesChannels}"
+                                         Style="{StaticResource GridListBoxStyle}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border x:Name="Card" Margin="0,0,16,16" Background="{DynamicResource Surface0Brush}" 
+                                                    CornerRadius="{StaticResource RadiusMedium}" Cursor="Hand">
+                                                <Border.InputBindings>
+                                                    <MouseBinding MouseAction="LeftClick"
+                                                                  Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                                  CommandParameter="{Binding}"/>
+                                                </Border.InputBindings>
+                                                <StackPanel Margin="12">
+                                                    <Border Height="100" Background="{StaticResource IconGradientBrush}" CornerRadius="{StaticResource RadiusSmall}" Margin="0,0,0,12">
+                                                        <Image Width="60" Stretch="Uniform"
+                                                               cache:CachedImage.SourceUrl="{Binding CoverUrl}"
+                                                               cache:CachedImage.DecodePixelWidth="120"
+                                                               cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
+                                                    </Border>
+                                                    <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding SeasonCountSafe, StringFormat='Sezon: {0}'}"
+                                                               Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center" Margin="0,4,0,0"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
                             </StackPanel>
 
                             <StackPanel Margin="0,0,0,24"
@@ -1253,53 +1307,68 @@
                     <ItemsControl ItemsSource="{Binding SearchResults}">
                         <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Background="{DynamicResource Surface1Brush}"
-                                    CornerRadius="8"
-                                    Padding="16"
-                                    Margin="0,0,0,12"
+                            <Button Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                    CommandParameter="{Binding}"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Padding="0"
                                     Cursor="Hand">
-                                <Border.InputBindings>
-                                    <MouseBinding MouseAction="LeftClick" 
-                                                  Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                  CommandParameter="{Binding}"/>
-                                </Border.InputBindings>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="120"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    
-                                    <!-- Thumbnail -->
-                                    <Border Width="100" Height="56"
-                                            CornerRadius="4"
-                                            Background="{DynamicResource Surface1Brush}">
-                                        <Image Stretch="UniformToFill"
-                                               cache:CachedImage.SourceUrl="{Binding Converter={StaticResource MediaThumbnailConverter}}"
-                                               cache:CachedImage.DecodePixelWidth="200"
-                                               cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
-                                    </Border>
-                                    
-                                    <!-- Info -->
-                                    <StackPanel Grid.Column="1" Margin="16,0,0,0">
-                                        <TextBlock Text="{Binding Name}"
-                                                   FontSize="16"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                        <TextBlock Text="{Binding GroupTitle}"
-                                                   FontSize="14"
-                                                   Foreground="{DynamicResource TextMutedBrush}"
-                                                   Margin="0,4,0,0"/>
-
-                                        <!-- Progress Bar -->
-                                        <Border Height="3" Background="#33FFFFFF" Margin="0,12,0,0"
-                                                Visibility="{Binding WatchedPercentage, Converter={StaticResource CountToVisibilityConverter}}">
-                                            <Border Width="{Binding WatchedPercentage, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=640}"
-                                                    Background="#E50914"
-                                                    HorizontalAlignment="Left"/>
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="Transparent">
+                                                        <ContentPresenter/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                    </Style>
+                                </Button.Style>
+                                <Border Background="{DynamicResource Surface1Brush}"
+                                        CornerRadius="8"
+                                        Padding="16"
+                                        Margin="0,0,0,12">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <!-- Thumbnail -->
+                                        <Border Width="100" Height="56"
+                                                CornerRadius="4"
+                                                Background="{DynamicResource Surface1Brush}">
+                                            <Image Stretch="UniformToFill"
+                                                   cache:CachedImage.SourceUrl="{Binding Converter={StaticResource MediaThumbnailConverter}}"
+                                                   cache:CachedImage.DecodePixelWidth="200"
+                                                   cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
                                         </Border>
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
+                                        
+                                        <!-- Info -->
+                                        <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="16"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{Binding GroupTitle}"
+                                                       FontSize="14"
+                                                       Foreground="{DynamicResource TextMutedBrush}"
+                                                       Margin="0,4,0,0"/>
+
+                                            <!-- Progress Bar -->
+                                            <Border Height="3" Background="#33FFFFFF" Margin="0,12,0,0"
+                                                    Visibility="{Binding WatchedPercentage, Converter={StaticResource CountToVisibilityConverter}}">
+                                                <Border Width="{Binding WatchedPercentage, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=640}"
+                                                        Background="#8D09E5"
+                                                        HorizontalAlignment="Left"/>
+                                            </Border>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </Button>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -1339,26 +1408,49 @@
                   Visibility="{Binding IsSeriesDetailVisible, Converter={StaticResource BoolToVisibilityConverter}}"
                   Panel.ZIndex="998">
                 
-                <Grid Margin="60,100">
+                <Grid Margin="52,88">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="0" Margin="0,0,0,40">
-                         <Button Command="{Binding CloseSeriesDetailCommand}" 
-                                Style="{StaticResource CircleButtonStyle}" 
-                                Content="←" FontSize="20" HorizontalAlignment="Left" Margin="0,0,0,24"/>
-                        <TextBlock Text="{Binding SelectedSeries.Name}" FontSize="48" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                        <TextBlock Text="{Binding SelectedSeries.Genre}" FontSize="18" Foreground="{DynamicResource TextMutedBrush}" Margin="0,8,0,0"/>
-                    </StackPanel>
+                    <Grid Grid.Row="0" Margin="0,0,0,28">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="260"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
 
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <Border Grid.Column="0" Height="360" CornerRadius="14" ClipToBounds="True" Background="{DynamicResource Surface0Brush}">
+                            <Image Stretch="UniformToFill"
+                                   cache:CachedImage.SourceUrl="{Binding SelectedSeriesPosterUrl}"
+                                   cache:CachedImage.DecodePixelWidth="520"
+                                   cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
+                        </Border>
+
+                        <StackPanel Grid.Column="1" Margin="28,0,0,0">
+                            <Button Command="{Binding CloseSeriesDetailCommand}" 
+                                    Style="{StaticResource CircleButtonStyle}" 
+                                    Content="←" FontSize="20" HorizontalAlignment="Left" Margin="0,0,0,20"/>
+                            <TextBlock Text="{Binding SelectedSeries.Name}" FontSize="44" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <TextBlock Text="{Binding SelectedSeries.Genre}" FontSize="16" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,16,0"/>
+                                <TextBlock Text="{Binding SelectedSeries.ReleaseYear}" FontSize="16" Foreground="{DynamicResource TextMutedBrush}"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding SelectedSeriesOverview}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" Margin="0,16,0,0" MaxHeight="96"/>
+                            <TextBlock Text="{Binding SelectedSeriesCast, StringFormat='Oyuncular: {0}'}"
+                                       FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,14,0,0"
+                                       Visibility="{Binding SelectedSeriesCast, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+                            <TextBlock Text="Detaylar yükleniyor..." FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,10,0,0"
+                                       Visibility="{Binding IsSelectedSeriesMetadataLoading, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,8,0,0">
                         <ItemsControl ItemsSource="{Binding SelectedSeries.Seasons}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel Margin="0,0,0,40">
-                                        <TextBlock Text="{Binding SeasonNumber, StringFormat='Sezon {0}'}" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
+                                        <TextBlock Text="{Binding SeasonNumber, StringFormat='Sezon {0}'}" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,16"/>
                                         <ItemsControl ItemsSource="{Binding Episodes}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
@@ -1398,7 +1490,7 @@
                                                                     <Border Height="3" Background="#33FFFFFF" Margin="0,12,0,0"
                                                                             Visibility="{Binding WatchedPercentage, Converter={StaticResource CountToVisibilityConverter}}">
                                                                         <Border Width="{Binding WatchedPercentage, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=150}"
-                                                                                Background="#E50914"
+                                                                                Background="#8D09E5"
                                                                                 HorizontalAlignment="Left"/>
                                                                     </Border>
                                                                 </StackPanel>

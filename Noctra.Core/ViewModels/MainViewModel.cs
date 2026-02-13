@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Noctra.Data;
+using System.Text.RegularExpressions;
 
 namespace Noctra.ViewModels;
 
@@ -36,6 +37,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IServiceProvider _serviceProvider;
     private readonly Microsoft.Extensions.DependencyInjection.IServiceScopeFactory _scopeFactory;
     private readonly ISettingsService _settingsService;
+    private readonly IMetadataService _metadataService;
 
     [ObservableProperty]
     private AppView _activeView = AppView.Home;
@@ -51,6 +53,9 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private List<Series> _latestSeries = new();
+
+    [ObservableProperty]
+    private List<Series> _seriesViewItems = new();
 
     [ObservableProperty]
     private Channel? _featuredChannel;
@@ -78,6 +83,21 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isSeriesDetailVisible;
+
+    [ObservableProperty]
+    private string? _selectedSeriesPosterUrl;
+
+    [ObservableProperty]
+    private string? _selectedSeriesBackdropUrl;
+
+    [ObservableProperty]
+    private string _selectedSeriesOverview = string.Empty;
+
+    [ObservableProperty]
+    private string _selectedSeriesCast = string.Empty;
+
+    [ObservableProperty]
+    private bool _isSelectedSeriesMetadataLoading;
 
     [ObservableProperty]
     private string? _selectedGroup;
@@ -129,12 +149,14 @@ public partial class MainViewModel : ObservableObject
         IServiceProvider serviceProvider,
         Microsoft.Extensions.DependencyInjection.IServiceScopeFactory scopeFactory,
         ISettingsService settingsService,
+        IMetadataService metadataService,
         IDispatcherService dispatcherService,
         WatermarkViewModel watermarkViewModel)
     {
         _serviceProvider = serviceProvider;
         _scopeFactory = scopeFactory;
         _settingsService = settingsService;
+        _metadataService = metadataService;
         _dispatcherService = dispatcherService;
         WatermarkViewModel = watermarkViewModel;
         _settingsService.SettingsChanged += ApplyRefreshSchedulesFromSettings;
@@ -487,10 +509,16 @@ public partial class MainViewModel : ObservableObject
             StatusMessage = "Kanallar yükleniyor...";
             
             // Same DbContext cannot execute multiple operations in parallel.
-            var groups = await playlistService.GetGroupsAsync(playlistId);
+            var allGroups = await playlistService.GetGroupsAsync(playlistId);
+            var liveGroups = await playlistService.GetGroupsByTypeAsync(playlistId, ChannelType.Live);
+            var vodGroups = await playlistService.GetGroupsByTypeAsync(playlistId, ChannelType.VOD);
+            var seriesGroups = await playlistService.GetGroupsByTypeAsync(playlistId, ChannelType.Series);
             var channelCount = await playlistService.GetChannelCountAsync(playlistId);
-            Groups = OrderGroupsByLanguagePreference(groups);
-            EnsurePreferredDefaultGroupSelected();
+            _allGroupsCache = OrderGroupsByLanguagePreference(allGroups);
+            _liveGroupsCache = OrderGroupsByLanguagePreference(liveGroups);
+            _vodGroupsCache = OrderGroupsByLanguagePreference(vodGroups);
+            _seriesGroupsCache = OrderGroupsByLanguagePreference(seriesGroups);
+            UpdateGroupsForSelectedType();
             ResetIncrementalState();
             await LoadMoreChannelsAsync();
             
@@ -523,7 +551,9 @@ public partial class MainViewModel : ObservableObject
         // Rail içeriklerini yükle
         TrendingChannels = Channels.Where(c => c.Type == ChannelType.Live).Take(10).ToList();
         LatestMovies = Channels.Where(c => c.Type == ChannelType.VOD).Take(10).ToList();
-        LatestSeries = await mediaService.GetSeriesAsync(SelectedPlaylist?.Id ?? 0);
+        var playlistId = SelectedPlaylist?.Id ?? 0;
+        LatestSeries = await mediaService.GetSeriesAsync(playlistId);
+        UpdateSeriesViewItems();
         ContinueWatching = Channels.Where(c => c.LastWatched.HasValue).OrderByDescending(c => c.LastWatched).Take(10).ToList();
 
         // Hero içeriği
@@ -546,6 +576,14 @@ public partial class MainViewModel : ObservableObject
     private int _currentPage;
     private bool _hasMoreChannels;
     private bool _isLoadingMoreChannels;
+    private int _currentSeriesPage;
+    private bool _hasMoreSeriesItems;
+    private bool _isLoadingMoreSeriesItems;
+    private List<Series> _seriesFilteredSource = new();
+    private List<string> _allGroupsCache = new();
+    private List<string> _liveGroupsCache = new();
+    private List<string> _vodGroupsCache = new();
+    private List<string> _seriesGroupsCache = new();
     private Timer? _epgSyncTimer;
     private Timer? _channelSyncTimer;
     private int _isBackgroundEpgSyncRunning;
@@ -559,6 +597,15 @@ public partial class MainViewModel : ObservableObject
         _isLoadingMoreChannels = false;
         Channels = new List<Channel>();
         FilteredChannels = new List<Channel>();
+    }
+
+    private void ResetSeriesIncrementalState()
+    {
+        _currentSeriesPage = 0;
+        _hasMoreSeriesItems = true;
+        _isLoadingMoreSeriesItems = false;
+        _seriesFilteredSource = new List<Series>();
+        SeriesViewItems = new List<Series>();
     }
 
     public async Task LoadMoreChannelsAsync(CancellationToken cancellationToken = default)
@@ -638,6 +685,54 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    public async Task LoadMoreSeriesIfNeededAsync(double verticalOffset, double scrollableHeight)
+    {
+        if (scrollableHeight <= 0)
+        {
+            return;
+        }
+
+        if ((verticalOffset / scrollableHeight) >= LoadMoreThreshold)
+        {
+            await LoadMoreSeriesAsync();
+        }
+    }
+
+    public Task LoadMoreSeriesAsync()
+    {
+        if (!_hasMoreSeriesItems || _isLoadingMoreSeriesItems || _seriesFilteredSource.Count == 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        _isLoadingMoreSeriesItems = true;
+
+        try
+        {
+            var start = _currentSeriesPage * IncrementalPageSize;
+            var page = _seriesFilteredSource.Skip(start).Take(IncrementalPageSize).ToList();
+            if (page.Count == 0)
+            {
+                _hasMoreSeriesItems = false;
+                return Task.CompletedTask;
+            }
+
+            _currentSeriesPage++;
+            _hasMoreSeriesItems = page.Count == IncrementalPageSize;
+
+            var merged = new List<Series>(SeriesViewItems.Count + page.Count);
+            merged.AddRange(SeriesViewItems);
+            merged.AddRange(page);
+            SeriesViewItems = merged;
+        }
+        finally
+        {
+            _isLoadingMoreSeriesItems = false;
+        }
+
+        return Task.CompletedTask;
+    }
+
     partial void OnSearchTextChanged(string value)
     {
         // Debounce logic
@@ -660,6 +755,7 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSelectedChannelTypeChanged(ChannelType? value)
     {
+        UpdateGroupsForSelectedType();
         ScheduleImmediateFilter();
     }
 
@@ -735,6 +831,37 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    private void UpdateGroupsForSelectedType()
+    {
+        var nextGroups = SelectedChannelType switch
+        {
+            ChannelType.Live => _liveGroupsCache,
+            ChannelType.VOD => _vodGroupsCache,
+            ChannelType.Series => _seriesGroupsCache,
+            _ => _allGroupsCache
+        };
+
+        Groups = nextGroups.ToList();
+
+        if (!string.IsNullOrWhiteSpace(SelectedGroup) && !Groups.Contains(SelectedGroup))
+        {
+            _suppressFilterRefresh = true;
+            try
+            {
+                SelectedGroup = null;
+            }
+            finally
+            {
+                _suppressFilterRefresh = false;
+            }
+        }
+
+        if (SelectedChannelType == ChannelType.Live)
+        {
+            EnsurePreferredDefaultGroupSelected();
+        }
+    }
+
     private static bool IsCountryPreferredGroup(string group, string countryCode)
     {
         if (string.IsNullOrWhiteSpace(group) || string.IsNullOrWhiteSpace(countryCode))
@@ -805,8 +932,10 @@ public partial class MainViewModel : ObservableObject
         {
             if (token.IsCancellationRequested) return;
             ResetIncrementalState();
+            ResetSeriesIncrementalState();
             if (token.IsCancellationRequested) return;
             await LoadMoreChannelsAsync(token);
+            UpdateSeriesViewItems();
         }
         catch (Exception ex)
         {
@@ -1317,7 +1446,8 @@ public partial class MainViewModel : ObservableObject
     private List<Channel> _searchLiveChannels = new();
 
     [ObservableProperty]
-    private List<Channel> _searchSeriesChannels = new();
+    private List<Series> _searchSeriesChannels = new();
+
 
     [ObservableProperty]
     private List<Channel> _searchVodChannels = new();
@@ -1463,18 +1593,24 @@ public partial class MainViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(SearchText))
         {
             SearchLiveChannels = new List<Channel>();
-            SearchSeriesChannels = new List<Channel>();
+            SearchSeriesChannels = new List<Series>();
             SearchVodChannels = new List<Channel>();
             ShowSearchEmptyState = false;
             return;
         }
 
+        var rawQuery = SearchText.Trim();
+        var normalizedSeriesQuery = NormalizeSeriesQuery(rawQuery);
+
         SearchLiveChannels = FilteredChannels
             .Where(c => c.Type == ChannelType.Live)
             .ToList();
 
-        SearchSeriesChannels = FilteredChannels
-            .Where(c => c.Type == ChannelType.Series)
+        var seriesSnapshot = LatestSeries.ToList();
+
+        SearchSeriesChannels = seriesSnapshot
+            .Where(series => SeriesMatchesSearch(series, rawQuery, normalizedSeriesQuery))
+            .OrderBy(series => series.Name)
             .ToList();
 
         SearchVodChannels = FilteredChannels
@@ -1484,6 +1620,57 @@ public partial class MainViewModel : ObservableObject
         ShowSearchEmptyState = SearchLiveChannels.Count == 0
             && SearchSeriesChannels.Count == 0
             && SearchVodChannels.Count == 0;
+    }
+
+    private void UpdateSeriesViewItems()
+    {
+        var source = LatestSeries ?? new List<Series>();
+        if (source.Count == 0)
+        {
+            ResetSeriesIncrementalState();
+            return;
+        }
+
+        var query = SearchText?.Trim() ?? string.Empty;
+        var normalizedQuery = NormalizeSeriesQuery(query);
+        var selectedGroup = SelectedGroup?.Trim();
+        var hasSearch = !string.IsNullOrWhiteSpace(query);
+
+        var filtered = source.Where(series =>
+        {
+            var groupOk = true;
+            if (!hasSearch && !string.IsNullOrWhiteSpace(selectedGroup))
+            {
+                var genre = series.Genre ?? string.Empty;
+                groupOk = genre.Contains(selectedGroup, StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (!groupOk)
+            {
+                return false;
+            }
+
+            if (!hasSearch)
+            {
+                return true;
+            }
+
+            return SeriesMatchesSearch(series, query, normalizedQuery);
+        });
+
+        filtered = SelectedSortOrder switch
+        {
+            ChannelSortOrder.NameAsc => filtered.OrderBy(s => s.Name),
+            ChannelSortOrder.NameDesc => filtered.OrderByDescending(s => s.Name),
+            ChannelSortOrder.OldestFirst => filtered.OrderBy(s => s.ReleaseYear ?? int.MaxValue).ThenBy(s => s.Name),
+            _ => filtered.OrderByDescending(s => s.ReleaseYear ?? 0).ThenBy(s => s.Name)
+        };
+
+        _seriesFilteredSource = filtered.ToList();
+        _currentSeriesPage = 0;
+        _hasMoreSeriesItems = true;
+        SeriesViewItems = new List<Series>();
+        _ = LoadMoreSeriesAsync();
     }
 
     [RelayCommand]
@@ -1544,15 +1731,16 @@ public partial class MainViewModel : ObservableObject
             var results = await Task.Run(() =>
             {
                 var localResults = new List<object>();
+                var normalizedSeriesQuery = NormalizeSeriesQuery(query);
 
                 localResults.AddRange(channelsSnapshot.Where(c =>
-                    c.Name.ToLower().Contains(searchLower) ||
-                    (c.GroupTitle?.ToLower().Contains(searchLower) ?? false))
+                    c.Type != ChannelType.Series &&
+                    (c.Name.ToLower().Contains(searchLower) ||
+                     (c.GroupTitle?.ToLower().Contains(searchLower) ?? false)))
                     .Take(10));
 
                 localResults.AddRange(seriesSnapshot.Where(s =>
-                    s.Name.ToLower().Contains(searchLower) ||
-                    (s.Genre?.ToLower().Contains(searchLower) ?? false))
+                    SeriesMatchesSearch(s, query, normalizedSeriesQuery))
                     .Take(10));
 
                 return localResults;
@@ -1775,6 +1963,10 @@ public partial class MainViewModel : ObservableObject
     {
         IsSeriesDetailVisible = false;
         SelectedSeries = null;
+        SelectedSeriesPosterUrl = null;
+        SelectedSeriesBackdropUrl = null;
+        SelectedSeriesOverview = string.Empty;
+        SelectedSeriesCast = string.Empty;
     }
 
     [RelayCommand]
@@ -1809,6 +2001,10 @@ public partial class MainViewModel : ObservableObject
     {
         if (media == null) return;
 
+        // Arama overlay açıkken seçim sonrası detay/oynatıcıyı kapatmasın diye önce overlay'i kapat.
+        IsSearchOverlayVisible = false;
+        SearchQuery = string.Empty;
+
         if (media is Channel channel)
         {
             SelectedChannel = channel;
@@ -1817,11 +2013,218 @@ public partial class MainViewModel : ObservableObject
         }
         else if (media is Series series)
         {
+            try
+            {
+                EnsureSeriesEpisodes(series);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"EnsureSeriesEpisodes failed: {ex.Message}");
+            }
             SelectedSeries = series;
             IsSeriesDetailVisible = true;
             StatusMessage = $"Seçildi: {series.Name}";
             OnMediaSelected?.Invoke(series);
+            _ = LoadSelectedSeriesMetadataAsync(series);
         }
+    }
+
+
+    private static readonly Regex SeriesEpisodeRegex = new(
+        @"\b(?:s(?:eason)?\s*\d{1,2}\s*e(?:pisode)?\s*\d{1,3}|\d{1,2}\s*x\s*\d{1,3}|sezon\s*\d{1,2}\s*b[oö]l[uü]m\s*\d{1,3}|b[oö]l[uü]m\s*\d{1,3}|ep(?:isode)?\s*\d{1,3})\b",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private static string NormalizeSeriesQuery(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return string.Empty;
+        }
+
+        var normalized = SeriesEpisodeRegex.Replace(query, " ");
+        normalized = Regex.Replace(normalized, @"\s+", " ").Trim();
+        return normalized.ToLowerInvariant();
+    }
+
+    private static bool SeriesMatchesSearch(Series series, string rawQuery, string normalizedQuery)
+    {
+        var seriesName = series.Name?.ToLowerInvariant() ?? string.Empty;
+        var genre = series.Genre?.ToLowerInvariant() ?? string.Empty;
+        var rawLower = rawQuery.ToLowerInvariant();
+
+        if (!string.IsNullOrWhiteSpace(normalizedQuery) && seriesName.Contains(normalizedQuery))
+        {
+            return true;
+        }
+
+        if (genre.Contains(rawLower) || (!string.IsNullOrWhiteSpace(normalizedQuery) && genre.Contains(normalizedQuery)))
+        {
+            return true;
+        }
+
+        var episodes = series.Seasons.SelectMany(s => s.Episodes);
+        return episodes.Any(ep =>
+        {
+            var episodeName = ep.Name?.ToLowerInvariant() ?? string.Empty;
+            return episodeName.Contains(rawLower) ||
+                   (!string.IsNullOrWhiteSpace(normalizedQuery) && episodeName.Contains(normalizedQuery));
+        });
+    }
+
+    private async Task LoadSelectedSeriesMetadataAsync(Series series)
+    {
+        try
+        {
+            IsSelectedSeriesMetadataLoading = true;
+
+            SelectedSeriesPosterUrl = series.CoverUrl;
+            SelectedSeriesBackdropUrl = null;
+            SelectedSeriesOverview = series.Plot ?? string.Empty;
+            SelectedSeriesCast = string.Empty;
+
+            var metadata = await _metadataService.FetchMetadataAsync(series.Name, ChannelType.Series);
+            if (metadata == null || SelectedSeries?.Id != series.Id)
+            {
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(metadata.PosterUrl))
+            {
+                SelectedSeriesPosterUrl = metadata.PosterUrl;
+            }
+
+            if (!string.IsNullOrWhiteSpace(metadata.BackdropUrl))
+            {
+                SelectedSeriesBackdropUrl = metadata.BackdropUrl;
+            }
+
+            if (!string.IsNullOrWhiteSpace(metadata.Description))
+            {
+                SelectedSeriesOverview = metadata.Description;
+            }
+
+            if (!string.IsNullOrWhiteSpace(metadata.Cast))
+            {
+                SelectedSeriesCast = metadata.Cast;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Series metadata load failed: {ex.Message}");
+        }
+        finally
+        {
+            IsSelectedSeriesMetadataLoading = false;
+        }
+    }
+
+    private void EnsureSeriesEpisodes(Series series)
+    {
+        if (series.Seasons.Count > 0 && series.Seasons.Any(s => s.Episodes.Count > 0))
+        {
+            return;
+        }
+
+        var normalizedSeriesName = NormalizeSeriesTitleForMatching(series.Name);
+        if (string.IsNullOrWhiteSpace(normalizedSeriesName))
+        {
+            return;
+        }
+
+        var candidates = Channels
+            .Where(c => c.Type == ChannelType.Series)
+            .Where(c =>
+            {
+                var normalizedChannelName = NormalizeSeriesTitleForMatching(c.Name);
+                return normalizedChannelName.Equals(normalizedSeriesName, StringComparison.OrdinalIgnoreCase)
+                    || normalizedChannelName.StartsWith(normalizedSeriesName + " ", StringComparison.OrdinalIgnoreCase);
+            })
+            .ToList();
+
+        if (candidates.Count == 0)
+        {
+            return;
+        }
+
+        var seasons = new Dictionary<int, Season>();
+        foreach (var channel in candidates)
+        {
+            var (seasonNumber, episodeNumber) = ParseEpisodeNumbers(channel.Name);
+            if (!seasons.TryGetValue(seasonNumber, out var season))
+            {
+                season = new Season
+                {
+                    SeasonNumber = seasonNumber,
+                    Name = $"Sezon {seasonNumber}",
+                    CoverUrl = series.CoverUrl,
+                    SeriesId = series.Id
+                };
+                seasons[seasonNumber] = season;
+            }
+
+            season.Episodes.Add(new Episode
+            {
+                EpisodeNumber = episodeNumber,
+                Name = channel.Name,
+                StreamUrl = channel.StreamUrl,
+                CoverUrl = channel.LogoUrl
+            });
+        }
+
+        series.Seasons = seasons
+            .OrderBy(kvp => kvp.Key)
+            .Select(kvp =>
+            {
+                kvp.Value.Episodes = kvp.Value.Episodes.OrderBy(ep => ep.EpisodeNumber).ToList();
+                return kvp.Value;
+            })
+            .ToList();
+    }
+
+    private static (int SeasonNumber, int EpisodeNumber) ParseEpisodeNumbers(string title)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return (1, 1);
+        }
+
+        var sxe = Regex.Match(title, @"[Ss](\d{1,2})\s*[Ee](\d{1,3})", RegexOptions.IgnoreCase);
+        if (sxe.Success)
+        {
+            return (SafeParseInt(sxe.Groups[1].Value, 1), SafeParseInt(sxe.Groups[2].Value, 1));
+        }
+
+        var xFormat = Regex.Match(title, @"(\d{1,2})\s*[Xx]\s*(\d{1,3})", RegexOptions.IgnoreCase);
+        if (xFormat.Success)
+        {
+            return (SafeParseInt(xFormat.Groups[1].Value, 1), SafeParseInt(xFormat.Groups[2].Value, 1));
+        }
+
+        var trFormat = Regex.Match(title, @"[Ss]ezon\s*(\d{1,2}).*?[Bb][oö]l[uü]m\s*(\d{1,3})", RegexOptions.IgnoreCase);
+        if (trFormat.Success)
+        {
+            return (SafeParseInt(trFormat.Groups[1].Value, 1), SafeParseInt(trFormat.Groups[2].Value, 1));
+        }
+
+        return (1, 1);
+    }
+
+    private static int SafeParseInt(string value, int fallback)
+    {
+        return int.TryParse(value, out var parsed) && parsed > 0 ? parsed : fallback;
+    }
+
+    private static string NormalizeSeriesTitleForMatching(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = NormalizeSeriesQuery(value);
+        normalized = Regex.Replace(normalized, @"\b(4k|2160p|1080p|720p|x264|x265|h264|h265|webrip|web-dl|bluray)\b", " ");
+        normalized = Regex.Replace(normalized, @"\s+", " ").Trim();
+        return normalized;
     }
 }
 
