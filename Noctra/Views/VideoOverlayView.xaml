@@ -481,7 +481,7 @@
                             <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding StreamQuality.VideoCodec, FallbackValue='-'}" Foreground="White" FontSize="13" Margin="0,0,0,6"/>
                             <TextBlock Grid.Row="3" Grid.Column="0" Text="Bit Rate" Foreground="#88FFFFFF" FontSize="13" Margin="0,0,16,6"
                                        Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding StreamQuality.VideoBitrate, StringFormat='{}{0} bps', FallbackValue='-'}" Foreground="White" FontSize="13"
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding StreamQuality.VideoBitrate, Converter={StaticResource BitrateDisplayConverter}}" Foreground="White" FontSize="13"
                                        Visibility="{Binding IsLiveContent, Converter={StaticResource BoolToVisibilityConverter}}"/>
                         </Grid>
 

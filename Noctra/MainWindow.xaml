@@ -149,6 +149,26 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style x:Key="EmptyStateContainerStyle" TargetType="StackPanel">
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,96,0,0"/>
+        </Style>
+
+        <Style x:Key="EmptyStateTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,14,0,6"/>
+        </Style>
+
+        <Style x:Key="EmptyStateDescStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+        </Style>
     </Window.Resources>
 
     <Border x:Name="MainBorder" Background="{DynamicResource Bg0Brush}" ClipToBounds="True">
@@ -887,6 +907,12 @@
                                 </StackPanel>
                             </Grid>
                             <ListBox ItemsSource="{Binding FilteredChannels}" Style="{StaticResource GridListBoxStyle}"/>
+                            <StackPanel Style="{StaticResource EmptyStateContainerStyle}"
+                                        Visibility="{Binding FilteredChannels.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=invert}">
+                                <Image Source="Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>
+                                <TextBlock Text="Film bulunamadı" Style="{StaticResource EmptyStateTitleStyle}"/>
+                                <TextBlock Text="Bu filtrede gösterilecek film yok." Style="{StaticResource EmptyStateDescStyle}"/>
+                            </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
 
@@ -942,10 +968,11 @@
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
-                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,100,0,0"
+                            <StackPanel Style="{StaticResource EmptyStateContainerStyle}"
                                         Visibility="{Binding SeriesViewItems.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=invert}">
-                                <TextBlock Text="Bu aramaya uygun dizi bulunamadı." 
-                                           FontSize="16" Foreground="{DynamicResource TextMutedBrush}"/>
+                                <Image Source="Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>
+                                <TextBlock Text="Dizi bulunamadı" Style="{StaticResource EmptyStateTitleStyle}"/>
+                                <TextBlock Text="Bu filtrede gösterilecek dizi yok." Style="{StaticResource EmptyStateDescStyle}"/>
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
@@ -1109,10 +1136,11 @@
                                 </ListBox.ItemTemplate>
                             </ListBox>
                             <!-- Empty State -->
-                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,100,0,0"
+                            <StackPanel Style="{StaticResource EmptyStateContainerStyle}"
                                         Visibility="{Binding ShowMyListEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <TextBlock Text="Henüz listenize bir şey eklemediniz." 
-                                           FontSize="16" Foreground="{DynamicResource TextMutedBrush}"/>
+                                <Image Source="Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>
+                                <TextBlock Text="Listeniz boş" Style="{StaticResource EmptyStateTitleStyle}"/>
+                                <TextBlock Text="İçerik eklediğinizde burada görünecek." Style="{StaticResource EmptyStateDescStyle}"/>
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
@@ -1153,10 +1181,11 @@
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
-                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,100,0,0"
+                            <StackPanel Style="{StaticResource EmptyStateContainerStyle}"
                                         Visibility="{Binding ShowFavoritesEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <TextBlock Text="Henüz favori içerik yok." 
-                                           FontSize="16" Foreground="{DynamicResource TextMutedBrush}"/>
+                                <Image Source="Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>
+                                <TextBlock Text="Favoriler boş" Style="{StaticResource EmptyStateTitleStyle}"/>
+                                <TextBlock Text="Beğendiğiniz içerikleri favorilere ekleyin." Style="{StaticResource EmptyStateDescStyle}"/>
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
@@ -1203,10 +1232,11 @@
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
-                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,100,0,0"
+                            <StackPanel Style="{StaticResource EmptyStateContainerStyle}"
                                         Visibility="{Binding ShowHistoryEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <TextBlock Text="Henüz izleme geçmişi yok." 
-                                           FontSize="16" Foreground="{DynamicResource TextMutedBrush}"/>
+                                <Image Source="Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>
+                                <TextBlock Text="Geçmiş boş" Style="{StaticResource EmptyStateTitleStyle}"/>
+                                <TextBlock Text="İzlediğiniz içerikler burada listelenecek." Style="{StaticResource EmptyStateDescStyle}"/>
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
@@ -1242,10 +1272,11 @@
                             <ListBox ItemsSource="{Binding FilteredChannels}" Style="{StaticResource GridListBoxStyle}"/>
                             
                             <!-- Empty State -->
-                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,100,0,0"
+                            <StackPanel Style="{StaticResource EmptyStateContainerStyle}"
                                         Visibility="{Binding FilteredChannels.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=invert}">
-                                <TextBlock Text="Bu kategoride kanal bulunamadı." 
-                                           FontSize="16" Foreground="{DynamicResource TextMutedBrush}"/>
+                                <Image Source="Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>
+                                <TextBlock Text="Kanal bulunamadı" Style="{StaticResource EmptyStateTitleStyle}"/>
+                                <TextBlock Text="Bu filtrede gösterilecek canlı kanal yok." Style="{StaticResource EmptyStateDescStyle}"/>
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>

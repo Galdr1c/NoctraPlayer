@@ -21,6 +21,7 @@ public class VideoPlayerService : IVideoPlayerService
     private const int MaxRetries = 3;
     private readonly object _qualitySync = new();
     private CancellationTokenSource? _qualityMonitorCts;
+    private CancellationTokenSource? _playCts;
     private long _playGeneration;
 
     public event EventHandler<bool>? PlayingChanged;
@@ -126,20 +127,29 @@ public class VideoPlayerService : IVideoPlayerService
         }
         
         _retryCount = 0;
-        Interlocked.Increment(ref _playGeneration);
+        var generation = Interlocked.Increment(ref _playGeneration);
+        _playCts?.Cancel();
+        _playCts?.Dispose();
+        _playCts = new CancellationTokenSource();
+        var playToken = _playCts.Token;
         StopQualityMonitoring();
         lock (_qualitySync)
         {
             StreamQuality = null;
         }
-        await PlayWithRetryAsync(url);
+        await PlayWithRetryAsync(url, playToken, generation);
     }
 
-    private async Task PlayWithRetryAsync(string url)
+    private async Task PlayWithRetryAsync(string url, CancellationToken cancellationToken, long generation)
     {
         if (_mediaPlayer == null)
         {
             _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, "Media player hazır değil."));
+            return;
+        }
+
+        if (cancellationToken.IsCancellationRequested || generation != Interlocked.Read(ref _playGeneration))
+        {
             return;
         }
 
@@ -164,15 +174,41 @@ public class VideoPlayerService : IVideoPlayerService
             _mediaPlayer.Play();
             
             // 5 saniye bekle - başarılı başladı mı?
-            await Task.Delay(5000);
+            try
+            {
+                await Task.Delay(5000, cancellationToken);
+            }
+            catch (TaskCanceledException)
+            {
+                _mediaPlayer.EncounteredError -= OnError;
+                return;
+            }
             
             _mediaPlayer.EncounteredError -= OnError;
+
+            if (cancellationToken.IsCancellationRequested || generation != Interlocked.Read(ref _playGeneration))
+            {
+                return;
+            }
             
             if (errorOccurred && _retryCount < MaxRetries)
             {
                 _retryCount++;
-                await Task.Delay(2000); // 2 saniye bekle
-                await PlayWithRetryAsync(url);
+                try
+                {
+                    await Task.Delay(2000, cancellationToken); // 2 saniye bekle
+                }
+                catch (TaskCanceledException)
+                {
+                    return;
+                }
+
+                if (cancellationToken.IsCancellationRequested || generation != Interlocked.Read(ref _playGeneration))
+                {
+                    return;
+                }
+
+                await PlayWithRetryAsync(url, cancellationToken, generation);
             }
             else if (errorOccurred)
             {
@@ -196,6 +232,10 @@ public class VideoPlayerService : IVideoPlayerService
 
     public void Stop()
     {
+        Interlocked.Increment(ref _playGeneration);
+        _playCts?.Cancel();
+        _playCts?.Dispose();
+        _playCts = null;
         StopQualityMonitoring();
         _mediaPlayer?.Stop();
     }
@@ -460,6 +500,9 @@ public class VideoPlayerService : IVideoPlayerService
     {
         if (_disposed) return;
         
+        _playCts?.Cancel();
+        _playCts?.Dispose();
+        _playCts = null;
         StopQualityMonitoring();
         _mediaPlayer?.Stop();
         _mediaPlayer?.Dispose();

@@ -105,6 +105,32 @@ public class CountToVisibilityConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
 }
 
+public class BitrateDisplayConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is not int bitrate || bitrate <= 0)
+        {
+            return "Bilinmiyor";
+        }
+
+        if (bitrate >= 1_000_000)
+        {
+            return $"{bitrate / 1_000_000.0:F2} Mbps";
+        }
+
+        if (bitrate >= 1_000)
+        {
+            return $"{bitrate / 1_000.0:F1} Kbps";
+        }
+
+        return $"{bitrate} bps";
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
+
 public class BoolToStringConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)

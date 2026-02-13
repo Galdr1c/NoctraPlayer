@@ -31,6 +31,7 @@
     <converters:BoolToIconConverter x:Key="BoolToIconConverter"/>
     <converters:PercentToWidthConverter x:Key="PercentToWidthConverter"/>
     <converters:DoubleToFloatConverter x:Key="DoubleToFloatConverter"/>
+    <converters:BitrateDisplayConverter x:Key="BitrateDisplayConverter"/>
 
     <!-- Player Separation Converters -->
     <converters:PlayPauseIconConverter x:Key="PlayPauseIconConverter"/>
