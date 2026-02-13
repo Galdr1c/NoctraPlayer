@@ -1,4 +1,4 @@
-# 🎯 NOCTRA - Otomatik EPG Sistemi
+﻿# 🎯 NOCTRA - Otomatik EPG Sistemi
 
 ## ✅ Kullanıcı HİÇ EPG DÜŞÜNMEMELİ!
 
@@ -19,7 +19,7 @@
    ├─> EPG kaynakları bul (öncelik sırasıyla)
    │   ├─> 1. Provider EPG (Xtream/Stalker)
    │   ├─> 2. M3U x-tvg-url
-   │   ├─> 3. iptv-epg.org (güncel, küçük)
+   │   ├─> 3. noctra-epg.org (güncel, küçük)
    │   ├─> 4. epgshare01.online (fazla kanal)
    │   └─> 5. Global fallback
    │
@@ -35,15 +35,15 @@
 
 ## 📦 EPG Kaynakları
 
-### ✅ iptv-epg.org (Birincil)
+### ✅ noctra-epg.org (Birincil)
 ```
-Format: https://iptv-epg.org/files/epg-{COUNTRY}.xml.gz
+Format: https://noctra-epg.org/files/epg-{COUNTRY}.xml.gz
 
 Örnekler:
-- TR: https://iptv-epg.org/files/epg-tr.xml.gz (126 kanal)
-- US: https://iptv-epg.org/files/epg-us.xml.gz (12,201 kanal)
-- UK: https://iptv-epg.org/files/epg-gb.xml.gz (939 kanal)
-- DE: https://iptv-epg.org/files/epg-de.xml.gz (433 kanal)
+- TR: https://noctra-epg.org/files/epg-tr.xml.gz (126 kanal)
+- US: https://noctra-epg.org/files/epg-us.xml.gz (12,201 kanal)
+- UK: https://noctra-epg.org/files/epg-gb.xml.gz (939 kanal)
+- DE: https://noctra-epg.org/files/epg-de.xml.gz (433 kanal)
 
 Avantajlar:
 ✓ Güncel (her saat)
@@ -372,10 +372,12 @@ MIT License - Use freely!
 
 ## 🙏 Teşekkürler
 
-- **iptv-epg.org** - Ücretsiz EPG servisi
+- **noctra-epg.org** - Ücretsiz EPG servisi
 - **epgshare01.online** - Kapsamlı EPG kaynağı
-- **IPTV Community** - Açık kaynak ruhu
+- **Noctra Community** - Açık kaynak ruhu
 
 ---
 
 Made with ❤️ by Noctra Team
+
+

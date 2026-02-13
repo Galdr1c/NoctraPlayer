@@ -1,6 +1,6 @@
-# IPTVPlayer
+﻿# Noctra
 
-Windows (WPF) tabanli, .NET 8 ile gelistirilmis bir IPTV oynaticisi.
+Windows (WPF) tabanli, .NET 8 ile gelistirilmis bir Noctra oynaticisi.
 Uygulama M3U/Xtream/Stalker kaynaklarini destekler, EPG verisini otomatik yukler, canli ve VOD/Series iceriklerini tek arayuzde yonetir.
 
 ## Mevcut Durum (Su Anki Hali)
@@ -10,9 +10,9 @@ Uygulama M3U/Xtream/Stalker kaynaklarini destekler, EPG verisini otomatik yukler
 - Veri katmani: `EF Core + SQLite`
 - Oynatici: `LibVLCSharp`
 - Cozum yapisi:
-  - `IPTVPlayer` (UI/WPF)
-  - `IPTVPlayer.Core` (is mantigi, servisler, modeller)
-  - `IPTVPlayer.Tests` (xUnit testleri)
+  - `Noctra` (UI/WPF)
+  - `Noctra.Core` (is mantigi, servisler, modeller)
+  - `Noctra.Tests` (xUnit testleri)
 
 ## Temel Ozellikler
 
@@ -117,14 +117,14 @@ Komutlar:
 
 ```powershell
 dotnet restore
-dotnet build IPTVPlayer.sln
-dotnet run --project IPTVPlayer\IPTVPlayer.csproj
+dotnet build Noctra.sln
+dotnet run --project Noctra\Noctra.csproj
 ```
 
 ## Testler
 
 ```powershell
-dotnet test IPTVPlayer.Tests\IPTVPlayer.Tests.csproj
+dotnet test Noctra.Tests\Noctra.Tests.csproj
 ```
 
 Mevcut test kapsami:
@@ -134,10 +134,10 @@ Mevcut test kapsami:
 ## Proje Yapisi
 
 ```text
-IPTVPlayer/
-  IPTVPlayer/          # WPF UI
-  IPTVPlayer.Core/     # Servisler, modeller, viewmodel'ler, EF Core
-  IPTVPlayer.Tests/    # xUnit testleri
+Noctra/
+  Noctra/          # WPF UI
+  Noctra.Core/     # Servisler, modeller, viewmodel'ler, EF Core
+  Noctra.Tests/    # xUnit testleri
   EPG_README.md        # EPG detay dokumani
 ```
 
@@ -163,3 +163,4 @@ Yeni ozellik eklendiginde veya mevcut davranis degistiginde su iki adimi birlikt
 
 1. Kod degisikligi
 2. `README.md` icindeki ilgili bolum (Ozellikler / Yol Haritasi / Yapilanlar Gunlugu)
+

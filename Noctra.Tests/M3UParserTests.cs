@@ -1,0 +1,76 @@
+﻿using Xunit;
+using Noctra.Services;
+using Noctra.Models;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace Noctra.Tests
+{
+    public class M3UParserTests
+    {
+        private readonly M3UParser _parser;
+
+        public M3UParserTests()
+        {
+            // HttpClient is not used for ParseAsync(string content), but required by constructor
+            _parser = new M3UParser(new HttpClient());
+        }
+
+        [Theory]
+        [InlineData("#EXTINF:-1,Test Channel\nhttp://test.com/live/user/pass/123.ts", ChannelType.Live)]
+        [InlineData("#EXTINF:-1,Test Movie\nhttp://test.com/movie/user/pass/123.mp4", ChannelType.VOD)]
+        [InlineData("#EXTINF:-1,Test Series\nhttp://test.com/series/user/pass/123.mp4", ChannelType.Series)]
+        [InlineData("#EXTINF:-1 group-title=\"Live TV\",Channel 1\nhttp://example.com/1.ts", ChannelType.Live)]
+        [InlineData("#EXTINF:-1 group-title=\"Movies\",Movie 1\nhttp://example.com/movie1.mkv", ChannelType.VOD)]
+        [InlineData("#EXTINF:-1 group-title=\"Series\",Series 1\nhttp://example.com/series1.mp4", ChannelType.Series)]
+        [InlineData("#EXTINF:-1,Game of Thrones S01E01\nhttp://example.com/got.mp4", ChannelType.Series)]
+        [InlineData("#EXTINF:-1,Breaking Bad 1x01\nhttp://example.com/bb.mp4", ChannelType.Series)]
+        [InlineData("#EXTINF:-1,Avatar (2009) 1080p\nhttp://example.com/avatar.mp4", ChannelType.VOD)]
+        [InlineData("#EXTINF:-1 group-title=\"Belgesel\",Planet Earth\nhttp://example.com/doc.ts", ChannelType.Live)] // Belgesel -> Live rules
+        [InlineData("#EXTINF:-1 group-title=\"Belgesel Serisi\",Cosmos S01E01\nhttp://example.com/cosmos.mp4", ChannelType.Series)] // Belgesel Serisi -> Series rules
+        public async Task ParseAsync_ShouldDetectCorrectType(string m3uEntry, ChannelType expectedType)
+        {
+            // Arrange
+            var content = "#EXTM3U\n" + m3uEntry;
+
+            // Act
+            var channels = await _parser.ParseAsync(content);
+
+            // Assert
+            Assert.Single(channels);
+            Assert.Equal(expectedType, channels[0].Type);
+        }
+
+        [Fact]
+        public async Task ParseAsync_ShouldHandleComplexPlaylist()
+        {
+            var m3u = @"#EXTM3U
+#EXTINF:-1 tvg-id=""TRT1"" tvg-name=""TRT 1"" tvg-logo=""http://logo.com/trt1.png"" group-title=""Ulusal"",TRT 1
+http://server.com/live/user/pass/101.ts
+#EXTINF:-1 tvg-logo=""http://logo.com/matrix.jpg"" group-title=""Action Movies"",The Matrix (1999) 1080p
+http://server.com/movie/user/pass/202.mp4
+#EXTINF:-1 group-title=""Series"",Friends S10E15
+http://server.com/series/user/pass/303.mp4";
+
+            var channels = await _parser.ParseAsync(m3u);
+
+            Assert.Equal(3, channels.Count);
+            
+            var channel1 = channels[0];
+            Assert.Equal("TRT 1", channel1.Name);
+            Assert.Equal(ChannelType.Live, channel1.Type);
+            Assert.Equal("Ulusal", channel1.GroupTitle);
+
+            var channel2 = channels[1];
+            Assert.Contains("Matrix", channel2.Name);
+            Assert.Equal(ChannelType.VOD, channel2.Type);
+
+            var channel3 = channels[2];
+            Assert.Contains("Friends", channel3.Name);
+            Assert.Equal(ChannelType.Series, channel3.Type);
+        }
+    }
+}
+

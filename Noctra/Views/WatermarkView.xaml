@@ -1,0 +1,29 @@
+﻿<UserControl x:Class="Noctra.Views.WatermarkView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:Noctra.Views"
+
+             xmlns:viewmodels="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
+             mc:Ignorable="d" 
+             d:DesignHeight="100" d:DesignWidth="300">
+
+    <!-- Watermark Overlay Container -->
+    <Grid Visibility="{Binding IsVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+        <Border Background="#10000000" CornerRadius="12" Padding="12,6"
+                HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                Margin="0,0,24,60"
+                Opacity="{Binding Opacity}"
+                IsHitTestVisible="False">
+            <Border.RenderTransform>
+                <TranslateTransform X="{Binding TranslateX}" Y="{Binding TranslateY}"/>
+            </Border.RenderTransform>
+            
+            <TextBlock Text="Noctra MP â€¢ Free" 
+                       FontFamily="Segoe UI" FontWeight="SemiBold" FontSize="12" 
+                       Foreground="White"/>
+        </Border>
+    </Grid>
+</UserControl>
+
