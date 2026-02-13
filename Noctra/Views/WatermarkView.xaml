@@ -21,7 +21,7 @@
             </Border.RenderTransform>
             
             <TextBlock Text="Noctra MP â€¢ Free" 
-                       FontFamily="Segoe UI" FontWeight="SemiBold" FontSize="12" 
+                       FontFamily="{DynamicResource DefaultFontFamily}" FontWeight="SemiBold" FontSize="12" 
                        Foreground="White"/>
         </Border>
     </Grid>

@@ -24,6 +24,7 @@ public partial class MainWindow : Window
     private readonly HoverPreviewService _hoverPreviewService;
     private readonly IServiceScopeFactory _scopeFactory;
     private bool _isDarkTheme = true;
+    private bool _isWindowClosed;
     private WindowState _windowStateBeforeFullScreen = WindowState.Normal;
     private ResizeMode _resizeModeBeforeFullScreen = ResizeMode.CanResize;
 
@@ -126,6 +127,8 @@ public partial class MainWindow : Window
 
         // Subscribe to Edit Channel requests
         _viewModel.RequestEditChannel += OnRequestEditChannel;
+
+        Closed += (_, _) => _isWindowClosed = true;
     }
 
     private void AnimateFullScreenTransition()
@@ -446,6 +449,11 @@ public partial class MainWindow : Window
     {
         try
         {
+            if (_isWindowClosed)
+            {
+                return;
+            }
+
             if (_playerViewModel.IsPlaying)
             {
                 _playerViewModel.StopCommand.Execute(null);
@@ -464,14 +472,19 @@ public partial class MainWindow : Window
             Hide();
             profilesWindow.ShowDialog();
 
-            if (!IsVisible && Application.Current.ShutdownMode != ShutdownMode.OnExplicitShutdown)
+            if (!_isWindowClosed &&
+                !IsVisible &&
+                Application.Current.ShutdownMode != ShutdownMode.OnExplicitShutdown)
             {
                 Show();
             }
         }
         catch (Exception ex)
         {
-            Show();
+            if (!_isWindowClosed)
+            {
+                Show();
+            }
             MessageBox.Show($"Profil secme ekrani acilamadi: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }

@@ -12,7 +12,7 @@
         ResizeMode="NoResize"
         AllowsTransparency="True"
         Background="Transparent"
-        FontFamily="Segoe UI Variable, Segoe UI">
+        FontFamily="{DynamicResource DefaultFontFamily}">
 
     <Window.Resources>
         <ResourceDictionary>
@@ -337,11 +337,16 @@
                                     </Grid.RowDefinitions>
 
                                     <!-- Plus Icon Box (Dashed Border) -->
-                                    <Border x:Name="AddBorder" Width="{StaticResource RatioSquareSize}" Height="{StaticResource RatioSquareSize}" CornerRadius="{DynamicResource RadiusMedium}" 
-                                            Grid.Row="0" Margin="0,0,0,12" 
-                                            Background="Transparent"
-                                            BorderBrush="{StaticResource DashedProfileBorderBrush}"
-                                            BorderThickness="2">
+                                    <Grid Width="{StaticResource RatioSquareSize}" Height="{StaticResource RatioSquareSize}" 
+                                          Grid.Row="0" Margin="0,0,0,12">
+                                        
+                                        <!-- Dashed Border Rectangle -->
+                                        <Rectangle x:Name="AddBorder"
+                                                   RadiusX="12" RadiusY="12"
+                                                   Stroke="{DynamicResource BorderBrush}"
+                                                   StrokeThickness="2"
+                                                   StrokeDashArray="4 2"
+                                                   Fill="Transparent"/>
 
                                         <!-- Circle with Plus -->
                                         <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -352,7 +357,7 @@
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                                        Margin="0,-4,0,0"/>
                                         </Grid>
-                                    </Border>
+                                    </Grid>
                                     
                                     <!-- Label -->
                                     <TextBlock x:Name="AddLabel" Grid.Row="1" Text="Profil Ekle" 
@@ -362,7 +367,7 @@
                                 </Grid>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="AddBorder" Property="BorderBrush" Value="{StaticResource DashedProfileBorderHoverBrush}"/>
+                                        <Setter TargetName="AddBorder" Property="Stroke" Value="{DynamicResource TextPrimaryBrush}"/>
                                         <Setter TargetName="PlusCircle" Property="Stroke" Value="{DynamicResource TextPrimaryBrush}"/>
                                         <Setter TargetName="PlusCircle" Property="Fill" Value="{DynamicResource AccentBrush}"/>
                                         <Setter TargetName="PlusIcon" Property="Foreground" Value="White"/>
@@ -411,5 +416,4 @@
         </Grid>
     </Border>
 </Window>
-
 

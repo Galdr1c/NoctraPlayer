@@ -152,7 +152,7 @@
          ========================================== -->
     
     <!-- Font Family -->
-    <FontFamily x:Key="DefaultFontFamily">Segoe UI Variable, Segoe UI</FontFamily>
+    <FontFamily x:Key="DefaultFontFamily">pack://application:,,,/Noctra;component/Assets/Fonts/Inter/#Inter</FontFamily>
     
     <!-- Font Sizes -->
     <sys:Double xmlns:sys="clr-namespace:System;assembly=mscorlib" x:Key="FontSizeH1">32</sys:Double>

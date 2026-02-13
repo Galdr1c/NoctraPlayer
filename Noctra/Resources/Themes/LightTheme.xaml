@@ -142,7 +142,7 @@
          TYPOGRAPHY
          ========================================== -->
     
-    <FontFamily x:Key="DefaultFontFamily">Segoe UI Variable, Segoe UI</FontFamily>
+    <FontFamily x:Key="DefaultFontFamily">pack://application:,,,/Noctra;component/Assets/Fonts/Inter/#Inter</FontFamily>
     
     <sys:Double xmlns:sys="clr-namespace:System;assembly=mscorlib" x:Key="FontSizeH1">32</sys:Double>
     <sys:Double xmlns:sys="clr-namespace:System;assembly=mscorlib" x:Key="FontSizeH2">24</sys:Double>

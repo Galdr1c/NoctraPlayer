@@ -11,7 +11,7 @@
         ResizeMode="NoResize"
         AllowsTransparency="True"
         Background="Transparent"
-        FontFamily="Segoe UI">
+        FontFamily="{DynamicResource DefaultFontFamily}">
 
     <Window.Resources>
         <ResourceDictionary>

@@ -14,7 +14,7 @@
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
-        FontFamily="Segoe UI"
+        FontFamily="{DynamicResource DefaultFontFamily}"
         MouseLeftButtonDown="Window_MouseLeftButtonDown">
     
     <Window.Resources>

@@ -15,7 +15,7 @@
         WindowStyle="SingleBorderWindow"
         AllowsTransparency="False"
         Background="{DynamicResource Bg0Brush}"
-        FontFamily="Segoe UI Variable, Segoe UI">
+        FontFamily="{DynamicResource DefaultFontFamily}">
 
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="0"

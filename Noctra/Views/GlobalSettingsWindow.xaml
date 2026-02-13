@@ -9,7 +9,7 @@
         ResizeMode="NoResize"
         AllowsTransparency="True"
         Background="Transparent"
-        FontFamily="Segoe UI Variable, Segoe UI">
+        FontFamily="{DynamicResource DefaultFontFamily}">
 
     <Window.Resources>
         <ResourceDictionary>

@@ -10,7 +10,7 @@
         ResizeMode="NoResize"
         AllowsTransparency="True"
         Background="Transparent"
-        FontFamily="Segoe UI Variable, Segoe UI">
+        FontFamily="{DynamicResource DefaultFontFamily}">
 
     <Window.Resources>
         <ResourceDictionary>
@@ -27,6 +27,10 @@
             BorderBrush="{DynamicResource AccentBrush}"
             BorderThickness="1">
         <Grid>
+            <Grid.Clip>
+                <RectangleGeometry Rect="0,0,898,648" RadiusX="15" RadiusY="15"/>
+            </Grid.Clip>
+
             <!-- Decorative Elements -->
             <Ellipse Width="400" Height="400" Fill="{DynamicResource AccentBrush}" Opacity="0.08" 
                      VerticalAlignment="Top" HorizontalAlignment="Right" Margin="-100"/>
@@ -160,5 +164,4 @@
         </Grid>
     </Border>
 </Window>
-
 
