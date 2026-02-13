@@ -135,6 +135,7 @@ public partial class MainViewModel : ObservableObject
         _settingsService = settingsService;
         _dispatcherService = dispatcherService;
         WatermarkViewModel = watermarkViewModel;
+        _settingsService.SettingsChanged += ApplyRefreshSchedulesFromSettings;
     }
 
     public async Task InitializeAsync()
@@ -498,6 +499,7 @@ public partial class MainViewModel : ObservableObject
             
             // Trigger EPG update in background
             _ = LoadEpgAsync();
+            EnsureChannelBackgroundRefresh();
         }
         catch (Exception ex)
         {
@@ -539,7 +541,9 @@ public partial class MainViewModel : ObservableObject
     private bool _hasMoreChannels;
     private bool _isLoadingMoreChannels;
     private Timer? _epgSyncTimer;
+    private Timer? _channelSyncTimer;
     private int _isBackgroundEpgSyncRunning;
+    private int _isBackgroundChannelSyncRunning;
     private bool _suppressFilterRefresh;
 
     private void ResetIncrementalState()
@@ -869,28 +873,45 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task RefreshPlaylistAsync()
     {
+        await RefreshSelectedPlaylistAsync();
+    }
+
+    public async Task RefreshSelectedPlaylistAsync(bool isBackground = false)
+    {
         if (SelectedPlaylist == null) return;
 
         try
         {
             using var scope = _scopeFactory.CreateScope();
             var playlistService = scope.ServiceProvider.GetRequiredService<IPlaylistService>();
-            
-            IsLoading = true;
-            StatusMessage = "Playlist güncelleniyor...";
-            
+
+            if (!isBackground)
+            {
+                IsLoading = true;
+                StatusMessage = "Kanal listesi güncelleniyor...";
+            }
+
             await playlistService.RefreshAsync(SelectedPlaylist.Id);
             await LoadChannelsAsync(SelectedPlaylist.Id);
-            
-            StatusMessage = "Playlist güncellendi";
+
+            if (!isBackground)
+            {
+                StatusMessage = "Kanal listesi güncellendi";
+            }
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Güncelleme hatası: {ex.Message}";
+            if (!isBackground)
+            {
+                StatusMessage = $"Kanal listesi güncelleme hatası: {ex.Message}";
+            }
         }
         finally
         {
-            IsLoading = false;
+            if (!isBackground)
+            {
+                IsLoading = false;
+            }
         }
     }
 
@@ -1032,6 +1053,19 @@ public partial class MainViewModel : ObservableObject
             // Sort by priority
             var epgSources = distinctSources.OrderBy(s => s.Priority).ToList();
 
+            // Optional custom EPG URL from settings (highest priority when provided)
+            var customEpgUrl = (_settingsService.Settings.CustomEpgUrl ?? string.Empty).Trim();
+            if (Uri.TryCreate(customEpgUrl, UriKind.Absolute, out _))
+            {
+                epgSources.Insert(0, new Services.EpgSource
+                {
+                    Url = customEpgUrl,
+                    Priority = 0,
+                    Type = Services.EpgSourceType.CustomUrl,
+                    IsPrimary = false
+                });
+            }
+
             // Ensure we only clear the DB once (at the start), not for every source
             for (int i = 0; i < epgSources.Count; i++)
             {
@@ -1154,8 +1188,18 @@ public partial class MainViewModel : ObservableObject
 
     private void EnsureEpgBackgroundSync()
     {
+        var hours = _settingsService.Settings.EpgRefreshFrequencyHours;
+        if (hours <= 0)
+        {
+            _epgSyncTimer?.Dispose();
+            _epgSyncTimer = null;
+            return;
+        }
+
+        var interval = TimeSpan.FromHours(hours);
         if (_epgSyncTimer != null)
         {
+            _epgSyncTimer.Change(interval, interval);
             return;
         }
 
@@ -1174,7 +1218,48 @@ public partial class MainViewModel : ObservableObject
             {
                 Interlocked.Exchange(ref _isBackgroundEpgSyncRunning, 0);
             }
-        }, null, TimeSpan.FromHours(6), TimeSpan.FromHours(6));
+        }, null, interval, interval);
+    }
+
+    private void EnsureChannelBackgroundRefresh()
+    {
+        var hours = _settingsService.Settings.ChannelListRefreshFrequencyHours;
+        if (hours <= 0)
+        {
+            _channelSyncTimer?.Dispose();
+            _channelSyncTimer = null;
+            return;
+        }
+
+        var interval = TimeSpan.FromHours(hours);
+        if (_channelSyncTimer != null)
+        {
+            _channelSyncTimer.Change(interval, interval);
+            return;
+        }
+
+        _channelSyncTimer = new Timer(async _ =>
+        {
+            if (Interlocked.Exchange(ref _isBackgroundChannelSyncRunning, 1) == 1)
+            {
+                return;
+            }
+
+            try
+            {
+                await RefreshSelectedPlaylistAsync(isBackground: true);
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _isBackgroundChannelSyncRunning, 0);
+            }
+        }, null, interval, interval);
+    }
+
+    private void ApplyRefreshSchedulesFromSettings()
+    {
+        EnsureEpgBackgroundSync();
+        EnsureChannelBackgroundRefresh();
     }
 
     [ObservableProperty]

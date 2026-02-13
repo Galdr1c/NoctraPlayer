@@ -114,4 +114,21 @@ public class AppSettings
     public bool AutoUpdate { get; set; } = true;
     public bool HardwareAcceleration { get; set; } = true;
     public bool Analytics { get; set; } = false;
+
+    // ============ Senkronizasyon Ayarlari ============
+
+    /// <summary>
+    /// Kanal listesi otomatik yenileme sikligi (saat). 0 = Kapali (manuel)
+    /// </summary>
+    public int ChannelListRefreshFrequencyHours { get; set; } = 0;
+
+    /// <summary>
+    /// EPG otomatik yenileme sikligi (saat). 0 = Kapali (manuel)
+    /// </summary>
+    public int EpgRefreshFrequencyHours { get; set; } = 6;
+
+    /// <summary>
+    /// EPG icin kullanicinin verdigi ozel URL (opsiyonel)
+    /// </summary>
+    public string? CustomEpgUrl { get; set; }
 }

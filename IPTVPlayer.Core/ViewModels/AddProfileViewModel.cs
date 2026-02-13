@@ -14,7 +14,6 @@ public partial class AddProfileViewModel : ObservableObject
     private readonly IDispatcherService _dispatcherService;
     private readonly IAvatarService _avatarService;
     private readonly IDialogService _dialogService;
-    private readonly IPlaylistService _playlistService;
     private readonly IM3UParser _m3uParser;
     private readonly IXtreamCodesService _xtreamCodesService;
     private readonly IStalkerPortalService _stalkerPortalService;
@@ -362,7 +361,6 @@ public partial class AddProfileViewModel : ObservableObject
         IDispatcherService dispatcherService, 
         IAvatarService avatarService, 
         IDialogService dialogService,
-        IPlaylistService playlistService,
         IM3UParser m3uParser,
         IXtreamCodesService xtreamCodesService,
         IStalkerPortalService stalkerPortalService)
@@ -371,7 +369,6 @@ public partial class AddProfileViewModel : ObservableObject
         _dispatcherService = dispatcherService;
         _avatarService = avatarService;
         _dialogService = dialogService;
-        _playlistService = playlistService;
         _m3uParser = m3uParser;
         _xtreamCodesService = xtreamCodesService;
         _stalkerPortalService = stalkerPortalService;
@@ -715,21 +712,7 @@ public partial class AddProfileViewModel : ObservableObject
             if (EditingProfile != null)
             {
                 // Update existing profile
-                
-                // FORCE REFRESH: Delete existing playlists for this profile
-                // This ensures the main view re-downloads the list with new credentials/URL
-                try 
-                {
-                    var existingPlaylists = await _playlistService.GetAllAsync(EditingProfile.Id);
-                    foreach (var pl in existingPlaylists)
-                    {
-                        await _playlistService.DeleteAsync(pl.Id);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Error clearing cache: {ex.Message}");
-                }
+                // Keep cached playlists. Channel list should refresh only when user explicitly requests it.
 
                 // Check if profile is tracked
                 var trackedProfile = _context.Profiles.Local.FirstOrDefault(p => p.Id == EditingProfile.Id);

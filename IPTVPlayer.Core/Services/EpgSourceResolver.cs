@@ -155,6 +155,7 @@ public class EpgSource
 /// </summary>
 public enum EpgSourceType
 {
+    CustomUrl,
     Provider,
     M3UHeader,
     IptvEpgOrg,

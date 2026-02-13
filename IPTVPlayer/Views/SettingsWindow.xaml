@@ -1,4 +1,4 @@
-<Window x:Class="IPTVPlayer.Views.SettingsWindow"
+﻿<Window x:Class="IPTVPlayer.Views.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -146,7 +146,7 @@
                                         <TextBlock Text="{Binding CurrentProfileName}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                         <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                                             <TextBlock Text="Aktif Profil" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
-                                            <TextBlock Text=" • " FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
+                                            <TextBlock Text=" â€¢ " FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
                                             <TextBlock Text="{Binding ProfileCreatedAt, StringFormat='Oluşturulma: {0:dd.MM.yyyy}'}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </StackPanel>
@@ -216,7 +216,7 @@
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal">
                             <Path Data="{StaticResource IconPlayback}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,8,0"/>
-                            <TextBlock Text="Oynatma" VerticalAlignment="Center"/>
+                            <TextBlock Text="Kişiselleştirme" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,0,32">
@@ -287,12 +287,59 @@
                                     <Slider Minimum="0" Maximum="100" Value="{Binding DefaultVolume}" Style="{StaticResource ModernSlider}"/>
                                 </StackPanel>
                             </Border>
+                        
+                            <Border Style="{StaticResource SettingsCard}">
+                                <StackPanel>
+                                    <TextBlock Text="Altyazı" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
+                                    <TextBlock Text="Varsayılan altyazı dili" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                                    <ComboBox SelectedIndex="{Binding SelectedSubtitleLanguage}" Style="{StaticResource ModernComboBox}" Width="250" HorizontalAlignment="Left" Margin="0,0,0,20">
+                                        <ComboBoxItem Content="Türkçe"/>
+                                        <ComboBoxItem Content="İngilizce"/>
+                                        <ComboBoxItem Content="Yok"/>
+                                    </ComboBox>
+                                    <Grid Margin="0,0,0,12">
+                                        <TextBlock Text="Yazı Boyutu" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                        <TextBlock HorizontalAlignment="Right" Text="{Binding SubtitleFontSize, StringFormat={}{0}px}" Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold"/>
+                                    </Grid>
+                                    <Slider Minimum="12" Maximum="32" Value="{Binding SubtitleFontSize}" Style="{StaticResource ModernSlider}" Margin="0,0,0,18"/>
+                                    <Grid Margin="0,0,0,12">
+                                        <TextBlock Text="Arka Plan Opaklığı" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                        <TextBlock HorizontalAlignment="Right" Text="{Binding SubtitleBackgroundOpacity, StringFormat={}{0}%}" Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold"/>
+                                    </Grid>
+                                    <Slider Minimum="0" Maximum="100" Value="{Binding SubtitleBackgroundOpacity}" Style="{StaticResource ModernSlider}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource SettingsCard}">
+                                <StackPanel>
+                                    <TextBlock Text="İndirme" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
+                                    <Grid Margin="0,0,0,18">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="Sadece Wi-Fi ile indir" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="Mobil veri kullanımını engeller" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <ToggleButton Grid.Column="1" IsChecked="{Binding DownloadWifiOnly}" Style="{StaticResource ModernToggleSwitch}"/>
+                                    </Grid>
+                                    <TextBlock Text="İndirme kalitesi" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                                    <ComboBox SelectedIndex="{Binding SelectedDownloadQuality}" Style="{StaticResource ModernComboBox}" Width="250" HorizontalAlignment="Left" Margin="0,0,0,18">
+                                        <ComboBoxItem Content="Standart"/>
+                                        <ComboBoxItem Content="Yüksek"/>
+                                    </ComboBox>
+                                    <TextBlock Text="Kayıt Konumu" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <TextBox Text="{Binding DownloadPath}" IsReadOnly="True" Style="{StaticResource ModernTextBox}" Padding="12"/>
+                                        <Button Grid.Column="1" Content="Değiştir" Click="ChangeDownloadPath_Click" Style="{StaticResource SecondaryButton}" Margin="12,0,0,0" Padding="16,0"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>
 
                 <!-- SUBTITLES TAB -->
-                <TabItem Style="{StaticResource SettingsTabItem}">
+                <TabItem Style="{StaticResource SettingsTabItem}" Visibility="Collapsed">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal">
                             <Path Data="{StaticResource IconSubtitles}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,8,0" SnapsToDevicePixels="True"/>
@@ -307,9 +354,9 @@
                                     
                                     <TextBlock Text="Varsayılan altyazı dili" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
                                     <ComboBox SelectedIndex="{Binding SelectedSubtitleLanguage}" Style="{StaticResource ModernComboBox}" Width="250" HorizontalAlignment="Left" Margin="0,0,0,24">
-                                        <ComboBoxItem Content="🇹🇷 Türkçe"/>
-                                        <ComboBoxItem Content="🇬🇧 İngilizce"/>
-                                        <ComboBoxItem Content="❌ Yok"/>
+                                        <ComboBoxItem Content="Türkçe"/>
+                                        <ComboBoxItem Content="İngilizce"/>
+                                        <ComboBoxItem Content="Yok"/>
                                     </ComboBox>
 
                                     <Grid Margin="0,0,0,16">
@@ -344,7 +391,7 @@
                 </TabItem>
 
                 <!-- DOWNLOADS TAB -->
-                <TabItem Style="{StaticResource SettingsTabItem}">
+                <TabItem Style="{StaticResource SettingsTabItem}" Visibility="Collapsed">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal">
                             <Path Data="{StaticResource IconDownloads}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,8,0"/>
@@ -376,9 +423,134 @@
                                     <Grid>
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                         <TextBox Text="{Binding DownloadPath}" IsReadOnly="True" Style="{StaticResource ModernTextBox}" Padding="12"/>
-                                        <Button Grid.Column="1" Content="📂 Değiştir" Click="ChangeDownloadPath_Click" 
+                                        <Button Grid.Column="1" Content="Değiştir" Click="ChangeDownloadPath_Click" 
                                                 Style="{StaticResource SecondaryButton}" Margin="12,0,0,0" Padding="16,0"/>
                                     </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <!-- CHANNEL LIST TAB -->
+                <TabItem Style="{StaticResource SettingsTabItem}">
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource IconPlayback}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,8,0"/>
+                            <TextBlock Text="Kanal Listesi" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,0,32">
+                        <StackPanel HorizontalAlignment="Stretch">
+                            <Border Style="{StaticResource SettingsCard}">
+                                <StackPanel>
+                                    <TextBlock Text="Kanal Listesi Yenileme" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
+                                    <TextBlock Text="Varsayılan olarak kanal listesi önbellekten yüklenir. Kaynaktan yeniden çekmek için aşağıdaki butonu kullanın."
+                                               TextWrapping="Wrap"
+                                               FontSize="13"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               Margin="0,0,0,12"/>
+
+                                    <Button Content="Şimdi Yenile"
+                                            Command="{Binding RefreshChannelListNowCommand}"
+                                            Style="{StaticResource PrimaryButtonStyle}"
+                                            HorizontalAlignment="Left"
+                                            Padding="20,10"
+                                            Margin="0,0,0,20"/>
+
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Son Yenileme" Foreground="{DynamicResource TextMutedBrush}"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding ChannelListLastUpdated, StringFormat={}{0:dd.MM.yyyy HH:mm}, TargetNullValue=-}"
+                                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                                   FontWeight="SemiBold"/>
+                                    </Grid>
+
+                                    <TextBlock Text="Yenileme Sıklığı" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                    <ComboBox SelectedValue="{Binding ChannelListRefreshFrequencyHours, Mode=TwoWay}"
+                                              SelectedValuePath="Tag"
+                                              Style="{StaticResource ModernComboBox}"
+                                              Width="260"
+                                              HorizontalAlignment="Left">
+                                        <ComboBoxItem Content="Kapalı (Sadece manuel)" Tag="0"/>
+                                        <ComboBoxItem Content="Her 1 saat" Tag="1"/>
+                                        <ComboBoxItem Content="Her 3 saat" Tag="3"/>
+                                        <ComboBoxItem Content="Her 6 saat" Tag="6"/>
+                                        <ComboBoxItem Content="Her 12 saat" Tag="12"/>
+                                        <ComboBoxItem Content="Her 24 saat" Tag="24"/>
+                                    </ComboBox>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
+                <!-- EPG TAB -->
+                <TabItem Style="{StaticResource SettingsTabItem}">
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource IconSubtitles}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" Width="18" Height="18" Stretch="Uniform" Margin="0,0,8,0"/>
+                            <TextBlock Text="EPG" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,0,32">
+                        <StackPanel HorizontalAlignment="Stretch">
+                            <Border Style="{StaticResource SettingsCard}">
+                                <StackPanel>
+                                    <TextBlock Text="EPG Yenileme" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
+
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Program Sayısı" Foreground="{DynamicResource TextMutedBrush}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding TotalEpgPrograms}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold"/>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Son Yenileme" Foreground="{DynamicResource TextMutedBrush}"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding LastEpgUpdate, StringFormat={}{0:dd.MM.yyyy HH:mm}, TargetNullValue=-}"
+                                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                                   FontWeight="SemiBold"/>
+                                    </Grid>
+
+                                    <Button Content="Şimdi Yenile"
+                                            Command="{Binding RefreshEpgNowCommand}"
+                                            Style="{StaticResource PrimaryButtonStyle}"
+                                            HorizontalAlignment="Left"
+                                            Padding="20,10"
+                                            Margin="0,0,0,20"/>
+
+                                    <TextBlock Text="Yenileme Sıklığı" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                    <ComboBox SelectedValue="{Binding EpgRefreshFrequencyHours, Mode=TwoWay}"
+                                              SelectedValuePath="Tag"
+                                              Style="{StaticResource ModernComboBox}"
+                                              Width="260"
+                                              HorizontalAlignment="Left"
+                                              Margin="0,0,0,20">
+                                        <ComboBoxItem Content="Kapalı (Sadece manuel)" Tag="0"/>
+                                        <ComboBoxItem Content="Her 1 saat" Tag="1"/>
+                                        <ComboBoxItem Content="Her 3 saat" Tag="3"/>
+                                        <ComboBoxItem Content="Her 6 saat" Tag="6"/>
+                                        <ComboBoxItem Content="Her 12 saat" Tag="12"/>
+                                        <ComboBoxItem Content="Her 24 saat" Tag="24"/>
+                                    </ComboBox>
+
+                                    <TextBlock Text="Özel EPG URL (Opsiyonel)" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                    <TextBox Text="{Binding CustomEpgUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource ModernTextBox}"
+                                             Padding="12"
+                                             helpers:TextBoxHelper.Watermark="https://.../epg.xml veya .xml.gz"/>
                                 </StackPanel>
                             </Border>
                         </StackPanel>
@@ -495,7 +667,7 @@
                                 <Grid>
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                     <Border Width="60" Height="60" Background="{DynamicResource PrimaryGradientBrush}" CornerRadius="12" Margin="0,0,20,0">
-                                        <TextBlock Text="📺" FontSize="32" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <TextBlock Text="TV" FontSize="32" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                         <TextBlock Text="IPTV Player Premium" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
@@ -508,7 +680,7 @@
                 </TabItem>
 
                 <!-- ADVANCED / ADMIN TAB -->
-                <TabItem Style="{StaticResource SettingsTabItem}">
+                <TabItem Style="{StaticResource SettingsTabItem}" Visibility="Collapsed">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal">
                             <Path Data="{StaticResource IconAppearance}" 
@@ -574,7 +746,7 @@
                     
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,20,0" FontWeight="SemiBold"/>
-                        <Button Content="💾 Ayarları Kaydet" Command="{Binding SaveSettingsCommand}" 
+                        <Button Content="Ayarları Kaydet" Command="{Binding SaveSettingsCommand}" 
                                 Style="{StaticResource PrimaryButtonStyle}" Padding="32,12" FontSize="15"/>
                     </StackPanel>
                 </Grid>
@@ -582,3 +754,9 @@
         </Grid>
     </Border>
 </Window>
+
+
+
+
+
+

@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using IPTVPlayer.Models;
 using IPTVPlayer.Data;
@@ -69,6 +69,15 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private string _appLanguage = "tr";
+
+    [ObservableProperty]
+    private int _channelListRefreshFrequencyHours;
+
+    [ObservableProperty]
+    private int _epgRefreshFrequencyHours;
+
+    [ObservableProperty]
+    private string _customEpgUrl = string.Empty;
 
     partial void OnIsDarkThemeChanged(bool value)
     {
@@ -152,6 +161,7 @@ public partial class SettingsViewModel : ObservableObject
         
         LoadSettings();
         LoadProfileInfo();
+        _ = ScanChannelListStatsAsync();
         _ = ScanEpgStatsAsync();
         _ = _mainViewModel.RefreshCurrentProfileExpirationAsync();
     }
@@ -173,7 +183,13 @@ public partial class SettingsViewModel : ObservableObject
                 }
             }
             LoadProfileInfo();
+            _ = ScanChannelListStatsAsync();
+            _ = ScanEpgStatsAsync();
             _ = _mainViewModel.RefreshCurrentProfileExpirationAsync();
+        }
+        else if (e.PropertyName == nameof(MainViewModel.SelectedPlaylist))
+        {
+            _ = ScanChannelListStatsAsync();
         }
     }
 
@@ -288,6 +304,9 @@ public partial class SettingsViewModel : ObservableObject
         // Appearance
         IsDarkTheme = s.IsDarkTheme;
         AppLanguage = string.IsNullOrWhiteSpace(s.Language) ? "tr" : s.Language;
+        ChannelListRefreshFrequencyHours = s.ChannelListRefreshFrequencyHours;
+        EpgRefreshFrequencyHours = s.EpgRefreshFrequencyHours;
+        CustomEpgUrl = s.CustomEpgUrl ?? string.Empty;
         
         // TMDB
         TmdbApiKey = s.TmdbApiKey ?? string.Empty;
@@ -324,6 +343,9 @@ public partial class SettingsViewModel : ObservableObject
         // Appearance
         s.IsDarkTheme = IsDarkTheme;
         s.Language = string.IsNullOrWhiteSpace(AppLanguage) ? "tr" : AppLanguage;
+        s.ChannelListRefreshFrequencyHours = Math.Max(0, ChannelListRefreshFrequencyHours);
+        s.EpgRefreshFrequencyHours = Math.Max(0, EpgRefreshFrequencyHours);
+        s.CustomEpgUrl = string.IsNullOrWhiteSpace(CustomEpgUrl) ? null : CustomEpgUrl.Trim();
         
         // TMDB
         s.TmdbApiKey = string.IsNullOrWhiteSpace(TmdbApiKey) ? null : TmdbApiKey;
@@ -363,6 +385,9 @@ public partial class SettingsViewModel : ObservableObject
     private int _totalEpgChannels;
 
     [ObservableProperty]
+    private DateTime? _channelListLastUpdated;
+
+    [ObservableProperty]
     private DateTime? _lastEpgUpdate;
 
     [ObservableProperty]
@@ -394,7 +419,7 @@ public partial class SettingsViewModel : ObservableObject
             
             if (!string.IsNullOrEmpty(EpgLastError))
             {
-                StatusMessage = "EPG Hatası bulundu (Gelişmiş sekmesine bakın)";
+                StatusMessage = "EPG hatası bulundu";
             }
             else
             {
@@ -407,7 +432,46 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
-        [RelayCommand]
+    [RelayCommand]
+    private async Task ScanChannelListStatsAsync()
+    {
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            if (_mainViewModel.SelectedPlaylist != null)
+            {
+                ChannelListLastUpdated = await db.Playlists
+                    .AsNoTracking()
+                    .Where(p => p.Id == _mainViewModel.SelectedPlaylist.Id)
+                    .Select(p => p.LastUpdated)
+                    .FirstOrDefaultAsync();
+                return;
+            }
+
+            var profileId = _mainViewModel.CurrentProfile?.Id;
+            if (profileId.HasValue)
+            {
+                ChannelListLastUpdated = await db.Playlists
+                    .AsNoTracking()
+                    .Where(p => p.IsActive && p.ProfileId == profileId.Value)
+                    .OrderByDescending(p => p.LastUpdated)
+                    .Select(p => p.LastUpdated)
+                    .FirstOrDefaultAsync();
+            }
+            else
+            {
+                ChannelListLastUpdated = null;
+            }
+        }
+        catch
+        {
+            ChannelListLastUpdated = null;
+        }
+    }
+
+    [RelayCommand]
     private Task ForceUpdateEpgAsync()
     {
         if (IsEpgLoading)
@@ -441,6 +505,38 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task RefreshChannelListNowAsync()
+    {
+        try
+        {
+            StatusMessage = "Kanal listesi yenileniyor...";
+            await _mainViewModel.RefreshSelectedPlaylistAsync();
+            await ScanChannelListStatsAsync();
+            StatusMessage = "Kanal listesi yenileme tamamlandı";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Kanal listesi yenileme hatası: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task RefreshEpgNowAsync()
+    {
+        try
+        {
+            StatusMessage = "EPG yenileniyor...";
+            await _mainViewModel.ForceRefreshEpgAsync();
+            await ScanEpgStatsAsync();
+            StatusMessage = "EPG yenileme tamamlandı";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"EPG yenileme hatası: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
     private void ToggleTheme()
     {
         IsDarkTheme = !IsDarkTheme;
@@ -455,3 +551,6 @@ public partial class SettingsViewModel : ObservableObject
         StatusMessage = "Ayarlar varsayılana sıfırlandı";
     }
 }
+
+
+
