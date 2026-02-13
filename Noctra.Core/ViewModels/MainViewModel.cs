@@ -640,6 +640,38 @@ public partial class MainViewModel : ObservableObject
                 onlyFavorites: ShowOnlyFavorites,
                 sortOrder: SelectedSortOrder);
 
+            // If selected group returns nothing on first page, fallback to "all" to avoid false empty UI.
+            if (_currentPage == 0 &&
+                page.Count == 0 &&
+                !hasSearch &&
+                !string.IsNullOrWhiteSpace(effectiveGroup))
+            {
+                var fallbackPage = await playlistService.GetChannelsFilteredPageAsync(
+                    SelectedPlaylist.Id,
+                    skip: 0,
+                    take: IncrementalPageSize,
+                    searchText: SearchText,
+                    group: null,
+                    type: effectiveType,
+                    onlyFavorites: ShowOnlyFavorites,
+                    sortOrder: SelectedSortOrder);
+
+                if (fallbackPage.Count > 0)
+                {
+                    _suppressFilterRefresh = true;
+                    try
+                    {
+                        SelectedGroup = null;
+                    }
+                    finally
+                    {
+                        _suppressFilterRefresh = false;
+                    }
+
+                    page = fallbackPage;
+                }
+            }
+
             if (cancellationToken.IsCancellationRequested)
             {
                 return;
@@ -856,10 +888,18 @@ public partial class MainViewModel : ObservableObject
             }
         }
 
-        if (SelectedChannelType == ChannelType.Live)
+        if (SelectedChannelType.HasValue)
         {
             EnsurePreferredDefaultGroupSelected();
         }
+    }
+
+    private void ReorderGroupCachesFromLanguagePreference()
+    {
+        _allGroupsCache = OrderGroupsByLanguagePreference(_allGroupsCache);
+        _liveGroupsCache = OrderGroupsByLanguagePreference(_liveGroupsCache);
+        _vodGroupsCache = OrderGroupsByLanguagePreference(_vodGroupsCache);
+        _seriesGroupsCache = OrderGroupsByLanguagePreference(_seriesGroupsCache);
     }
 
     private static bool IsCountryPreferredGroup(string group, string countryCode)
@@ -1431,6 +1471,9 @@ public partial class MainViewModel : ObservableObject
     {
         EnsureEpgBackgroundSync();
         EnsureChannelBackgroundRefresh();
+        ReorderGroupCachesFromLanguagePreference();
+        UpdateGroupsForSelectedType();
+        ScheduleImmediateFilter();
     }
 
     [ObservableProperty]
@@ -1451,6 +1494,21 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private List<Channel> _searchVodChannels = new();
+
+    [ObservableProperty]
+    private string _searchSuggestion = string.Empty;
+
+    [ObservableProperty]
+    private List<Channel> _searchSimilarLiveChannels = new();
+
+    [ObservableProperty]
+    private List<Series> _searchSimilarSeriesChannels = new();
+
+    [ObservableProperty]
+    private List<Channel> _searchSimilarVodChannels = new();
+
+    [ObservableProperty]
+    private bool _showSearchSimilarSection;
 
     [ObservableProperty]
     private bool _showSearchEmptyState;
@@ -1595,6 +1653,11 @@ public partial class MainViewModel : ObservableObject
             SearchLiveChannels = new List<Channel>();
             SearchSeriesChannels = new List<Series>();
             SearchVodChannels = new List<Channel>();
+            SearchSuggestion = string.Empty;
+            SearchSimilarLiveChannels = new List<Channel>();
+            SearchSimilarSeriesChannels = new List<Series>();
+            SearchSimilarVodChannels = new List<Channel>();
+            ShowSearchSimilarSection = false;
             ShowSearchEmptyState = false;
             return;
         }
@@ -1617,9 +1680,196 @@ public partial class MainViewModel : ObservableObject
             .Where(c => c.Type == ChannelType.VOD)
             .ToList();
 
-        ShowSearchEmptyState = SearchLiveChannels.Count == 0
-            && SearchSeriesChannels.Count == 0
-            && SearchVodChannels.Count == 0;
+        var hasAnyExact = SearchLiveChannels.Count > 0
+            || SearchSeriesChannels.Count > 0
+            || SearchVodChannels.Count > 0;
+
+        UpdateSearchSuggestionAndSimilar(rawQuery, seriesSnapshot);
+
+        ShowSearchEmptyState = !hasAnyExact && !ShowSearchSimilarSection;
+    }
+
+    private void UpdateSearchSuggestionAndSimilar(string rawQuery, List<Series> seriesSnapshot)
+    {
+        var normalizedQuery = NormalizeFuzzyText(rawQuery);
+        if (string.IsNullOrWhiteSpace(normalizedQuery))
+        {
+            SearchSuggestion = string.Empty;
+            SearchSimilarLiveChannels = new List<Channel>();
+            SearchSimilarSeriesChannels = new List<Series>();
+            SearchSimilarVodChannels = new List<Channel>();
+            ShowSearchSimilarSection = false;
+            return;
+        }
+
+        var candidateNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var channel in Channels)
+        {
+            if (!string.IsNullOrWhiteSpace(channel.Name))
+            {
+                candidateNames.Add(channel.Name);
+            }
+        }
+
+        foreach (var series in seriesSnapshot)
+        {
+            if (!string.IsNullOrWhiteSpace(series.Name))
+            {
+                candidateNames.Add(series.Name);
+            }
+        }
+
+        SearchSuggestion = ComputeBestSuggestion(rawQuery, candidateNames);
+
+        var similarLive = Channels
+            .Where(c => c.Type == ChannelType.Live)
+            .Where(c => IsLikelySimilar(rawQuery, c.Name))
+            .Where(c => !SearchLiveChannels.Any(x => x.Id == c.Id))
+            .Take(12)
+            .ToList();
+
+        var similarSeries = seriesSnapshot
+            .Where(s => IsLikelySimilar(rawQuery, s.Name))
+            .Where(s => !SearchSeriesChannels.Any(x => x.Id == s.Id))
+            .Take(12)
+            .ToList();
+
+        var similarVod = Channels
+            .Where(c => c.Type == ChannelType.VOD)
+            .Where(c => IsLikelySimilar(rawQuery, c.Name))
+            .Where(c => !SearchVodChannels.Any(x => x.Id == c.Id))
+            .Take(12)
+            .ToList();
+
+        SearchSimilarLiveChannels = similarLive;
+        SearchSimilarSeriesChannels = similarSeries;
+        SearchSimilarVodChannels = similarVod;
+        ShowSearchSimilarSection = similarLive.Count > 0 || similarSeries.Count > 0 || similarVod.Count > 0;
+    }
+
+    private static string ComputeBestSuggestion(string query, IEnumerable<string> candidates)
+    {
+        var normalizedQuery = NormalizeFuzzyText(query);
+        if (string.IsNullOrWhiteSpace(normalizedQuery))
+        {
+            return string.Empty;
+        }
+
+        string best = string.Empty;
+        var bestDistance = int.MaxValue;
+
+        foreach (var candidate in candidates)
+        {
+            if (string.IsNullOrWhiteSpace(candidate))
+            {
+                continue;
+            }
+
+            var normalizedCandidate = NormalizeFuzzyText(candidate);
+            if (string.IsNullOrWhiteSpace(normalizedCandidate) || normalizedCandidate == normalizedQuery)
+            {
+                continue;
+            }
+
+            var maxDistance = GetDistanceThreshold(Math.Max(normalizedQuery.Length, normalizedCandidate.Length));
+            var distance = LevenshteinDistance(normalizedQuery, normalizedCandidate, maxDistance);
+            if (distance < 0 || distance >= bestDistance)
+            {
+                continue;
+            }
+
+            bestDistance = distance;
+            best = candidate;
+        }
+
+        return bestDistance == int.MaxValue ? string.Empty : best;
+    }
+
+    private static bool IsLikelySimilar(string query, string? candidate)
+    {
+        var normalizedQuery = NormalizeFuzzyText(query);
+        var normalizedCandidate = NormalizeFuzzyText(candidate);
+        if (string.IsNullOrWhiteSpace(normalizedQuery) || string.IsNullOrWhiteSpace(normalizedCandidate))
+        {
+            return false;
+        }
+
+        if (normalizedCandidate.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase) ||
+            normalizedQuery.Contains(normalizedCandidate, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var maxDistance = GetDistanceThreshold(Math.Max(normalizedQuery.Length, normalizedCandidate.Length));
+        return LevenshteinDistance(normalizedQuery, normalizedCandidate, maxDistance) >= 0;
+    }
+
+    private static int GetDistanceThreshold(int length)
+    {
+        if (length <= 5) return 1;
+        if (length <= 10) return 2;
+        if (length <= 16) return 3;
+        return 4;
+    }
+
+    private static string NormalizeFuzzyText(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = value.Trim().ToLowerInvariant();
+        normalized = Regex.Replace(normalized, @"[^\p{L}\p{Nd}\s]", " ");
+        normalized = Regex.Replace(normalized, @"\s+", " ").Trim();
+        return normalized;
+    }
+
+    private static int LevenshteinDistance(string source, string target, int maxDistance)
+    {
+        if (source == target)
+        {
+            return 0;
+        }
+
+        if (Math.Abs(source.Length - target.Length) > maxDistance)
+        {
+            return -1;
+        }
+
+        var previous = new int[target.Length + 1];
+        var current = new int[target.Length + 1];
+        for (var j = 0; j <= target.Length; j++)
+        {
+            previous[j] = j;
+        }
+
+        for (var i = 1; i <= source.Length; i++)
+        {
+            current[0] = i;
+            var rowMin = current[0];
+
+            for (var j = 1; j <= target.Length; j++)
+            {
+                var cost = source[i - 1] == target[j - 1] ? 0 : 1;
+                current[j] = Math.Min(
+                    Math.Min(current[j - 1] + 1, previous[j] + 1),
+                    previous[j - 1] + cost);
+                if (current[j] < rowMin)
+                {
+                    rowMin = current[j];
+                }
+            }
+
+            if (rowMin > maxDistance)
+            {
+                return -1;
+            }
+
+            (previous, current) = (current, previous);
+        }
+
+        return previous[target.Length] <= maxDistance ? previous[target.Length] : -1;
     }
 
     private void UpdateSeriesViewItems()
@@ -1693,6 +1943,18 @@ public partial class MainViewModel : ObservableObject
             Navigate(AppView.Search);
             CloseSearch();
         }
+    }
+
+    [RelayCommand]
+    private void ApplySearchSuggestion()
+    {
+        if (string.IsNullOrWhiteSpace(SearchSuggestion))
+        {
+            return;
+        }
+
+        SearchText = SearchSuggestion;
+        Navigate(AppView.Search);
     }
 
     [RelayCommand]

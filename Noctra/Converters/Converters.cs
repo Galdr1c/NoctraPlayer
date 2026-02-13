@@ -93,8 +93,13 @@ public class CountToVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        if (value is int count) return count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        return Visibility.Collapsed;
+        var isVisible = value is int count && count > 0;
+        if (string.Equals(parameter?.ToString(), "invert", StringComparison.OrdinalIgnoreCase))
+        {
+            isVisible = !isVisible;
+        }
+
+        return isVisible ? Visibility.Visible : Visibility.Collapsed;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();

@@ -335,7 +335,7 @@ public class PlaylistService : IPlaylistService
     {
         return await _context.Channels
             .Where(c => c.PlaylistId == playlistId && c.GroupTitle != null)
-            .Select(c => c.GroupTitle!)
+            .Select(c => c.GroupTitle!.Trim())
             .Distinct()
             .OrderBy(g => g)
             .ToListAsync();
@@ -345,7 +345,7 @@ public class PlaylistService : IPlaylistService
     {
         return await _context.Channels
             .Where(c => c.PlaylistId == playlistId && c.Type == type && c.GroupTitle != null)
-            .Select(c => c.GroupTitle!)
+            .Select(c => c.GroupTitle!.Trim())
             .Distinct()
             .OrderBy(g => g)
             .ToListAsync();
@@ -385,7 +385,10 @@ public class PlaylistService : IPlaylistService
 
         if (!string.IsNullOrEmpty(group))
         {
-            query = query.Where(c => c.GroupTitle == group);
+            var normalizedGroup = group.Trim();
+            query = query.Where(c =>
+                c.GroupTitle != null &&
+                (c.GroupTitle == normalizedGroup || c.GroupTitle.Trim() == normalizedGroup));
         }
 
         if (type.HasValue)

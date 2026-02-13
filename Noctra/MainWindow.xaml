@@ -957,6 +957,24 @@
                         <StackPanel Margin="24">
                             <TextBlock Text="Arama Sonuçları" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
 
+                            <Border Margin="0,0,0,20"
+                                    Padding="12,10"
+                                    Background="{DynamicResource Surface0Brush}"
+                                    CornerRadius="{StaticResource RadiusSmall}"
+                                    Visibility="{Binding SearchSuggestion, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="Bunu mu demek istediniz?" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+                                    <Button Content="{Binding SearchSuggestion}"
+                                            Margin="10,0,0,0"
+                                            Padding="10,4"
+                                            Command="{Binding ApplySearchSuggestionCommand}"
+                                            Background="{DynamicResource Surface1Brush}"
+                                            Foreground="{DynamicResource TextPrimaryBrush}"
+                                            BorderThickness="0"
+                                            Cursor="Hand"/>
+                                </StackPanel>
+                            </Border>
+
                             <StackPanel Margin="0,0,0,24"
                                         Visibility="{Binding SearchLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
                                 <TextBlock Text="Canlı TV" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
@@ -998,6 +1016,53 @@
                                         Visibility="{Binding SearchVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
                                 <TextBlock Text="VOD" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
                                 <ListBox ItemsSource="{Binding SearchVodChannels}" Style="{StaticResource GridListBoxStyle}"/>
+                            </StackPanel>
+
+                            <StackPanel Margin="0,8,0,24"
+                                        Visibility="{Binding ShowSearchSimilarSection, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock Text="Yakın Sonuçlar" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+
+                                <StackPanel Margin="0,0,0,20"
+                                            Visibility="{Binding SearchSimilarLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                                    <TextBlock Text="Canlı TV" FontSize="16" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                                    <ListBox ItemsSource="{Binding SearchSimilarLiveChannels}" Style="{StaticResource GridListBoxStyle}"/>
+                                </StackPanel>
+
+                                <StackPanel Margin="0,0,0,20"
+                                            Visibility="{Binding SearchSimilarSeriesChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                                    <TextBlock Text="Dizi" FontSize="16" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                                    <ListBox ItemsSource="{Binding SearchSimilarSeriesChannels}" Style="{StaticResource GridListBoxStyle}">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border x:Name="Card" Margin="0,0,16,16" Background="{DynamicResource Surface0Brush}" 
+                                                        CornerRadius="{StaticResource RadiusMedium}" Cursor="Hand">
+                                                    <Border.InputBindings>
+                                                        <MouseBinding MouseAction="LeftClick"
+                                                                      Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                                      CommandParameter="{Binding}"/>
+                                                    </Border.InputBindings>
+                                                    <StackPanel Margin="12">
+                                                        <Border Height="100" Background="{StaticResource IconGradientBrush}" CornerRadius="{StaticResource RadiusSmall}" Margin="0,0,0,12">
+                                                            <Image Width="60" Stretch="Uniform"
+                                                                   cache:CachedImage.SourceUrl="{Binding CoverUrl}"
+                                                                   cache:CachedImage.DecodePixelWidth="120"
+                                                                   cache:CachedImage.PlaceholderSource="{StaticResource DefaultRemoteImagePlaceholder}"/>
+                                                        </Border>
+                                                        <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Text="{Binding SeasonCountSafe, StringFormat='Sezon: {0}'}"
+                                                                   Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center" Margin="0,4,0,0"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </StackPanel>
+
+                                <StackPanel Margin="0,0,0,8"
+                                            Visibility="{Binding SearchSimilarVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                                    <TextBlock Text="VOD" FontSize="16" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                                    <ListBox ItemsSource="{Binding SearchSimilarVodChannels}" Style="{StaticResource GridListBoxStyle}"/>
+                                </StackPanel>
                             </StackPanel>
 
                             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,100,0,0"
