@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using Noctra.Models;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
+using System.Text.RegularExpressions;
 
 namespace Noctra.ViewModels;
 
@@ -11,6 +12,8 @@ namespace Noctra.ViewModels;
 /// </summary>
 public partial class PlayerViewModel : ObservableObject
 {
+    public sealed record TrackOption(int Id, string Name);
+
     private readonly IVideoPlayerService _videoPlayerService;
     private readonly IEpgService _epgService;
     private readonly IMetadataService _metadataService;
@@ -106,10 +109,10 @@ public partial class PlayerViewModel : ObservableObject
     private bool _showControls = true;
 
     [ObservableProperty]
-    private List<(int Id, string? Name)> _audioTracks = new();
+    private List<TrackOption> _audioTracks = new();
 
     [ObservableProperty]
-    private List<(int Id, string? Name)> _subtitleTracks = new();
+    private List<TrackOption> _subtitleTracks = new();
 
     [ObservableProperty]
     private int _selectedAudioTrack = -1;
@@ -221,6 +224,7 @@ public partial class PlayerViewModel : ObservableObject
                 {
                     IsBuffering = false;
                     UpdateMediaInfo();
+                    _ = RefreshTracksWithRetryAsync();
                     RestartAutoHideTimer(); // Ensure controls stay visible for a few seconds after playback starts
                 }
             });
@@ -709,7 +713,12 @@ public partial class PlayerViewModel : ObservableObject
     private void OpenAudioSettings()
     {
         IsAudioSettingsOpen = !IsAudioSettingsOpen;
-        if (IsAudioSettingsOpen) IsLocked = true;
+        if (IsAudioSettingsOpen)
+        {
+            IsLocked = true;
+            UpdateMediaInfo();
+            _ = RefreshTracksWithRetryAsync();
+        }
     }
 
     [RelayCommand]
@@ -741,9 +750,120 @@ public partial class PlayerViewModel : ObservableObject
         Duration = _videoPlayerService.Duration;
         DurationText = TimeSpan.FromSeconds(Duration).ToString(@"hh\:mm\:ss");
         TryApplyPendingResumeSeek();
-        
-        AudioTracks = _videoPlayerService.AudioTracks.ToList();
-        SubtitleTracks = _videoPlayerService.SubtitleTracks.ToList();
+
+        AudioTracks = _videoPlayerService.AudioTracks
+            .Where(t => t.Id >= 0 && !IsDisabledTrackLabel(t.Name))
+            .Select(t => new TrackOption(t.Id, NormalizeTrackName(t.Name, $"Ses {t.Id}")))
+            .ToList();
+
+        SubtitleTracks = _videoPlayerService.SubtitleTracks
+            .Select(t => IsDisabledTrackLabel(t.Name)
+                ? new TrackOption(t.Id, "Kapalı")
+                : new TrackOption(t.Id, NormalizeTrackName(t.Name, $"Altyazı {t.Id}")))
+            .ToList();
+
+        if (!SubtitleTracks.Any(t => string.Equals(t.Name, "Kapalı", StringComparison.OrdinalIgnoreCase)))
+        {
+            SubtitleTracks.Add(new TrackOption(-1, "Kapalı"));
+        }
+    }
+
+    private static bool IsDisabledTrackLabel(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return false;
+        }
+
+        var value = name.Trim();
+        return string.Equals(value, "Disable", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(value, "Disabled", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(value, "Devre Dışı", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(value, "Off", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(value, "None", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(value, "Kapalı", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeTrackName(string? rawName, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(rawName))
+        {
+            return fallback;
+        }
+
+        var name = rawName.Trim();
+        name = Regex.Replace(
+            name,
+            @"^\s*track\s*\d+\s*([:\-\)\.]|\s)\s*",
+            string.Empty,
+            RegexOptions.IgnoreCase);
+
+        if (Regex.IsMatch(name, @"^\s*track\s*\d+\s*$", RegexOptions.IgnoreCase))
+        {
+            return fallback;
+        }
+
+        // Remove bracket characters while keeping inner text: [English] -> English
+        name = name.Replace("[", string.Empty).Replace("]", string.Empty);
+        name = Regex.Replace(name, @"\s+", " ").Trim();
+        name = CollapseDuplicateLabelParts(name);
+
+        return string.IsNullOrWhiteSpace(name) ? fallback : name;
+    }
+
+    private static string CollapseDuplicateLabelParts(string value)
+    {
+        var parts = value
+            .Split(" - ", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .ToList();
+
+        if (parts.Count <= 1)
+        {
+            return value;
+        }
+
+        static string Key(string text) => Regex.Replace(text, @"[\W_]+", string.Empty).ToLowerInvariant();
+
+        var unique = new List<string>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var part in parts)
+        {
+            var key = Key(part);
+            if (string.IsNullOrWhiteSpace(key) || !seen.Add(key))
+            {
+                continue;
+            }
+
+            unique.Add(part);
+        }
+
+        if (unique.Count == 0)
+        {
+            return value;
+        }
+
+        return string.Join(" - ", unique);
+    }
+
+    private async Task RefreshTracksWithRetryAsync()
+    {
+        // Some streams expose track metadata shortly after playback starts.
+        var delays = new[] { 250, 800, 1600 };
+        foreach (var delay in delays)
+        {
+            await Task.Delay(delay);
+            if (!IsPlaying || CurrentChannel == null)
+            {
+                return;
+            }
+
+            _dispatcherService.Invoke(UpdateMediaInfo);
+
+            if (AudioTracks.Count > 0 || SubtitleTracks.Count > 0)
+            {
+                return;
+            }
+        }
     }
 
     [RelayCommand]
@@ -1238,14 +1358,12 @@ public partial class PlayerViewModel : ObservableObject
 
     partial void OnSelectedAudioTrackChanged(int value)
     {
-        if (value >= 0)
-            _videoPlayerService.SetAudioTrack(value);
+        // Applied directly in SetAudioTrack command.
     }
 
     partial void OnSelectedSubtitleTrackChanged(int value)
     {
-        if (value >= 0)
-            _videoPlayerService.SetSubtitleTrack(value);
+        // Applied directly in SetSubtitleTrack command.
     }
 
     [RelayCommand]
@@ -1258,16 +1376,16 @@ public partial class PlayerViewModel : ObservableObject
     [RelayCommand]
     private void SetAudioTrack(int id)
     {
+        _videoPlayerService.SetAudioTrack(id);
         SelectedAudioTrack = id;
-        // _videoPlayerService.SetAudioTrack(id); // Handled by OnSelectedAudioTrackChanged
         RestartAutoHideTimer();
     }
 
     [RelayCommand]
     private void SetSubtitleTrack(int id)
     {
+        _videoPlayerService.SetSubtitleTrack(id);
         SelectedSubtitleTrack = id;
-        // _videoPlayerService.SetSubtitleTrack(id); // Handled by OnSelectedSubtitleTrackChanged
         RestartAutoHideTimer();
     }
 
@@ -1290,5 +1408,6 @@ public partial class PlayerViewModel : ObservableObject
     [RelayCommand]
     private void UserInteraction() => RestartAutoHideTimer();
 }
+
 
 

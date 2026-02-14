@@ -346,8 +346,24 @@ public class VideoPlayerService : IVideoPlayerService
 
     public void SetSubtitleTrack(int trackId)
     {
-        if (_mediaPlayer != null)
+        if (_mediaPlayer == null)
+        {
+            return;
+        }
+
+        if (trackId >= 0)
+        {
             _mediaPlayer.SetSpu(trackId);
+            return;
+        }
+
+        // Disable subtitle for streams that require explicit OFF track ids.
+        // Try common LibVLC OFF id first, then fallback to 0 when needed.
+        _mediaPlayer.SetSpu(-1);
+        if (_mediaPlayer.Spu != -1)
+        {
+            _mediaPlayer.SetSpu(0);
+        }
     }
 
     private void StartQualityMonitoring()

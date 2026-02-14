@@ -25,8 +25,31 @@ public partial class MainWindow : Window
     private readonly IServiceScopeFactory _scopeFactory;
     private bool _isDarkTheme = true;
     private bool _isWindowClosed;
+    private int _playLaunchVersion;
     private WindowState _windowStateBeforeFullScreen = WindowState.Normal;
     private ResizeMode _resizeModeBeforeFullScreen = ResizeMode.CanResize;
+    private Rect _windowRectBeforeFullScreen;
+
+    // Win32 interop for true fullscreen (covers taskbar)
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+    private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MonitorInfoEx lpmi);
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct WinRect { public int Left, Top, Right, Bottom; }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential, CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+    private struct MonitorInfoEx
+    {
+        public int cbSize;
+        public WinRect rcMonitor;
+        public WinRect rcWork;
+        public uint dwFlags;
+    }
+
+    private const uint MONITOR_DEFAULTTONEAREST = 2;
 
     public MainWindow(MainViewModel viewModel, PlayerViewModel playerViewModel, 
                       IVideoPlayerService videoPlayerService,
@@ -92,14 +115,39 @@ public partial class MainWindow : Window
                 {
                     _windowStateBeforeFullScreen = WindowState;
                     _resizeModeBeforeFullScreen = ResizeMode;
+                    _windowRectBeforeFullScreen = new Rect(Left, Top, Width, Height);
+
+                    // Get the monitor this window is on
+                    var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+                    var monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+                    var info = new MonitorInfoEx { cbSize = System.Runtime.InteropServices.Marshal.SizeOf<MonitorInfoEx>() };
+                    GetMonitorInfo(monitor, ref info);
+
+                    // Convert pixel bounds to WPF DIP units
+                    var source = PresentationSource.FromVisual(this);
+                    double dpiScaleX = source?.CompositionTarget?.TransformFromDevice.M11 ?? 1.0;
+                    double dpiScaleY = source?.CompositionTarget?.TransformFromDevice.M22 ?? 1.0;
+
+                    // Go Normal first, set style, then manually position to full monitor bounds
+                    WindowState = WindowState.Normal;
                     WindowStyle = WindowStyle.None;
-                    WindowState = WindowState.Maximized;
                     ResizeMode = ResizeMode.NoResize;
+
+                    Left = info.rcMonitor.Left * dpiScaleX;
+                    Top = info.rcMonitor.Top * dpiScaleY;
+                    Width = (info.rcMonitor.Right - info.rcMonitor.Left) * dpiScaleX;
+                    Height = (info.rcMonitor.Bottom - info.rcMonitor.Top) * dpiScaleY;
                 }
                 else
                 {
                     WindowStyle = WindowStyle.SingleBorderWindow;
                     ResizeMode = _resizeModeBeforeFullScreen;
+
+                    // Restore saved window position
+                    Left = _windowRectBeforeFullScreen.Left;
+                    Top = _windowRectBeforeFullScreen.Top;
+                    Width = _windowRectBeforeFullScreen.Width;
+                    Height = _windowRectBeforeFullScreen.Height;
                     WindowState = _windowStateBeforeFullScreen;
                 }
 
@@ -177,6 +225,11 @@ public partial class MainWindow : Window
             if (_playerViewModel.IsAudioSettingsOpen || _playerViewModel.IsQualitySettingsOpen)
             {
                 _playerViewModel.ClosePanelsCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (PlayerArea.Visibility == Visibility.Visible && _playerViewModel.IsFullScreen)
+            {
+                _playerViewModel.IsFullScreen = false;
                 e.Handled = true;
             }
             else if (PlayerArea.Visibility == Visibility.Visible)
@@ -277,6 +330,7 @@ public partial class MainWindow : Window
     {
         try
         {
+            Interlocked.Increment(ref _playLaunchVersion);
             try { System.IO.File.AppendAllText(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_log.txt"), $"[{DateTime.Now}] ExitPlayerMode called.\n"); } catch { }
 
             // 1. Hide Player Area FIRST to stop rendering logic in VideoView
@@ -325,6 +379,13 @@ public partial class MainWindow : Window
 
     private void PlayChannel(Channel channel)
     {
+        _ = StartChannelPlaybackAsync(channel);
+    }
+
+    private async Task StartChannelPlaybackAsync(Channel channel)
+    {
+        var launchVersion = Interlocked.Increment(ref _playLaunchVersion);
+
         try
         {
             // Sync profile ID for watch history
@@ -341,18 +402,59 @@ public partial class MainWindow : Window
             {
                 _playerViewModel.SetCurrentEpisode(null, null);
             }
-            
-            // Start Playback via ViewModel
-            _ = _playerViewModel.PlayChannelAsync(channel);
-            
-            // Enter Full Window Mode
+
+            // Close hover previews before main playback to avoid renderer/contention issues.
+            _hoverPreviewService.StopPreview();
+
+            // Enter Full Window Mode first and ensure VideoView is attached.
             EnterPlayerMode();
+            if (VideoView.MediaPlayer == null)
+            {
+                VideoView.MediaPlayer = _videoPlayerService.GetMediaPlayer();
+            }
+
+            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+
+            await _playerViewModel.PlayChannelAsync(channel);
+
+            // If playback still did not start, do one safe retry.
+            var started = await WaitForPlaybackStartAsync(launchVersion, TimeSpan.FromSeconds(10));
+            if (!started && launchVersion == _playLaunchVersion)
+            {
+                _playerViewModel.StopCommand.Execute(null);
+                await Task.Delay(150);
+                await _playerViewModel.PlayChannelAsync(channel);
+            }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"PlayChannel error: {ex}");
-            MessageBox.Show($"Video oynatılamadı: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Warning);
+            if (launchVersion == _playLaunchVersion)
+            {
+                MessageBox.Show($"Video oynatılamadı: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
+    }
+
+    private async Task<bool> WaitForPlaybackStartAsync(int launchVersion, TimeSpan timeout)
+    {
+        var start = DateTime.UtcNow;
+        while (DateTime.UtcNow - start < timeout)
+        {
+            if (launchVersion != _playLaunchVersion)
+            {
+                return false;
+            }
+
+            if (_playerViewModel.IsPlaying || _videoPlayerService.IsPlaying)
+            {
+                return true;
+            }
+
+            await Task.Delay(150);
+        }
+
+        return _playerViewModel.IsPlaying || _videoPlayerService.IsPlaying;
     }
 
     private void ShowMainContent()
@@ -678,7 +780,12 @@ public partial class MainWindow : Window
             }
         }
 
-        base.OnKeyDown(e);
+        // Player shortcuts only work while the full player view is open.
+        if (PlayerArea.Visibility != Visibility.Visible)
+        {
+            base.OnKeyDown(e);
+            return;
+        }
 
         // Keyboard shortcuts
         bool isLive = _playerViewModel.IsLiveContent;
@@ -728,6 +835,11 @@ public partial class MainWindow : Window
                     e.Handled = true;
                 }
                 break;
+        }
+
+        if (!e.Handled)
+        {
+            base.OnKeyDown(e);
         }
     }
 }
