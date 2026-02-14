@@ -17,6 +17,7 @@ public partial class PlayerViewModel : ObservableObject
     private readonly IVideoPlayerService _videoPlayerService;
     private readonly IEpgService _epgService;
     private readonly IMetadataService _metadataService;
+    private readonly IIntroDetectionService _introDetectionService;
     private int _playRequestVersion;
 
     [ObservableProperty]
@@ -164,6 +165,8 @@ public partial class PlayerViewModel : ObservableObject
     private DateTime _liveRecoveryWindowStartUtc = DateTime.MinValue;
     private int _liveRecoveryAttemptsInWindow;
     private int _liveStallScore;
+    private double? _resolvedIntroStartSec;
+    private double? _resolvedIntroEndSec;
 
     private readonly IDispatcherService _dispatcherService;
     private readonly IWatchHistoryService? _watchHistoryService;
@@ -178,12 +181,14 @@ public partial class PlayerViewModel : ObservableObject
         IVideoPlayerService videoPlayerService,
         IEpgService epgService,
         IMetadataService metadataService,
+        IIntroDetectionService introDetectionService,
         IDispatcherService dispatcherService,
         IWatchHistoryService? watchHistoryService = null)
     {
         _videoPlayerService = videoPlayerService;
         _epgService = epgService;
         _metadataService = metadataService;
+        _introDetectionService = introDetectionService;
         _dispatcherService = dispatcherService;
         _watchHistoryService = watchHistoryService;
 
@@ -1193,11 +1198,12 @@ public partial class PlayerViewModel : ObservableObject
     private void SkipIntro()
     {
         if (IsLiveContent) return;
-        
-        if (_currentEpisode?.IntroEndSec != null)
+
+        var introEndSec = _resolvedIntroEndSec ?? _currentEpisode?.IntroEndSec;
+        if (introEndSec != null)
         {
             // Jump to intro end timestamp
-            var newPos = Math.Min(_currentEpisode.IntroEndSec.Value, Duration);
+            var newPos = Math.Min(introEndSec.Value, Duration);
             _videoPlayerService.Position = newPos;
         }
         else
@@ -1217,12 +1223,19 @@ public partial class PlayerViewModel : ObservableObject
     public void SetCurrentEpisode(Episode? episode, Episode? nextEpisode = null)
     {
         _currentEpisode = episode;
+        _resolvedIntroStartSec = null;
+        _resolvedIntroEndSec = null;
         NextEpisode = nextEpisode;
         _introSkipped = false;
         _creditsTriggered = false;
         IsIntroDetected = false;
         IsCreditsZone = false;
         IsNextEpisodePromptVisible = false;
+
+        if (episode != null)
+        {
+            _ = ResolveIntroWindowForCurrentEpisodeAsync(episode);
+        }
     }
 
     /// <summary>
@@ -1232,10 +1245,13 @@ public partial class PlayerViewModel : ObservableObject
     {
         if (_currentEpisode == null || IsLiveContent) return;
 
+        var introStartSec = _resolvedIntroStartSec ?? _currentEpisode.IntroStartSec;
+        var introEndSec = _resolvedIntroEndSec ?? _currentEpisode.IntroEndSec;
+
         // ── INTRO DETECTION ──
-        if (!_introSkipped && _currentEpisode.IntroStartSec != null && _currentEpisode.IntroEndSec != null)
+        if (!_introSkipped && introStartSec != null && introEndSec != null && introEndSec > introStartSec)
         {
-            var inIntro = pos >= _currentEpisode.IntroStartSec.Value && pos < _currentEpisode.IntroEndSec.Value;
+            var inIntro = pos >= introStartSec.Value && pos < introEndSec.Value;
             
             if (inIntro && !IsIntroDetected)
             {
@@ -1274,6 +1290,25 @@ public partial class PlayerViewModel : ObservableObject
                     }
                 }
             }
+        }
+    }
+
+    private async Task ResolveIntroWindowForCurrentEpisodeAsync(Episode episode)
+    {
+        try
+        {
+            var resolved = await _introDetectionService.ResolveIntroWindowAsync(episode);
+            if (resolved == null || _currentEpisode == null || _currentEpisode.Id != episode.Id)
+            {
+                return;
+            }
+
+            _resolvedIntroStartSec = resolved.Value.StartSec;
+            _resolvedIntroEndSec = resolved.Value.EndSec;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PlayerViewModel] Intro resolve failed: {ex.Message}");
         }
     }
 
