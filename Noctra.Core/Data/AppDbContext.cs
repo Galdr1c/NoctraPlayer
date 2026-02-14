@@ -42,6 +42,7 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.DetectedCountry).HasMaxLength(10);
             entity.HasMany(e => e.Channels)
                   .WithOne(e => e.Playlist)
                   .HasForeignKey(e => e.PlaylistId)

@@ -19,9 +19,8 @@
    ├─> EPG kaynakları bul (öncelik sırasıyla)
    │   ├─> 1. Provider EPG (Xtream/Stalker)
    │   ├─> 2. M3U x-tvg-url
-   │   ├─> 3. noctra-epg.org (güncel, küçük)
-   │   ├─> 4. epgshare01.online (fazla kanal)
-   │   └─> 5. Global fallback
+   │   ├─> 3. iptv-epg.org (güncel, küçük)
+   │   └─> 4. Global fallback
    │
    └─> EPG'yi arka planda yükle
        └─> Kullanıcı beklemez!
@@ -35,15 +34,15 @@
 
 ## 📦 EPG Kaynakları
 
-### ✅ noctra-epg.org (Birincil)
+### ✅ iptv-epg.org (Birincil)
 ```
-Format: https://noctra-epg.org/files/epg-{COUNTRY}.xml.gz
+Format: https://iptv-epg.org/files/epg-{COUNTRY}.xml.gz
 
 Örnekler:
-- TR: https://noctra-epg.org/files/epg-tr.xml.gz (126 kanal)
-- US: https://noctra-epg.org/files/epg-us.xml.gz (12,201 kanal)
-- UK: https://noctra-epg.org/files/epg-gb.xml.gz (939 kanal)
-- DE: https://noctra-epg.org/files/epg-de.xml.gz (433 kanal)
+- TR: https://iptv-epg.org/files/epg-tr.xml.gz (126 kanal)
+- US: https://iptv-epg.org/files/epg-us.xml.gz (12,201 kanal)
+- UK: https://iptv-epg.org/files/epg-gb.xml.gz (939 kanal)
+- DE: https://iptv-epg.org/files/epg-de.xml.gz (433 kanal)
 
 Avantajlar:
 ✓ Güncel (her saat)
@@ -51,25 +50,6 @@ Avantajlar:
 ✓ Hızlı indirme
 ✓ Ücretsiz
 ```
-
-### ✅ epgshare01.online (Alternatif)
-```
-Format: http://epgshare01.online/epgshare01/epg_ripper_{COUNTRY}{NUM}.xml.gz
-
-Örnekler:
-- TR: epg_ripper_TR1.xml.gz (46,864 kanal)
-- TR: epg_ripper_TR3.xml.gz (43,873 kanal)
-- US: epg_ripper_US2.xml.gz (155,603 kanal)
-- Global: epg_ripper_ALL_SOURCES1.xml.gz (188 MB!)
-
-Avantajlar:
-✓ Daha fazla kanal
-✓ Birden fazla kaynak (TR1, TR3)
-✓ Spor kanalları (US_SPORTS1)
-✓ Yerel kanallar (US_LOCALS1)
-✓ Ücretsiz
-```
-
 ---
 
 ## 🔧 Kurulum
@@ -372,8 +352,7 @@ MIT License - Use freely!
 
 ## 🙏 Teşekkürler
 
-- **noctra-epg.org** - Ücretsiz EPG servisi
-- **epgshare01.online** - Kapsamlı EPG kaynağı
+- **iptv-epg.org** - Ücretsiz EPG servisi
 - **Noctra Community** - Açık kaynak ruhu
 
 ---

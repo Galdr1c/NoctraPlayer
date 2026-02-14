@@ -1256,7 +1256,7 @@ public partial class MainViewModel : ObservableObject
                 });
             }
 
-            // b) Country-specific sources (noctra-epg.org etc)
+            // b) Country-specific sources (iptv-epg.org etc)
             foreach (var (countryCode, _, _) in detectedCountries)
             {
                 var countrySources = epgSourceResolver.ResolveEpgSources(countryCode);

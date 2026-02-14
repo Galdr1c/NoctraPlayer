@@ -193,6 +193,13 @@ namespace Noctra.Core.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("DetectedCountry")
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EpgLastUpdated")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("EpgUrl")
                         .HasColumnType("TEXT");
 

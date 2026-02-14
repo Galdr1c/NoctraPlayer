@@ -2,19 +2,19 @@
 
 /// <summary>
 /// Ülke koduna göre en uygun EPG kaynaklarını belirler
-/// Öncelik: Provider EPG → M3U x-tvg-url → noctra-epg.org → epgshare01 → global fallback
+/// Öncelik: Provider EPG → M3U x-tvg-url → iptv-epg.org → global fallback
 /// </summary>
 public class EpgSourceResolver
 {
     /// <summary>
-    /// noctra-epg.org URL kalıbı
+    /// iptv-epg.org URL kalıbı
     /// </summary>
-    private const string IptvEpgOrgTemplate = "https://noctra-epg.org/files/epg-{0}.xml";
+    private const string IptvEpgOrgTemplate = "https://iptv-epg.org/files/epg-{0}.xml";
 
     /// <summary>
     /// Global fallback URL (büyük dosya, son çare)
     /// </summary>
-    private const string GlobalFallbackUrl = "https://noctra-epg.org/files/epg-all.xml";
+    private const string GlobalFallbackUrl = "https://iptv-epg.org/files/epg-all.xml";
 
     /// <summary>
     /// Desteklenen ülkeler ve özel EPG URL'leri
@@ -23,43 +23,43 @@ public class EpgSourceResolver
     {
         ["TR"] = new[]
         {
-            "https://noctra-epg.org/files/epg-tr.xml"
+            "https://iptv-epg.org/files/epg-tr.xml"
         },
         ["GB"] = new[]
         {
-            "https://noctra-epg.org/files/epg-gb.xml"
+            "https://iptv-epg.org/files/epg-gb.xml"
         },
         ["US"] = new[]
         {
-            "https://noctra-epg.org/files/epg-us.xml"
+            "https://iptv-epg.org/files/epg-us.xml"
         },
         ["DE"] = new[]
         {
-            "https://noctra-epg.org/files/epg-de.xml"
+            "https://iptv-epg.org/files/epg-de.xml"
         },
         ["FR"] = new[]
         {
-            "https://noctra-epg.org/files/epg-fr.xml"
+            "https://iptv-epg.org/files/epg-fr.xml"
         },
         ["IT"] = new[]
         {
-            "https://noctra-epg.org/files/epg-it.xml"
+            "https://iptv-epg.org/files/epg-it.xml"
         },
         ["ES"] = new[]
         {
-            "https://noctra-epg.org/files/epg-es.xml"
+            "https://iptv-epg.org/files/epg-es.xml"
         },
         ["NL"] = new[]
         {
-            "https://noctra-epg.org/files/epg-nl.xml"
+            "https://iptv-epg.org/files/epg-nl.xml"
         },
         ["RU"] = new[]
         {
-            "https://noctra-epg.org/files/epg-ru.xml"
+            "https://iptv-epg.org/files/epg-ru.xml"
         },
         ["AR"] = new[]
         {
-            "https://noctra-epg.org/files/epg-ar.xml"
+            "https://iptv-epg.org/files/epg-ar.xml"
         }
     };
 
@@ -98,7 +98,7 @@ public class EpgSourceResolver
             });
         }
 
-        // 3. noctra-epg.org (ülke bazlı) — HER ZAMAN secondary (isim eşleştirmesi ile)
+        // 3. iptv-epg.orgg (ülke bazlı) — HER ZAMAN secondary (isim eşleştirmesi ile)
         var code = countryCode.ToLowerInvariant();
         sources.Add(new EpgSource
         {
