@@ -17,7 +17,6 @@ public partial class PlayerViewModel : ObservableObject
     private readonly IVideoPlayerService _videoPlayerService;
     private readonly IEpgService _epgService;
     private readonly IMetadataService _metadataService;
-    private readonly IIntroDetectionService _introDetectionService;
     private int _playRequestVersion;
 
     [ObservableProperty]
@@ -137,9 +136,6 @@ public partial class PlayerViewModel : ObservableObject
     private bool _isInfoPanelOpen;
 
     [ObservableProperty]
-    private bool _isIntroDetected;
-
-    [ObservableProperty]
     private Episode? _nextEpisode;
 
     [ObservableProperty]
@@ -149,7 +145,6 @@ public partial class PlayerViewModel : ObservableObject
     private bool _isCreditsZone;
 
     private Episode? _currentEpisode;
-    private bool _introSkipped;
     private bool _creditsTriggered;
     private double _lastPausedPosition;
     private long _lastPausedTimeMs;
@@ -165,9 +160,6 @@ public partial class PlayerViewModel : ObservableObject
     private DateTime _liveRecoveryWindowStartUtc = DateTime.MinValue;
     private int _liveRecoveryAttemptsInWindow;
     private int _liveStallScore;
-    private double? _resolvedIntroStartSec;
-    private double? _resolvedIntroEndSec;
-
     private readonly IDispatcherService _dispatcherService;
     private readonly IWatchHistoryService? _watchHistoryService;
     private readonly System.Timers.Timer _autoHideTimer;
@@ -181,14 +173,12 @@ public partial class PlayerViewModel : ObservableObject
         IVideoPlayerService videoPlayerService,
         IEpgService epgService,
         IMetadataService metadataService,
-        IIntroDetectionService introDetectionService,
         IDispatcherService dispatcherService,
         IWatchHistoryService? watchHistoryService = null)
     {
         _videoPlayerService = videoPlayerService;
         _epgService = epgService;
         _metadataService = metadataService;
-        _introDetectionService = introDetectionService;
         _dispatcherService = dispatcherService;
         _watchHistoryService = watchHistoryService;
 
@@ -286,7 +276,6 @@ public partial class PlayerViewModel : ObservableObject
                     var remaining = Math.Max(0, Duration - pos);
                     RemainingTime = "-" + TimeSpan.FromSeconds(remaining).ToString(@"hh\:mm\:ss");
 
-                    // Intro/Credits detection from episode timestamps
                     CheckIntroCreditsPosition(pos);
                 }
             });
@@ -1194,48 +1183,16 @@ public partial class PlayerViewModel : ObservableObject
         RestartAutoHideTimer();
     }
 
-    [RelayCommand]
-    private void SkipIntro()
-    {
-        if (IsLiveContent) return;
-
-        var introEndSec = _resolvedIntroEndSec ?? _currentEpisode?.IntroEndSec;
-        if (introEndSec != null)
-        {
-            // Jump to intro end timestamp
-            var newPos = Math.Min(introEndSec.Value, Duration);
-            _videoPlayerService.Position = newPos;
-        }
-        else
-        {
-            // Fallback: skip 85 seconds
-            var newPos = Math.Min(Position + 85, Duration);
-            _videoPlayerService.Position = newPos;
-        }
-        
-        IsIntroDetected = false;
-        _introSkipped = true;
-    }
-
     /// <summary>
     /// Mevcut bölümü ayarlar (dizi oynatma başlatıldığında çağrılır)
     /// </summary>
     public void SetCurrentEpisode(Episode? episode, Episode? nextEpisode = null)
     {
         _currentEpisode = episode;
-        _resolvedIntroStartSec = null;
-        _resolvedIntroEndSec = null;
         NextEpisode = nextEpisode;
-        _introSkipped = false;
         _creditsTriggered = false;
-        IsIntroDetected = false;
         IsCreditsZone = false;
         IsNextEpisodePromptVisible = false;
-
-        if (episode != null)
-        {
-            _ = ResolveIntroWindowForCurrentEpisodeAsync(episode);
-        }
     }
 
     /// <summary>
@@ -1244,31 +1201,6 @@ public partial class PlayerViewModel : ObservableObject
     private void CheckIntroCreditsPosition(double pos)
     {
         if (_currentEpisode == null || IsLiveContent) return;
-
-        var introStartSec = _resolvedIntroStartSec ?? _currentEpisode.IntroStartSec;
-        var introEndSec = _resolvedIntroEndSec ?? _currentEpisode.IntroEndSec;
-
-        // ── INTRO DETECTION ──
-        if (!_introSkipped && introStartSec != null && introEndSec != null && introEndSec > introStartSec)
-        {
-            var inIntro = pos >= introStartSec.Value && pos < introEndSec.Value;
-            
-            if (inIntro && !IsIntroDetected)
-            {
-                IsIntroDetected = true;
-                
-                // Auto-skip if setting enabled
-                if (GetAutoSkipIntroSetting())
-                {
-                    SkipIntro();
-                    return;
-                }
-            }
-            else if (!inIntro && IsIntroDetected)
-            {
-                IsIntroDetected = false;
-            }
-        }
 
         // ── CREDITS DETECTION ──
         if (!_creditsTriggered && _currentEpisode.CreditsStartSec != null)
@@ -1291,43 +1223,6 @@ public partial class PlayerViewModel : ObservableObject
                 }
             }
         }
-    }
-
-    private async Task ResolveIntroWindowForCurrentEpisodeAsync(Episode episode)
-    {
-        try
-        {
-            var resolved = await _introDetectionService.ResolveIntroWindowAsync(episode);
-            if (resolved == null || _currentEpisode == null || _currentEpisode.Id != episode.Id)
-            {
-                return;
-            }
-
-            _resolvedIntroStartSec = resolved.Value.StartSec;
-            _resolvedIntroEndSec = resolved.Value.EndSec;
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[PlayerViewModel] Intro resolve failed: {ex.Message}");
-        }
-    }
-
-    private bool GetAutoSkipIntroSetting()
-    {
-        try
-        {
-            var settingsPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "Noctra", "settings.json");
-            if (File.Exists(settingsPath))
-            {
-                var json = File.ReadAllText(settingsPath);
-                var settings = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(json);
-                return settings?.AutoSkipIntro ?? false;
-            }
-        }
-        catch { /* ignore */ }
-        return false;
     }
 
     private bool GetAutoSkipCreditsSetting()

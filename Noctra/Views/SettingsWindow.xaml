@@ -241,15 +241,6 @@
                                     <Grid Margin="0,0,0,16">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                         <StackPanel>
-                                            <TextBlock Text="İntro'yu otomatik geç" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                            <TextBlock Text="Tespit edildiğinde açılış jeneriğini atlar" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
-                                        </StackPanel>
-                                        <ToggleButton Grid.Column="1" IsChecked="{Binding AutoSkipIntro}" Style="{StaticResource ModernToggleSwitch}"/>
-                                    </Grid>
-
-                                    <Grid Margin="0,0,0,16">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                        <StackPanel>
                                             <TextBlock Text="Jenerik bitince sonraki bölüme geç" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                             <TextBlock Text="Kapanış jeneriğinde otomatik olarak sonraki bölümü başlatır" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
                                         </StackPanel>

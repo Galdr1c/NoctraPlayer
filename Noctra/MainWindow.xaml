@@ -1872,55 +1872,6 @@
                     </Grid>
                 </Border>
 
-                <!-- Skip Intro Button -->
-                <Button x:Name="SkipIntroButton"
-                        Command="{Binding SkipIntroCommand}"
-                        Content="İntro'yu Geç ›"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Bottom"
-                        Margin="0,0,100,120"
-                        Padding="24,12"
-                        Background="{DynamicResource Surface1Brush}"
-                        Foreground="{DynamicResource TextPrimaryBrush}"
-                        FontSize="16"
-                        FontWeight="Bold"
-                        BorderThickness="1"
-                        BorderBrush="{DynamicResource BorderBrush}"
-                        Cursor="Hand"
-                        Opacity="0"
-                        Visibility="Collapsed"
-                        Panel.ZIndex="3000">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsIntroDetected}" Value="True">
-                                    <DataTrigger.EnterActions>
-                                        <BeginStoryboard>
-                                            <Storyboard>
-                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="Visible"/>
-                                                </ObjectAnimationUsingKeyFrames>
-                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                               To="1" Duration="0:0:0.3"/>
-                                            </Storyboard>
-                                        </BeginStoryboard>
-                                    </DataTrigger.EnterActions>
-                                    <DataTrigger.ExitActions>
-                                        <BeginStoryboard>
-                                            <Storyboard>
-                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                               To="0" Duration="0:0:0.3"/>
-                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="Visibility">
-                                                    <DiscreteObjectKeyFrame KeyTime="0:0:0.3" Value="Collapsed"/>
-                                                </ObjectAnimationUsingKeyFrames>
-                                            </Storyboard>
-                                        </BeginStoryboard>
-                                    </DataTrigger.ExitActions>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                </Button>
             </Grid>
     </Grid>
     </Border>

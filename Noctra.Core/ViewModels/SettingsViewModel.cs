@@ -25,9 +25,6 @@ public partial class SettingsViewModel : ObservableObject
     private bool _autoPlayNext;
     
     [ObservableProperty]
-    private bool _autoSkipIntro;
-
-    [ObservableProperty]
     private bool _autoSkipCredits;
     
     [ObservableProperty]
@@ -265,7 +262,6 @@ public partial class SettingsViewModel : ObservableObject
         
         // Playback
         AutoPlayNext = s.AutoPlayNext;
-        AutoSkipIntro = s.AutoSkipIntro;
         AutoSkipCredits = s.AutoSkipCredits;
         SelectedDataUsage = (int)s.DataUsage;
         DefaultVolume = s.DefaultVolume;
@@ -304,7 +300,6 @@ public partial class SettingsViewModel : ObservableObject
         
         // Playback
         s.AutoPlayNext = AutoPlayNext;
-        s.AutoSkipIntro = AutoSkipIntro;
         s.AutoSkipCredits = AutoSkipCredits;
         s.DataUsage = (DataUsageLevel)SelectedDataUsage;
         s.DefaultVolume = DefaultVolume;

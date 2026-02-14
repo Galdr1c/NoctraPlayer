@@ -33,11 +33,6 @@ public class AppSettings
     public bool AutoPlayNext { get; set; } = true;
     
     /// <summary>
-    /// İntro'yu otomatik geç
-    /// </summary>
-    public bool AutoSkipIntro { get; set; } = false;
-    
-    /// <summary>
     /// Jenerik bittiğinde sonraki bölüme otomatik geç
     /// </summary>
     public bool AutoSkipCredits { get; set; } = false;
