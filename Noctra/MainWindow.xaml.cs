@@ -23,6 +23,7 @@ public partial class MainWindow : Window
     private readonly IVideoPlayerService _videoPlayerService;
     private readonly HoverPreviewService _hoverPreviewService;
     private readonly IServiceScopeFactory _scopeFactory;
+    private PlayerOverlayWindow? _overlayWindow;
     private bool _isDarkTheme = true;
     private bool _isWindowClosed;
     private int _playLaunchVersion;
@@ -153,6 +154,12 @@ public partial class MainWindow : Window
 
                 AnimateFullScreenTransition();
                 _playerViewModel.UserInteractionCommand.Execute(null);
+                SyncOverlayWindowBounds();
+                UpdateOverlayWindowVisibility();
+            }
+            else if (e.PropertyName == nameof(PlayerViewModel.IsVisible))
+            {
+                UpdateOverlayWindowVisibility();
             }
         };
 
@@ -177,6 +184,11 @@ public partial class MainWindow : Window
         _viewModel.RequestEditChannel += OnRequestEditChannel;
 
         Closed += (_, _) => _isWindowClosed = true;
+        LocationChanged += (_, _) => SyncOverlayWindowBounds();
+        SizeChanged += (_, _) => SyncOverlayWindowBounds();
+        StateChanged += (_, _) => SyncOverlayWindowBounds();
+        Activated += (_, _) => BringOverlayAboveOwner();
+        Deactivated += (_, _) => BringOverlayAboveOwner();
     }
 
     private void AnimateFullScreenTransition()
@@ -296,7 +308,9 @@ public partial class MainWindow : Window
 
         // 1. Show Player Area (covers the window content)
         PlayerArea.Visibility = Visibility.Visible;
-        PlayerOverlayPopup.IsOpen = true;
+        EnsureOverlayWindow();
+        SyncOverlayWindowBounds();
+        UpdateOverlayWindowVisibility();
         
         // 2. Hide Mini Player (if active)
         MiniPlayer.Visibility = Visibility.Collapsed;
@@ -334,7 +348,7 @@ public partial class MainWindow : Window
             try { System.IO.File.AppendAllText(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "debug_log.txt"), $"[{DateTime.Now}] ExitPlayerMode called.\n"); } catch { }
 
             // 1. Hide Player Area FIRST to stop rendering logic in VideoView
-            PlayerOverlayPopup.IsOpen = false;
+            HideOverlayWindow();
             PlayerArea.Visibility = Visibility.Collapsed;
 
             // Allow UI to update and VideoView to realize it's hidden
@@ -574,7 +588,7 @@ public partial class MainWindow : Window
 
             if (PlayerArea.Visibility == Visibility.Visible)
             {
-                PlayerOverlayPopup.IsOpen = false;
+                HideOverlayWindow();
                 PlayerArea.Visibility = Visibility.Collapsed;
             }
 
@@ -599,6 +613,129 @@ public partial class MainWindow : Window
                 Show();
             }
             MessageBox.Show($"Profil secme ekrani acilamadi: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void MouseCaptureLayer_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (PlayerArea.Visibility != Visibility.Visible)
+        {
+            return;
+        }
+
+        if (e.ClickCount >= 2)
+        {
+            _playerViewModel.ToggleFullScreenCommand.Execute(null);
+        }
+        else
+        {
+            _playerViewModel.PlayPauseCommand.Execute(null);
+            _playerViewModel.UserInteractionCommand.Execute(null);
+        }
+    }
+
+    private void MouseCaptureLayer_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (PlayerArea.Visibility != Visibility.Visible)
+        {
+            return;
+        }
+
+        _playerViewModel.UserInteractionCommand.Execute(null);
+    }
+
+    private void EnsureOverlayWindow()
+    {
+        if (_overlayWindow != null)
+        {
+            return;
+        }
+
+        _overlayWindow = new PlayerOverlayWindow
+        {
+            Owner = this,
+            DataContext = _playerViewModel
+        };
+
+        _overlayWindow.OverlayView.DataContext = _playerViewModel;
+        _overlayWindow.Closed += (_, _) => _overlayWindow = null;
+        _overlayWindow.Show();
+        _overlayWindow.Hide();
+    }
+
+    private void UpdateOverlayWindowVisibility()
+    {
+        if (_overlayWindow == null)
+        {
+            return;
+        }
+
+        var shouldShow = PlayerArea.Visibility == Visibility.Visible;
+        if (shouldShow)
+        {
+            SyncOverlayWindowBounds();
+            if (!_overlayWindow.IsVisible)
+            {
+                _overlayWindow.Show();
+            }
+
+            BringOverlayAboveOwner();
+        }
+        else if (_overlayWindow.IsVisible)
+        {
+            _overlayWindow.Hide();
+        }
+    }
+
+    private void HideOverlayWindow()
+    {
+        if (_overlayWindow?.IsVisible == true)
+        {
+            _overlayWindow.Hide();
+        }
+    }
+
+    private void BringOverlayAboveOwner()
+    {
+        if (_overlayWindow?.IsVisible != true)
+        {
+            return;
+        }
+
+        _overlayWindow.Topmost = true;
+        _overlayWindow.Topmost = false;
+    }
+
+    private void SyncOverlayWindowBounds()
+    {
+        if (_overlayWindow == null || PlayerArea.Visibility != Visibility.Visible)
+        {
+            return;
+        }
+
+        try
+        {
+            var topLeft = PlayerArea.PointToScreen(new Point(0, 0));
+            var bottomRight = PlayerArea.PointToScreen(new Point(PlayerArea.ActualWidth, PlayerArea.ActualHeight));
+
+            var source = PresentationSource.FromVisual(this);
+            if (source?.CompositionTarget == null)
+            {
+                return;
+            }
+
+            var transform = source.CompositionTarget.TransformFromDevice;
+            var dipTopLeft = transform.Transform(topLeft);
+            var dipBottomRight = transform.Transform(bottomRight);
+
+            _overlayWindow.Left = dipTopLeft.X;
+            _overlayWindow.Top = dipTopLeft.Y;
+            _overlayWindow.Width = Math.Max(0, dipBottomRight.X - dipTopLeft.X);
+            _overlayWindow.Height = Math.Max(0, dipBottomRight.Y - dipTopLeft.Y);
+        }
+        catch
+        {
+            // Ignore transient sync errors during window state transitions.
         }
     }
 

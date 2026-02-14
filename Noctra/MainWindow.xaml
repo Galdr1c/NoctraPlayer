@@ -6,7 +6,6 @@
         xmlns:vlc="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
         xmlns:cache="clr-namespace:Noctra.Behaviors"
         xmlns:views="clr-namespace:Noctra.Views"
-        xmlns:helpers="clr-namespace:Noctra.Helpers"
         xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
         mc:Ignorable="d"
         Title="Noctra" 
@@ -1774,22 +1773,11 @@
                 <views:WatermarkView DataContext="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=WatermarkViewModel}"
                                      Panel.ZIndex="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,100"/>
 
-                <helpers:NonTopmostPopup x:Name="PlayerOverlayPopup"
-                       PlacementTarget="{Binding ElementName=PlayerArea}"
-                       Placement="Center"
-                       AllowsTransparency="True"
-                       StaysOpen="True"
-                       PopupAnimation="None"
-                       IsOpen="False">
-                    <Border Background="Transparent"
-                            Width="{Binding ActualWidth, ElementName=PlayerArea}"
-                            Height="{Binding ActualHeight, ElementName=PlayerArea}">
-                        <views:VideoOverlayView x:Name="VideoOverlay"
-                                                DataContext="{Binding DataContext, ElementName=PlayerArea}"
-                                                HorizontalAlignment="Stretch"
-                                                VerticalAlignment="Stretch"/>
-                    </Border>
-                </helpers:NonTopmostPopup>
+                <Border x:Name="MouseCaptureLayer"
+                        Panel.ZIndex="2500"
+                        Background="Transparent"
+                        MouseMove="MouseCaptureLayer_MouseMove"
+                        MouseLeftButtonDown="MouseCaptureLayer_MouseLeftButtonDown"/>
 
                 <!-- Next Episode Prompt -->
                 <Border x:Name="NextEpisodePrompt"

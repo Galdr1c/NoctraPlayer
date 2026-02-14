@@ -41,8 +41,7 @@
 
     <Grid Background="Transparent"
           Cursor="Arrow"
-          MouseLeftButtonDown="Root_MouseLeftButtonDown"
-          MouseMove="Root_MouseMove">
+          MouseLeftButtonDown="Root_MouseLeftButtonDown">
 
         <!-- ==========================================
              OVERLAY CONTENT (Visible when interacting) 
