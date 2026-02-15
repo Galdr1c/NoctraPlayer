@@ -1,0 +1,161 @@
+<Window x:Class="Noctra.Avalonia.Views.UpsellWindow"
+        xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        x:CompileBindings="False"
+        Title="Premium'a Yükselt" Height="650" Width="900"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="False"
+        SystemDecorations="None"
+        CanResize="False"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        FontFamily="{StaticResource DefaultFontFamily}">
+
+    <Window.Styles>
+        <!-- Buy Button -->
+        <Style Selector="Button.BuyBtn">
+            <Setter Property="Background" Value="{DynamicResource PrimaryGradientBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="CornerRadius" Value="28"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="Button.BuyBtn:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+        </Style>
+
+        <!-- Close/Dismiss Button -->
+        <Style Selector="Button.DismissBtn">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+        <Style Selector="Button.DismissBtn:pointerover">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        
+        <!-- Top-Right Close Button -->
+        <Style Selector="Button.UpsellCloseBtn">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="10"/>
+        </Style>
+        <Style Selector="Button.UpsellCloseBtn:pointerover">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+    </Window.Styles>
+
+    <Border CornerRadius="{DynamicResource RadiusLarge}"
+            ClipToBounds="True"
+            Background="{DynamicResource BackgroundGradientBrush}"
+            BorderBrush="{DynamicResource AccentBrush}"
+            BorderThickness="1">
+        <Grid>
+            <!-- Decorative Elements -->
+            <Ellipse Width="400" Height="400" Fill="{DynamicResource AccentBrush}" Opacity="0.08"
+                     VerticalAlignment="Top" HorizontalAlignment="Right" Margin="-100"/>
+            <Ellipse Width="300" Height="300" Fill="{DynamicResource GlowBrush}" Opacity="0.04"
+                     VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="-50"/>
+
+            <Grid Margin="40">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- HEADER -->
+                <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,30">
+                    <TextBlock Text="👑 PREMIUM" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource AccentLightBrush}" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                    <TextBlock Text="Sınırları Kaldırın" FontSize="36" FontWeight="Bold"
+                               Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Tüm özelliklere erişin ve Noctra deneyiminizi yükseltin"
+                               FontSize="16" Foreground="{DynamicResource TextMutedBrush}"
+                               HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                </StackPanel>
+
+                <!-- COMPARISON -->
+                <Grid Grid.Row="1" Margin="0,0,0,30">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="40"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- FREE CARD -->
+                    <Border Grid.Column="0" Background="{DynamicResource Surface0Brush}" CornerRadius="12" Padding="24">
+                        <StackPanel>
+                            <TextBlock Text="Free" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Text="Temel Kullanım" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20"/>
+
+                            <StackPanel Margin="0,0,0,8">
+                                <TextBlock Text="✓ 1 Profil" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,4"/>
+                                <TextBlock Text="✓ 1 M3U Hesabı" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,4"/>
+                                <TextBlock Text="✓ 24 Saatlik EPG" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,4"/>
+                                <TextBlock Text="✓ 50 Favori Kanal" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,4"/>
+                                <TextBlock Text="✗ Kynora Filigranı" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4"/>
+                                <TextBlock Text="✗ Kanal Yönetimi Yok" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- PREMIUM CARD -->
+                    <Border Grid.Column="2" CornerRadius="12" Padding="24" BorderThickness="2" BorderBrush="{DynamicResource AccentBrush}"
+                            Background="{DynamicResource PremiumCardBackgroundBrush}"
+                            BoxShadow="0 0 30 0 #33A855F7">
+
+                        <StackPanel>
+                            <Grid>
+                                <StackPanel>
+                                    <TextBlock Text="Premium" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
+                                    <TextBlock Text="Lifetime Lisans" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20"/>
+                                </StackPanel>
+                                <Border HorizontalAlignment="Right" VerticalAlignment="Top"
+                                        Background="{DynamicResource AccentBrush}" CornerRadius="4" Padding="8,4">
+                                    <TextBlock Text="EN İYİ DEĞER" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                                </Border>
+                            </Grid>
+
+                            <StackPanel Margin="0,0,0,8">
+                                <TextBlock Text="✓ Sınırsız Profil" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" Margin="0,4"/>
+                                <TextBlock Text="✓ Sınırsız M3U Hesabı" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" Margin="0,4"/>
+                                <TextBlock Text="✓ 2 Haftalık EPG + Grid" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" Margin="0,4"/>
+                                <TextBlock Text="✓ Filigransız İzleme" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" Margin="0,4"/>
+                                <TextBlock Text="✓ Kanal Gizleme/Sıralama" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" Margin="0,4"/>
+                                <TextBlock Text="✓ Tüm Temalar &amp; Animasyonlar" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" Margin="0,4"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- FOOTER / ACTIONS -->
+                <StackPanel Grid.Row="2" HorizontalAlignment="Center">
+                    <Button Click="Buy_Click" Width="320" Height="56"
+                            Classes="BuyBtn">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Text="Premium Satın Al" FontSize="18" FontWeight="Bold" Foreground="White"/>
+                            <TextBlock Text=" - 480 TL (Tek Sefer)" FontSize="16" FontWeight="Normal" Foreground="White" Opacity="0.9"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Content="Hayır, teşekkürler" Click="ContinueFree_Click"
+                            Classes="DismissBtn" Margin="0,20,0,0"
+                            HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- Close Button -->
+            <Button Content="✕" Click="Close_Click" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="20"
+                    Classes="UpsellCloseBtn"/>
+        </Grid>
+    </Border>
+</Window>

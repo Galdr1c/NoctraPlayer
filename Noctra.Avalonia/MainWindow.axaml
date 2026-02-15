@@ -1,0 +1,798 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Noctra.ViewModels"
+        xmlns:models="using:Noctra.Models"
+        xmlns:views="using:Noctra.Avalonia.Views"
+        x:Class="Noctra.Avalonia.MainWindow"
+        x:Name="RootWindow"
+        x:DataType="vm:MainViewModel"
+        Title="Noctra"
+        Width="1400" Height="800"
+        MinWidth="1000" MinHeight="600"
+        Background="{DynamicResource Bg0Brush}">
+
+  <Grid RowDefinitions="64,*,48">
+
+    <!-- ========== HEADER BAR ========== -->
+    <Border Grid.Row="0" Background="{DynamicResource HeaderGradientBrush}" Padding="24,0" PointerPressed="HeaderBar_PointerPressed">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <!-- Logo -->
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="12" Margin="8,0,0,0">
+          <Image Source="avares://Noctra.Avalonia/Assets/Logo.png" Height="32" />
+          <TextBlock Text="Noctra" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Search Button -->
+        <Button Grid.Column="1" HorizontalAlignment="Right" Margin="0,0,24,0"
+                Command="{Binding OpenSearchCommand}" Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="8">
+          <StackPanel Orientation="Horizontal">
+            <TextBlock Text="🔍" FontSize="18" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,8,0"/>
+            <TextBlock Text="Ara" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}"/>
+          </StackPanel>
+        </Button>
+
+        <!-- Header Actions -->
+        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+          <!-- Settings Button -->
+          <Button Click="SettingsButton_Click" Cursor="Hand" ToolTip.Tip="Ayarlar"
+                  Width="48" Height="48" Background="Transparent" BorderThickness="0" CornerRadius="24">
+            <PathIcon Data="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"
+                     Foreground="{DynamicResource TextMutedBrush}" Width="22" Height="22"/>
+          </Button>
+          <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="0,8" Opacity="0.5"/>
+          <!-- Window Controls -->
+          <Button x:Name="MinimizeButton" Click="MinimizeButton_Click" Background="Transparent" BorderThickness="0" Width="46" Height="32" Cursor="Hand" ToolTip.Tip="Küçült">
+            <PathIcon Data="M0,8 H12 V10 H0 Z" Foreground="{DynamicResource TextMutedBrush}" Width="12" Height="10"/>
+          </Button>
+          <Button x:Name="MaximizeButton" Click="MaximizeButton_Click" Background="Transparent" BorderThickness="0" Width="46" Height="32" Cursor="Hand" ToolTip.Tip="Ekranı Kapla">
+            <PathIcon Data="M1,1 H11 V11 H1 Z" Foreground="{DynamicResource TextMutedBrush}" Width="11" Height="11"/>
+          </Button>
+          <Button x:Name="CloseButton" Click="CloseButton_Click" Background="Transparent" BorderThickness="0" Width="46" Height="32" Cursor="Hand" ToolTip.Tip="Kapat">
+            <PathIcon Data="M1.1,1.1 L10.9,10.9 M10.9,1.1 L1.1,10.9" Foreground="{DynamicResource TextMutedBrush}" Width="11" Height="11"/>
+          </Button>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- ========== MAIN CONTENT AREA ========== -->
+    <Grid Grid.Row="1" ColumnDefinitions="280,*">
+
+      <!-- SIDEBAR -->
+      <Border Grid.Column="0" Background="{DynamicResource Bg1Brush}">
+        <StackPanel Margin="16,24,16,16">
+          <!-- Home -->
+          <Button Classes="navItem" Click="NavigateHome_Click" Cursor="Hand"
+                  Background="{Binding ActiveView, Converter={StaticResource EqualityToBrushConverter}, ConverterParameter={x:Static vm:AppView.Home}}">
+            <Grid ColumnDefinitions="Auto,*" Margin="16,14"><TextBlock Text="🏠" FontSize="18" VerticalAlignment="Center" Margin="0,0,12,0"/><TextBlock Grid.Column="1" Text="Ana Sayfa" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/></Grid>
+          </Button>
+          <!-- Live TV -->
+          <Button Classes="navItem" Click="NavigateLive_Click" Cursor="Hand"
+                  Background="{Binding ActiveView, Converter={StaticResource EqualityToBrushConverter}, ConverterParameter={x:Static vm:AppView.Live}}">
+            <Grid ColumnDefinitions="Auto,*" Margin="16,14"><TextBlock Text="📺" FontSize="18" VerticalAlignment="Center" Margin="0,0,12,0"/><TextBlock Grid.Column="1" Text="Canlı TV" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/></Grid>
+          </Button>
+          <!-- Movies -->
+          <Button Classes="navItem" Click="NavigateMovies_Click" Cursor="Hand"
+                  Background="{Binding ActiveView, Converter={StaticResource EqualityToBrushConverter}, ConverterParameter={x:Static vm:AppView.Movies}}">
+            <Grid ColumnDefinitions="Auto,*" Margin="16,14"><TextBlock Text="🎬" FontSize="18" VerticalAlignment="Center" Margin="0,0,12,0"/><TextBlock Grid.Column="1" Text="Filmler" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/></Grid>
+          </Button>
+          <!-- Series -->
+          <Button Classes="navItem" Click="NavigateSeries_Click" Cursor="Hand"
+                  Background="{Binding ActiveView, Converter={StaticResource EqualityToBrushConverter}, ConverterParameter={x:Static vm:AppView.Series}}">
+            <Grid ColumnDefinitions="Auto,*" Margin="16,14"><TextBlock Text="📺" FontSize="18" VerticalAlignment="Center" Margin="0,0,12,0"/><TextBlock Grid.Column="1" Text="Diziler" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/></Grid>
+          </Button>
+          <!-- My List -->
+          <Button Classes="navItem" Click="NavigateMyList_Click" Cursor="Hand"
+                  Background="{Binding ActiveView, Converter={StaticResource EqualityToBrushConverter}, ConverterParameter={x:Static vm:AppView.MyList}}">
+            <Grid ColumnDefinitions="Auto,*" Margin="16,14"><TextBlock Text="➕" FontSize="18" VerticalAlignment="Center" Margin="0,0,12,0"/><TextBlock Grid.Column="1" Text="Listem" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/></Grid>
+          </Button>
+          <!-- Divider -->
+          <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,20"/>
+          <!-- Favorites -->
+          <Button Classes="navItem" Click="NavigateFavorites_Click" Cursor="Hand"
+                  Background="{Binding ActiveView, Converter={StaticResource EqualityToBrushConverter}, ConverterParameter={x:Static vm:AppView.Favorites}}">
+            <Grid ColumnDefinitions="Auto,*" Margin="16,12"><TextBlock Text="⭐" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="16" VerticalAlignment="Center" Margin="0,0,12,0"/><TextBlock Grid.Column="1" Text="Favoriler" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="14" VerticalAlignment="Center"/></Grid>
+          </Button>
+          <!-- History -->
+          <Button Classes="navItem" Click="NavigateHistory_Click" Cursor="Hand"
+                  Background="{Binding ActiveView, Converter={StaticResource EqualityToBrushConverter}, ConverterParameter={x:Static vm:AppView.History}}">
+            <Grid ColumnDefinitions="Auto,*" Margin="16,12"><TextBlock Text="📜" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="16" VerticalAlignment="Center" Margin="0,0,12,0"/><TextBlock Grid.Column="1" Text="Geçmiş" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="14" VerticalAlignment="Center"/></Grid>
+          </Button>
+        </StackPanel>
+      </Border>
+
+      <!-- MAIN CONTENT -->
+      <Grid Grid.Column="1">
+
+        <!-- 1. HOME VIEW -->
+        <ScrollViewer x:Name="HomeView" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Home}}">
+          <StackPanel Margin="24">
+            <!-- HERO SECTION -->
+            <Border Height="500" CornerRadius="16" Margin="0,0,0,40" ClipToBounds="True">
+              <Grid>
+                <Image Stretch="UniformToFill" Source="{Binding FeaturedChannel.CoverUrl}"/>
+                <Border>
+                  <Border.Background>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                      <GradientStop Color="Transparent" Offset="0.0"/>
+                      <GradientStop Color="#AA0B0614" Offset="0.5"/>
+                      <GradientStop Color="#0B0614" Offset="1.0"/>
+                    </LinearGradientBrush>
+                  </Border.Background>
+                </Border>
+                <StackPanel VerticalAlignment="Bottom" Margin="60,0,60,60">
+                  <TextBlock Text="{Binding FeaturedChannel.Name}" FontSize="56" FontWeight="Bold" Foreground="White" TextWrapping="Wrap" MaxWidth="600" HorizontalAlignment="Left"/>
+                  <StackPanel Orientation="Horizontal" Margin="0,16,0,24">
+                    <Border Background="#7C3AED" CornerRadius="4" Padding="8,4" Margin="0,0,12,0">
+                      <TextBlock Text="LIVE" FontSize="12" FontWeight="Bold" Foreground="White"/>
+                    </Border>
+                    <TextBlock Text="{Binding FeaturedChannel.GroupTitle}" FontSize="16" Foreground="#C4B5FD" VerticalAlignment="Center"/>
+                    <TextBlock Text=" • " FontSize="16" Foreground="#666" Margin="8,0"/>
+                    <TextBlock Text="HD" FontSize="16" Foreground="#22C55E" VerticalAlignment="Center"/>
+                  </StackPanel>
+                  <TextBlock Text="{Binding FeaturedChannel.Description}" FontSize="16" Foreground="#E5E5E5" TextWrapping="Wrap" MaxWidth="600" LineHeight="24" Margin="0,0,0,24"/>
+                  <StackPanel Orientation="Horizontal" Spacing="16">
+                    <Button Command="{Binding PlayFeaturedCommand}" Height="56" Padding="32,0" Background="White" BorderThickness="0" Cursor="Hand" CornerRadius="8">
+                      <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="▶" FontSize="20" Foreground="Black" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="İzle" FontSize="18" Foreground="Black" FontWeight="Bold" VerticalAlignment="Center"/>
+                      </StackPanel>
+                    </Button>
+                    <Button Command="{Binding AddToMyListCommand}" CommandParameter="{Binding FeaturedChannel}" Height="56" Width="56" Background="#A06D6D6E" BorderThickness="0" Cursor="Hand" CornerRadius="28" ToolTip.Tip="Listem'e Ekle">
+                      <TextBlock Text="{Binding FeaturedChannel.IsInMyList, Converter={StaticResource BoolToIconConverter}}" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Button>
+                    <Button Height="56" Padding="32,0" Background="#A06D6D6E" BorderThickness="0" Cursor="Hand" CornerRadius="8">
+                      <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="ℹ" FontSize="20" Foreground="White" Margin="0,0,12,0"/>
+                        <TextBlock Text="Daha Fazla Bilgi" FontSize="18" Foreground="White"/>
+                      </StackPanel>
+                    </Button>
+                  </StackPanel>
+                </StackPanel>
+              </Grid>
+            </Border>
+
+            <!-- Rail: İzlemeye Devam Et -->
+            <StackPanel IsVisible="{Binding ContinueWatching.Count, Converter={StaticResource CountToVisibilityConverter}}" Margin="0,0,0,40">
+              <TextBlock Text="İzlemeye Devam Et" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+              <ItemsControl ItemsSource="{Binding ContinueWatching}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="12"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="models:Channel">
+                    <Button Width="300" Height="169" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                      <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusSmall}" ClipToBounds="True">
+                        <Grid>
+                          <Image Stretch="UniformToFill" Source="{Binding LogoUrl}" Opacity="0.8"/>
+                          <Border Background="{DynamicResource HeroOverlayBrush}"/>
+                          <StackPanel VerticalAlignment="Bottom" Margin="12">
+                            <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                          </StackPanel>
+                        </Grid>
+                      </Border>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+
+            <!-- Rail: Şu An Trend -->
+            <StackPanel Margin="0,0,0,40">
+              <TextBlock Text="Şu An Trend" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+              <ItemsControl ItemsSource="{Binding TrendingChannels}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="12"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="models:Channel">
+                    <Button Width="300" Height="169" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                      <Button.ContextFlyout>
+                        <MenuFlyout>
+                          <MenuItem Header="Listem'e Ekle/Çıkar" Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).AddToMyListCommand}" CommandParameter="{Binding}"/>
+                          <MenuItem Header="Favorilere Ekle/Çıkar" Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}" CommandParameter="{Binding}"/>
+                        </MenuFlyout>
+                      </Button.ContextFlyout>
+                      <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusSmall}" ClipToBounds="True">
+                        <Grid>
+                          <Image Stretch="UniformToFill" Source="{Binding LogoUrl}" Opacity="0.8"/>
+                          <Border Background="{DynamicResource HeroOverlayBrush}"/>
+                          <StackPanel VerticalAlignment="Bottom" Margin="12">
+                            <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                          </StackPanel>
+                        </Grid>
+                      </Border>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+
+            <!-- Rail: Popüler Filmler -->
+            <StackPanel Margin="0,0,0,40">
+              <TextBlock Text="Popüler Filmler" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+              <ItemsControl ItemsSource="{Binding LatestMovies}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="12"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="models:Channel">
+                    <Button Width="160" Height="240" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                      <Button.ContextFlyout>
+                        <MenuFlyout>
+                          <MenuItem Header="Listem'e Ekle/Çıkar" Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).AddToMyListCommand}" CommandParameter="{Binding}"/>
+                          <MenuItem Header="Favorilere Ekle/Çıkar" Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}" CommandParameter="{Binding}"/>
+                        </MenuFlyout>
+                      </Button.ContextFlyout>
+                      <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusSmall}" ClipToBounds="True">
+                        <Grid>
+                          <Image Stretch="UniformToFill" Source="{Binding CoverUrl}"/>
+                          <Border Background="{DynamicResource HeroOverlayBrush}"/>
+                          <StackPanel VerticalAlignment="Bottom" Margin="12">
+                            <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="Bold" FontSize="14" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
+                          </StackPanel>
+                        </Grid>
+                      </Border>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+
+            <!-- Rail: Yeni Diziler -->
+            <StackPanel Margin="0,0,0,40">
+              <TextBlock Text="Yeni Diziler" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+              <ItemsControl ItemsSource="{Binding LatestSeries}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="12"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="models:Series">
+                    <Button Width="160" Height="240" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                      <Button.ContextFlyout>
+                        <MenuFlyout>
+                          <MenuItem Header="Listem'e Ekle/Çıkar" Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).AddToMyListCommand}" CommandParameter="{Binding}"/>
+                          <MenuItem Header="Favorilere Ekle/Çıkar" Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}" CommandParameter="{Binding}"/>
+                        </MenuFlyout>
+                      </Button.ContextFlyout>
+                      <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusSmall}" ClipToBounds="True">
+                        <Grid>
+                          <Image Stretch="UniformToFill" Source="{Binding CoverUrl}"/>
+                          <Border Background="{DynamicResource HeroOverlayBrush}"/>
+                          <StackPanel VerticalAlignment="Bottom" Margin="12">
+                            <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="Bold" FontSize="14" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding Genre}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
+                          </StackPanel>
+                        </Grid>
+                      </Border>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- 2. MOVIES VIEW -->
+        <ScrollViewer x:Name="MoviesView" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Movies}}">
+          <StackPanel Margin="24">
+            <Grid Margin="0,0,0,24" ColumnDefinitions="*,Auto">
+              <TextBlock Text="Filmler" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                <ComboBox Width="260" ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}"/>
+                <Button Content="Tümü" Width="64" Click="ClearGroupSelection_Click"/>
+                <ComboBox Width="240" ItemsSource="{Binding SortOptions}" SelectedValue="{Binding SelectedSortOrder}" SelectedValueBinding="{Binding Key}" DisplayMemberBinding="{Binding Value}"/>
+              </StackPanel>
+            </Grid>
+            <ItemsControl ItemsSource="{Binding FilteredChannels}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Channel">
+                  <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                    <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
+                      <StackPanel Spacing="6">
+                        <Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12">
+                          <Image Width="60" Stretch="Uniform" Source="{Binding CoverUrl}"/>
+                        </Border>
+                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center"/>
+                      </StackPanel>
+                    </Border>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <!-- Empty State -->
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0"
+                        IsVisible="{Binding FilteredChannels.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=invert}">
+              <Image Source="avares://Noctra.Avalonia/Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>
+              <TextBlock Text="Film bulunamadı" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" Margin="0,14,0,6"/>
+              <TextBlock Text="Bu filtrede gösterilecek film yok." FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- 3. SERIES VIEW -->
+        <ScrollViewer x:Name="SeriesView" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Series}}">
+          <StackPanel Margin="24">
+            <Grid Margin="0,0,0,24" ColumnDefinitions="*,Auto">
+              <TextBlock Text="Diziler" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                <ComboBox Width="260" ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}"/>
+                <Button Content="Tümü" Width="64" Click="ClearGroupSelection_Click"/>
+                <ComboBox Width="240" ItemsSource="{Binding SortOptions}" SelectedValue="{Binding SelectedSortOrder}" SelectedValueBinding="{Binding Key}" DisplayMemberBinding="{Binding Value}"/>
+              </StackPanel>
+            </Grid>
+            <ItemsControl ItemsSource="{Binding SeriesViewItems}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Series">
+                  <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                    <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
+                      <StackPanel Spacing="6">
+                        <Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12">
+                          <Image Width="60" Stretch="Uniform" Source="{Binding CoverUrl}"/>
+                        </Border>
+                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding SeasonCountSafe, StringFormat='Sezon: {0}'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center" Margin="0,4,0,0"/>
+                      </StackPanel>
+                    </Border>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0"
+                        IsVisible="{Binding !SeriesViewItems.Count}">
+              <Image Source="avares://Noctra.Avalonia/Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>
+              <TextBlock Text="Dizi bulunamadı" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" Margin="0,14,0,6"/>
+              <TextBlock Text="Bu filtrede gösterilecek dizi yok." FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- 4. LIVE TV VIEW -->
+        <ScrollViewer x:Name="LiveView" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Live}}">
+          <StackPanel Margin="24">
+            <Grid Margin="0,0,0,24" ColumnDefinitions="*,Auto">
+              <TextBlock Text="Canlı TV" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                <ComboBox Width="260" ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}"/>
+                <Button Content="Tümü" Width="64" Click="ClearGroupSelection_Click"/>
+                <ComboBox Width="240" ItemsSource="{Binding SortOptions}" SelectedValue="{Binding SelectedSortOrder}" SelectedValueBinding="{Binding Key}" DisplayMemberBinding="{Binding Value}"/>
+              </StackPanel>
+            </Grid>
+            <ItemsControl ItemsSource="{Binding FilteredChannels}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Channel">
+                  <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                    <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
+                      <StackPanel Spacing="6">
+                        <Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12">
+                          <Image Width="60" Stretch="Uniform" Source="{Binding LogoUrl}"/>
+                        </Border>
+                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center"/>
+                      </StackPanel>
+                    </Border>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0"
+                        IsVisible="{Binding FilteredChannels.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=invert}">
+              <Image Source="avares://Noctra.Avalonia/Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>
+              <TextBlock Text="Kanal bulunamadı" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" Margin="0,14,0,6"/>
+              <TextBlock Text="Bu filtrede gösterilecek canlı kanal yok." FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- 5. SEARCH VIEW -->
+        <ScrollViewer x:Name="SearchView" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Search}}">
+          <StackPanel Margin="24">
+            <TextBlock Text="Arama Sonuçları" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
+            <!-- Search Suggestion -->
+            <Border Margin="0,0,0,20" Padding="12,10" Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusSmall}"
+                    IsVisible="{Binding SearchSuggestion, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="Bunu mu demek istediniz?" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+                <Button Content="{Binding SearchSuggestion}" Margin="10,0,0,0" Padding="10,4" Command="{Binding ApplySearchSuggestionCommand}"
+                        Background="{DynamicResource Surface1Brush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand"/>
+              </StackPanel>
+            </Border>
+            <!-- Live results -->
+            <StackPanel Margin="0,0,0,24" IsVisible="{Binding SearchLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+              <TextBlock Text="Canlı TV" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+              <ItemsControl ItemsSource="{Binding SearchLiveChannels}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="models:Channel">
+                    <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                      <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
+                        <StackPanel><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12"/></StackPanel>
+                      </Border>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+            <!-- Series results -->
+            <StackPanel Margin="0,0,0,24" IsVisible="{Binding SearchSeriesChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+              <TextBlock Text="Dizi" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+              <ItemsControl ItemsSource="{Binding SearchSeriesChannels}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="models:Series">
+                    <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                      <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
+                        <StackPanel>
+                          <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                          <TextBlock Text="{Binding SeasonCountSafe, StringFormat='Sezon: {0}'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" Margin="0,4,0,0"/>
+                        </StackPanel>
+                      </Border>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+            <!-- VOD results -->
+            <StackPanel Margin="0,0,0,24" IsVisible="{Binding SearchVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+              <TextBlock Text="VOD" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+              <ItemsControl ItemsSource="{Binding SearchVodChannels}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="models:Channel">
+                    <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                      <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
+                        <StackPanel><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12"/></StackPanel>
+                      </Border>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+            <!-- Similar Results -->
+            <StackPanel Margin="0,8,0,24" IsVisible="{Binding ShowSearchSimilarSection}">
+              <TextBlock Text="Yakın Sonuçlar" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+              <!-- Similar Live -->
+              <StackPanel Margin="0,0,0,20" IsVisible="{Binding SearchSimilarLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                <TextBlock Text="Canlı TV" FontSize="16" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                <ItemsControl ItemsSource="{Binding SearchSimilarLiveChannels}">
+                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="models:Channel">
+                      <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                              Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                        <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
+                          <StackPanel><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12"/></StackPanel>
+                        </Border>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+              <!-- Similar Series -->
+              <StackPanel Margin="0,0,0,20" IsVisible="{Binding SearchSimilarSeriesChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                <TextBlock Text="Dizi" FontSize="16" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                <ItemsControl ItemsSource="{Binding SearchSimilarSeriesChannels}">
+                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="models:Series">
+                      <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                              Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                        <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
+                          <StackPanel>
+                            <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding SeasonCountSafe, StringFormat='Sezon: {0}'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" Margin="0,4,0,0"/>
+                          </StackPanel>
+                        </Border>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+              <!-- Similar VOD -->
+              <StackPanel Margin="0,0,0,8" IsVisible="{Binding SearchSimilarVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                <TextBlock Text="VOD" FontSize="16" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                <ItemsControl ItemsSource="{Binding SearchSimilarVodChannels}">
+                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="models:Channel">
+                      <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                              Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                        <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
+                          <StackPanel><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12"/></StackPanel>
+                        </Border>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </StackPanel>
+            <!-- Empty search -->
+            <StackPanel HorizontalAlignment="Center" Margin="0,100,0,0" IsVisible="{Binding ShowSearchEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
+              <TextBlock Text="Sonuç bulunamadı." FontSize="16" Foreground="{DynamicResource TextMutedBrush}"/>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- 6. MY LIST VIEW -->
+        <ScrollViewer x:Name="MyListView" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.MyList}}">
+          <StackPanel Margin="24">
+            <TextBlock Text="Listem" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
+            <ItemsControl ItemsSource="{Binding MyList}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Channel">
+                  <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                    <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
+                      <StackPanel><Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12"><Image Width="60" Stretch="Uniform" Source="{Binding LogoUrl}"/></Border><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/></StackPanel>
+                    </Border>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0" IsVisible="{Binding ShowMyListEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
+              <Image Source="avares://Noctra.Avalonia/Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>
+              <TextBlock Text="Listeniz boş" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" Margin="0,14,0,6"/>
+              <TextBlock Text="İçerik eklediğinizde burada görünecek." FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- 7. FAVORITES VIEW -->
+        <ScrollViewer x:Name="FavoritesView" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Favorites}}">
+          <StackPanel Margin="24">
+            <TextBlock Text="Favoriler" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
+            <ItemsControl ItemsSource="{Binding FavoriteChannels}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Channel">
+                  <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                    <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
+                      <StackPanel><Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12"><Image Width="60" Stretch="Uniform" Source="{Binding LogoUrl}"/></Border><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/></StackPanel>
+                    </Border>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0" IsVisible="{Binding ShowFavoritesEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
+              <Image Source="avares://Noctra.Avalonia/Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>
+              <TextBlock Text="Favoriler boş" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" Margin="0,14,0,6"/>
+              <TextBlock Text="Beğendiğiniz içerikleri favorilere ekleyin." FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- 8. HISTORY VIEW -->
+        <ScrollViewer x:Name="HistoryView" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.History}}">
+          <StackPanel Margin="24">
+            <TextBlock Text="Geçmiş" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
+            <TextBlock Text="Canlı TV" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"
+                       IsVisible="{Binding HistoryLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
+            <ItemsControl ItemsSource="{Binding HistoryLiveChannels}" IsVisible="{Binding HistoryLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Channel">
+                  <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                    <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
+                      <StackPanel><Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12"><Image Width="60" Stretch="Uniform" Source="{Binding LogoUrl}"/></Border><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding LastWatched, StringFormat='Son: {0:dd.MM.yyyy HH:mm}'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><Border Height="3" Background="#33FFFFFF" Margin="0,10,0,0" IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}"><Border Width="{Binding ., Converter={StaticResource WatchedProgressWidthConverter}, ConverterParameter=160}" Background="{DynamicResource AccentBrush}" HorizontalAlignment="Left"/></Border></StackPanel>
+                    </Border>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Text="Diziler" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,12"
+                       IsVisible="{Binding HistorySeriesChannels.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
+            <ItemsControl ItemsSource="{Binding HistorySeriesChannels}" IsVisible="{Binding HistorySeriesChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Channel">
+                  <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                    <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
+                      <StackPanel><Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12"><Image Width="60" Stretch="Uniform" Source="{Binding LogoUrl}"/></Border><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding LastWatched, StringFormat='Son: {0:dd.MM.yyyy HH:mm}'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><Border Height="3" Background="#33FFFFFF" Margin="0,10,0,0" IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}"><Border Width="{Binding ., Converter={StaticResource WatchedProgressWidthConverter}, ConverterParameter=160}" Background="{DynamicResource AccentBrush}" HorizontalAlignment="Left"/></Border></StackPanel>
+                    </Border>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Text="Filmler" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,12"
+                       IsVisible="{Binding HistoryVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
+            <ItemsControl ItemsSource="{Binding HistoryVodChannels}" IsVisible="{Binding HistoryVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Channel">
+                  <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                    <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
+                      <StackPanel><Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12"><Image Width="60" Stretch="Uniform" Source="{Binding LogoUrl}"/></Border><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding LastWatched, StringFormat='Son: {0:dd.MM.yyyy HH:mm}'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><Border Height="3" Background="#33FFFFFF" Margin="0,10,0,0" IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}"><Border Width="{Binding ., Converter={StaticResource WatchedProgressWidthConverter}, ConverterParameter=160}" Background="{DynamicResource AccentBrush}" HorizontalAlignment="Left"/></Border></StackPanel>
+                    </Border>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0" IsVisible="{Binding ShowHistoryEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
+              <Image Source="avares://Noctra.Avalonia/Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>
+              <TextBlock Text="Geçmiş boş" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" Margin="0,14,0,6"/>
+              <TextBlock Text="İzlediğiniz içerikler burada listelenecek." FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- Loading Skeleton State -->
+        <Grid x:Name="LoadingSkeletons" Background="{DynamicResource Bg0Brush}" IsVisible="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+          <StackPanel Margin="24">
+            <Border Height="500" Background="{DynamicResource Surface0Brush}" CornerRadius="16" Margin="0,0,0,32" Opacity="0.5"/>
+            <Border Width="200" Height="24" Background="{DynamicResource Surface0Brush}" CornerRadius="4" HorizontalAlignment="Left" Margin="0,0,0,16" Opacity="0.5"/>
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <Border Width="300" Height="169" Background="{DynamicResource Surface0Brush}" CornerRadius="8" Opacity="0.5"/>
+              <Border Width="300" Height="169" Background="{DynamicResource Surface0Brush}" CornerRadius="8" Opacity="0.5"/>
+              <Border Width="300" Height="169" Background="{DynamicResource Surface0Brush}" CornerRadius="8" Opacity="0.5"/>
+            </StackPanel>
+          </StackPanel>
+        </Grid>
+
+        <!-- Search Overlay -->
+        <Grid x:Name="SearchOverlay" Background="#CC000000" IsVisible="{Binding IsSearchOverlayVisible}" ZIndex="1000">
+          <StackPanel MaxWidth="800" VerticalAlignment="Top" Margin="0,100,0,0">
+            <Border Background="{DynamicResource Bg1Brush}" CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="2">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBox x:Name="SearchInput" FontSize="24" Background="Transparent" BorderThickness="0" Padding="20" Watermark="Film, dizi veya kanal ara..."
+                         Text="{Binding SearchQuery}" KeyDown="SearchInput_KeyDown"/>
+                <Button Grid.Column="1" Command="{Binding CommitSearchCommand}" Background="Transparent" BorderThickness="0" Padding="20" Cursor="Hand">
+                  <TextBlock Text="🔍" FontSize="24" Foreground="#7C3AED"/>
+                </Button>
+              </Grid>
+            </Border>
+            <ScrollViewer MaxHeight="500" Margin="0,20,0,0">
+              <ItemsControl ItemsSource="{Binding SearchResults}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="models:Channel">
+                    <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}"
+                            Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" Margin="0,0,0,12" HorizontalAlignment="Stretch">
+                      <Border Background="{DynamicResource Surface1Brush}" CornerRadius="8" Padding="16">
+                        <Grid ColumnDefinitions="120,*">
+                          <Border Width="100" Height="56" CornerRadius="4" Background="{DynamicResource Surface1Brush}" ClipToBounds="True">
+                            <Image Stretch="UniformToFill" Source="{Binding LogoUrl}"/>
+                          </Border>
+                          <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                            <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Text="{Binding GroupTitle}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                            <!-- Progress bar -->
+                            <Border Height="3" Background="#33FFFFFF" Margin="0,12,0,0"
+                                    IsVisible="{Binding WatchedPercentage, Converter={StaticResource CountToVisibilityConverter}}">
+                              <Border Width="{Binding WatchedPercentage, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=640}"
+                                      Background="#8D09E5" HorizontalAlignment="Left"/>
+                            </Border>
+                          </StackPanel>
+                        </Grid>
+                      </Border>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </StackPanel>
+          <Button Content="✕" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="40" FontSize="24" Foreground="White"
+                  Background="Transparent" BorderThickness="0" Command="{Binding CloseSearchCommand}" Cursor="Hand"/>
+        </Grid>
+
+        <!-- Series Detail Overlay -->
+        <Grid x:Name="SeriesDetailOverlay" Background="{DynamicResource BackgroundGradientBrush}"
+              IsVisible="{Binding IsSeriesDetailVisible}" ZIndex="998">
+          <Grid Margin="52,88">
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+            <Grid ColumnDefinitions="260,*" Margin="0,0,0,28">
+              <Border Height="360" CornerRadius="14" ClipToBounds="True" Background="{DynamicResource Surface0Brush}">
+                <Image Stretch="UniformToFill" Source="{Binding SelectedSeriesPosterUrl}"/>
+              </Border>
+              <StackPanel Grid.Column="1" Margin="28,0,0,0">
+                <Button Command="{Binding CloseSeriesDetailCommand}" Content="←" FontSize="20" HorizontalAlignment="Left" Margin="0,0,0,20" Background="Transparent" BorderThickness="0" Cursor="Hand"/>
+                <TextBlock Text="{Binding SelectedSeries.Name}" FontSize="44" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap"/>
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                  <TextBlock Text="{Binding SelectedSeries.Genre}" FontSize="16" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,16,0"/>
+                  <TextBlock Text="{Binding SelectedSeries.ReleaseYear}" FontSize="16" Foreground="{DynamicResource TextMutedBrush}"/>
+                </StackPanel>
+                <TextBlock Text="{Binding SelectedSeriesOverview}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" Margin="0,16,0,0" MaxHeight="96"/>
+                <TextBlock Text="{Binding SelectedSeriesCast, StringFormat='Oyuncular: {0}'}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,14,0,0"
+                           IsVisible="{Binding SelectedSeriesCast, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+                <TextBlock Text="Detaylar yükleniyor..." FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,10,0,0"
+                           IsVisible="{Binding IsSelectedSeriesMetadataLoading, Converter={StaticResource BoolToVisibilityConverter}}"/>
+              </StackPanel>
+            </Grid>
+            <ScrollViewer Grid.Row="1" Padding="0,8,0,0">
+              <ItemsControl ItemsSource="{Binding SelectedSeries.Seasons}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <StackPanel Margin="0,0,0,40">
+                      <TextBlock Text="{Binding SeasonNumber, StringFormat='Sezon {0}'}" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+                      <ItemsControl ItemsSource="{Binding Episodes}">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Button Margin="0,0,16,24" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand" x:DataType="models:Episode"
+                                    Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).PlayEpisodeCommand}" CommandParameter="{Binding}">
+                              <Border Background="{DynamicResource Bg1Brush}" CornerRadius="8" Width="240">
+                                <Grid RowDefinitions="Auto,*">
+                                  <Border Height="100" CornerRadius="8,8,0,0" ClipToBounds="True">
+                                    <Grid>
+                                      <Image Stretch="UniformToFill" Source="{Binding CoverUrl}"/>
+                                      <Border Background="#44000000"/>
+                                      <TextBlock Text="▶" Foreground="White" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.6"/>
+                                      <!-- Completion badge -->
+                                      <Border Width="24" Height="24" CornerRadius="12" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8"
+                                              Background="{DynamicResource AccentBrush}" IsVisible="{Binding IsCompleted}">
+                                        <TextBlock Text="✓" Foreground="White" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                      </Border>
+                                    </Grid>
+                                  </Border>
+                                  <Border Grid.Row="1" Padding="12">
+                                    <StackPanel>
+                                      <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis"/>
+                                      <!-- Episode progress bar -->
+                                      <Border Height="3" Background="#33FFFFFF" Margin="0,12,0,0"
+                                              IsVisible="{Binding WatchedPercentage, Converter={StaticResource CountToVisibilityConverter}}">
+                                        <Border Width="{Binding WatchedPercentage, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=150}"
+                                                Background="{DynamicResource AccentBrush}" HorizontalAlignment="Left"/>
+                                      </Border>
+                                    </StackPanel>
+                                  </Border>
+                                </Grid>
+                              </Border>
+                            </Button>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Grid>
+        </Grid>
+
+        <!-- Player Area -->
+        <Grid x:Name="PlayerArea" Background="Black" IsVisible="False" ClipToBounds="True" ZIndex="2000">
+          <Grid x:Name="VideoHost"/>
+          <views:VideoOverlayView x:Name="OverlayControl" ZIndex="2"/>
+          <!-- Next Episode Prompt (binds to PlayerViewModel via OverlayControl's DataContext) -->
+          <Border x:Name="NextEpisodePrompt" Background="{DynamicResource SurfaceBrush}" CornerRadius="12" Padding="24"
+                  HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,40,40" Width="350"
+                  DataContext="{Binding #OverlayControl.DataContext}" x:DataType="vm:PlayerViewModel"
+                  IsVisible="{Binding IsNextEpisodePromptVisible}" ZIndex="3000">
+            <Grid RowDefinitions="Auto,Auto,Auto">
+              <TextBlock Text="Sonraki Bölüm" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+              <StackPanel Grid.Row="1" Margin="0,0,0,16">
+                <TextBlock Text="{Binding NextEpisode.Name}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="{Binding NextEpisode.Plot}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextTrimming="CharacterEllipsis" MaxHeight="40" Margin="0,4,0,0"/>
+              </StackPanel>
+              <Button Grid.Row="2" Content="▶ Şimdi İzle" Command="{Binding PlayNextEpisodeCommand}"
+                      Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="16" FontWeight="Bold" Padding="20,12" BorderThickness="0" HorizontalAlignment="Stretch" Cursor="Hand"/>
+            </Grid>
+          </Border>
+        </Grid>
+
+      </Grid>
+    </Grid>
+
+    <!-- ========== STATUS BAR ========== -->
+    <Border Grid.Row="2" Background="{DynamicResource HeaderGradientBrush}">
+      <Grid Margin="24,0" ColumnDefinitions="*,Auto">
+        <TextBlock Text="{Binding StatusMessage}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+        <Border Grid.Column="1" Background="{DynamicResource AccentBrush}" CornerRadius="{DynamicResource RadiusPill}" Padding="14,6">
+          <TextBlock Text="{Binding FilteredChannels.Count, StringFormat='{}{0} kanal'}" FontSize="12" FontWeight="SemiBold" Foreground="White"/>
+        </Border>
+      </Grid>
+    </Border>
+
+  </Grid>
+</Window>

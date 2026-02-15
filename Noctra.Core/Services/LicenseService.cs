@@ -170,7 +170,7 @@ public class LicenseService : ObservableObject, ILicenseService
         };
     }
 
-    public event Action SubscriptionChanged;
+    public event Action? SubscriptionChanged;
 
     public async Task<bool> StartPurchaseFlowAsync(SubscriptionTier targetTier)
     {

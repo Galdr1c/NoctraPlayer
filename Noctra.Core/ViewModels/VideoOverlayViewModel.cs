@@ -351,7 +351,7 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
     }
 
     // Timer to update clock
-    private System.Timers.Timer _clockTimer;
+    private System.Timers.Timer? _clockTimer;
 
     public void InitializeClock()
     {

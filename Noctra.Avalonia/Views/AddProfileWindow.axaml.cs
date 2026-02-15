@@ -1,0 +1,82 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Microsoft.Extensions.DependencyInjection;
+using Noctra.ViewModels;
+
+namespace Noctra.Avalonia.Views;
+
+public partial class AddProfileWindow : Window
+{
+    private readonly IServiceScopeFactory _scopeFactory;
+    private AddProfileViewModel? _viewModel;
+
+    public AddProfileWindow()
+        : this(
+            ((App)Application.Current!).Services.GetRequiredService<AddProfileViewModel>(),
+            ((App)Application.Current!).Services.GetRequiredService<IServiceScopeFactory>())
+    {
+    }
+
+    public AddProfileWindow(AddProfileViewModel viewModel, IServiceScopeFactory scopeFactory)
+    {
+        InitializeComponent();
+        _scopeFactory = scopeFactory;
+        DataContext = viewModel;
+        _viewModel = viewModel;
+        _viewModel.RequestClose += ViewModel_RequestClose;
+        _viewModel.RequestAvatarPicker += ViewModel_RequestAvatarPicker;
+    }
+
+    private void DragBar_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            BeginMoveDrag(e);
+        }
+    }
+
+    private void Cancel_Click(object? sender, RoutedEventArgs e)
+    {
+        Close(false);
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        if (_viewModel != null)
+        {
+            _viewModel.RequestClose -= ViewModel_RequestClose;
+            _viewModel.RequestAvatarPicker -= ViewModel_RequestAvatarPicker;
+        }
+
+        base.OnClosed(e);
+    }
+
+    private void ViewModel_RequestClose(object? sender, EventArgs e)
+    {
+        Close(true);
+    }
+
+    private async void ViewModel_RequestAvatarPicker(object? sender, EventArgs e)
+    {
+        if (_viewModel == null)
+        {
+            return;
+        }
+
+        using var scope = _scopeFactory.CreateScope();
+        var pickerVm = scope.ServiceProvider.GetRequiredService<AvatarPickerViewModel>();
+        var pickerWindow = scope.ServiceProvider.GetRequiredService<AvatarPickerWindow>();
+        pickerWindow.DataContext = pickerVm;
+
+        string? selectedAvatar = null;
+        pickerVm.AvatarSelected += (_, avatar) => selectedAvatar = avatar;
+
+        var result = await pickerWindow.ShowDialog<bool?>(this);
+        if (result == true && !string.IsNullOrWhiteSpace(selectedAvatar))
+        {
+            _viewModel.SetAvatar(selectedAvatar);
+        }
+    }
+}

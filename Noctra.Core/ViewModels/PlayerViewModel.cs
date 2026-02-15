@@ -165,8 +165,6 @@ public partial class PlayerViewModel : ObservableObject
     private readonly System.Timers.Timer _autoHideTimer;
     private readonly System.Timers.Timer _clockTimer;
     private readonly System.Timers.Timer _watchHistoryTimer;
-    private System.Timers.Timer? _zappingTimer;
-
     public int? CurrentProfileId { get; set; }
 
     public PlayerViewModel(

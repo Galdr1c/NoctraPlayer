@@ -1,0 +1,101 @@
+<Window x:Class="Noctra.Avalonia.Views.AvatarPickerWindow"
+        xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:Noctra.ViewModels"
+        mc:Ignorable="d"
+        x:DataType="vm:AvatarPickerViewModel"
+        x:CompileBindings="False"
+        Title="Avatar Seç" Height="600" Width="800"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        SystemDecorations="None"
+        CanResize="False"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        FontFamily="{StaticResource DefaultFontFamily}">
+
+    <Window.Styles>
+        <!-- Close Button -->
+        <Style Selector="Button.AvatarCloseBtn">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="20"/>
+        </Style>
+        <Style Selector="Button.AvatarCloseBtn:pointerover">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+
+        <!-- Avatar Item Button -->
+        <Style Selector="Button.AvatarItemBtn">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="10"/>
+        </Style>
+        <Style Selector="Button.AvatarItemBtn:pointerover Border.AvatarBorder">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+        </Style>
+    </Window.Styles>
+
+    <Border CornerRadius="{DynamicResource RadiusMedium}"
+            ClipToBounds="True"
+            Background="{DynamicResource Bg0Brush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1">
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Header -->
+                <RowDefinition Height="*"/>    <!-- Avatars -->
+                <RowDefinition Height="Auto"/> <!-- Footer -->
+            </Grid.RowDefinitions>
+
+            <!-- Drag area -->
+            <Border Height="20" VerticalAlignment="Top" Background="Transparent" PointerPressed="DragBar_PointerPressed"/>
+
+            <!-- Header -->
+            <Grid Grid.Row="0" Margin="0,0,0,20">
+                <TextBlock Text="Profil Resmi Seç" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                <Button HorizontalAlignment="Right" Content="✕" 
+                        Click="CloseButton_Click"
+                        Classes="AvatarCloseBtn"/>
+            </Grid>
+
+            <!-- Avatar Grid -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Avatars}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Classes="AvatarItemBtn"
+                                    Command="{Binding $parent[Window].((vm:AvatarPickerViewModel)DataContext).SelectAvatarCommand}"
+                                    CommandParameter="{Binding}">
+                                <Border Width="100" Height="100" CornerRadius="4" 
+                                        BorderBrush="Transparent" BorderThickness="2" 
+                                        Classes="AvatarBorder"
+                                        Background="{Binding Converter={StaticResource ProfileColorConverter}}"
+                                        ClipToBounds="True">
+                                    <Image Source="{Binding Converter={StaticResource AvatarPathConverter}}" 
+                                           Stretch="UniformToFill" 
+                                           RenderOptions.BitmapInterpolationMode="HighQuality"/>
+                                </Border>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+            
+            <TextBlock Grid.Row="2" Text="İpucu: İstediğiniz avatarın üzerine tıklayın." 
+                       Foreground="{DynamicResource TextMutedBrush}" 
+                       HorizontalAlignment="Center" Margin="0,20,0,0"/>
+        </Grid>
+    </Border>
+</Window>

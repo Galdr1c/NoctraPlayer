@@ -1,0 +1,211 @@
+<Window x:Class="Noctra.Avalonia.Views.EditChannelWindow"
+        xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:Noctra.ViewModels"
+        mc:Ignorable="d"
+        x:DataType="vm:EditChannelViewModel"
+        x:CompileBindings="False"
+        Title="Kanal Düzenle" Height="600" Width="500"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        SystemDecorations="None"
+        CanResize="False"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        FontFamily="{StaticResource DefaultFontFamily}">
+
+    <Window.Styles>
+        <!-- Close Button -->
+        <Style Selector="Button.EditCloseBtn">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.EditCloseBtn:pointerover">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+
+        <!-- Primary Action Button -->
+        <Style Selector="Button.EditPrimaryBtn">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="Button.EditPrimaryBtn:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+        </Style>
+
+        <!-- Secondary Action Button -->
+        <Style Selector="Button.EditSecondaryBtn">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.EditSecondaryBtn:pointerover">
+            <Setter Property="BorderBrush" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+
+        <!-- Search Result Item -->
+        <Style Selector="Button.SearchResultItem">
+            <Setter Property="Background" Value="{DynamicResource Surface0Brush}"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        </Style>
+        <Style Selector="Button.SearchResultItem:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
+        </Style>
+    </Window.Styles>
+
+    <Border Background="{DynamicResource BackgroundGradientBrush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="{DynamicResource RadiusSmall}"
+            ClipToBounds="True">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Title Bar -->
+                <RowDefinition Height="*"/>    <!-- Content -->
+                <RowDefinition Height="Auto"/> <!-- Footer -->
+            </Grid.RowDefinitions>
+
+            <!-- Title Bar -->
+            <Grid Grid.Row="0" Background="Transparent" PointerPressed="DragBar_PointerPressed">
+                <TextBlock Text="Kanal Düzenle"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           FontSize="16" FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           Margin="24,12"/>
+
+                <Button HorizontalAlignment="Right" VerticalAlignment="Center" Margin="8"
+                        Command="{Binding CancelCommand}"
+                        Content="✕"
+                        Classes="EditCloseBtn"/>
+            </Grid>
+
+            <!-- Content -->
+            <ScrollViewer Grid.Row="1" Padding="24" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+
+                    <!-- Metadata Search Section -->
+                    <Border Background="{DynamicResource Surface1Brush}" CornerRadius="8" Padding="16" Margin="0,0,0,24">
+                        <StackPanel>
+                            <TextBlock Text="Otomatik Bilgi Getir (TMDb)" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" Margin="0,0,0,8"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding MetadataSearchQuery}"
+                                         Watermark="Film veya Dizi adı ara..."/>
+                                <Button Grid.Column="1" Command="{Binding SearchMetadataCommand}"
+                                        Classes="EditPrimaryBtn"
+                                        Margin="8,0,0,0"
+                                        Padding="16,10"
+                                        Content="Ara"/>
+                            </Grid>
+
+                            <!-- Search Results List -->
+                            <ItemsControl ItemsSource="{Binding SearchResults}"
+                                         Margin="0,12,0,0"
+                                         IsVisible="{Binding SearchResults.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Classes="SearchResultItem"
+                                                Command="{Binding $parent[Window].((vm:EditChannelViewModel)DataContext).ApplyMetadataCommand}"
+                                                CommandParameter="{Binding}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="40"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Image Source="{Binding PosterPath}" Stretch="Uniform" Height="60"/>
+                                                <StackPanel Grid.Column="1" Margin="12,0">
+                                                    <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding ReleaseDate}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" Text="Seç" Foreground="{DynamicResource AccentBrush}"
+                                                           VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13"/>
+                                            </Grid>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="Kanal Adı" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                    <TextBox Text="{Binding Name}" Margin="0,0,0,16"/>
+
+                    <TextBlock Text="Grup" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                    <TextBox Text="{Binding GroupTitle}" Margin="0,0,0,16"/>
+
+                    <TextBlock Text="Kanal Türü" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                    <ComboBox SelectedItem="{Binding Type}" ItemsSource="{Binding ChannelTypes}" Margin="0,0,0,16"
+                              HorizontalAlignment="Stretch"/>
+
+                    <TextBlock Text="Logo URL" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                    <TextBox Text="{Binding LogoUrl}" Margin="0,0,0,16"/>
+
+                    <TextBlock Text="EPG ID (TvgId)" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                    <TextBox Text="{Binding TvgId}" Margin="0,0,0,16"/>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Footer -->
+            <Border Grid.Row="2" Background="{DynamicResource Surface1Brush}" Padding="16" CornerRadius="0,0,8,8">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="İptal" Command="{Binding CancelCommand}" Click="Cancel_Click"
+                            Classes="EditSecondaryBtn" Margin="0,0,12,0" Width="100" Height="40"/>
+                    <Button Content="Kaydet" Command="{Binding SaveCommand}"
+                            Classes="EditPrimaryBtn" Width="100" Height="40"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Loading Overlay -->
+            <Grid Grid.RowSpan="3" Background="#80000000" IsVisible="{Binding IsBusy}" ZIndex="100">
+                <Border Background="{DynamicResource Surface1Brush}" CornerRadius="8" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <StackPanel>
+                        <TextBlock Text="⌛" FontSize="32" HorizontalAlignment="Center"
+                                   RenderTransformOrigin="50%,50%">
+                            <TextBlock.RenderTransform>
+                                <RotateTransform Angle="0"/>
+                            </TextBlock.RenderTransform>
+                            <TextBlock.Styles>
+                                <Style Selector="TextBlock">
+                                    <Style.Animations>
+                                        <Animation Duration="0:0:1" IterationCount="INFINITE">
+                                            <KeyFrame Cue="0%">
+                                                <Setter Property="RenderTransform" Value="rotate(0deg)"/>
+                                            </KeyFrame>
+                                            <KeyFrame Cue="100%">
+                                                <Setter Property="RenderTransform" Value="rotate(360deg)"/>
+                                            </KeyFrame>
+                                        </Animation>
+                                    </Style.Animations>
+                                </Style>
+                            </TextBlock.Styles>
+                        </TextBlock>
+                        <TextBlock Text="İşleniyor..." Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,16,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

@@ -26,12 +26,12 @@ public partial class M3UParser : IM3UParser
         _httpClient.Timeout = TimeSpan.FromSeconds(30); // Global timeout
     }
 
-    public async Task<List<Channel>> ParseAsync(string content)
+    public Task<List<Channel>> ParseAsync(string content)
     {
         var channels = new List<Channel>();
         var lines = content.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
 
-        if (lines.Length == 0) return channels;
+        if (lines.Length == 0) return Task.FromResult(channels);
 
         // M3U header kontrolü
         var firstLine = lines[0].Trim();
@@ -63,7 +63,7 @@ public partial class M3UParser : IM3UParser
             }
         }
 
-        return channels;
+        return Task.FromResult(channels);
     }
 
     public async Task<List<Channel>> ParseFromFileAsync(string filePath)

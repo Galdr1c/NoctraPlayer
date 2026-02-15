@@ -1,0 +1,95 @@
+<Window x:Class="Noctra.Avalonia.Views.DialogWindow"
+        xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="using:Noctra.Avalonia.Views"
+        x:Name="DialogWindowRoot"
+        x:DataType="views:DialogWindow"
+        x:CompileBindings="False"
+        Title="{Binding TitleText}"
+        Width="450" Height="220"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        Topmost="True"
+        SystemDecorations="None"
+        CanResize="False"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        FontFamily="{StaticResource DefaultFontFamily}">
+
+    <Window.Styles>
+        <!-- Primary Button -->
+        <Style Selector="Button.DialogPrimary">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="Button.DialogPrimary:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+        </Style>
+
+        <!-- Secondary Button -->
+        <Style Selector="Button.DialogSecondary">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.DialogSecondary:pointerover">
+            <Setter Property="BorderBrush" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+    </Window.Styles>
+
+    <Border Background="{DynamicResource BackgroundBrush}"
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+            CornerRadius="{DynamicResource RadiusMedium}" ClipToBounds="True"
+            BoxShadow="0 0 20 0 #80000000">
+
+        <Grid Margin="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Title -->
+            <TextBlock Text="{Binding TitleText}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="18" FontWeight="Bold" Margin="0,0,0,16"/>
+
+            <!-- Content Area -->
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Icon -->
+                <Path x:Name="IconPath"
+                      Width="32" Height="32"
+                      Stretch="Uniform"
+                      Fill="{DynamicResource TextPrimaryBrush}"
+                      VerticalAlignment="Center"
+                      Margin="0,0,20,0"/>
+
+                <!-- Message -->
+                <TextBlock Grid.Column="1" Text="{Binding MessageText}" Foreground="{DynamicResource TextMutedBrush}"
+                           FontSize="15" VerticalAlignment="Center" TextWrapping="Wrap"/>
+            </Grid>
+
+            <!-- Actions -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                <Button Content="{Binding SecondaryButtonText}" Width="100" Height="40"
+                        Classes="DialogSecondary" Margin="0,0,12,0"
+                        Click="Secondary_Click" IsVisible="{Binding ShowSecondary}"/>
+
+                <Button Content="{Binding PrimaryButtonText}" Width="120" Height="40"
+                        Classes="DialogPrimary"
+                        Click="Primary_Click"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

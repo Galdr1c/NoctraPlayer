@@ -165,9 +165,10 @@ public partial class MainViewModel : ObservableObject
         _settingsService.SettingsChanged += ApplyRefreshSchedulesFromSettings;
     }
 
-    public async Task InitializeAsync()
+    public Task InitializeAsync()
     {
         // Otomatik yükleme yerine profil yüklenmesini bekle
+        return Task.CompletedTask;
     }
 
     [ObservableProperty]

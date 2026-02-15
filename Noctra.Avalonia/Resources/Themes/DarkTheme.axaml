@@ -1,0 +1,128 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Color x:Key="Bg0Color">#141414</Color>
+  <Color x:Key="Bg1Color">#1A1A1A</Color>
+  <Color x:Key="Surface0Color">#2A2A2A</Color>
+  <Color x:Key="Surface1Color">#333333</Color>
+  <Color x:Key="BorderColor">#404040</Color>
+
+  <Color x:Key="Accent300Color">#C4B5FD</Color>
+  <Color x:Key="Accent500Color">#A78BFA</Color>
+  <Color x:Key="Accent600Color">#8B5CF6</Color>
+  <Color x:Key="Accent700Color">#7C3AED</Color>
+  <Color x:Key="GlowColor">#C4B5FD</Color>
+
+  <Color x:Key="TextPrimaryColor">#FFFFFF</Color>
+  <Color x:Key="TextSecondaryColor">#E5E5E5</Color>
+  <Color x:Key="TextMutedColor">#B3B3B3</Color>
+  <Color x:Key="TextDisabledColor">#808080</Color>
+
+  <Color x:Key="SuccessColor">#46D369</Color>
+  <Color x:Key="WarningColor">#FFA00A</Color>
+  <Color x:Key="ErrorColor">#E50914</Color>
+  <Color x:Key="InfoColor">#54B4D3</Color>
+  <Color x:Key="LiveRedColor">#E50914</Color>
+
+  <SolidColorBrush x:Key="Bg0Brush" Color="{StaticResource Bg0Color}" />
+  <SolidColorBrush x:Key="Bg1Brush" Color="{StaticResource Bg1Color}" />
+  <SolidColorBrush x:Key="Surface0Brush" Color="{StaticResource Surface0Color}" />
+  <SolidColorBrush x:Key="Surface1Brush" Color="{StaticResource Surface1Color}" />
+  <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}" />
+
+  <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource Accent500Color}" />
+  <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource Accent600Color}" />
+  <SolidColorBrush x:Key="AccentLightBrush" Color="{StaticResource Accent300Color}" />
+  <SolidColorBrush x:Key="GlowBrush" Color="{StaticResource GlowColor}" />
+
+  <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}" />
+  <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}" />
+  <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource TextMutedColor}" />
+  <SolidColorBrush x:Key="TextDisabledBrush" Color="{StaticResource TextDisabledColor}" />
+
+  <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
+  <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />
+  <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}" />
+  <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource InfoColor}" />
+  <SolidColorBrush x:Key="LiveRedBrush" Color="{StaticResource LiveRedColor}" />
+
+  <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource Bg0Color}" />
+  <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource Surface0Color}" />
+  <SolidColorBrush x:Key="SurfaceLightBrush" Color="{StaticResource Surface1Color}" />
+  <SolidColorBrush x:Key="CardBackgroundBrush" Color="{StaticResource Surface0Color}" />
+  <SolidColorBrush x:Key="InputBackgroundBrush" Color="{StaticResource Surface1Color}" />
+  <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource BorderColor}" />
+
+  <LinearGradientBrush x:Key="PrimaryGradientBrush" StartPoint="0,0" EndPoint="1,1">
+    <GradientStop Color="#8B5CF6" Offset="0.0" />
+    <GradientStop Color="#7C3AED" Offset="1.0" />
+  </LinearGradientBrush>
+
+  <LinearGradientBrush x:Key="BackgroundGradientBrush" StartPoint="0,0" EndPoint="1,1">
+    <GradientStop Color="{StaticResource Bg0Color}" Offset="0.0" />
+    <GradientStop Color="#1a0a2e" Offset="1.0" />
+  </LinearGradientBrush>
+
+  <LinearGradientBrush x:Key="HeaderGradientBrush" StartPoint="0,0" EndPoint="1,0">
+    <GradientStop Color="{StaticResource Bg1Color}" Offset="0.0" />
+    <GradientStop Color="#2D1B4E" Offset="1.0" />
+  </LinearGradientBrush>
+
+  <LinearGradientBrush x:Key="GlowGradientBrush" StartPoint="0,0" EndPoint="1,0">
+    <GradientStop Color="{StaticResource GlowColor}" Offset="0.0" />
+    <GradientStop Color="{StaticResource Accent500Color}" Offset="1.0" />
+  </LinearGradientBrush>
+
+  <LinearGradientBrush x:Key="HeroOverlayBrush" StartPoint="0,0" EndPoint="0,1">
+    <GradientStop Color="Transparent" Offset="0.0" />
+    <GradientStop Color="#99141414" Offset="0.5" />
+    <GradientStop Color="#141414" Offset="1.0" />
+  </LinearGradientBrush>
+
+  <LinearGradientBrush x:Key="IconGradientBrush" StartPoint="0,0" EndPoint="1,1">
+    <GradientStop Color="{StaticResource Accent600Color}" Offset="0.0" />
+    <GradientStop Color="{StaticResource GlowColor}" Offset="1.0" />
+  </LinearGradientBrush>
+
+  <LinearGradientBrush x:Key="CardHoverGradientBrush" StartPoint="0,0" EndPoint="1,0">
+    <GradientStop Color="#333333" Offset="0.0" />
+    <GradientStop Color="#404040" Offset="1.0" />
+  </LinearGradientBrush>
+
+  <LinearGradientBrush x:Key="PremiumCardBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
+    <GradientStop Color="{StaticResource Surface0Color}" Offset="0.0" />
+    <GradientStop Color="#1E1636" Offset="1.0" />
+  </LinearGradientBrush>
+  <SolidColorBrush x:Key="PremiumCardForegroundBrush" Color="White" />
+
+  <!-- Effect anahtarlarini koru; ilerleyen fazlarda BoxShadow/VisualEffect'e tasinacak -->
+  <x:String x:Key="DefaultShadow">shadow-token-default</x:String>
+  <x:String x:Key="CardShadow">shadow-token-card</x:String>
+  <x:String x:Key="HeroShadow">shadow-token-hero</x:String>
+  <x:String x:Key="AccentGlow">shadow-token-accent</x:String>
+  <x:String x:Key="FocusGlow">shadow-token-focus</x:String>
+
+  <FontFamily x:Key="DefaultFontFamily">Inter</FontFamily>
+
+  <x:Double x:Key="FontSizeH1">32</x:Double>
+  <x:Double x:Key="FontSizeH2">24</x:Double>
+  <x:Double x:Key="FontSizeH3">20</x:Double>
+  <x:Double x:Key="FontSizeBody">14</x:Double>
+  <x:Double x:Key="FontSizeBodyLarge">16</x:Double>
+  <x:Double x:Key="FontSizeCaption">12</x:Double>
+  <x:Double x:Key="FontSizeSmall">11</x:Double>
+
+  <Thickness x:Key="PagePadding">32</Thickness>
+  <Thickness x:Key="SectionPadding">24</Thickness>
+  <Thickness x:Key="CardPadding">16</Thickness>
+  <Thickness x:Key="ItemPadding">12</Thickness>
+  <Thickness x:Key="SmallPadding">8</Thickness>
+  <x:Double x:Key="CardGap">16</x:Double>
+  <x:Double x:Key="RailGap">24</x:Double>
+
+  <CornerRadius x:Key="RadiusSmall">8</CornerRadius>
+  <CornerRadius x:Key="RadiusMedium">12</CornerRadius>
+  <CornerRadius x:Key="RadiusLarge">16</CornerRadius>
+  <CornerRadius x:Key="RadiusXLarge">24</CornerRadius>
+  <CornerRadius x:Key="RadiusPill">100</CornerRadius>
+</ResourceDictionary>
+

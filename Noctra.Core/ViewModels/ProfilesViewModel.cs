@@ -162,9 +162,10 @@ public partial class ProfilesViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task EditProfile(Profile profile)
+    private Task EditProfile(Profile profile)
     {
         OnProfileEditRequested?.Invoke(profile);
+        return Task.CompletedTask;
     }
 }
 

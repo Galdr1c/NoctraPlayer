@@ -151,6 +151,11 @@ Noctra/
 - Opsiyonel telemetry/diagnostic modu
 - Paketleme ve dagitim sureci (installer/release otomasyonu)
 
+## WPF -> Avalonia Gecis Notlari
+
+- Adim adim gecis plani: `docs/WPF_TO_AVALONIA_MIGRATION.md`
+- Gorev takip panosu: `docs/WPF_TO_AVALONIA_TASKBOARD.md`
+
 ## Yapilanlar Gunlugu
 
 Bu bolumu her yeni tamamlanan ozellikte guncelleyecegiz.
