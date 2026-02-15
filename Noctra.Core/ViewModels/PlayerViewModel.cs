@@ -162,6 +162,7 @@ public partial class PlayerViewModel : ObservableObject
     private DateTime _liveRecoveryWindowStartUtc = DateTime.MinValue;
     private int _liveRecoveryAttemptsInWindow;
     private int _liveStallScore;
+    private int _volumeBeforeMute = 100;
     private readonly IDispatcherService _dispatcherService;
     private readonly IWatchHistoryService? _watchHistoryService;
     private readonly System.Timers.Timer _autoHideTimer;
@@ -1165,6 +1166,19 @@ public partial class PlayerViewModel : ObservableObject
     partial void OnVolumeChanged(int value)
     {
         _videoPlayerService.Volume = value;
+        if (value > 0)
+        {
+            _volumeBeforeMute = value;
+        }
+
+        if (value > 0 && IsMuted)
+        {
+            IsMuted = false;
+        }
+        else if (value == 0 && !IsMuted)
+        {
+            IsMuted = true;
+        }
     }
 
     partial void OnIsMutedChanged(bool value)
@@ -1175,7 +1189,28 @@ public partial class PlayerViewModel : ObservableObject
     [RelayCommand]
     private void ToggleMute()
     {
-        IsMuted = !IsMuted;
+        if (!IsMuted)
+        {
+            if (Volume > 0)
+            {
+                _volumeBeforeMute = Volume;
+            }
+
+            IsMuted = true;
+            if (Volume != 0)
+            {
+                Volume = 0;
+            }
+        }
+        else
+        {
+            IsMuted = false;
+            if (Volume == 0)
+            {
+                Volume = _volumeBeforeMute > 0 ? _volumeBeforeMute : 50;
+            }
+        }
+
         RestartAutoHideTimer();
     }
 

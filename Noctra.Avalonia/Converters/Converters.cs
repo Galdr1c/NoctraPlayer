@@ -558,15 +558,13 @@ public class PlayPauseIconConverter : IValueConverter
 
 public class VolumeIconConverter : IValueConverter
 {
+    private const string VolumeOnPath = "M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z";
+    private const string VolumeMutedPath = "M3 9v6h4l5 5V4L7 9H3zm10.5 3l2.5 2.5 1.5-1.5-2.5-2.5 2.5-2.5-1.5-1.5-2.5 2.5-2.5-2.5-1.5 1.5 2.5 2.5-2.5 2.5 1.5 1.5 2.5-2.5z";
+
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         var isMuted = value is bool b && b;
-        if (isMuted)
-        {
-            return "M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63z";
-        }
-
-        return "M3 9v6h4l5 5V4L7 9H3z";
+        return isMuted ? VolumeMutedPath : VolumeOnPath;
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

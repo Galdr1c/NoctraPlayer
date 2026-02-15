@@ -24,7 +24,7 @@
         </Style>
     </UserControl.Styles>
 
-    <Grid Background="Transparent" Cursor="Arrow">
+    <Grid Background="Transparent">
 
         <!-- ==========================================
              OVERLAY CONTENT (Visible when interacting)
@@ -181,7 +181,9 @@
 
                     <!-- Left: Volume -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal">
-                        <Button Command="{Binding ToggleMuteCommand}" Content="&#x1F50A;" FontSize="20"/>
+                        <Button Command="{Binding ToggleMuteCommand}"
+                                Content="{Binding IsMuted, Converter={StaticResource BoolToStringConverter}, ConverterParameter=🔇|🔊}"
+                                FontSize="20"/>
                         <Slider Width="100" Margin="12,0,0,0" VerticalAlignment="Center"
                                 Minimum="0" Maximum="100" Value="{Binding Volume}"/>
                     </StackPanel>
@@ -543,11 +545,23 @@
                 </Transitions>
             </Border.Transitions>
             <StackPanel>
-                <TextBlock Text="SES" FontSize="26" HorizontalAlignment="Center" Foreground="White" Margin="0,0,0,12"/>
+                <TextBlock Text="SESSIZ"
+                           FontSize="26"
+                           HorizontalAlignment="Center"
+                           Foreground="White"
+                           Margin="0,0,0,12"
+                           IsVisible="{Binding IsMuted}"/>
+                <TextBlock Text="SES"
+                           FontSize="26"
+                           HorizontalAlignment="Center"
+                           Foreground="White"
+                           Margin="0,0,0,12"
+                           IsVisible="{Binding IsMuted, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
                 <TextBlock Text="{Binding Volume, StringFormat='{}{0}%'}"
                            FontSize="28" FontWeight="Bold"
                            Foreground="White"
-                           HorizontalAlignment="Center"/>
+                           HorizontalAlignment="Center"
+                           IsVisible="{Binding IsMuted, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
             </StackPanel>
         </Border>
 

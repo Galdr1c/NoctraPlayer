@@ -237,6 +237,13 @@ public partial class VideoOverlayView : UserControl
 
     private void UpdateOverlayCursor(bool isOverlayVisible)
     {
-        Cursor = isOverlayVisible ? VisibleCursor : HiddenCursor;
+        var cursor = isOverlayVisible ? VisibleCursor : HiddenCursor;
+        Cursor = cursor;
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel != null)
+        {
+            topLevel.Cursor = cursor;
+        }
     }
 }
