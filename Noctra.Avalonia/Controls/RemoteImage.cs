@@ -22,6 +22,9 @@ public class RemoteImage : Image
     private static readonly ConcurrentDictionary<string, Task<Bitmap?>> InFlightLoads = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, byte> FailedUrlLog = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentQueue<string> CacheOrder = new();
+    private static readonly Uri PlaceholderUri = new("avares://Noctra.Avalonia/Assets/Logo.png");
+    private static readonly object PlaceholderLock = new();
+    private static Bitmap? _placeholderBitmap;
     private const int MaxCacheEntries = 1500;
 
     private CancellationTokenSource? _loadCts;
@@ -104,7 +107,7 @@ public class RemoteImage : Image
         var normalizedUrl = NormalizeUrl(Url);
         if (string.IsNullOrWhiteSpace(normalizedUrl))
         {
-            SetSourceOnUiThread(null);
+            SetSourceOnUiThread(GetPlaceholderBitmap());
             return;
         }
 
@@ -296,14 +299,35 @@ public class RemoteImage : Image
 
     private void TrySetSource(string sourceUrl, Bitmap? bitmap, CancellationToken cancellationToken)
     {
-        var currentUrl = NormalizeUrl(Url);
-        if (cancellationToken.IsCancellationRequested ||
-            !string.Equals(currentUrl, sourceUrl, StringComparison.OrdinalIgnoreCase))
+        if (cancellationToken.IsCancellationRequested)
         {
             return;
         }
 
-        SetSourceOnUiThread(bitmap);
+        void Apply()
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            var currentUrl = NormalizeUrl(Url);
+            if (!string.Equals(currentUrl, sourceUrl, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            Source = bitmap ?? GetPlaceholderBitmap();
+        }
+
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            Apply();
+        }
+        else
+        {
+            Dispatcher.UIThread.Post(Apply, DispatcherPriority.Background);
+        }
     }
 
     private void CancelPendingLoad()
@@ -346,6 +370,21 @@ public class RemoteImage : Image
         }
 
         var normalized = url.Trim().Trim('"', '\'');
+        if (normalized.Length < 8)
+        {
+            return null;
+        }
+
+        if (normalized.Equals("logo n/a", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("n/a", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("none", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("null", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        normalized = normalized.Replace("&amp;", "&", StringComparison.OrdinalIgnoreCase);
+
         if (normalized.StartsWith("//", StringComparison.Ordinal))
         {
             return "https:" + normalized;
@@ -364,6 +403,32 @@ public class RemoteImage : Image
         }
 
         return normalized;
+    }
+
+    private static Bitmap? GetPlaceholderBitmap()
+    {
+        lock (PlaceholderLock)
+        {
+            if (_placeholderBitmap != null)
+            {
+                return _placeholderBitmap;
+            }
+
+            try
+            {
+                if (AssetLoader.Exists(PlaceholderUri))
+                {
+                    using var stream = AssetLoader.Open(PlaceholderUri);
+                    _placeholderBitmap = new Bitmap(stream);
+                }
+            }
+            catch
+            {
+                _placeholderBitmap = null;
+            }
+
+            return _placeholderBitmap;
+        }
     }
 
     private static void LogFailure(string url, string reason)

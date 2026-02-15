@@ -553,8 +553,20 @@ public partial class MainViewModel : ObservableObject
         var mediaService = scope.ServiceProvider.GetRequiredService<IMediaService>();
         
         // Rail içeriklerini yükle
-        TrendingChannels = Channels.Where(c => c.Type == ChannelType.Live).Take(10).ToList();
-        LatestMovies = Channels.Where(c => c.Type == ChannelType.VOD).Take(10).ToList();
+        TrendingChannels = Channels
+            .Where(c => c.Type == ChannelType.Live)
+            .OrderByDescending(HasDisplayImage)
+            .ThenBy(c => c.Name)
+            .Take(10)
+            .ToList();
+
+        LatestMovies = Channels
+            .Where(c => c.Type == ChannelType.VOD)
+            .OrderByDescending(HasDisplayImage)
+            .ThenByDescending(c => c.Id)
+            .Take(10)
+            .ToList();
+
         var playlistId = SelectedPlaylist?.Id ?? 0;
         LatestSeries = await mediaService.GetSeriesAsync(playlistId);
         UpdateSeriesViewItems();
@@ -562,6 +574,41 @@ public partial class MainViewModel : ObservableObject
 
         // Hero içeriği
         FeaturedChannel = TrendingChannels.FirstOrDefault() ?? LatestMovies.FirstOrDefault();
+    }
+
+    private static bool HasDisplayImage(Channel channel)
+        => IsDisplayImageUrl(channel.CoverUrl) || IsDisplayImageUrl(channel.LogoUrl);
+
+    private static bool HasDisplayImage(Series series)
+        => IsDisplayImageUrl(series.CoverUrl);
+
+    private static bool IsDisplayImageUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return false;
+        }
+
+        var normalized = url.Trim().Trim('"', '\'');
+        if (normalized.Length < 12)
+        {
+            return false;
+        }
+
+        if (normalized.Equals("logo n/a", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("n/a", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("none", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("null", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return normalized.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("//", StringComparison.Ordinal) ||
+               normalized.StartsWith("avares://", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("file://", StringComparison.OrdinalIgnoreCase) ||
+               normalized.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase);
     }
 
     private Task LoadFavoritesAsync()
@@ -1832,17 +1879,22 @@ public partial class MainViewModel : ObservableObject
 
         SearchLiveChannels = FilteredChannels
             .Where(c => c.Type == ChannelType.Live)
+            .OrderByDescending(HasDisplayImage)
+            .ThenBy(c => c.Name)
             .ToList();
 
         var seriesSnapshot = LatestSeries.ToList();
 
         SearchSeriesChannels = seriesSnapshot
             .Where(series => SeriesMatchesSearch(series, rawQuery, normalizedSeriesQuery))
-            .OrderBy(series => series.Name)
+            .OrderByDescending(HasDisplayImage)
+            .ThenBy(series => series.Name)
             .ToList();
 
         SearchVodChannels = FilteredChannels
             .Where(c => c.Type == ChannelType.VOD)
+            .OrderByDescending(HasDisplayImage)
+            .ThenBy(c => c.Name)
             .ToList();
 
         var hasAnyExact = SearchLiveChannels.Count > 0
@@ -1890,12 +1942,14 @@ public partial class MainViewModel : ObservableObject
             .Where(c => c.Type == ChannelType.Live)
             .Where(c => IsLikelySimilar(rawQuery, c.Name))
             .Where(c => !SearchLiveChannels.Any(x => x.Id == c.Id))
+            .OrderByDescending(HasDisplayImage)
             .Take(12)
             .ToList();
 
         var similarSeries = seriesSnapshot
             .Where(s => IsLikelySimilar(rawQuery, s.Name))
             .Where(s => !SearchSeriesChannels.Any(x => x.Id == s.Id))
+            .OrderByDescending(HasDisplayImage)
             .Take(12)
             .ToList();
 
@@ -1903,6 +1957,7 @@ public partial class MainViewModel : ObservableObject
             .Where(c => c.Type == ChannelType.VOD)
             .Where(c => IsLikelySimilar(rawQuery, c.Name))
             .Where(c => !SearchVodChannels.Any(x => x.Id == c.Id))
+            .OrderByDescending(HasDisplayImage)
             .Take(12)
             .ToList();
 
@@ -2164,10 +2219,14 @@ public partial class MainViewModel : ObservableObject
                     c.Type != ChannelType.Series &&
                     (c.Name.ToLower().Contains(searchLower) ||
                      (c.GroupTitle?.ToLower().Contains(searchLower) ?? false)))
+                    .OrderByDescending(HasDisplayImage)
+                    .ThenBy(c => c.Name)
                     .Take(10));
 
                 localResults.AddRange(seriesSnapshot.Where(s =>
                     SeriesMatchesSearch(s, query, normalizedSeriesQuery))
+                    .OrderByDescending(HasDisplayImage)
+                    .ThenBy(s => s.Name)
                     .Take(10));
 
                 return localResults;

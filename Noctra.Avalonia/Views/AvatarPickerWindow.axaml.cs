@@ -7,6 +7,8 @@ namespace Noctra.Avalonia.Views;
 
 public partial class AvatarPickerWindow : Window
 {
+    private AvatarPickerViewModel? _viewModel;
+
     public AvatarPickerWindow()
     {
         InitializeComponent();
@@ -16,8 +18,33 @@ public partial class AvatarPickerWindow : Window
         : this()
     {
         DataContext = viewModel;
+        BindViewModel(viewModel);
+    }
 
-        viewModel.AvatarSelected += ViewModel_AvatarSelected;
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        base.OnDataContextChanged(e);
+        BindViewModel(DataContext as AvatarPickerViewModel);
+    }
+
+    private void BindViewModel(AvatarPickerViewModel? viewModel)
+    {
+        if (ReferenceEquals(_viewModel, viewModel))
+        {
+            return;
+        }
+
+        if (_viewModel != null)
+        {
+            _viewModel.AvatarSelected -= ViewModel_AvatarSelected;
+        }
+
+        _viewModel = viewModel;
+
+        if (_viewModel != null)
+        {
+            _viewModel.AvatarSelected += ViewModel_AvatarSelected;
+        }
     }
 
     private void ViewModel_AvatarSelected(object? sender, string avatar)
@@ -40,10 +67,7 @@ public partial class AvatarPickerWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
-        if (DataContext is AvatarPickerViewModel vm)
-        {
-            vm.AvatarSelected -= ViewModel_AvatarSelected;
-        }
+        BindViewModel(null);
         base.OnClosed(e);
     }
 }

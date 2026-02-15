@@ -607,9 +607,36 @@ public class MediaThumbnailConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is Channel channel) return channel.LogoUrl;
-        if (value is Series series) return series.CoverUrl;
+        if (value is Channel channel)
+        {
+            return NormalizeImageUrl(channel.CoverUrl) ?? NormalizeImageUrl(channel.LogoUrl);
+        }
+
+        if (value is Series series)
+        {
+            return NormalizeImageUrl(series.CoverUrl);
+        }
+
         return null;
+    }
+
+    private static string? NormalizeImageUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return null;
+        }
+
+        var normalized = url.Trim().Trim('"', '\'');
+        if (normalized.Equals("logo n/a", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("n/a", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("none", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("null", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return normalized;
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

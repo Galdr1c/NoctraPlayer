@@ -101,6 +101,15 @@ public partial class Channel : ObservableObject
     
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public string? Description => Plot;
+
+    partial void OnLogoUrlChanged(string? value)
+        => OnPropertyChanged(nameof(CoverUrl));
+
+    partial void OnBackdropUrlChanged(string? value)
+        => OnPropertyChanged(nameof(CoverUrl));
+
+    partial void OnPlotChanged(string? value)
+        => OnPropertyChanged(nameof(Description));
 }
 
 

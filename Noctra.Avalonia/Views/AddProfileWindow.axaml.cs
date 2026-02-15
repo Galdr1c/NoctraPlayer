@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Microsoft.Extensions.DependencyInjection;
+using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
 
 namespace Noctra.Avalonia.Views;
@@ -24,9 +25,35 @@ public partial class AddProfileWindow : Window
         InitializeComponent();
         _scopeFactory = scopeFactory;
         DataContext = viewModel;
+        BindViewModel(viewModel);
+    }
+
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        base.OnDataContextChanged(e);
+        BindViewModel(DataContext as AddProfileViewModel);
+    }
+
+    private void BindViewModel(AddProfileViewModel? viewModel)
+    {
+        if (ReferenceEquals(_viewModel, viewModel))
+        {
+            return;
+        }
+
+        if (_viewModel != null)
+        {
+            _viewModel.RequestClose -= ViewModel_RequestClose;
+            _viewModel.RequestAvatarPicker -= ViewModel_RequestAvatarPicker;
+        }
+
         _viewModel = viewModel;
-        _viewModel.RequestClose += ViewModel_RequestClose;
-        _viewModel.RequestAvatarPicker += ViewModel_RequestAvatarPicker;
+
+        if (_viewModel != null)
+        {
+            _viewModel.RequestClose += ViewModel_RequestClose;
+            _viewModel.RequestAvatarPicker += ViewModel_RequestAvatarPicker;
+        }
     }
 
     private void DragBar_PointerPressed(object? sender, PointerPressedEventArgs e)
@@ -44,12 +71,7 @@ public partial class AddProfileWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
-        if (_viewModel != null)
-        {
-            _viewModel.RequestClose -= ViewModel_RequestClose;
-            _viewModel.RequestAvatarPicker -= ViewModel_RequestAvatarPicker;
-        }
-
+        BindViewModel(null);
         base.OnClosed(e);
     }
 
@@ -65,18 +87,49 @@ public partial class AddProfileWindow : Window
             return;
         }
 
-        using var scope = _scopeFactory.CreateScope();
-        var pickerVm = scope.ServiceProvider.GetRequiredService<AvatarPickerViewModel>();
-        var pickerWindow = scope.ServiceProvider.GetRequiredService<AvatarPickerWindow>();
-        pickerWindow.DataContext = pickerVm;
-
-        string? selectedAvatar = null;
-        pickerVm.AvatarSelected += (_, avatar) => selectedAvatar = avatar;
-
-        var result = await pickerWindow.ShowDialog<bool?>(this);
-        if (result == true && !string.IsNullOrWhiteSpace(selectedAvatar))
+        try
         {
-            _viewModel.SetAvatar(selectedAvatar);
+            using var scope = _scopeFactory.CreateScope();
+            var pickerWindow = scope.ServiceProvider.GetRequiredService<AvatarPickerWindow>();
+            var pickerVm = pickerWindow.DataContext as AvatarPickerViewModel
+                ?? scope.ServiceProvider.GetRequiredService<AvatarPickerViewModel>();
+
+            if (!ReferenceEquals(pickerWindow.DataContext, pickerVm))
+            {
+                pickerWindow.DataContext = pickerVm;
+            }
+
+            string? selectedAvatar = null;
+            void OnAvatarSelected(object? _, string avatar)
+            {
+                selectedAvatar = avatar;
+            }
+
+            pickerVm.AvatarSelected += OnAvatarSelected;
+            bool? result;
+            try
+            {
+                result = await pickerWindow.ShowDialog<bool?>(this);
+            }
+            finally
+            {
+                pickerVm.AvatarSelected -= OnAvatarSelected;
+            }
+
+            if (result == true && !string.IsNullOrWhiteSpace(selectedAvatar))
+            {
+                _viewModel.SetAvatar(selectedAvatar);
+            }
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.LogException("Failed to open AvatarPickerWindow.", ex);
+
+            var dialogService = ((App)Application.Current!).Services.GetService<IDialogService>();
+            if (dialogService != null)
+            {
+                await dialogService.ShowErrorAsync("Hata", "Avatar seçme penceresi açılamadı.", ex);
+            }
         }
     }
 }
