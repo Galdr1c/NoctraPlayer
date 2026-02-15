@@ -80,6 +80,58 @@ public partial class VideoOverlayView : UserControl
         _playerViewModel.UserInteractionCommand.Execute(null);
     }
 
+    private void OverlayRoot_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (_playerViewModel == null)
+        {
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case Key.Space:
+                _playerViewModel.PlayPauseCommand.Execute(null);
+                e.Handled = true;
+                break;
+            case Key.Escape:
+                _playerViewModel.ClosePlayerCommand.Execute(null);
+                e.Handled = true;
+                break;
+            case Key.F:
+                _playerViewModel.ToggleFullScreenCommand.Execute(null);
+                e.Handled = true;
+                break;
+            case Key.Left:
+                if (!_playerViewModel.IsLiveContent)
+                {
+                    _playerViewModel.SkipBackwardCommand.Execute(10);
+                    e.Handled = true;
+                }
+                break;
+            case Key.Right:
+                if (!_playerViewModel.IsLiveContent)
+                {
+                    _playerViewModel.SkipForwardCommand.Execute(10);
+                    e.Handled = true;
+                }
+                break;
+            case Key.M:
+                _playerViewModel.ToggleMuteCommand.Execute(null);
+                e.Handled = true;
+                break;
+            case Key.Up:
+                _playerViewModel.Volume = Math.Min(100, _playerViewModel.Volume + 5);
+                _playerViewModel.UserInteractionCommand.Execute(null);
+                e.Handled = true;
+                break;
+            case Key.Down:
+                _playerViewModel.Volume = Math.Max(0, _playerViewModel.Volume - 5);
+                _playerViewModel.UserInteractionCommand.Execute(null);
+                e.Handled = true;
+                break;
+        }
+    }
+
     private void PlayerViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(PlayerViewModel.Volume) or nameof(PlayerViewModel.IsMuted))

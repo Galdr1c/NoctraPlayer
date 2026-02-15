@@ -182,7 +182,7 @@ public partial class PlayerViewModel : ObservableObject
 
         // Auto-hide timer
         _autoHideTimer = new System.Timers.Timer(4000);
-        _autoHideTimer.Elapsed += (s, e) => _dispatcherService.Invoke(() => IsVisible = IsLocked);
+        _autoHideTimer.Elapsed += (s, e) => _dispatcherService.Invoke(() => IsVisible = true);
         _autoHideTimer.AutoReset = false;
 
         // Clock timer
@@ -687,7 +687,7 @@ public partial class PlayerViewModel : ObservableObject
     private void RestartAutoHideTimer()
     {
         _autoHideTimer.Stop();
-        if (!IsLocked) _autoHideTimer.Start();
+        // Keep controls visible to avoid disappearing overlay issues in Avalonia player UI.
         IsVisible = true;
     }
 

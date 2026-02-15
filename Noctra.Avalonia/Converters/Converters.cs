@@ -18,6 +18,11 @@ public class BoolToVisibilityConverter : IValueConverter
             isVisible = !isVisible;
         }
 
+        if (string.Equals(parameter?.ToString(), "OpacityOnly", StringComparison.OrdinalIgnoreCase))
+        {
+            return isVisible ? 1.0 : 0.0;
+        }
+
         return isVisible ? true : false;
     }
 
