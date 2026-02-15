@@ -570,7 +570,12 @@ public partial class MainViewModel : ObservableObject
         var playlistId = SelectedPlaylist?.Id ?? 0;
         LatestSeries = await mediaService.GetSeriesAsync(playlistId);
         UpdateSeriesViewItems();
-        ContinueWatching = Channels.Where(c => c.LastWatched.HasValue).OrderByDescending(c => c.LastWatched).Take(10).ToList();
+
+        ContinueWatching = Channels
+            .Where(c => c.LastWatched.HasValue)
+            .OrderByDescending(c => c.LastWatched)
+            .Take(10)
+            .ToList();
 
         // Hero içeriği
         FeaturedChannel = TrendingChannels.FirstOrDefault() ?? LatestMovies.FirstOrDefault();
@@ -1304,7 +1309,21 @@ public partial class MainViewModel : ObservableObject
                 });
             }
 
-            // b) Country-specific sources (iptv-epg.org etc)
+            // b) Playlist'te saklanan / M3U başlığından gelen EPG URL'i
+            var playlistEpgUrl = (SelectedPlaylist?.EpgUrl ?? string.Empty).Trim();
+            if (Uri.TryCreate(playlistEpgUrl, UriKind.Absolute, out _) &&
+                !distinctSources.Any(s => string.Equals(s.Url, playlistEpgUrl, StringComparison.OrdinalIgnoreCase)))
+            {
+                distinctSources.Add(new Services.EpgSource
+                {
+                    Url = playlistEpgUrl,
+                    Priority = 2,
+                    Type = Services.EpgSourceType.M3UHeader,
+                    IsPrimary = string.IsNullOrEmpty(providerEpgUrl)
+                });
+            }
+
+            // c) Country-specific sources (iptv-epg.org etc)
             foreach (var (countryCode, _, _) in detectedCountries)
             {
                 var countrySources = epgSourceResolver.ResolveEpgSources(countryCode);
@@ -1351,6 +1370,7 @@ public partial class MainViewModel : ObservableObject
             // 4. Her kaynağı indirmeyi dene
             bool anySuccess = false;
             string? lastSourceError = null;
+            string? successfulSourceUrl = null;
             
             foreach (var source in epgSources)
             {
@@ -1377,6 +1397,7 @@ public partial class MainViewModel : ObservableObject
                     if (loadedPrograms > 0)
                     {
                         anySuccess = true;
+                        successfulSourceUrl = source.Url;
                         System.Diagnostics.Debug.WriteLine($"[MainViewModel] EPG loaded from {source.Type} ({loadedPrograms} programs) - URL: {source.Url}");
                         lastSourceError = null;
                     }
@@ -1413,6 +1434,12 @@ public partial class MainViewModel : ObservableObject
                 var playlistToUpdate = await db.Playlists.FirstOrDefaultAsync(p => p.Id == SelectedPlaylist.Id);
                 if (playlistToUpdate != null)
                 {
+                    if (!string.IsNullOrWhiteSpace(successfulSourceUrl))
+                    {
+                        playlistToUpdate.EpgUrl = successfulSourceUrl;
+                        SelectedPlaylist.EpgUrl = successfulSourceUrl;
+                    }
+
                     playlistToUpdate.EpgLastUpdated = DateTime.Now;
                     await db.SaveChangesAsync();
                     SelectedPlaylist.EpgLastUpdated = playlistToUpdate.EpgLastUpdated;

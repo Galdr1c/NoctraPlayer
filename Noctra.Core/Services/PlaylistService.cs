@@ -58,13 +58,14 @@ public class PlaylistService : IPlaylistService
 
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] Downloading and parsing M3U from: {url}");
             var channels = await _parser.ParseFromUrlAsync(url);
+            var detectedEpgUrl = NormalizeEpgUrl(_parser.LastDetectedEpgUrl);
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] Parsed {channels.Count} channels from M3U");
 
             // Otomatik organizasyon: dedup, kategorize, sıralama
             var organized = _organizer.Organize(channels);
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] Organized: {channels.Count} → {organized.Count} channels");
 
-            return await AddFromChannelsAsync(name, url, organized, profileId);
+            return await AddFromChannelsAsync(name, url, organized, profileId, detectedEpgUrl);
         }
         catch (Exception ex)
         {
@@ -73,7 +74,7 @@ public class PlaylistService : IPlaylistService
         }
     }
 
-    public async Task<Playlist> AddFromChannelsAsync(string name, string sourceUrl, IReadOnlyCollection<Channel> channels, int? profileId = null)
+    public async Task<Playlist> AddFromChannelsAsync(string name, string sourceUrl, IReadOnlyCollection<Channel> channels, int? profileId = null, string? detectedEpgUrl = null)
     {
         var existing = await _context.Playlists
             .FirstOrDefaultAsync(p => p.Url == sourceUrl && p.ProfileId == profileId && p.IsActive);
@@ -91,7 +92,8 @@ public class PlaylistService : IPlaylistService
             CreatedAt = DateTime.Now,
             LastUpdated = DateTime.Now,
             ChannelCount = channels.Count,
-            IsActive = true
+            IsActive = true,
+            EpgUrl = NormalizeEpgUrl(detectedEpgUrl)
         };
 
         _context.ChangeTracker.AutoDetectChangesEnabled = false;
@@ -130,8 +132,32 @@ public class PlaylistService : IPlaylistService
                     var scopedDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
                     var channelNames = channelSnapshot.Select(c => c.Name ?? "").ToList();
-                    var detectedCountry = _languageDetection.DetectCountry(channelNames);
-                    var epgSources = _epgSourceResolver.ResolveEpgSources(detectedCountry);
+                    var countryCandidates = _languageDetection.DetectCountries(channelNames)
+                        .Where(c => c.Percentage > 10 || c.ChannelCount > 5)
+                        .Select(c => c.CountryCode)
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .Take(3)
+                        .ToList();
+
+                    if (countryCandidates.Count == 0)
+                    {
+                        countryCandidates.Add("TR");
+                    }
+
+                    var detectedCountry = countryCandidates[0];
+                    var epgSources = countryCandidates
+                        .SelectMany(country => _epgSourceResolver.ResolveEpgSources(
+                            country,
+                            m3uEpgUrl: NormalizeEpgUrl(detectedEpgUrl)))
+                        .GroupBy(source => source.Url, StringComparer.OrdinalIgnoreCase)
+                        .Select(group => group.First())
+                        .OrderBy(source => source.Priority)
+                        .ToList();
+
+                    for (var i = 0; i < epgSources.Count; i++)
+                    {
+                        epgSources[i].ClearBeforeLoad = (i == 0);
+                    }
 
                     string? usedEpgUrl = null;
                     foreach (var source in epgSources)
@@ -144,10 +170,17 @@ public class PlaylistService : IPlaylistService
                             }
 
                             System.Diagnostics.Debug.WriteLine($"[AutoEPG] Loading from {source.Url}");
+                            var beforeCount = await scopedEpgService.GetTotalProgramCountAsync();
                             await scopedEpgService.LoadEpgAsync(source.Url, source.IsPrimary, channelSnapshot);
-                            usedEpgUrl = source.Url;
-                            System.Diagnostics.Debug.WriteLine($"[PlaylistService] EPG loaded from {source.Type}");
-                            break;
+                            var afterCount = await scopedEpgService.GetTotalProgramCountAsync();
+                            if (afterCount > beforeCount)
+                            {
+                                usedEpgUrl = source.Url;
+                                System.Diagnostics.Debug.WriteLine($"[PlaylistService] EPG loaded from {source.Type} (+{afterCount - beforeCount})");
+                                break;
+                            }
+
+                            System.Diagnostics.Debug.WriteLine($"[PlaylistService] EPG source had no matches: {source.Type}");
                         }
                         catch (Exception ex)
                         {
@@ -159,8 +192,12 @@ public class PlaylistService : IPlaylistService
                     if (playlistToUpdate != null)
                     {
                         playlistToUpdate.DetectedCountry = detectedCountry;
-                        playlistToUpdate.EpgUrl = usedEpgUrl;
-                        playlistToUpdate.EpgLastUpdated = DateTime.Now;
+                        if (!string.IsNullOrWhiteSpace(usedEpgUrl))
+                        {
+                            playlistToUpdate.EpgUrl = usedEpgUrl;
+                            playlistToUpdate.EpgLastUpdated = DateTime.Now;
+                        }
+
                         await scopedDb.SaveChangesAsync();
                     }
                 }
@@ -183,6 +220,7 @@ public class PlaylistService : IPlaylistService
         try 
         {
             var rawChannels = await _parser.ParseFromFileAsync(filePath);
+            var detectedEpgUrl = NormalizeEpgUrl(_parser.LastDetectedEpgUrl);
             var channels = _organizer.Organize(rawChannels);
             
             var playlist = new Playlist
@@ -193,7 +231,8 @@ public class PlaylistService : IPlaylistService
                 CreatedAt = DateTime.Now,
                 LastUpdated = DateTime.Now,
                 ChannelCount = channels.Count,
-                IsActive = true
+                IsActive = true,
+                EpgUrl = detectedEpgUrl
             };
 
             _context.ChangeTracker.AutoDetectChangesEnabled = false;
@@ -423,17 +462,45 @@ public class PlaylistService : IPlaylistService
 
         var channels = playlist.Channels.ToList();
         
-        // Ülke tespiti (yoksa yap)
-        if (string.IsNullOrEmpty(playlist.DetectedCountry))
+        var channelNames = channels.Select(c => c.Name ?? "").ToList();
+        var countryCandidates = new List<string>();
+        if (!string.IsNullOrWhiteSpace(playlist.DetectedCountry))
         {
-            var channelNames = channels.Select(c => c.Name ?? "").ToList();
-            playlist.DetectedCountry = _languageDetection.DetectCountry(channelNames);
+            countryCandidates.Add(playlist.DetectedCountry);
         }
 
-        // EPG kaynaklarını çöz
-        var epgSources = _epgSourceResolver.ResolveEpgSources(
-            playlist.DetectedCountry ?? "TR",
-            m3uEpgUrl: playlist.EpgUrl);
+        foreach (var country in _languageDetection.DetectCountries(channelNames)
+            .Where(c => c.Percentage > 10 || c.ChannelCount > 5)
+            .Select(c => c.CountryCode))
+        {
+            if (!countryCandidates.Contains(country, StringComparer.OrdinalIgnoreCase))
+            {
+                countryCandidates.Add(country);
+            }
+        }
+
+        if (countryCandidates.Count == 0)
+        {
+            countryCandidates.Add("TR");
+        }
+
+        playlist.DetectedCountry = countryCandidates[0];
+
+        // EPG kaynaklarını çöz (çoklu ülke + tekilleştirme)
+        var epgSources = countryCandidates
+            .Take(3)
+            .SelectMany(country => _epgSourceResolver.ResolveEpgSources(
+                country,
+                m3uEpgUrl: playlist.EpgUrl))
+            .GroupBy(source => source.Url, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderBy(source => source.Priority)
+            .ToList();
+
+        for (var i = 0; i < epgSources.Count; i++)
+        {
+            epgSources[i].ClearBeforeLoad = (i == 0);
+        }
 
         foreach (var source in epgSources)
         {
@@ -446,11 +513,19 @@ public class PlaylistService : IPlaylistService
                     await _epgService.ClearEpgAsync();
                 }
 
+                var beforeCount = await _epgService.GetTotalProgramCountAsync();
                 await _epgService.LoadEpgAsync(source.Url, source.IsPrimary, channels);
+                var afterCount = await _epgService.GetTotalProgramCountAsync();
+                if (afterCount <= beforeCount)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PlaylistService] RefreshEpg no program loaded: {source.Type}");
+                    continue;
+                }
+
                 playlist.EpgUrl = source.Url;
                 playlist.EpgLastUpdated = DateTime.Now;
                 await _context.SaveChangesAsync();
-                System.Diagnostics.Debug.WriteLine($"[PlaylistService] RefreshEpg success: {source.Type}");
+                System.Diagnostics.Debug.WriteLine($"[PlaylistService] RefreshEpg success: {source.Type} (+{afterCount - beforeCount})");
                 return;
             }
             catch (Exception ex)
@@ -458,6 +533,23 @@ public class PlaylistService : IPlaylistService
                 System.Diagnostics.Debug.WriteLine($"[PlaylistService] RefreshEpg failed: {source.Type} - {ex.Message}");
             }
         }
+    }
+
+    private static string? NormalizeEpgUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return null;
+        }
+
+        var normalized = url.Trim().Trim('"', '\'');
+        if (Uri.TryCreate(normalized, UriKind.Absolute, out var uri) &&
+            (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+        {
+            return uri.ToString();
+        }
+
+        return null;
     }
 }
 

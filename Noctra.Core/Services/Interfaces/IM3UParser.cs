@@ -8,6 +8,11 @@ namespace Noctra.Services.Interfaces;
 public interface IM3UParser
 {
     /// <summary>
+    /// Son parse edilen M3U başlığından tespit edilen EPG URL'i (x-tvg-url).
+    /// </summary>
+    string? LastDetectedEpgUrl { get; }
+
+    /// <summary>
     /// M3U içeriğini parse eder
     /// </summary>
     /// <param name="content">M3U dosya içeriği</param>

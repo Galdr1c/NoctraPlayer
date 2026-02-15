@@ -15,7 +15,7 @@ public interface IPlaylistService
     /// <summary>
     /// Hazir kanal listesi ile playlist olusturur
     /// </summary>
-    Task<Playlist> AddFromChannelsAsync(string name, string sourceUrl, IReadOnlyCollection<Channel> channels, int? profileId = null);
+    Task<Playlist> AddFromChannelsAsync(string name, string sourceUrl, IReadOnlyCollection<Channel> channels, int? profileId = null, string? detectedEpgUrl = null);
     
     /// <summary>
     /// Dosyadan playlist ekler

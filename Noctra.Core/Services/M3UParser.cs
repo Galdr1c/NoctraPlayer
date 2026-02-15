@@ -12,6 +12,7 @@ namespace Noctra.Services;
 public partial class M3UParser : IM3UParser
 {
     private readonly HttpClient _httpClient;
+    public string? LastDetectedEpgUrl { get; private set; }
 
     public M3UParser(HttpClient httpClient)
     {
@@ -30,6 +31,7 @@ public partial class M3UParser : IM3UParser
     {
         var channels = new List<Channel>();
         var lines = content.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+        LastDetectedEpgUrl = null;
 
         if (lines.Length == 0) return Task.FromResult(channels);
 
@@ -38,6 +40,12 @@ public partial class M3UParser : IM3UParser
         if (!firstLine.StartsWith("#EXTM3U", StringComparison.OrdinalIgnoreCase))
         {
             throw new FormatException("Geçersiz M3U formatı: #EXTM3U header bulunamadı");
+        }
+
+        var xTvgUrlMatch = XTvgUrlRegex().Match(firstLine);
+        if (xTvgUrlMatch.Success)
+        {
+            LastDetectedEpgUrl = ExtractFirstEpgUrl(xTvgUrlMatch.Groups[1].Value);
         }
 
         Channel? currentChannel = null;
@@ -260,6 +268,31 @@ public partial class M3UParser : IM3UParser
 
     [GeneratedRegex(@",\s*(.+)$")]
     private static partial Regex ChannelNameRegex();
+
+    [GeneratedRegex(@"x-tvg-url=""([^""]*)""", RegexOptions.IgnoreCase)]
+    private static partial Regex XTvgUrlRegex();
+
+    private static string? ExtractFirstEpgUrl(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        var candidates = raw
+            .Split([',', ';'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var candidate in candidates)
+        {
+            if (Uri.TryCreate(candidate, UriKind.Absolute, out var uri) &&
+                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+            {
+                return uri.ToString();
+            }
+        }
+
+        return null;
+    }
 }
 
 
