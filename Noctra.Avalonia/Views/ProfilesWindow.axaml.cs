@@ -134,6 +134,7 @@ public partial class ProfilesWindow : Window
 
             _mainWindow.DataContext = _mainViewModel;
             await _mainViewModel.LoadProfileAsync(reloadedProfile);
+            _mainWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
             if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {

@@ -98,6 +98,21 @@ public partial class SettingsWindow : Window
             return;
         }
 
+        if (Owner is MainWindow ownerMainWindow)
+        {
+            ownerMainWindow.OpenProfileSelection();
+            Close();
+            return;
+        }
+
+        var mainWindow = ((App)Application.Current!).Services.GetService<MainWindow>();
+        if (mainWindow != null)
+        {
+            mainWindow.OpenProfileSelection();
+            Close();
+            return;
+        }
+
         var profilesWindow = ((App)Application.Current!).Services.GetRequiredService<ProfilesWindow>();
         profilesWindow.DisableAutoSelect = true;
         desktop.MainWindow = profilesWindow;

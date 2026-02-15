@@ -1,9 +1,13 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Noctra.Models;
 
 namespace Noctra.Avalonia.Converters;
@@ -373,6 +377,11 @@ public class StringToVisibilityConverter : IValueConverter
 
 public class AvatarPathConverter : IValueConverter
 {
+    private const string DefaultAvatarFileName = "avatar_1.png";
+    private const string AvatarAssetPrefix = "avares://Noctra.Avalonia/Assets/Avatars/";
+    private static readonly object CacheLock = new();
+    private static readonly Dictionary<string, Bitmap> BitmapCache = new(StringComparer.OrdinalIgnoreCase);
+
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is not string fileName || string.IsNullOrWhiteSpace(fileName))
@@ -380,12 +389,123 @@ public class AvatarPathConverter : IValueConverter
             return null;
         }
 
-        if (!fileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+        var normalized = NormalizeAvatarFileName(fileName);
+        var bitmap = GetOrLoadAvatar(normalized);
+        if (bitmap != null)
         {
-            fileName += ".png";
+            return bitmap;
         }
 
-        return $"avares://Noctra.Avalonia/Assets/Avatars/{fileName}";
+        return !string.Equals(normalized, DefaultAvatarFileName, StringComparison.OrdinalIgnoreCase)
+            ? GetOrLoadAvatar(DefaultAvatarFileName)
+            : null;
+    }
+
+    private static string NormalizeAvatarFileName(string input)
+    {
+        var normalized = input.Trim().Trim('"', '\'');
+
+        if (normalized.StartsWith("avares://", StringComparison.OrdinalIgnoreCase) &&
+            Uri.TryCreate(normalized, UriKind.Absolute, out var uri))
+        {
+            var path = uri.AbsolutePath;
+            var lastSlashIndex = path.LastIndexOf('/');
+            normalized = lastSlashIndex >= 0 ? path[(lastSlashIndex + 1)..] : path;
+        }
+
+        normalized = normalized.Replace('\\', '/');
+        var finalSlashIndex = normalized.LastIndexOf('/');
+        if (finalSlashIndex >= 0)
+        {
+            normalized = normalized[(finalSlashIndex + 1)..];
+        }
+
+        if (!normalized.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized += ".png";
+        }
+
+        return string.Equals(normalized, "default.png", StringComparison.OrdinalIgnoreCase)
+            ? DefaultAvatarFileName
+            : normalized;
+    }
+
+    private static Bitmap? GetOrLoadAvatar(string avatarFileName)
+    {
+        lock (CacheLock)
+        {
+            if (BitmapCache.TryGetValue(avatarFileName, out var cached))
+            {
+                return cached;
+            }
+        }
+
+        var loaded = LoadFromAssets(avatarFileName) ?? LoadFromDisk(avatarFileName);
+        if (loaded == null)
+        {
+            return null;
+        }
+
+        lock (CacheLock)
+        {
+            if (BitmapCache.TryGetValue(avatarFileName, out var existing))
+            {
+                loaded.Dispose();
+                return existing;
+            }
+
+            BitmapCache[avatarFileName] = loaded;
+            return loaded;
+        }
+    }
+
+    private static Bitmap? LoadFromAssets(string avatarFileName)
+    {
+        if (!Uri.TryCreate($"{AvatarAssetPrefix}{avatarFileName}", UriKind.Absolute, out var uri))
+        {
+            return null;
+        }
+
+        if (!AssetLoader.Exists(uri))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var stream = AssetLoader.Open(uri);
+            return new Bitmap(stream);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static Bitmap? LoadFromDisk(string avatarFileName)
+    {
+        var candidates = new[]
+        {
+            Path.Combine(AppContext.BaseDirectory, "Assets", "Avatars", avatarFileName),
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Assets", "Avatars", avatarFileName))
+        };
+
+        foreach (var candidate in candidates)
+        {
+            try
+            {
+                if (File.Exists(candidate))
+                {
+                    return new Bitmap(candidate);
+                }
+            }
+            catch
+            {
+                // Continue trying fallback paths.
+            }
+        }
+
+        return null;
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

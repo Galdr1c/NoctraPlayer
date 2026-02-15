@@ -27,7 +27,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <AvaloniaResource Include="..\Noctra\Assets\Logo.png" Link="Assets\Logo.png" />
+    <AvaloniaResource Include="Assets\**" />
+    <Content Include="Assets\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

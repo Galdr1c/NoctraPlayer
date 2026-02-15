@@ -1,0 +1,378 @@
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
+using Avalonia.Threading;
+
+namespace Noctra.Avalonia.Controls;
+
+public class RemoteImage : Image
+{
+    public static readonly StyledProperty<string?> UrlProperty =
+        AvaloniaProperty.Register<RemoteImage, string?>(nameof(Url));
+
+    private static readonly HttpClient HttpClient = CreateHttpClient();
+    private static readonly ConcurrentDictionary<string, Bitmap> Cache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, Task<Bitmap?>> InFlightLoads = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, byte> FailedUrlLog = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentQueue<string> CacheOrder = new();
+    private const int MaxCacheEntries = 1500;
+
+    private CancellationTokenSource? _loadCts;
+
+    static RemoteImage()
+    {
+        UrlProperty.Changed.AddClassHandler<RemoteImage>((control, _) => control.StartImageLoad());
+    }
+
+    public string? Url
+    {
+        get => GetValue(UrlProperty);
+        set => SetValue(UrlProperty, value);
+    }
+
+    public static async Task PreloadAsync(IEnumerable<string?> urls, int maxCount = 120, CancellationToken cancellationToken = default)
+    {
+        if (urls == null)
+        {
+            return;
+        }
+
+        var normalizedUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var rawUrl in urls)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var normalized = NormalizeUrl(rawUrl);
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                continue;
+            }
+
+            if (Cache.ContainsKey(normalized))
+            {
+                continue;
+            }
+
+            normalizedUrls.Add(normalized);
+            if (normalizedUrls.Count >= maxCount)
+            {
+                break;
+            }
+        }
+
+        if (normalizedUrls.Count == 0)
+        {
+            return;
+        }
+
+        var tasks = new List<Task>(normalizedUrls.Count);
+        foreach (var normalized in normalizedUrls)
+        {
+            var task = InFlightLoads.GetOrAdd(normalized, static url => DownloadBitmapAsync(url));
+            tasks.Add(task);
+        }
+
+        await Task.WhenAll(tasks).ConfigureAwait(false);
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+
+        if (Source == null && !string.IsNullOrWhiteSpace(Url))
+        {
+            StartImageLoad();
+        }
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        CancelPendingLoad();
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    private void StartImageLoad()
+    {
+        CancelPendingLoad();
+
+        var normalizedUrl = NormalizeUrl(Url);
+        if (string.IsNullOrWhiteSpace(normalizedUrl))
+        {
+            SetSourceOnUiThread(null);
+            return;
+        }
+
+        if (Cache.TryGetValue(normalizedUrl, out var cached))
+        {
+            SetSourceOnUiThread(cached);
+            return;
+        }
+
+        _loadCts = new CancellationTokenSource();
+        var loadTask = InFlightLoads.GetOrAdd(normalizedUrl, static url => DownloadBitmapAsync(url));
+        _ = AwaitImageAsync(normalizedUrl, loadTask, _loadCts.Token);
+    }
+
+    private async Task AwaitImageAsync(string url, Task<Bitmap?> loadTask, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var bitmap = await loadTask.WaitAsync(cancellationToken).ConfigureAwait(false);
+            TrySetSource(url, bitmap, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore stale requests when the control is recycled.
+        }
+        catch
+        {
+            TrySetSource(url, null, cancellationToken);
+        }
+    }
+
+    private static async Task<Bitmap?> DownloadBitmapAsync(string url)
+    {
+        try
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                return null;
+            }
+
+            if (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
+            {
+                return await DownloadHttpBitmapAsync(url, uri).ConfigureAwait(false);
+            }
+
+            if (uri.Scheme == Uri.UriSchemeFile)
+            {
+                if (!File.Exists(uri.LocalPath))
+                {
+                    return null;
+                }
+
+                using var file = File.OpenRead(uri.LocalPath);
+                return new Bitmap(file);
+            }
+
+            if (uri.Scheme.Equals("avares", StringComparison.OrdinalIgnoreCase))
+            {
+                using var asset = AssetLoader.Open(uri);
+                return new Bitmap(asset);
+            }
+
+            if (uri.Scheme.Equals("data", StringComparison.OrdinalIgnoreCase))
+            {
+                return TryDecodeDataUri(url);
+            }
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+        finally
+        {
+            InFlightLoads.TryRemove(url, out _);
+        }
+    }
+
+    private static async Task<Bitmap?> DownloadHttpBitmapAsync(string normalizedUrl, Uri uri)
+    {
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+                using var response = await HttpClient
+                    .SendAsync(request, HttpCompletionOption.ResponseHeadersRead)
+                    .ConfigureAwait(false);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    LogFailure(normalizedUrl, $"HTTP {(int)response.StatusCode}");
+                    if (attempt < 2)
+                    {
+                        await Task.Delay(200 * (attempt + 1)).ConfigureAwait(false);
+                        continue;
+                    }
+
+                    return null;
+                }
+
+                await using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                using var memory = new MemoryStream();
+                await stream.CopyToAsync(memory).ConfigureAwait(false);
+                memory.Position = 0;
+
+                var bitmap = new Bitmap(memory);
+                AddToCache(normalizedUrl, bitmap);
+                return bitmap;
+            }
+            catch (HttpRequestException) when (attempt < 2)
+            {
+                await Task.Delay(200 * (attempt + 1)).ConfigureAwait(false);
+            }
+            catch (TaskCanceledException) when (attempt < 2)
+            {
+                await Task.Delay(200 * (attempt + 1)).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (attempt < 2)
+            {
+                LogFailure(normalizedUrl, ex.GetType().Name);
+                await Task.Delay(200 * (attempt + 1)).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                LogFailure(normalizedUrl, ex.GetType().Name);
+                return null;
+            }
+        }
+
+        LogFailure(normalizedUrl, "RetryExhausted");
+        return null;
+    }
+
+    private static Bitmap? TryDecodeDataUri(string url)
+    {
+        var commaIndex = url.IndexOf(',');
+        if (commaIndex < 0 || commaIndex >= url.Length - 1)
+        {
+            return null;
+        }
+
+        var header = url[..commaIndex];
+        var payload = url[(commaIndex + 1)..];
+
+        if (!header.Contains(";base64", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        try
+        {
+            var bytes = Convert.FromBase64String(payload);
+            using var memory = new MemoryStream(bytes);
+            return new Bitmap(memory);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static void AddToCache(string url, Bitmap bitmap)
+    {
+        if (!Cache.TryAdd(url, bitmap))
+        {
+            return;
+        }
+
+        CacheOrder.Enqueue(url);
+
+        while (Cache.Count > MaxCacheEntries && CacheOrder.TryDequeue(out var oldestKey))
+        {
+            Cache.TryRemove(oldestKey, out _);
+        }
+    }
+
+    private void SetSourceOnUiThread(Bitmap? bitmap)
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            Source = bitmap;
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() => Source = bitmap, DispatcherPriority.Background);
+    }
+
+    private void TrySetSource(string sourceUrl, Bitmap? bitmap, CancellationToken cancellationToken)
+    {
+        var currentUrl = NormalizeUrl(Url);
+        if (cancellationToken.IsCancellationRequested ||
+            !string.Equals(currentUrl, sourceUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        SetSourceOnUiThread(bitmap);
+    }
+
+    private void CancelPendingLoad()
+    {
+        var current = Interlocked.Exchange(ref _loadCts, null);
+        if (current == null)
+        {
+            return;
+        }
+
+        current.Cancel();
+        current.Dispose();
+    }
+
+    private static HttpClient CreateHttpClient()
+    {
+        var handler = new SocketsHttpHandler
+        {
+            AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+            MaxConnectionsPerServer = 24
+        };
+
+        var client = new HttpClient(handler)
+        {
+            Timeout = TimeSpan.FromSeconds(12)
+        };
+
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("Noctra.Avalonia/1.0");
+        client.DefaultRequestHeaders.Accept.ParseAdd("image/avif,image/webp,image/apng,image/*,*/*;q=0.8");
+        return client;
+    }
+
+    private static string? NormalizeUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return null;
+        }
+
+        var normalized = url.Trim().Trim('"', '\'');
+        if (normalized.StartsWith("//", StringComparison.Ordinal))
+        {
+            return "https:" + normalized;
+        }
+
+        if (!normalized.Contains("://", StringComparison.Ordinal) &&
+            normalized.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
+        {
+            return "https://" + normalized;
+        }
+
+        if (normalized.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized.Replace(" ", "%20", StringComparison.Ordinal);
+        }
+
+        return normalized;
+    }
+
+    private static void LogFailure(string url, string reason)
+    {
+        if (FailedUrlLog.Count > 300 || !FailedUrlLog.TryAdd(url, 0))
+        {
+            return;
+        }
+
+        Noctra.Avalonia.StartupDiagnostics.Log($"[RemoteImage] Failed: {reason} | {url}");
+    }
+}

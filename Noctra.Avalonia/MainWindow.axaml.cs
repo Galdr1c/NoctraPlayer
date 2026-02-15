@@ -4,6 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Avalonia.Controls;
@@ -18,6 +19,7 @@ public partial class MainWindow : Window
     private readonly IVideoPlayerService _videoPlayerService;
     private readonly MainViewModel _mainViewModel;
     private readonly PlayerViewModel _playerViewModel;
+    private CancellationTokenSource? _imageWarmupCts;
 
     public MainWindow()
         : this(
@@ -40,19 +42,30 @@ public partial class MainWindow : Window
         OverlayControl.DataContext = _playerViewModel;
         NextEpisodePrompt.DataContext = _playerViewModel;
         VideoSurface.MediaPlayer = _videoPlayerService.GetMediaPlayer();
+        MiniVideoSurface.MediaPlayer = null;
         AddHandler(KeyDownEvent, MainWindow_KeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
         Closed += OnClosed;
         _mainViewModel.OnMediaSelected += MainViewModel_OnMediaSelected;
+        _mainViewModel.PropertyChanged += MainViewModel_PropertyChanged;
+        _mainViewModel.RequestEditChannel += MainViewModel_RequestEditChannel;
         _playerViewModel.PropertyChanged += PlayerViewModel_PropertyChanged;
         _playerViewModel.CloseRequested += PlayerViewModel_CloseRequested;
+        _playerViewModel.OpenEpisodesRequested += PlayerViewModel_OpenEpisodesRequested;
     }
 
     private void OnClosed(object? sender, EventArgs e)
     {
         _mainViewModel.OnMediaSelected -= MainViewModel_OnMediaSelected;
+        _mainViewModel.PropertyChanged -= MainViewModel_PropertyChanged;
+        _mainViewModel.RequestEditChannel -= MainViewModel_RequestEditChannel;
         _playerViewModel.PropertyChanged -= PlayerViewModel_PropertyChanged;
         _playerViewModel.CloseRequested -= PlayerViewModel_CloseRequested;
+        _playerViewModel.OpenEpisodesRequested -= PlayerViewModel_OpenEpisodesRequested;
         VideoSurface.MediaPlayer = null;
+        MiniVideoSurface.MediaPlayer = null;
+        _imageWarmupCts?.Cancel();
+        _imageWarmupCts?.Dispose();
+        _imageWarmupCts = null;
     }
 
     // === Window Chrome ===
@@ -102,6 +115,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        HideMiniPlayer();
         PlayerArea.IsVisible = true;
         _playerViewModel.IsLocked = false;
         _playerViewModel.UserInteractionCommand.Execute(null);
@@ -109,10 +123,91 @@ public partial class MainWindow : Window
         Dispatcher.UIThread.Post(() => OverlayControl.Focus(), DispatcherPriority.Input);
     }
 
+    private void MainViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(MainViewModel.FilteredChannels) or
+            nameof(MainViewModel.TrendingChannels) or
+            nameof(MainViewModel.LatestMovies) or
+            nameof(MainViewModel.LatestSeries) or
+            nameof(MainViewModel.SeriesViewItems) or
+            nameof(MainViewModel.FeaturedChannel))
+        {
+            ScheduleImageWarmup();
+        }
+    }
+
     private void PlayerViewModel_CloseRequested(object? sender, EventArgs e)
     {
         PlayerArea.IsVisible = false;
         _playerViewModel.IsLocked = false;
+        UpdateMiniPlayerVisibility();
+    }
+
+    private void PlayerViewModel_OpenEpisodesRequested(object? sender, EventArgs e)
+    {
+        if (_mainViewModel.SelectedSeries == null)
+        {
+            return;
+        }
+
+        _playerViewModel.ClosePlayerCommand.Execute(null);
+        _mainViewModel.IsSeriesDetailVisible = true;
+    }
+
+    private async void MainViewModel_RequestEditChannel(Channel channel)
+    {
+        try
+        {
+            var services = ((App)Application.Current!).Services;
+            var viewModel = services.GetRequiredService<EditChannelViewModel>();
+            viewModel.Initialize(channel);
+
+            var window = new Views.EditChannelWindow(viewModel);
+            await window.ShowDialog<bool>(this);
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.LogException("Failed to open EditChannelWindow.", ex);
+        }
+    }
+
+    private void ScheduleImageWarmup()
+    {
+        _imageWarmupCts?.Cancel();
+        _imageWarmupCts?.Dispose();
+        _imageWarmupCts = new CancellationTokenSource();
+        var token = _imageWarmupCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(140, token).ConfigureAwait(false);
+                await WarmupVisibleImagesAsync(token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }, token);
+    }
+
+    private async Task WarmupVisibleImagesAsync(CancellationToken cancellationToken)
+    {
+        var urls = new List<string?>(220);
+
+        if (_mainViewModel.FeaturedChannel != null)
+        {
+            urls.Add(_mainViewModel.FeaturedChannel.CoverUrl);
+            urls.Add(_mainViewModel.FeaturedChannel.LogoUrl);
+        }
+
+        urls.AddRange(_mainViewModel.TrendingChannels.Take(50).Select(c => c.LogoUrl ?? c.CoverUrl));
+        urls.AddRange(_mainViewModel.LatestMovies.Take(50).Select(c => c.CoverUrl ?? c.LogoUrl));
+        urls.AddRange(_mainViewModel.FilteredChannels.Take(120).Select(c => c.CoverUrl ?? c.LogoUrl));
+        urls.AddRange(_mainViewModel.LatestSeries.Take(60).Select(s => s.CoverUrl));
+        urls.AddRange(_mainViewModel.SeriesViewItems.Take(60).Select(s => s.CoverUrl));
+
+        await RemoteImage.PreloadAsync(urls, maxCount: 180, cancellationToken).ConfigureAwait(false);
     }
 
     private void MainWindow_KeyDown(object? sender, KeyEventArgs e)
@@ -177,14 +272,17 @@ public partial class MainWindow : Window
     // === Player ===
     private void PlayerViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(PlayerViewModel.IsFullScreen))
+        if (e.PropertyName == nameof(PlayerViewModel.IsFullScreen))
         {
-            return;
+            WindowState = _playerViewModel.IsFullScreen
+                ? WindowState.FullScreen
+                : WindowState.Normal;
         }
 
-        WindowState = _playerViewModel.IsFullScreen
-            ? WindowState.FullScreen
-            : WindowState.Normal;
+        if (e.PropertyName == nameof(PlayerViewModel.IsPlaying))
+        {
+            UpdateMiniPlayerVisibility();
+        }
     }
 
     // === Navigation ===
@@ -197,7 +295,7 @@ public partial class MainWindow : Window
     private void NavigateFavorites_Click(object? sender, RoutedEventArgs e) => _mainViewModel.NavigateCommand.Execute(AppView.Favorites);
     private void NavigateHistory_Click(object? sender, RoutedEventArgs e) => _mainViewModel.NavigateCommand.Execute(AppView.History);
 
-    private void SwitchProfile_Click(object? sender, RoutedEventArgs e)
+    public void OpenProfileSelection()
     {
         if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -209,5 +307,130 @@ public partial class MainWindow : Window
         desktop.MainWindow = profilesWindow;
         profilesWindow.Show();
         Hide();
+    }
+
+    private void SwitchProfile_Click(object? sender, RoutedEventArgs e)
+    {
+        OpenProfileSelection();
+    }
+
+    private void HideMiniPlayer()
+    {
+        MiniPlayer.IsVisible = false;
+        MiniVideoSurface.MediaPlayer = null;
+    }
+
+    private void UpdateMiniPlayerVisibility()
+    {
+        if (PlayerArea.IsVisible || !_videoPlayerService.IsPlaying)
+        {
+            HideMiniPlayer();
+            return;
+        }
+
+        MiniVideoSurface.MediaPlayer = _videoPlayerService.GetMediaPlayer();
+        MiniPlayer.IsVisible = true;
+    }
+
+    private void MouseCaptureLayer_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!PlayerArea.IsVisible)
+        {
+            return;
+        }
+
+        var pointerPoint = e.GetCurrentPoint(this);
+        if (!pointerPoint.Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        if (e.ClickCount >= 2)
+        {
+            _playerViewModel.ToggleFullScreenCommand.Execute(null);
+            return;
+        }
+
+        _playerViewModel.PlayPauseCommand.Execute(null);
+        _playerViewModel.UserInteractionCommand.Execute(null);
+    }
+
+    private void MouseCaptureLayer_PointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (!PlayerArea.IsVisible)
+        {
+            return;
+        }
+
+        _playerViewModel.UserInteractionCommand.Execute(null);
+    }
+
+    private void CloseMiniPlayer_Click(object? sender, RoutedEventArgs e)
+    {
+        HideMiniPlayer();
+        if (_videoPlayerService.IsPlaying)
+        {
+            _playerViewModel.StopCommand.Execute(null);
+        }
+    }
+
+    private void HomeView_ScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        if (sender is not ScrollViewer scrollViewer)
+        {
+            return;
+        }
+
+        var verticalOffset = scrollViewer.Offset.Y;
+        HeroGrid.Opacity = Math.Max(0.2, 1.0 - (verticalOffset / 800.0));
+
+        if (HeroGrid.RenderTransform is not TransformGroup transforms)
+        {
+            return;
+        }
+
+        if (transforms.Children.Count > 0 && transforms.Children[0] is TranslateTransform parallax)
+        {
+            parallax.Y = verticalOffset * 0.3;
+        }
+
+        if (transforms.Children.Count > 1 && transforms.Children[1] is ScaleTransform zoom)
+        {
+            var zoomFactor = Math.Clamp(1.0 + (verticalOffset / 2500.0), 1.0, 1.16);
+            zoom.ScaleX = zoomFactor;
+            zoom.ScaleY = zoomFactor;
+        }
+    }
+
+    private async void LiveView_ScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        await LoadMoreChannelsFromScrollAsync(sender as ScrollViewer);
+    }
+
+    private async void MoviesView_ScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        await LoadMoreChannelsFromScrollAsync(sender as ScrollViewer);
+    }
+
+    private async void SeriesView_ScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        if (sender is not ScrollViewer scrollViewer)
+        {
+            return;
+        }
+
+        var scrollableHeight = Math.Max(0, scrollViewer.Extent.Height - scrollViewer.Viewport.Height);
+        await _mainViewModel.LoadMoreSeriesIfNeededAsync(scrollViewer.Offset.Y, scrollableHeight);
+    }
+
+    private async Task LoadMoreChannelsFromScrollAsync(ScrollViewer? scrollViewer)
+    {
+        if (scrollViewer == null)
+        {
+            return;
+        }
+
+        var scrollableHeight = Math.Max(0, scrollViewer.Extent.Height - scrollViewer.Viewport.Height);
+        await _mainViewModel.LoadMoreChannelsIfNeededAsync(scrollViewer.Offset.Y, scrollableHeight);
     }
 }

@@ -11,6 +11,7 @@
         TransparencyLevelHint="None"
         Width="1400" Height="800"
         MinWidth="1000" MinHeight="600"
+        WindowStartupLocation="CenterScreen"
         Background="{DynamicResource Bg0Brush}">
 
   <Grid RowDefinitions="64,*,48">
@@ -106,12 +107,19 @@
       <Grid Grid.Column="1">
 
         <!-- 1. HOME VIEW -->
-        <ScrollViewer x:Name="HomeView" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Home}}">
+        <ScrollViewer x:Name="HomeView" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Home}}"
+                      ScrollChanged="HomeView_ScrollChanged">
           <StackPanel Margin="24">
             <!-- HERO SECTION -->
             <Border Height="500" CornerRadius="16" Margin="0,0,0,40" ClipToBounds="True">
-              <Grid>
-                <Image Stretch="UniformToFill" Source="{Binding FeaturedChannel.CoverUrl}"/>
+              <Grid x:Name="HeroGrid" RenderTransformOrigin="0.5,0.5">
+                <Grid.RenderTransform>
+                  <TransformGroup>
+                    <TranslateTransform/>
+                    <ScaleTransform/>
+                  </TransformGroup>
+                </Grid.RenderTransform>
+                <controls:RemoteImage x:Name="HeroImage" Stretch="UniformToFill" Url="{Binding FeaturedChannel.CoverUrl}"/>
                 <Border>
                   <Border.Background>
                     <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
@@ -164,7 +172,7 @@
                             Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
                       <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusSmall}" ClipToBounds="True">
                         <Grid>
-                          <Image Stretch="UniformToFill" Source="{Binding LogoUrl}" Opacity="0.8"/>
+                          <controls:RemoteImage Stretch="UniformToFill" Url="{Binding LogoUrl}" Opacity="0.8"/>
                           <Border Background="{DynamicResource HeroOverlayBrush}"/>
                           <StackPanel VerticalAlignment="Bottom" Margin="12">
                             <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis"/>
@@ -195,7 +203,7 @@
                       </Button.ContextFlyout>
                       <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusSmall}" ClipToBounds="True">
                         <Grid>
-                          <Image Stretch="UniformToFill" Source="{Binding LogoUrl}" Opacity="0.8"/>
+                          <controls:RemoteImage Stretch="UniformToFill" Url="{Binding LogoUrl}" Opacity="0.8"/>
                           <Border Background="{DynamicResource HeroOverlayBrush}"/>
                           <StackPanel VerticalAlignment="Bottom" Margin="12">
                             <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis"/>
@@ -226,7 +234,7 @@
                       </Button.ContextFlyout>
                       <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusSmall}" ClipToBounds="True">
                         <Grid>
-                          <Image Stretch="UniformToFill" Source="{Binding CoverUrl}"/>
+                          <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
                           <Border Background="{DynamicResource HeroOverlayBrush}"/>
                           <StackPanel VerticalAlignment="Bottom" Margin="12">
                             <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="Bold" FontSize="14" TextTrimming="CharacterEllipsis"/>
@@ -257,7 +265,7 @@
                       </Button.ContextFlyout>
                       <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusSmall}" ClipToBounds="True">
                         <Grid>
-                          <Image Stretch="UniformToFill" Source="{Binding CoverUrl}"/>
+                          <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
                           <Border Background="{DynamicResource HeroOverlayBrush}"/>
                           <StackPanel VerticalAlignment="Bottom" Margin="12">
                             <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="Bold" FontSize="14" TextTrimming="CharacterEllipsis"/>
@@ -274,7 +282,8 @@
         </ScrollViewer>
 
         <!-- 2. MOVIES VIEW -->
-        <ScrollViewer x:Name="MoviesView" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Movies}}">
+        <ScrollViewer x:Name="MoviesView" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Movies}}"
+                      ScrollChanged="MoviesView_ScrollChanged">
           <StackPanel Margin="24">
             <Grid Margin="0,0,0,24" ColumnDefinitions="*,Auto">
               <TextBlock Text="Filmler" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
@@ -293,7 +302,7 @@
                     <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
                       <StackPanel Spacing="6">
                         <Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12">
-                          <Image Width="60" Stretch="Uniform" Source="{Binding CoverUrl}"/>
+                          <controls:RemoteImage Width="60" Stretch="Uniform" Url="{Binding CoverUrl}"/>
                         </Border>
                         <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
                         <TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center"/>
@@ -314,7 +323,8 @@
         </ScrollViewer>
 
         <!-- 3. SERIES VIEW -->
-        <ScrollViewer x:Name="SeriesView" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Series}}">
+        <ScrollViewer x:Name="SeriesView" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Series}}"
+                      ScrollChanged="SeriesView_ScrollChanged">
           <StackPanel Margin="24">
             <Grid Margin="0,0,0,24" ColumnDefinitions="*,Auto">
               <TextBlock Text="Diziler" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
@@ -333,7 +343,7 @@
                     <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
                       <StackPanel Spacing="6">
                         <Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12">
-                          <Image Width="60" Stretch="Uniform" Source="{Binding CoverUrl}"/>
+                          <controls:RemoteImage Width="60" Stretch="Uniform" Url="{Binding CoverUrl}"/>
                         </Border>
                         <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
                         <TextBlock Text="{Binding SeasonCountSafe, StringFormat='Sezon: {0}'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center" Margin="0,4,0,0"/>
@@ -353,7 +363,8 @@
         </ScrollViewer>
 
         <!-- 4. LIVE TV VIEW -->
-        <ScrollViewer x:Name="LiveView" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Live}}">
+        <ScrollViewer x:Name="LiveView" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Live}}"
+                      ScrollChanged="LiveView_ScrollChanged">
           <StackPanel Margin="24">
             <Grid Margin="0,0,0,24" ColumnDefinitions="*,Auto">
               <TextBlock Text="Canlı TV" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
@@ -372,7 +383,7 @@
                     <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
                       <StackPanel Spacing="6">
                         <Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12">
-                          <Image Width="60" Stretch="Uniform" Source="{Binding LogoUrl}"/>
+                          <controls:RemoteImage Width="60" Stretch="Uniform" Url="{Binding LogoUrl}"/>
                         </Border>
                         <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
                         <TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center"/>
@@ -534,7 +545,7 @@
                   <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
                           Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
                     <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
-                      <StackPanel><Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12"><Image Width="60" Stretch="Uniform" Source="{Binding LogoUrl}"/></Border><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/></StackPanel>
+                      <StackPanel><Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12"><controls:RemoteImage Width="60" Stretch="Uniform" Url="{Binding LogoUrl}"/></Border><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/></StackPanel>
                     </Border>
                   </Button>
                 </DataTemplate>
@@ -559,7 +570,7 @@
                   <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
                           Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
                     <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
-                      <StackPanel><Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12"><Image Width="60" Stretch="Uniform" Source="{Binding LogoUrl}"/></Border><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/></StackPanel>
+                      <StackPanel><Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12"><controls:RemoteImage Width="60" Stretch="Uniform" Url="{Binding LogoUrl}"/></Border><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/></StackPanel>
                     </Border>
                   </Button>
                 </DataTemplate>
@@ -586,7 +597,7 @@
                   <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
                           Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
                     <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
-                      <StackPanel><Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12"><Image Width="60" Stretch="Uniform" Source="{Binding LogoUrl}"/></Border><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding LastWatched, StringFormat='Son: {0:dd.MM.yyyy HH:mm}'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><Border Height="3" Background="#33FFFFFF" Margin="0,10,0,0" IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}"><Border Width="{Binding ., Converter={StaticResource WatchedProgressWidthConverter}, ConverterParameter=160}" Background="{DynamicResource AccentBrush}" HorizontalAlignment="Left"/></Border></StackPanel>
+                      <StackPanel><Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12"><controls:RemoteImage Width="60" Stretch="Uniform" Url="{Binding LogoUrl}"/></Border><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding LastWatched, StringFormat='Son: {0:dd.MM.yyyy HH:mm}'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><Border Height="3" Background="#33FFFFFF" Margin="0,10,0,0" IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}"><Border Width="{Binding ., Converter={StaticResource WatchedProgressWidthConverter}, ConverterParameter=160}" Background="{DynamicResource AccentBrush}" HorizontalAlignment="Left"/></Border></StackPanel>
                     </Border>
                   </Button>
                 </DataTemplate>
@@ -601,7 +612,7 @@
                   <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
                           Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
                     <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
-                      <StackPanel><Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12"><Image Width="60" Stretch="Uniform" Source="{Binding LogoUrl}"/></Border><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding LastWatched, StringFormat='Son: {0:dd.MM.yyyy HH:mm}'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><Border Height="3" Background="#33FFFFFF" Margin="0,10,0,0" IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}"><Border Width="{Binding ., Converter={StaticResource WatchedProgressWidthConverter}, ConverterParameter=160}" Background="{DynamicResource AccentBrush}" HorizontalAlignment="Left"/></Border></StackPanel>
+                      <StackPanel><Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12"><controls:RemoteImage Width="60" Stretch="Uniform" Url="{Binding LogoUrl}"/></Border><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding LastWatched, StringFormat='Son: {0:dd.MM.yyyy HH:mm}'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><Border Height="3" Background="#33FFFFFF" Margin="0,10,0,0" IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}"><Border Width="{Binding ., Converter={StaticResource WatchedProgressWidthConverter}, ConverterParameter=160}" Background="{DynamicResource AccentBrush}" HorizontalAlignment="Left"/></Border></StackPanel>
                     </Border>
                   </Button>
                 </DataTemplate>
@@ -616,7 +627,7 @@
                   <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
                           Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
                     <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
-                      <StackPanel><Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12"><Image Width="60" Stretch="Uniform" Source="{Binding LogoUrl}"/></Border><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding LastWatched, StringFormat='Son: {0:dd.MM.yyyy HH:mm}'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><Border Height="3" Background="#33FFFFFF" Margin="0,10,0,0" IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}"><Border Width="{Binding ., Converter={StaticResource WatchedProgressWidthConverter}, ConverterParameter=160}" Background="{DynamicResource AccentBrush}" HorizontalAlignment="Left"/></Border></StackPanel>
+                      <StackPanel><Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12"><controls:RemoteImage Width="60" Stretch="Uniform" Url="{Binding LogoUrl}"/></Border><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding LastWatched, StringFormat='Son: {0:dd.MM.yyyy HH:mm}'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><Border Height="3" Background="#33FFFFFF" Margin="0,10,0,0" IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}"><Border Width="{Binding ., Converter={StaticResource WatchedProgressWidthConverter}, ConverterParameter=160}" Background="{DynamicResource AccentBrush}" HorizontalAlignment="Left"/></Border></StackPanel>
                     </Border>
                   </Button>
                 </DataTemplate>
@@ -657,19 +668,18 @@
             </Border>
             <ScrollViewer MaxHeight="500" Margin="0,20,0,0">
               <ItemsControl ItemsSource="{Binding SearchResults}">
-                <ItemsControl.ItemTemplate>
+                <ItemsControl.DataTemplates>
                   <DataTemplate x:DataType="models:Channel">
                     <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}"
                             Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" Margin="0,0,0,12" HorizontalAlignment="Stretch">
                       <Border Background="{DynamicResource Surface1Brush}" CornerRadius="8" Padding="16">
                         <Grid ColumnDefinitions="120,*">
                           <Border Width="100" Height="56" CornerRadius="4" Background="{DynamicResource Surface1Brush}" ClipToBounds="True">
-                            <Image Stretch="UniformToFill" Source="{Binding LogoUrl}"/>
+                            <controls:RemoteImage Stretch="UniformToFill" Url="{Binding LogoUrl}"/>
                           </Border>
                           <StackPanel Grid.Column="1" Margin="16,0,0,0">
                             <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                             <TextBlock Text="{Binding GroupTitle}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
-                            <!-- Progress bar -->
                             <Border Height="3" Background="#33FFFFFF" Margin="0,12,0,0"
                                     IsVisible="{Binding WatchedPercentage, Converter={StaticResource CountToVisibilityConverter}}">
                               <Border Width="{Binding WatchedPercentage, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=640}"
@@ -680,7 +690,24 @@
                       </Border>
                     </Button>
                   </DataTemplate>
-                </ItemsControl.ItemTemplate>
+
+                  <DataTemplate x:DataType="models:Series">
+                    <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}"
+                            Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" Margin="0,0,0,12" HorizontalAlignment="Stretch">
+                      <Border Background="{DynamicResource Surface1Brush}" CornerRadius="8" Padding="16">
+                        <Grid ColumnDefinitions="120,*">
+                          <Border Width="100" Height="56" CornerRadius="4" Background="{DynamicResource Surface1Brush}" ClipToBounds="True">
+                            <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
+                          </Border>
+                          <StackPanel Grid.Column="1" Margin="16,0,0,0">
+                            <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Text="{Binding Genre}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                          </StackPanel>
+                        </Grid>
+                      </Border>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.DataTemplates>
               </ItemsControl>
             </ScrollViewer>
           </StackPanel>
@@ -695,7 +722,7 @@
             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
             <Grid ColumnDefinitions="260,*" Margin="0,0,0,28">
               <Border Height="360" CornerRadius="14" ClipToBounds="True" Background="{DynamicResource Surface0Brush}">
-                <Image Stretch="UniformToFill" Source="{Binding SelectedSeriesPosterUrl}"/>
+                <controls:RemoteImage Stretch="UniformToFill" Url="{Binding SelectedSeriesPosterUrl}"/>
               </Border>
               <StackPanel Grid.Column="1" Margin="28,0,0,0">
                 <Button Command="{Binding CloseSeriesDetailCommand}" Content="←" FontSize="20" HorizontalAlignment="Left" Margin="0,0,0,20" Background="Transparent" BorderThickness="0" Cursor="Hand"/>
@@ -727,7 +754,7 @@
                                 <Grid RowDefinitions="Auto,*">
                                   <Border Height="100" CornerRadius="8,8,0,0" ClipToBounds="True">
                                     <Grid>
-                                      <Image Stretch="UniformToFill" Source="{Binding CoverUrl}"/>
+                                      <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
                                       <Border Background="#44000000"/>
                                       <TextBlock Text="▶" Foreground="White" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.6"/>
                                       <!-- Completion badge -->
@@ -766,10 +793,46 @@
       </Grid>
     </Grid>
 
+    <!-- Mini Player (Picture-in-Picture) -->
+    <Border x:Name="MiniPlayer"
+            Width="320" Height="180"
+            CornerRadius="12"
+            Background="Black"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            Margin="24"
+            IsVisible="False"
+            ZIndex="4900"
+            BoxShadow="0 12 28 0 #66000000">
+      <Grid>
+        <controls:MemoryVideoView x:Name="MiniVideoSurface"/>
+        <Border Background="{DynamicResource HeroOverlayBrush}" IsHitTestVisible="False"/>
+
+        <Button HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Margin="8"
+                Width="28" Height="28"
+                Background="#AA000000"
+                Foreground="White"
+                BorderThickness="0"
+                Cursor="Hand"
+                CornerRadius="14"
+                Click="CloseMiniPlayer_Click">
+          <TextBlock Text="X" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Button>
+      </Grid>
+    </Border>
+
     <!-- Player Area (full window overlay) -->
     <Grid x:Name="PlayerArea" Grid.RowSpan="3" Background="Black" IsVisible="False" ClipToBounds="True" ZIndex="5000">
       <controls:MemoryVideoView x:Name="VideoSurface"/>
-      <Grid x:Name="PlayerOverlayLayer">
+      <views:WatermarkView DataContext="{Binding WatermarkViewModel}" ZIndex="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,100"/>
+      <Border x:Name="MouseCaptureLayer"
+              ZIndex="2500"
+              Background="Transparent"
+              PointerMoved="MouseCaptureLayer_PointerMoved"
+              PointerPressed="MouseCaptureLayer_PointerPressed"/>
+      <Grid x:Name="PlayerOverlayLayer" ZIndex="2600">
         <views:VideoOverlayView x:Name="OverlayControl" ZIndex="2"/>
         <!-- Next Episode Prompt (binds to PlayerViewModel via OverlayControl's DataContext) -->
         <Border x:Name="NextEpisodePrompt" Background="{DynamicResource SurfaceBrush}" CornerRadius="12" Padding="24"

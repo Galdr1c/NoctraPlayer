@@ -10,8 +10,10 @@ using Noctra.Data;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
+using System.Globalization;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 
 namespace Noctra.Avalonia;
 
@@ -39,11 +41,14 @@ public partial class App : Application
             using var scope = Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Database.EnsureCreated();
+            ApplySchemaFixupsAsync(db).GetAwaiter().GetResult();
             StartupDiagnostics.Log("Database EnsureCreated completed.");
 
             var settings = scope.ServiceProvider.GetRequiredService<ISettingsService>();
             var themeService = Services.GetRequiredService<IThemeService>();
+            ApplyApplicationLanguage(settings.Settings.Language);
             themeService.SetTheme(settings.Settings.IsDarkTheme);
+            settings.SettingsChanged += () => ApplyApplicationLanguage(settings.Settings.Language);
             StartupDiagnostics.Log("Theme applied.");
         }
         catch (Exception ex)
@@ -67,8 +72,28 @@ public partial class App : Application
                 StartupDiagnostics.Log("ProfilesWindow resolved and assigned as startup window.");
                 desktop.Exit += (_, _) =>
                 {
-                    var video = Services.GetService<IVideoPlayerService>();
-                    video?.Dispose();
+                    try
+                    {
+                        var video = Services.GetService<IVideoPlayerService>();
+                        video?.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        StartupDiagnostics.LogException("Error while disposing video service on exit", ex);
+                    }
+
+                    if (Services is IDisposable disposableServices)
+                    {
+                        try
+                        {
+                            disposableServices.Dispose();
+                        }
+                        catch (Exception ex)
+                        {
+                            StartupDiagnostics.LogException("Error while disposing service provider on exit", ex);
+                        }
+                    }
+
                     StartupDiagnostics.Log("Desktop exit cleanup completed.");
                 };
             }
@@ -110,6 +135,7 @@ public partial class App : Application
         services.AddSingleton<IDispatcherService, AvaloniaDispatcherService>();
         services.AddSingleton<IDialogService, AvaloniaDialogService>();
         services.AddSingleton<IThemeService, AvaloniaThemeService>();
+        services.AddSingleton<AvaloniaImageCacheService>();
         services.AddSingleton<IVideoPlayerService, VideoPlayerService>();
         services.AddTransient<WatermarkViewModel>();
         services.AddSingleton<MainViewModel>();
@@ -175,5 +201,36 @@ public partial class App : Application
             AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
         };
         return new HttpClient(handler);
+    }
+
+    private static async Task ApplySchemaFixupsAsync(AppDbContext context)
+    {
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE ProviderAccounts ADD COLUMN ExpirationDate TEXT;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Profiles ADD COLUMN CreatedAt TEXT NOT NULL DEFAULT '0001-01-01 00:00:00';"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Playlists ADD COLUMN EpgUrl TEXT;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Playlists ADD COLUMN DetectedCountry TEXT;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Playlists ADD COLUMN EpgLastUpdated TEXT;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN IntroStartSec REAL;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN IntroEndSec REAL;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN CreditsStartSec REAL;"); } catch { }
+    }
+
+    private static void ApplyApplicationLanguage(string? languageCode)
+    {
+        var normalized = (languageCode ?? "tr").Trim().ToLowerInvariant();
+        var cultureName = normalized switch
+        {
+            "en" => "en-US",
+            "de" => "de-DE",
+            "fr" => "fr-FR",
+            "es" => "es-ES",
+            _ => "tr-TR"
+        };
+
+        var culture = new CultureInfo(cultureName);
+        Thread.CurrentThread.CurrentCulture = culture;
+        Thread.CurrentThread.CurrentUICulture = culture;
+        CultureInfo.DefaultThreadCurrentCulture = culture;
+        CultureInfo.DefaultThreadCurrentUICulture = culture;
     }
 }

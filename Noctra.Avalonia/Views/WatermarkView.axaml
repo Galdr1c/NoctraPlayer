@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Noctra.ViewModels"
+             x:Class="Noctra.Avalonia.Views.WatermarkView"
+             x:DataType="vm:WatermarkViewModel">
+  <Grid IsVisible="{Binding IsVisible}">
+    <Border Background="#10000000"
+            CornerRadius="12"
+            Padding="12,6"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            Margin="0,0,24,60"
+            Opacity="{Binding Opacity}"
+            IsHitTestVisible="False">
+      <Border.RenderTransform>
+        <TranslateTransform X="{Binding TranslateX}" Y="{Binding TranslateY}"/>
+      </Border.RenderTransform>
+
+      <TextBlock Text="Noctra MP - Free"
+                 FontWeight="SemiBold"
+                 FontSize="12"
+                 Foreground="White"/>
+    </Border>
+  </Grid>
+</UserControl>
