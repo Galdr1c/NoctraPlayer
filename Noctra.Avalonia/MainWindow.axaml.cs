@@ -5,8 +5,8 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Threading;
-using LibVLCSharp.Avalonia;
 using Microsoft.Extensions.DependencyInjection;
+using Noctra.Avalonia.Controls;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
@@ -18,7 +18,6 @@ public partial class MainWindow : Window
     private readonly IVideoPlayerService _videoPlayerService;
     private readonly MainViewModel _mainViewModel;
     private readonly PlayerViewModel _playerViewModel;
-    private readonly VideoView _videoView;
 
     public MainWindow()
         : this(
@@ -37,19 +36,10 @@ public partial class MainWindow : Window
         _videoPlayerService = videoPlayerService;
         DataContext = _mainViewModel;
 
-        _videoView = new VideoView
-        {
-            MediaPlayer = _videoPlayerService.GetMediaPlayer(),
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Stretch
-        };
-
-        VideoHost.Children.Add(_videoView);
         PlayerOverlayLayer.DataContext = _playerViewModel;
         OverlayControl.DataContext = _playerViewModel;
         NextEpisodePrompt.DataContext = _playerViewModel;
-        // Put overlay inside VideoView content to avoid native host airspace issues.
-        _videoView.Content = PlayerOverlayLayer;
+        VideoSurface.MediaPlayer = _videoPlayerService.GetMediaPlayer();
         AddHandler(KeyDownEvent, MainWindow_KeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
         Closed += OnClosed;
         _mainViewModel.OnMediaSelected += MainViewModel_OnMediaSelected;
@@ -62,7 +52,7 @@ public partial class MainWindow : Window
         _mainViewModel.OnMediaSelected -= MainViewModel_OnMediaSelected;
         _playerViewModel.PropertyChanged -= PlayerViewModel_PropertyChanged;
         _playerViewModel.CloseRequested -= PlayerViewModel_CloseRequested;
-        _videoView.MediaPlayer = null;
+        VideoSurface.MediaPlayer = null;
     }
 
     // === Window Chrome ===
@@ -113,7 +103,7 @@ public partial class MainWindow : Window
         }
 
         PlayerArea.IsVisible = true;
-        _playerViewModel.IsLocked = true;
+        _playerViewModel.IsLocked = false;
         _playerViewModel.UserInteractionCommand.Execute(null);
         await _playerViewModel.PlayChannelAsync(channel);
         Dispatcher.UIThread.Post(() => OverlayControl.Focus(), DispatcherPriority.Input);
@@ -127,7 +117,7 @@ public partial class MainWindow : Window
 
     private void MainWindow_KeyDown(object? sender, KeyEventArgs e)
     {
-        if (!PlayerArea.IsVisible)
+        if (e.Handled || !PlayerArea.IsVisible)
         {
             return;
         }
@@ -139,7 +129,14 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 break;
             case Key.Escape:
-                _playerViewModel.ClosePlayerCommand.Execute(null);
+                if (_playerViewModel.IsFullScreen)
+                {
+                    _playerViewModel.ToggleFullScreenCommand.Execute(null);
+                }
+                else
+                {
+                    _playerViewModel.ClosePlayerCommand.Execute(null);
+                }
                 e.Handled = true;
                 break;
             case Key.F:

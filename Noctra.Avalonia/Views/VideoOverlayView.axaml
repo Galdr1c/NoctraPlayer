@@ -558,21 +558,5 @@
             <ProgressBar Foreground="#8D09E5" Width="60" Height="60" IsIndeterminate="True"/>
             <TextBlock Text="Yükleniyor..." Foreground="White" HorizontalAlignment="Center" Margin="0,16,0,0"/>
         </StackPanel>
-
-        <!-- Debug marker: proves overlay render path -->
-        <Border Background="#D90000"
-                Padding="10,6"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Top"
-                Margin="16"
-                CornerRadius="6"
-                ZIndex="2000"
-                IsHitTestVisible="False">
-            <TextBlock Text="OVERLAY ACTIVE"
-                       Foreground="White"
-                       FontSize="14"
-                       FontWeight="Bold"/>
-        </Border>
-
     </Grid>
 </UserControl>

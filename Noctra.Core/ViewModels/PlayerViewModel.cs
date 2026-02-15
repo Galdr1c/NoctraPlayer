@@ -12,6 +12,8 @@ namespace Noctra.ViewModels;
 /// </summary>
 public partial class PlayerViewModel : ObservableObject
 {
+    private const double OverlayAutoHideDelayMs = 4000;
+
     public sealed record TrackOption(int Id, string Name);
 
     private readonly IVideoPlayerService _videoPlayerService;
@@ -181,8 +183,15 @@ public partial class PlayerViewModel : ObservableObject
         _watchHistoryService = watchHistoryService;
 
         // Auto-hide timer
-        _autoHideTimer = new System.Timers.Timer(4000);
-        _autoHideTimer.Elapsed += (s, e) => _dispatcherService.Invoke(() => IsVisible = true);
+        _autoHideTimer = new System.Timers.Timer(OverlayAutoHideDelayMs);
+        _autoHideTimer.Elapsed += (s, e) =>
+            _dispatcherService.Invoke(() =>
+            {
+                if (CanAutoHideOverlay())
+                {
+                    IsVisible = false;
+                }
+            });
         _autoHideTimer.AutoReset = false;
 
         // Clock timer
@@ -687,8 +696,23 @@ public partial class PlayerViewModel : ObservableObject
     private void RestartAutoHideTimer()
     {
         _autoHideTimer.Stop();
-        // Keep controls visible to avoid disappearing overlay issues in Avalonia player UI.
         IsVisible = true;
+        if (CanAutoHideOverlay())
+        {
+            _autoHideTimer.Start();
+        }
+    }
+
+    private bool CanAutoHideOverlay()
+    {
+        return IsPlaying
+            && !IsLocked
+            && !IsBuffering
+            && !IsAudioSettingsOpen
+            && !IsQualitySettingsOpen
+            && !IsInfoPanelOpen
+            && !IsZappingVisible
+            && !IsNextEpisodePromptVisible;
     }
 
     [RelayCommand]
@@ -1335,6 +1359,90 @@ public partial class PlayerViewModel : ObservableObject
 
     [RelayCommand]
     private void UserInteraction() => RestartAutoHideTimer();
+
+    partial void OnIsLockedChanged(bool value)
+    {
+        if (value)
+        {
+            _autoHideTimer.Stop();
+            IsVisible = true;
+            return;
+        }
+
+        RestartAutoHideTimer();
+    }
+
+    partial void OnIsAudioSettingsOpenChanged(bool value)
+    {
+        if (value)
+        {
+            _autoHideTimer.Stop();
+            IsVisible = true;
+            return;
+        }
+
+        RestartAutoHideTimer();
+    }
+
+    partial void OnIsQualitySettingsOpenChanged(bool value)
+    {
+        if (value)
+        {
+            _autoHideTimer.Stop();
+            IsVisible = true;
+            return;
+        }
+
+        RestartAutoHideTimer();
+    }
+
+    partial void OnIsInfoPanelOpenChanged(bool value)
+    {
+        if (value)
+        {
+            _autoHideTimer.Stop();
+            IsVisible = true;
+            return;
+        }
+
+        RestartAutoHideTimer();
+    }
+
+    partial void OnIsBufferingChanged(bool value)
+    {
+        if (value)
+        {
+            _autoHideTimer.Stop();
+            IsVisible = true;
+            return;
+        }
+
+        RestartAutoHideTimer();
+    }
+
+    partial void OnIsZappingVisibleChanged(bool value)
+    {
+        if (value)
+        {
+            _autoHideTimer.Stop();
+            IsVisible = true;
+            return;
+        }
+
+        RestartAutoHideTimer();
+    }
+
+    partial void OnIsNextEpisodePromptVisibleChanged(bool value)
+    {
+        if (value)
+        {
+            _autoHideTimer.Stop();
+            IsVisible = true;
+            return;
+        }
+
+        RestartAutoHideTimer();
+    }
 }
 
 

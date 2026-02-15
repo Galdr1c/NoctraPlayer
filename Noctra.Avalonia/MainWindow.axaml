@@ -3,6 +3,7 @@
         xmlns:vm="using:Noctra.ViewModels"
         xmlns:models="using:Noctra.Models"
         xmlns:views="using:Noctra.Avalonia.Views"
+        xmlns:controls="using:Noctra.Avalonia.Controls"
         x:Class="Noctra.Avalonia.MainWindow"
         x:Name="RootWindow"
         x:DataType="vm:MainViewModel"
@@ -767,7 +768,7 @@
 
     <!-- Player Area (full window overlay) -->
     <Grid x:Name="PlayerArea" Grid.RowSpan="3" Background="Black" IsVisible="False" ClipToBounds="True" ZIndex="5000">
-      <Grid x:Name="VideoHost"/>
+      <controls:MemoryVideoView x:Name="VideoSurface"/>
       <Grid x:Name="PlayerOverlayLayer">
         <views:VideoOverlayView x:Name="OverlayControl" ZIndex="2"/>
         <!-- Next Episode Prompt (binds to PlayerViewModel via OverlayControl's DataContext) -->

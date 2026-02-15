@@ -12,6 +12,9 @@ public partial class VideoOverlayView : UserControl
     public static readonly StyledProperty<bool> IsVolumeToastVisibleProperty =
         AvaloniaProperty.Register<VideoOverlayView, bool>(nameof(IsVolumeToastVisible));
 
+    private static readonly Cursor HiddenCursor = new(StandardCursorType.None);
+    private static readonly Cursor VisibleCursor = new(StandardCursorType.Arrow);
+
     private readonly DispatcherTimer _volumeToastTimer;
     private PlayerViewModel? _playerViewModel;
     private bool _isTimelinePointerDown;
@@ -50,6 +53,11 @@ public partial class VideoOverlayView : UserControl
         if (_playerViewModel != null)
         {
             _playerViewModel.PropertyChanged += PlayerViewModel_PropertyChanged;
+            UpdateOverlayCursor(_playerViewModel.IsVisible);
+        }
+        else
+        {
+            Cursor = VisibleCursor;
         }
     }
 
@@ -94,7 +102,14 @@ public partial class VideoOverlayView : UserControl
                 e.Handled = true;
                 break;
             case Key.Escape:
-                _playerViewModel.ClosePlayerCommand.Execute(null);
+                if (_playerViewModel.IsFullScreen)
+                {
+                    _playerViewModel.ToggleFullScreenCommand.Execute(null);
+                }
+                else
+                {
+                    _playerViewModel.ClosePlayerCommand.Execute(null);
+                }
                 e.Handled = true;
                 break;
             case Key.F:
@@ -137,6 +152,11 @@ public partial class VideoOverlayView : UserControl
         if (e.PropertyName is nameof(PlayerViewModel.Volume) or nameof(PlayerViewModel.IsMuted))
         {
             ShowVolumeToast();
+        }
+
+        if (e.PropertyName == nameof(PlayerViewModel.IsVisible))
+        {
+            UpdateOverlayCursor(_playerViewModel?.IsVisible == true);
         }
     }
 
@@ -213,5 +233,10 @@ public partial class VideoOverlayView : UserControl
                 value = 0;
                 return false;
         }
+    }
+
+    private void UpdateOverlayCursor(bool isOverlayVisible)
+    {
+        Cursor = isOverlayVisible ? VisibleCursor : HiddenCursor;
     }
 }
