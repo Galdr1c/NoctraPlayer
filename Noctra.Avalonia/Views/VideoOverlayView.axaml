@@ -670,7 +670,7 @@
         <Border Background="Black"
                 IsHitTestVisible="True"
                 ZIndex="900"
-                IsVisible="{Binding IsBuffering}"/>
+                IsVisible="{Binding IsBufferShieldVisible}"/>
 
         <!-- Loading state back button -->
         <Button Command="{Binding ClosePlayerCommand}"

@@ -19,6 +19,7 @@ public partial class PlayerViewModel : ObservableObject
     private const double SkipAggregationWindowMs = 1200;
     private const double SkipSeekCarryWindowMs = 1400;
     private const double SkipSeekCarryToleranceSeconds = 2.0;
+    private const double SeekBufferShieldSuppressionMs = 2800;
     private const double EpisodeCompletedPercentThreshold = 90.0;
     private static readonly double EpisodeCompletedTailSeconds = TimeSpan.FromMinutes(5).TotalSeconds;
 
@@ -73,6 +74,8 @@ public partial class PlayerViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isBuffering;
+
+    public bool IsBufferShieldVisible => IsBuffering && (IsLiveContent || !_suppressBufferShieldForSeek);
 
     [ObservableProperty]
     private bool _isLive;
@@ -200,6 +203,8 @@ public partial class PlayerViewModel : ObservableObject
     private int _liveRecoveryAttemptsInWindow;
     private int _liveStallScore;
     private int _volumeBeforeMute = 100;
+    private bool _suppressBufferShieldForSeek;
+    private int _seekShieldSuppressionToken;
     private Series? _currentSeriesContext;
     private readonly IDispatcherService _dispatcherService;
     private readonly IWatchHistoryService? _watchHistoryService;
@@ -356,6 +361,7 @@ public partial class PlayerViewModel : ObservableObject
     {
         if (value != null)
         {
+            CancelSeekBufferShieldSuppression();
             // Canlı TV kontrolü
             IsLiveContent = value.Type == ChannelType.Live;
             _livePauseRequiresHardRestart = false;
@@ -394,6 +400,7 @@ public partial class PlayerViewModel : ObservableObject
     partial void OnIsLiveContentChanged(bool value)
     {
         UpdateOverlaySecondaryText();
+        OnPropertyChanged(nameof(IsBufferShieldVisible));
     }
 
     public async Task PlayChannelAsync(Channel channel)
@@ -1334,6 +1341,7 @@ public partial class PlayerViewModel : ObservableObject
     {
         _isUserSeeking = false;
         if (IsLiveContent) return;
+        EnableSeekBufferShieldSuppression();
         var clamped = ClampSeekPosition(position);
         ResetSkipSeekCarry();
         ResetSkipOverlayAggregation();
@@ -1739,6 +1747,37 @@ public partial class PlayerViewModel : ObservableObject
         ResetSkipOverlayAggregation();
     }
 
+    private void EnableSeekBufferShieldSuppression()
+    {
+        _suppressBufferShieldForSeek = true;
+        OnPropertyChanged(nameof(IsBufferShieldVisible));
+        var token = Interlocked.Increment(ref _seekShieldSuppressionToken);
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay((int)SeekBufferShieldSuppressionMs).ConfigureAwait(false);
+            }
+            catch
+            {
+                return;
+            }
+
+            if (token != _seekShieldSuppressionToken)
+            {
+                return;
+            }
+
+            _dispatcherService.BeginInvoke(CancelSeekBufferShieldSuppression);
+        });
+    }
+
+    private void CancelSeekBufferShieldSuppression()
+    {
+        _suppressBufferShieldForSeek = false;
+        OnPropertyChanged(nameof(IsBufferShieldVisible));
+    }
+
     private static bool IsEpisodeCompleted(double durationSeconds, double positionSeconds)
     {
         if (durationSeconds <= 0 || positionSeconds <= 0)
@@ -2015,6 +2054,8 @@ public partial class PlayerViewModel : ObservableObject
 
     partial void OnIsBufferingChanged(bool value)
     {
+        OnPropertyChanged(nameof(IsBufferShieldVisible));
+
         if (value)
         {
             _autoHideTimer.Stop();
@@ -2057,6 +2098,8 @@ public partial class PlayerViewModel : ObservableObject
             IsVisible = true;
             return;
         }
+
+        CancelSeekBufferShieldSuppression();
 
         RestartAutoHideTimer();
     }
