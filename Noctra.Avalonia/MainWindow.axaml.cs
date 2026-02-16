@@ -50,7 +50,8 @@ public partial class MainWindow : Window
         _mainViewModel.RequestEditChannel += MainViewModel_RequestEditChannel;
         _playerViewModel.PropertyChanged += PlayerViewModel_PropertyChanged;
         _playerViewModel.CloseRequested += PlayerViewModel_CloseRequested;
-        _playerViewModel.OpenEpisodesRequested += PlayerViewModel_OpenEpisodesRequested;
+        _playerViewModel.EpisodeRequested += PlayerViewModel_EpisodeRequested;
+        _playerViewModel.EpisodeProgressUpdated += PlayerViewModel_EpisodeProgressUpdated;
         _playerViewModel.NextEpisodeRequested += PlayerViewModel_NextEpisodeRequested;
     }
 
@@ -61,7 +62,8 @@ public partial class MainWindow : Window
         _mainViewModel.RequestEditChannel -= MainViewModel_RequestEditChannel;
         _playerViewModel.PropertyChanged -= PlayerViewModel_PropertyChanged;
         _playerViewModel.CloseRequested -= PlayerViewModel_CloseRequested;
-        _playerViewModel.OpenEpisodesRequested -= PlayerViewModel_OpenEpisodesRequested;
+        _playerViewModel.EpisodeRequested -= PlayerViewModel_EpisodeRequested;
+        _playerViewModel.EpisodeProgressUpdated -= PlayerViewModel_EpisodeProgressUpdated;
         _playerViewModel.NextEpisodeRequested -= PlayerViewModel_NextEpisodeRequested;
         VideoSurface.MediaPlayer = null;
         MiniVideoSurface.MediaPlayer = null;
@@ -127,7 +129,8 @@ public partial class MainWindow : Window
         {
             _playerViewModel.SetCurrentEpisode(
                 _mainViewModel.CurrentEpisodePlaybackContext,
-                _mainViewModel.NextEpisodePlaybackContext);
+                _mainViewModel.NextEpisodePlaybackContext,
+                _mainViewModel.CurrentSeriesPlaybackContext);
         }
         else
         {
@@ -145,6 +148,16 @@ public partial class MainWindow : Window
     private void PlayerViewModel_NextEpisodeRequested(object? sender, Episode episode)
     {
         _mainViewModel.PlayEpisodeCommand.Execute(episode);
+    }
+
+    private void PlayerViewModel_EpisodeRequested(object? sender, Episode episode)
+    {
+        _mainViewModel.PlayEpisodeCommand.Execute(episode);
+    }
+
+    private void PlayerViewModel_EpisodeProgressUpdated(object? sender, Episode episode)
+    {
+        _mainViewModel.SyncEpisodeProgress(episode);
     }
 
     private void MainViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -165,17 +178,6 @@ public partial class MainWindow : Window
         PlayerArea.IsVisible = false;
         _playerViewModel.IsLocked = false;
         UpdateMiniPlayerVisibility();
-    }
-
-    private void PlayerViewModel_OpenEpisodesRequested(object? sender, EventArgs e)
-    {
-        if (_mainViewModel.SelectedSeries == null)
-        {
-            return;
-        }
-
-        _playerViewModel.ClosePlayerCommand.Execute(null);
-        _mainViewModel.IsSeriesDetailVisible = true;
     }
 
     private async void MainViewModel_RequestEditChannel(Channel channel)

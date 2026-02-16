@@ -86,6 +86,7 @@ public partial class MainViewModel : ObservableObject
 
     public Episode? CurrentEpisodePlaybackContext { get; private set; }
     public Episode? NextEpisodePlaybackContext { get; private set; }
+    public Series? CurrentSeriesPlaybackContext { get; private set; }
 
     [ObservableProperty]
     private string? _selectedSeriesPosterUrl;
@@ -1060,6 +1061,7 @@ public partial class MainViewModel : ObservableObject
         {
             CurrentEpisodePlaybackContext = null;
             NextEpisodePlaybackContext = null;
+            CurrentSeriesPlaybackContext = null;
         }
         
         SelectedChannel = channel;
@@ -2472,6 +2474,7 @@ public partial class MainViewModel : ObservableObject
     {
         var channel = BuildSeriesEpisodeChannel(episode);
         CurrentEpisodePlaybackContext = episode;
+        CurrentSeriesPlaybackContext = ResolveSeriesForEpisode(episode);
         NextEpisodePlaybackContext = FindNextEpisode(episode);
         
         SelectChannel(channel);
@@ -2535,6 +2538,7 @@ public partial class MainViewModel : ObservableObject
             {
                 CurrentEpisodePlaybackContext = null;
                 NextEpisodePlaybackContext = null;
+                CurrentSeriesPlaybackContext = null;
             }
 
             SelectedChannel = channel;
@@ -2865,6 +2869,7 @@ public partial class MainViewModel : ObservableObject
         {
             CurrentEpisodePlaybackContext = null;
             NextEpisodePlaybackContext = null;
+            CurrentSeriesPlaybackContext = null;
             return false;
         }
 
@@ -2876,6 +2881,11 @@ public partial class MainViewModel : ObservableObject
                 NextEpisodePlaybackContext = FindNextEpisode(CurrentEpisodePlaybackContext);
             }
 
+            if (CurrentSeriesPlaybackContext == null)
+            {
+                CurrentSeriesPlaybackContext = ResolveSeriesForEpisode(CurrentEpisodePlaybackContext);
+            }
+
             return true;
         }
 
@@ -2884,12 +2894,96 @@ public partial class MainViewModel : ObservableObject
         {
             CurrentEpisodePlaybackContext = null;
             NextEpisodePlaybackContext = null;
+            CurrentSeriesPlaybackContext = null;
             return false;
         }
 
         CurrentEpisodePlaybackContext = resolvedEpisode;
+        CurrentSeriesPlaybackContext = ResolveSeriesForEpisode(resolvedEpisode);
         NextEpisodePlaybackContext = FindNextEpisode(resolvedEpisode);
         return true;
+    }
+
+    private Series? ResolveSeriesForEpisode(Episode episode)
+    {
+        if (episode == null)
+        {
+            return null;
+        }
+
+        if (SelectedSeries != null && SeriesContainsEpisode(SelectedSeries, episode))
+        {
+            return SelectedSeries;
+        }
+
+        return FindSeriesContainingEpisode(episode);
+    }
+
+    public void SyncEpisodeProgress(Episode episode)
+    {
+        if (episode == null)
+        {
+            return;
+        }
+
+        var candidates = new List<Series>();
+        if (SelectedSeries != null)
+        {
+            candidates.Add(SelectedSeries);
+        }
+
+        if (CurrentSeriesPlaybackContext != null)
+        {
+            candidates.Add(CurrentSeriesPlaybackContext);
+        }
+
+        candidates.AddRange(SeriesViewItems);
+        candidates.AddRange(LatestSeries);
+
+        var seenSeries = new HashSet<int>();
+        var anyUpdated = false;
+
+        foreach (var series in candidates)
+        {
+            if (series == null)
+            {
+                continue;
+            }
+
+            if (series.Id > 0 && !seenSeries.Add(series.Id))
+            {
+                continue;
+            }
+
+            foreach (var season in series.Seasons)
+            {
+                foreach (var item in season.Episodes)
+                {
+                    var isMatch =
+                        (item.Id > 0 && episode.Id > 0 && item.Id == episode.Id) ||
+                        (!string.IsNullOrWhiteSpace(item.StreamUrl) &&
+                         string.Equals(item.StreamUrl, episode.StreamUrl, StringComparison.OrdinalIgnoreCase));
+
+                    if (!isMatch)
+                    {
+                        continue;
+                    }
+
+                    item.LastWatched = episode.LastWatched;
+                    item.WatchedPosition = episode.WatchedPosition;
+                    item.Duration = episode.Duration;
+                    item.IsCompleted = episode.IsCompleted;
+                    anyUpdated = true;
+                }
+            }
+        }
+
+        if (anyUpdated)
+        {
+            OnPropertyChanged(nameof(SelectedSeries));
+            OnPropertyChanged(nameof(SeriesViewItems));
+            OnPropertyChanged(nameof(LatestSeries));
+        }
     }
 
     private Episode? FindNextEpisode(Episode episode)

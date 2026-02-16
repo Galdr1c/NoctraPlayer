@@ -12,6 +12,10 @@
   <converters:PercentageRangeToVisibilityConverter x:Key="PercentageRangeToVisibilityConverter" />
   <converters:WatchedProgressVisibilityConverter x:Key="WatchedProgressVisibilityConverter" />
   <converters:WatchedProgressWidthConverter x:Key="WatchedProgressWidthConverter" />
+  <converters:EpisodeWatchedProgressVisibilityConverter x:Key="EpisodeWatchedProgressVisibilityConverter" />
+  <converters:EpisodeWatchedProgressWidthConverter x:Key="EpisodeWatchedProgressWidthConverter" />
+  <converters:EpisodeCompletionBadgeVisibilityConverter x:Key="EpisodeCompletionBadgeVisibilityConverter" />
+  <converters:EpisodeIdentityConverter x:Key="EpisodeIdentityConverter" />
   <converters:BoolToStringConverter x:Key="BoolToStringConverter" />
   <converters:EqualityToBoolConverter x:Key="EqualityToBoolConverter" />
   <converters:EqualityToBrushConverter x:Key="EqualityToBrushConverter"

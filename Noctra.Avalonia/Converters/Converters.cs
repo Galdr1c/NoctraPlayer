@@ -294,6 +294,150 @@ public class WatchedProgressWidthConverter : IValueConverter
         => null;
 }
 
+public class EpisodeWatchedProgressVisibilityConverter : IValueConverter
+{
+    private static readonly double MinWatchSeconds = TimeSpan.FromMinutes(1).TotalSeconds;
+    private static readonly double CompletionTailSeconds = TimeSpan.FromMinutes(5).TotalSeconds;
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is not Episode episode)
+        {
+            return false;
+        }
+
+        if (episode.IsCompleted)
+        {
+            return false;
+        }
+
+        var watchedSeconds = episode.WatchedPosition?.TotalSeconds ?? 0d;
+        if (watchedSeconds < MinWatchSeconds)
+        {
+            return false;
+        }
+
+        if (episode.Duration is not TimeSpan duration || duration.TotalSeconds <= 0)
+        {
+            return true;
+        }
+
+        var totalSeconds = duration.TotalSeconds;
+        var percent = (watchedSeconds / totalSeconds) * 100d;
+        var remainingSeconds = Math.Max(0d, totalSeconds - watchedSeconds);
+
+        return percent >= 90d || (totalSeconds > CompletionTailSeconds && remainingSeconds <= CompletionTailSeconds)
+            ? false
+            : true;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => null;
+}
+
+public class EpisodeWatchedProgressWidthConverter : IValueConverter
+{
+    private static readonly double MinWatchSeconds = TimeSpan.FromMinutes(1).TotalSeconds;
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is not Episode episode || episode.IsCompleted)
+        {
+            return 0d;
+        }
+
+        var maxWidth = 150d;
+        if (parameter != null &&
+            double.TryParse(parameter.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedWidth))
+        {
+            maxWidth = parsedWidth;
+        }
+
+        var watchedSeconds = episode.WatchedPosition?.TotalSeconds ?? 0d;
+        if (watchedSeconds < MinWatchSeconds)
+        {
+            return 0d;
+        }
+
+        double percent;
+        if (episode.Duration is TimeSpan duration && duration.TotalSeconds > 0)
+        {
+            percent = (watchedSeconds / duration.TotalSeconds) * 100d;
+        }
+        else
+        {
+            var watchedMinutes = watchedSeconds / 60d;
+            percent = Math.Clamp(8d + watchedMinutes * 2.2d, 8d, 88d);
+        }
+
+        return maxWidth * (Math.Clamp(percent, 0d, 100d) / 100d);
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => null;
+}
+
+public class EpisodeCompletionBadgeVisibilityConverter : IValueConverter
+{
+    private static readonly double CompletionTailSeconds = TimeSpan.FromMinutes(5).TotalSeconds;
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is not Episode episode)
+        {
+            return false;
+        }
+
+        if (episode.IsCompleted)
+        {
+            return true;
+        }
+
+        var watchedSeconds = episode.WatchedPosition?.TotalSeconds ?? 0d;
+        if (watchedSeconds <= 0)
+        {
+            return false;
+        }
+
+        if (episode.Duration is not TimeSpan duration || duration.TotalSeconds <= 0)
+        {
+            return false;
+        }
+
+        var totalSeconds = duration.TotalSeconds;
+        var percent = (watchedSeconds / totalSeconds) * 100d;
+        var remainingSeconds = Math.Max(0d, totalSeconds - watchedSeconds);
+
+        return percent >= 90d || (totalSeconds > CompletionTailSeconds && remainingSeconds <= CompletionTailSeconds);
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => null;
+}
+
+public class EpisodeIdentityConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is not Episode episode)
+        {
+            return string.Empty;
+        }
+
+        if (episode.Id > 0)
+        {
+            return $"id:{episode.Id}";
+        }
+
+        return !string.IsNullOrWhiteSpace(episode.StreamUrl)
+            ? $"url:{episode.StreamUrl.Trim()}"
+            : string.Empty;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => null;
+}
+
 public class BitrateDisplayConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)

@@ -749,7 +749,7 @@
                                       <materialIcons:MaterialIcon Kind="Play" Foreground="White" Width="24" Height="24" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.6"/>
                                       <!-- Completion badge -->
                                       <Border Width="24" Height="24" CornerRadius="12" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8"
-                                              Background="{DynamicResource AccentBrush}" IsVisible="{Binding IsCompleted}">
+                                              Background="{DynamicResource AccentBrush}" IsVisible="{Binding ., Converter={StaticResource EpisodeCompletionBadgeVisibilityConverter}}">
                                         <materialIcons:MaterialIcon Kind="Check" Foreground="White" Width="14" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                       </Border>
                                     </Grid>
@@ -759,8 +759,8 @@
                                       <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis"/>
                                       <!-- Episode progress bar -->
                                       <Border Height="3" Background="#33FFFFFF" Margin="0,12,0,0"
-                                              IsVisible="{Binding WatchedPercentage, Converter={StaticResource CountToVisibilityConverter}}">
-                                        <Border Width="{Binding WatchedPercentage, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=150}"
+                                              IsVisible="{Binding ., Converter={StaticResource EpisodeWatchedProgressVisibilityConverter}}">
+                                        <Border Width="{Binding ., Converter={StaticResource EpisodeWatchedProgressWidthConverter}, ConverterParameter=150}"
                                                 Background="{DynamicResource AccentBrush}" HorizontalAlignment="Left"/>
                                       </Border>
                                     </StackPanel>

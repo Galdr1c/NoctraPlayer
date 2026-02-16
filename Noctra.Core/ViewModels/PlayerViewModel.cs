@@ -19,6 +19,8 @@ public partial class PlayerViewModel : ObservableObject
     private const double SkipAggregationWindowMs = 1200;
     private const double SkipSeekCarryWindowMs = 1400;
     private const double SkipSeekCarryToleranceSeconds = 2.0;
+    private const double EpisodeCompletedPercentThreshold = 90.0;
+    private static readonly double EpisodeCompletedTailSeconds = TimeSpan.FromMinutes(5).TotalSeconds;
 
     public sealed record TrackOption(int Id, string Name);
     public sealed class SkipOverlayEventArgs : EventArgs
@@ -141,6 +143,9 @@ public partial class PlayerViewModel : ObservableObject
     private bool _isQualitySettingsOpen;
 
     [ObservableProperty]
+    private bool _isEpisodesPanelOpen;
+
+    [ObservableProperty]
     private Models.StreamQualityInfo? _streamQuality;
 
     public bool HasTopQualityBadgesReady =>
@@ -153,7 +158,16 @@ public partial class PlayerViewModel : ObservableObject
     private bool _isInfoPanelOpen;
 
     [ObservableProperty]
+    private List<Season> _episodeSeasons = new();
+
+    [ObservableProperty]
+    private string _episodesPanelTitle = string.Empty;
+
+    [ObservableProperty]
     private Episode? _nextEpisode;
+
+    [ObservableProperty]
+    private string _currentEpisodeIdentity = string.Empty;
 
     [ObservableProperty]
     private bool _isNextEpisodePromptVisible;
@@ -186,6 +200,7 @@ public partial class PlayerViewModel : ObservableObject
     private int _liveRecoveryAttemptsInWindow;
     private int _liveStallScore;
     private int _volumeBeforeMute = 100;
+    private Series? _currentSeriesContext;
     private readonly IDispatcherService _dispatcherService;
     private readonly IWatchHistoryService? _watchHistoryService;
     private readonly System.Timers.Timer _autoHideTimer;
@@ -524,30 +539,34 @@ public partial class PlayerViewModel : ObservableObject
             var livePosition = Math.Max(0, _videoPlayerService.Position);
             var currentPosition = TimeSpan.FromSeconds(Math.Max(Position, livePosition));
             var currentDuration = Duration > 0 ? TimeSpan.FromSeconds(Duration) : (TimeSpan?)null;
-            var isCompleted = Duration > 0 && Position >= Duration - 30;
+            var isCompleted = IsEpisodeCompleted(Duration, Position);
 
             await _watchHistoryService.TrackWatchAsync(
                 CurrentProfileId.Value,
                 channelId,
                 isEpisodePlayback ? _currentEpisode!.Id : null,
                 currentPosition,
-                isCompleted, // Completed if within 30 seconds of end
+                isCompleted,
                 currentDuration
             );
 
             if (isEpisodePlayback && _currentEpisode != null)
             {
+                var finalCompleted = _currentEpisode.IsCompleted || isCompleted;
                 _dispatcherService.BeginInvoke(() =>
                 {
                     _currentEpisode.LastWatched = DateTime.Now;
-                    _currentEpisode.WatchedPosition = isCompleted && currentDuration.HasValue
+                    _currentEpisode.WatchedPosition = finalCompleted && currentDuration.HasValue
                         ? currentDuration.Value
                         : currentPosition;
-                    _currentEpisode.IsCompleted = isCompleted;
+                    _currentEpisode.IsCompleted = finalCompleted;
                     if (currentDuration.HasValue)
                     {
                         _currentEpisode.Duration = currentDuration.Value;
                     }
+
+                    RefreshEpisodeBrowserContext(_currentSeriesContext);
+                    EpisodeProgressUpdated?.Invoke(this, _currentEpisode);
                 });
             }
         }
@@ -762,6 +781,7 @@ public partial class PlayerViewModel : ObservableObject
             && !IsBuffering
             && !IsAudioSettingsOpen
             && !IsQualitySettingsOpen
+            && !IsEpisodesPanelOpen
             && !IsInfoPanelOpen
             && !IsZappingVisible
             && !IsNextEpisodePromptVisible;
@@ -783,6 +803,9 @@ public partial class PlayerViewModel : ObservableObject
         IsAudioSettingsOpen = !IsAudioSettingsOpen;
         if (IsAudioSettingsOpen)
         {
+            IsQualitySettingsOpen = false;
+            IsEpisodesPanelOpen = false;
+            IsInfoPanelOpen = false;
             IsLocked = true;
             UpdateMediaInfo();
             _ = RefreshTracksWithRetryAsync();
@@ -793,14 +816,26 @@ public partial class PlayerViewModel : ObservableObject
     private void OpenQualitySettings()
     {
         IsQualitySettingsOpen = !IsQualitySettingsOpen;
-        if (IsQualitySettingsOpen) IsLocked = true;
+        if (IsQualitySettingsOpen)
+        {
+            IsAudioSettingsOpen = false;
+            IsEpisodesPanelOpen = false;
+            IsInfoPanelOpen = false;
+            IsLocked = true;
+        }
     }
 
     [RelayCommand]
     private void OpenInfoPanel()
     {
         IsInfoPanelOpen = !IsInfoPanelOpen;
-        if (IsInfoPanelOpen) IsLocked = true;
+        if (IsInfoPanelOpen)
+        {
+            IsAudioSettingsOpen = false;
+            IsQualitySettingsOpen = false;
+            IsEpisodesPanelOpen = false;
+            IsLocked = true;
+        }
     }
 
     [RelayCommand]
@@ -808,6 +843,7 @@ public partial class PlayerViewModel : ObservableObject
     {
         IsAudioSettingsOpen = false;
         IsQualitySettingsOpen = false;
+        IsEpisodesPanelOpen = false;
         IsInfoPanelOpen = false;
         IsLocked = false;
         RestartAutoHideTimer();
@@ -1326,13 +1362,30 @@ public partial class PlayerViewModel : ObservableObject
     /// <summary>
     /// Mevcut bölümü ayarlar (dizi oynatma başlatıldığında çağrılır)
     /// </summary>
-    public void SetCurrentEpisode(Episode? episode, Episode? nextEpisode = null)
+    public void SetCurrentEpisode(Episode? episode, Episode? nextEpisode = null, Series? series = null)
     {
         _currentEpisode = episode;
+        CurrentEpisodeIdentity = BuildEpisodeIdentity(episode);
         NextEpisode = nextEpisode;
         _creditsTriggered = false;
         IsCreditsZone = false;
         IsNextEpisodePromptVisible = false;
+        IsEpisodesPanelOpen = false;
+
+        if (episode == null)
+        {
+            _currentSeriesContext = null;
+            EpisodeSeasons = new List<Season>();
+            EpisodesPanelTitle = string.Empty;
+            PlayEpisodeFromOverlayCommand.NotifyCanExecuteChanged();
+            PlayNextEpisodeCommand.NotifyCanExecuteChanged();
+            return;
+        }
+
+        _currentSeriesContext = series
+            ?? episode.Season?.Series
+            ?? _currentSeriesContext;
+        RefreshEpisodeBrowserContext(_currentSeriesContext);
 
         if (episode?.Duration is TimeSpan knownDuration && knownDuration.TotalSeconds > 0)
         {
@@ -1345,6 +1398,7 @@ public partial class PlayerViewModel : ObservableObject
         }
 
         PlayNextEpisodeCommand.NotifyCanExecuteChanged();
+        PlayEpisodeFromOverlayCommand.NotifyCanExecuteChanged();
     }
 
     private void TryShowNextEpisodePromptAtEnd()
@@ -1426,13 +1480,20 @@ public partial class PlayerViewModel : ObservableObject
             return false;
         }
 
+        var hasDuration = Duration > 0;
+        var fallbackFiveMinuteTrigger = hasDuration
+            ? Math.Max(0, Duration - EpisodeCompletedTailSeconds)
+            : double.MaxValue;
+
         if (_currentEpisode.CreditsStartSec is double creditsStartSec && creditsStartSec > 0)
         {
-            triggerAt = creditsStartSec;
+            triggerAt = hasDuration
+                ? Math.Min(creditsStartSec, fallbackFiveMinuteTrigger)
+                : creditsStartSec;
             return true;
         }
 
-        if (Duration <= 0)
+        if (!hasDuration)
         {
             return false;
         }
@@ -1441,7 +1502,9 @@ public partial class PlayerViewModel : ObservableObject
             Duration * NextEpisodePromptTailRatio,
             NextEpisodePromptMinTailSeconds,
             NextEpisodePromptMaxTailSeconds);
-        triggerAt = Math.Max(0, Duration - tailThreshold);
+        triggerAt = Math.Min(
+            Math.Max(0, Duration - tailThreshold),
+            fallbackFiveMinuteTrigger);
         return true;
     }
 
@@ -1676,6 +1739,20 @@ public partial class PlayerViewModel : ObservableObject
         ResetSkipOverlayAggregation();
     }
 
+    private static bool IsEpisodeCompleted(double durationSeconds, double positionSeconds)
+    {
+        if (durationSeconds <= 0 || positionSeconds <= 0)
+        {
+            return false;
+        }
+
+        var percentReached = (positionSeconds / durationSeconds) * 100.0;
+        var remainingSeconds = Math.Max(0, durationSeconds - positionSeconds);
+
+        return percentReached >= EpisodeCompletedPercentThreshold
+            || (durationSeconds > EpisodeCompletedTailSeconds && remainingSeconds <= EpisodeCompletedTailSeconds);
+    }
+
     private void PrepareForContentLoading()
     {
         _isPlaybackEnded = false;
@@ -1688,6 +1765,68 @@ public partial class PlayerViewModel : ObservableObject
         RemainingTime = IsLiveContent ? "00:00:00" : "-00:00:00";
         IsBuffering = true;
         BufferingProgress = 0;
+    }
+
+    private void RefreshEpisodeBrowserContext(Series? series)
+    {
+        _currentSeriesContext = series;
+        EpisodesPanelTitle = series?.Name ?? CurrentChannel?.Name ?? string.Empty;
+
+        if (series == null || series.Seasons == null || series.Seasons.Count == 0)
+        {
+            EpisodeSeasons = new List<Season>();
+            return;
+        }
+
+        EpisodeSeasons = series.Seasons
+            .Where(s => s.Episodes != null && s.Episodes.Count > 0)
+            .OrderBy(s => s.SeasonNumber)
+            .ToList();
+    }
+
+    private Episode? FindNextEpisodeInBrowser(Episode episode)
+    {
+        if (EpisodeSeasons.Count == 0)
+        {
+            return null;
+        }
+
+        var orderedEpisodes = EpisodeSeasons
+            .OrderBy(s => s.SeasonNumber)
+            .SelectMany(s => s.Episodes.OrderBy(e => e.EpisodeNumber))
+            .ToList();
+
+        var currentIndex = orderedEpisodes.FindIndex(e =>
+            e.Id > 0 && episode.Id > 0
+                ? e.Id == episode.Id
+                : string.Equals(e.StreamUrl, episode.StreamUrl, StringComparison.OrdinalIgnoreCase));
+
+        if (currentIndex < 0 || currentIndex + 1 >= orderedEpisodes.Count)
+        {
+            return null;
+        }
+
+        return orderedEpisodes[currentIndex + 1];
+    }
+
+    private static string BuildEpisodeIdentity(Episode? episode)
+    {
+        if (episode == null)
+        {
+            return string.Empty;
+        }
+
+        if (episode.Id > 0)
+        {
+            return $"id:{episode.Id}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(episode.StreamUrl))
+        {
+            return $"url:{episode.StreamUrl.Trim()}";
+        }
+
+        return string.Empty;
     }
 
     private void SetPlaybackPosition(double position)
@@ -1719,14 +1858,59 @@ public partial class PlayerViewModel : ObservableObject
         return Math.Max(0, position);
     }
 
-    public event EventHandler? OpenEpisodesRequested;
     public event EventHandler<Episode>? NextEpisodeRequested;
+    public event EventHandler<Episode>? EpisodeRequested;
+    public event EventHandler<Episode>? EpisodeProgressUpdated;
     public event EventHandler<SkipOverlayEventArgs>? SkipOverlayRequested;
 
     [RelayCommand]
     private void OpenEpisodes()
     {
-        OpenEpisodesRequested?.Invoke(this, EventArgs.Empty);
+        if (!IsSeriesContent)
+        {
+            return;
+        }
+
+        if (EpisodeSeasons.Count == 0)
+        {
+            return;
+        }
+
+        var isOpening = !IsEpisodesPanelOpen;
+        IsAudioSettingsOpen = false;
+        IsQualitySettingsOpen = false;
+        IsInfoPanelOpen = false;
+        IsEpisodesPanelOpen = isOpening;
+        IsLocked = isOpening;
+        RestartAutoHideTimer();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPlayEpisodeFromOverlay))]
+    private void PlayEpisodeFromOverlay(Episode? episode)
+    {
+        if (episode == null)
+        {
+            return;
+        }
+
+        _currentEpisode = episode;
+        CurrentEpisodeIdentity = BuildEpisodeIdentity(episode);
+        NextEpisode = FindNextEpisodeInBrowser(episode);
+        _creditsTriggered = false;
+        IsCreditsZone = false;
+        IsNextEpisodePromptVisible = false;
+        IsEpisodesPanelOpen = false;
+        IsLocked = false;
+
+        PrepareForContentLoading();
+        EpisodeRequested?.Invoke(this, episode);
+        RestartAutoHideTimer();
+    }
+
+    private bool CanPlayEpisodeFromOverlay(Episode? episode)
+    {
+        return episode != null &&
+               !string.IsNullOrWhiteSpace(episode.StreamUrl);
     }
 
     partial void OnSelectedAudioTrackChanged(int value)
@@ -1854,6 +2038,18 @@ public partial class PlayerViewModel : ObservableObject
     }
 
     partial void OnIsNextEpisodePromptVisibleChanged(bool value)
+    {
+        if (value)
+        {
+            _autoHideTimer.Stop();
+            IsVisible = true;
+            return;
+        }
+
+        RestartAutoHideTimer();
+    }
+
+    partial void OnIsEpisodesPanelOpenChanged(bool value)
     {
         if (value)
         {

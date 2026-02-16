@@ -41,9 +41,10 @@ public class WatchHistoryService : IWatchHistoryService
             _context.WatchHistories.Add(history);
         }
 
-        history.StoppedAt = completed && duration.HasValue ? duration.Value : position;
+        var isCompletedNow = history.Completed || completed;
+        history.StoppedAt = isCompletedNow && duration.HasValue ? duration.Value : position;
         history.WatchedAt = DateTime.Now;
-        history.Completed = completed;
+        history.Completed = isCompletedNow;
         
         // Update total watched duration (approximate increment)
         history.WatchedDuration += TimeSpan.FromSeconds(5);
