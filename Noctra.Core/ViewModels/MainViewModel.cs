@@ -617,13 +617,9 @@ public partial class MainViewModel : ObservableObject
                normalized.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase);
     }
 
-    private Task LoadFavoritesAsync()
+    private async Task LoadFavoritesAsync()
     {
-        UpdateMyList();
-        UpdateFavoriteChannels();
-        UpdateHistoryChannels();
-        _ = RefreshPersonalListsFromDatabaseAsync();
-        return Task.CompletedTask;
+        await RefreshPersonalListsFromDatabaseAsync();
     }
 
     private CancellationTokenSource? _filterCts;
@@ -750,8 +746,14 @@ public partial class MainViewModel : ObservableObject
 
             Channels = merged;
             FilteredChannels = merged;
-            UpdateMyList();
-            UpdateFavoriteChannels();
+
+            var isPersonalView = ActiveView == AppView.MyList || ActiveView == AppView.Favorites;
+            if (!isPersonalView)
+            {
+                UpdateMyList();
+                UpdateFavoriteChannels();
+            }
+
             UpdateHistoryChannels();
             UpdateSearchBuckets();
         }
@@ -1079,11 +1081,6 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task ToggleFavoriteAsync(object media)
     {
-        if (media is not Channel channel)
-        {
-            return;
-        }
-
         if (!CurrentProfileId.HasValue)
         {
             StatusMessage = "Önce bir profil seçmelisiniz";
@@ -1094,19 +1091,77 @@ public partial class MainViewModel : ObservableObject
         var channelService = scope.ServiceProvider.GetRequiredService<IChannelService>();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        if (channel.PlaylistId <= 0)
+        if (media is Channel channel)
         {
-            channel.PlaylistId = SelectedPlaylist?.Id
-                ?? await db.Playlists
-                    .AsNoTracking()
-                    .Where(p => p.ProfileId == CurrentProfileId.Value && p.IsActive)
-                    .Select(p => p.Id)
-                    .FirstOrDefaultAsync();
+            if (channel.PlaylistId <= 0)
+            {
+                channel.PlaylistId = SelectedPlaylist?.Id
+                    ?? await db.Playlists
+                        .AsNoTracking()
+                        .Where(p => p.ProfileId == CurrentProfileId.Value && p.IsActive)
+                        .Select(p => p.Id)
+                        .FirstOrDefaultAsync();
+            }
+
+            channel.IsFavorite = !channel.IsFavorite;
+            await channelService.UpdateChannelAsync(channel);
+            StatusMessage = channel.IsFavorite ? "Favorilere eklendi" : "Favorilerden çıkarıldı";
         }
-        
-        channel.IsFavorite = !channel.IsFavorite;
-        await channelService.UpdateChannelAsync(channel);
-        StatusMessage = channel.IsFavorite ? "Favorilere eklendi" : "Favorilerden çıkarıldı";
+        else if (media is Series series)
+        {
+            if (series.PlaylistId <= 0)
+            {
+                series.PlaylistId = SelectedPlaylist?.Id
+                    ?? await db.Playlists
+                        .AsNoTracking()
+                        .Where(p => p.ProfileId == CurrentProfileId.Value && p.IsActive)
+                        .Select(p => p.Id)
+                        .FirstOrDefaultAsync();
+            }
+
+            var seriesFromDb = await db.Series
+                .Include(s => s.Seasons)
+                .ThenInclude(sn => sn.Episodes)
+                .FirstOrDefaultAsync(s =>
+                    s.Id == series.Id ||
+                    (s.PlaylistId == series.PlaylistId && s.Name == series.Name));
+
+            if (seriesFromDb == null)
+            {
+                return;
+            }
+
+            var shouldFavorite = !seriesFromDb.IsFavorite;
+            seriesFromDb.IsFavorite = shouldFavorite;
+            series.IsFavorite = shouldFavorite;
+
+            var episodeUrls = seriesFromDb.Seasons
+                .SelectMany(sn => sn.Episodes)
+                .Select(ep => ep.StreamUrl)
+                .Where(url => !string.IsNullOrWhiteSpace(url))
+                .Distinct()
+                .ToList();
+
+            if (episodeUrls.Count > 0)
+            {
+                var relatedChannels = await db.Channels
+                    .Where(c => episodeUrls.Contains(c.StreamUrl))
+                    .ToListAsync();
+
+                foreach (var relatedChannel in relatedChannels)
+                {
+                    relatedChannel.IsFavorite = shouldFavorite;
+                }
+            }
+
+            await db.SaveChangesAsync();
+            StatusMessage = shouldFavorite ? "Favorilere eklendi" : "Favorilerden çıkarıldı";
+        }
+        else
+        {
+            return;
+        }
+
         UpdateMyList();
         UpdateFavoriteChannels();
         UpdateHistoryChannels();
@@ -1567,10 +1622,10 @@ public partial class MainViewModel : ObservableObject
     }
 
     [ObservableProperty]
-    private List<Channel> _myList = new();
+    private List<object> _myList = new();
 
     [ObservableProperty]
-    private List<Channel> _favoriteChannels = new();
+    private List<object> _favoriteChannels = new();
 
     [ObservableProperty]
     private List<Channel> _historyChannels = new();
@@ -1641,7 +1696,16 @@ public partial class MainViewModel : ObservableObject
         {
             SelectedChannelType = null;
             SelectedGroup = null;
-            UpdateMyList();
+            try
+            {
+                UpdateMyList();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Navigate->UpdateMyList failed: {ex}");
+                MyList = new List<object>();
+                ShowMyListEmptyState = true;
+            }
             _ = RefreshPersonalListsFromDatabaseAsync();
         }
         else if (view == AppView.Favorites)
@@ -1649,7 +1713,16 @@ public partial class MainViewModel : ObservableObject
             SelectedChannelType = null;
             SelectedGroup = null;
             ShowOnlyFavorites = false;
-            UpdateFavoriteChannels();
+            try
+            {
+                UpdateFavoriteChannels();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Navigate->UpdateFavoriteChannels failed: {ex}");
+                FavoriteChannels = new List<object>();
+                ShowFavoritesEmptyState = true;
+            }
             _ = RefreshPersonalListsFromDatabaseAsync();
         }
         else if (view == AppView.History)
@@ -1667,18 +1740,86 @@ public partial class MainViewModel : ObservableObject
 
     private void UpdateMyList()
     {
-        var list = new List<Channel>();
-        list.AddRange(Channels.Where(c => c.IsInMyList));
-        MyList = list;
-        ShowMyListEmptyState = MyList.Count == 0;
+        try
+        {
+            var channelsSnapshot = Channels?.ToList() ?? new List<Channel>();
+            var latestSeriesSnapshot = LatestSeries?.ToList() ?? new List<Series>();
+            var seriesViewSnapshot = SeriesViewItems?.ToList() ?? new List<Series>();
+
+            var list = new List<object>();
+            list.AddRange(channelsSnapshot
+                .Where(c => c.Type != ChannelType.Series && c.IsInMyList)
+                .Cast<object>());
+
+            var seriesMap = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
+            foreach (var series in latestSeriesSnapshot.Concat(seriesViewSnapshot))
+            {
+                if (series == null)
+                {
+                    continue;
+                }
+
+                var key = series.Id > 0 ? $"id:{series.Id}" : $"p:{series.PlaylistId}|n:{series.Name}";
+                if (!seriesMap.ContainsKey(key))
+                {
+                    seriesMap[key] = series;
+                }
+            }
+
+            list.AddRange(seriesMap.Values.Where(s => s.IsInMyList).Cast<object>());
+            MyList = list
+                .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty)
+                .ToList();
+            ShowMyListEmptyState = MyList.Count == 0;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"UpdateMyList failed: {ex}");
+            MyList = new List<object>();
+            ShowMyListEmptyState = true;
+        }
     }
 
     private void UpdateFavoriteChannels()
     {
-        FavoriteChannels = Channels
-            .Where(c => c.IsFavorite)
-            .ToList();
-        ShowFavoritesEmptyState = FavoriteChannels.Count == 0;
+        try
+        {
+            var channelsSnapshot = Channels?.ToList() ?? new List<Channel>();
+            var latestSeriesSnapshot = LatestSeries?.ToList() ?? new List<Series>();
+            var seriesViewSnapshot = SeriesViewItems?.ToList() ?? new List<Series>();
+
+            var list = new List<object>();
+            list.AddRange(channelsSnapshot
+                .Where(c => c.Type != ChannelType.Series && c.IsFavorite)
+                .Cast<object>());
+
+            var seriesMap = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
+            foreach (var series in latestSeriesSnapshot.Concat(seriesViewSnapshot))
+            {
+                if (series == null)
+                {
+                    continue;
+                }
+
+                var key = series.Id > 0 ? $"id:{series.Id}" : $"p:{series.PlaylistId}|n:{series.Name}";
+                if (!seriesMap.ContainsKey(key))
+                {
+                    seriesMap[key] = series;
+                }
+            }
+
+            list.AddRange(seriesMap.Values.Where(s => s.IsFavorite).Cast<object>());
+            FavoriteChannels = list
+                .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty)
+                .ToList();
+            ShowFavoritesEmptyState = FavoriteChannels.Count == 0;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"UpdateFavoriteChannels failed: {ex}");
+            FavoriteChannels = new List<object>();
+            ShowFavoritesEmptyState = true;
+        }
     }
 
     private void UpdateHistoryChannels()
@@ -1704,8 +1845,8 @@ public partial class MainViewModel : ObservableObject
     {
         if (!CurrentProfileId.HasValue)
         {
-            MyList = new List<Channel>();
-            FavoriteChannels = new List<Channel>();
+            MyList = new List<object>();
+            FavoriteChannels = new List<object>();
             HistoryChannels = new List<Channel>();
             HistoryLiveChannels = new List<Channel>();
             HistorySeriesChannels = new List<Channel>();
@@ -1724,8 +1865,8 @@ public partial class MainViewModel : ObservableObject
 
         if (profilePlaylistIds.Count == 0)
         {
-            MyList = new List<Channel>();
-            FavoriteChannels = new List<Channel>();
+            MyList = new List<object>();
+            FavoriteChannels = new List<object>();
             HistoryChannels = new List<Channel>();
             HistoryLiveChannels = new List<Channel>();
             HistorySeriesChannels = new List<Channel>();
@@ -1736,17 +1877,41 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        MyList = await db.Channels
+        var myListChannels = await db.Channels
             .AsNoTracking()
-            .Where(c => profilePlaylistIds.Contains(c.PlaylistId) && c.IsInMyList)
+            .Where(c => profilePlaylistIds.Contains(c.PlaylistId) && c.Type != ChannelType.Series && c.IsInMyList)
             .OrderBy(c => c.Name)
             .ToListAsync();
 
-        FavoriteChannels = await db.Channels
+        var myListSeries = await db.Series
             .AsNoTracking()
-            .Where(c => profilePlaylistIds.Contains(c.PlaylistId) && c.IsFavorite)
+            .Where(s => profilePlaylistIds.Contains(s.PlaylistId) && s.IsInMyList)
+            .OrderBy(s => s.Name)
+            .ToListAsync();
+
+        MyList = myListChannels
+            .Cast<object>()
+            .Concat(myListSeries.Cast<object>())
+            .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty)
+            .ToList();
+
+        var favoriteChannels = await db.Channels
+            .AsNoTracking()
+            .Where(c => profilePlaylistIds.Contains(c.PlaylistId) && c.Type != ChannelType.Series && c.IsFavorite)
             .OrderBy(c => c.Name)
             .ToListAsync();
+
+        var favoriteSeries = await db.Series
+            .AsNoTracking()
+            .Where(s => profilePlaylistIds.Contains(s.PlaylistId) && s.IsFavorite)
+            .OrderBy(s => s.Name)
+            .ToListAsync();
+
+        FavoriteChannels = favoriteChannels
+            .Cast<object>()
+            .Concat(favoriteSeries.Cast<object>())
+            .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty)
+            .ToList();
 
         HistoryChannels = await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds);
         UpdateHistoryBuckets();
@@ -2310,6 +2475,12 @@ public partial class MainViewModel : ObservableObject
         
         if (media is Channel channel)
         {
+            if (channel.Type == ChannelType.Live)
+            {
+                StatusMessage = "Canlı kanallar listeme eklenemez";
+                return;
+            }
+
             if (channel.PlaylistId <= 0)
             {
                 channel.PlaylistId = SelectedPlaylist?.Id
@@ -2440,29 +2611,85 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task RemoveFromFavorites(object media)
     {
-        if (!CurrentProfileId.HasValue || media is not Channel channel)
+        if (!CurrentProfileId.HasValue)
         {
             return;
         }
 
         using var scope = _scopeFactory.CreateScope();
         var channelService = scope.ServiceProvider.GetRequiredService<IChannelService>();
+        var mediaService = scope.ServiceProvider.GetRequiredService<IMediaService>();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        if (channel.PlaylistId <= 0)
+        if (media is Channel channel)
         {
-            channel.PlaylistId = SelectedPlaylist?.Id
-                ?? await db.Playlists
-                    .AsNoTracking()
-                    .Where(p => p.ProfileId == CurrentProfileId.Value && p.IsActive)
-                    .Select(p => p.Id)
-                    .FirstOrDefaultAsync();
-        }
+            if (channel.PlaylistId <= 0)
+            {
+                channel.PlaylistId = SelectedPlaylist?.Id
+                    ?? await db.Playlists
+                        .AsNoTracking()
+                        .Where(p => p.ProfileId == CurrentProfileId.Value && p.IsActive)
+                        .Select(p => p.Id)
+                        .FirstOrDefaultAsync();
+            }
 
-        if (channel.IsFavorite)
+            if (channel.IsFavorite)
+            {
+                channel.IsFavorite = false;
+                await channelService.UpdateChannelAsync(channel);
+            }
+        }
+        else if (media is Series series)
         {
-            channel.IsFavorite = false;
-            await channelService.UpdateChannelAsync(channel);
+            if (series.PlaylistId <= 0)
+            {
+                series.PlaylistId = SelectedPlaylist?.Id
+                    ?? await db.Playlists
+                        .AsNoTracking()
+                        .Where(p => p.ProfileId == CurrentProfileId.Value && p.IsActive)
+                        .Select(p => p.Id)
+                        .FirstOrDefaultAsync();
+            }
+
+            series.IsFavorite = false;
+            await mediaService.UpdateSeriesAsync(series);
+
+            var seriesFromDb = await db.Series
+                .Include(s => s.Seasons)
+                .ThenInclude(sn => sn.Episodes)
+                .FirstOrDefaultAsync(s =>
+                    s.Id == series.Id ||
+                    (s.PlaylistId == series.PlaylistId && s.Name == series.Name));
+
+            if (seriesFromDb != null)
+            {
+                seriesFromDb.IsFavorite = false;
+
+                var episodeUrls = seriesFromDb.Seasons
+                    .SelectMany(sn => sn.Episodes)
+                    .Select(ep => ep.StreamUrl)
+                    .Where(url => !string.IsNullOrWhiteSpace(url))
+                    .Distinct()
+                    .ToList();
+
+                if (episodeUrls.Count > 0)
+                {
+                    var relatedChannels = await db.Channels
+                        .Where(c => episodeUrls.Contains(c.StreamUrl))
+                        .ToListAsync();
+
+                    foreach (var relatedChannel in relatedChannels)
+                    {
+                        relatedChannel.IsFavorite = false;
+                    }
+                }
+
+                await db.SaveChangesAsync();
+            }
+        }
+        else
+        {
+            return;
         }
 
         StatusMessage = "Favorilerden çıkarıldı";

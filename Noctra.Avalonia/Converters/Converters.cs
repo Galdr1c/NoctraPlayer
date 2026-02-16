@@ -438,6 +438,31 @@ public class EpisodeIdentityConverter : IValueConverter
         => null;
 }
 
+public class MediaSupportsFavoriteConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is Channel || value is Series;
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => null;
+}
+
+public class MediaSupportsMyListConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        return value switch
+        {
+            Series => true,
+            Channel channel => channel.Type != ChannelType.Live,
+            _ => false
+        };
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => null;
+}
+
 public class BitrateDisplayConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)

@@ -45,6 +45,12 @@ public class MediaService : IMediaService
                 g => g.Key,
                 g => g.Any(s => s.IsInMyList),
                 StringComparer.OrdinalIgnoreCase);
+        var favoriteStateByName = staleSeries
+            .GroupBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Any(s => s.IsFavorite),
+                StringComparer.OrdinalIgnoreCase);
         if (staleSeries.Count > 0)
         {
             _context.Series.RemoveRange(staleSeries);
@@ -69,13 +75,15 @@ public class MediaService : IMediaService
             if (!seriesGroups.TryGetValue(seriesName, out var series))
             {
                 myListStateByName.TryGetValue(seriesName, out var inMyList);
+                favoriteStateByName.TryGetValue(seriesName, out var isFavorite);
                 series = new Series
                 {
                     Name = seriesName,
                     PlaylistId = playlistId,
                     CoverUrl = channel.LogoUrl,
                     Genre = channel.GroupTitle,
-                    IsInMyList = inMyList
+                    IsInMyList = inMyList,
+                    IsFavorite = isFavorite
                 };
                 seriesGroups[seriesName] = series;
                 _context.Series.Add(series);
@@ -203,6 +211,7 @@ public class MediaService : IMediaService
         if (dbSeries != null)
         {
             dbSeries.IsInMyList = series.IsInMyList;
+            dbSeries.IsFavorite = series.IsFavorite;
             _context.Series.Update(dbSeries);
             await _context.SaveChangesAsync();
         }

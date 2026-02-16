@@ -209,8 +209,10 @@
                             Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
                       <Button.ContextFlyout>
                         <MenuFlyout>
-                          <MenuItem Header="Listem'e Ekle/&#199;&#305;kar" Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).AddToMyListCommand}" CommandParameter="{Binding}"/>
-                          <MenuItem Header="Favorilere Ekle/&#199;&#305;kar" Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}" CommandParameter="{Binding}"/>
+                          <MenuItem Header="Listem'e Ekle/&#199;&#305;kar" Click="Context_AddToMyList_Click" Tag="{Binding}" CommandParameter="{Binding}"
+                                    IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
+                          <MenuItem Header="Favorilere Ekle/&#199;&#305;kar" Click="Context_ToggleFavorite_Click" Tag="{Binding}" CommandParameter="{Binding}"
+                                    IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
                         </MenuFlyout>
                       </Button.ContextFlyout>
                       <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusSmall}" ClipToBounds="True">
@@ -240,8 +242,10 @@
                             Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
                       <Button.ContextFlyout>
                         <MenuFlyout>
-                          <MenuItem Header="Listem'e Ekle/&#199;&#305;kar" Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).AddToMyListCommand}" CommandParameter="{Binding}"/>
-                          <MenuItem Header="Favorilere Ekle/&#199;&#305;kar" Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}" CommandParameter="{Binding}"/>
+                          <MenuItem Header="Listem'e Ekle/&#199;&#305;kar" Click="Context_AddToMyList_Click" Tag="{Binding}" CommandParameter="{Binding}"
+                                    IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
+                          <MenuItem Header="Favorilere Ekle/&#199;&#305;kar" Click="Context_ToggleFavorite_Click" Tag="{Binding}" CommandParameter="{Binding}"
+                                    IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
                         </MenuFlyout>
                       </Button.ContextFlyout>
                       <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusSmall}" ClipToBounds="True">
@@ -271,8 +275,10 @@
                             Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
                       <Button.ContextFlyout>
                         <MenuFlyout>
-                          <MenuItem Header="Listem'e Ekle/&#199;&#305;kar" Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).AddToMyListCommand}" CommandParameter="{Binding}"/>
-                          <MenuItem Header="Favorilere Ekle/&#199;&#305;kar" Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}" CommandParameter="{Binding}"/>
+                          <MenuItem Header="Listem'e Ekle/&#199;&#305;kar" Click="Context_AddToMyList_Click" Tag="{Binding}" CommandParameter="{Binding}"
+                                    IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
+                          <MenuItem Header="Favorilere Ekle/&#199;&#305;kar" Click="Context_ToggleFavorite_Click" Tag="{Binding}" CommandParameter="{Binding}"
+                                    IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
                         </MenuFlyout>
                       </Button.ContextFlyout>
                       <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusSmall}" ClipToBounds="True">
@@ -311,6 +317,18 @@
                 <DataTemplate x:DataType="models:Channel">
                   <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
                           Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                    <Button.ContextFlyout>
+                      <MenuFlyout>
+                        <MenuItem Header="Listem'e Ekle/&#199;&#305;kar"
+                                  Click="Context_AddToMyList_Click"
+                                  Tag="{Binding}" CommandParameter="{Binding}"
+                                  IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
+                        <MenuItem Header="Favorilere Ekle/&#199;&#305;kar"
+                                  Click="Context_ToggleFavorite_Click"
+                                  Tag="{Binding}" CommandParameter="{Binding}"
+                                  IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
+                      </MenuFlyout>
+                    </Button.ContextFlyout>
                     <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
                       <StackPanel Spacing="6">
                         <Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12">
@@ -352,6 +370,18 @@
                 <DataTemplate x:DataType="models:Series">
                   <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
                           Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                    <Button.ContextFlyout>
+                      <MenuFlyout>
+                        <MenuItem Header="Listem'e Ekle/&#199;&#305;kar"
+                                  Click="Context_AddToMyList_Click"
+                                  Tag="{Binding}" CommandParameter="{Binding}"
+                                  IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
+                        <MenuItem Header="Favorilere Ekle/&#199;&#305;kar"
+                                  Click="Context_ToggleFavorite_Click"
+                                  Tag="{Binding}" CommandParameter="{Binding}"
+                                  IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
+                      </MenuFlyout>
+                    </Button.ContextFlyout>
                     <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
                       <StackPanel Spacing="6">
                         <Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12">
@@ -392,6 +422,14 @@
                 <DataTemplate x:DataType="models:Channel">
                   <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
                           Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                    <Button.ContextFlyout>
+                      <MenuFlyout>
+                        <MenuItem Header="Favorilere Ekle/&#199;&#305;kar"
+                                  Click="Context_ToggleFavorite_Click"
+                                  Tag="{Binding}" CommandParameter="{Binding}"
+                                  IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
+                      </MenuFlyout>
+                    </Button.ContextFlyout>
                     <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
                       <StackPanel Spacing="6">
                         <Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12">
@@ -420,6 +458,18 @@
             <DataTemplate x:Key="SearchChannelCardTemplate" x:DataType="models:Channel">
               <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
                       Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                <Button.ContextFlyout>
+                  <MenuFlyout>
+                    <MenuItem Header="Listem'e Ekle/&#199;&#305;kar"
+                              Click="Context_AddToMyList_Click"
+                              Tag="{Binding}" CommandParameter="{Binding}"
+                              IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
+                    <MenuItem Header="Favorilere Ekle/&#199;&#305;kar"
+                              Click="Context_ToggleFavorite_Click"
+                              Tag="{Binding}" CommandParameter="{Binding}"
+                              IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
+                  </MenuFlyout>
+                </Button.ContextFlyout>
                 <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
                   <StackPanel>
                     <Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12">
@@ -436,6 +486,18 @@
             <DataTemplate x:Key="SearchSeriesCardTemplate" x:DataType="models:Series">
               <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
                       Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                <Button.ContextFlyout>
+                  <MenuFlyout>
+                    <MenuItem Header="Listem'e Ekle/&#199;&#305;kar"
+                              Click="Context_AddToMyList_Click"
+                              Tag="{Binding}" CommandParameter="{Binding}"
+                              IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
+                    <MenuItem Header="Favorilere Ekle/&#199;&#305;kar"
+                              Click="Context_ToggleFavorite_Click"
+                              Tag="{Binding}" CommandParameter="{Binding}"
+                              IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
+                  </MenuFlyout>
+                </Button.ContextFlyout>
                 <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
                   <StackPanel>
                     <Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12" ClipToBounds="True">
@@ -527,9 +589,16 @@
             <ItemsControl ItemsSource="{Binding MyList}">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="models:Channel">
+                <DataTemplate x:CompileBindings="False">
                   <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
-                          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                          Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}">
+                    <Button.ContextMenu>
+                      <ContextMenu>
+                        <MenuItem Header="Listeden &#199;&#305;kar"
+                                  Click="Context_RemoveFromMyList_Click"
+                                  Tag="{Binding}" CommandParameter="{Binding}"/>
+                      </ContextMenu>
+                    </Button.ContextMenu>
                     <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
                       <StackPanel><Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12"><controls:RemoteImage Width="60" Stretch="Uniform" Url="{Binding CoverUrl}"/></Border><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/></StackPanel>
                     </Border>
@@ -552,9 +621,16 @@
             <ItemsControl ItemsSource="{Binding FavoriteChannels}">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="models:Channel">
+                <DataTemplate x:CompileBindings="False">
                   <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
-                          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                          Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}">
+                    <Button.ContextMenu>
+                      <ContextMenu>
+                        <MenuItem Header="Favorilerden &#199;&#305;kar"
+                                  Click="Context_RemoveFromFavorites_Click"
+                                  Tag="{Binding}" CommandParameter="{Binding}"/>
+                      </ContextMenu>
+                    </Button.ContextMenu>
                     <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
                       <StackPanel><Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12"><controls:RemoteImage Width="60" Stretch="Uniform" Url="{Binding CoverUrl}"/></Border><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/></StackPanel>
                     </Border>

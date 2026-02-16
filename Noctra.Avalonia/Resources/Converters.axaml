@@ -16,6 +16,8 @@
   <converters:EpisodeWatchedProgressWidthConverter x:Key="EpisodeWatchedProgressWidthConverter" />
   <converters:EpisodeCompletionBadgeVisibilityConverter x:Key="EpisodeCompletionBadgeVisibilityConverter" />
   <converters:EpisodeIdentityConverter x:Key="EpisodeIdentityConverter" />
+  <converters:MediaSupportsFavoriteConverter x:Key="MediaSupportsFavoriteConverter" />
+  <converters:MediaSupportsMyListConverter x:Key="MediaSupportsMyListConverter" />
   <converters:BoolToStringConverter x:Key="BoolToStringConverter" />
   <converters:EqualityToBoolConverter x:Key="EqualityToBoolConverter" />
   <converters:EqualityToBrushConverter x:Key="EqualityToBrushConverter"

@@ -17,6 +17,7 @@ public class Series
     public double? Rating { get; set; }
     public int PlaylistId { get; set; }
     public bool IsInMyList { get; set; }
+    public bool IsFavorite { get; set; }
     
     // Navigation properties
     public Playlist? Playlist { get; set; }
