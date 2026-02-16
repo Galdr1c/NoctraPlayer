@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="Noctra.Views.WatermarkView"
+<UserControl x:Class="Noctra.Views.WatermarkView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -20,7 +20,7 @@
                 <TranslateTransform X="{Binding TranslateX}" Y="{Binding TranslateY}"/>
             </Border.RenderTransform>
             
-            <TextBlock Text="Noctra MP â€¢ Free" 
+            <TextBlock Text="Noctra MP &#8226; Free" 
                        FontFamily="{DynamicResource DefaultFontFamily}" FontWeight="SemiBold" FontSize="12" 
                        Foreground="White"/>
         </Border>

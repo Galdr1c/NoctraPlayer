@@ -1052,10 +1052,11 @@ public partial class MainViewModel : ObservableObject
         using var scope = _scopeFactory.CreateScope();
         var channelService = scope.ServiceProvider.GetRequiredService<IChannelService>();
 
-        var isEpisodeContext = channel.Type == ChannelType.Series &&
-                               CurrentEpisodePlaybackContext != null &&
-                               string.Equals(CurrentEpisodePlaybackContext.StreamUrl, channel.StreamUrl, StringComparison.OrdinalIgnoreCase);
-        if (!isEpisodeContext)
+        if (channel.Type == ChannelType.Series)
+        {
+            TryPrepareEpisodePlaybackContext(channel);
+        }
+        else
         {
             CurrentEpisodePlaybackContext = null;
             NextEpisodePlaybackContext = null;
@@ -1717,11 +1718,7 @@ public partial class MainViewModel : ObservableObject
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var watchHistoryService = scope.ServiceProvider.GetRequiredService<IWatchHistoryService>();
         await watchHistoryService.CleanupOlderThanDaysAsync(CurrentProfileId.Value, 7);
-        var profilePlaylistIds = await db.Playlists
-            .AsNoTracking()
-            .Where(p => p.ProfileId == CurrentProfileId.Value && p.IsActive)
-            .Select(p => p.Id)
-            .ToListAsync();
+        var profilePlaylistIds = await GetProfilePlaylistIdsAsync(db, CurrentProfileId.Value);
 
         if (profilePlaylistIds.Count == 0)
         {
@@ -1767,11 +1764,7 @@ public partial class MainViewModel : ObservableObject
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var watchHistoryService = scope.ServiceProvider.GetRequiredService<IWatchHistoryService>();
         await watchHistoryService.CleanupOlderThanDaysAsync(CurrentProfileId.Value, 7);
-        var profilePlaylistIds = await db.Playlists
-            .AsNoTracking()
-            .Where(p => p.ProfileId == CurrentProfileId.Value && p.IsActive)
-            .Select(p => p.Id)
-            .ToListAsync();
+        var profilePlaylistIds = await GetProfilePlaylistIdsAsync(db, CurrentProfileId.Value);
 
         if (profilePlaylistIds.Count == 0)
         {
@@ -1785,6 +1778,26 @@ public partial class MainViewModel : ObservableObject
 
         HistoryChannels = await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds);
         UpdateHistoryBuckets();
+    }
+
+    private static async Task<List<int>> GetProfilePlaylistIdsAsync(AppDbContext db, int profileId)
+    {
+        var activeIds = await db.Playlists
+            .AsNoTracking()
+            .Where(p => p.ProfileId == profileId && p.IsActive)
+            .Select(p => p.Id)
+            .ToListAsync();
+
+        if (activeIds.Count > 0)
+        {
+            return activeIds;
+        }
+
+        return await db.Playlists
+            .AsNoTracking()
+            .Where(p => p.ProfileId == profileId)
+            .Select(p => p.Id)
+            .ToListAsync();
     }
 
     private async Task<List<Channel>> GetHistoryChannelsFromWatchHistoryAsync(AppDbContext db, List<int> profilePlaylistIds)
@@ -2514,6 +2527,16 @@ public partial class MainViewModel : ObservableObject
 
         if (media is Channel channel)
         {
+            if (channel.Type == ChannelType.Series)
+            {
+                TryPrepareEpisodePlaybackContext(channel);
+            }
+            else
+            {
+                CurrentEpisodePlaybackContext = null;
+                NextEpisodePlaybackContext = null;
+            }
+
             SelectedChannel = channel;
             StatusMessage = $"Seçildi: {channel.Name}";
             OnMediaSelected?.Invoke(channel);
@@ -2836,9 +2859,52 @@ public partial class MainViewModel : ObservableObject
         };
     }
 
+    public bool TryPrepareEpisodePlaybackContext(Channel channel)
+    {
+        if (channel == null || channel.Type != ChannelType.Series || string.IsNullOrWhiteSpace(channel.StreamUrl))
+        {
+            CurrentEpisodePlaybackContext = null;
+            NextEpisodePlaybackContext = null;
+            return false;
+        }
+
+        if (CurrentEpisodePlaybackContext != null &&
+            string.Equals(CurrentEpisodePlaybackContext.StreamUrl, channel.StreamUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            if (NextEpisodePlaybackContext == null)
+            {
+                NextEpisodePlaybackContext = FindNextEpisode(CurrentEpisodePlaybackContext);
+            }
+
+            return true;
+        }
+
+        var resolvedEpisode = FindEpisodeByStreamUrl(channel.StreamUrl!);
+        if (resolvedEpisode == null)
+        {
+            CurrentEpisodePlaybackContext = null;
+            NextEpisodePlaybackContext = null;
+            return false;
+        }
+
+        CurrentEpisodePlaybackContext = resolvedEpisode;
+        NextEpisodePlaybackContext = FindNextEpisode(resolvedEpisode);
+        return true;
+    }
+
     private Episode? FindNextEpisode(Episode episode)
     {
+        if (episode == null)
+        {
+            return null;
+        }
+
         var series = SelectedSeries;
+        if (series == null || !SeriesContainsEpisode(series, episode))
+        {
+            series = FindSeriesContainingEpisode(episode);
+        }
+
         if (series == null)
         {
             return null;
@@ -2860,6 +2926,95 @@ public partial class MainViewModel : ObservableObject
         }
 
         return orderedEpisodes[currentIndex + 1];
+    }
+
+    private Series? FindSeriesContainingEpisode(Episode episode)
+    {
+        var candidates = new List<Series>();
+        if (SelectedSeries != null)
+        {
+            candidates.Add(SelectedSeries);
+        }
+
+        candidates.AddRange(SeriesViewItems);
+        candidates.AddRange(LatestSeries);
+
+        var seen = new HashSet<int>();
+        foreach (var series in candidates)
+        {
+            if (series == null)
+            {
+                continue;
+            }
+
+            if (series.Id > 0 && !seen.Add(series.Id))
+            {
+                continue;
+            }
+
+            if (SeriesContainsEpisode(series, episode))
+            {
+                return series;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool SeriesContainsEpisode(Series series, Episode episode)
+    {
+        return series.Seasons
+            .SelectMany(s => s.Episodes)
+            .Any(e =>
+                e.Id > 0 && episode.Id > 0
+                    ? e.Id == episode.Id
+                    : !string.IsNullOrWhiteSpace(e.StreamUrl) &&
+                      string.Equals(e.StreamUrl, episode.StreamUrl, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private Episode? FindEpisodeByStreamUrl(string streamUrl)
+    {
+        if (string.IsNullOrWhiteSpace(streamUrl))
+        {
+            return null;
+        }
+
+        var candidates = new List<Series>();
+        if (SelectedSeries != null)
+        {
+            candidates.Add(SelectedSeries);
+        }
+
+        candidates.AddRange(SeriesViewItems);
+        candidates.AddRange(LatestSeries);
+
+        var seen = new HashSet<int>();
+        foreach (var series in candidates)
+        {
+            if (series == null)
+            {
+                continue;
+            }
+
+            if (series.Id > 0 && !seen.Add(series.Id))
+            {
+                continue;
+            }
+
+            var match = series.Seasons
+                .OrderBy(s => s.SeasonNumber)
+                .SelectMany(s => s.Episodes.OrderBy(e => e.EpisodeNumber))
+                .FirstOrDefault(e =>
+                    !string.IsNullOrWhiteSpace(e.StreamUrl) &&
+                    string.Equals(e.StreamUrl, streamUrl, StringComparison.OrdinalIgnoreCase));
+
+            if (match != null)
+            {
+                return match;
+            }
+        }
+
+        return null;
     }
 }
 

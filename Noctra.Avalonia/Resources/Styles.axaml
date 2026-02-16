@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
 
     <!-- ==========================================
          UI SCALING & RATIOS
@@ -449,12 +450,11 @@
                             BorderThickness="2"
                             Background="Transparent"
                             VerticalAlignment="Center">
-                        <TextBlock x:Name="CheckMark" Text="✓"
-                                   Foreground="{DynamicResource TextPrimaryBrush}"
-                                   FontWeight="Bold" FontSize="28"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"
-                                   IsVisible="False"
-                                   Margin="0,-2,0,0"/>
+                        <materialIcons:MaterialIcon x:Name="CheckMark" Kind="Check"
+                                                    Foreground="{DynamicResource TextPrimaryBrush}"
+                                                    Width="22" Height="22"
+                                                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                    IsVisible="False"/>
                     </Border>
                     <ContentPresenter Grid.Column="1" VerticalAlignment="Center" Margin="15,0,0,0"
                                       Content="{TemplateBinding Content}"
@@ -463,7 +463,7 @@
             </ControlTemplate>
         </Setter>
 
-        <Style Selector="^:checked /template/ TextBlock#CheckMark">
+        <Style Selector="^:checked /template/ materialIcons|MaterialIcon#CheckMark">
             <Setter Property="IsVisible" Value="True"/>
         </Style>
         <Style Selector="^:checked /template/ Border#Box">

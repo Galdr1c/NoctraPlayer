@@ -13,8 +13,23 @@ namespace Noctra.ViewModels;
 public partial class PlayerViewModel : ObservableObject
 {
     private const double OverlayAutoHideDelayMs = 4000;
+    private const double NextEpisodePromptTailRatio = 0.07;
+    private const double NextEpisodePromptMinTailSeconds = 25;
+    private const double NextEpisodePromptMaxTailSeconds = 90;
+    private const double SkipAggregationWindowMs = 1200;
+    private const double SkipSeekCarryWindowMs = 1400;
+    private const double SkipSeekCarryToleranceSeconds = 2.0;
 
     public sealed record TrackOption(int Id, string Name);
+    public sealed class SkipOverlayEventArgs : EventArgs
+    {
+        public SkipOverlayEventArgs(double seconds)
+        {
+            Seconds = seconds;
+        }
+
+        public double Seconds { get; }
+    }
 
     private readonly IVideoPlayerService _videoPlayerService;
     private readonly IEpgService _epgService;
@@ -148,6 +163,14 @@ public partial class PlayerViewModel : ObservableObject
 
     private Episode? _currentEpisode;
     private bool _creditsTriggered;
+    private bool _isUserSeeking;
+    private bool _hasPendingSkipSeekTarget;
+    private double _pendingSkipSeekTarget;
+    private DateTime _pendingSkipSeekExpiresUtc = DateTime.MinValue;
+    private double _skipAggregationSeconds;
+    private DateTime _skipAggregationLastUpdatedUtc = DateTime.MinValue;
+    private bool _isPlaybackEnded;
+    private int _isEndedSeekRecoverInProgress;
     private double _lastPausedPosition;
     private long _lastPausedTimeMs;
     private double _pendingResumeSeekPosition;
@@ -225,11 +248,24 @@ public partial class PlayerViewModel : ObservableObject
                 IsPlaying = playing;
                 if (playing) 
                 {
-                    IsBuffering = false;
+                    _isPlaybackEnded = false;
+                    if (BufferingProgress >= 99f)
+                    {
+                        IsBuffering = false;
+                    }
                     UpdateMediaInfo();
                     _ = RefreshTracksWithRetryAsync();
                     RestartAutoHideTimer(); // Ensure controls stay visible for a few seconds after playback starts
                 }
+            });
+        };
+
+        _videoPlayerService.PlaybackEnded += (_, _) =>
+        {
+            _dispatcherService.Invoke(() =>
+            {
+                _isPlaybackEnded = true;
+                TryShowNextEpisodePromptAtEnd();
             });
         };
 
@@ -247,9 +283,8 @@ public partial class PlayerViewModel : ObservableObject
             _dispatcherService.Invoke(() =>
             {
                 BufferingProgress = progress;
-                // Some streams never report 100 while playback is already running.
-                // Keep loading UI only before playback starts.
-                IsBuffering = progress < 100 && !IsPlaying;
+                // Keep loading active until playback truly starts and buffering reaches 100.
+                IsBuffering = !IsPlaying || progress < 100f;
 
                 // Buffering bittiğinde kontrol katmanını mutlaka geri getir.
                 if (!IsBuffering)
@@ -265,7 +300,8 @@ public partial class PlayerViewModel : ObservableObject
             _dispatcherService.Invoke(() =>
             {
                 ConnectionStatus = errorMessage;
-                IsBuffering = false;
+                // Broken/unreachable streams should stay in loading state until user changes content.
+                IsBuffering = true;
                 BufferingProgress = 0;
             });
         };
@@ -274,16 +310,27 @@ public partial class PlayerViewModel : ObservableObject
         {
             _dispatcherService.Invoke(() =>
             {
-                _lastLivePositionEventAtUtc = DateTime.UtcNow;
-                Position = pos;
-                PositionText = TimeSpan.FromSeconds(pos).ToString(@"hh\:mm\:ss");
-                TryApplyPendingResumeSeek();
-                
+                var nowUtc = DateTime.UtcNow;
+                _lastLivePositionEventAtUtc = nowUtc;
+                UpdateDurationFromService();
+                if (IsPlaying && IsBuffering)
+                {
+                    IsBuffering = false;
+                }
+
+                if (!_isUserSeeking)
+                {
+                    Position = pos;
+                    PositionText = TimeSpan.FromSeconds(pos).ToString(@"hh\:mm\:ss");
+                    TryApplyPendingResumeSeek();
+                }
+
+                ReleaseSkipSeekCarryIfSettled(nowUtc, pos);
+
                 if (Duration > 0)
                 {
                     var remaining = Math.Max(0, Duration - pos);
                     RemainingTime = "-" + TimeSpan.FromSeconds(remaining).ToString(@"hh\:mm\:ss");
-
                     CheckIntroCreditsPosition(pos);
                 }
             });
@@ -303,6 +350,8 @@ public partial class PlayerViewModel : ObservableObject
             _liveRecoveryWindowStartUtc = DateTime.MinValue;
             _liveRecoveryAttemptsInWindow = 0;
             _liveStallScore = 0;
+            _isPlaybackEnded = false;
+            ResetSeekInteractionState();
             // Kanal geçişinde eski timeline değerleri görünmesin.
             Position = 0;
             PositionText = "00:00:00";
@@ -336,13 +385,15 @@ public partial class PlayerViewModel : ObservableObject
     {
         var requestVersion = Interlocked.Increment(ref _playRequestVersion);
 
+        // Force previous media to stop so stale position events do not leak into the next item.
+        _videoPlayerService.Stop();
+
         CurrentChannel = channel;
         CurrentProgram = GetFallbackProgram();
         IsLiveContent = channel.Type == ChannelType.Live;
         IsSeriesContent = channel.Type == ChannelType.Series;
         UpdateOverlaySecondaryText();
-        IsBuffering = true;
-        BufferingProgress = 0;
+        PrepareForContentLoading();
         StreamQuality = null;
         StreamInfo = "Kalite tespit ediliyor...";
         try
@@ -764,8 +815,7 @@ public partial class PlayerViewModel : ObservableObject
 
     private void UpdateMediaInfo()
     {
-        Duration = _videoPlayerService.Duration;
-        DurationText = TimeSpan.FromSeconds(Duration).ToString(@"hh\:mm\:ss");
+        UpdateDurationFromService(force: true);
         TryApplyPendingResumeSeek();
 
         AudioTracks = _videoPlayerService.AudioTracks
@@ -783,6 +833,27 @@ public partial class PlayerViewModel : ObservableObject
         {
             SubtitleTracks.Add(new TrackOption(-1, "Kapalı"));
         }
+    }
+
+    private void UpdateDurationFromService(bool force = false)
+    {
+        var latestDuration = _videoPlayerService.Duration;
+        if (latestDuration <= 0)
+        {
+            if (force && Duration <= 0)
+            {
+                DurationText = "00:00:00";
+            }
+            return;
+        }
+
+        if (!force && Duration > 0 && Math.Abs(Duration - latestDuration) < 0.25)
+        {
+            return;
+        }
+
+        Duration = latestDuration;
+        DurationText = TimeSpan.FromSeconds(latestDuration).ToString(@"hh\:mm\:ss");
     }
 
     private static bool IsDisabledTrackLabel(string? name)
@@ -1147,6 +1218,8 @@ public partial class PlayerViewModel : ObservableObject
     [RelayCommand]
     private async Task Stop()
     {
+        _isPlaybackEnded = false;
+        ResetSeekInteractionState();
         _watchHistoryTimer.Stop();
         await FlushWatchHistoryAsync(force: true);
         _videoPlayerService.Stop();
@@ -1215,29 +1288,39 @@ public partial class PlayerViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void StartSeeking()
+    {
+        _isUserSeeking = true;
+    }
+
+    [RelayCommand]
     private void Seek(double position)
     {
+        _isUserSeeking = false;
         if (IsLiveContent) return;
-        _videoPlayerService.Position = position;
+        var clamped = ClampSeekPosition(position);
+        ResetSkipSeekCarry();
+        ResetSkipOverlayAggregation();
+        Position = clamped;
+        PositionText = TimeSpan.FromSeconds(clamped).ToString(@"hh\:mm\:ss");
+        if (Duration > 0)
+        {
+            var remaining = Math.Max(0, Duration - clamped);
+            RemainingTime = "-" + TimeSpan.FromSeconds(remaining).ToString(@"hh\:mm\:ss");
+        }
+        CheckIntroCreditsPosition(clamped);
+        SetPlaybackPosition(clamped);
+        if (_isPlaybackEnded)
+        {
+            _ = EnsurePlaybackResumedAfterEndedSeekAsync(clamped);
+        }
         RestartAutoHideTimer();
     }
 
     [RelayCommand]
     private void SkipForward(object? parameter)
     {
-        if (IsLiveContent) return;
-
-        double seconds = 10;
-        if (parameter != null)
-        {
-            if (parameter is int i) seconds = i;
-            else if (parameter is double d) seconds = d;
-            else if (parameter is string s && double.TryParse(s, out double parsed)) seconds = parsed;
-        }
-
-        var newPos = Math.Min(Position + seconds, Duration);
-        _videoPlayerService.Position = newPos;
-        RestartAutoHideTimer();
+        ApplySkipDelta(ParseSkipSeconds(parameter));
     }
 
     /// <summary>
@@ -1250,6 +1333,38 @@ public partial class PlayerViewModel : ObservableObject
         _creditsTriggered = false;
         IsCreditsZone = false;
         IsNextEpisodePromptVisible = false;
+
+        if (episode?.Duration is TimeSpan knownDuration && knownDuration.TotalSeconds > 0)
+        {
+            var seconds = knownDuration.TotalSeconds;
+            if (Duration <= 0 || Math.Abs(Duration - seconds) > 1)
+            {
+                Duration = seconds;
+                DurationText = TimeSpan.FromSeconds(seconds).ToString(@"hh\:mm\:ss");
+            }
+        }
+
+        PlayNextEpisodeCommand.NotifyCanExecuteChanged();
+    }
+
+    private void TryShowNextEpisodePromptAtEnd()
+    {
+        if (_creditsTriggered ||
+            IsLiveContent ||
+            CurrentChannel?.Type != ChannelType.Series ||
+            NextEpisode == null)
+        {
+            return;
+        }
+
+        _creditsTriggered = true;
+        IsCreditsZone = true;
+        IsNextEpisodePromptVisible = true;
+
+        if (GetAutoSkipCreditsSetting())
+        {
+            _ = PlayNextEpisodeCommand.ExecuteAsync(null);
+        }
     }
 
     /// <summary>
@@ -1257,29 +1372,77 @@ public partial class PlayerViewModel : ObservableObject
     /// </summary>
     private void CheckIntroCreditsPosition(double pos)
     {
-        if (_currentEpisode == null || IsLiveContent) return;
-
-        // ── CREDITS DETECTION ──
-        if (!_creditsTriggered && _currentEpisode.CreditsStartSec != null)
+        if (_currentEpisode == null || IsLiveContent || NextEpisode == null)
         {
-            if (pos >= _currentEpisode.CreditsStartSec.Value)
-            {
-                _creditsTriggered = true;
-                IsCreditsZone = true;
-
-                // Show next episode prompt if available
-                if (NextEpisode != null)
-                {
-                    IsNextEpisodePromptVisible = true;
-
-                    // Auto-skip to next episode if setting enabled
-                    if (GetAutoSkipCreditsSetting())
-                    {
-                        _ = PlayNextEpisodeCommand.ExecuteAsync(null);
-                    }
-                }
-            }
+            return;
         }
+
+        if (!TryGetCreditsTriggerThreshold(out var triggerAt))
+        {
+            return;
+        }
+
+        var isInCreditsZone = pos >= triggerAt;
+        var exitThreshold = Math.Max(0, triggerAt - 3);
+        var hasExitedCreditsZone = pos < exitThreshold;
+
+        if (_creditsTriggered)
+        {
+            if (hasExitedCreditsZone)
+            {
+                _creditsTriggered = false;
+                IsCreditsZone = false;
+                IsNextEpisodePromptVisible = false;
+            }
+            else
+            {
+                IsCreditsZone = true;
+                IsNextEpisodePromptVisible = true;
+            }
+
+            return;
+        }
+
+        if (!isInCreditsZone)
+        {
+            return;
+        }
+
+        _creditsTriggered = true;
+        IsCreditsZone = true;
+        IsNextEpisodePromptVisible = true;
+
+        if (GetAutoSkipCreditsSetting())
+        {
+            _ = PlayNextEpisodeCommand.ExecuteAsync(null);
+        }
+    }
+
+    private bool TryGetCreditsTriggerThreshold(out double triggerAt)
+    {
+        triggerAt = 0;
+        if (_currentEpisode == null)
+        {
+            return false;
+        }
+
+        if (_currentEpisode.CreditsStartSec is double creditsStartSec && creditsStartSec > 0)
+        {
+            triggerAt = creditsStartSec;
+            return true;
+        }
+
+        if (Duration <= 0)
+        {
+            return false;
+        }
+
+        var tailThreshold = Math.Clamp(
+            Duration * NextEpisodePromptTailRatio,
+            NextEpisodePromptMinTailSeconds,
+            NextEpisodePromptMaxTailSeconds);
+        triggerAt = Math.Max(0, Duration - tailThreshold);
+        return true;
     }
 
     private bool GetAutoSkipCreditsSetting()
@@ -1300,42 +1463,265 @@ public partial class PlayerViewModel : ObservableObject
         return false;
     }
 
-    [RelayCommand(CanExecute = nameof(CanPlayNextEpisode))]
+    [RelayCommand]
     private async Task PlayNextEpisode()
     {
-        if (NextEpisode != null)
+        if (NextEpisode == null)
         {
-            IsNextEpisodePromptVisible = false;
-            ChannelName = NextEpisode.Name; 
-            // In real app, this would trigger MainViewModel to play the next episode
+            return;
         }
-        await Task.CompletedTask;
-    }
 
-    private bool CanPlayNextEpisode()
-    {
-        return CurrentChannel?.Type == ChannelType.Series && !IsLiveContent;
+        var nextEpisode = NextEpisode;
+        PrepareForContentLoading();
+        IsNextEpisodePromptVisible = false;
+        IsCreditsZone = false;
+        _creditsTriggered = false;
+        NextEpisodeRequested?.Invoke(this, nextEpisode);
+        await Task.CompletedTask;
     }
 
     [RelayCommand]
     private void SkipBackward(object? parameter)
     {
-        if (IsLiveContent) return;
+        ApplySkipDelta(-ParseSkipSeconds(parameter));
+    }
 
-        double seconds = 10;
-        if (parameter != null)
+    private void ApplySkipDelta(double deltaSeconds)
+    {
+        if (IsLiveContent)
         {
-            if (parameter is int i) seconds = i;
-            else if (parameter is double d) seconds = d;
-            else if (parameter is string s && double.TryParse(s, out double parsed)) seconds = parsed;
+            return;
         }
 
-        var newPos = Math.Max(Position - seconds, 0);
-        _videoPlayerService.Position = newPos;
+        if (Math.Abs(deltaSeconds) <= 0.001)
+        {
+            RestartAutoHideTimer();
+            return;
+        }
+
+        var nowUtc = DateTime.UtcNow;
+        var basePosition = Position;
+        if (_hasPendingSkipSeekTarget && nowUtc <= _pendingSkipSeekExpiresUtc)
+        {
+            basePosition = _pendingSkipSeekTarget;
+        }
+        else
+        {
+            ResetSkipSeekCarry();
+        }
+
+        var targetPosition = ClampSeekPosition(basePosition + deltaSeconds);
+        var effectiveDelta = targetPosition - basePosition;
+        if (Math.Abs(effectiveDelta) <= 0.001)
+        {
+            RestartAutoHideTimer();
+            return;
+        }
+
+        _pendingSkipSeekTarget = targetPosition;
+        _pendingSkipSeekExpiresUtc = nowUtc.AddMilliseconds(SkipSeekCarryWindowMs);
+        _hasPendingSkipSeekTarget = true;
+
+        Position = targetPosition;
+        PositionText = TimeSpan.FromSeconds(targetPosition).ToString(@"hh\:mm\:ss");
+        if (Duration > 0)
+        {
+            var remaining = Math.Max(0, Duration - targetPosition);
+            RemainingTime = "-" + TimeSpan.FromSeconds(remaining).ToString(@"hh\:mm\:ss");
+        }
+        CheckIntroCreditsPosition(targetPosition);
+
+        SetPlaybackPosition(targetPosition);
+        if (_isPlaybackEnded)
+        {
+            _ = EnsurePlaybackResumedAfterEndedSeekAsync(targetPosition);
+        }
+        RaiseSkipOverlay(effectiveDelta, nowUtc);
         RestartAutoHideTimer();
     }
 
+    private async Task EnsurePlaybackResumedAfterEndedSeekAsync(double targetPosition)
+    {
+        if (!_isPlaybackEnded || IsLiveContent || CurrentChannel == null)
+        {
+            return;
+        }
+
+        if (Interlocked.Exchange(ref _isEndedSeekRecoverInProgress, 1) == 1)
+        {
+            return;
+        }
+
+        try
+        {
+            _videoPlayerService.Resume();
+            await Task.Delay(180);
+
+            if (IsPlaying)
+            {
+                _isPlaybackEnded = false;
+                return;
+            }
+
+            var existingPlayer = _videoPlayerService.GetMediaPlayer();
+            if (existingPlayer?.Media != null)
+            {
+                existingPlayer.Play();
+                await Task.Delay(180);
+                if (IsPlaying)
+                {
+                    _isPlaybackEnded = false;
+                    return;
+                }
+            }
+
+            var streamUrl = CurrentChannel?.StreamUrl;
+            if (string.IsNullOrWhiteSpace(streamUrl))
+            {
+                return;
+            }
+
+            await _videoPlayerService.PlayAsync(streamUrl);
+            SetPlaybackPosition(targetPosition);
+
+            _isPlaybackEnded = false;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PlayerViewModel] Ended-seek recover failed: {ex.Message}");
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _isEndedSeekRecoverInProgress, 0);
+        }
+    }
+
+    private void RaiseSkipOverlay(double deltaSeconds, DateTime nowUtc)
+    {
+        var shouldResetAggregation =
+            _skipAggregationLastUpdatedUtc == DateTime.MinValue ||
+            nowUtc - _skipAggregationLastUpdatedUtc > TimeSpan.FromMilliseconds(SkipAggregationWindowMs) ||
+            Math.Sign(_skipAggregationSeconds) != Math.Sign(deltaSeconds);
+
+        if (shouldResetAggregation)
+        {
+            _skipAggregationSeconds = deltaSeconds;
+        }
+        else
+        {
+            _skipAggregationSeconds += deltaSeconds;
+        }
+
+        _skipAggregationLastUpdatedUtc = nowUtc;
+        SkipOverlayRequested?.Invoke(this, new SkipOverlayEventArgs(_skipAggregationSeconds));
+    }
+
+    private static double ParseSkipSeconds(object? parameter)
+    {
+        const double defaultSeconds = 10;
+
+        if (parameter == null)
+        {
+            return defaultSeconds;
+        }
+
+        if (parameter is int intValue)
+        {
+            return Math.Abs(intValue);
+        }
+
+        if (parameter is double doubleValue)
+        {
+            return Math.Abs(doubleValue);
+        }
+
+        if (parameter is string str && double.TryParse(str, out var parsed))
+        {
+            return Math.Abs(parsed);
+        }
+
+        return defaultSeconds;
+    }
+
+    private void ReleaseSkipSeekCarryIfSettled(DateTime nowUtc, double currentPosition)
+    {
+        if (!_hasPendingSkipSeekTarget)
+        {
+            return;
+        }
+
+        if (nowUtc > _pendingSkipSeekExpiresUtc ||
+            Math.Abs(currentPosition - _pendingSkipSeekTarget) <= SkipSeekCarryToleranceSeconds)
+        {
+            ResetSkipSeekCarry();
+        }
+    }
+
+    private void ResetSkipSeekCarry()
+    {
+        _hasPendingSkipSeekTarget = false;
+        _pendingSkipSeekTarget = 0;
+        _pendingSkipSeekExpiresUtc = DateTime.MinValue;
+    }
+
+    private void ResetSkipOverlayAggregation()
+    {
+        _skipAggregationSeconds = 0;
+        _skipAggregationLastUpdatedUtc = DateTime.MinValue;
+    }
+
+    private void ResetSeekInteractionState()
+    {
+        ResetSkipSeekCarry();
+        ResetSkipOverlayAggregation();
+    }
+
+    private void PrepareForContentLoading()
+    {
+        _isPlaybackEnded = false;
+        _isUserSeeking = false;
+        ResetSeekInteractionState();
+        Position = 0;
+        PositionText = "00:00:00";
+        Duration = 0;
+        DurationText = "00:00:00";
+        RemainingTime = IsLiveContent ? "00:00:00" : "-00:00:00";
+        IsBuffering = true;
+        BufferingProgress = 0;
+    }
+
+    private void SetPlaybackPosition(double position)
+    {
+        var clamped = ClampSeekPosition(position);
+        var mediaPlayer = _videoPlayerService.GetMediaPlayer();
+        if (mediaPlayer != null)
+        {
+            var targetTimeMs = (long)Math.Max(0, clamped * 1000);
+            mediaPlayer.Time = targetTimeMs;
+            return;
+        }
+
+        _videoPlayerService.Position = clamped;
+    }
+
+    private double ClampSeekPosition(double position)
+    {
+        if (double.IsNaN(position) || double.IsInfinity(position))
+        {
+            return Position;
+        }
+
+        if (Duration > 0)
+        {
+            return Math.Clamp(position, 0, Duration);
+        }
+
+        return Math.Max(0, position);
+    }
+
     public event EventHandler? OpenEpisodesRequested;
+    public event EventHandler<Episode>? NextEpisodeRequested;
+    public event EventHandler<SkipOverlayEventArgs>? SkipOverlayRequested;
 
     [RelayCommand]
     private void OpenEpisodes()

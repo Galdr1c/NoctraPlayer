@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:Noctra.ViewModels"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         mc:Ignorable="d"
         x:DataType="vm:AddProfileViewModel"
         x:CompileBindings="False"
@@ -202,7 +203,7 @@
                                         BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,10,0,0"
                                         IsVisible="{Binding ShowXtreamConversionBanner}">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="ℹ" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <materialIcons:MaterialIcon Kind="InformationOutline" Width="16" Height="16" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                         <TextBlock FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap">
                                             <Run Text="M3U linkiniz Xtream formatina donusturuldu."/>
                                             <Run Text=" Sunucu, kullanici adi ve sifre otomatik ayristirildi." FontWeight="SemiBold"/>

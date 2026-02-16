@@ -26,6 +26,7 @@ public class RemoteImage : Image
     private static readonly object PlaceholderLock = new();
     private static Bitmap? _placeholderBitmap;
     private const int MaxCacheEntries = 1500;
+    private const int PlaceholderFallbackDelayMs = 1800;
 
     private CancellationTokenSource? _loadCts;
 
@@ -107,7 +108,9 @@ public class RemoteImage : Image
         var normalizedUrl = NormalizeUrl(Url);
         if (string.IsNullOrWhiteSpace(normalizedUrl))
         {
-            SetSourceOnUiThread(GetPlaceholderBitmap());
+            SetSourceOnUiThread(null);
+            _loadCts = new CancellationTokenSource();
+            _ = SetPlaceholderWithDelayAsync(_loadCts.Token);
             return;
         }
 
@@ -117,9 +120,32 @@ public class RemoteImage : Image
             return;
         }
 
+        SetSourceOnUiThread(null);
         _loadCts = new CancellationTokenSource();
         var loadTask = InFlightLoads.GetOrAdd(normalizedUrl, static url => DownloadBitmapAsync(url));
         _ = AwaitImageAsync(normalizedUrl, loadTask, _loadCts.Token);
+    }
+
+    private async Task SetPlaceholderWithDelayAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (PlaceholderFallbackDelayMs > 0)
+            {
+                await Task.Delay(PlaceholderFallbackDelayMs, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        SetSourceOnUiThread(GetPlaceholderBitmap());
     }
 
     private async Task AwaitImageAsync(string url, Task<Bitmap?> loadTask, CancellationToken cancellationToken)
@@ -127,6 +153,11 @@ public class RemoteImage : Image
         try
         {
             var bitmap = await loadTask.WaitAsync(cancellationToken).ConfigureAwait(false);
+            if (bitmap == null && PlaceholderFallbackDelayMs > 0)
+            {
+                await Task.Delay(PlaceholderFallbackDelayMs, cancellationToken).ConfigureAwait(false);
+            }
+
             TrySetSource(url, bitmap, cancellationToken);
         }
         catch (OperationCanceledException)
@@ -135,6 +166,18 @@ public class RemoteImage : Image
         }
         catch
         {
+            try
+            {
+                if (PlaceholderFallbackDelayMs > 0)
+                {
+                    await Task.Delay(PlaceholderFallbackDelayMs, cancellationToken).ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
             TrySetSource(url, null, cancellationToken);
         }
     }

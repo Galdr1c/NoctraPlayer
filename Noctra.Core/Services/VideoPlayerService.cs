@@ -26,6 +26,7 @@ public class VideoPlayerService : IVideoPlayerService
 
     public event EventHandler<bool>? PlayingChanged;
     public event EventHandler<double>? PositionChanged;
+    public event EventHandler? PlaybackEnded;
     public event EventHandler<string>? ErrorOccurred;
     public event EventHandler<StreamQualityInfo>? QualityDetected;
 
@@ -99,7 +100,11 @@ public class VideoPlayerService : IVideoPlayerService
         _mediaPlayer.EndReached += (s, e) =>
         {
             StopQualityMonitoring();
-            _dispatcherService.BeginInvoke(() => PlayingChanged?.Invoke(this, false));
+            _dispatcherService.BeginInvoke(() =>
+            {
+                PlayingChanged?.Invoke(this, false);
+                PlaybackEnded?.Invoke(this, EventArgs.Empty);
+            });
         };
         
         _mediaPlayer.PositionChanged += (s, e) => 
@@ -248,7 +253,17 @@ public class VideoPlayerService : IVideoPlayerService
         _playCts?.Dispose();
         _playCts = null;
         StopQualityMonitoring();
-        _mediaPlayer?.Stop();
+        if (_mediaPlayer == null)
+        {
+            return;
+        }
+
+        _mediaPlayer.Stop();
+
+        // Clear previous frame so failed loads do not leave stale video content visible.
+        var currentMedia = _mediaPlayer.Media;
+        _mediaPlayer.Media = null;
+        currentMedia?.Dispose();
     }
 
     public int Volume

@@ -11,11 +11,16 @@ public partial class VideoOverlayView : UserControl
 {
     public static readonly StyledProperty<bool> IsVolumeToastVisibleProperty =
         AvaloniaProperty.Register<VideoOverlayView, bool>(nameof(IsVolumeToastVisible));
+    public static readonly StyledProperty<bool> IsSeekToastVisibleProperty =
+        AvaloniaProperty.Register<VideoOverlayView, bool>(nameof(IsSeekToastVisible));
+    public static readonly StyledProperty<string> SeekToastTextProperty =
+        AvaloniaProperty.Register<VideoOverlayView, string>(nameof(SeekToastText), "+0:10");
 
     private static readonly Cursor HiddenCursor = new(StandardCursorType.None);
     private static readonly Cursor VisibleCursor = new(StandardCursorType.Arrow);
 
     private readonly DispatcherTimer _volumeToastTimer;
+    private readonly DispatcherTimer _seekToastTimer;
     private PlayerViewModel? _playerViewModel;
     private bool _isTimelinePointerDown;
 
@@ -23,6 +28,18 @@ public partial class VideoOverlayView : UserControl
     {
         get => GetValue(IsVolumeToastVisibleProperty);
         set => SetValue(IsVolumeToastVisibleProperty, value);
+    }
+
+    public bool IsSeekToastVisible
+    {
+        get => GetValue(IsSeekToastVisibleProperty);
+        set => SetValue(IsSeekToastVisibleProperty, value);
+    }
+
+    public string SeekToastText
+    {
+        get => GetValue(SeekToastTextProperty);
+        set => SetValue(SeekToastTextProperty, value);
     }
 
     public VideoOverlayView()
@@ -38,6 +55,64 @@ public partial class VideoOverlayView : UserControl
             IsVolumeToastVisible = false;
             _volumeToastTimer.Stop();
         };
+
+        _seekToastTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(1200)
+        };
+        _seekToastTimer.Tick += (_, _) =>
+        {
+            IsSeekToastVisible = false;
+            _seekToastTimer.Stop();
+        };
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        // Subscribe to slider events explicitly to handle bubbled/tunnelled events correctly
+        var slider = this.FindControl<Slider>("TimelineSlider");
+        if (slider != null)
+        {
+            // Capture the start of interaction eagerly (Tunnel) or even if handled (Bubble)
+            slider.AddHandler(PointerPressedEvent, TimelineSlider_PointerPressed, RoutingStrategies.Tunnel | RoutingStrategies.Bubble, handledEventsToo: true);
+            slider.AddHandler(PointerReleasedEvent, TimelineSlider_PointerReleased, RoutingStrategies.Bubble, handledEventsToo: true);
+            slider.AddHandler(PointerCaptureLostEvent, TimelineSlider_PointerCaptureLost, RoutingStrategies.Bubble, handledEventsToo: true);
+        }
+    }
+
+    private void TimelineSlider_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        _isTimelinePointerDown = true;
+        _playerViewModel?.StartSeekingCommand.Execute(null);
+    }
+
+    private void TimelineSlider_PointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        CommitSeek(sender);
+    }
+
+    private void TimelineSlider_PointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    {
+        CommitSeek(sender);
+    }
+
+    private void CommitSeek(object? sender)
+    {
+        if (!_isTimelinePointerDown || _playerViewModel == null)
+        {
+            return;
+        }
+
+        _isTimelinePointerDown = false;
+
+        if (_playerViewModel.IsLiveContent || sender is not Slider slider)
+        {
+            return;
+        }
+
+        _playerViewModel.SeekCommand.Execute(slider.Value);
+        _playerViewModel.UserInteractionCommand.Execute(null);
     }
 
     protected override void OnDataContextChanged(EventArgs e)
@@ -47,17 +122,20 @@ public partial class VideoOverlayView : UserControl
         if (_playerViewModel != null)
         {
             _playerViewModel.PropertyChanged -= PlayerViewModel_PropertyChanged;
+            _playerViewModel.SkipOverlayRequested -= PlayerViewModel_SkipOverlayRequested;
         }
 
         _playerViewModel = DataContext as PlayerViewModel;
         if (_playerViewModel != null)
         {
             _playerViewModel.PropertyChanged += PlayerViewModel_PropertyChanged;
+            _playerViewModel.SkipOverlayRequested += PlayerViewModel_SkipOverlayRequested;
             UpdateOverlayCursor(_playerViewModel.IsVisible);
         }
         else
         {
             Cursor = VisibleCursor;
+            IsSeekToastVisible = false;
         }
     }
 
@@ -167,6 +245,22 @@ public partial class VideoOverlayView : UserControl
         _volumeToastTimer.Start();
     }
 
+    private void PlayerViewModel_SkipOverlayRequested(object? sender, PlayerViewModel.SkipOverlayEventArgs e)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            SeekToastText = FormatSkipToast(e.Seconds);
+            ShowSeekToast();
+        });
+    }
+
+    private void ShowSeekToast()
+    {
+        IsSeekToastVisible = true;
+        _seekToastTimer.Stop();
+        _seekToastTimer.Start();
+    }
+
     private void AudioTrack_Click(object? sender, RoutedEventArgs e)
     {
         if (_playerViewModel == null || sender is not Button button)
@@ -193,29 +287,6 @@ public partial class VideoOverlayView : UserControl
         }
     }
 
-    private void TimelineSlider_PointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        _isTimelinePointerDown = true;
-    }
-
-    private void TimelineSlider_PointerReleased(object? sender, PointerReleasedEventArgs e)
-    {
-        if (!_isTimelinePointerDown || _playerViewModel == null)
-        {
-            return;
-        }
-
-        _isTimelinePointerDown = false;
-
-        if (_playerViewModel.IsLiveContent || sender is not Slider slider)
-        {
-            return;
-        }
-
-        _playerViewModel.SeekCommand.Execute(slider.Value);
-        _playerViewModel.UserInteractionCommand.Execute(null);
-    }
-
     private static bool TryGetIntFromTag(object? tag, out int value)
     {
         switch (tag)
@@ -233,6 +304,16 @@ public partial class VideoOverlayView : UserControl
                 value = 0;
                 return false;
         }
+    }
+
+    private static string FormatSkipToast(double seconds)
+    {
+        var sign = seconds >= 0 ? "+" : "-";
+        var absDuration = TimeSpan.FromSeconds(Math.Abs(seconds));
+        var formatted = absDuration.TotalHours >= 1
+            ? absDuration.ToString(@"h\:mm\:ss")
+            : absDuration.ToString(@"m\:ss");
+        return $"{sign}{formatted}";
     }
 
     private void UpdateOverlayCursor(bool isOverlayVisible)

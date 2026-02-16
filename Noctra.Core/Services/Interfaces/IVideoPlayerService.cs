@@ -87,6 +87,11 @@ public interface IVideoPlayerService : IDisposable
     /// Pozisyon değiştiğinde
     /// </summary>
     event EventHandler<double>? PositionChanged;
+
+    /// <summary>
+    /// Medya doğal olarak sona ulaştığında
+    /// </summary>
+    event EventHandler? PlaybackEnded;
     
     /// <summary>
     /// LibVLC MediaPlayer nesnesini döner (Sadece UI/VideoView bağlama için)

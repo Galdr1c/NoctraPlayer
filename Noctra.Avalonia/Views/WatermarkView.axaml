@@ -18,7 +18,7 @@
 
       <TextBlock Text="Noctra MP - Free"
                  FontWeight="SemiBold"
-                 FontSize="12"
+                 FontSize="38"
                  Foreground="White"/>
     </Border>
   </Grid>

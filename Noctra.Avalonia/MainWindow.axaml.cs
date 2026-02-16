@@ -51,6 +51,7 @@ public partial class MainWindow : Window
         _playerViewModel.PropertyChanged += PlayerViewModel_PropertyChanged;
         _playerViewModel.CloseRequested += PlayerViewModel_CloseRequested;
         _playerViewModel.OpenEpisodesRequested += PlayerViewModel_OpenEpisodesRequested;
+        _playerViewModel.NextEpisodeRequested += PlayerViewModel_NextEpisodeRequested;
     }
 
     private void OnClosed(object? sender, EventArgs e)
@@ -61,6 +62,7 @@ public partial class MainWindow : Window
         _playerViewModel.PropertyChanged -= PlayerViewModel_PropertyChanged;
         _playerViewModel.CloseRequested -= PlayerViewModel_CloseRequested;
         _playerViewModel.OpenEpisodesRequested -= PlayerViewModel_OpenEpisodesRequested;
+        _playerViewModel.NextEpisodeRequested -= PlayerViewModel_NextEpisodeRequested;
         VideoSurface.MediaPlayer = null;
         MiniVideoSurface.MediaPlayer = null;
         _imageWarmupCts?.Cancel();
@@ -115,12 +117,34 @@ public partial class MainWindow : Window
             return;
         }
 
+        _playerViewModel.CurrentProfileId = _mainViewModel.CurrentProfileId;
+        if (channel.Type == ChannelType.Series && _mainViewModel.CurrentEpisodePlaybackContext == null)
+        {
+            _mainViewModel.TryPrepareEpisodePlaybackContext(channel);
+        }
+
+        if (channel.Type == ChannelType.Series && _mainViewModel.CurrentEpisodePlaybackContext != null)
+        {
+            _playerViewModel.SetCurrentEpisode(
+                _mainViewModel.CurrentEpisodePlaybackContext,
+                _mainViewModel.NextEpisodePlaybackContext);
+        }
+        else
+        {
+            _playerViewModel.SetCurrentEpisode(null, null);
+        }
+
         HideMiniPlayer();
         PlayerArea.IsVisible = true;
         _playerViewModel.IsLocked = false;
         _playerViewModel.UserInteractionCommand.Execute(null);
         await _playerViewModel.PlayChannelAsync(channel);
         Dispatcher.UIThread.Post(() => OverlayControl.Focus(), DispatcherPriority.Input);
+    }
+
+    private void PlayerViewModel_NextEpisodeRequested(object? sender, Episode episode)
+    {
+        _mainViewModel.PlayEpisodeCommand.Execute(episode);
     }
 
     private void MainViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -282,6 +306,11 @@ public partial class MainWindow : Window
         if (e.PropertyName == nameof(PlayerViewModel.IsPlaying))
         {
             UpdateMiniPlayerVisibility();
+        }
+
+        if (e.PropertyName == nameof(PlayerViewModel.IsNextEpisodePromptVisible))
+        {
+            MouseCaptureLayer.IsHitTestVisible = !_playerViewModel.IsNextEpisodePromptVisible;
         }
     }
 

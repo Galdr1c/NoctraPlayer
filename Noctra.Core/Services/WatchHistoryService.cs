@@ -20,9 +20,14 @@ public class WatchHistoryService : IWatchHistoryService
 
     public async Task TrackWatchAsync(int profileId, int? channelId, int? episodeId, TimeSpan position, bool completed = false, TimeSpan? duration = null)
     {
+        if (!channelId.HasValue && !episodeId.HasValue)
+        {
+            return;
+        }
+
         var history = await _context.WatchHistories
             .FirstOrDefaultAsync(w => w.ProfileId == profileId && 
-                                     (channelId != null ? w.ChannelId == channelId : w.EpisodeId == episodeId));
+                                     (channelId.HasValue ? w.ChannelId == channelId : w.EpisodeId == episodeId));
 
         if (history == null)
         {
