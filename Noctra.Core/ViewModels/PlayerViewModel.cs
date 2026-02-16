@@ -13,15 +13,15 @@ namespace Noctra.ViewModels;
 public partial class PlayerViewModel : ObservableObject
 {
     private const double OverlayAutoHideDelayMs = 4000;
-    private const double NextEpisodePromptTailRatio = 0.07;
+    private const double NextEpisodePromptTailRatio = 0.06;
     private const double NextEpisodePromptMinTailSeconds = 25;
-    private const double NextEpisodePromptMaxTailSeconds = 90;
+    private const double NextEpisodePromptMaxTailSeconds = 180;
     private const double SkipAggregationWindowMs = 1200;
     private const double SkipSeekCarryWindowMs = 1400;
     private const double SkipSeekCarryToleranceSeconds = 2.0;
     private const double SeekBufferShieldSuppressionMs = 2800;
     private const double EpisodeCompletedPercentThreshold = 90.0;
-    private static readonly double EpisodeCompletedTailSeconds = TimeSpan.FromMinutes(5).TotalSeconds;
+    private static readonly double EpisodeCompletedTailSeconds = TimeSpan.FromMinutes(3).TotalSeconds;
 
     public sealed record TrackOption(int Id, string Name);
     public sealed class SkipOverlayEventArgs : EventArgs

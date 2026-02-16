@@ -49,7 +49,7 @@ public partial class AvatarPickerWindow : Window
 
     private void ViewModel_AvatarSelected(object? sender, string avatar)
     {
-        Close(true);
+        Close(avatar);
     }
 
     private void DragBar_PointerPressed(object? sender, PointerPressedEventArgs e)
@@ -62,7 +62,7 @@ public partial class AvatarPickerWindow : Window
 
     private void CloseButton_Click(object? sender, RoutedEventArgs e)
     {
-        Close(false);
+        Close(null);
     }
 
     protected override void OnClosed(EventArgs e)

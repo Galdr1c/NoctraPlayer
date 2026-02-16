@@ -902,7 +902,7 @@
         <views:VideoOverlayView x:Name="OverlayControl" ZIndex="2"/>
         <!-- Next Episode Prompt (binds to PlayerViewModel via OverlayControl's DataContext) -->
         <Border x:Name="NextEpisodePrompt" Background="{DynamicResource SurfaceBrush}" CornerRadius="12" Padding="24"
-                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,40,40" Width="350"
+                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,40,180" Width="350"
                 DataContext="{Binding #OverlayControl.DataContext}" x:DataType="vm:PlayerViewModel"
                 IsVisible="{Binding IsNextEpisodePromptVisible}" ZIndex="3000">
           <Grid RowDefinitions="Auto,Auto,Auto">

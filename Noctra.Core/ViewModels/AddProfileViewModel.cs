@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Noctra.Models;
+using Noctra.Services;
 using Noctra.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Noctra.Data;
@@ -10,10 +11,12 @@ namespace Noctra.ViewModels;
 public partial class AddProfileViewModel : ObservableObject
 {
     private const string StalkerMacPrefix = "00:1A:79:";
+    private const string ProfilesLimitKey = "profiles";
     private readonly AppDbContext _context;
     private readonly IDispatcherService _dispatcherService;
     private readonly IAvatarService _avatarService;
     private readonly IDialogService _dialogService;
+    private readonly ILicenseService _licenseService;
     private readonly IM3UParser _m3uParser;
     private readonly IXtreamCodesService _xtreamCodesService;
     private readonly IStalkerPortalService _stalkerPortalService;
@@ -361,6 +364,7 @@ public partial class AddProfileViewModel : ObservableObject
         IDispatcherService dispatcherService, 
         IAvatarService avatarService, 
         IDialogService dialogService,
+        ILicenseService licenseService,
         IM3UParser m3uParser,
         IXtreamCodesService xtreamCodesService,
         IStalkerPortalService stalkerPortalService)
@@ -369,6 +373,7 @@ public partial class AddProfileViewModel : ObservableObject
         _dispatcherService = dispatcherService;
         _avatarService = avatarService;
         _dialogService = dialogService;
+        _licenseService = licenseService;
         _m3uParser = m3uParser;
         _xtreamCodesService = xtreamCodesService;
         _stalkerPortalService = stalkerPortalService;
@@ -729,6 +734,14 @@ public partial class AddProfileViewModel : ObservableObject
             }
             else
             {
+                var profileCount = await _context.Profiles.CountAsync();
+                if (!_licenseService.IsWithinLimit(ProfilesLimitKey, profileCount))
+                {
+                    await transaction.RollbackAsync();
+                    await _dialogService.ShowUpsellAsync();
+                    return;
+                }
+
                 // Create new profile
                 var profile = new Profile
                 {

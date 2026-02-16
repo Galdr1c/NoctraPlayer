@@ -99,24 +99,9 @@ public partial class AddProfileWindow : Window
                 pickerWindow.DataContext = pickerVm;
             }
 
-            string? selectedAvatar = null;
-            void OnAvatarSelected(object? _, string avatar)
-            {
-                selectedAvatar = avatar;
-            }
-
-            pickerVm.AvatarSelected += OnAvatarSelected;
-            bool? result;
-            try
-            {
-                result = await pickerWindow.ShowDialog<bool?>(this);
-            }
-            finally
-            {
-                pickerVm.AvatarSelected -= OnAvatarSelected;
-            }
-
-            if (result == true && !string.IsNullOrWhiteSpace(selectedAvatar))
+            pickerVm.SelectedAvatar = _viewModel.SelectedAvatar;
+            var selectedAvatar = await pickerWindow.ShowDialog<string?>(this);
+            if (!string.IsNullOrWhiteSpace(selectedAvatar))
             {
                 _viewModel.SetAvatar(selectedAvatar);
             }

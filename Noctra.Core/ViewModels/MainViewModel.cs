@@ -526,15 +526,12 @@ public partial class MainViewModel : ObservableObject
             UpdateGroupsForSelectedType();
             ResetIncrementalState();
             await LoadMoreChannelsAsync();
-            
-            await Task.WhenAll(
-                LoadHomeContentAsync(),
-                LoadFavoritesAsync());
-            await RefreshPersonalListsFromDatabaseAsync();
+
             StatusMessage = $"{channelCount} kanal hazır";
-            
-            // Trigger EPG update in background
-            _ = LoadEpgAsync();
+
+            // Warm-up heavy/non-critical data in background so first paint is faster.
+            _ = WarmupAfterInitialChannelLoadAsync();
+            _ = LoadEpgAsync(isBackgroundSync: true);
             EnsureChannelBackgroundRefresh();
         }
         catch (Exception ex)
@@ -545,6 +542,20 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    private async Task WarmupAfterInitialChannelLoadAsync()
+    {
+        try
+        {
+            await Task.WhenAll(
+                LoadHomeContentAsync(),
+                LoadFavoritesAsync());
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"WarmupAfterInitialChannelLoadAsync error: {ex}");
         }
     }
 

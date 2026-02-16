@@ -76,7 +76,7 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Button Classes="AvatarItemBtn"
-                                    Command="{Binding $parent[Window].DataContext.SelectAvatarCommand}"
+                                    Command="{Binding DataContext.SelectAvatarCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                     CommandParameter="{Binding}">
                                 <Border Width="100" Height="100" CornerRadius="4" 
                                         BorderBrush="Transparent" BorderThickness="2" 

@@ -1,4 +1,4 @@
-<UserControl x:Class="Noctra.Avalonia.Views.VideoOverlayView"
+﻿<UserControl x:Class="Noctra.Avalonia.Views.VideoOverlayView"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -457,52 +457,68 @@
                                     <ItemsControl ItemsSource="{Binding Episodes}" Margin="0,10,0,0">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="models:Episode">
-                                                <Button Margin="0,0,0,10"
+                                                <Button Margin="0,0,0,12"
                                                         Padding="0"
                                                         Background="Transparent"
                                                         BorderThickness="0"
+                                                        CornerRadius="12"
                                                         HorizontalContentAlignment="Stretch"
                                                         Command="{Binding #OverlayRoot.DataContext.PlayEpisodeFromOverlayCommand}"
                                                         CommandParameter="{Binding}">
-                                                    <Border Background="#12000000" BorderBrush="#22FFFFFF" BorderThickness="1" CornerRadius="12" Padding="10">
-                                                        <Grid>
-                                                            <Grid ColumnDefinitions="110,*,Auto">
-                                                                <Border Width="110" Height="62" ClipToBounds="True" CornerRadius="8" Background="#22000000">
-                                                                    <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
-                                                                </Border>
-                                                                <StackPanel Grid.Column="1" Margin="12,0,12,0" VerticalAlignment="Center">
-                                                                    <TextBlock Text="{Binding EpisodeNumber, StringFormat='B&#246;l&#252;m {0}'}" FontSize="11" Foreground="#BBBBBB"/>
-                                                                    <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Foreground="White" TextTrimming="CharacterEllipsis"/>
-                                                                    <TextBlock Text="{Binding Plot}" FontSize="12" Foreground="#A0A0A0" TextTrimming="CharacterEllipsis"
-                                                                               IsVisible="{Binding Plot, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
-                                                                    <Border Height="3" Background="#33FFFFFF" Margin="0,8,0,0"
-                                                                            IsVisible="{Binding ., Converter={StaticResource EpisodeWatchedProgressVisibilityConverter}}">
-                                                                        <Border Width="{Binding ., Converter={StaticResource EpisodeWatchedProgressWidthConverter}, ConverterParameter=190}"
-                                                                                Background="{DynamicResource AccentBrush}" HorizontalAlignment="Left"/>
-                                                                    </Border>
-                                                                </StackPanel>
-                                                                <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
-                                                                    <Border Width="24" Height="24" CornerRadius="12" Background="#8D09E5" HorizontalAlignment="Right"
-                                                                            IsVisible="{Binding ., Converter={StaticResource EpisodeCompletionBadgeVisibilityConverter}}">
-                                                                        <materialIcons:MaterialIcon Kind="Check" Width="14" Height="14" Foreground="White"
-                                                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                                    </Border>
-                                                                </StackPanel>
-                                                            </Grid>
-                                                            <Border IsHitTestVisible="False"
-                                                                    BorderBrush="#8D09E5"
-                                                                    BorderThickness="2"
-                                                                    CornerRadius="12"
-                                                                    Opacity="0.9">
-                                                                <Border.IsVisible>
-                                                                    <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
-                                                                        <Binding Path="." Converter="{StaticResource EpisodeIdentityConverter}"/>
-                                                                        <Binding Path="#OverlayRoot.DataContext.CurrentEpisodeIdentity"/>
-                                                                    </MultiBinding>
-                                                                </Border.IsVisible>
+                                                    <!-- Main Container -->
+                                                    <Panel>
+                                                        <!-- Background Border -->
+                                                        <Border Name="CardBackground" 
+                                                                Background="#12000000" 
+                                                                BorderBrush="#22FFFFFF" 
+                                                                BorderThickness="1" 
+                                                                CornerRadius="12"
+                                                                ClipToBounds="True"/>
+                                                                
+                                                        <!-- Content -->
+                                                        <Grid ColumnDefinitions="120,*,Auto" Margin="10">
+                                                            <!-- Thumbnail -->
+                                                            <Border Width="120" Height="68" ClipToBounds="True" CornerRadius="8" Background="#22000000">
+                                                                <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
                                                             </Border>
+                                                            
+                                                            <!-- Text Info -->
+                                                            <StackPanel Grid.Column="1" Margin="16,0,16,0" VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding EpisodeNumber, StringFormat='Bölüm {0}'}" FontSize="12" Foreground="#AAAAAA" FontWeight="Medium"/>
+                                                                <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" Foreground="White" TextTrimming="CharacterEllipsis" Margin="0,2,0,4"/>
+                                                                
+                                                                <!-- Progress Bar -->
+                                                                <Border Height="3" Background="#33FFFFFF" CornerRadius="1.5" HorizontalAlignment="Left" Width="100"
+                                                                        IsVisible="{Binding ., Converter={StaticResource EpisodeWatchedProgressVisibilityConverter}}">
+                                                                    <Border Width="{Binding ., Converter={StaticResource EpisodeWatchedProgressWidthConverter}, ConverterParameter=100}"
+                                                                            Background="{DynamicResource AccentBrush}" CornerRadius="1.5" HorizontalAlignment="Left"/>
+                                                                </Border>
+                                                            </StackPanel>
+
+                                                            <!-- Check Badge -->
+                                                            <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                                                <Border Width="28" Height="28" CornerRadius="14" Background="{DynamicResource AccentBrush}"
+                                                                        IsVisible="{Binding ., Converter={StaticResource EpisodeCompletionBadgeVisibilityConverter}}"
+                                                                        BoxShadow="0 2 8 0 #4C000000">
+                                                                    <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="White"/>
+                                                                </Border>
+                                                            </StackPanel>
                                                         </Grid>
-                                                    </Border>
+
+                                                        <!-- Active Selection Border (Outer Glow) -->
+                                                        <Border IsHitTestVisible="False"
+                                                                BorderBrush="{DynamicResource AccentBrush}"
+                                                                BorderThickness="2"
+                                                                CornerRadius="12"
+                                                                Background="Transparent">
+                                                            <Border.IsVisible>
+                                                                <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                                                                    <Binding Path="." Converter="{StaticResource EpisodeIdentityConverter}"/>
+                                                                    <Binding Path="#OverlayRoot.DataContext.CurrentEpisodeIdentity"/>
+                                                                </MultiBinding>
+                                                            </Border.IsVisible>
+                                                        </Border>
+                                                    </Panel>
                                                 </Button>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>

@@ -26,7 +26,7 @@ public class RemoteImage : Image
     private static readonly object PlaceholderLock = new();
     private static Bitmap? _placeholderBitmap;
     private const int MaxCacheEntries = 1500;
-    private const int PlaceholderFallbackDelayMs = 1800;
+    private const int PlaceholderFallbackDelayMs = 1500;
 
     private CancellationTokenSource? _loadCts;
 

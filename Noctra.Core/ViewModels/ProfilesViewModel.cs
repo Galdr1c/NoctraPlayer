@@ -4,15 +4,18 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.EntityFrameworkCore;
 using Noctra.Data;
 using Noctra.Models;
+using Noctra.Services;
 using Noctra.Services.Interfaces;
 
 namespace Noctra.ViewModels;
 
 public partial class ProfilesViewModel : ObservableObject
 {
+    private const string ProfilesLimitKey = "profiles";
     private readonly IDialogService _dialogService;
     private readonly AppDbContext _context;
     private readonly IDispatcherService _dispatcherService;
+    private readonly ILicenseService _licenseService;
     
     [ObservableProperty]
     private ObservableCollection<Profile> _profiles = new();
@@ -25,11 +28,16 @@ public partial class ProfilesViewModel : ObservableObject
     public event Action<Profile>? OnProfileEditRequested;
     public event Action? RequestClose;
 
-    public ProfilesViewModel(AppDbContext context, IDialogService dialogService, IDispatcherService dispatcherService)
+    public ProfilesViewModel(
+        AppDbContext context,
+        IDialogService dialogService,
+        IDispatcherService dispatcherService,
+        ILicenseService licenseService)
     {
         _context = context;
         _dialogService = dialogService;
         _dispatcherService = dispatcherService;
+        _licenseService = licenseService;
     }
 
     public void RefreshProfiles()
@@ -70,8 +78,15 @@ public partial class ProfilesViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void AddProfile()
+    private async Task AddProfile()
     {
+        var profileCount = await _context.Profiles.CountAsync();
+        if (!_licenseService.IsWithinLimit(ProfilesLimitKey, profileCount))
+        {
+            await _dialogService.ShowUpsellAsync();
+            return;
+        }
+
         OnProfileAddRequested?.Invoke(null!);
     }
 
