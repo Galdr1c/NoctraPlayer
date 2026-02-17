@@ -44,6 +44,8 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - `Indir` butonu gizlenir.
   - `Hakkinda` butonu/paneli gizlenir.
   - Ses/altyazi, kalite ve tam ekran kontrolleri korunur.
+  - VOD icin de indirilen oynatim algisi guclendirildi (`.nctra`, `file://`, profile download path),
+    boylece offline/indirilen VOD oynatiminda `Indir` ve `Hakkinda` butonlari gizli kalir.
 
 ### Fixed
 - `%100` gorunup tamamlanmama durumu giderildi:
@@ -74,6 +76,23 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - Tamamlanmis indirmelerde kalan `.nctra.part` artik dosyalari temizleme iyilestirildi:
   - Finalize adiminda `part` silme retry ile yapilir.
   - Periyodik cleanup'ta completed kayitlar icin stale `TempFilePath` temizlenir.
+- Indirme akisinda `The response ended prematurely` / erken kapanan yanit senaryosu iyilestirildi:
+  - Toplam byte biliniyorsa eksik inen dosya artik `tamamlandi` sayilmaz.
+  - Gecici baglanti kesintilerinde otomatik devam denemesi eklendi (`3` deneme).
+  - Denemeler siniri asilirsa indirme `Duraklatildi` kalir ve kullaniciya `Devam Et` mesaji gosterilir.
+- Kullaniciya gosterilen hata metinleri standartlastirildi:
+  - Yeni ortak esleyici: `UserFriendlyErrorMessage`.
+  - Teknik/ham `ex.Message` metinleri yerine daha acik mesajlar kullaniliyor
+    (`Ag hatasi`, `Kimlik dogrulama hatasi`, `Sunucu hatasi`, `Dosya dogrulama hatasi`, vb.).
+  - Uygulanan baslica alanlar:
+    - `MainViewModel` durum mesajlari
+    - `SettingsViewModel` EPG/Kanal yenileme mesajlari
+    - `AddProfileViewModel` analiz/kaydetme hatalari
+    - `PlayerViewModel` indirme hata mesaji
+    - `MainWindow` oynatma hata mesaji
+    - `AvaloniaDialogService` dialog hata detaylari
+    - `ContentDownloadService` indirme durdurma/otomatik devam mesajlari
+    - `VideoPlayerService` oynatma baslatma hata mesaji
 
 ### Performance
 - Indirme sirasinda progress persistence seyreltildi (zaman + byte esik tabanli).

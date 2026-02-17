@@ -9,6 +9,7 @@ using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Avalonia.Controls;
 using Noctra.Models;
+using Noctra.Services;
 using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
 
@@ -257,7 +258,7 @@ public partial class MainWindow : Window
         {
             StartupDiagnostics.LogException("Media playback failed in MainWindow_OnMediaSelected.", ex);
             PlayerArea.IsVisible = false;
-            _mainViewModel.StatusMessage = $"Icerik oynatilamadi: {ex.Message}";
+            _mainViewModel.StatusMessage = UserFriendlyErrorMessage.WithPrefix("Icerik oynatilamadi", ex);
         }
     }
 

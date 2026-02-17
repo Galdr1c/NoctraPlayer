@@ -400,6 +400,11 @@ public partial class SettingsViewModel : ObservableObject
             {
                 EpgLastError = _epgService.LastError;
             }
+
+            if (!string.IsNullOrWhiteSpace(EpgLastError))
+            {
+                EpgLastError = UserFriendlyErrorMessage.FromText(EpgLastError);
+            }
             
             if (updateStatusMessage && !string.IsNullOrEmpty(EpgLastError))
             {
@@ -414,7 +419,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             if (updateStatusMessage)
             {
-                StatusMessage = $"[Istatistik] Hata: {ex.Message}";
+                StatusMessage = $"[Istatistik] {UserFriendlyErrorMessage.FromException(ex)}";
             }
         }
     }
@@ -499,7 +504,7 @@ public partial class SettingsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            SetProgressStatus("Kanal", RefreshProgressPercent, $"Kanal listesi yenileme hatasi: {ex.Message}");
+            SetProgressStatus("Kanal", RefreshProgressPercent, UserFriendlyErrorMessage.WithPrefix("Kanal listesi yenileme hatasi", ex));
         }
         finally
         {
@@ -553,7 +558,10 @@ public partial class SettingsViewModel : ObservableObject
 
                     if (!string.IsNullOrWhiteSpace(EpgLastError))
                     {
-                        SetProgressStatus("EPG", RefreshProgressPercent, $"EPG yenileme hatasi: {EpgLastError}");
+                        SetProgressStatus(
+                            "EPG",
+                            RefreshProgressPercent,
+                            $"EPG yenileme hatasi: {UserFriendlyErrorMessage.FromText(EpgLastError)}");
                         return;
                     }
 
@@ -569,7 +577,7 @@ public partial class SettingsViewModel : ObservableObject
                 }
                 catch (Exception ex)
                 {
-                    SetProgressStatus("EPG", RefreshProgressPercent, $"EPG izleme hatasi: {ex.Message}");
+                    SetProgressStatus("EPG", RefreshProgressPercent, UserFriendlyErrorMessage.WithPrefix("EPG izleme hatasi", ex));
                     return;
                 }
             }

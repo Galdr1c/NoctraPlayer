@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Data;
 using Noctra.Avalonia.Views;
+using Noctra.Services;
 using Noctra.Services.Interfaces;
 
 namespace Noctra.Avalonia.Services;
@@ -28,7 +29,12 @@ public sealed class AvaloniaDialogService : IDialogService
     public async Task ShowErrorAsync(string title, string message, Exception? ex = null)
     {
         var owner = GetMainWindow();
-        var fullMessage = ex == null ? message : $"{message}\n{ex.Message}";
+        var safeDetail = ex == null
+            ? string.Empty
+            : UserFriendlyErrorMessage.FromException(ex);
+        var fullMessage = string.IsNullOrWhiteSpace(safeDetail)
+            ? message
+            : $"{message}\n{safeDetail}";
         var dialog = new DialogWindow(title, fullMessage, DialogMode.Error);
         await dialog.ShowDialog(owner);
     }

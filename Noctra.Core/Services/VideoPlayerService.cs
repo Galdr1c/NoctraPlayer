@@ -226,7 +226,8 @@ public class VideoPlayerService : IVideoPlayerService
         }
         catch (Exception ex)
         {
-            _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, $"Oynatma başlatılamadı: {ex.Message}"));
+            var message = UserFriendlyErrorMessage.WithPrefix("Oynatma baslatilamadi", ex);
+            _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, message));
         }
     }
 

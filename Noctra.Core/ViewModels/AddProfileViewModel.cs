@@ -147,7 +147,7 @@ public partial class AddProfileViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = $"URL parse hatası: {ex.Message}";
+            StatusMessage = UserFriendlyErrorMessage.WithPrefix("URL parse hatasi", ex);
             HasError = true;
         }
     }
@@ -180,7 +180,7 @@ public partial class AddProfileViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = $"URL oluşturma hatası: {ex.Message}";
+            StatusMessage = UserFriendlyErrorMessage.WithPrefix("URL olusturma hatasi", ex);
             HasError = true;
         }
     }
@@ -664,7 +664,7 @@ public partial class AddProfileViewModel : ObservableObject
         catch (Exception ex)
         {
             HasError = true;
-            StatusMessage = $"Analiz hatasi: {ex.Message}";
+            StatusMessage = UserFriendlyErrorMessage.WithPrefix("Analiz hatasi", ex);
             PlaylistPreviewSummary = string.Empty;
         }
         finally
@@ -720,7 +720,7 @@ public partial class AddProfileViewModel : ObservableObject
         catch (Exception ex)
         {
             var sourceType = IsStalker ? "Stalker Portal" : IsXtream ? "Xtream" : "M3U";
-            return PlaylistImportPreview.Invalid(sourceType, ex.Message);
+            return PlaylistImportPreview.Invalid(sourceType, UserFriendlyErrorMessage.FromException(ex));
         }
     }
     [RelayCommand]
@@ -858,8 +858,7 @@ public partial class AddProfileViewModel : ObservableObject
         catch (Exception ex)
         {
             HasError = true;
-            string detail = ex.InnerException?.Message ?? ex.Message;
-            StatusMessage = $"Hata: {detail}";
+            StatusMessage = UserFriendlyErrorMessage.WithPrefix("Hata", ex);
         }
         finally
         {

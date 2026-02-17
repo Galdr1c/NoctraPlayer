@@ -308,7 +308,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Profil yüklenirken hata oluştu: {ex.Message}";
+            StatusMessage = UserFriendlyErrorMessage.WithPrefix("Profil yuklenirken hata olustu", ex);
             _logger?.LogDebug($"LoadProfile Error: {ex}");
         }
         finally
@@ -560,7 +560,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger?.LogDebug($"LoadChannels error: {ex}");
-            StatusMessage = $"Kanallar yüklenemedi: {ex.Message}";
+            StatusMessage = UserFriendlyErrorMessage.WithPrefix("Kanallar yuklenemedi", ex);
         }
         finally
         {
@@ -1395,7 +1395,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Hata: {ex.Message}";
+            StatusMessage = UserFriendlyErrorMessage.WithPrefix("Islem basarisiz", ex);
         }
         finally
         {
@@ -1483,7 +1483,7 @@ public partial class MainViewModel : ObservableObject
         {
             if (!isBackground)
             {
-                StatusMessage = $"Kanal listesi güncelleme hatası: {ex.Message}";
+                StatusMessage = UserFriendlyErrorMessage.WithPrefix("Kanal listesi guncelleme hatasi", ex);
             }
         }
         finally
@@ -1567,7 +1567,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            await PersistSelectedPlaylistEpgErrorAsync($"Manual: {ex.Message}");
+            await PersistSelectedPlaylistEpgErrorAsync($"Manual: {UserFriendlyErrorMessage.FromException(ex)}");
             _logger?.LogDebug($"Manual EPG refresh failed: {ex}");
         }
     }
@@ -1792,7 +1792,7 @@ public partial class MainViewModel : ObservableObject
                 }
                 catch (Exception ex)
                 {
-                    lastSourceError = $"{source.Type}: {ex.Message}";
+                    lastSourceError = $"{source.Type}: {UserFriendlyErrorMessage.FromException(ex)}";
                     _logger?.LogDebug($"[MainViewModel] EPG source failed: {source.Type} - {ex.Message}");
                 }
             }
@@ -1839,10 +1839,10 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            await PersistSelectedPlaylistEpgErrorAsync($"LoadEpgInternal: {ex.Message}");
+            await PersistSelectedPlaylistEpgErrorAsync($"LoadEpgInternal: {UserFriendlyErrorMessage.FromException(ex)}");
             if (!isBackgroundSync)
             {
-                StatusMessage = $"EPG Hatası: {ex.Message}";
+                StatusMessage = UserFriendlyErrorMessage.WithPrefix("EPG hatasi", ex);
             }
             else
             {
@@ -3617,7 +3617,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger?.LogError(ex, "PlayEpisode failed.");
-            StatusMessage = $"Bolum oynatilamadi: {ex.Message}";
+            StatusMessage = UserFriendlyErrorMessage.WithPrefix("Bolum oynatilamadi", ex);
         }
     }
 

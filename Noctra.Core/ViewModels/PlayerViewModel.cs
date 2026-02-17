@@ -403,7 +403,7 @@ public partial class PlayerViewModel : ObservableObject
         DownloadStatusMessage = string.Empty;
         IsDownloadInProgress = false;
         Interlocked.Exchange(ref _isDownloadActionRunning, 0);
-        IsDownloadedPlayback = IsDownloadedStreamUrl(value?.StreamUrl);
+        IsDownloadedPlayback = LooksLikeDownloadedPlaybackStreamUrl(value?.StreamUrl);
 
         if (value != null)
         {
@@ -1667,7 +1667,7 @@ public partial class PlayerViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            DownloadStatusMessage = $"Indirme hatasi: {ex.Message}";
+            DownloadStatusMessage = UserFriendlyErrorMessage.WithPrefix("Indirme hatasi", ex);
         }
         finally
         {
@@ -2083,6 +2083,48 @@ public partial class PlayerViewModel : ObservableObject
         if (!Regex.IsMatch(normalized, @"^[a-zA-Z]:[\\/]"))
         {
             return false;
+        }
+
+        return File.Exists(normalized);
+    }
+
+    private static bool LooksLikeDownloadedPlaybackStreamUrl(string? streamUrl)
+    {
+        if (string.IsNullOrWhiteSpace(streamUrl))
+        {
+            return false;
+        }
+
+        var normalized = streamUrl.Trim().Trim('"', '\'');
+        if (normalized.Length < 4)
+        {
+            return false;
+        }
+
+        if (normalized.StartsWith("file://", StringComparison.OrdinalIgnoreCase) &&
+            Uri.TryCreate(normalized, UriKind.Absolute, out var fileUri) &&
+            fileUri.IsFile)
+        {
+            normalized = fileUri.LocalPath;
+        }
+
+        var isLocalPath = normalized.StartsWith(@"\\", StringComparison.Ordinal) ||
+                          Regex.IsMatch(normalized, @"^[a-zA-Z]:[\\/]");
+        if (!isLocalPath)
+        {
+            return false;
+        }
+
+        var lowered = normalized.Replace('/', '\\').ToLowerInvariant();
+        if (lowered.EndsWith(".nctra", StringComparison.Ordinal) ||
+            lowered.EndsWith(".nctra.part", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        if (lowered.Contains(@"\noctra\downloads\profile_", StringComparison.Ordinal))
+        {
+            return true;
         }
 
         return File.Exists(normalized);

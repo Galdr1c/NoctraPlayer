@@ -21,6 +21,7 @@ public class ContentDownloadService : IContentDownloadService
     private const string PlaybackCacheExtension = ".playcache";
     private const int ProgressPersistIntervalMs = 1800;
     private const long ProgressPersistMinDeltaBytes = 1024 * 1024; // 1 MB
+    private const int MaxAutoResumeAttempts = 3;
     private static readonly Regex SeriesEpisodeRegex = new(
         @"(s(?:eason)?\s*(?<s>\d{1,2})\s*e(?:pisode)?\s*(?<e>\d{1,3}))|((?<s2>\d{1,2})\s*x\s*(?<e2>\d{1,3}))|(sezon\s*(?<s3>\d{1,2})\s*b[oö]l[uü]m\s*(?<e3>\d{1,3}))|(b[oö]l[uü]m\s*(?<e4>\d{1,3}))",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -37,6 +38,7 @@ public class ContentDownloadService : IContentDownloadService
     private readonly ConcurrentDictionary<int, string> _activeTempFiles = new();
     private readonly ConcurrentDictionary<int, byte> _pauseRequestedIds = new();
     private readonly ConcurrentDictionary<int, byte> _cancelRequestedIds = new();
+    private readonly ConcurrentDictionary<int, int> _autoResumeAttempts = new();
     private readonly ConcurrentDictionary<int, DateTime> _lastCleanupUtcByProfile = new();
     private readonly byte[] _encryptionKey;
     private readonly byte[] _hmacKey;
@@ -755,8 +757,23 @@ public class ContentDownloadService : IContentDownloadService
                 return;
             }
 
+            if (totalBytes.HasValue && totalBytes.Value > 0 && downloaded < totalBytes.Value)
+            {
+                _logger?.LogWarning(
+                    "Download response ended early for item {DownloadId}. Downloaded={Downloaded}, Expected={Expected}",
+                    downloadId,
+                    downloaded,
+                    totalBytes.Value);
+
+                await TryAutoResumeAfterTransientInterruptionAsync(
+                    downloadId,
+                    $"Sunucu yaniti erken sonlandi ({FormatBytes(downloaded)}/{FormatBytes(totalBytes.Value)}).");
+                return;
+            }
+
             await EncryptFileWithRetryAsync(plainTempPath, encryptedPath, extension, localCts.Token);
             TryDeleteFileWithRetry(plainTempPath);
+            _autoResumeAttempts.TryRemove(downloadId, out _);
             await MarkCompletedAsync(downloadId, encryptedPath, downloaded, totalBytes, startedAt);
         }
         catch (OperationCanceledException)
@@ -777,7 +794,15 @@ public class ContentDownloadService : IContentDownloadService
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "Download failed for item {DownloadId}", downloadId);
-            await MarkInterruptedAsPausedAsync(downloadId, $"Indirme durduruldu: {ex.Message}");
+            if (IsTransientResponseEndedException(ex))
+            {
+                await TryAutoResumeAfterTransientInterruptionAsync(downloadId, ex.Message);
+            }
+            else
+            {
+                _autoResumeAttempts.TryRemove(downloadId, out _);
+                await MarkInterruptedAsPausedAsync(downloadId, UserFriendlyErrorMessage.WithPrefix("Indirme durduruldu", ex));
+            }
         }
         finally
         {
@@ -827,6 +852,53 @@ public class ContentDownloadService : IContentDownloadService
         return null;
     }
 
+    private async Task TryAutoResumeAfterTransientInterruptionAsync(int downloadId, string detail)
+    {
+        var attempt = _autoResumeAttempts.AddOrUpdate(downloadId, 1, static (_, current) => current + 1);
+        if (attempt > MaxAutoResumeAttempts)
+        {
+            _autoResumeAttempts.TryRemove(downloadId, out _);
+            await MarkInterruptedAsPausedAsync(
+                downloadId,
+                $"Indirme durduruldu: baglanti birden fazla kez kesildi. Lutfen 'Devam Et' ile tekrar deneyin.");
+            return;
+        }
+
+        var safeDetail = UserFriendlyErrorMessage.FromText(detail);
+        await MarkInterruptedAsPausedAsync(
+            downloadId,
+            $"Baglanti kesildi, otomatik devam deneniyor ({attempt}/{MaxAutoResumeAttempts}). {safeDetail}");
+
+        var delayMs = Math.Min(4500, 1200 * attempt);
+        await Task.Delay(delayMs);
+        await ResumeDownloadAsync(downloadId, CancellationToken.None);
+    }
+
+    private static bool IsTransientResponseEndedException(Exception ex)
+    {
+        var current = ex;
+        while (current != null)
+        {
+            var text = current.Message ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                var lowered = text.ToLowerInvariant();
+                if (lowered.Contains("response ended prematurely", StringComparison.Ordinal) ||
+                    lowered.Contains("response ended", StringComparison.Ordinal) ||
+                    lowered.Contains("unexpected end", StringComparison.Ordinal) ||
+                    lowered.Contains("incomplete", StringComparison.Ordinal) ||
+                    lowered.Contains("end of stream", StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            current = current.InnerException;
+        }
+
+        return false;
+    }
+
     private static long? ResolveTotalBytes(HttpResponseMessage response, long resumedBytes)
     {
         if (response.Content.Headers.ContentRange?.Length is long rangedTotal && rangedTotal > 0)
@@ -852,6 +924,7 @@ public class ContentDownloadService : IContentDownloadService
         _pauseRequestedIds.TryRemove(downloadId, out _);
         _cancelRequestedIds.TryRemove(downloadId, out _);
         _queuedIds.TryRemove(downloadId, out _);
+        _autoResumeAttempts.TryRemove(downloadId, out _);
 
         await using var scope = _scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -920,6 +993,8 @@ public class ContentDownloadService : IContentDownloadService
         long? total,
         DateTime startedAtUtc)
     {
+        _autoResumeAttempts.TryRemove(downloadId, out _);
+
         await using var scope = _scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId);
@@ -1546,6 +1621,25 @@ public class ContentDownloadService : IContentDownloadService
         }
 
         return ".mp4";
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes <= 0)
+        {
+            return "0 B";
+        }
+
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        var value = (double)bytes;
+        var unitIndex = 0;
+        while (value >= 1024 && unitIndex < units.Length - 1)
+        {
+            value /= 1024;
+            unitIndex++;
+        }
+
+        return $"{value:0.##} {units[unitIndex]}";
     }
 
     private static string BuildSafeFileName(string rawName)
