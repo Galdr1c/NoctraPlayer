@@ -26,7 +26,11 @@ public partial class GlobalSettingsViewModel : ObservableObject
         _settingsService = settingsService;
         
         LoadSettings();
-        Settings.SetOnChanged(SaveSettings);
+    }
+
+    partial void OnSettingsChanged(GlobalSettings value)
+    {
+        value.SetOnChanged(SaveSettings);
     }
 
     private void LoadSettings()
@@ -92,12 +96,6 @@ public partial class GlobalSettingsViewModel : ObservableObject
         _ = _settingsService.SaveAsync();
     }
 
-    // Bu metod GlobalSettings içindeki bir property değiştiğinde tetiklenmez.
-    // XAML bindingleri genellikle Settings.IsDarkTheme gibi yapıldığı için 
-    // GlobalSettings modelinin içinde de PropertyChanged yakalamalıyız veya 
-    // UI'daki toggle'lar ViewModel'deki bir komutu tetiklemeli.
-    // GlobalSettingsWindow.xaml.cs 'deki DarkTheme_Click ApplyThemeCommand'i çağırıyor, bu iyi.
-    // ToggleSwitch'ler ise Bindings kullanıyor. GlobalSettings modeline de hook ekleyelim.
 }
 
 // Global Settings Model

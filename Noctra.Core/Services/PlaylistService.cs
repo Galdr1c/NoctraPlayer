@@ -63,7 +63,7 @@ public class PlaylistService : IPlaylistService
 
             // Otomatik organizasyon: dedup, kategorize, sıralama
             var organized = _organizer.Organize(channels);
-            System.Diagnostics.Debug.WriteLine($"[PlaylistService] Organized: {channels.Count} → {organized.Count} channels");
+            System.Diagnostics.Debug.WriteLine($"[PlaylistService] Organized: {channels.Count} › {organized.Count} channels");
 
             return await AddFromChannelsAsync(name, url, organized, profileId, detectedEpgUrl);
         }
@@ -160,6 +160,8 @@ public class PlaylistService : IPlaylistService
                     }
 
                     string? usedEpgUrl = null;
+                    string? autoEpgError = null;
+
                     foreach (var source in epgSources)
                     {
                         try
@@ -176,26 +178,37 @@ public class PlaylistService : IPlaylistService
                             if (afterCount > beforeCount)
                             {
                                 usedEpgUrl = source.Url;
+                                autoEpgError = null;
                                 System.Diagnostics.Debug.WriteLine($"[PlaylistService] EPG loaded from {source.Type} (+{afterCount - beforeCount})");
                                 break;
                             }
 
+                            autoEpgError = $"{source.Type}: 0 program";
                             System.Diagnostics.Debug.WriteLine($"[PlaylistService] EPG source had no matches: {source.Type}");
                         }
                         catch (Exception ex)
                         {
+                            autoEpgError = $"{source.Type}: {ex.Message}";
                             System.Diagnostics.Debug.WriteLine($"[PlaylistService] EPG source failed: {source.Type} - {ex.Message}");
                         }
+                    }
+
+                    if (usedEpgUrl == null && string.IsNullOrWhiteSpace(autoEpgError))
+                    {
+                        autoEpgError = "Otomatik EPG kaynagindan veri alinamadi.";
                     }
 
                     var playlistToUpdate = await scopedDb.Playlists.FirstOrDefaultAsync(p => p.Id == playlistId);
                     if (playlistToUpdate != null)
                     {
                         playlistToUpdate.DetectedCountry = detectedCountry;
+                        playlistToUpdate.EpgLastError = autoEpgError;
+
                         if (!string.IsNullOrWhiteSpace(usedEpgUrl))
                         {
                             playlistToUpdate.EpgUrl = usedEpgUrl;
                             playlistToUpdate.EpgLastUpdated = DateTime.Now;
+                            playlistToUpdate.EpgLastError = null;
                         }
 
                         await scopedDb.SaveChangesAsync();
@@ -204,6 +217,21 @@ public class PlaylistService : IPlaylistService
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"[PlaylistService] Auto-EPG error: {ex.Message}");
+
+                    try
+                    {
+                        using var fallbackScope = _scopeFactory.CreateScope();
+                        var fallbackDb = fallbackScope.ServiceProvider.GetRequiredService<AppDbContext>();
+                        var playlistToUpdate = await fallbackDb.Playlists.FirstOrDefaultAsync(p => p.Id == playlistId);
+                        if (playlistToUpdate != null)
+                        {
+                            playlistToUpdate.EpgLastError = $"AutoEPG: {ex.Message}";
+                            await fallbackDb.SaveChangesAsync();
+                        }
+                    }
+                    catch
+                    {
+                    }
                 }
             });
 
@@ -502,6 +530,7 @@ public class PlaylistService : IPlaylistService
             epgSources[i].ClearBeforeLoad = (i == 0);
         }
 
+        string? lastError = null;
         foreach (var source in epgSources)
         {
             try
@@ -524,15 +553,22 @@ public class PlaylistService : IPlaylistService
 
                 playlist.EpgUrl = source.Url;
                 playlist.EpgLastUpdated = DateTime.Now;
+                playlist.EpgLastError = null;
                 await _context.SaveChangesAsync();
                 System.Diagnostics.Debug.WriteLine($"[PlaylistService] RefreshEpg success: {source.Type} (+{afterCount - beforeCount})");
                 return;
             }
             catch (Exception ex)
             {
+                lastError = $"{source.Type}: {ex.Message}";
                 System.Diagnostics.Debug.WriteLine($"[PlaylistService] RefreshEpg failed: {source.Type} - {ex.Message}");
             }
         }
+
+        playlist.EpgLastError = string.IsNullOrWhiteSpace(lastError)
+            ? "EPG kaynaklarindan veri alinamadi."
+            : lastError;
+        await _context.SaveChangesAsync();
     }
 
     private static string? NormalizeEpgUrl(string? url)
@@ -552,5 +588,7 @@ public class PlaylistService : IPlaylistService
         return null;
     }
 }
+
+
 
 

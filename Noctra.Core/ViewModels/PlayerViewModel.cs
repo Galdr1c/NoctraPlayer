@@ -19,7 +19,7 @@ public partial class PlayerViewModel : ObservableObject
     private const double SkipAggregationWindowMs = 1200;
     private const double SkipSeekCarryWindowMs = 1400;
     private const double SkipSeekCarryToleranceSeconds = 2.0;
-    private const double SeekBufferShieldSuppressionMs = 2800;
+    private const double SeekBufferShieldSuppressionMs = 5000;
     private const double EpisodeCompletedPercentThreshold = 90.0;
     private static readonly double EpisodeCompletedTailSeconds = TimeSpan.FromMinutes(3).TotalSeconds;
 
@@ -1570,6 +1570,8 @@ public partial class PlayerViewModel : ObservableObject
             return;
         }
 
+        EnableSeekBufferShieldSuppression();
+
         var nowUtc = DateTime.UtcNow;
         var basePosition = Position;
         if (_hasPendingSkipSeekTarget && nowUtc <= _pendingSkipSeekExpiresUtc)
@@ -1775,6 +1777,14 @@ public partial class PlayerViewModel : ObservableObject
     private void CancelSeekBufferShieldSuppression()
     {
         _suppressBufferShieldForSeek = false;
+        
+        // Safety check: If we are still buffering after the timeout and it's not live content,
+        // force clear the buffering state to avoid getting stuck on black screen.
+        if (IsBuffering && !IsLiveContent)
+        {
+            IsBuffering = false;
+        }
+
         OnPropertyChanged(nameof(IsBufferShieldVisible));
     }
 

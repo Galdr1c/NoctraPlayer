@@ -371,7 +371,22 @@ public partial class SettingsViewModel : ObservableObject
                 .Select(p => p.EpgLastUpdated)
                 .FirstOrDefaultAsync();
 
-            EpgLastError = _epgService.LastError;
+            var profileId = _mainViewModel.CurrentProfile?.Id;
+            var errorQuery = db.Playlists.AsNoTracking().Where(p => p.IsActive && !string.IsNullOrWhiteSpace(p.EpgLastError));
+            if (profileId.HasValue)
+            {
+                errorQuery = errorQuery.Where(p => p.ProfileId == profileId.Value);
+            }
+
+            EpgLastError = await errorQuery
+                .OrderByDescending(p => p.EpgLastUpdated ?? p.LastUpdated ?? p.CreatedAt)
+                .Select(p => p.EpgLastError)
+                .FirstOrDefaultAsync();
+
+            if (string.IsNullOrWhiteSpace(EpgLastError))
+            {
+                EpgLastError = _epgService.LastError;
+            }
             
             if (!string.IsNullOrEmpty(EpgLastError))
             {

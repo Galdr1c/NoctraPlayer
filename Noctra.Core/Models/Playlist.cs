@@ -18,6 +18,7 @@ public class Playlist
     public string? EpgUrl { get; set; }
     public string? DetectedCountry { get; set; }
     public DateTime? EpgLastUpdated { get; set; }
+    public string? EpgLastError { get; set; }
 
     public int? ProfileId { get; set; }
     public Profile? Profile { get; set; }

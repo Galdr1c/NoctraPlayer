@@ -12,6 +12,9 @@ public partial class AddProfileViewModel : ObservableObject
 {
     private const string StalkerMacPrefix = "00:1A:79:";
     private const string ProfilesLimitKey = "profiles";
+    private static readonly System.Text.RegularExpressions.Regex StalkerMacRegex = new(
+        "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$",
+        System.Text.RegularExpressions.RegexOptions.Compiled);
     private readonly AppDbContext _context;
     private readonly IDispatcherService _dispatcherService;
     private readonly IAvatarService _avatarService;
@@ -199,6 +202,7 @@ public partial class AddProfileViewModel : ObservableObject
             _isUpdatingUrl = true;
             Username = StalkerMacPrefix + NormalizeStalkerMacSuffix(suffix);
             _isUpdatingUrl = false;
+            UpdateStalkerMacValidation(Username);
             return;
         }
         
@@ -284,7 +288,35 @@ public partial class AddProfileViewModel : ObservableObject
             _isUpdatingUrl = true;
             Username = StalkerMacPrefix;
             _isUpdatingUrl = false;
+            UpdateStalkerMacValidation(Username);
+            return;
         }
+
+        if (!string.Equals(UrlError, "MAC adresi gecersiz. Ornek: 00:1A:79:AA:BB:CC", StringComparison.Ordinal) &&
+            !string.Equals(UrlError, "Stalker Portal icin MAC adresi gereklidir", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        UrlError = null;
+    }
+
+    private void UpdateStalkerMacValidation(string currentUsername)
+    {
+        if (!IsStalker)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(currentUsername))
+        {
+            UrlError = "Stalker Portal icin MAC adresi gereklidir";
+            return;
+        }
+
+        UrlError = StalkerMacRegex.IsMatch(currentUsername.Trim())
+            ? null
+            : "MAC adresi gecersiz. Ornek: 00:1A:79:AA:BB:CC";
     }
 
     private static string NormalizeStalkerMacSuffix(string? input)
@@ -536,11 +568,7 @@ public partial class AddProfileViewModel : ObservableObject
                 return false;
             }
 
-            var macRegex = new System.Text.RegularExpressions.Regex(
-                "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$",
-                System.Text.RegularExpressions.RegexOptions.Compiled);
-
-            if (!macRegex.IsMatch(Username.Trim()))
+            if (!StalkerMacRegex.IsMatch(Username.Trim()))
             {
                 UrlError = "MAC adresi gecersiz. Ornek: 00:1A:79:AA:BB:CC";
                 return false;
