@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<Profile> Profiles { get; set; }
     public DbSet<ProviderAccount> ProviderAccounts { get; set; }
     public DbSet<WatchHistory> WatchHistories { get; set; }
+    public DbSet<DownloadItem> DownloadItems { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
@@ -126,6 +127,16 @@ public class AppDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.EpisodeId)
                   .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<DownloadItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.DisplayName).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.SourceUrl).IsRequired();
+            entity.HasIndex(e => e.ProfileId);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => new { e.ProfileId, e.Status, e.CreatedAt });
         });
     }
 }

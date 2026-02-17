@@ -235,32 +235,50 @@
                     </StackPanel>
 
                     <!-- Right: Options -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal">
-                        <Button Command="{Binding OpenEpisodesCommand}"
-                                Content="B&#246;l&#252;mler" Margin="0,0,16,0"
-                                IsVisible="{Binding IsSeriesContent}"/>
+                    <StackPanel Grid.Column="2" Spacing="8" HorizontalAlignment="Right">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Command="{Binding OpenEpisodesCommand}"
+                                    Content="B&#246;l&#252;mler" Margin="0,0,16,0"
+                                    IsVisible="{Binding IsSeriesContent}"/>
 
-                        <Button Command="{Binding PlayNextEpisodeCommand}"
-                                Content="S&#305;radaki B&#246;l&#252;m" Margin="0,0,24,0"
-                                IsVisible="{Binding IsSeriesContent}"/>
+                            <Button Command="{Binding PlayNextEpisodeCommand}"
+                                    Content="S&#305;radaki B&#246;l&#252;m" Margin="0,0,24,0"
+                                    IsVisible="{Binding IsSeriesContent}"/>
 
-                        <Button Command="{Binding OpenInfoPanelCommand}" Margin="0,0,16,0">
-                            <materialIcons:MaterialIcon Kind="InformationOutline" Width="18" Height="18" Foreground="White"/>
-                        </Button>
-                        <Button Command="{Binding OpenAudioSettingsCommand}" Margin="0,0,16,0">
-                            <materialIcons:MaterialIcon Kind="Music" Width="18" Height="18" Foreground="White"/>
-                        </Button>
-                        <Button Command="{Binding OpenQualitySettingsCommand}" Margin="0,0,16,0">
-                            <materialIcons:MaterialIcon Kind="CogOutline" Width="18" Height="18" Foreground="White"/>
-                        </Button>
-                        <Button Command="{Binding ToggleFullScreenCommand}">
-                            <Grid>
-                                <materialIcons:MaterialIcon Kind="Fullscreen" Width="18" Height="18" Foreground="White"
-                                                            IsVisible="{Binding IsFullScreen, Converter={StaticResource InverseBoolConverter}}"/>
-                                <materialIcons:MaterialIcon Kind="FullscreenExit" Width="18" Height="18" Foreground="White"
-                                                            IsVisible="{Binding IsFullScreen}"/>
-                            </Grid>
-                        </Button>
+                            <Button Command="{Binding DownloadCurrentContentCommand}"
+                                    IsVisible="{Binding CanShowDownloadButton}"
+                                    IsEnabled="{Binding CanDownloadCurrentContent}"
+                                    Margin="0,0,16,0">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <materialIcons:MaterialIcon Kind="Download" Width="18" Height="18" Foreground="White"/>
+                                    <TextBlock Text="{Binding DownloadButtonText}" Foreground="White" FontSize="13" FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button Command="{Binding OpenInfoPanelCommand}" Margin="0,0,16,0">
+                                <materialIcons:MaterialIcon Kind="InformationOutline" Width="18" Height="18" Foreground="White"/>
+                            </Button>
+                            <Button Command="{Binding OpenAudioSettingsCommand}" Margin="0,0,16,0">
+                                <materialIcons:MaterialIcon Kind="Music" Width="18" Height="18" Foreground="White"/>
+                            </Button>
+                            <Button Command="{Binding OpenQualitySettingsCommand}" Margin="0,0,16,0">
+                                <materialIcons:MaterialIcon Kind="CogOutline" Width="18" Height="18" Foreground="White"/>
+                            </Button>
+                            <Button Command="{Binding ToggleFullScreenCommand}">
+                                <Grid>
+                                    <materialIcons:MaterialIcon Kind="Fullscreen" Width="18" Height="18" Foreground="White"
+                                                                IsVisible="{Binding IsFullScreen, Converter={StaticResource InverseBoolConverter}}"/>
+                                    <materialIcons:MaterialIcon Kind="FullscreenExit" Width="18" Height="18" Foreground="White"
+                                                                IsVisible="{Binding IsFullScreen}"/>
+                                </Grid>
+                            </Button>
+                        </StackPanel>
+
+                        <TextBlock Text="{Binding DownloadStatusMessage}"
+                                   HorizontalAlignment="Right"
+                                   Foreground="#D9FFFFFF"
+                                   FontSize="12"
+                                   IsVisible="{Binding DownloadStatusMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
                     </StackPanel>
                 </Grid>
             </Grid>

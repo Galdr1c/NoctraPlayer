@@ -40,6 +40,7 @@ public partial class MainViewModel : ObservableObject
     private readonly Microsoft.Extensions.DependencyInjection.IServiceScopeFactory _scopeFactory;
     private readonly ISettingsService _settingsService;
     private readonly IMetadataService _metadataService;
+    private readonly IContentDownloadService _contentDownloadService;
     private readonly ILogger<MainViewModel>? _logger;
 
     [ObservableProperty]
@@ -156,6 +157,7 @@ public partial class MainViewModel : ObservableObject
         IServiceProvider serviceProvider,
         Microsoft.Extensions.DependencyInjection.IServiceScopeFactory scopeFactory,
         ISettingsService settingsService,
+        IContentDownloadService contentDownloadService,
         IMetadataService metadataService,
         IDispatcherService dispatcherService,
         WatermarkViewModel watermarkViewModel,
@@ -164,11 +166,26 @@ public partial class MainViewModel : ObservableObject
         _serviceProvider = serviceProvider;
         _scopeFactory = scopeFactory;
         _settingsService = settingsService;
+        _contentDownloadService = contentDownloadService;
         _metadataService = metadataService;
         _dispatcherService = dispatcherService;
         _logger = logger;
         WatermarkViewModel = watermarkViewModel;
         _settingsService.SettingsChanged += ApplyRefreshSchedulesFromSettings;
+        _contentDownloadService.DownloadsChanged += (_, _) =>
+        {
+            _dispatcherService.BeginInvoke(() =>
+            {
+                if (CurrentProfileId.HasValue)
+                {
+                    _ = RefreshDownloadsFromServiceAsync(CurrentProfileId.Value);
+                    if (ActiveView == AppView.Downloads && !IsDownloadCenterVisible)
+                    {
+                        ScheduleDownloadsLandingRefresh(CurrentProfileId.Value);
+                    }
+                }
+            });
+        };
     }
 
     public Task InitializeAsync()
@@ -683,10 +700,21 @@ public partial class MainViewModel : ObservableObject
         if (normalized.StartsWith("file://", StringComparison.OrdinalIgnoreCase) ||
             normalized.StartsWith(@"\\", StringComparison.Ordinal))
         {
-            return true;
+            if (normalized.StartsWith("file://", StringComparison.OrdinalIgnoreCase) &&
+                Uri.TryCreate(normalized, UriKind.Absolute, out var fileUri))
+            {
+                return File.Exists(fileUri.LocalPath);
+            }
+
+            return File.Exists(normalized);
         }
 
-        return Regex.IsMatch(normalized, @"^[a-zA-Z]:[\\/]");
+        if (!Regex.IsMatch(normalized, @"^[a-zA-Z]:[\\/]"))
+        {
+            return false;
+        }
+
+        return File.Exists(normalized);
     }
 
     private static bool SeriesHasDownloadedEpisode(Series series)
@@ -712,6 +740,60 @@ public partial class MainViewModel : ObservableObject
         return false;
     }
 
+    private static Series BuildDownloadedOnlySeries(Series series)
+    {
+        var filteredSeasons = series.Seasons
+            .OrderBy(s => s.SeasonNumber)
+            .Select(season => new Season
+            {
+                Id = season.Id,
+                SeasonNumber = season.SeasonNumber,
+                Name = season.Name,
+                CoverUrl = season.CoverUrl,
+                SeriesId = season.SeriesId,
+                Episodes = season.Episodes
+                    .Where(e => IsDownloadedStreamUrl(e.StreamUrl))
+                    .OrderBy(e => e.EpisodeNumber)
+                    .GroupBy(e => e.Id > 0 ? $"id:{e.Id}" : $"url:{e.StreamUrl}")
+                    .Select(g => g.First())
+                    .Select(e => new Episode
+                    {
+                        Id = e.Id,
+                        EpisodeNumber = e.EpisodeNumber,
+                        Name = e.Name,
+                        StreamUrl = e.StreamUrl,
+                        Plot = e.Plot,
+                        CoverUrl = e.CoverUrl,
+                        Duration = e.Duration,
+                        LastWatched = e.LastWatched,
+                        WatchedPosition = e.WatchedPosition,
+                        SeasonId = e.SeasonId,
+                        IntroStartSec = e.IntroStartSec,
+                        IntroEndSec = e.IntroEndSec,
+                        CreditsStartSec = e.CreditsStartSec,
+                        IsCompleted = e.IsCompleted
+                    })
+                    .ToList()
+            })
+            .Where(s => s.Episodes.Count > 0)
+            .ToList();
+
+        return new Series
+        {
+            Id = series.Id,
+            Name = series.Name,
+            CoverUrl = series.CoverUrl,
+            Plot = series.Plot,
+            Genre = series.Genre,
+            ReleaseYear = series.ReleaseYear,
+            Rating = series.Rating,
+            PlaylistId = series.PlaylistId,
+            IsInMyList = series.IsInMyList,
+            IsFavorite = series.IsFavorite,
+            Seasons = filteredSeasons
+        };
+    }
+
     private async Task LoadFavoritesAsync()
     {
         await RefreshPersonalListsFromDatabaseAsync();
@@ -719,6 +801,8 @@ public partial class MainViewModel : ObservableObject
 
     private CancellationTokenSource? _filterCts;
     private CancellationTokenSource? _searchCts;
+    private CancellationTokenSource? _downloadsLandingRefreshCts;
+    private int _isDownloadsLandingRefreshing;
     private readonly int _filterDelayMs = 300;
     private readonly int _searchDelayMs = 200;
     private int _currentPage;
@@ -742,6 +826,7 @@ public partial class MainViewModel : ObservableObject
     private int _isManualRefreshRunning;
     private readonly Dictionary<int, DateTime> _playlistNoChangeUntilUtc = new();
     private bool _suppressFilterRefresh;
+    private bool _seriesDetailDownloadedOnlyMode;
 
     private void ResetIncrementalState()
     {
@@ -1924,6 +2009,24 @@ public partial class MainViewModel : ObservableObject
     private List<Channel> _downloadedVodChannels = new();
 
     [ObservableProperty]
+    private List<DownloadItem> _activeDownloadItems = new();
+
+    [ObservableProperty]
+    private List<DownloadItem> _activeDownloadingItems = new();
+
+    [ObservableProperty]
+    private List<DownloadItem> _queuedDownloadItems = new();
+
+    [ObservableProperty]
+    private int _activeDownloadCount;
+
+    [ObservableProperty]
+    private string _activeDownloadsTotalSpeedText = "0 B/sn";
+
+    [ObservableProperty]
+    private string _downloadFreeDiskSpaceText = "-";
+
+    [ObservableProperty]
     private List<Channel> _searchLiveChannels = new();
 
     [ObservableProperty]
@@ -1963,6 +2066,11 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _showDownloadsEmptyState = true;
 
+    [ObservableProperty]
+    private bool _isDownloadCenterVisible;
+
+    public bool ShowDownloadsLandingEmptyState => !IsDownloadCenterVisible && ShowDownloadsEmptyState;
+
     [RelayCommand]
     private void Navigate(AppView view)
     {
@@ -1976,6 +2084,11 @@ public partial class MainViewModel : ObservableObject
         }
 
         ActiveView = view;
+        if (view != AppView.Downloads)
+        {
+            _seriesDetailDownloadedOnlyMode = false;
+        }
+
         if (view == AppView.Live) SelectedChannelType = ChannelType.Live;
         else if (view == AppView.Movies) SelectedChannelType = ChannelType.VOD;
         else if (view == AppView.Series) SelectedChannelType = ChannelType.Series;
@@ -2025,6 +2138,7 @@ public partial class MainViewModel : ObservableObject
             SelectedChannelType = null;
             SelectedGroup = null;
             ShowOnlyFavorites = false;
+            IsDownloadCenterVisible = false;
             UpdateDownloadedItems();
             _ = RefreshDownloadedItemsFromDatabaseAsync();
         }
@@ -2166,16 +2280,19 @@ public partial class MainViewModel : ObservableObject
 
             DownloadedSeriesItems = seriesMap.Values
                 .Where(SeriesHasDownloadedEpisode)
+                .Select(BuildDownloadedOnlySeries)
                 .OrderBy(s => s.Name)
                 .ToList();
 
-            ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 && DownloadedSeriesItems.Count == 0;
+            ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
+                                      DownloadedSeriesItems.Count == 0;
         }
         catch (Exception ex)
         {
             _logger?.LogDebug($"UpdateDownloadedItems failed: {ex}");
             DownloadedVodChannels = new List<Channel>();
             DownloadedSeriesItems = new List<Series>();
+            ActiveDownloadItems = new List<DownloadItem>();
             ShowDownloadsEmptyState = true;
         }
     }
@@ -2186,6 +2303,10 @@ public partial class MainViewModel : ObservableObject
         {
             DownloadedVodChannels = new List<Channel>();
             DownloadedSeriesItems = new List<Series>();
+            ActiveDownloadItems = new List<DownloadItem>();
+            ActiveDownloadingItems = new List<DownloadItem>();
+            QueuedDownloadItems = new List<DownloadItem>();
+            SetDownloadCenterSummaryEmpty();
             ShowDownloadsEmptyState = true;
             return;
         }
@@ -2198,7 +2319,9 @@ public partial class MainViewModel : ObservableObject
         {
             DownloadedVodChannels = new List<Channel>();
             DownloadedSeriesItems = new List<Series>();
-            ShowDownloadsEmptyState = true;
+            await RefreshDownloadsFromServiceAsync(CurrentProfileId.Value);
+            ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
+                                     DownloadedSeriesItems.Count == 0;
             return;
         }
 
@@ -2222,9 +2345,314 @@ public partial class MainViewModel : ObservableObject
 
         DownloadedSeriesItems = seriesCandidates
             .Where(SeriesHasDownloadedEpisode)
+            .Select(BuildDownloadedOnlySeries)
             .ToList();
 
-        ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 && DownloadedSeriesItems.Count == 0;
+        var existingDownloadedEpisodeUrls = new HashSet<string>(
+            DownloadedSeriesItems
+                .SelectMany(s => s.Seasons)
+                .SelectMany(sn => sn.Episodes)
+                .Select(ep => ep.StreamUrl)
+                .Where(url => !string.IsNullOrWhiteSpace(url)),
+            StringComparer.OrdinalIgnoreCase);
+
+        var completedSeriesDownloads = await db.DownloadItems
+            .AsNoTracking()
+            .Where(d => d.ProfileId == CurrentProfileId.Value &&
+                        d.ChannelType == ChannelType.Series &&
+                        d.Status == DownloadStatus.Completed &&
+                        !string.IsNullOrWhiteSpace(d.LocalEncryptedPath))
+            .OrderBy(d => d.CreatedAt)
+            .ToListAsync();
+
+        var fallbackSeriesMap = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in completedSeriesDownloads)
+        {
+            if (string.IsNullOrWhiteSpace(item.LocalEncryptedPath) || !File.Exists(item.LocalEncryptedPath))
+            {
+                continue;
+            }
+
+            if (existingDownloadedEpisodeUrls.Contains(item.LocalEncryptedPath))
+            {
+                continue;
+            }
+
+            var seriesName = ExtractSeriesBaseName(item.DisplayName);
+            var seriesKey = $"{item.PlaylistId}|{NormalizeFuzzyText(seriesName)}";
+            if (!fallbackSeriesMap.TryGetValue(seriesKey, out var series))
+            {
+                series = new Series
+                {
+                    Name = seriesName,
+                    CoverUrl = item.PosterUrl,
+                    PlaylistId = item.PlaylistId
+                };
+                fallbackSeriesMap[seriesKey] = series;
+            }
+
+            var parsed = ParseEpisodeNumbers(item.DisplayName);
+            var season = series.Seasons.FirstOrDefault(s => s.SeasonNumber == parsed.SeasonNumber);
+            if (season == null)
+            {
+                season = new Season
+                {
+                    SeasonNumber = parsed.SeasonNumber,
+                    Name = $"Sezon {parsed.SeasonNumber}",
+                    CoverUrl = item.PosterUrl
+                };
+                series.Seasons.Add(season);
+            }
+
+            if (season.Episodes.Any(e => string.Equals(e.StreamUrl, item.LocalEncryptedPath, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            var episodeNumber = parsed.EpisodeNumber > 0 ? parsed.EpisodeNumber : season.Episodes.Count + 1;
+            season.Episodes.Add(new Episode
+            {
+                EpisodeNumber = episodeNumber,
+                Name = item.DisplayName,
+                StreamUrl = item.LocalEncryptedPath,
+                CoverUrl = item.PosterUrl
+            });
+        }
+
+        if (fallbackSeriesMap.Count > 0)
+        {
+            foreach (var series in fallbackSeriesMap.Values)
+            {
+                series.Seasons = series.Seasons
+                    .OrderBy(s => s.SeasonNumber)
+                    .Select(s =>
+                    {
+                        s.Episodes = s.Episodes.OrderBy(e => e.EpisodeNumber).ToList();
+                        return s;
+                    })
+                    .ToList();
+            }
+
+            DownloadedSeriesItems = DownloadedSeriesItems
+                .Concat(fallbackSeriesMap.Values)
+                .OrderBy(s => s.Name)
+                .ToList();
+        }
+
+        await RefreshDownloadsFromServiceAsync(CurrentProfileId.Value);
+        ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
+                                 DownloadedSeriesItems.Count == 0;
+    }
+
+    private async Task RefreshDownloadsFromServiceAsync(int profileId)
+    {
+        try
+        {
+            var downloads = await _contentDownloadService.GetDownloadsAsync(profileId);
+            var allActive = downloads
+                .Where(d => d.IsActive)
+                .OrderByDescending(d => d.CreatedAt)
+                .ToList();
+
+            ActiveDownloadItems = allActive
+                .Select((d, index) =>
+                {
+                    d.QueueOrder = index + 1;
+                    return d;
+                })
+                .ToList();
+
+            ActiveDownloadingItems = allActive
+                .Where(d => d.Status == DownloadStatus.Downloading || d.Status == DownloadStatus.Paused)
+                .OrderBy(d => d.Status == DownloadStatus.Paused ? 1 : 0)
+                .ThenBy(d => d.CreatedAt)
+                .ToList();
+
+            QueuedDownloadItems = allActive
+                .Where(d => d.Status == DownloadStatus.Queued)
+                .OrderBy(d => d.CreatedAt)
+                .ToList();
+            UpdateDownloadCenterSummary(profileId);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug($"RefreshDownloadsFromServiceAsync failed: {ex.Message}");
+            ActiveDownloadItems = new List<DownloadItem>();
+            ActiveDownloadingItems = new List<DownloadItem>();
+            QueuedDownloadItems = new List<DownloadItem>();
+            SetDownloadCenterSummaryEmpty();
+        }
+
+        ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
+                                 DownloadedSeriesItems.Count == 0;
+    }
+
+    private void SetDownloadCenterSummaryEmpty()
+    {
+        ActiveDownloadCount = 0;
+        ActiveDownloadsTotalSpeedText = "0 B/sn";
+        DownloadFreeDiskSpaceText = "-";
+        ActiveDownloadingItems = new List<DownloadItem>();
+        QueuedDownloadItems = new List<DownloadItem>();
+    }
+
+    private void UpdateDownloadCenterSummary(int profileId)
+    {
+        ActiveDownloadCount = ActiveDownloadingItems.Count;
+        var totalSpeed = ActiveDownloadItems
+            .Where(d => d.Status == DownloadStatus.Downloading)
+            .Sum(d => Math.Max(0, d.SpeedBytesPerSecond));
+        ActiveDownloadsTotalSpeedText = $"{FormatDownloadBytes((long)totalSpeed)}/sn";
+        DownloadFreeDiskSpaceText = ResolveDownloadFreeSpaceText(profileId);
+    }
+
+    private string ResolveDownloadFreeSpaceText(int profileId)
+    {
+        try
+        {
+            var rootFallback = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Noctra",
+                "Downloads");
+            var configured = _settingsService.Settings.DownloadPath;
+            var root = string.IsNullOrWhiteSpace(configured)
+                ? rootFallback
+                : configured.Trim().Trim('"');
+
+            if (!Path.IsPathFullyQualified(root))
+            {
+                root = rootFallback;
+            }
+
+            var profilePath = Path.Combine(root, $"profile_{profileId}");
+            Directory.CreateDirectory(profilePath);
+
+            var driveRoot = Path.GetPathRoot(profilePath);
+            if (string.IsNullOrWhiteSpace(driveRoot))
+            {
+                return "-";
+            }
+
+            var drive = new DriveInfo(driveRoot);
+            return $"{FormatDownloadBytes(drive.AvailableFreeSpace)} boş";
+        }
+        catch
+        {
+            return "-";
+        }
+    }
+
+    private static string FormatDownloadBytes(long bytes)
+    {
+        if (bytes <= 0)
+        {
+            return "0 B";
+        }
+
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        var value = (double)bytes;
+        var unitIndex = 0;
+        while (value >= 1024 && unitIndex < units.Length - 1)
+        {
+            value /= 1024;
+            unitIndex++;
+        }
+
+        return $"{value:0.##} {units[unitIndex]}";
+    }
+
+    private void ScheduleDownloadsLandingRefresh(int profileId)
+    {
+        _downloadsLandingRefreshCts?.Cancel();
+        _downloadsLandingRefreshCts?.Dispose();
+
+        var cts = new CancellationTokenSource();
+        _downloadsLandingRefreshCts = cts;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(900, cts.Token);
+                if (cts.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                if (Interlocked.Exchange(ref _isDownloadsLandingRefreshing, 1) == 1)
+                {
+                    return;
+                }
+
+                await _dispatcherService.InvokeAsync(async () =>
+                {
+                    if (CurrentProfileId != profileId ||
+                        ActiveView != AppView.Downloads ||
+                        IsDownloadCenterVisible)
+                    {
+                        return;
+                    }
+
+                    await RefreshDownloadedItemsFromDatabaseAsync();
+                });
+            }
+            catch (OperationCanceledException)
+            {
+                // no-op
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _isDownloadsLandingRefreshing, 0);
+            }
+        });
+    }
+
+    [RelayCommand]
+    private void ToggleDownloadCenter()
+    {
+        IsDownloadCenterVisible = !IsDownloadCenterVisible;
+    }
+
+    [RelayCommand]
+    private async Task CancelDownloadAsync(DownloadItem? item)
+    {
+        if (item == null || item.Id <= 0)
+        {
+            return;
+        }
+
+        await _contentDownloadService.CancelDownloadAsync(item.Id);
+    }
+
+    [RelayCommand]
+    private async Task TogglePauseDownloadAsync(DownloadItem? item)
+    {
+        if (item == null || item.Id <= 0)
+        {
+            return;
+        }
+
+        if (item.IsPaused)
+        {
+            await _contentDownloadService.ResumeDownloadAsync(item.Id);
+        }
+        else
+        {
+            await _contentDownloadService.PauseDownloadAsync(item.Id);
+        }
+    }
+
+    partial void OnIsDownloadCenterVisibleChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowDownloadsLandingEmptyState));
+        if (!value && CurrentProfileId.HasValue && ActiveView == AppView.Downloads)
+        {
+            ScheduleDownloadsLandingRefresh(CurrentProfileId.Value);
+        }
+    }
+
+    partial void OnShowDownloadsEmptyStateChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowDownloadsLandingEmptyState));
     }
 
     private async Task RefreshPersonalListsFromDatabaseAsync()
@@ -2239,10 +2667,20 @@ public partial class MainViewModel : ObservableObject
             HistoryVodChannels = new List<Channel>();
             DownloadedSeriesItems = new List<Series>();
             DownloadedVodChannels = new List<Channel>();
+            if (CurrentProfileId.HasValue)
+            {
+                await RefreshDownloadsFromServiceAsync(CurrentProfileId.Value);
+            }
+            else
+            {
+                ActiveDownloadItems = new List<DownloadItem>();
+                SetDownloadCenterSummaryEmpty();
+            }
             ShowMyListEmptyState = true;
             ShowFavoritesEmptyState = true;
             ShowHistoryEmptyState = true;
-            ShowDownloadsEmptyState = true;
+            ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
+                                     DownloadedSeriesItems.Count == 0;
             return;
         }
 
@@ -2262,10 +2700,12 @@ public partial class MainViewModel : ObservableObject
             HistoryVodChannels = new List<Channel>();
             DownloadedSeriesItems = new List<Series>();
             DownloadedVodChannels = new List<Channel>();
+            await RefreshDownloadsFromServiceAsync(CurrentProfileId.Value);
             ShowMyListEmptyState = true;
             ShowFavoritesEmptyState = true;
             ShowHistoryEmptyState = true;
-            ShowDownloadsEmptyState = true;
+            ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
+                                     DownloadedSeriesItems.Count == 0;
             return;
         }
 
@@ -3108,6 +3548,7 @@ public partial class MainViewModel : ObservableObject
     private void CloseSeriesDetail()
     {
         IsSeriesDetailVisible = false;
+        _seriesDetailDownloadedOnlyMode = false;
         SelectedSeries = null;
         SelectedSeriesPosterUrl = null;
         SelectedSeriesBackdropUrl = null;
@@ -3180,6 +3621,13 @@ public partial class MainViewModel : ObservableObject
             {
                 _logger?.LogDebug($"EnsureSeriesEpisodes failed: {ex.Message}");
             }
+
+            _seriesDetailDownloadedOnlyMode = ActiveView == AppView.Downloads;
+            if (_seriesDetailDownloadedOnlyMode)
+            {
+                selectedSeries = BuildDownloadedOnlySeries(selectedSeries);
+            }
+
             SelectedSeries = selectedSeries;
             IsSeriesDetailVisible = true;
             StatusMessage = $"Seçildi: {selectedSeries.Name}";
@@ -3203,6 +3651,19 @@ public partial class MainViewModel : ObservableObject
         var normalized = SeriesEpisodeRegex.Replace(query, " ");
         normalized = Regex.Replace(normalized, @"\s+", " ").Trim();
         return normalized.ToLowerInvariant();
+    }
+
+    private static string ExtractSeriesBaseName(string? displayName)
+    {
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            return "Dizi";
+        }
+
+        var normalized = SeriesEpisodeRegex.Replace(displayName, " ");
+        normalized = Regex.Replace(normalized, @"[\-._]+", " ");
+        normalized = Regex.Replace(normalized, @"\s+", " ").Trim();
+        return string.IsNullOrWhiteSpace(normalized) ? displayName.Trim() : normalized;
     }
 
     private static bool SeriesMatchesSearch(Series series, string rawQuery, string normalizedQuery)

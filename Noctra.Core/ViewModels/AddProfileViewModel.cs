@@ -23,6 +23,7 @@ public partial class AddProfileViewModel : ObservableObject
     private readonly IM3UParser _m3uParser;
     private readonly IXtreamCodesService _xtreamCodesService;
     private readonly IStalkerPortalService _stalkerPortalService;
+    private readonly IContentDownloadService _contentDownloadService;
 
     // Simplified Account Details
     [ObservableProperty]
@@ -457,7 +458,8 @@ public partial class AddProfileViewModel : ObservableObject
         ILicenseService licenseService,
         IM3UParser m3uParser,
         IXtreamCodesService xtreamCodesService,
-        IStalkerPortalService stalkerPortalService)
+        IStalkerPortalService stalkerPortalService,
+        IContentDownloadService contentDownloadService)
     {
         _context = context;
         _dispatcherService = dispatcherService;
@@ -467,6 +469,7 @@ public partial class AddProfileViewModel : ObservableObject
         _m3uParser = m3uParser;
         _xtreamCodesService = xtreamCodesService;
         _stalkerPortalService = stalkerPortalService;
+        _contentDownloadService = contentDownloadService;
 
         // Initialize with default avatar
         var avatars = _avatarService.GetAvatarsByCategory().Values.FirstOrDefault();
@@ -544,6 +547,8 @@ public partial class AddProfileViewModel : ObservableObject
 
             var hasOtherProfiles = await _context.Profiles
                 .AnyAsync(p => p.ProviderAccountId == providerAccountId && p.Id != profileId);
+
+            await _contentDownloadService.DeleteProfileDownloadsAsync(profileId);
 
             await using var transaction = await _context.Database.BeginTransactionAsync();
 

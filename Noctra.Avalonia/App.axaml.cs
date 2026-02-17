@@ -128,6 +128,7 @@ public partial class App : Application
         services.AddScoped<IWatchHistoryService, WatchHistoryService>();
         services.AddSingleton<IAvatarService, AvatarService>();
         services.AddSingleton<ISettingsService, SettingsService>();
+        services.AddSingleton<IContentDownloadService, ContentDownloadService>();
         services.AddSingleton<ILicenseService, LicenseService>();
         services.AddSingleton<LanguageDetectionService>();
         services.AddSingleton<EpgSourceResolver>();
@@ -218,6 +219,39 @@ public partial class App : Application
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN IntroEndSec REAL;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN CreditsStartSec REAL;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN IsFavorite INTEGER NOT NULL DEFAULT 0;"); } catch { }
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync(@"
+CREATE TABLE IF NOT EXISTS DownloadItems (
+    Id INTEGER NOT NULL CONSTRAINT PK_DownloadItems PRIMARY KEY AUTOINCREMENT,
+    ProfileId INTEGER NOT NULL,
+    PlaylistId INTEGER NOT NULL DEFAULT 0,
+    ChannelId INTEGER NULL,
+    EpisodeId INTEGER NULL,
+    ChannelType INTEGER NOT NULL DEFAULT 1,
+    DisplayName TEXT NOT NULL,
+    PosterUrl TEXT NULL,
+    SourceUrl TEXT NOT NULL,
+    LocalEncryptedPath TEXT NULL,
+    TempFilePath TEXT NULL,
+    AudioTracksJson TEXT NULL,
+    SubtitleTracksJson TEXT NULL,
+    Status INTEGER NOT NULL DEFAULT 0,
+    BytesDownloaded INTEGER NOT NULL DEFAULT 0,
+    BytesTotal INTEGER NULL,
+    SpeedBytesPerSecond REAL NOT NULL DEFAULT 0,
+    EstimatedSecondsRemaining INTEGER NULL,
+    ErrorMessage TEXT NULL,
+    CreatedAt TEXT NOT NULL,
+    UpdatedAt TEXT NOT NULL,
+    CompletedAt TEXT NULL
+);");
+            await context.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_DownloadItems_ProfileId ON DownloadItems(ProfileId);");
+            await context.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_DownloadItems_Status ON DownloadItems(Status);");
+            await context.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_DownloadItems_ProfileStatusCreated ON DownloadItems(ProfileId, Status, CreatedAt);");
+            await context.Database.ExecuteSqlRawAsync("ALTER TABLE DownloadItems ADD COLUMN TempFilePath TEXT;");
+        }
+        catch { }
     }
 
     private static void ApplyApplicationLanguage(string? languageCode)

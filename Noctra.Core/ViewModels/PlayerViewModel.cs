@@ -37,6 +37,7 @@ public partial class PlayerViewModel : ObservableObject
     private readonly IVideoPlayerService _videoPlayerService;
     private readonly IEpgService _epgService;
     private readonly IMetadataService _metadataService;
+    private readonly IContentDownloadService _contentDownloadService;
     private int _playRequestVersion;
 
     [ObservableProperty]
@@ -178,6 +179,21 @@ public partial class PlayerViewModel : ObservableObject
     [ObservableProperty]
     private bool _isCreditsZone;
 
+    [ObservableProperty]
+    private bool _isDownloadInProgress;
+
+    [ObservableProperty]
+    private string _downloadStatusMessage = string.Empty;
+
+    public bool CanShowDownloadButton => CurrentChannel != null && !IsLiveContent;
+
+    public bool CanDownloadCurrentContent =>
+        CanShowDownloadButton &&
+        !IsDownloadInProgress &&
+        !string.IsNullOrWhiteSpace(CurrentChannel?.StreamUrl);
+
+    public string DownloadButtonText => IsDownloadInProgress ? "Indiriliyor..." : "Indir";
+
     private Episode? _currentEpisode;
     private bool _creditsTriggered;
     private bool _isUserSeeking;
@@ -207,6 +223,7 @@ public partial class PlayerViewModel : ObservableObject
     private int _seekShieldSuppressionToken;
     private Series? _currentSeriesContext;
     private bool _isContentTransitioning;
+    private int _isDownloadActionRunning;
     private readonly IDispatcherService _dispatcherService;
     private readonly IWatchHistoryService? _watchHistoryService;
     private readonly System.Timers.Timer _autoHideTimer;
@@ -218,12 +235,14 @@ public partial class PlayerViewModel : ObservableObject
         IVideoPlayerService videoPlayerService,
         IEpgService epgService,
         IMetadataService metadataService,
+        IContentDownloadService contentDownloadService,
         IDispatcherService dispatcherService,
         IWatchHistoryService? watchHistoryService = null)
     {
         _videoPlayerService = videoPlayerService;
         _epgService = epgService;
         _metadataService = metadataService;
+        _contentDownloadService = contentDownloadService;
         _dispatcherService = dispatcherService;
         _watchHistoryService = watchHistoryService;
 
@@ -376,6 +395,10 @@ public partial class PlayerViewModel : ObservableObject
 
     partial void OnCurrentChannelChanged(Channel? value)
     {
+        DownloadStatusMessage = string.Empty;
+        IsDownloadInProgress = false;
+        Interlocked.Exchange(ref _isDownloadActionRunning, 0);
+
         if (value != null)
         {
             CancelSeekBufferShieldSuppression();
@@ -400,6 +423,9 @@ public partial class PlayerViewModel : ObservableObject
 
         UpdateOverlaySecondaryText();
         OnPropertyChanged(nameof(HasCurrentProgramInfo));
+        OnPropertyChanged(nameof(CanShowDownloadButton));
+        OnPropertyChanged(nameof(CanDownloadCurrentContent));
+        DownloadCurrentContentCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnCurrentProgramChanged(EpgProgram? value)
@@ -418,6 +444,16 @@ public partial class PlayerViewModel : ObservableObject
     {
         UpdateOverlaySecondaryText();
         OnPropertyChanged(nameof(IsBufferShieldVisible));
+        OnPropertyChanged(nameof(CanShowDownloadButton));
+        OnPropertyChanged(nameof(CanDownloadCurrentContent));
+        DownloadCurrentContentCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnIsDownloadInProgressChanged(bool value)
+    {
+        OnPropertyChanged(nameof(DownloadButtonText));
+        OnPropertyChanged(nameof(CanDownloadCurrentContent));
+        DownloadCurrentContentCommand.NotifyCanExecuteChanged();
     }
 
     public async Task PlayChannelAsync(Channel channel)
@@ -437,7 +473,8 @@ public partial class PlayerViewModel : ObservableObject
         StreamInfo = "Kalite tespit ediliyor...";
         try
         {
-            await _videoPlayerService.PlayAsync(channel.StreamUrl);
+            var resolvedStreamUrl = await _contentDownloadService.ResolvePlayableUrlAsync(channel.StreamUrl);
+            await _videoPlayerService.PlayAsync(resolvedStreamUrl);
         }
         catch
         {
@@ -1295,6 +1332,7 @@ public partial class PlayerViewModel : ObservableObject
         CurrentChannel = null;
         CurrentProgram = null;
         IsVisible = true;
+        await _contentDownloadService.CleanupPlaybackCacheAsync();
     }
 
     partial void OnVolumeChanged(int value)
@@ -1405,6 +1443,8 @@ public partial class PlayerViewModel : ObservableObject
             EpisodesPanelTitle = string.Empty;
             PlayEpisodeFromOverlayCommand.NotifyCanExecuteChanged();
             PlayNextEpisodeCommand.NotifyCanExecuteChanged();
+            OnPropertyChanged(nameof(CanDownloadCurrentContent));
+            DownloadCurrentContentCommand.NotifyCanExecuteChanged();
             return;
         }
 
@@ -1425,6 +1465,8 @@ public partial class PlayerViewModel : ObservableObject
 
         PlayNextEpisodeCommand.NotifyCanExecuteChanged();
         PlayEpisodeFromOverlayCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(CanDownloadCurrentContent));
+        DownloadCurrentContentCommand.NotifyCanExecuteChanged();
     }
 
     private void TryShowNextEpisodePromptAtEnd()
@@ -1569,10 +1611,86 @@ public partial class PlayerViewModel : ObservableObject
         await Task.CompletedTask;
     }
 
+    [RelayCommand(CanExecute = nameof(CanDownloadCurrentContent))]
+    private async Task DownloadCurrentContentAsync()
+    {
+        if (CurrentChannel == null || !CanDownloadCurrentContent)
+        {
+            return;
+        }
+
+        if (Interlocked.Exchange(ref _isDownloadActionRunning, 1) == 1)
+        {
+            return;
+        }
+
+        IsDownloadInProgress = true;
+        DownloadStatusMessage = "Indirme baslatiliyor...";
+        RestartAutoHideTimer();
+
+        try
+        {
+            var request = BuildDownloadRequest(CurrentChannel);
+            var result = await _contentDownloadService.QueueDownloadAsync(request);
+            DownloadStatusMessage = result.Message;
+        }
+        catch (Exception ex)
+        {
+            DownloadStatusMessage = $"Indirme hatasi: {ex.Message}";
+        }
+        finally
+        {
+            IsDownloadInProgress = false;
+            Interlocked.Exchange(ref _isDownloadActionRunning, 0);
+        }
+    }
+
     [RelayCommand]
     private void SkipBackward(object? parameter)
     {
         ApplySkipDelta(-ParseSkipSeconds(parameter));
+    }
+
+    private DownloadContentRequest BuildDownloadRequest(Channel channel)
+    {
+        var profileId = CurrentProfileId ?? 0;
+        var playlistId = channel.PlaylistId > 0
+            ? channel.PlaylistId
+            : _currentSeriesContext?.PlaylistId ?? 0;
+        var audioTracks = AudioTracks
+            .Select(t => new DownloadTrackOption(t.Id, t.Name))
+            .ToList();
+        var subtitleTracks = SubtitleTracks
+            .Select(t => new DownloadTrackOption(t.Id, t.Name))
+            .ToList();
+        var poster = channel.CoverUrl ?? channel.LogoUrl;
+
+        if (channel.Type == ChannelType.Series)
+        {
+            return new DownloadContentRequest(
+                profileId,
+                DownloadItemType.SeriesEpisode,
+                _currentEpisode?.Name ?? channel.Name,
+                _currentEpisode?.StreamUrl ?? channel.StreamUrl,
+                poster,
+                playlistId,
+                channel.Id,
+                _currentEpisode?.Id ?? 0,
+                audioTracks,
+                subtitleTracks);
+        }
+
+        return new DownloadContentRequest(
+            profileId,
+            DownloadItemType.Vod,
+            channel.Name,
+            channel.StreamUrl,
+            poster,
+            playlistId,
+            channel.Id,
+            0,
+            audioTracks,
+            subtitleTracks);
     }
 
     private void ApplySkipDelta(double deltaSeconds)

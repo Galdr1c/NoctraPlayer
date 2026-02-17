@@ -16,6 +16,7 @@ public partial class ProfilesViewModel : ObservableObject
     private readonly AppDbContext _context;
     private readonly IDispatcherService _dispatcherService;
     private readonly ILicenseService _licenseService;
+    private readonly IContentDownloadService _contentDownloadService;
     
     [ObservableProperty]
     private ObservableCollection<Profile> _profiles = new();
@@ -32,12 +33,14 @@ public partial class ProfilesViewModel : ObservableObject
         AppDbContext context,
         IDialogService dialogService,
         IDispatcherService dispatcherService,
-        ILicenseService licenseService)
+        ILicenseService licenseService,
+        IContentDownloadService contentDownloadService)
     {
         _context = context;
         _dialogService = dialogService;
         _dispatcherService = dispatcherService;
         _licenseService = licenseService;
+        _contentDownloadService = contentDownloadService;
     }
 
     public void RefreshProfiles()
@@ -137,6 +140,8 @@ public partial class ProfilesViewModel : ObservableObject
             {
                 var hasOtherProfiles = await _context.Profiles
                     .AnyAsync(p => p.ProviderAccountId == providerAccountId && p.Id != profileId);
+
+                await _contentDownloadService.DeleteProfileDownloadsAsync(profileId);
 
                 await using var transaction = await _context.Database.BeginTransactionAsync();
 

@@ -285,7 +285,7 @@ public partial class SettingsViewModel : ObservableObject
         // Downloads
         SelectedDownloadQuality = (int)s.DownloadQuality;
         DownloadWifiOnly = s.DownloadWifiOnly;
-        DownloadPath = s.DownloadPath;
+        DownloadPath = NormalizeDownloadPath(s.DownloadPath);
         
         // Appearance
         IsDarkTheme = s.IsDarkTheme;
@@ -323,6 +323,7 @@ public partial class SettingsViewModel : ObservableObject
         // Downloads
         s.DownloadQuality = (DownloadQuality)SelectedDownloadQuality;
         s.DownloadWifiOnly = DownloadWifiOnly;
+        DownloadPath = NormalizeDownloadPath(DownloadPath);
         s.DownloadPath = DownloadPath;
         
         // Appearance
@@ -604,6 +605,30 @@ public partial class SettingsViewModel : ObservableObject
         var normalized = Math.Clamp(percent, 0, 100);
         RefreshProgressPercent = normalized;
         StatusMessage = $"[{scope}] {message} (%{normalized})";
+    }
+
+    private static string NormalizeDownloadPath(string? rawPath)
+    {
+        var fallback = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Noctra",
+            "Downloads");
+
+        var candidate = string.IsNullOrWhiteSpace(rawPath)
+            ? fallback
+            : rawPath.Trim().Trim('"');
+
+        try
+        {
+            var full = Path.GetFullPath(candidate);
+            Directory.CreateDirectory(full);
+            return full;
+        }
+        catch
+        {
+            Directory.CreateDirectory(fallback);
+            return Path.GetFullPath(fallback);
+        }
     }
 
     [RelayCommand]
