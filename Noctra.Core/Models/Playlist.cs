@@ -20,6 +20,11 @@ public class Playlist
     public DateTime? EpgLastUpdated { get; set; }
     public string? EpgLastError { get; set; }
 
+    // Source metadata cache for cheap "unchanged" checks before full M3U download.
+    public string? SourceEtag { get; set; }
+    public DateTime? SourceLastModified { get; set; }
+    public long? SourceContentLength { get; set; }
+
     public int? ProfileId { get; set; }
     public Profile? Profile { get; set; }
     

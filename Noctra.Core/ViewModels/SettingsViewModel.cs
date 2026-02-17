@@ -19,6 +19,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IThemeService _themeService;
     private readonly IServiceScopeFactory _scopeFactory;
     private CancellationTokenSource? _epgRefreshWatchCts;
+    private int _isRefreshOperationRunning;
 
     // ============ Oynatma Ayarları ============
     
@@ -92,6 +93,9 @@ public partial class SettingsViewModel : ObservableObject
     
     [ObservableProperty]
     private string _statusMessage = string.Empty;
+
+    [ObservableProperty]
+    private int _refreshProgressPercent;
     
     // ============ TMDB ============
     
@@ -144,8 +148,8 @@ public partial class SettingsViewModel : ObservableObject
         
         LoadSettings();
         LoadProfileInfo();
-        _ = ScanChannelListStatsAsync();
-        _ = ScanEpgStatsAsync();
+        _ = ScanChannelListStatsCoreAsync(updateStatusMessage: false);
+        _ = ScanEpgStatsCoreAsync(updateStatusMessage: false);
         _ = _mainViewModel.RefreshCurrentProfileExpirationAsync();
     }
 
@@ -166,13 +170,13 @@ public partial class SettingsViewModel : ObservableObject
                 }
             }
             LoadProfileInfo();
-            _ = ScanChannelListStatsAsync();
-            _ = ScanEpgStatsAsync();
+            _ = ScanChannelListStatsCoreAsync(updateStatusMessage: false);
+            _ = ScanEpgStatsCoreAsync(updateStatusMessage: false);
             _ = _mainViewModel.RefreshCurrentProfileExpirationAsync();
         }
         else if (e.PropertyName == nameof(MainViewModel.SelectedPlaylist))
         {
-            _ = ScanChannelListStatsAsync();
+            _ = ScanChannelListStatsCoreAsync(updateStatusMessage: false);
         }
     }
 
@@ -352,10 +356,17 @@ public partial class SettingsViewModel : ObservableObject
 
     [RelayCommand]
     private async Task ScanEpgStatsAsync()
+        => await ScanEpgStatsCoreAsync(updateStatusMessage: true);
+
+    private async Task ScanEpgStatsCoreAsync(bool updateStatusMessage)
     {
         try 
         {
-            StatusMessage = "İstatistikler okunuyor...";
+            if (updateStatusMessage)
+            {
+                StatusMessage = "[Istatistik] EPG verileri okunuyor...";
+            }
+
             await using var scope = _scopeFactory.CreateAsyncScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
@@ -389,26 +400,37 @@ public partial class SettingsViewModel : ObservableObject
                 EpgLastError = _epgService.LastError;
             }
             
-            if (!string.IsNullOrEmpty(EpgLastError))
+            if (updateStatusMessage && !string.IsNullOrEmpty(EpgLastError))
             {
-                StatusMessage = "EPG hatası bulundu";
+                StatusMessage = "[Istatistik] EPG hatasi bulundu";
             }
-            else
+            else if (updateStatusMessage)
             {
-                StatusMessage = "EPG istatistikleri güncellendi";
+                StatusMessage = "[Istatistik] EPG istatistikleri guncellendi";
             }
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Hata: {ex.Message}";
+            if (updateStatusMessage)
+            {
+                StatusMessage = $"[Istatistik] Hata: {ex.Message}";
+            }
         }
     }
 
     [RelayCommand]
     private async Task ScanChannelListStatsAsync()
+        => await ScanChannelListStatsCoreAsync(updateStatusMessage: true);
+
+    private async Task ScanChannelListStatsCoreAsync(bool updateStatusMessage)
     {
         try
         {
+            if (updateStatusMessage)
+            {
+                StatusMessage = "[Istatistik] Kanal listesi verileri okunuyor...";
+            }
+
             await using var scope = _scopeFactory.CreateAsyncScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
@@ -436,34 +458,70 @@ public partial class SettingsViewModel : ObservableObject
             {
                 ChannelListLastUpdated = null;
             }
+
+            if (updateStatusMessage)
+            {
+                StatusMessage = "[Istatistik] Kanal listesi istatistikleri guncellendi";
+            }
         }
         catch
         {
             ChannelListLastUpdated = null;
+            if (updateStatusMessage)
+            {
+                StatusMessage = "[Istatistik] Kanal listesi istatistikleri okunamadi";
+            }
         }
     }
 
     [RelayCommand]
     private async Task RefreshChannelListNowAsync()
     {
+        if (!TryBeginRefreshOperation("Kanal listesi yenileniyor"))
+        {
+            return;
+        }
+
         try
         {
-            StatusMessage = "Kanal listesi yenileniyor...";
+            SetProgressStatus("Kanal", 12, "Kanal listesi yenileniyor...");
             await _mainViewModel.RefreshSelectedPlaylistAsync();
-            await ScanChannelListStatsAsync();
-            StatusMessage = "Kanal listesi yenileme tamamlandı";
+            SetProgressStatus("Kanal", 72, "Kanal listesi verileri guncelleniyor...");
+            await ScanChannelListStatsCoreAsync(updateStatusMessage: false);
+            var resultMessage = _mainViewModel.StatusMessage;
+            if (string.IsNullOrWhiteSpace(resultMessage))
+            {
+                resultMessage = "Kanal listesi yenileme tamamlandi";
+            }
+
+            SetProgressStatus("Kanal", 100, resultMessage);
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Kanal listesi yenileme hatası: {ex.Message}";
+            SetProgressStatus("Kanal", RefreshProgressPercent, $"Kanal listesi yenileme hatasi: {ex.Message}");
+        }
+        finally
+        {
+            EndRefreshOperation();
         }
     }
 
     [RelayCommand]
     private Task RefreshEpgNowAsync()
     {
-        StatusMessage = "EPG yenileme arka planda başlatıldı...";
-        _mainViewModel.ForceRefreshEpgInBackground();
+        if (!TryBeginRefreshOperation("EPG yenileme baslatiliyor"))
+        {
+            return Task.CompletedTask;
+        }
+
+        SetProgressStatus("EPG", 8, "EPG yenileme arka planda baslatildi...");
+        var started = _mainViewModel.ForceRefreshEpgInBackground();
+        if (!started)
+        {
+            SetProgressStatus("EPG", 8, "Baska bir yenileme islemi zaten devam ediyor...");
+            EndRefreshOperation();
+            return Task.CompletedTask;
+        }
 
         _epgRefreshWatchCts?.Cancel();
         _epgRefreshWatchCts?.Dispose();
@@ -477,35 +535,75 @@ public partial class SettingsViewModel : ObservableObject
         var startedAt = DateTime.Now.AddSeconds(-2);
         var timeoutAt = DateTime.Now.AddMinutes(3);
 
-        while (!cancellationToken.IsCancellationRequested && DateTime.Now < timeoutAt)
+        try
         {
-            try
+            while (!cancellationToken.IsCancellationRequested && DateTime.Now < timeoutAt)
             {
-                await Task.Delay(1500, cancellationToken);
-                await ScanEpgStatsAsync();
-
-                if (!string.IsNullOrWhiteSpace(EpgLastError))
+                try
                 {
-                    StatusMessage = $"EPG yenileme hatasi: {EpgLastError}";
+                    await Task.Delay(1500, cancellationToken);
+                    await ScanEpgStatsCoreAsync(updateStatusMessage: false);
+                    var elapsed = DateTime.Now - startedAt;
+                    var dynamicPercent = Math.Min(95, 10 + (int)(elapsed.TotalSeconds / 2.0));
+                    if (dynamicPercent > RefreshProgressPercent)
+                    {
+                        SetProgressStatus("EPG", dynamicPercent, "EPG verileri isleniyor...");
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(EpgLastError))
+                    {
+                        SetProgressStatus("EPG", RefreshProgressPercent, $"EPG yenileme hatasi: {EpgLastError}");
+                        return;
+                    }
+
+                    if (LastEpgUpdate.HasValue && LastEpgUpdate.Value >= startedAt)
+                    {
+                        SetProgressStatus("EPG", 100, "EPG yenileme tamamlandi");
+                        return;
+                    }
+                }
+                catch (TaskCanceledException)
+                {
                     return;
                 }
-
-                if (LastEpgUpdate.HasValue && LastEpgUpdate.Value >= startedAt)
+                catch (Exception ex)
                 {
-                    StatusMessage = "EPG yenileme tamamlandi";
+                    SetProgressStatus("EPG", RefreshProgressPercent, $"EPG izleme hatasi: {ex.Message}");
                     return;
                 }
             }
-            catch (TaskCanceledException)
-            {
-                return;
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = $"EPG izleme hatasi: {ex.Message}";
-                return;
-            }
+
+            SetProgressStatus("EPG", RefreshProgressPercent, "EPG yenileme zaman asimina ugradi");
         }
+        finally
+        {
+            EndRefreshOperation();
+        }
+    }
+
+    private bool TryBeginRefreshOperation(string operationLabel)
+    {
+        if (Interlocked.Exchange(ref _isRefreshOperationRunning, 1) == 1)
+        {
+            StatusMessage = $"[Yenileme] Baska bir islem devam ediyor. Once mevcut yenilemenin bitmesini bekleyin.";
+            return false;
+        }
+
+        RefreshProgressPercent = 0;
+        StatusMessage = $"[Yenileme] {operationLabel}";
+        return true;
+    }
+
+    private void EndRefreshOperation()
+    {
+        Interlocked.Exchange(ref _isRefreshOperationRunning, 0);
+    }
+
+    private void SetProgressStatus(string scope, int percent, string message)
+    {
+        var normalized = Math.Clamp(percent, 0, 100);
+        RefreshProgressPercent = normalized;
+        StatusMessage = $"[{scope}] {message} (%{normalized})";
     }
 
     [RelayCommand]

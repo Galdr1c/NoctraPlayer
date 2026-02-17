@@ -693,6 +693,8 @@ public partial class MainViewModel : ObservableObject
     private int _isManualEpgRefreshRunning;
     private int _isRefreshingPlaylist;
     private int _isAddingPlaylist;
+    private int _isManualRefreshRunning;
+    private readonly Dictionary<int, DateTime> _playlistNoChangeUntilUtc = new();
     private bool _suppressFilterRefresh;
 
     private void ResetIncrementalState()
@@ -1273,6 +1275,15 @@ public partial class MainViewModel : ObservableObject
     {
         if (SelectedPlaylist == null) return;
 
+        if (!isBackground &&
+            _playlistNoChangeUntilUtc.TryGetValue(SelectedPlaylist.Id, out var noChangeUntil) &&
+            noChangeUntil > DateTime.UtcNow)
+        {
+            StatusMessage = "Kanal listesi zaten guncel";
+            await TouchPlaylistLastUpdatedAsync(SelectedPlaylist.Id);
+            return;
+        }
+
         if (Interlocked.Exchange(ref _isRefreshingPlaylist, 1) == 1)
         {
             if (!isBackground)
@@ -1280,6 +1291,16 @@ public partial class MainViewModel : ObservableObject
                 StatusMessage = "Playlist zaten yenileniyor...";
             }
             return;
+        }
+
+        if (!isBackground)
+        {
+            if (Interlocked.Exchange(ref _isManualRefreshRunning, 1) == 1)
+            {
+                StatusMessage = "Baska bir yenileme islemi zaten devam ediyor...";
+                Interlocked.Exchange(ref _isRefreshingPlaylist, 0);
+                return;
+            }
         }
 
         try
@@ -1293,12 +1314,30 @@ public partial class MainViewModel : ObservableObject
                 StatusMessage = "Kanal listesi güncelleniyor...";
             }
 
+            var beforeCount = await playlistService.GetChannelCountAsync(SelectedPlaylist.Id);
             await playlistService.RefreshAsync(SelectedPlaylist.Id);
-            await LoadChannelsAsync(SelectedPlaylist.Id);
+            var afterCount = await playlistService.GetChannelCountAsync(SelectedPlaylist.Id);
+            var addedCount = Math.Max(0, afterCount - beforeCount);
+
+            if (addedCount > 0)
+            {
+                await LoadChannelsAsync(SelectedPlaylist.Id);
+            }
 
             if (!isBackground)
             {
-                StatusMessage = "Kanal listesi güncellendi";
+                StatusMessage = addedCount == 0
+                    ? "Kanal listesi zaten guncel"
+                    : $"Kanal listesi guncellendi ({addedCount} yeni kanal eklendi)";
+
+                if (addedCount == 0)
+                {
+                    _playlistNoChangeUntilUtc[SelectedPlaylist.Id] = DateTime.UtcNow.AddMinutes(2);
+                }
+                else
+                {
+                    _playlistNoChangeUntilUtc.Remove(SelectedPlaylist.Id);
+                }
             }
         }
         catch (Exception ex)
@@ -1313,9 +1352,36 @@ public partial class MainViewModel : ObservableObject
             if (!isBackground)
             {
                 IsLoading = false;
+                Interlocked.Exchange(ref _isManualRefreshRunning, 0);
             }
 
             Interlocked.Exchange(ref _isRefreshingPlaylist, 0);
+        }
+    }
+
+    private async Task TouchPlaylistLastUpdatedAsync(int playlistId)
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var playlist = await db.Playlists.FirstOrDefaultAsync(p => p.Id == playlistId);
+            if (playlist == null)
+            {
+                return;
+            }
+
+            playlist.LastUpdated = DateTime.Now;
+            await db.SaveChangesAsync();
+
+            if (SelectedPlaylist?.Id == playlistId)
+            {
+                SelectedPlaylist.LastUpdated = playlist.LastUpdated;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug($"TouchPlaylistLastUpdatedAsync failed: {ex}");
         }
     }
 
@@ -1340,9 +1406,17 @@ public partial class MainViewModel : ObservableObject
         await LoadEpgInternalAsync(isBackgroundSync: false, forceRefresh: true, setBusyState: false);
     }
 
-    public void ForceRefreshEpgInBackground()
+    public bool ForceRefreshEpgInBackground()
     {
+        if (Volatile.Read(ref _isManualRefreshRunning) == 1 ||
+            Volatile.Read(ref _isManualEpgRefreshRunning) == 1)
+        {
+            StatusMessage = "Baska bir yenileme islemi zaten devam ediyor...";
+            return false;
+        }
+
         _ = RunManualEpgRefreshBackgroundAsync();
+        return true;
     }
 
     private async Task RunManualEpgRefreshBackgroundAsync()
@@ -1368,6 +1442,13 @@ public partial class MainViewModel : ObservableObject
             if (Interlocked.Exchange(ref _isManualEpgRefreshRunning, 1) == 1)
             {
                 StatusMessage = "EPG yenileme zaten devam ediyor...";
+                return;
+            }
+
+            if (Interlocked.Exchange(ref _isManualRefreshRunning, 1) == 1)
+            {
+                StatusMessage = "Baska bir yenileme islemi zaten devam ediyor...";
+                Interlocked.Exchange(ref _isManualEpgRefreshRunning, 0);
                 return;
             }
         }
@@ -1639,6 +1720,7 @@ public partial class MainViewModel : ObservableObject
             if (!isBackgroundSync)
             {
                 Interlocked.Exchange(ref _isManualEpgRefreshRunning, 0);
+                Interlocked.Exchange(ref _isManualRefreshRunning, 0);
             }
         }
     }

@@ -4,6 +4,8 @@ using Noctra.Models;
 using Noctra.Services.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
+using System.Net;
+using System.Net.Http.Headers;
 
 namespace Noctra.Services;
 
@@ -21,6 +23,7 @@ public class PlaylistService : IPlaylistService
     private readonly EpgSourceResolver _epgSourceResolver;
     private readonly IEpgService _epgService;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly HttpClient _httpClient;
 
     public PlaylistService(
         AppDbContext context, 
@@ -30,7 +33,8 @@ public class PlaylistService : IPlaylistService
         LanguageDetectionService languageDetection,
         EpgSourceResolver epgSourceResolver,
         IEpgService epgService,
-        IServiceScopeFactory scopeFactory)
+        IServiceScopeFactory scopeFactory,
+        HttpClient httpClient)
     {
         _context = context;
         _parser = parser;
@@ -40,6 +44,7 @@ public class PlaylistService : IPlaylistService
         _epgSourceResolver = epgSourceResolver;
         _epgService = epgService;
         _scopeFactory = scopeFactory;
+        _httpClient = httpClient;
     }
 
     public async Task<Playlist> AddFromUrlAsync(string name, string url, int? profileId = null)
@@ -324,8 +329,18 @@ public class PlaylistService : IPlaylistService
         if (playlist == null)
             throw new KeyNotFoundException($"Playlist bulunamadı: {playlistId}");
 
-        // Mevcut kanalları sil
-        _context.Channels.RemoveRange(playlist.Channels);
+        RemotePlaylistMetadata? latestRemoteMetadata = null;
+        if (!string.IsNullOrWhiteSpace(playlist.Url))
+        {
+            latestRemoteMetadata = await TryFetchRemoteMetadataAsync(playlist.Url, playlist);
+            if (latestRemoteMetadata?.IsUnchanged == true)
+            {
+                playlist.LastUpdated = DateTime.Now;
+                UpdatePlaylistSourceMetadata(playlist, latestRemoteMetadata);
+                await _context.SaveChangesAsync();
+                return playlist;
+            }
+        }
 
         // Yeni kanalları parse et
         List<Channel> newChannels;
@@ -344,20 +359,39 @@ public class PlaylistService : IPlaylistService
 
         // Organizasyon pipeline'ı uygula
         var organizedChannels = _organizer.Organize(newChannels);
+        var existingFingerprints = new HashSet<string>(
+            playlist.Channels.Select(BuildChannelFingerprint),
+            StringComparer.OrdinalIgnoreCase);
+        var channelsToAdd = organizedChannels
+            .Where(c => !existingFingerprints.Contains(BuildChannelFingerprint(c)))
+            .ToList();
 
-        // Yeni kanalları ekle
-        foreach (var channel in organizedChannels)
+        if (channelsToAdd.Count == 0)
         {
-            channel.PlaylistId = playlist.Id;
-            _context.Channels.Add(channel);
+            playlist.LastUpdated = DateTime.Now;
+            if (latestRemoteMetadata != null)
+            {
+                UpdatePlaylistSourceMetadata(playlist, latestRemoteMetadata);
+            }
+            await _context.SaveChangesAsync();
+            return playlist;
         }
 
-        playlist.ChannelCount = organizedChannels.Count;
-        playlist.LastUpdated = DateTime.Now;
+        foreach (var channel in channelsToAdd)
+        {
+            channel.PlaylistId = playlist.Id;
+        }
 
+        _context.Channels.AddRange(channelsToAdd);
+        playlist.ChannelCount = playlist.Channels.Count + channelsToAdd.Count;
+        playlist.LastUpdated = DateTime.Now;
+        if (latestRemoteMetadata != null)
+        {
+            UpdatePlaylistSourceMetadata(playlist, latestRemoteMetadata);
+        }
         await _context.SaveChangesAsync();
 
-        // Re-aggregate
+        // Re-aggregate only when there is a real delta.
         await _mediaService.AggregateContentAsync(playlist.Id);
 
         return playlist;
@@ -489,6 +523,163 @@ public class PlaylistService : IPlaylistService
             account.ExpirationDate = expirationDate;
             await _context.SaveChangesAsync();
         }
+    }
+
+    private static string BuildChannelFingerprint(Channel channel)
+    {
+        var typeKey = ((int)channel.Type).ToString();
+        var tvgId = NormalizeIdentityToken(channel.TvgId);
+        if (!string.IsNullOrWhiteSpace(tvgId))
+        {
+            return $"tvgid|{typeKey}|{tvgId}";
+        }
+
+        var tvgName = NormalizeIdentityToken(channel.TvgName);
+        var name = NormalizeIdentityToken(channel.Name);
+        var group = NormalizeIdentityToken(channel.GroupTitle);
+
+        if (!string.IsNullOrWhiteSpace(tvgName))
+        {
+            return $"tvgname|{typeKey}|{tvgName}|{group}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            return $"name|{typeKey}|{name}|{group}";
+        }
+
+        var streamPath = NormalizeStreamIdentity(channel.StreamUrl);
+        return $"stream|{typeKey}|{streamPath}";
+    }
+
+    private static string NormalizeIdentityToken(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return string.Empty;
+        }
+
+        return string.Join(" ", raw
+            .Trim()
+            .ToLowerInvariant()
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries));
+    }
+
+    private static string NormalizeStreamIdentity(string? streamUrl)
+    {
+        if (string.IsNullOrWhiteSpace(streamUrl))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = streamUrl.Trim();
+        if (Uri.TryCreate(trimmed, UriKind.Absolute, out var uri))
+        {
+            var host = uri.Host.ToLowerInvariant();
+            var path = uri.AbsolutePath.Trim().ToLowerInvariant();
+            return $"{host}{path}";
+        }
+
+        var q = trimmed.IndexOf('?');
+        var pathOnly = q >= 0 ? trimmed[..q] : trimmed;
+        return pathOnly.Trim().ToLowerInvariant();
+    }
+
+    private async Task<RemotePlaylistMetadata?> TryFetchRemoteMetadataAsync(string url, Playlist playlist)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Head, uri);
+            if (!string.IsNullOrWhiteSpace(playlist.SourceEtag))
+            {
+                request.Headers.TryAddWithoutValidation("If-None-Match", playlist.SourceEtag);
+            }
+
+            if (playlist.SourceLastModified.HasValue)
+            {
+                request.Headers.IfModifiedSince = playlist.SourceLastModified.Value;
+            }
+
+            using var response = await _httpClient.SendAsync(request);
+            if (response.StatusCode == HttpStatusCode.NotModified)
+            {
+                return new RemotePlaylistMetadata
+                {
+                    IsUnchanged = true,
+                    Etag = playlist.SourceEtag,
+                    LastModified = playlist.SourceLastModified,
+                    ContentLength = playlist.SourceContentLength
+                };
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            var etag = response.Headers.ETag?.Tag;
+            var lastModified = response.Content.Headers.LastModified?.UtcDateTime;
+            var contentLength = response.Content.Headers.ContentLength;
+
+            var unchanged = false;
+            if (!string.IsNullOrWhiteSpace(etag) &&
+                !string.IsNullOrWhiteSpace(playlist.SourceEtag) &&
+                string.Equals(etag, playlist.SourceEtag, StringComparison.Ordinal))
+            {
+                unchanged = true;
+            }
+            else if (lastModified.HasValue && playlist.SourceLastModified.HasValue &&
+                     lastModified.Value == playlist.SourceLastModified.Value &&
+                     contentLength.HasValue && playlist.SourceContentLength.HasValue &&
+                     contentLength.Value == playlist.SourceContentLength.Value)
+            {
+                unchanged = true;
+            }
+
+            return new RemotePlaylistMetadata
+            {
+                IsUnchanged = unchanged,
+                Etag = etag,
+                LastModified = lastModified,
+                ContentLength = contentLength
+            };
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static void UpdatePlaylistSourceMetadata(Playlist playlist, RemotePlaylistMetadata metadata)
+    {
+        if (!string.IsNullOrWhiteSpace(metadata.Etag))
+        {
+            playlist.SourceEtag = metadata.Etag;
+        }
+
+        if (metadata.LastModified.HasValue)
+        {
+            playlist.SourceLastModified = metadata.LastModified.Value;
+        }
+
+        if (metadata.ContentLength.HasValue)
+        {
+            playlist.SourceContentLength = metadata.ContentLength.Value;
+        }
+    }
+
+    private sealed class RemotePlaylistMetadata
+    {
+        public bool IsUnchanged { get; set; }
+        public string? Etag { get; set; }
+        public DateTime? LastModified { get; set; }
+        public long? ContentLength { get; set; }
     }
 
     public async Task RefreshEpgAsync(int playlistId)
