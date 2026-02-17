@@ -103,3 +103,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - `RemoteImage` preload artik eszamanli istekleri sinirliyor (throttle), istek firtinasi azaltildi.
   - `image.tmdb.org` `http` URL'leri otomatik `https`'e normalize ediliyor.
   - HTTP resim isteginde timeout suresi artirildi ve `http -> https` fallback denemesi eklendi.
+  - Guvenli performans ayarlari ile gorsel yukleme hizi iyilestirildi:
+    - Placeholder fallback gecikmesi `1500ms -> 300ms`.
+    - `MaxConnectionsPerServer` `24 -> 32`.
+    - HTTP timeout `18s -> 14s`.
+    - Retry modeli daha hizli hale getirildi (`2` deneme, `120ms` taban gecikme).
+    - Kalici HTTP hatalarinda (`400/401/403/404/410`) fail-fast (gereksiz retry yok).
+    - Warmup gecikmesi `140ms -> 50ms`.
+    - Preload kapasitesi `180 -> 220`.

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,8 +27,10 @@ public class RemoteImage : Image
     private static readonly object PlaceholderLock = new();
     private static Bitmap? _placeholderBitmap;
     private const int MaxCacheEntries = 1500;
-    private const int PlaceholderFallbackDelayMs = 1500;
-    private const int PreloadConcurrency = 8;
+    private const int PlaceholderFallbackDelayMs = 300;
+    private const int PreloadConcurrency = 10;
+    private const int HttpImageMaxAttempts = 2;
+    private const int HttpRetryBaseDelayMs = 120;
 
     private CancellationTokenSource? _loadCts;
 
@@ -260,7 +263,7 @@ public class RemoteImage : Image
 
     private static async Task<Bitmap?> DownloadHttpBitmapWithRetryAsync(string normalizedUrl, Uri uri)
     {
-        for (var attempt = 0; attempt < 3; attempt++)
+        for (var attempt = 0; attempt < HttpImageMaxAttempts; attempt++)
         {
             try
             {
@@ -272,9 +275,19 @@ public class RemoteImage : Image
                 if (!response.IsSuccessStatusCode)
                 {
                     LogFailure(normalizedUrl, $"HTTP {(int)response.StatusCode}");
-                    if (attempt < 2)
+                    // Permanent client errors should fail fast to avoid pointless retries.
+                    if (response.StatusCode is HttpStatusCode.BadRequest or
+                        HttpStatusCode.Unauthorized or
+                        HttpStatusCode.Forbidden or
+                        HttpStatusCode.NotFound or
+                        HttpStatusCode.Gone)
                     {
-                        await Task.Delay(200 * (attempt + 1)).ConfigureAwait(false);
+                        return null;
+                    }
+
+                    if (attempt < HttpImageMaxAttempts - 1)
+                    {
+                        await Task.Delay(HttpRetryBaseDelayMs * (attempt + 1)).ConfigureAwait(false);
                         continue;
                     }
 
@@ -290,18 +303,18 @@ public class RemoteImage : Image
                 AddToCache(normalizedUrl, bitmap);
                 return bitmap;
             }
-            catch (HttpRequestException) when (attempt < 2)
+            catch (HttpRequestException) when (attempt < HttpImageMaxAttempts - 1)
             {
-                await Task.Delay(200 * (attempt + 1)).ConfigureAwait(false);
+                await Task.Delay(HttpRetryBaseDelayMs * (attempt + 1)).ConfigureAwait(false);
             }
-            catch (TaskCanceledException) when (attempt < 2)
+            catch (TaskCanceledException) when (attempt < HttpImageMaxAttempts - 1)
             {
-                await Task.Delay(200 * (attempt + 1)).ConfigureAwait(false);
+                await Task.Delay(HttpRetryBaseDelayMs * (attempt + 1)).ConfigureAwait(false);
             }
-            catch (Exception ex) when (attempt < 2)
+            catch (Exception ex) when (attempt < HttpImageMaxAttempts - 1)
             {
                 LogFailure(normalizedUrl, ex.GetType().Name);
-                await Task.Delay(200 * (attempt + 1)).ConfigureAwait(false);
+                await Task.Delay(HttpRetryBaseDelayMs * (attempt + 1)).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -445,12 +458,12 @@ public class RemoteImage : Image
             AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
             PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
-            MaxConnectionsPerServer = 24
+            MaxConnectionsPerServer = 32
         };
 
         var client = new HttpClient(handler)
         {
-            Timeout = TimeSpan.FromSeconds(18)
+            Timeout = TimeSpan.FromSeconds(14)
         };
 
         client.DefaultRequestHeaders.UserAgent.ParseAdd("Noctra.Avalonia/1.0");

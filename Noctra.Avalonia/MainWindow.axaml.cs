@@ -325,7 +325,7 @@ public partial class MainWindow : Window
         {
             try
             {
-                await Task.Delay(140, token).ConfigureAwait(false);
+                await Task.Delay(50, token).ConfigureAwait(false);
                 await WarmupVisibleImagesAsync(token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
@@ -350,7 +350,7 @@ public partial class MainWindow : Window
         urls.AddRange(_mainViewModel.LatestSeries.Take(60).Select(s => s.CoverUrl));
         urls.AddRange(_mainViewModel.SeriesViewItems.Take(60).Select(s => s.CoverUrl));
 
-        await RemoteImage.PreloadAsync(urls, maxCount: 180, cancellationToken).ConfigureAwait(false);
+        await RemoteImage.PreloadAsync(urls, maxCount: 220, cancellationToken).ConfigureAwait(false);
     }
 
     private void MainWindow_KeyDown(object? sender, KeyEventArgs e)
