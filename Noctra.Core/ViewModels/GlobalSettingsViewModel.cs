@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using Noctra.Services.Interfaces;
 using Noctra.Services;
 using System;
+using System.ComponentModel;
 using System.Threading.Tasks;
 
 namespace Noctra.ViewModels;
@@ -13,8 +14,22 @@ public partial class GlobalSettingsViewModel : ObservableObject
     private readonly IDialogService _dialogService;
     private readonly ISettingsService _settingsService;
 
-    [ObservableProperty]
     private GlobalSettings _settings = new();
+    public GlobalSettings Settings
+    {
+        get => _settings;
+        set
+        {
+            if (ReferenceEquals(_settings, value))
+            {
+                return;
+            }
+
+            _settings.PropertyChanged -= OnSettingsPropertyChanged;
+            SetProperty(ref _settings, value);
+            _settings.PropertyChanged += OnSettingsPropertyChanged;
+        }
+    }
 
     public GlobalSettingsViewModel(
         IThemeService themeService,
@@ -28,11 +43,6 @@ public partial class GlobalSettingsViewModel : ObservableObject
         LoadSettings();
     }
 
-    partial void OnSettingsChanged(GlobalSettings value)
-    {
-        value.SetOnChanged(SaveSettings);
-    }
-
     private void LoadSettings()
     {
         var s = _settingsService.Settings;
@@ -44,6 +54,11 @@ public partial class GlobalSettingsViewModel : ObservableObject
             HardwareAcceleration = s.HardwareAcceleration,
             Analytics = s.Analytics
         };
+    }
+
+    private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        SaveSettings();
     }
 
     [RelayCommand]
@@ -101,9 +116,6 @@ public partial class GlobalSettingsViewModel : ObservableObject
 // Global Settings Model
 public partial class GlobalSettings : ObservableObject
 {
-    private Action? _onChanged;
-    public void SetOnChanged(Action onChanged) => _onChanged = onChanged;
-
     [ObservableProperty]
     private bool _isDarkTheme = true;
 
@@ -118,12 +130,6 @@ public partial class GlobalSettings : ObservableObject
 
     [ObservableProperty]
     private bool _analytics = false;
-
-    partial void OnIsDarkThemeChanged(bool value) => _onChanged?.Invoke();
-    partial void OnLanguageChanged(string value) => _onChanged?.Invoke();
-    partial void OnAutoUpdateChanged(bool value) => _onChanged?.Invoke();
-    partial void OnHardwareAccelerationChanged(bool value) => _onChanged?.Invoke();
-    partial void OnAnalyticsChanged(bool value) => _onChanged?.Invoke();
 }
 
 

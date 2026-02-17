@@ -18,6 +18,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IEpgService _epgService;
     private readonly IThemeService _themeService;
     private readonly IServiceScopeFactory _scopeFactory;
+    private CancellationTokenSource? _epgRefreshWatchCts;
 
     // ============ Oynatma Ayarları ============
     
@@ -459,18 +460,51 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task RefreshEpgNowAsync()
+    private Task RefreshEpgNowAsync()
     {
-        try
+        StatusMessage = "EPG yenileme arka planda başlatıldı...";
+        _mainViewModel.ForceRefreshEpgInBackground();
+
+        _epgRefreshWatchCts?.Cancel();
+        _epgRefreshWatchCts?.Dispose();
+        _epgRefreshWatchCts = new CancellationTokenSource();
+        _ = WatchEpgRefreshOutcomeAsync(_epgRefreshWatchCts.Token);
+        return Task.CompletedTask;
+    }
+
+    private async Task WatchEpgRefreshOutcomeAsync(CancellationToken cancellationToken)
+    {
+        var startedAt = DateTime.Now.AddSeconds(-2);
+        var timeoutAt = DateTime.Now.AddMinutes(3);
+
+        while (!cancellationToken.IsCancellationRequested && DateTime.Now < timeoutAt)
         {
-            StatusMessage = "EPG yenileniyor...";
-            await _mainViewModel.ForceRefreshEpgAsync();
-            await ScanEpgStatsAsync();
-            StatusMessage = "EPG yenileme tamamlandı";
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"EPG yenileme hatası: {ex.Message}";
+            try
+            {
+                await Task.Delay(1500, cancellationToken);
+                await ScanEpgStatsAsync();
+
+                if (!string.IsNullOrWhiteSpace(EpgLastError))
+                {
+                    StatusMessage = $"EPG yenileme hatasi: {EpgLastError}";
+                    return;
+                }
+
+                if (LastEpgUpdate.HasValue && LastEpgUpdate.Value >= startedAt)
+                {
+                    StatusMessage = "EPG yenileme tamamlandi";
+                    return;
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"EPG izleme hatasi: {ex.Message}";
+                return;
+            }
         }
     }
 

@@ -82,6 +82,8 @@ public partial class AddProfileViewModel : ObservableObject
         {
             _isUpdatingUrl = false;
         }
+
+        ValidateRealtimeInputs();
     }
 
     private void ParseCredentialsFromUrl(string url)
@@ -210,6 +212,8 @@ public partial class AddProfileViewModel : ObservableObject
         {
             ConvertXtreamToM3UUrl();
         }
+
+        ValidateRealtimeInputs();
     }
 
     [ObservableProperty]
@@ -225,6 +229,8 @@ public partial class AddProfileViewModel : ObservableObject
         {
             ConvertXtreamToM3UUrl();
         }
+
+        ValidateRealtimeInputs();
     }
     
         [ObservableProperty]
@@ -247,6 +253,8 @@ public partial class AddProfileViewModel : ObservableObject
                 ConvertM3UUrlToXtream(Url);
             }
         }
+
+        ValidateRealtimeInputs();
     }
 
     [ObservableProperty]
@@ -270,6 +278,8 @@ public partial class AddProfileViewModel : ObservableObject
                 ConvertXtreamToM3UUrl();
             }
         }
+
+        ValidateRealtimeInputs();
     }
 
     [ObservableProperty]
@@ -289,12 +299,60 @@ public partial class AddProfileViewModel : ObservableObject
             Username = StalkerMacPrefix;
             _isUpdatingUrl = false;
             UpdateStalkerMacValidation(Username);
+            ValidateRealtimeInputs();
             return;
         }
 
         if (!string.Equals(UrlError, "MAC adresi gecersiz. Ornek: 00:1A:79:AA:BB:CC", StringComparison.Ordinal) &&
             !string.Equals(UrlError, "Stalker Portal icin MAC adresi gereklidir", StringComparison.Ordinal))
         {
+            return;
+        }
+
+        UrlError = null;
+        ValidateRealtimeInputs();
+    }
+
+    private void ValidateRealtimeInputs()
+    {
+        if (IsStalker)
+        {
+            UpdateStalkerMacValidation(Username);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Url))
+        {
+            UrlError = "URL gereklidir";
+            return;
+        }
+
+        var normalizedUrl = Url.Trim();
+        if (!normalizedUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+            !normalizedUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            normalizedUrl = "http://" + normalizedUrl;
+        }
+
+        if (!Uri.TryCreate(normalizedUrl, UriKind.Absolute, out _))
+        {
+            UrlError = "Gecersiz URL formati";
+            return;
+        }
+
+        if (IsM3U)
+        {
+            var lower = normalizedUrl.ToLowerInvariant();
+            if (!lower.Contains(".m3u") && !lower.Contains(".m3u8") && !lower.Contains("get.php"))
+            {
+                UrlError = "M3U URL'i .m3u, .m3u8 veya get.php icermelidir";
+                return;
+            }
+        }
+
+        if (IsXtream && (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password)))
+        {
+            UrlError = "Xtream icin kullanici adi ve sifre gereklidir";
             return;
         }
 

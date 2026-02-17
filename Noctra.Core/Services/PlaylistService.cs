@@ -3,6 +3,7 @@ using Noctra.Data;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using System.Collections.Concurrent;
 
 namespace Noctra.Services;
 
@@ -11,6 +12,7 @@ namespace Noctra.Services;
 /// </summary>
 public class PlaylistService : IPlaylistService
 {
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> AddPlaylistLocks = new(StringComparer.Ordinal);
     private readonly AppDbContext _context;
     private readonly IM3UParser _parser;
     private readonly IMediaService _mediaService;
@@ -42,13 +44,18 @@ public class PlaylistService : IPlaylistService
 
     public async Task<Playlist> AddFromUrlAsync(string name, string url, int? profileId = null)
     {
+        var normalizedUrl = (url ?? string.Empty).Trim();
+        var lockKey = $"{profileId?.ToString() ?? "null"}|{normalizedUrl}";
+        var gate = AddPlaylistLocks.GetOrAdd(lockKey, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync();
+
         try 
         {
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] AddFromUrlAsync: {name} - {url}");
             
             // Check existing first to avoid potential parsing overhead
             var existing = await _context.Playlists
-                .FirstOrDefaultAsync(p => p.Url == url && p.ProfileId == profileId && p.IsActive);
+                .FirstOrDefaultAsync(p => p.Url == normalizedUrl && p.ProfileId == profileId && p.IsActive);
                 
             if (existing != null) 
             {
@@ -56,8 +63,8 @@ public class PlaylistService : IPlaylistService
                 return existing;
             }
 
-            System.Diagnostics.Debug.WriteLine($"[PlaylistService] Downloading and parsing M3U from: {url}");
-            var channels = await _parser.ParseFromUrlAsync(url);
+            System.Diagnostics.Debug.WriteLine($"[PlaylistService] Downloading and parsing M3U from: {normalizedUrl}");
+            var channels = await _parser.ParseFromUrlAsync(normalizedUrl);
             var detectedEpgUrl = NormalizeEpgUrl(_parser.LastDetectedEpgUrl);
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] Parsed {channels.Count} channels from M3U");
 
@@ -65,12 +72,16 @@ public class PlaylistService : IPlaylistService
             var organized = _organizer.Organize(channels);
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] Organized: {channels.Count} › {organized.Count} channels");
 
-            return await AddFromChannelsAsync(name, url, organized, profileId, detectedEpgUrl);
+            return await AddFromChannelsAsync(name, normalizedUrl, organized, profileId, detectedEpgUrl);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"AddFromUrlAsync error: {ex}");
             throw;
+        }
+        finally
+        {
+            gate.Release();
         }
     }
 
@@ -588,6 +599,7 @@ public class PlaylistService : IPlaylistService
         return null;
     }
 }
+
 
 
 

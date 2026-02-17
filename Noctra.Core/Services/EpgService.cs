@@ -2,6 +2,7 @@
 using System.Net.Http;
 using System.Xml.Linq;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Noctra.Data;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
@@ -15,19 +16,28 @@ public class EpgService : IEpgService
 {
     private readonly AppDbContext _context;
     private readonly HttpClient _httpClient;
+    private readonly ILogger<EpgService>? _logger;
+    private readonly SemaphoreSlim _loadSemaphore = new(1, 1);
     
     public bool IsLoaded { get; private set; }
     public DateTime? LastUpdated { get; private set; }
     public string? LastError { get; private set; }
 
-    public EpgService(AppDbContext context, HttpClient httpClient)
+    public EpgService(AppDbContext context, HttpClient httpClient, ILogger<EpgService>? logger = null)
     {
         _context = context;
         _httpClient = httpClient;
+        _logger = logger;
     }
 
     public async Task LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1)
     {
+        if (!await _loadSemaphore.WaitAsync(0).ConfigureAwait(false))
+        {
+            _logger?.LogWarning("Another EPG load is in progress, skipping new request.");
+            return;
+        }
+
         try
         {
             LastError = null; // Clear previous error
@@ -261,9 +271,13 @@ public class EpgService : IEpgService
         catch (Exception ex)
         {
             LastError = ex.Message; // Capture error
-            System.Diagnostics.Debug.WriteLine($"EPG Load Error: {ex}");
+            _logger?.LogError(ex, "EPG load failed for URL {EpgUrl}", epgUrl);
             // Don't throw if secondary
             if (isPrimary) throw;
+        }
+        finally
+        {
+            _loadSemaphore.Release();
         }
     }
 

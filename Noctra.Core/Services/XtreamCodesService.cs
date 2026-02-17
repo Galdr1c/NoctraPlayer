@@ -15,6 +15,10 @@ public class XtreamCodesService : IXtreamCodesService
     };
 
     private readonly HttpClient _httpClient;
+    private static readonly ConcurrentDictionary<string, CachedAuthState> AuthCache = new(StringComparer.Ordinal);
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> AuthLocks = new(StringComparer.Ordinal);
+    private static readonly TimeSpan SuccessAuthTtl = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan FailedAuthTtl = TimeSpan.FromSeconds(30);
 
     public XtreamCodesService(HttpClient httpClient)
     {
@@ -36,7 +40,7 @@ public class XtreamCodesService : IXtreamCodesService
         CancellationToken cancellationToken = default)
     {
         var normalizedBaseUrl = NormalizeBaseUrl(baseUrl);
-        var authenticated = await AuthenticateAsync(normalizedBaseUrl, username, password, cancellationToken);
+        var authenticated = await EnsureAuthenticatedAsync(normalizedBaseUrl, username, password, cancellationToken);
 
         if (!authenticated)
         {
@@ -85,6 +89,38 @@ public class XtreamCodesService : IXtreamCodesService
         }
 
         return channels;
+    }
+
+    private async Task<bool> EnsureAuthenticatedAsync(
+        string normalizedBaseUrl,
+        string username,
+        string password,
+        CancellationToken cancellationToken)
+    {
+        var cacheKey = BuildAuthCacheKey(normalizedBaseUrl, username, password);
+        if (AuthCache.TryGetValue(cacheKey, out var cached) && cached.ExpiresAt > DateTimeOffset.UtcNow)
+        {
+            return cached.IsAuthenticated;
+        }
+
+        var authLock = AuthLocks.GetOrAdd(cacheKey, _ => new SemaphoreSlim(1, 1));
+        await authLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (AuthCache.TryGetValue(cacheKey, out cached) && cached.ExpiresAt > DateTimeOffset.UtcNow)
+            {
+                return cached.IsAuthenticated;
+            }
+
+            var authenticated = await AuthenticateAsync(normalizedBaseUrl, username, password, cancellationToken);
+            var ttl = authenticated ? SuccessAuthTtl : FailedAuthTtl;
+            AuthCache[cacheKey] = new CachedAuthState(authenticated, DateTimeOffset.UtcNow.Add(ttl));
+            return authenticated;
+        }
+        finally
+        {
+            authLock.Release();
+        }
     }
 
     private static List<Channel> MapLiveChannels(
@@ -372,6 +408,9 @@ public class XtreamCodesService : IXtreamCodesService
         return normalized.TrimEnd('/');
     }
 
+    private static string BuildAuthCacheKey(string normalizedBaseUrl, string username, string password)
+        => $"{normalizedBaseUrl}|{username}|{password}";
+
     private static IReadOnlyDictionary<string, string> BuildCategoryMap(IEnumerable<XtreamCategoryDto>? categories)
     {
         return categories?
@@ -571,5 +610,7 @@ public class XtreamCodesService : IXtreamCodesService
             writer.WriteStringValue(value);
         }
     }
+
+    private readonly record struct CachedAuthState(bool IsAuthenticated, DateTimeOffset ExpiresAt);
 }
 

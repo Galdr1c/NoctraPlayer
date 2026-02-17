@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -10,6 +11,9 @@ namespace Noctra.Services;
 public class StalkerPortalService : IStalkerPortalService
 {
     private readonly HttpClient _httpClient;
+    private static readonly ConcurrentDictionary<string, CachedTokenState> TokenCache = new(StringComparer.Ordinal);
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> TokenLocks = new(StringComparer.Ordinal);
+    private static readonly TimeSpan TokenTtl = TimeSpan.FromMinutes(10);
 
     public StalkerPortalService(HttpClient httpClient)
     {
@@ -18,7 +22,8 @@ public class StalkerPortalService : IStalkerPortalService
 
     public async Task<bool> AuthenticateAsync(string portalUrl, string macAddress, CancellationToken cancellationToken = default)
     {
-        var token = await HandshakeAsync(portalUrl, macAddress, cancellationToken);
+        var normalizedPortalUrl = NormalizePortalUrl(portalUrl);
+        var token = await GetOrCreateTokenAsync(normalizedPortalUrl, macAddress, cancellationToken);
         return !string.IsNullOrWhiteSpace(token);
     }
 
@@ -30,13 +35,36 @@ public class StalkerPortalService : IStalkerPortalService
     {
         var normalizedPortalUrl = NormalizePortalUrl(portalUrl);
         var endpoint = BuildLoadEndpoint(normalizedPortalUrl);
-        var token = await HandshakeAsync(normalizedPortalUrl, macAddress, cancellationToken);
+        var token = await GetOrCreateTokenAsync(normalizedPortalUrl, macAddress, cancellationToken);
 
         if (string.IsNullOrWhiteSpace(token))
         {
             throw new InvalidOperationException("Stalker Portal handshake basarisiz. URL veya MAC adresini kontrol edin.");
         }
 
+        try
+        {
+            return await LoadChannelsWithTokenAsync(endpoint, token, includeVod, cancellationToken);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized || ex.StatusCode == HttpStatusCode.Forbidden)
+        {
+            InvalidateToken(normalizedPortalUrl, macAddress);
+            var refreshedToken = await GetOrCreateTokenAsync(normalizedPortalUrl, macAddress, cancellationToken);
+            if (string.IsNullOrWhiteSpace(refreshedToken))
+            {
+                throw new InvalidOperationException("Stalker token yenilenemedi. URL veya MAC adresini kontrol edin.");
+            }
+
+            return await LoadChannelsWithTokenAsync(endpoint, refreshedToken, includeVod, cancellationToken);
+        }
+    }
+
+    private async Task<List<Channel>> LoadChannelsWithTokenAsync(
+        string endpoint,
+        string token,
+        bool includeVod,
+        CancellationToken cancellationToken)
+    {
         var liveGenreMap = await GetGenreMapAsync(endpoint, token, "itv", cancellationToken);
         var vodGenreMap = await GetGenreMapAsync(endpoint, token, "vod", cancellationToken);
 
@@ -132,6 +160,49 @@ public class StalkerPortalService : IStalkerPortalService
 
         var js = await PostForJsAsync(endpoint, body, token: null, cancellationToken);
         return GetString(js, "token") ?? string.Empty;
+    }
+
+    private async Task<string> GetOrCreateTokenAsync(string normalizedPortalUrl, string macAddress, CancellationToken cancellationToken)
+    {
+        var key = BuildTokenCacheKey(normalizedPortalUrl, macAddress);
+        if (TokenCache.TryGetValue(key, out var cached) &&
+            cached.ExpiresAt > DateTimeOffset.UtcNow &&
+            !string.IsNullOrWhiteSpace(cached.Token))
+        {
+            return cached.Token;
+        }
+
+        var tokenLock = TokenLocks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+        await tokenLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (TokenCache.TryGetValue(key, out cached) &&
+                cached.ExpiresAt > DateTimeOffset.UtcNow &&
+                !string.IsNullOrWhiteSpace(cached.Token))
+            {
+                return cached.Token;
+            }
+
+            var token = await HandshakeAsync(normalizedPortalUrl, macAddress, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                TokenCache[key] = new CachedTokenState(token, DateTimeOffset.UtcNow.Add(TokenTtl));
+            }
+
+            return token;
+        }
+        finally
+        {
+            tokenLock.Release();
+        }
+    }
+
+    private static string BuildTokenCacheKey(string normalizedPortalUrl, string macAddress)
+        => $"{normalizedPortalUrl}|{macAddress.Trim()}";
+
+    private static void InvalidateToken(string normalizedPortalUrl, string macAddress)
+    {
+        TokenCache.TryRemove(BuildTokenCacheKey(normalizedPortalUrl, macAddress), out _);
     }
 
     private async Task<string> CreateLinkAsync(string endpoint, string token, string? cmd, CancellationToken cancellationToken)
@@ -375,5 +446,11 @@ public class StalkerPortalService : IStalkerPortalService
         public string? Logo { get; set; }
         public string? TvGenreId { get; set; }
     }
+
+    private readonly record struct CachedTokenState(string Token, DateTimeOffset ExpiresAt);
 }
+
+
+
+
 

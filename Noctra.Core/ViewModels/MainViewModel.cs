@@ -7,6 +7,7 @@ using Noctra.Services.Interfaces;
 using Noctra.Services;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using Noctra.Data;
 using System.Text.RegularExpressions;
@@ -38,6 +39,7 @@ public partial class MainViewModel : ObservableObject
     private readonly Microsoft.Extensions.DependencyInjection.IServiceScopeFactory _scopeFactory;
     private readonly ISettingsService _settingsService;
     private readonly IMetadataService _metadataService;
+    private readonly ILogger<MainViewModel>? _logger;
 
     [ObservableProperty]
     private AppView _activeView = AppView.Home;
@@ -155,13 +157,15 @@ public partial class MainViewModel : ObservableObject
         ISettingsService settingsService,
         IMetadataService metadataService,
         IDispatcherService dispatcherService,
-        WatermarkViewModel watermarkViewModel)
+        WatermarkViewModel watermarkViewModel,
+        ILogger<MainViewModel>? logger = null)
     {
         _serviceProvider = serviceProvider;
         _scopeFactory = scopeFactory;
         _settingsService = settingsService;
         _metadataService = metadataService;
         _dispatcherService = dispatcherService;
+        _logger = logger;
         WatermarkViewModel = watermarkViewModel;
         _settingsService.SettingsChanged += ApplyRefreshSchedulesFromSettings;
     }
@@ -205,14 +209,14 @@ public partial class MainViewModel : ObservableObject
             if (existingPlaylists.Count > 0)
             {
                 // Use cached playlist - much faster!
-                System.Diagnostics.Debug.WriteLine($"[MainViewModel] Using cached playlist for profile {profile.Id}");
+                _logger?.LogDebug($"[MainViewModel] Using cached playlist for profile {profile.Id}");
                 StatusMessage = "Önbellekten yükleniyor...";
                 await LoadPlaylistsAsync();
             }
             else
             {
                 // No cache - download and parse M3U
-                System.Diagnostics.Debug.WriteLine($"[MainViewModel] No cache found, downloading playlist for profile {profile.Id}");
+                _logger?.LogDebug($"[MainViewModel] No cache found, downloading playlist for profile {profile.Id}");
                 
                 switch (profile.ProviderAccount.Type)
                 {
@@ -251,7 +255,7 @@ public partial class MainViewModel : ObservableObject
                         }
                         catch (Exception ex)
                         {
-                            System.Diagnostics.Debug.WriteLine($"[MainViewModel] Xtream API fallback to M3U: {ex.Message}");
+                            _logger?.LogDebug($"[MainViewModel] Xtream API fallback to M3U: {ex.Message}");
                             var fallbackM3uUrl = $"{baseUrl}/get.php?username={Uri.EscapeDataString(username)}&password={Uri.EscapeDataString(password)}&type=m3u_plus&output=ts";
                             StatusMessage = "Kanal listesi indiriliyor...";
                             await playlistService.AddFromUrlAsync(profile.Name, fallbackM3uUrl, profile.Id);
@@ -285,7 +289,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusMessage = $"Profil yüklenirken hata oluştu: {ex.Message}";
-            System.Diagnostics.Debug.WriteLine($"LoadProfile Error: {ex}");
+            _logger?.LogDebug($"LoadProfile Error: {ex}");
         }
         finally
         {
@@ -414,7 +418,7 @@ public partial class MainViewModel : ObservableObject
         try
         {
             var apiUrl = $"{baseUrl}/player_api.php?username={Uri.EscapeDataString(username ?? "")}&password={Uri.EscapeDataString(password ?? "")}";
-            System.Diagnostics.Debug.WriteLine($"[CheckExpiration] Checking: {apiUrl}");
+            _logger?.LogDebug($"[CheckExpiration] Checking: {apiUrl}");
 
             using var client = new HttpClient();
             client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
@@ -423,7 +427,7 @@ public partial class MainViewModel : ObservableObject
             
             if (!response.IsSuccessStatusCode)
             {
-                System.Diagnostics.Debug.WriteLine($"[CheckExpiration] Failed with status: {response.StatusCode}");
+                _logger?.LogDebug($"[CheckExpiration] Failed with status: {response.StatusCode}");
                 return;
             }
 
@@ -464,7 +468,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"CheckExpiration Error: {ex}");
+            _logger?.LogDebug($"CheckExpiration Error: {ex}");
         }
     }
 
@@ -529,14 +533,13 @@ public partial class MainViewModel : ObservableObject
 
             StatusMessage = $"{channelCount} kanal hazır";
 
-            // Warm-up heavy/non-critical data in background so first paint is faster.
-            _ = WarmupAfterInitialChannelLoadAsync();
-            _ = LoadEpgAsync(isBackgroundSync: true);
+            // Fire-and-forget tasks are wrapped to avoid unobserved failures and task races.
+            StartPostChannelLoadBackgroundTasks();
             EnsureChannelBackgroundRefresh();
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"LoadChannels error: {ex}");
+            _logger?.LogDebug($"LoadChannels error: {ex}");
             StatusMessage = $"Kanallar yüklenemedi: {ex.Message}";
         }
         finally
@@ -555,7 +558,42 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"WarmupAfterInitialChannelLoadAsync error: {ex}");
+            _logger?.LogDebug($"WarmupAfterInitialChannelLoadAsync error: {ex}");
+        }
+    }
+
+    private void StartPostChannelLoadBackgroundTasks()
+    {
+        _ = RunPostChannelLoadBackgroundTasksAsync();
+    }
+
+    private async Task RunPostChannelLoadBackgroundTasksAsync()
+    {
+        try
+        {
+            await WarmupAfterInitialChannelLoadAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug($"Post-load warmup failed: {ex}");
+        }
+
+        if (Interlocked.Exchange(ref _isBackgroundEpgSyncRunning, 1) == 1)
+        {
+            return;
+        }
+
+        try
+        {
+            await LoadEpgInternalAsync(isBackgroundSync: true, forceRefresh: false, setBusyState: false);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug($"Post-load EPG sync failed: {ex}");
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _isBackgroundEpgSyncRunning, 0);
         }
     }
 
@@ -652,6 +690,9 @@ public partial class MainViewModel : ObservableObject
     private Timer? _channelSyncTimer;
     private int _isBackgroundEpgSyncRunning;
     private int _isBackgroundChannelSyncRunning;
+    private int _isManualEpgRefreshRunning;
+    private int _isRefreshingPlaylist;
+    private int _isAddingPlaylist;
     private bool _suppressFilterRefresh;
 
     private void ResetIncrementalState()
@@ -1051,7 +1092,7 @@ public partial class MainViewModel : ObservableObject
         {
             if (ex is OperationCanceledException) return;
 
-            System.Diagnostics.Debug.WriteLine($"ApplyFilters error: {ex}");
+            _logger?.LogDebug($"ApplyFilters error: {ex}");
             StatusMessage = "Filtreleme sırasında hata oluştu";
         }
         finally
@@ -1189,6 +1230,12 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
+        if (Interlocked.Exchange(ref _isAddingPlaylist, 1) == 1)
+        {
+            StatusMessage = "Playlist ekleme zaten devam ediyor...";
+            return;
+        }
+
         try
         {
             using var scope = _scopeFactory.CreateScope();
@@ -1212,6 +1259,7 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             IsLoading = false;
+            Interlocked.Exchange(ref _isAddingPlaylist, 0);
         }
     }
 
@@ -1224,6 +1272,15 @@ public partial class MainViewModel : ObservableObject
     public async Task RefreshSelectedPlaylistAsync(bool isBackground = false)
     {
         if (SelectedPlaylist == null) return;
+
+        if (Interlocked.Exchange(ref _isRefreshingPlaylist, 1) == 1)
+        {
+            if (!isBackground)
+            {
+                StatusMessage = "Playlist zaten yenileniyor...";
+            }
+            return;
+        }
 
         try
         {
@@ -1257,6 +1314,8 @@ public partial class MainViewModel : ObservableObject
             {
                 IsLoading = false;
             }
+
+            Interlocked.Exchange(ref _isRefreshingPlaylist, 0);
         }
     }
 
@@ -1281,9 +1340,37 @@ public partial class MainViewModel : ObservableObject
         await LoadEpgInternalAsync(isBackgroundSync: false, forceRefresh: true, setBusyState: false);
     }
 
+    public void ForceRefreshEpgInBackground()
+    {
+        _ = RunManualEpgRefreshBackgroundAsync();
+    }
+
+    private async Task RunManualEpgRefreshBackgroundAsync()
+    {
+        try
+        {
+            StatusMessage = "EPG yenileme başlatıldı...";
+            await LoadEpgInternalAsync(isBackgroundSync: false, forceRefresh: true, setBusyState: false);
+        }
+        catch (Exception ex)
+        {
+            await PersistSelectedPlaylistEpgErrorAsync($"Manual: {ex.Message}");
+            _logger?.LogDebug($"Manual EPG refresh failed: {ex}");
+        }
+    }
+
     private async Task LoadEpgInternalAsync(bool isBackgroundSync, bool forceRefresh = false, bool setBusyState = true)
     {
         if (CurrentProfile == null) return;
+
+        if (!isBackgroundSync)
+        {
+            if (Interlocked.Exchange(ref _isManualEpgRefreshRunning, 1) == 1)
+            {
+                StatusMessage = "EPG yenileme zaten devam ediyor...";
+                return;
+            }
+        }
 
         try
         {
@@ -1361,7 +1448,7 @@ public partial class MainViewModel : ObservableObject
             if (detectedCountries.Count == 0)
                 detectedCountries.Add(("TR", 0, 0));
 
-            System.Diagnostics.Debug.WriteLine($"[MainViewModel] Detected countries: {string.Join(", ", detectedCountries.Select(c => c.CountryCode))}");
+            _logger?.LogDebug($"[MainViewModel] Detected countries: {string.Join(", ", detectedCountries.Select(c => c.CountryCode))}");
 
             // 3. EPG kaynaklarını topla
             var distinctSources = new List<Services.EpgSource>();
@@ -1416,12 +1503,13 @@ public partial class MainViewModel : ObservableObject
             var customEpgUrl = (_settingsService.Settings.CustomEpgUrl ?? string.Empty).Trim();
             if (Uri.TryCreate(customEpgUrl, UriKind.Absolute, out _))
             {
+                var hasUsableTvgIds = channelsForMapping.Any(c => !string.IsNullOrWhiteSpace(c.TvgId));
                 epgSources.Insert(0, new Services.EpgSource
                 {
                     Url = customEpgUrl,
                     Priority = 0,
                     Type = Services.EpgSourceType.CustomUrl,
-                    IsPrimary = false
+                    IsPrimary = hasUsableTvgIds
                 });
             }
 
@@ -1454,7 +1542,7 @@ public partial class MainViewModel : ObservableObject
                     // Eğer bu kaynak için temizlik gerekiyorsa
                     if (source.ClearBeforeLoad)
                     {
-                        System.Diagnostics.Debug.WriteLine("[MainViewModel] Clearing existing EPG data...");
+                        _logger?.LogDebug("[MainViewModel] Clearing existing EPG data...");
                         await epgService.ClearEpgAsync();
                     }
 
@@ -1467,7 +1555,7 @@ public partial class MainViewModel : ObservableObject
                     {
                         anySuccess = true;
                         successfulSourceUrl = source.Url;
-                        System.Diagnostics.Debug.WriteLine($"[MainViewModel] EPG loaded from {source.Type} ({loadedPrograms} programs) - URL: {source.Url}");
+                        _logger?.LogDebug($"[MainViewModel] EPG loaded from {source.Type} ({loadedPrograms} programs) - URL: {source.Url}");
                         lastSourceError = null;
                     }
                     else
@@ -1477,7 +1565,7 @@ public partial class MainViewModel : ObservableObject
                         {
                             lastSourceError = $"{source.Type}: 0 program";
                         }
-                        System.Diagnostics.Debug.WriteLine($"[MainViewModel] EPG source returned 0 programs: {source.Type}");
+                        _logger?.LogDebug($"[MainViewModel] EPG source returned 0 programs: {source.Type}");
                     }
                     
                     // Do NOT break here; continue to load other countries/sources
@@ -1485,7 +1573,7 @@ public partial class MainViewModel : ObservableObject
                 catch (Exception ex)
                 {
                     lastSourceError = $"{source.Type}: {ex.Message}";
-                    System.Diagnostics.Debug.WriteLine($"[MainViewModel] EPG source failed: {source.Type} - {ex.Message}");
+                    _logger?.LogDebug($"[MainViewModel] EPG source failed: {source.Type} - {ex.Message}");
                 }
             }
 
@@ -1498,32 +1586,47 @@ public partial class MainViewModel : ObservableObject
                     : $"EPG yüklenemedi{(string.IsNullOrWhiteSpace(lastSourceError) ? "" : $" ({lastSourceError})")}";
             }
 
-            if (anySuccess && SelectedPlaylist != null)
+            if (SelectedPlaylist != null)
             {
                 var playlistToUpdate = await db.Playlists.FirstOrDefaultAsync(p => p.Id == SelectedPlaylist.Id);
                 if (playlistToUpdate != null)
                 {
-                    if (!string.IsNullOrWhiteSpace(successfulSourceUrl))
+                    if (anySuccess)
                     {
-                        playlistToUpdate.EpgUrl = successfulSourceUrl;
-                        SelectedPlaylist.EpgUrl = successfulSourceUrl;
-                    }
+                        if (!string.IsNullOrWhiteSpace(successfulSourceUrl))
+                        {
+                            playlistToUpdate.EpgUrl = successfulSourceUrl;
+                            SelectedPlaylist.EpgUrl = successfulSourceUrl;
+                        }
 
-                    playlistToUpdate.EpgLastUpdated = DateTime.Now;
-                    await db.SaveChangesAsync();
-                    SelectedPlaylist.EpgLastUpdated = playlistToUpdate.EpgLastUpdated;
+                        playlistToUpdate.EpgLastUpdated = DateTime.Now;
+                        playlistToUpdate.EpgLastError = null;
+                        await db.SaveChangesAsync();
+                        SelectedPlaylist.EpgLastUpdated = playlistToUpdate.EpgLastUpdated;
+                        SelectedPlaylist.EpgLastError = null;
+                    }
+                    else
+                    {
+                        var errorText = string.IsNullOrWhiteSpace(lastSourceError)
+                            ? "EPG kaynaklarindan veri alinamadi."
+                            : lastSourceError;
+                        playlistToUpdate.EpgLastError = errorText;
+                        await db.SaveChangesAsync();
+                        SelectedPlaylist.EpgLastError = errorText;
+                    }
                 }
             }
         }
         catch (Exception ex)
         {
+            await PersistSelectedPlaylistEpgErrorAsync($"LoadEpgInternal: {ex.Message}");
             if (!isBackgroundSync)
             {
                 StatusMessage = $"EPG Hatası: {ex.Message}";
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine($"Background EPG sync failed: {ex.Message}");
+                _logger?.LogDebug($"Background EPG sync failed: {ex.Message}");
             }
         }
         finally
@@ -1532,6 +1635,38 @@ public partial class MainViewModel : ObservableObject
             {
                 IsLoading = false;
             }
+
+            if (!isBackgroundSync)
+            {
+                Interlocked.Exchange(ref _isManualEpgRefreshRunning, 0);
+            }
+        }
+    }
+
+    private async Task PersistSelectedPlaylistEpgErrorAsync(string error)
+    {
+        if (SelectedPlaylist == null || string.IsNullOrWhiteSpace(error))
+        {
+            return;
+        }
+
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var playlist = await db.Playlists.FirstOrDefaultAsync(p => p.Id == SelectedPlaylist.Id);
+            if (playlist == null)
+            {
+                return;
+            }
+
+            playlist.EpgLastError = error;
+            await db.SaveChangesAsync();
+            SelectedPlaylist.EpgLastError = error;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug($"PersistSelectedPlaylistEpgErrorAsync failed: {ex}");
         }
     }
 
@@ -1713,7 +1848,7 @@ public partial class MainViewModel : ObservableObject
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Navigate->UpdateMyList failed: {ex}");
+                _logger?.LogDebug($"Navigate->UpdateMyList failed: {ex}");
                 MyList = new List<object>();
                 ShowMyListEmptyState = true;
             }
@@ -1730,7 +1865,7 @@ public partial class MainViewModel : ObservableObject
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Navigate->UpdateFavoriteChannels failed: {ex}");
+                _logger?.LogDebug($"Navigate->UpdateFavoriteChannels failed: {ex}");
                 FavoriteChannels = new List<object>();
                 ShowFavoritesEmptyState = true;
             }
@@ -1785,7 +1920,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"UpdateMyList failed: {ex}");
+            _logger?.LogDebug($"UpdateMyList failed: {ex}");
             MyList = new List<object>();
             ShowMyListEmptyState = true;
         }
@@ -1827,7 +1962,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"UpdateFavoriteChannels failed: {ex}");
+            _logger?.LogDebug($"UpdateFavoriteChannels failed: {ex}");
             FavoriteChannels = new List<object>();
             ShowFavoritesEmptyState = true;
         }
@@ -2793,7 +2928,7 @@ public partial class MainViewModel : ObservableObject
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"EnsureSeriesEpisodes failed: {ex.Message}");
+                _logger?.LogDebug($"EnsureSeriesEpisodes failed: {ex.Message}");
             }
             SelectedSeries = selectedSeries;
             IsSeriesDetailVisible = true;
@@ -2884,7 +3019,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Series metadata load failed: {ex.Message}");
+            _logger?.LogDebug($"Series metadata load failed: {ex.Message}");
         }
         finally
         {
@@ -3349,6 +3484,7 @@ public partial class MainViewModel : ObservableObject
         return null;
     }
 }
+
 
 
 

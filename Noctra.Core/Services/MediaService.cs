@@ -6,28 +6,9 @@ using Noctra.Services.Interfaces;
 
 namespace Noctra.Services;
 
-public class MediaService : IMediaService
+public partial class MediaService : IMediaService
 {
     private readonly AppDbContext _context;
-    private static readonly Regex SxeRegex = new(
-        @"^(?<name>.+?)\s*(?:[-._ ]*)[Ss](?<season>\d{1,2})\s*[Ee](?<episode>\d{1,3})\b",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
-    private static readonly Regex XRegex = new(
-        @"^(?<name>.+?)\s*(?:[-._ ]*)(?<season>\d{1,2})\s*[Xx]\s*(?<episode>\d{1,3})\b",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
-    private static readonly Regex TurkishRegex = new(
-        @"^(?<name>.+?)\s*(?:[-._ ]*)[Ss]ezon\s*(?<season>\d{1,2}).*?[Bb][oö]l[uü]m\s*(?<episode>\d{1,3})\b",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
-    private static readonly Regex EnglishRegex = new(
-        @"^(?<name>.+?)\s*(?:[-._ ]*)[Ss]eason\s*(?<season>\d{1,2}).*?[Ee]pisode\s*(?<episode>\d{1,3})\b",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
-    private static readonly Regex SeasonOnlyRegex = new(
-        @"^(?<name>.+?)\s*(?:[-._ ]*)(?:[Ss]eason|[Ss]ezon)\s*(?<season>\d{1,2})\b",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
-    private static readonly Regex EpisodeTokenRegex = new(
-        @"\b(?:[Ss]\d{1,2}[Ee]\d{1,3}|\d{1,2}[Xx]\d{1,3}|[Ss]ezon\s*\d{1,2}\s*[Bb][oö]l[uü]m\s*\d{1,3}|[Ee]p(?:isode)?\s*\d{1,3}|[Bb][oö]l[uü]m\s*\d{1,3})\b",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
-    private static readonly Regex MultiSpaceRegex = new(@"\s+", RegexOptions.Compiled);
 
     public MediaService(AppDbContext context)
     {
@@ -126,7 +107,7 @@ public class MediaService : IMediaService
         }
 
         var title = channelName.Trim();
-        foreach (var regex in new[] { SxeRegex, XRegex, TurkishRegex, EnglishRegex })
+        foreach (var regex in new[] { SxeRegex(), XRegex(), TurkishRegex(), EnglishRegex() })
         {
             var match = regex.Match(title);
             if (!match.Success)
@@ -141,7 +122,7 @@ public class MediaService : IMediaService
             return (seriesName, season, episode);
         }
 
-        var seasonOnly = SeasonOnlyRegex.Match(title);
+        var seasonOnly = SeasonOnlyRegex().Match(title);
         if (seasonOnly.Success)
         {
             var rawName = seasonOnly.Groups["name"].Value;
@@ -150,7 +131,7 @@ public class MediaService : IMediaService
             return (seriesName, season, 1);
         }
 
-        var fallbackName = CleanSeriesName(EpisodeTokenRegex.Replace(title, " "));
+        var fallbackName = CleanSeriesName(EpisodeTokenRegex().Replace(title, " "));
         return (fallbackName, 1, 1);
     }
 
@@ -162,9 +143,9 @@ public class MediaService : IMediaService
         }
 
         var cleaned = value.Trim();
-        cleaned = EpisodeTokenRegex.Replace(cleaned, " ");
+        cleaned = EpisodeTokenRegex().Replace(cleaned, " ");
         cleaned = cleaned.Replace('_', ' ').Replace('.', ' ');
-        cleaned = MultiSpaceRegex.Replace(cleaned, " ").Trim(' ', '-', '|', ':');
+        cleaned = MultiSpaceRegex().Replace(cleaned, " ").Trim(' ', '-', '|', ':');
         return string.IsNullOrWhiteSpace(cleaned) ? "Bilinmeyen Dizi" : cleaned;
     }
 
@@ -216,6 +197,27 @@ public class MediaService : IMediaService
             await _context.SaveChangesAsync();
         }
     }
+
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss](?<season>\d{1,2})\s*[Ee](?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SxeRegex();
+
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?<season>\d{1,2})\s*[Xx]\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
+    private static partial Regex XRegex();
+
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss]ezon\s*(?<season>\d{1,2}).*?[Bb][oö]l[uü]m\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
+    private static partial Regex TurkishRegex();
+
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss]eason\s*(?<season>\d{1,2}).*?[Ee]pisode\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
+    private static partial Regex EnglishRegex();
+
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?:[Ss]eason|[Ss]ezon)\s*(?<season>\d{1,2})\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SeasonOnlyRegex();
+
+    [GeneratedRegex(@"\b(?:[Ss]\d{1,2}[Ee]\d{1,3}|\d{1,2}[Xx]\d{1,3}|[Ss]ezon\s*\d{1,2}\s*[Bb][oö]l[uü]m\s*\d{1,3}|[Ee]p(?:isode)?\s*\d{1,3}|[Bb][oö]l[uü]m\s*\d{1,3})\b", RegexOptions.IgnoreCase)]
+    private static partial Regex EpisodeTokenRegex();
+
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex MultiSpaceRegex();
 }
 
 
