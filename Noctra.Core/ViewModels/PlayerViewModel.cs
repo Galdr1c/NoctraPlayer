@@ -50,6 +50,9 @@ public partial class PlayerViewModel : ObservableObject
     private bool _isSeriesContent;
 
     [ObservableProperty]
+    private bool _isDownloadedPlayback;
+
+    [ObservableProperty]
     private bool _isLocked;
 
     [ObservableProperty]
@@ -185,7 +188,9 @@ public partial class PlayerViewModel : ObservableObject
     [ObservableProperty]
     private string _downloadStatusMessage = string.Empty;
 
-    public bool CanShowDownloadButton => CurrentChannel != null && !IsLiveContent;
+    public bool CanShowDownloadButton => CurrentChannel != null && !IsLiveContent && !IsDownloadedPlayback;
+
+    public bool CanShowInfoButton => !IsDownloadedPlayback;
 
     public bool CanDownloadCurrentContent =>
         CanShowDownloadButton &&
@@ -398,6 +403,7 @@ public partial class PlayerViewModel : ObservableObject
         DownloadStatusMessage = string.Empty;
         IsDownloadInProgress = false;
         Interlocked.Exchange(ref _isDownloadActionRunning, 0);
+        IsDownloadedPlayback = IsDownloadedStreamUrl(value?.StreamUrl);
 
         if (value != null)
         {
@@ -445,6 +451,19 @@ public partial class PlayerViewModel : ObservableObject
         UpdateOverlaySecondaryText();
         OnPropertyChanged(nameof(IsBufferShieldVisible));
         OnPropertyChanged(nameof(CanShowDownloadButton));
+        OnPropertyChanged(nameof(CanDownloadCurrentContent));
+        DownloadCurrentContentCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnIsDownloadedPlaybackChanged(bool value)
+    {
+        if (value)
+        {
+            IsInfoPanelOpen = false;
+        }
+
+        OnPropertyChanged(nameof(CanShowDownloadButton));
+        OnPropertyChanged(nameof(CanShowInfoButton));
         OnPropertyChanged(nameof(CanDownloadCurrentContent));
         DownloadCurrentContentCommand.NotifyCanExecuteChanged();
     }
@@ -889,6 +908,11 @@ public partial class PlayerViewModel : ObservableObject
     [RelayCommand]
     private void OpenInfoPanel()
     {
+        if (IsDownloadedPlayback)
+        {
+            return;
+        }
+
         IsInfoPanelOpen = !IsInfoPanelOpen;
         if (IsInfoPanelOpen)
         {
@@ -1602,6 +1626,13 @@ public partial class PlayerViewModel : ObservableObject
             return;
         }
 
+        if (IsDownloadedPlayback && !IsDownloadedStreamUrl(NextEpisode.StreamUrl))
+        {
+            DownloadStatusMessage = "Siradaki bolum indirilmemis.";
+            RestartAutoHideTimer();
+            return;
+        }
+
         var nextEpisode = NextEpisode;
         PrepareForContentLoading();
         IsNextEpisodePromptVisible = false;
@@ -2022,6 +2053,39 @@ public partial class PlayerViewModel : ObservableObject
         }
 
         return string.Empty;
+    }
+
+    private static bool IsDownloadedStreamUrl(string? streamUrl)
+    {
+        if (string.IsNullOrWhiteSpace(streamUrl))
+        {
+            return false;
+        }
+
+        var normalized = streamUrl.Trim().Trim('"', '\'');
+        if (normalized.Length < 4)
+        {
+            return false;
+        }
+
+        if (normalized.StartsWith("file://", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith(@"\\", StringComparison.Ordinal))
+        {
+            if (normalized.StartsWith("file://", StringComparison.OrdinalIgnoreCase) &&
+                Uri.TryCreate(normalized, UriKind.Absolute, out var fileUri))
+            {
+                return File.Exists(fileUri.LocalPath);
+            }
+
+            return File.Exists(normalized);
+        }
+
+        if (!Regex.IsMatch(normalized, @"^[a-zA-Z]:[\\/]"))
+        {
+            return false;
+        }
+
+        return File.Exists(normalized);
     }
 
     private void SetPlaybackPosition(double position)

@@ -19,6 +19,8 @@ public class ContentDownloadService : IContentDownloadService
     private const string EncryptedExtension = ".nctra";
     private const string DownloadTempExtension = ".nctra.part";
     private const string PlaybackCacheExtension = ".playcache";
+    private const int ProgressPersistIntervalMs = 1800;
+    private const long ProgressPersistMinDeltaBytes = 1024 * 1024; // 1 MB
     private static readonly Regex SeriesEpisodeRegex = new(
         @"(s(?:eason)?\s*(?<s>\d{1,2})\s*e(?:pisode)?\s*(?<e>\d{1,3}))|((?<s2>\d{1,2})\s*x\s*(?<e2>\d{1,3}))|(sezon\s*(?<s3>\d{1,2})\s*b[oö]l[uü]m\s*(?<e3>\d{1,3}))|(b[oö]l[uü]m\s*(?<e4>\d{1,3}))",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -166,7 +168,21 @@ public class ContentDownloadService : IContentDownloadService
             return cachePath;
         }
 
-        await DecryptFileAsync(streamUrl, cachePath, cancellationToken);
+        try
+        {
+            await DecryptFileAsync(streamUrl, cachePath, cancellationToken);
+        }
+        catch (InvalidDataException)
+        {
+            // Corrupted/mismatched encrypted file: attempt one-time repair from persisted temp payload.
+            var repaired = await TryRepairEncryptedDownloadAsync(streamUrl, cancellationToken);
+            if (!repaired)
+            {
+                throw;
+            }
+
+            await DecryptFileAsync(streamUrl, cachePath, cancellationToken);
+        }
         try
         {
             File.SetAttributes(cachePath, FileAttributes.Hidden | FileAttributes.Temporary);
@@ -176,6 +192,107 @@ public class ContentDownloadService : IContentDownloadService
             // no-op
         }
         return cachePath;
+    }
+
+    private async Task<bool> TryRepairEncryptedDownloadAsync(
+        string encryptedPath,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var normalizedEncryptedPath = NormalizePath(encryptedPath);
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var candidates = await db.DownloadItems
+                .Where(d => d.LocalEncryptedPath != null)
+                .ToListAsync(cancellationToken);
+
+            var item = candidates.FirstOrDefault(d =>
+                string.Equals(NormalizePath(d.LocalEncryptedPath), normalizedEncryptedPath, StringComparison.OrdinalIgnoreCase));
+            if (item == null && candidates.Count > 0)
+            {
+                item = candidates.FirstOrDefault(d =>
+                    string.Equals(Path.GetFileName(d.LocalEncryptedPath), Path.GetFileName(normalizedEncryptedPath), StringComparison.OrdinalIgnoreCase));
+            }
+
+            var tempPath = item?.TempFilePath;
+            if (string.IsNullOrWhiteSpace(tempPath) || !File.Exists(tempPath))
+            {
+                var siblingTemp = normalizedEncryptedPath + ".part";
+                if (File.Exists(siblingTemp))
+                {
+                    tempPath = siblingTemp;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(tempPath) || !File.Exists(tempPath))
+            {
+                return false;
+            }
+
+            var tempLength = new FileInfo(tempPath).Length;
+            if (tempLength <= 0)
+            {
+                return false;
+            }
+
+            var extension = ResolveExtensionFromSource(item?.SourceUrl ?? string.Empty);
+            if (File.Exists(normalizedEncryptedPath))
+            {
+                TryDeleteFileWithRetry(normalizedEncryptedPath);
+            }
+
+            await EncryptFileWithRetryAsync(tempPath, normalizedEncryptedPath, extension, cancellationToken);
+            TryDeleteFileWithRetry(tempPath);
+
+            if (item != null)
+            {
+                item.LocalEncryptedPath = normalizedEncryptedPath;
+                item.Status = DownloadStatus.Completed;
+                item.BytesDownloaded = tempLength;
+                item.BytesTotal = tempLength;
+                item.SpeedBytesPerSecond = 0;
+                item.EstimatedSecondsRemaining = 0;
+                item.TempFilePath = null;
+                item.ErrorMessage = null;
+                item.CompletedAt ??= DateTime.Now;
+                item.UpdatedAt = DateTime.Now;
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
+            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Encrypted download repair failed for path {EncryptedPath}", encryptedPath);
+            return false;
+        }
+    }
+
+    private static string NormalizePath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return string.Empty;
+        }
+
+        var value = path.Trim().Trim('"', '\'');
+        if (value.StartsWith("file://", StringComparison.OrdinalIgnoreCase) &&
+            Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
+            uri.IsFile)
+        {
+            value = uri.LocalPath;
+        }
+
+        try
+        {
+            return Path.GetFullPath(value);
+        }
+        catch
+        {
+            return value;
+        }
     }
 
     private async Task<string?> TryRestoreMissingLocalPathAsync(
@@ -523,6 +640,23 @@ public class ContentDownloadService : IContentDownloadService
             resumedBytes = 0;
         }
 
+        if (File.Exists(encryptedPath) && new FileInfo(encryptedPath).Length > 0)
+        {
+            await MarkCompletedAsync(downloadId, encryptedPath, resumedBytes, item.BytesTotal ?? resumedBytes, DateTime.UtcNow);
+            return;
+        }
+
+        if (item.BytesTotal.HasValue &&
+            item.BytesTotal.Value > 0 &&
+            resumedBytes >= item.BytesTotal.Value &&
+            File.Exists(plainTempPath))
+        {
+            await EncryptFileWithRetryAsync(plainTempPath, encryptedPath, extension, localCts.Token);
+            TryDeleteFileWithRetry(plainTempPath);
+            await MarkCompletedAsync(downloadId, encryptedPath, resumedBytes, item.BytesTotal, DateTime.UtcNow);
+            return;
+        }
+
         item.Status = DownloadStatus.Downloading;
         item.ErrorMessage = null;
         item.UpdatedAt = DateTime.Now;
@@ -551,50 +685,68 @@ public class ContentDownloadService : IContentDownloadService
             }
 
             var totalBytes = ResolveTotalBytes(response, resumedBytes);
-            await using var sourceStream = await response.Content.ReadAsStreamAsync(localCts.Token);
-            await using var output = new FileStream(
-                plainTempPath,
-                resumedBytes > 0 ? FileMode.Append : FileMode.Create,
-                FileAccess.Write,
-                FileShare.Read,
-                1024 * 64,
-                true);
-
-            var buffer = new byte[1024 * 64];
             long downloaded = resumedBytes;
-            long lastBytes = resumedBytes;
             var startedAt = DateTime.UtcNow;
-            var lastTick = DateTime.UtcNow;
+            var lastPersistTick = DateTime.UtcNow;
+            long lastPersistedBytes = resumedBytes;
 
-            while (true)
+            await using (var sourceStream = await response.Content.ReadAsStreamAsync(localCts.Token))
+            await using (var output = new FileStream(
+                             plainTempPath,
+                             resumedBytes > 0 ? FileMode.Append : FileMode.Create,
+                             FileAccess.Write,
+                             FileShare.Read,
+                             1024 * 64,
+                             true))
             {
-                localCts.Token.ThrowIfCancellationRequested();
-                var read = await sourceStream.ReadAsync(buffer.AsMemory(0, buffer.Length), localCts.Token);
-                if (read <= 0)
+                var buffer = new byte[1024 * 64];
+                long lastBytes = resumedBytes;
+                var lastTick = DateTime.UtcNow;
+
+                while (true)
                 {
-                    break;
+                    localCts.Token.ThrowIfCancellationRequested();
+                    var read = await sourceStream.ReadAsync(buffer.AsMemory(0, buffer.Length), localCts.Token);
+                    if (read <= 0)
+                    {
+                        break;
+                    }
+
+                    await output.WriteAsync(buffer.AsMemory(0, read), localCts.Token);
+                    downloaded += read;
+
+                    var now = DateTime.UtcNow;
+                    if ((now - lastTick).TotalMilliseconds >= 800)
+                    {
+                        var deltaBytes = downloaded - lastBytes;
+                        var deltaSeconds = Math.Max(0.2, (now - lastTick).TotalSeconds);
+                        var speed = deltaBytes / deltaSeconds;
+                        var eta = speed > 0 && totalBytes.HasValue
+                            ? (int?)Math.Max(0, (int)Math.Ceiling((totalBytes.Value - downloaded) / speed))
+                            : null;
+                        var shouldPersistByTime = (now - lastPersistTick).TotalMilliseconds >= ProgressPersistIntervalMs;
+                        var shouldPersistByDelta = downloaded - lastPersistedBytes >= ProgressPersistMinDeltaBytes;
+                        if (shouldPersistByTime || shouldPersistByDelta)
+                        {
+                            item.BytesDownloaded = downloaded;
+                            item.BytesTotal = totalBytes;
+                            item.SpeedBytesPerSecond = speed;
+                            item.EstimatedSecondsRemaining = eta;
+                            item.UpdatedAt = DateTime.Now;
+                            await startDb.SaveChangesAsync(localCts.Token);
+                            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+                            lastPersistTick = now;
+                            lastPersistedBytes = downloaded;
+                        }
+
+                        lastTick = now;
+                        lastBytes = downloaded;
+                    }
                 }
 
-                await output.WriteAsync(buffer.AsMemory(0, read), localCts.Token);
-                downloaded += read;
-
-                var now = DateTime.UtcNow;
-                if ((now - lastTick).TotalMilliseconds >= 800)
-                {
-                    var deltaBytes = downloaded - lastBytes;
-                    var deltaSeconds = Math.Max(0.2, (now - lastTick).TotalSeconds);
-                    var speed = deltaBytes / deltaSeconds;
-                    var eta = speed > 0 && totalBytes.HasValue
-                        ? (int?)Math.Max(0, (int)Math.Ceiling((totalBytes.Value - downloaded) / speed))
-                        : null;
-
-                    await UpdateProgressAsync(downloadId, downloaded, totalBytes, speed, eta);
-                    lastTick = now;
-                    lastBytes = downloaded;
-                }
+                await output.FlushAsync(localCts.Token);
             }
 
-            await output.FlushAsync(localCts.Token);
             if (downloaded <= 0)
             {
                 await MarkFailedAsync(downloadId, "Indirme tamamlanamadi (bos dosya).");
@@ -603,8 +755,8 @@ public class ContentDownloadService : IContentDownloadService
                 return;
             }
 
-            await EncryptFileAsync(plainTempPath, encryptedPath, extension);
-            TryDeleteFile(plainTempPath);
+            await EncryptFileWithRetryAsync(plainTempPath, encryptedPath, extension, localCts.Token);
+            TryDeleteFileWithRetry(plainTempPath);
             await MarkCompletedAsync(downloadId, encryptedPath, downloaded, totalBytes, startedAt);
         }
         catch (OperationCanceledException)
@@ -742,6 +894,15 @@ public class ContentDownloadService : IContentDownloadService
                 await RestoreMappedEntitiesToSourceUrlAsync(db, item);
                 db.DownloadItems.Remove(item);
                 changed = true;
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(item.TempFilePath))
+            {
+                TryDeleteFileWithRetry(item.TempFilePath);
+                item.TempFilePath = null;
+                item.UpdatedAt = DateTime.Now;
+                changed = true;
             }
         }
 
@@ -750,30 +911,6 @@ public class ContentDownloadService : IContentDownloadService
             await db.SaveChangesAsync(cancellationToken);
             DownloadsChanged?.Invoke(this, EventArgs.Empty);
         }
-    }
-
-    private async Task UpdateProgressAsync(
-        int downloadId,
-        long downloaded,
-        long? total,
-        double speed,
-        int? eta)
-    {
-        await using var scope = _scopeFactory.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId);
-        if (item == null || item.Status != DownloadStatus.Downloading)
-        {
-            return;
-        }
-
-        item.BytesDownloaded = downloaded;
-        item.BytesTotal = total;
-        item.SpeedBytesPerSecond = speed;
-        item.EstimatedSecondsRemaining = eta;
-        item.UpdatedAt = DateTime.Now;
-        await db.SaveChangesAsync();
-        DownloadsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private async Task MarkCompletedAsync(
@@ -1029,6 +1166,41 @@ public class ContentDownloadService : IContentDownloadService
         var hash = hmac.ComputeHash(output);
         output.Position = output.Length;
         await output.WriteAsync(hash);
+    }
+
+    private async Task EncryptFileWithRetryAsync(
+        string sourcePath,
+        string encryptedPath,
+        string originalExtension,
+        CancellationToken cancellationToken)
+    {
+        Exception? lastError = null;
+        for (var attempt = 1; attempt <= 4; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                if (attempt > 1 && File.Exists(encryptedPath))
+                {
+                    TryDeleteFile(encryptedPath);
+                }
+
+                await EncryptFileAsync(sourcePath, encryptedPath, originalExtension);
+                return;
+            }
+            catch (IOException ex)
+            {
+                lastError = ex;
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                lastError = ex;
+            }
+
+            await Task.Delay(250 * attempt, cancellationToken);
+        }
+
+        throw lastError ?? new IOException("Sifreleme adimi basarisiz.");
     }
 
     private async Task DecryptFileAsync(string encryptedPath, string plainPath, CancellationToken cancellationToken)

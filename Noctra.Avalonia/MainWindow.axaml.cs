@@ -226,30 +226,39 @@ public partial class MainWindow : Window
             return;
         }
 
-        _playerViewModel.CurrentProfileId = _mainViewModel.CurrentProfileId;
-        if (channel.Type == ChannelType.Series && _mainViewModel.CurrentEpisodePlaybackContext == null)
+        try
         {
-            _mainViewModel.TryPrepareEpisodePlaybackContext(channel);
-        }
+            _playerViewModel.CurrentProfileId = _mainViewModel.CurrentProfileId;
+            if (channel.Type == ChannelType.Series && _mainViewModel.CurrentEpisodePlaybackContext == null)
+            {
+                _mainViewModel.TryPrepareEpisodePlaybackContext(channel);
+            }
 
-        if (channel.Type == ChannelType.Series && _mainViewModel.CurrentEpisodePlaybackContext != null)
-        {
-            _playerViewModel.SetCurrentEpisode(
-                _mainViewModel.CurrentEpisodePlaybackContext,
-                _mainViewModel.NextEpisodePlaybackContext,
-                _mainViewModel.CurrentSeriesPlaybackContext);
-        }
-        else
-        {
-            _playerViewModel.SetCurrentEpisode(null, null);
-        }
+            if (channel.Type == ChannelType.Series && _mainViewModel.CurrentEpisodePlaybackContext != null)
+            {
+                _playerViewModel.SetCurrentEpisode(
+                    _mainViewModel.CurrentEpisodePlaybackContext,
+                    _mainViewModel.NextEpisodePlaybackContext,
+                    _mainViewModel.CurrentSeriesPlaybackContext);
+            }
+            else
+            {
+                _playerViewModel.SetCurrentEpisode(null, null);
+            }
 
-        HideMiniPlayer();
-        PlayerArea.IsVisible = true;
-        _playerViewModel.IsLocked = false;
-        _playerViewModel.UserInteractionCommand.Execute(null);
-        await _playerViewModel.PlayChannelAsync(channel);
-        Dispatcher.UIThread.Post(() => OverlayControl.Focus(), DispatcherPriority.Input);
+            HideMiniPlayer();
+            PlayerArea.IsVisible = true;
+            _playerViewModel.IsLocked = false;
+            _playerViewModel.UserInteractionCommand.Execute(null);
+            await _playerViewModel.PlayChannelAsync(channel);
+            Dispatcher.UIThread.Post(() => OverlayControl.Focus(), DispatcherPriority.Input);
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.LogException("Media playback failed in MainWindow_OnMediaSelected.", ex);
+            PlayerArea.IsVisible = false;
+            _mainViewModel.StatusMessage = $"Icerik oynatilamadi: {ex.Message}";
+        }
     }
 
     private void PlayerViewModel_NextEpisodeRequested(object? sender, Episode episode)

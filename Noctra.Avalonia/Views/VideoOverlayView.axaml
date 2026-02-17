@@ -256,6 +256,9 @@
                             </Button>
 
                             <Button Command="{Binding OpenInfoPanelCommand}" Margin="0,0,16,0">
+                                <Button.IsVisible>
+                                    <Binding Path="CanShowInfoButton"/>
+                                </Button.IsVisible>
                                 <materialIcons:MaterialIcon Kind="InformationOutline" Width="18" Height="18" Foreground="White"/>
                             </Button>
                             <Button Command="{Binding OpenAudioSettingsCommand}" Margin="0,0,16,0">

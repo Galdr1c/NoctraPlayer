@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using Noctra.Data;
 using System.Text.RegularExpressions;
+using System.Net.NetworkInformation;
 
 namespace Noctra.ViewModels;
 
@@ -42,6 +43,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IMetadataService _metadataService;
     private readonly IContentDownloadService _contentDownloadService;
     private readonly ILogger<MainViewModel>? _logger;
+    private readonly DateTime _downloadCenterSessionStartUtc = DateTime.UtcNow;
 
     [ObservableProperty]
     private AppView _activeView = AppView.Home;
@@ -827,6 +829,8 @@ public partial class MainViewModel : ObservableObject
     private readonly Dictionary<int, DateTime> _playlistNoChangeUntilUtc = new();
     private bool _suppressFilterRefresh;
     private bool _seriesDetailDownloadedOnlyMode;
+
+    public bool IsDownloadedSeriesDetailMode => _seriesDetailDownloadedOnlyMode;
 
     private void ResetIncrementalState()
     {
@@ -2018,6 +2022,9 @@ public partial class MainViewModel : ObservableObject
     private List<DownloadItem> _queuedDownloadItems = new();
 
     [ObservableProperty]
+    private List<DownloadItem> _completedDownloadItems = new();
+
+    [ObservableProperty]
     private int _activeDownloadCount;
 
     [ObservableProperty]
@@ -2087,6 +2094,7 @@ public partial class MainViewModel : ObservableObject
         if (view != AppView.Downloads)
         {
             _seriesDetailDownloadedOnlyMode = false;
+            OnPropertyChanged(nameof(IsDownloadedSeriesDetailMode));
         }
 
         if (view == AppView.Live) SelectedChannelType = ChannelType.Live;
@@ -2335,6 +2343,55 @@ public partial class MainViewModel : ObservableObject
             .Where(c => IsDownloadedStreamUrl(c.StreamUrl))
             .ToList();
 
+        var existingDownloadedVodUrls = new HashSet<string>(
+            DownloadedVodChannels
+                .Select(c => c.StreamUrl)
+                .Where(url => !string.IsNullOrWhiteSpace(url)),
+            StringComparer.OrdinalIgnoreCase);
+
+        var completedVodDownloads = await db.DownloadItems
+            .AsNoTracking()
+            .Where(d => d.ProfileId == CurrentProfileId.Value &&
+                        d.ChannelType == ChannelType.VOD &&
+                        d.Status == DownloadStatus.Completed &&
+                        !string.IsNullOrWhiteSpace(d.LocalEncryptedPath))
+            .OrderBy(d => d.CreatedAt)
+            .ToListAsync();
+
+        var fallbackVod = new List<Channel>();
+        foreach (var item in completedVodDownloads)
+        {
+            if (string.IsNullOrWhiteSpace(item.LocalEncryptedPath) || !File.Exists(item.LocalEncryptedPath))
+            {
+                continue;
+            }
+
+            if (existingDownloadedVodUrls.Contains(item.LocalEncryptedPath))
+            {
+                continue;
+            }
+
+            fallbackVod.Add(new Channel
+            {
+                Name = string.IsNullOrWhiteSpace(item.DisplayName) ? "VOD" : item.DisplayName,
+                StreamUrl = item.LocalEncryptedPath,
+                LogoUrl = item.PosterUrl,
+                BackdropUrl = item.PosterUrl,
+                Type = ChannelType.VOD,
+                PlaylistId = item.PlaylistId
+            });
+        }
+
+        if (fallbackVod.Count > 0)
+        {
+            DownloadedVodChannels = DownloadedVodChannels
+                .Concat(fallbackVod)
+                .GroupBy(c => c.StreamUrl ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.First())
+                .OrderBy(c => c.Name)
+                .ToList();
+        }
+
         var seriesCandidates = await db.Series
             .AsNoTracking()
             .Where(s => profilePlaylistIds.Contains(s.PlaylistId))
@@ -2472,6 +2529,17 @@ public partial class MainViewModel : ObservableObject
                 .Where(d => d.Status == DownloadStatus.Queued)
                 .OrderBy(d => d.CreatedAt)
                 .ToList();
+
+            CompletedDownloadItems = downloads
+                .Where(d => d.Status == DownloadStatus.Completed)
+                .Where(d =>
+                {
+                    var ts = (d.CompletedAt ?? d.UpdatedAt).ToUniversalTime();
+                    return ts >= _downloadCenterSessionStartUtc;
+                })
+                .OrderByDescending(d => d.CompletedAt ?? d.UpdatedAt)
+                .Take(100)
+                .ToList();
             UpdateDownloadCenterSummary(profileId);
         }
         catch (Exception ex)
@@ -2480,6 +2548,7 @@ public partial class MainViewModel : ObservableObject
             ActiveDownloadItems = new List<DownloadItem>();
             ActiveDownloadingItems = new List<DownloadItem>();
             QueuedDownloadItems = new List<DownloadItem>();
+            CompletedDownloadItems = new List<DownloadItem>();
             SetDownloadCenterSummaryEmpty();
         }
 
@@ -2494,6 +2563,7 @@ public partial class MainViewModel : ObservableObject
         DownloadFreeDiskSpaceText = "-";
         ActiveDownloadingItems = new List<DownloadItem>();
         QueuedDownloadItems = new List<DownloadItem>();
+        CompletedDownloadItems = new List<DownloadItem>();
     }
 
     private void UpdateDownloadCenterSummary(int profileId)
@@ -3535,6 +3605,52 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void PlayEpisode(Episode episode)
     {
+        _ = PlayEpisodeSafeAsync(episode);
+    }
+
+    private async Task PlayEpisodeSafeAsync(Episode? episode)
+    {
+        try
+        {
+            await PlayEpisodeInternalAsync(episode);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "PlayEpisode failed.");
+            StatusMessage = $"Bolum oynatilamadi: {ex.Message}";
+        }
+    }
+
+    private async Task PlayEpisodeInternalAsync(Episode? episode)
+    {
+        if (episode == null)
+        {
+            return;
+        }
+
+        var preferredStreamUrl = await ResolvePreferredStreamUrlAsync(episode.StreamUrl);
+        if (!string.Equals(preferredStreamUrl, episode.StreamUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            episode = new Episode
+            {
+                Id = episode.Id,
+                EpisodeNumber = episode.EpisodeNumber,
+                Name = episode.Name,
+                StreamUrl = preferredStreamUrl,
+                Plot = episode.Plot,
+                CoverUrl = episode.CoverUrl,
+                Duration = episode.Duration,
+                LastWatched = episode.LastWatched,
+                WatchedPosition = episode.WatchedPosition,
+                SeasonId = episode.SeasonId,
+                IntroStartSec = episode.IntroStartSec,
+                IntroEndSec = episode.IntroEndSec,
+                CreditsStartSec = episode.CreditsStartSec,
+                IsCompleted = episode.IsCompleted,
+                Season = episode.Season
+            };
+        }
+
         var channel = BuildSeriesEpisodeChannel(episode);
         CurrentEpisodePlaybackContext = episode;
         CurrentSeriesPlaybackContext = ResolveSeriesForEpisode(episode);
@@ -3549,6 +3665,7 @@ public partial class MainViewModel : ObservableObject
     {
         IsSeriesDetailVisible = false;
         _seriesDetailDownloadedOnlyMode = false;
+        OnPropertyChanged(nameof(IsDownloadedSeriesDetailMode));
         SelectedSeries = null;
         SelectedSeriesPosterUrl = null;
         SelectedSeriesBackdropUrl = null;
@@ -3594,6 +3711,8 @@ public partial class MainViewModel : ObservableObject
 
         if (media is Channel channel)
         {
+            channel.StreamUrl = await ResolvePreferredStreamUrlAsync(channel.StreamUrl);
+
             if (channel.Type == ChannelType.Series)
             {
                 TryPrepareEpisodePlaybackContext(channel);
@@ -3623,6 +3742,7 @@ public partial class MainViewModel : ObservableObject
             }
 
             _seriesDetailDownloadedOnlyMode = ActiveView == AppView.Downloads;
+            OnPropertyChanged(nameof(IsDownloadedSeriesDetailMode));
             if (_seriesDetailDownloadedOnlyMode)
             {
                 selectedSeries = BuildDownloadedOnlySeries(selectedSeries);
@@ -3664,6 +3784,43 @@ public partial class MainViewModel : ObservableObject
         normalized = Regex.Replace(normalized, @"[\-._]+", " ");
         normalized = Regex.Replace(normalized, @"\s+", " ").Trim();
         return string.IsNullOrWhiteSpace(normalized) ? displayName.Trim() : normalized;
+    }
+
+    private async Task<string> ResolvePreferredStreamUrlAsync(string? streamUrl)
+    {
+        if (string.IsNullOrWhiteSpace(streamUrl))
+        {
+            return string.Empty;
+        }
+
+        if (ActiveView == AppView.Downloads || !NetworkInterface.GetIsNetworkAvailable())
+        {
+            return streamUrl;
+        }
+
+        if (!IsDownloadedStreamUrl(streamUrl))
+        {
+            return streamUrl;
+        }
+
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var item = await db.DownloadItems
+                .AsNoTracking()
+                .Where(d => d.Status == DownloadStatus.Completed &&
+                            d.LocalEncryptedPath == streamUrl &&
+                            !string.IsNullOrWhiteSpace(d.SourceUrl))
+                .OrderByDescending(d => d.CompletedAt ?? d.UpdatedAt)
+                .FirstOrDefaultAsync();
+
+            return item?.SourceUrl ?? streamUrl;
+        }
+        catch
+        {
+            return streamUrl;
+        }
     }
 
     private static bool SeriesMatchesSearch(Series series, string rawQuery, string normalizedQuery)

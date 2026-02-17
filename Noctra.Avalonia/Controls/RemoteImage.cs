@@ -27,6 +27,7 @@ public class RemoteImage : Image
     private static Bitmap? _placeholderBitmap;
     private const int MaxCacheEntries = 1500;
     private const int PlaceholderFallbackDelayMs = 1500;
+    private const int PreloadConcurrency = 8;
 
     private CancellationTokenSource? _loadCts;
 
@@ -75,11 +76,23 @@ public class RemoteImage : Image
             return;
         }
 
+        using var throttle = new SemaphoreSlim(PreloadConcurrency, PreloadConcurrency);
         var tasks = new List<Task>(normalizedUrls.Count);
         foreach (var normalized in normalizedUrls)
         {
-            var task = InFlightLoads.GetOrAdd(normalized, static url => DownloadBitmapAsync(url));
-            tasks.Add(task);
+            tasks.Add(Task.Run(async () =>
+            {
+                await throttle.WaitAsync(cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    var task = InFlightLoads.GetOrAdd(normalized, static url => DownloadBitmapAsync(url));
+                    await task.ConfigureAwait(false);
+                }
+                finally
+                {
+                    throttle.Release();
+                }
+            }, cancellationToken));
         }
 
         await Task.WhenAll(tasks).ConfigureAwait(false);
@@ -232,6 +245,21 @@ public class RemoteImage : Image
 
     private static async Task<Bitmap?> DownloadHttpBitmapAsync(string normalizedUrl, Uri uri)
     {
+        var requestUris = BuildRequestUriCandidates(uri);
+        foreach (var requestUri in requestUris)
+        {
+            var result = await DownloadHttpBitmapWithRetryAsync(normalizedUrl, requestUri).ConfigureAwait(false);
+            if (result != null)
+            {
+                return result;
+            }
+        }
+
+        return null;
+    }
+
+    private static async Task<Bitmap?> DownloadHttpBitmapWithRetryAsync(string normalizedUrl, Uri uri)
+    {
         for (var attempt = 0; attempt < 3; attempt++)
         {
             try
@@ -284,6 +312,31 @@ public class RemoteImage : Image
 
         LogFailure(normalizedUrl, "RetryExhausted");
         return null;
+    }
+
+    private static IReadOnlyList<Uri> BuildRequestUriCandidates(Uri originalUri)
+    {
+        if (originalUri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var httpsBuilder = new UriBuilder(originalUri) { Scheme = Uri.UriSchemeHttps, Port = -1 };
+                var httpsUri = httpsBuilder.Uri;
+
+                if (originalUri.Host.Equals("image.tmdb.org", StringComparison.OrdinalIgnoreCase))
+                {
+                    return [httpsUri];
+                }
+
+                return [originalUri, httpsUri];
+            }
+            catch
+            {
+                return [originalUri];
+            }
+        }
+
+        return [originalUri];
     }
 
     private static Bitmap? TryDecodeDataUri(string url)
@@ -397,7 +450,7 @@ public class RemoteImage : Image
 
         var client = new HttpClient(handler)
         {
-            Timeout = TimeSpan.FromSeconds(12)
+            Timeout = TimeSpan.FromSeconds(18)
         };
 
         client.DefaultRequestHeaders.UserAgent.ParseAdd("Noctra.Avalonia/1.0");
@@ -443,6 +496,13 @@ public class RemoteImage : Image
             normalized.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
             normalized = normalized.Replace(" ", "%20", StringComparison.Ordinal);
+            if (Uri.TryCreate(normalized, UriKind.Absolute, out var uri) &&
+                uri.Host.Equals("image.tmdb.org", StringComparison.OrdinalIgnoreCase) &&
+                uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase))
+            {
+                var builder = new UriBuilder(uri) { Scheme = Uri.UriSchemeHttps, Port = -1 };
+                normalized = builder.Uri.ToString();
+            }
         }
 
         return normalized;

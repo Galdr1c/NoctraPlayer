@@ -891,6 +891,36 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
 
+            <StackPanel IsVisible="{Binding IsDownloadCenterVisible}">
+            <TextBlock Text="Tamamlanan İndirmeler" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,18,0,10"
+                       IsVisible="{Binding CompletedDownloadItems.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
+            <ItemsControl ItemsSource="{Binding CompletedDownloadItems}" IsVisible="{Binding CompletedDownloadItems.Count, Converter={StaticResource CountToVisibilityConverter}}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Spacing="8"/>
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:DownloadItem">
+                  <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="12">
+                    <Grid ColumnDefinitions="64,*,Auto">
+                      <Border Width="64" Height="86" CornerRadius="{DynamicResource RadiusSmall}" Background="{DynamicResource Surface1Brush}" ClipToBounds="True" Margin="0,0,12,0">
+                        <controls:RemoteImage Stretch="UniformToFill" Url="{Binding PosterUrl}"/>
+                      </Border>
+                      <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+                        <TextBlock Text="{Binding DisplayName}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding SizeText, StringFormat='{}Boyut: {0}'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12"/>
+                      </StackPanel>
+                      <Border Grid.Column="2" Background="{DynamicResource Surface1Brush}" CornerRadius="999" Padding="10,4" VerticalAlignment="Center">
+                        <TextBlock Text="Tamamlandı" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
+                      </Border>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            </StackPanel>
+
             <StackPanel IsVisible="{Binding IsDownloadCenterVisible, Converter={StaticResource InverseBoolConverter}}">
             <TextBlock Text="Diziler" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,18,0,12"
                        IsVisible="{Binding DownloadedSeriesItems.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
@@ -1047,52 +1077,86 @@
               </StackPanel>
             </Grid>
             <ScrollViewer Grid.Row="1" Padding="0,8,0,0">
-              <ItemsControl ItemsSource="{Binding SelectedSeries.Seasons}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate>
-                    <StackPanel Margin="0,0,0,40">
-                      <TextBlock Text="{Binding SeasonNumber, StringFormat='Sezon {0}'}" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,16"/>
-                      <ItemsControl ItemsSource="{Binding Episodes}">
-                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                          <DataTemplate>
-                            <Button Margin="0,0,16,24" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand" x:DataType="models:Episode"
-                                    Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).PlayEpisodeCommand}" CommandParameter="{Binding}">
-                              <Border Background="{DynamicResource Bg1Brush}" CornerRadius="8" Width="240">
-                                <Grid RowDefinitions="Auto,*">
-                                  <Border Height="100" CornerRadius="8,8,0,0" ClipToBounds="True">
-                                    <Grid>
-                                      <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
-                                      <Border Background="#44000000"/>
-                                      <materialIcons:MaterialIcon Kind="Play" Foreground="White" Width="24" Height="24" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.6"/>
-                                      <!-- Completion badge -->
-                                      <Border Width="24" Height="24" CornerRadius="12" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8"
-                                              Background="{DynamicResource AccentBrush}" IsVisible="{Binding ., Converter={StaticResource EpisodeCompletionBadgeVisibilityConverter}}">
-                                        <materialIcons:MaterialIcon Kind="Check" Foreground="White" Width="14" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                      </Border>
-                                    </Grid>
-                                  </Border>
-                                  <Border Grid.Row="1" Padding="12">
-                                    <StackPanel>
-                                      <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis"/>
-                                      <!-- Episode progress bar -->
-                                      <Border Height="3" Background="#33FFFFFF" Margin="0,12,0,0"
-                                              IsVisible="{Binding ., Converter={StaticResource EpisodeWatchedProgressVisibilityConverter}}">
-                                        <Border Width="{Binding ., Converter={StaticResource EpisodeWatchedProgressWidthConverter}, ConverterParameter=150}"
-                                                Background="{DynamicResource AccentBrush}" HorizontalAlignment="Left"/>
-                                      </Border>
-                                    </StackPanel>
-                                  </Border>
+              <Grid>
+                <!-- Normal detay görünümü -->
+                <ItemsControl ItemsSource="{Binding SelectedSeries.Seasons}"
+                              IsVisible="{Binding IsDownloadedSeriesDetailMode, Converter={StaticResource InverseBoolConverter}}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <StackPanel Margin="0,0,0,40">
+                        <TextBlock Text="{Binding SeasonNumber, StringFormat='Sezon {0}'}" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+                        <ItemsControl ItemsSource="{Binding Episodes}">
+                          <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                              <Button Margin="0,0,16,24" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand" x:DataType="models:Episode"
+                                      Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).PlayEpisodeCommand}" CommandParameter="{Binding}">
+                                <Border Background="{DynamicResource Bg1Brush}" CornerRadius="8" Width="240">
+                                  <Grid RowDefinitions="Auto,*">
+                                    <Border Height="100" CornerRadius="8,8,0,0" ClipToBounds="True">
+                                      <Grid>
+                                        <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
+                                        <Border Background="#44000000"/>
+                                        <materialIcons:MaterialIcon Kind="Play" Foreground="White" Width="24" Height="24" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.6"/>
+                                        <Border Width="24" Height="24" CornerRadius="12" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8"
+                                                Background="{DynamicResource AccentBrush}" IsVisible="{Binding ., Converter={StaticResource EpisodeCompletionBadgeVisibilityConverter}}">
+                                          <materialIcons:MaterialIcon Kind="Check" Foreground="White" Width="14" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                      </Grid>
+                                    </Border>
+                                    <Border Grid.Row="1" Padding="12">
+                                      <StackPanel>
+                                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis"/>
+                                        <Border Height="3" Background="#33FFFFFF" Margin="0,12,0,0"
+                                                IsVisible="{Binding ., Converter={StaticResource EpisodeWatchedProgressVisibilityConverter}}">
+                                          <Border Width="{Binding ., Converter={StaticResource EpisodeWatchedProgressWidthConverter}, ConverterParameter=150}"
+                                                  Background="{DynamicResource AccentBrush}" HorizontalAlignment="Left"/>
+                                        </Border>
+                                      </StackPanel>
+                                    </Border>
+                                  </Grid>
+                                </Border>
+                              </Button>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- İndirilen dizi görünümü: sezonlara ayrılmış düz liste -->
+                <ItemsControl ItemsSource="{Binding SelectedSeries.Seasons}"
+                              IsVisible="{Binding IsDownloadedSeriesDetailMode}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="models:Season">
+                      <StackPanel Margin="0,0,0,20">
+                        <TextBlock Text="{Binding SeasonNumber, StringFormat='Season {0}'}" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                        <ItemsControl ItemsSource="{Binding Episodes}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="models:Episode">
+                              <Button Margin="0,0,0,8"
+                                      Padding="12,10"
+                                      Background="{DynamicResource Surface0Brush}"
+                                      BorderBrush="{DynamicResource BorderBrush}"
+                                      BorderThickness="1"
+                                      HorizontalContentAlignment="Stretch"
+                                      Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).PlayEpisodeCommand}"
+                                      CommandParameter="{Binding}">
+                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                  <TextBlock Text="{Binding EpisodeNumber, StringFormat='E{0:00}'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" Margin="0,0,12,0"/>
+                                  <TextBlock Grid.Column="1" Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" TextTrimming="CharacterEllipsis"/>
+                                  <materialIcons:MaterialIcon Grid.Column="2" Kind="Play" Width="16" Height="16" Foreground="{DynamicResource TextMutedBrush}"/>
                                 </Grid>
-                              </Border>
-                            </Button>
-                          </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                      </ItemsControl>
-                    </StackPanel>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
+                              </Button>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Grid>
             </ScrollViewer>
           </Grid>
         </Grid>
