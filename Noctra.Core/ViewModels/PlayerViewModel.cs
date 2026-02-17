@@ -206,6 +206,7 @@ public partial class PlayerViewModel : ObservableObject
     private bool _suppressBufferShieldForSeek;
     private int _seekShieldSuppressionToken;
     private Series? _currentSeriesContext;
+    private bool _isContentTransitioning;
     private readonly IDispatcherService _dispatcherService;
     private readonly IWatchHistoryService? _watchHistoryService;
     private readonly System.Timers.Timer _autoHideTimer;
@@ -268,6 +269,7 @@ public partial class PlayerViewModel : ObservableObject
                 IsPlaying = playing;
                 if (playing) 
                 {
+                    _isContentTransitioning = false;
                     _isPlaybackEnded = false;
                     if (BufferingProgress >= 99f)
                     {
@@ -303,6 +305,14 @@ public partial class PlayerViewModel : ObservableObject
             _dispatcherService.Invoke(() =>
             {
                 BufferingProgress = progress;
+
+                // Ignore stale buffering callbacks while switching content.
+                if (_isContentTransitioning)
+                {
+                    IsBuffering = true;
+                    return;
+                }
+
                 // Keep loading active until playback truly starts and buffering reaches 100.
                 IsBuffering = !IsPlaying || progress < 100f;
 
@@ -332,6 +342,13 @@ public partial class PlayerViewModel : ObservableObject
             {
                 var nowUtc = DateTime.UtcNow;
                 _lastLivePositionEventAtUtc = nowUtc;
+
+                // Drop tail position events from previous media during transitions.
+                if (_isContentTransitioning)
+                {
+                    return;
+                }
+
                 UpdateDurationFromService();
                 if (IsPlaying && IsBuffering)
                 {
@@ -1261,6 +1278,7 @@ public partial class PlayerViewModel : ObservableObject
     [RelayCommand]
     private async Task Stop()
     {
+        _isContentTransitioning = false;
         _isPlaybackEnded = false;
         ResetSeekInteractionState();
         _watchHistoryTimer.Stop();
@@ -1776,11 +1794,12 @@ public partial class PlayerViewModel : ObservableObject
 
     private void CancelSeekBufferShieldSuppression()
     {
+        var wasSuppressed = _suppressBufferShieldForSeek;
         _suppressBufferShieldForSeek = false;
         
         // Safety check: If we are still buffering after the timeout and it's not live content,
         // force clear the buffering state to avoid getting stuck on black screen.
-        if (IsBuffering && !IsLiveContent)
+        if (wasSuppressed && !_isContentTransitioning && IsBuffering && !IsLiveContent)
         {
             IsBuffering = false;
         }
@@ -1804,9 +1823,17 @@ public partial class PlayerViewModel : ObservableObject
 
     private void PrepareForContentLoading()
     {
+        _isContentTransitioning = true;
         _isPlaybackEnded = false;
         _isUserSeeking = false;
+        _pendingResumeSeekPosition = 0;
+        _pendingResumeSeekAttempts = 0;
+        _lastPausedPosition = 0;
+        _lastPausedTimeMs = 0;
+        Interlocked.Increment(ref _seekShieldSuppressionToken);
+        _suppressBufferShieldForSeek = false;
         ResetSeekInteractionState();
+        IsPlaying = false;
         Position = 0;
         PositionText = "00:00:00";
         Duration = 0;
@@ -1814,6 +1841,7 @@ public partial class PlayerViewModel : ObservableObject
         RemainingTime = IsLiveContent ? "00:00:00" : "-00:00:00";
         IsBuffering = true;
         BufferingProgress = 0;
+        OnPropertyChanged(nameof(IsBufferShieldVisible));
     }
 
     private void RefreshEpisodeBrowserContext(Series? series)

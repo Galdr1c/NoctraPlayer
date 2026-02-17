@@ -4,8 +4,24 @@
              x:Class="Noctra.Avalonia.App">
   <Application.Resources>
     <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Default">
+          <ResourceDictionary.MergedDictionaries>
+            <ResourceInclude Source="avares://Noctra.Avalonia/Resources/Themes/DarkTheme.axaml" />
+          </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Dark">
+          <ResourceDictionary.MergedDictionaries>
+            <ResourceInclude Source="avares://Noctra.Avalonia/Resources/Themes/DarkTheme.axaml" />
+          </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Light">
+          <ResourceDictionary.MergedDictionaries>
+            <ResourceInclude Source="avares://Noctra.Avalonia/Resources/Themes/LightTheme.axaml" />
+          </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
       <ResourceDictionary.MergedDictionaries>
-        <ResourceInclude Source="avares://Noctra.Avalonia/Resources/Themes/DarkTheme.axaml" />
         <ResourceInclude Source="avares://Noctra.Avalonia/Resources/Colors.axaml" />
         <ResourceInclude Source="avares://Noctra.Avalonia/Resources/Converters.axaml" />
         <ResourceInclude Source="avares://Noctra.Avalonia/Resources/Styles.axaml" />

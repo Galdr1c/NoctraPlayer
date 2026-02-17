@@ -17,34 +17,20 @@ public partial class MediaService : IMediaService
 
     public async Task AggregateContentAsync(int playlistId)
     {
-        var staleSeries = await _context.Series
-            .Where(s => s.PlaylistId == playlistId)
-            .ToListAsync();
-        var myListStateByName = staleSeries
-            .GroupBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(
-                g => g.Key,
-                g => g.Any(s => s.IsInMyList),
-                StringComparer.OrdinalIgnoreCase);
-        var favoriteStateByName = staleSeries
-            .GroupBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(
-                g => g.Key,
-                g => g.Any(s => s.IsFavorite),
-                StringComparer.OrdinalIgnoreCase);
-        if (staleSeries.Count > 0)
-        {
-            _context.Series.RemoveRange(staleSeries);
-            await _context.SaveChangesAsync();
-        }
-
         var channels = await _context.Channels
             .Where(c => c.PlaylistId == playlistId && c.Type == ChannelType.Series)
             .ToListAsync();
 
         if (!channels.Any()) return;
 
-        var seriesGroups = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
+        var existingSeries = await _context.Series
+            .Include(s => s.Seasons)
+            .ThenInclude(se => se.Episodes)
+            .Where(s => s.PlaylistId == playlistId)
+            .ToListAsync();
+        var seriesGroups = existingSeries
+            .GroupBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
         foreach (var channel in channels)
         {
@@ -55,19 +41,29 @@ public partial class MediaService : IMediaService
 
             if (!seriesGroups.TryGetValue(seriesName, out var series))
             {
-                myListStateByName.TryGetValue(seriesName, out var inMyList);
-                favoriteStateByName.TryGetValue(seriesName, out var isFavorite);
                 series = new Series
                 {
                     Name = seriesName,
                     PlaylistId = playlistId,
                     CoverUrl = channel.LogoUrl,
                     Genre = channel.GroupTitle,
-                    IsInMyList = inMyList,
-                    IsFavorite = isFavorite
+                    IsInMyList = false,
+                    IsFavorite = false
                 };
                 seriesGroups[seriesName] = series;
                 _context.Series.Add(series);
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(series.CoverUrl) && !string.IsNullOrWhiteSpace(channel.LogoUrl))
+                {
+                    series.CoverUrl = channel.LogoUrl;
+                }
+
+                if (string.IsNullOrWhiteSpace(series.Genre) && !string.IsNullOrWhiteSpace(channel.GroupTitle))
+                {
+                    series.Genre = channel.GroupTitle;
+                }
             }
 
             var season = series.Seasons.FirstOrDefault(s => s.SeasonNumber == seasonNum);
@@ -77,11 +73,19 @@ public partial class MediaService : IMediaService
                 series.Seasons.Add(season);
             }
 
-            var hasDuplicateEpisode = season.Episodes.Any(e =>
-                e.EpisodeNumber == episodeNum &&
-                string.Equals(e.StreamUrl, channel.StreamUrl, StringComparison.OrdinalIgnoreCase));
-            if (hasDuplicateEpisode)
+            var existingEpisode = FindExistingEpisode(season, episodeNum, channel.Name, channel.StreamUrl);
+            if (existingEpisode != null)
             {
+                // Preserve watch/progress fields; only fill missing metadata.
+                if (string.IsNullOrWhiteSpace(existingEpisode.CoverUrl) && !string.IsNullOrWhiteSpace(channel.LogoUrl))
+                {
+                    existingEpisode.CoverUrl = channel.LogoUrl;
+                }
+
+                if (string.IsNullOrWhiteSpace(existingEpisode.Plot) && !string.IsNullOrWhiteSpace(channel.Plot))
+                {
+                    existingEpisode.Plot = channel.Plot;
+                }
                 continue;
             }
 
@@ -97,6 +101,65 @@ public partial class MediaService : IMediaService
         }
 
         await _context.SaveChangesAsync();
+    }
+
+    private static Episode? FindExistingEpisode(Season season, int episodeNumber, string? episodeName, string? streamUrl)
+    {
+        var streamIdentity = NormalizeStreamIdentity(streamUrl);
+        if (!string.IsNullOrWhiteSpace(streamIdentity))
+        {
+            var byStream = season.Episodes.FirstOrDefault(e =>
+                string.Equals(NormalizeStreamIdentity(e.StreamUrl), streamIdentity, StringComparison.OrdinalIgnoreCase));
+            if (byStream != null)
+            {
+                return byStream;
+            }
+        }
+
+        var nameIdentity = NormalizeEpisodeName(episodeName);
+        if (!string.IsNullOrWhiteSpace(nameIdentity))
+        {
+            var byNumberAndName = season.Episodes.FirstOrDefault(e =>
+                e.EpisodeNumber == episodeNumber &&
+                string.Equals(NormalizeEpisodeName(e.Name), nameIdentity, StringComparison.OrdinalIgnoreCase));
+            if (byNumberAndName != null)
+            {
+                return byNumberAndName;
+            }
+        }
+
+        return season.Episodes.FirstOrDefault(e => e.EpisodeNumber == episodeNumber);
+    }
+
+    private static string NormalizeEpisodeName(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        return string.Join(" ", value
+            .Trim()
+            .ToLowerInvariant()
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries));
+    }
+
+    private static string NormalizeStreamIdentity(string? streamUrl)
+    {
+        if (string.IsNullOrWhiteSpace(streamUrl))
+        {
+            return string.Empty;
+        }
+
+        var trimmed = streamUrl.Trim();
+        if (Uri.TryCreate(trimmed, UriKind.Absolute, out var uri))
+        {
+            return $"{uri.Host.ToLowerInvariant()}{uri.AbsolutePath.Trim().ToLowerInvariant()}";
+        }
+
+        var q = trimmed.IndexOf('?');
+        var pathOnly = q >= 0 ? trimmed[..q] : trimmed;
+        return pathOnly.Trim().ToLowerInvariant();
     }
 
     private static (string SeriesName, int Season, int Episode) ParseSeriesEpisodeInfo(string? channelName)

@@ -23,7 +23,8 @@ public enum AppView
     Search,
     MyList,
     Favorites,
-    History
+    History,
+    Downloads
 }
 
 /// <summary>
@@ -666,6 +667,51 @@ public partial class MainViewModel : ObservableObject
                normalized.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool IsDownloadedStreamUrl(string? streamUrl)
+    {
+        if (string.IsNullOrWhiteSpace(streamUrl))
+        {
+            return false;
+        }
+
+        var normalized = streamUrl.Trim().Trim('"', '\'');
+        if (normalized.Length < 4)
+        {
+            return false;
+        }
+
+        if (normalized.StartsWith("file://", StringComparison.OrdinalIgnoreCase) ||
+            normalized.StartsWith(@"\\", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return Regex.IsMatch(normalized, @"^[a-zA-Z]:[\\/]");
+    }
+
+    private static bool SeriesHasDownloadedEpisode(Series series)
+    {
+        if (series?.Seasons == null || series.Seasons.Count == 0)
+        {
+            return false;
+        }
+
+        foreach (var season in series.Seasons)
+        {
+            if (season?.Episodes == null || season.Episodes.Count == 0)
+            {
+                continue;
+            }
+
+            if (season.Episodes.Any(e => IsDownloadedStreamUrl(e.StreamUrl)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private async Task LoadFavoritesAsync()
     {
         await RefreshPersonalListsFromDatabaseAsync();
@@ -809,6 +855,10 @@ public partial class MainViewModel : ObservableObject
             }
 
             UpdateHistoryChannels();
+            if (ActiveView == AppView.Downloads)
+            {
+                UpdateDownloadedItems();
+            }
             UpdateSearchBuckets();
         }
         finally
@@ -1868,6 +1918,12 @@ public partial class MainViewModel : ObservableObject
     private List<Channel> _historyVodChannels = new();
 
     [ObservableProperty]
+    private List<Series> _downloadedSeriesItems = new();
+
+    [ObservableProperty]
+    private List<Channel> _downloadedVodChannels = new();
+
+    [ObservableProperty]
     private List<Channel> _searchLiveChannels = new();
 
     [ObservableProperty]
@@ -1903,6 +1959,9 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _showHistoryEmptyState = true;
+
+    [ObservableProperty]
+    private bool _showDownloadsEmptyState = true;
 
     [RelayCommand]
     private void Navigate(AppView view)
@@ -1960,6 +2019,14 @@ public partial class MainViewModel : ObservableObject
             ShowOnlyFavorites = false;
             UpdateHistoryChannels();
             _ = RefreshPersonalListsFromDatabaseAsync();
+        }
+        else if (view == AppView.Downloads)
+        {
+            SelectedChannelType = null;
+            SelectedGroup = null;
+            ShowOnlyFavorites = false;
+            UpdateDownloadedItems();
+            _ = RefreshDownloadedItemsFromDatabaseAsync();
         }
         else SelectedChannelType = null;
         
@@ -2069,6 +2136,97 @@ public partial class MainViewModel : ObservableObject
         ShowHistoryEmptyState = HistoryChannels.Count == 0;
     }
 
+    private void UpdateDownloadedItems()
+    {
+        try
+        {
+            var channelsSnapshot = Channels?.ToList() ?? new List<Channel>();
+            var latestSeriesSnapshot = LatestSeries?.ToList() ?? new List<Series>();
+            var seriesViewSnapshot = SeriesViewItems?.ToList() ?? new List<Series>();
+
+            DownloadedVodChannels = channelsSnapshot
+                .Where(c => c.Type == ChannelType.VOD && IsDownloadedStreamUrl(c.StreamUrl))
+                .OrderBy(c => c.Name)
+                .ToList();
+
+            var seriesMap = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
+            foreach (var series in latestSeriesSnapshot.Concat(seriesViewSnapshot))
+            {
+                if (series == null)
+                {
+                    continue;
+                }
+
+                var key = series.Id > 0 ? $"id:{series.Id}" : $"p:{series.PlaylistId}|n:{series.Name}";
+                if (!seriesMap.ContainsKey(key))
+                {
+                    seriesMap[key] = series;
+                }
+            }
+
+            DownloadedSeriesItems = seriesMap.Values
+                .Where(SeriesHasDownloadedEpisode)
+                .OrderBy(s => s.Name)
+                .ToList();
+
+            ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 && DownloadedSeriesItems.Count == 0;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug($"UpdateDownloadedItems failed: {ex}");
+            DownloadedVodChannels = new List<Channel>();
+            DownloadedSeriesItems = new List<Series>();
+            ShowDownloadsEmptyState = true;
+        }
+    }
+
+    private async Task RefreshDownloadedItemsFromDatabaseAsync()
+    {
+        if (!CurrentProfileId.HasValue)
+        {
+            DownloadedVodChannels = new List<Channel>();
+            DownloadedSeriesItems = new List<Series>();
+            ShowDownloadsEmptyState = true;
+            return;
+        }
+
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var profilePlaylistIds = await GetProfilePlaylistIdsAsync(db, CurrentProfileId.Value);
+
+        if (profilePlaylistIds.Count == 0)
+        {
+            DownloadedVodChannels = new List<Channel>();
+            DownloadedSeriesItems = new List<Series>();
+            ShowDownloadsEmptyState = true;
+            return;
+        }
+
+        var vodChannels = await db.Channels
+            .AsNoTracking()
+            .Where(c => profilePlaylistIds.Contains(c.PlaylistId) && c.Type == ChannelType.VOD)
+            .OrderBy(c => c.Name)
+            .ToListAsync();
+
+        DownloadedVodChannels = vodChannels
+            .Where(c => IsDownloadedStreamUrl(c.StreamUrl))
+            .ToList();
+
+        var seriesCandidates = await db.Series
+            .AsNoTracking()
+            .Where(s => profilePlaylistIds.Contains(s.PlaylistId))
+            .Include(s => s.Seasons)
+                .ThenInclude(sn => sn.Episodes)
+            .OrderBy(s => s.Name)
+            .ToListAsync();
+
+        DownloadedSeriesItems = seriesCandidates
+            .Where(SeriesHasDownloadedEpisode)
+            .ToList();
+
+        ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 && DownloadedSeriesItems.Count == 0;
+    }
+
     private async Task RefreshPersonalListsFromDatabaseAsync()
     {
         if (!CurrentProfileId.HasValue)
@@ -2079,9 +2237,12 @@ public partial class MainViewModel : ObservableObject
             HistoryLiveChannels = new List<Channel>();
             HistorySeriesChannels = new List<Channel>();
             HistoryVodChannels = new List<Channel>();
+            DownloadedSeriesItems = new List<Series>();
+            DownloadedVodChannels = new List<Channel>();
             ShowMyListEmptyState = true;
             ShowFavoritesEmptyState = true;
             ShowHistoryEmptyState = true;
+            ShowDownloadsEmptyState = true;
             return;
         }
 
@@ -2099,9 +2260,12 @@ public partial class MainViewModel : ObservableObject
             HistoryLiveChannels = new List<Channel>();
             HistorySeriesChannels = new List<Channel>();
             HistoryVodChannels = new List<Channel>();
+            DownloadedSeriesItems = new List<Series>();
+            DownloadedVodChannels = new List<Channel>();
             ShowMyListEmptyState = true;
             ShowFavoritesEmptyState = true;
             ShowHistoryEmptyState = true;
+            ShowDownloadsEmptyState = true;
             return;
         }
 
@@ -2146,6 +2310,10 @@ public partial class MainViewModel : ObservableObject
 
         ShowMyListEmptyState = MyList.Count == 0;
         ShowFavoritesEmptyState = FavoriteChannels.Count == 0;
+        if (ActiveView == AppView.Downloads)
+        {
+            await RefreshDownloadedItemsFromDatabaseAsync();
+        }
     }
 
     private async Task RefreshHistoryChannelsOnlyAsync()

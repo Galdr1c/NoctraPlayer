@@ -8,6 +8,7 @@
         x:Class="Noctra.Avalonia.MainWindow"
         x:Name="RootWindow"
         x:DataType="vm:MainViewModel"
+        Icon="avares://Noctra.Avalonia/Assets/Logo.png"
         Title="Noctra"
         TransparencyLevelHint="None"
         Width="1400" Height="800"
@@ -106,6 +107,11 @@
           <Button Classes="navItem" Click="NavigateHistory_Click" Cursor="Hand"
                   Background="{Binding ActiveView, Converter={StaticResource EqualityToBrushConverter}, ConverterParameter={x:Static vm:AppView.History}}">
             <Grid ColumnDefinitions="Auto,*" Margin="16,12"><materialIcons:MaterialIcon Kind="History" Width="16" Height="16" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/><TextBlock Grid.Column="1" Text="Ge&#231;mi&#351;" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="14" VerticalAlignment="Center"/></Grid>
+          </Button>
+          <!-- Downloads -->
+          <Button Classes="navItem" Click="NavigateDownloads_Click" Cursor="Hand"
+                  Background="{Binding ActiveView, Converter={StaticResource EqualityToBrushConverter}, ConverterParameter={x:Static vm:AppView.Downloads}}">
+            <Grid ColumnDefinitions="Auto,*" Margin="16,12"><materialIcons:MaterialIcon Kind="Download" Width="16" Height="16" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/><TextBlock Grid.Column="1" Text="&#304;ndirilenler" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="14" VerticalAlignment="Center"/></Grid>
           </Button>
         </StackPanel>
       </Border>
@@ -699,6 +705,62 @@
               <Image Source="avares://Noctra.Avalonia/Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>
               <TextBlock Text="Ge&#231;mi&#351; bo&#351;" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" Margin="0,14,0,6"/>
               <TextBlock Text="&#304;zledi&#287;iniz i&#231;erikler burada listelenecek." FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- 9. DOWNLOADS VIEW -->
+        <ScrollViewer x:Name="DownloadsView" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Downloads}}">
+          <StackPanel Margin="24">
+            <TextBlock Text="&#304;ndirilenler" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
+
+            <TextBlock Text="Diziler" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"
+                       IsVisible="{Binding DownloadedSeriesItems.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
+            <ItemsControl ItemsSource="{Binding DownloadedSeriesItems}" IsVisible="{Binding DownloadedSeriesItems.Count, Converter={StaticResource CountToVisibilityConverter}}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Series">
+                  <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                    <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
+                      <StackPanel>
+                        <Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12">
+                          <controls:RemoteImage Width="60" Stretch="Uniform" Url="{Binding CoverUrl}"/>
+                        </Border>
+                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding SeasonCountSafe, StringFormat='{}{0} sezon'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center" Margin="0,6,0,0"/>
+                      </StackPanel>
+                    </Border>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Text="Filmler" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,12"
+                       IsVisible="{Binding DownloadedVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
+            <ItemsControl ItemsSource="{Binding DownloadedVodChannels}" IsVisible="{Binding DownloadedVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Channel">
+                  <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                    <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
+                      <StackPanel>
+                        <Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12">
+                          <controls:RemoteImage Width="60" Stretch="Uniform" Url="{Binding CoverUrl}"/>
+                        </Border>
+                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                      </StackPanel>
+                    </Border>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0" IsVisible="{Binding ShowDownloadsEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
+              <Image Source="avares://Noctra.Avalonia/Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>
+              <TextBlock Text="&#304;ndirilen i&#231;erik yok" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" Margin="0,14,0,6"/>
+              <TextBlock Text="&#304;ndirilen VOD ve dizi i&#231;erikleri burada listelenecek." FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
             </StackPanel>
           </StackPanel>
         </ScrollViewer>
