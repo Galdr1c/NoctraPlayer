@@ -47,9 +47,6 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
     private bool _isBuffering;
 
     [ObservableProperty]
-    private bool _isZappingVisible;
-
-    [ObservableProperty]
     private string _channelLogo = string.Empty;
 
     [ObservableProperty]
@@ -80,7 +77,6 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
     private bool _isVolumeToastVisible;
 
     private bool _isUpdatingFromService;
-    private System.Timers.Timer? _zappingTimer;
     private readonly System.Timers.Timer _volumeToastTimer;
 
     public VideoOverlayViewModel(IVideoPlayerService playerService, INetworkService networkService)
@@ -297,32 +293,6 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
         RestartAutoHideTimer();
     }
 
-    public void ShowZapping(string name, string? logo = null, bool isLive = true)
-    {
-        ChannelName = name;
-        ChannelLogo = logo ?? string.Empty;
-        IsLive = isLive;
-        ConnectionStatus = "Bağlanıyor...";
-        BufferingProgress = 0;
-        StreamInfo = isLive ? "1080p | 60fps" : "4K | HDR | 24fps";
-        IsZappingVisible = true;
-
-        _zappingTimer?.Stop();
-        _zappingTimer ??= new System.Timers.Timer(4000); // 4s for premium feel
-        _zappingTimer.AutoReset = false;
-        _zappingTimer.Elapsed += (s, e) => IsZappingVisible = false;
-        
-        // Simulate buffering progress for visuals
-        var progressTimer = new System.Timers.Timer(100);
-        progressTimer.Elapsed += (s, e) => {
-            if (BufferingProgress < 100) BufferingProgress += 5;
-            else progressTimer.Stop();
-        };
-        progressTimer.Start();
-
-        _zappingTimer.Start();
-    }
-
     private void RestartAutoHideTimer()
     {
         _autoHideTimer.Stop();
@@ -375,7 +345,6 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
     {
         _autoHideTimer?.Dispose();
         _clockTimer?.Dispose();
-        _zappingTimer?.Dispose();
         _volumeToastTimer?.Dispose();
         if (_networkService != null)
         {

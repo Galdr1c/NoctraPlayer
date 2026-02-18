@@ -682,43 +682,6 @@
                 </ScrollViewer>
             </Grid>
 
-            <!-- 6. Zapping / Mini Info Overlay (Appears when changing channels) -->
-            <Grid VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="48,0,0,160"
-                  IsVisible="{Binding IsZappingVisible}">
-                <Border Background="#F20A0A0A" CornerRadius="16" Padding="24,20" BorderBrush="#22FFFFFF" BorderThickness="1"
-                        MinWidth="400">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <StackPanel Orientation="Horizontal">
-                            <Border Width="72" Height="72" Background="#1AFFFFFF" CornerRadius="12" Margin="0,0,20,0">
-                                <Image Source="{Binding ChannelLogo}" Stretch="Uniform" Margin="10"/>
-                            </Border>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="{Binding ChannelName}" FontSize="28" FontWeight="Bold" Foreground="White"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                                    <TextBlock Text="{Binding ConnectionStatus}" FontSize="15" Foreground="#FF999999"/>
-                                    <TextBlock Text=" &#8226; " Foreground="#44FFFFFF" Margin="8,0"/>
-                                    <TextBlock Text="{Binding StreamInfo}" FontSize="15" Foreground="#88FFFFFF"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <!-- Buffering Progress -->
-                        <Grid Grid.Row="1" Margin="0,20,0,0">
-                            <ProgressBar Value="{Binding BufferingProgress}" Height="4"
-                                         Background="#1AFFFFFF" Foreground="#8D09E5"
-                                         BorderThickness="0"/>
-                        </Grid>
-                    </Grid>
-                </Border>
-            </Grid>
-
-        </Grid>
-
         <!-- Buffer Shield: Keep screen black while stream reconnects/buffers -->
         <Border Background="Black"
                 IsHitTestVisible="True"

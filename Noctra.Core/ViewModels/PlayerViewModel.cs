@@ -60,9 +60,6 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private string _currentTimeStr = "00:00";
 
     [ObservableProperty]
-    private bool _isZappingVisible;
-
-    [ObservableProperty]
     private string _channelName = string.Empty;
 
     [ObservableProperty]
@@ -529,10 +526,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         else
         {
             _watchHistoryTimer.Stop();
-        }
-
-        // Zapping göster
-        ShowZapping(channel.Name, channel.LogoUrl, IsLiveContent);
+        
 
         // Always query DB-backed EPG; IsLoaded flag may belong to another service instance.
         var program = await _epgService.GetCurrentProgramAsync(channel);
@@ -834,12 +828,6 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         };
     }
 
-    public void ShowZapping(string name, string? logo, bool isLive)
-    {
-        // Disabled by UX request:
-        // "Bağlanıyor / Kalite tespit ediliyor" mini zapping penceresini göstermiyoruz.
-        IsZappingVisible = false;
-    }
 
     private void UpdateStreamInfoFromQuality()
     {
@@ -873,7 +861,6 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             && !IsQualitySettingsOpen
             && !IsEpisodesPanelOpen
             && !IsInfoPanelOpen
-            && !IsZappingVisible
             && !IsNextEpisodePromptVisible;
     }
 
@@ -2359,17 +2346,6 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         RestartAutoHideTimer();
     }
 
-    partial void OnIsZappingVisibleChanged(bool value)
-    {
-        if (value)
-        {
-            _autoHideTimer.Stop();
-            IsVisible = true;
-            return;
-        }
-
-        RestartAutoHideTimer();
-    }
 
     partial void OnIsNextEpisodePromptVisibleChanged(bool value)
     {
