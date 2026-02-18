@@ -147,7 +147,7 @@ public partial class AddProfileViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = UserFriendlyErrorMessage.WithPrefix("URL parse hatasi", ex);
+            StatusMessage = UserFriendlyErrorMessage.WithPrefix("URL parse hatası", ex);
             HasError = true;
         }
     }
@@ -180,7 +180,7 @@ public partial class AddProfileViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = UserFriendlyErrorMessage.WithPrefix("URL olusturma hatasi", ex);
+            StatusMessage = UserFriendlyErrorMessage.WithPrefix("URL oluşturma hatası", ex);
             HasError = true;
         }
     }
@@ -240,11 +240,29 @@ public partial class AddProfileViewModel : ObservableObject
     partial void OnIsXtreamChanged(bool value)
     {
         PlaylistPreviewSummary = string.Empty;
+        ClearAnalysisResults();
 
         if (_isUpdatingUrl) return;
 
         if (value)
         {
+            // Detect switch from Stalker (MAC in Username)
+            if (Username.StartsWith(StalkerMacPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                Username = string.Empty;
+                Password = string.Empty;
+
+                // Try to restore cached credentials if available
+                if (!string.IsNullOrWhiteSpace(_cachedUsername))
+                {
+                    _isUpdatingUrl = true;
+                    if (!string.IsNullOrWhiteSpace(_cachedUrl)) Url = _cachedUrl;
+                    Username = _cachedUsername;
+                    Password = _cachedPassword ?? string.Empty;
+                    _isUpdatingUrl = false;
+                }
+            }
+
             IsM3U = false;
             IsStalker = false;
 
@@ -264,11 +282,29 @@ public partial class AddProfileViewModel : ObservableObject
     partial void OnIsM3UChanged(bool value)
     {
         PlaylistPreviewSummary = string.Empty;
+        ClearAnalysisResults();
 
         if (_isUpdatingUrl) return;
 
         if (value)
         {
+            // Detect switch from Stalker (MAC in Username)
+            if (Username.StartsWith(StalkerMacPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                Username = string.Empty;
+                Password = string.Empty;
+
+                // Try to restore cached credentials if available
+                if (!string.IsNullOrWhiteSpace(_cachedUsername))
+                {
+                    _isUpdatingUrl = true;
+                    if (!string.IsNullOrWhiteSpace(_cachedUrl)) Url = _cachedUrl;
+                    Username = _cachedUsername;
+                    Password = _cachedPassword ?? string.Empty;
+                    _isUpdatingUrl = false;
+                }
+            }
+
             IsXtream = false;
             IsStalker = false;
 
@@ -286,26 +322,75 @@ public partial class AddProfileViewModel : ObservableObject
     [ObservableProperty]
     private bool _isStalker = false;
 
+    // Cache for switching back from Stalker
+    private string? _cachedUrl;
+    private string? _cachedUsername;
+    private string? _cachedPassword;
+
+    private void ClearAnalysisResults()
+    {
+        ConnectionHealth = ConnectionHealth.Unknown;
+        DetailedStatus = string.Empty;
+        StatusMessage = string.Empty;
+        HasError = false;
+        // PlaylistPreviewSummary is already cleared in individual setters
+    }
+
     partial void OnIsStalkerChanged(bool value)
     {
         PlaylistPreviewSummary = string.Empty;
+        ClearAnalysisResults();
 
         if (_isUpdatingUrl) return;
 
         if (value)
         {
+            // Cache current Xtream/M3U credentials before switching to Stalker
+            if (!Username.StartsWith(StalkerMacPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                _cachedUrl = Url;
+                _cachedUsername = Username;
+                _cachedPassword = Password;
+            }
+
             IsXtream = false;
             IsM3U = false;
+
+            // Clean URL: Keep only Scheme + Host + Port
+            if (!string.IsNullOrWhiteSpace(Url))
+            {
+                try 
+                {
+                    var uri = new Uri(Url);
+                    var baseUrl = $"{uri.Scheme}://{uri.Host}";
+                    if (!uri.IsDefaultPort)
+                    {
+                        baseUrl += $":{uri.Port}";
+                    }
+                    _isUpdatingUrl = true;
+                    Url = baseUrl;
+                    _isUpdatingUrl = false;
+                } 
+                catch 
+                { 
+                    // Ignore invalid URLs, let validation handle them
+                }
+            }
+
+            // Reset Credentials
+            Password = string.Empty;
+
             _isUpdatingUrl = true;
             Username = StalkerMacPrefix;
             _isUpdatingUrl = false;
+            
             UpdateStalkerMacValidation(Username);
             ValidateRealtimeInputs();
             return;
         }
 
-        if (!string.Equals(UrlError, "MAC adresi gecersiz. Ornek: 00:1A:79:AA:BB:CC", StringComparison.Ordinal) &&
-            !string.Equals(UrlError, "Stalker Portal icin MAC adresi gereklidir", StringComparison.Ordinal))
+        if (!string.Equals(UrlError, "MAC adresi geçersiz. Örnek: 00:1A:79:AA:BB:CC", StringComparison.Ordinal) &&
+            !string.Equals(UrlError, "Stalker Portal için MAC adresi gereklidir", StringComparison.Ordinal))
         {
             return;
         }
@@ -337,7 +422,7 @@ public partial class AddProfileViewModel : ObservableObject
 
         if (!Uri.TryCreate(normalizedUrl, UriKind.Absolute, out _))
         {
-            UrlError = "Gecersiz URL formati";
+            UrlError = "Geçersiz URL formatı";
             return;
         }
 
@@ -346,14 +431,14 @@ public partial class AddProfileViewModel : ObservableObject
             var lower = normalizedUrl.ToLowerInvariant();
             if (!lower.Contains(".m3u") && !lower.Contains(".m3u8") && !lower.Contains("get.php"))
             {
-                UrlError = "M3U URL'i .m3u, .m3u8 veya get.php icermelidir";
+                UrlError = "M3U URL'i .m3u, .m3u8 veya get.php içermelidir";
                 return;
             }
         }
 
         if (IsXtream && (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password)))
         {
-            UrlError = "Xtream icin kullanici adi ve sifre gereklidir";
+            UrlError = "Xtream için kullanıcı adı ve şifre gereklidir";
             return;
         }
 
@@ -369,13 +454,13 @@ public partial class AddProfileViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(currentUsername))
         {
-            UrlError = "Stalker Portal icin MAC adresi gereklidir";
+            UrlError = "Stalker Portal için MAC adresi gereklidir";
             return;
         }
 
         UrlError = StalkerMacRegex.IsMatch(currentUsername.Trim())
             ? null
-            : "MAC adresi gecersiz. Ornek: 00:1A:79:AA:BB:CC";
+            : "MAC adresi geçersiz. Örnek: 00:1A:79:AA:BB:CC";
     }
 
     private static string NormalizeStalkerMacSuffix(string? input)
@@ -446,6 +531,12 @@ public partial class AddProfileViewModel : ObservableObject
 
     [ObservableProperty]
     private Profile? _editingProfile;
+
+    [ObservableProperty]
+    private ConnectionHealth _connectionHealth = ConnectionHealth.Unknown;
+
+    [ObservableProperty]
+    private string _detailedStatus = string.Empty;
 
     public event EventHandler? RequestClose;
     public event EventHandler? RequestAvatarPicker;
@@ -529,7 +620,7 @@ public partial class AddProfileViewModel : ObservableObject
         if (profile == null || EditingProfile == null) return;
 
         var confirmed = await _dialogService.ShowConfirmationAsync("Profil Sil",
-            $"'{profile.Name}' profilini silmek istediginize emin misiniz?");
+            $"'{profile.Name}' profilini silmek istediğinize emin misiniz?");
         if (!confirmed) return;
 
         try
@@ -580,7 +671,7 @@ public partial class AddProfileViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            await _dialogService.ShowErrorAsync("Hata", "Profil silinirken bir hata olustu.", ex);
+            await _dialogService.ShowErrorAsync("Hata", "Profil silinirken bir hata oluştu.", ex);
         }
         finally
         {
@@ -604,7 +695,7 @@ public partial class AddProfileViewModel : ObservableObject
 
         if (!Uri.TryCreate(Url, UriKind.Absolute, out _))
         {
-            UrlError = "Gecersiz URL formati";
+            UrlError = "Geçersiz URL formatı";
             return false;
         }
 
@@ -613,7 +704,7 @@ public partial class AddProfileViewModel : ObservableObject
             var lower = Url.ToLowerInvariant();
             if (!lower.Contains(".m3u") && !lower.Contains(".m3u8") && !lower.Contains("get.php"))
             {
-                UrlError = "M3U URL'i .m3u, .m3u8 veya get.php icermelidir";
+                UrlError = "M3U URL'i .m3u, .m3u8 veya get.php içermelidir";
                 return false;
             }
         }
@@ -622,7 +713,7 @@ public partial class AddProfileViewModel : ObservableObject
         {
             if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
             {
-                UrlError = "Xtream icin kullanici adi ve sifre gereklidir";
+                UrlError = "Xtream için kullanıcı adı ve şifre gereklidir";
                 return false;
             }
         }
@@ -631,13 +722,13 @@ public partial class AddProfileViewModel : ObservableObject
         {
             if (string.IsNullOrWhiteSpace(Username))
             {
-                UrlError = "Stalker Portal icin MAC adresi gereklidir";
+                UrlError = "Stalker Portal için MAC adresi gereklidir";
                 return false;
             }
 
             if (!StalkerMacRegex.IsMatch(Username.Trim()))
             {
-                UrlError = "MAC adresi gecersiz. Ornek: 00:1A:79:AA:BB:CC";
+                UrlError = "MAC adresi geçersiz. Örnek: 00:1A:79:AA:BB:CC";
                 return false;
             }
         }
@@ -648,28 +739,89 @@ public partial class AddProfileViewModel : ObservableObject
     [RelayCommand]
     private async Task AnalyzeConnectionAsync()
     {
-        if (!ValidateUrl())
+        var urlToCheck = Url?.Trim();
+        if (string.IsNullOrWhiteSpace(urlToCheck))
         {
+            StatusMessage = "URL gereklidir";
+            return;
+        }
+
+        if (!urlToCheck.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+            !urlToCheck.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            urlToCheck = "http://" + urlToCheck;
+        }
+
+        // Prepare the actual URL to check based on profile type
+        if (IsXtream && !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Password))
+        {
+            // For Xtream, we check the player_api.php with credentials
+            // This verifies both the server AND the username/password
+            var uri = new Uri(urlToCheck);
+            var baseUrl = $"{uri.Scheme}://{uri.Host}";
+            if (!uri.IsDefaultPort) baseUrl += $":{uri.Port}";
+            
+            urlToCheck = $"{baseUrl}/player_api.php?username={Uri.EscapeDataString(Username)}&password={Uri.EscapeDataString(Password)}";
+        }
+        else if (IsStalker)
+        {
+            // For Stalker, we try to hit the portal initialization endpoint
+            // This is better than just the base URL, but we still bypass strict MAC check
+            // because a full Stalker handshake is complex to simulate here.
+            // We just want to know if a Stalker Portal exists at this address.
+            if (!urlToCheck.EndsWith("/c/") && !urlToCheck.EndsWith("/portal.php"))
+            {
+                // Try to guess the portal path if just base URL is given
+                // We will test the base URL first, if that fails or returns 404, we might try common paths?
+                // For now, let's just stick to what the user entered, maybe appending /c/ if it looks like a root
+            }
+        }
+
+        if (!Uri.TryCreate(urlToCheck, UriKind.Absolute, out _))
+        {
+            StatusMessage = "Geçersiz URL formatı";
             return;
         }
 
         IsAnalyzingConnection = true;
         HasError = false;
-        StatusMessage = "Baglanti analiz ediliyor...";
+        StatusMessage = "Bağlantı analiz ediliyor...";
         PlaylistPreviewSummary = string.Empty;
+        ConnectionHealth = ConnectionHealth.Unknown;
+        DetailedStatus = string.Empty;
 
         try
         {
-            var preview = await BuildImportPreviewAsync();
-            HasError = !preview.IsValid;
-            PlaylistPreviewSummary = preview.ToSummaryText();
-            StatusMessage = preview.IsValid ? "Baglanti analizi tamamlandi" : "Baglanti analizi basarisiz";
+            // Perform health check
+            var (health, statusCode, latency, error) = await PerformHealthCheckAsync(urlToCheck);
+
+            // Special handling for Xtream Auth failure (JSON response with error or 401)
+            // PerformHealthCheckAsync currently returns status code.
+            // If it's 200 OK, it means "Server Reached".
+            // For Xtream player_api, 200 OK usually means valid login or at least valid API.
+            // If credentials are wrong, it might return 200 OK but with JSON {"user_info":{"auth":0}} 
+            // Parsing that JSON is heavy, but status code 200 is a good start. 
+            // A 401/403 definitely means Auth Failed.
+
+            ConnectionHealth = health;
+            DetailedStatus = FormatDetailedStatus(statusCode, latency, error);
+
+            if (health == ConnectionHealth.Critical)
+            {
+                HasError = true;
+                StatusMessage = "Bağlantı analizi başarısız";
+                return;
+            }
+            
+            HasError = false;
+            StatusMessage = "Bağlantı analizi tamamlandı";
         }
         catch (Exception ex)
         {
             HasError = true;
-            StatusMessage = UserFriendlyErrorMessage.WithPrefix("Analiz hatasi", ex);
-            PlaylistPreviewSummary = string.Empty;
+            StatusMessage = UserFriendlyErrorMessage.WithPrefix("Analiz hatası", ex);
+            ConnectionHealth = ConnectionHealth.Critical;
+            DetailedStatus = "Beklenmeyen Hata";
         }
         finally
         {
@@ -677,7 +829,102 @@ public partial class AddProfileViewModel : ObservableObject
         }
     }
 
-    private async Task<PlaylistImportPreview> BuildImportPreviewAsync()
+    private string FormatDetailedStatus(int? statusCode, long? latency, string? error)
+    {
+        if (!statusCode.HasValue && !string.IsNullOrEmpty(error))
+            return error;
+
+        var statusText = statusCode.HasValue ? $"{statusCode} {GetReasonPhrase(statusCode.Value)}" : "Bilinmiyor";
+        var latencyText = latency.HasValue ? $"{latency}ms" : "";
+        
+        return $"{statusText} - {latencyText}".Trim(' ', '-');
+    }
+
+    private string GetReasonPhrase(int statusCode)
+    {
+        return statusCode switch
+        {
+            200 => "Tamam",
+            301 => "Kalıcı Yönlendirme",
+            302 => "Geçici Yönlendirme",
+            400 => "Geçersiz İstek",
+            401 => "Yetkisiz (Kullanıcı Adı/Şifre)",
+            403 => "Yasaklı (Erişim Reddedildi)",
+            404 => "Bulunamadı (URL Hatalı)",
+            500 => "Sunucu Hatası",
+            502 => "Geçersiz Ağ Geçidi",
+            503 => "Hizmet Kullanılamıyor",
+            504 => "Zaman Aşımı",
+            _ => "Sunucu Yanıtı"
+        };
+    }
+
+    private async Task<(ConnectionHealth Health, int? StatusCode, long? Latency, string? Error)> PerformHealthCheckAsync(string url)
+    {
+        try
+        {
+            using var client = new System.Net.Http.HttpClient();
+            client.Timeout = TimeSpan.FromSeconds(10); // 10s timeout
+
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            
+            // Try HEAD first for lightweight check, fallback to GET
+            System.Net.Http.HttpResponseMessage response;
+            try
+            {
+                var request = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Head, url);
+                response = await client.SendAsync(request, System.Net.Http.HttpCompletionOption.ResponseHeadersRead);
+            }
+            catch (System.Net.Http.HttpRequestException)
+            {
+                // Some servers block HEAD, try GET
+                stopwatch.Restart();
+                response = await client.GetAsync(url, System.Net.Http.HttpCompletionOption.ResponseHeadersRead);
+            }
+            
+            stopwatch.Stop();
+            var latency = stopwatch.ElapsedMilliseconds;
+            var code = (int)response.StatusCode;
+
+            if (response.IsSuccessStatusCode)
+            {
+                var health = latency < 300 ? ConnectionHealth.Good : 
+                             latency < 1000 ? ConnectionHealth.Weak : 
+                             ConnectionHealth.Bad;
+                
+                return (health, code, latency, null);
+            }
+            else
+            {
+                var error = code switch
+                {
+                    401 or 403 => "Yetkisiz Erişim (Kullanıcı adı/Şifre hatalı olabilir)",
+                    404 => "URL Bulunamadı (Link bozuk veya kanal silinmiş)",
+                    >= 500 => "Sunucu Hatası (Sağlayıcı kaynaklı sorun)",
+                    _ => $"HTTP Hatası {code}"
+                };
+
+                return (ConnectionHealth.Critical, code, latency, error);
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            return (ConnectionHealth.Critical, null, null, "Zaman Aşımı (Sunucu yanıt vermiyor)");
+        }
+        catch (System.Net.Http.HttpRequestException ex)
+        {
+            return (ConnectionHealth.Critical, null, null, $"Ağ Hatası: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            return (ConnectionHealth.Critical, null, null, $"Hata: {ex.Message}");
+        }
+    }
+
+    private async Task<PlaylistImportPreview> BuildImportPreviewAsync(
+        ConnectionHealth health = ConnectionHealth.Unknown, 
+        long? latency = null, 
+        int? statusCode = null)
     {
         try
         {
@@ -704,7 +951,7 @@ public partial class AddProfileViewModel : ObservableObject
                     Username,
                     includeVod: true);
 
-                return PlaylistImportPreview.FromChannels(channels, "Stalker Portal", existingAccountDuplicate);
+                return PlaylistImportPreview.FromChannels(channels, "Stalker Portal", existingAccountDuplicate, health, latency, statusCode);
             }
 
             if (IsXtream)
@@ -715,16 +962,16 @@ public partial class AddProfileViewModel : ObservableObject
                     Password,
                     includeSeriesEpisodes: false);
 
-                return PlaylistImportPreview.FromChannels(channels, "Xtream", existingAccountDuplicate);
+                return PlaylistImportPreview.FromChannels(channels, "Xtream", existingAccountDuplicate, health, latency, statusCode);
             }
 
             channels = await _m3uParser.ParseFromUrlAsync(Url);
-            return PlaylistImportPreview.FromChannels(channels, "M3U", existingAccountDuplicate);
+            return PlaylistImportPreview.FromChannels(channels, "M3U", existingAccountDuplicate, health, latency, statusCode);
         }
         catch (Exception ex)
         {
             var sourceType = IsStalker ? "Stalker Portal" : IsXtream ? "Xtream" : "M3U";
-            return PlaylistImportPreview.Invalid(sourceType, UserFriendlyErrorMessage.FromException(ex));
+            return PlaylistImportPreview.Invalid(sourceType, UserFriendlyErrorMessage.FromException(ex), statusCode);
         }
     }
     [RelayCommand]
@@ -745,7 +992,7 @@ public partial class AddProfileViewModel : ObservableObject
             }
             else
             {
-                ProfileNameError = "Profil adi gereklidir";
+                ProfileNameError = "Profil adı gereklidir";
                 return;
             }
         }

@@ -16,28 +16,46 @@ public class PlaylistImportPreview
     public bool HasExistingAccountDuplicate { get; init; }
     public string? ErrorMessage { get; init; }
 
+    public ConnectionHealth Health { get; init; } = ConnectionHealth.Unknown;
+    public int? StatusCode { get; init; }
+    public long? LatencyMs { get; init; }
+
     public string ToSummaryText()
     {
         if (!IsValid)
         {
-            return $"Dogrulama basarisiz: {ErrorMessage}";
+            var statusPart = StatusCode.HasValue ? $" (Kod: {StatusCode})" : "";
+            return $"Dogrulama basarisiz: {ErrorMessage}{statusPart}";
         }
 
+        var healthText = Health switch
+        {
+            ConnectionHealth.Good => "Mukemmel",
+            ConnectionHealth.Weak => "Orta",
+            ConnectionHealth.Bad => "Kotu",
+            _ => "Bilinmiyor"
+        };
+        
+        var latencyPart = LatencyMs.HasValue ? $" | Gecikme: {LatencyMs}ms ({healthText})" : "";
+
         var duplicateSuffix = DuplicateNameCount > 0 || DuplicateStreamUrlCount > 0
-            ? $" | Tekrar: isim {DuplicateNameCount}, URL {DuplicateStreamUrlCount}"
+            ? $" | Yinelenen Kanal: isim {DuplicateNameCount}, URL {DuplicateStreamUrlCount}"
             : string.Empty;
 
         var existingSuffix = HasExistingAccountDuplicate
             ? " | Uyari: Bu baglantiyi kullanan baska hesap mevcut"
             : string.Empty;
 
-        return $"{SourceType} Onizleme | Toplam {TotalChannels} kanal | Canli {LiveCount} | VOD {VodCount} | Dizi {SeriesCount} | Kategori {CategoryCount}{duplicateSuffix}{existingSuffix}";
+        return $"{SourceType} Onizleme | Toplam {TotalChannels} kanal | Canli {LiveCount} | VOD {VodCount} | Dizi {SeriesCount} | Kategori {CategoryCount}{latencyPart}{duplicateSuffix}{existingSuffix}";
     }
 
     public static PlaylistImportPreview FromChannels(
         IReadOnlyCollection<Channel> channels,
         string sourceType,
-        bool hasExistingAccountDuplicate)
+        bool hasExistingAccountDuplicate,
+        ConnectionHealth health = ConnectionHealth.Unknown,
+        long? latencyMs = null,
+        int? statusCode = null)
     {
         var nonEmptyNames = channels
             .Select(c => c.Name?.Trim())
@@ -70,18 +88,32 @@ public class PlaylistImportPreview
             DuplicateStreamUrlCount = nonEmptyUrls
                 .GroupBy(u => u, StringComparer.OrdinalIgnoreCase)
                 .Count(g => g.Count() > 1),
-            HasExistingAccountDuplicate = hasExistingAccountDuplicate
+            HasExistingAccountDuplicate = hasExistingAccountDuplicate,
+            Health = health,
+            LatencyMs = latencyMs,
+            StatusCode = statusCode
         };
     }
 
-    public static PlaylistImportPreview Invalid(string sourceType, string errorMessage)
+    public static PlaylistImportPreview Invalid(string sourceType, string errorMessage, int? statusCode = null)
     {
         return new PlaylistImportPreview
         {
             IsValid = false,
             SourceType = sourceType,
-            ErrorMessage = errorMessage
+            ErrorMessage = errorMessage,
+            Health = ConnectionHealth.Critical,
+            StatusCode = statusCode
         };
     }
+}
+
+public enum ConnectionHealth
+{
+    Unknown,
+    Good,     // < 300ms, 200 OK
+    Weak,     // 300-1000ms, 200 OK
+    Bad,      // > 1000ms, 200 OK
+    Critical  // Connection Failed / 4xx / 5xx
 }
 

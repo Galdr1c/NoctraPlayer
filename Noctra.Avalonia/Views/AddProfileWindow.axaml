@@ -8,7 +8,7 @@
         mc:Ignorable="d"
         x:DataType="vm:AddProfileViewModel"
         x:CompileBindings="False"
-        Title="Profil Ayarlari" Height="700" Width="950"
+        Title="Profil Ayarları" Height="700" Width="950"
         MinHeight="550" MinWidth="800"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
@@ -27,6 +27,8 @@
             <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
         <Style Selector="Button.CancelBtn:pointerover">
             <Setter Property="BorderBrush" Value="{DynamicResource TextPrimaryBrush}"/>
@@ -41,6 +43,8 @@
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
         <Style Selector="Button.SaveBtn:pointerover">
             <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
@@ -54,12 +58,21 @@
         <Style Selector="Button.DeleteBtn">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                </Transitions>
+            </Setter>
         </Style>
         <Style Selector="Button.DeleteBtn:pointerover">
-            <Setter Property="Opacity" Value="0.7"/>
+            <Setter Property="Background" Value="#1AFF3333"/> 
+        </Style>
+        <Style Selector="Button.DeleteBtn:pressed">
+            <Setter Property="Background" Value="#33FF3333"/>
         </Style>
 
         <!-- Avatar Button Style -->
@@ -68,6 +81,48 @@
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Padding" Value="0"/>
+            <Setter Property="CornerRadius" Value="14"/>
+        </Style>
+        <!-- Scale animation for Avatar Button on hover -->
+        <Style Selector="Button.AvatarBtn:pointerover /template/ ContentPresenter">
+            <Setter Property="RenderTransform" Value="scale(0.98)"/>
+        </Style>
+        
+        <!-- Edit Icon Style (Child of AvatarBtn) -->
+        <Style Selector="Border.EditIcon">
+            <Setter Property="Opacity" Value="0.8"/>
+            <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <!-- When Avatar Button is hovered, target the EditIcon border -->
+        <Style Selector="Button.AvatarBtn:pointerover Border.EditIcon">
+            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="Background" Value="{DynamicResource Surface2Brush}"/>
+            <Setter Property="RenderTransform" Value="scale(1.1)"/>
+        </Style>
+        
+        <!-- Close Button Style -->
+        <Style Selector="Button.CloseBtn">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                    <BrushTransition Property="Foreground" Duration="0:0:0.2"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.CloseBtn:pointerover">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="#22FFFFFF"/>
         </Style>
     </Window.Styles>
 
@@ -76,9 +131,17 @@
             Background="{DynamicResource BackgroundGradientBrush}">
         <Grid>
             <!-- Drag Bar -->
-            <Border Height="34" VerticalAlignment="Top" Background="Transparent" PointerPressed="DragBar_PointerPressed"/>
+            <Border Height="40" VerticalAlignment="Top" Background="Transparent" PointerPressed="DragBar_PointerPressed"/>
+            
+            <!-- Close Button -->
+            <Button Click="Cancel_Click" Classes="CloseBtn" 
+                    HorizontalAlignment="Right" VerticalAlignment="Top" 
+                    Margin="16" Width="32" Height="32"
+                    CornerRadius="16">
+                <materialIcons:MaterialIcon Kind="Close" Width="20" Height="20"/>
+            </Button>
 
-            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,40,0,0">
                 <Grid VerticalAlignment="Center" HorizontalAlignment="Center" Margin="40,0,40,40">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/> <!-- Header -->
@@ -88,10 +151,16 @@
 
                     <!-- Header -->
                     <StackPanel Grid.Row="0" Margin="0,0,0,40">
-                        <TextBlock x:Name="TitleText" FontSize="56" FontWeight="Medium" 
-                                   Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"
-                                   Text="{Binding EditingProfile, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter='Profili Duzenle|Profil Ekle'}"/>
-                        <TextBlock Text="Noctra izleyen baska bir kisi icin profil ekleyin." FontSize="18" 
+                        <Panel HorizontalAlignment="Center">
+                            <TextBlock Text="Profili Düzenle" FontSize="56" FontWeight="Medium" 
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       IsVisible="{Binding EditingProfile, Converter={StaticResource NullToVisibilityConverter}}"/>
+                            <TextBlock Text="Profil Ekle" FontSize="56" FontWeight="Medium" 
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       IsVisible="{Binding EditingProfile, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}"/>
+                        </Panel>
+                        
+                        <TextBlock Text="Noctra izleyen başka bir kişi için profil ekleyin." FontSize="18" 
                                    Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" Margin="0,5,0,0"/>
                         <Rectangle Height="1" Fill="{DynamicResource BorderBrush}" Margin="0,30,0,0" Width="800"/>
                     </StackPanel>
@@ -117,13 +186,12 @@
                                                RenderOptions.BitmapInterpolationMode="HighQuality"/>
 
                                         <!-- Edit Icon -->
-                                        <Border Width="56" Height="56"
-                                                Background="{DynamicResource Surface1Brush}"
+                                        <Border Classes="EditIcon"
+                                                Width="56" Height="56"
                                                 CornerRadius="28"
                                                 HorizontalAlignment="Right"
                                                 VerticalAlignment="Bottom"
-                                                Margin="12"
-                                                Opacity="0.8">
+                                                Margin="12">
                                             <Path Data="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
                                                   Fill="{DynamicResource TextPrimaryBrush}"
                                                   Stretch="Uniform"
@@ -139,25 +207,29 @@
                         <!-- Info Column -->
                         <StackPanel Grid.Column="1" VerticalAlignment="Top">
                             <!-- Profile Name -->
-                            <TextBlock Text="Profil Adi" Foreground="{DynamicResource TextMutedBrush}" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"/>
+                            <TextBlock Text="Profil Adı" Foreground="{DynamicResource TextMutedBrush}" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"/>
                             <TextBox Text="{Binding ProfileName}" 
                                      Height="52"
-                                     Watermark="Isim girin"/>
+                                     Watermark="İsim girin"/>
 
-                            <CheckBox Content="Cocuk Profili" 
+                            <CheckBox Content="Çocuk Profili" 
                                       IsChecked="{Binding IsChild}"
                                       Margin="4,16,0,0"/>
                             
                             <Rectangle Height="1" Fill="{DynamicResource BorderBrush}" Margin="0,32"/>
                             
                             <!-- Provider Account -->
-                            <TextBlock Text="Hesap Ayarlari" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="20" FontWeight="Bold" Margin="0,0,0,16"/>
+                            <TextBlock Text="Hesap Ayarları" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="20" FontWeight="Bold" Margin="0,0,0,16"/>
 
                             <!-- Connection Details Section -->
                             <StackPanel IsVisible="{Binding ShowConnectionFields}">
                                 <!-- URL Field -->
-                                <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"
-                                           Text="{Binding IsM3U, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter='M3U Link|Sunucu URL'}"/>
+                                <Panel Margin="4,0,0,8">
+                                    <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="14" FontWeight="SemiBold"
+                                               Text="M3U Link" IsVisible="{Binding IsM3U}"/>
+                                    <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="14" FontWeight="SemiBold"
+                                               Text="Sunucu URL" IsVisible="{Binding !IsM3U}"/>
+                                </Panel>
                                 
                                 <TextBox Text="{Binding Url}" 
                                          Height="52" Margin="0,0,0,20"
@@ -171,16 +243,20 @@
                                     </Grid.ColumnDefinitions>
 
                                     <StackPanel Margin="0,0,10,0">
-                                        <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"
-                                                   Text="{Binding IsStalker, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter='MAC Adresi|Kullanici Adi'}"/>
+                                        <Panel Margin="4,0,0,8">
+                                            <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="14" FontWeight="SemiBold"
+                                                       Text="MAC Adresi" IsVisible="{Binding IsStalker}"/>
+                                            <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="14" FontWeight="SemiBold"
+                                                       Text="Kullanıcı Adı" IsVisible="{Binding !IsStalker}"/>
+                                        </Panel>
                                         <TextBox Text="{Binding Username}" Height="52"
-                                                 Watermark="Kullanici adi"/>
+                                                 Watermark="Kullanıcı adı"/>
                                     </StackPanel>
 
                                     <StackPanel Grid.Column="1" Margin="10,0,0,0" IsVisible="{Binding !IsStalker}">
-                                        <TextBlock Text="Sifre" Foreground="{DynamicResource TextMutedBrush}" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"/>
+                                        <TextBlock Text="Şifre" Foreground="{DynamicResource TextMutedBrush}" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"/>
                                         <TextBox Text="{Binding Password}" Height="52"
-                                                 Watermark="Sifre"/>
+                                                 Watermark="Şifre" PasswordChar="•"/>
                                     </StackPanel>
                                 </Grid>
 
@@ -188,43 +264,47 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                     <RadioButton GroupName="ProfileType" Content="Xtream Codes"
                                                  IsChecked="{Binding IsXtream}"
-                                                 Margin="0,0,12,0" Padding="20,10"/>
+                                                 Margin="0,0,12,0" Padding="12,10"/>
                                     <RadioButton GroupName="ProfileType" Content="M3U Playlist"
                                                  IsChecked="{Binding IsM3U}"
-                                                 Margin="0,0,12,0" Padding="20,10"/>
+                                                 Margin="0,0,12,0" Padding="12,10"/>
                                     <RadioButton GroupName="ProfileType" Content="Stalker Portal"
                                                  IsChecked="{Binding IsStalker}"
-                                                 Padding="20,10"/>
+                                                 Padding="12,10"/>
                                 </StackPanel>
                                 
-                                <!-- Info Banner - M3U to Xtream Conversion -->
-                                <Border Background="{DynamicResource PremiumCardBackgroundBrush}" 
-                                        BorderBrush="{DynamicResource AccentBrush}" 
-                                        BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,10,0,0"
-                                        IsVisible="{Binding ShowXtreamConversionBanner}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <materialIcons:MaterialIcon Kind="InformationOutline" Width="16" Height="16" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                        <TextBlock FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap">
-                                            <Run Text="M3U linkiniz Xtream formatina donusturuldu."/>
-                                            <Run Text=" Sunucu, kullanici adi ve sifre otomatik ayristirildi." FontWeight="SemiBold"/>
-                                        </TextBlock>
-                                    </StackPanel>
-                                </Border>
 
                                 <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
                                     <Button Command="{Binding AnalyzeConnectionCommand}"
                                             Height="42"
                                             Padding="16,8"
-                                            Content="Baglantiyi Analiz Et"
-                                            IsEnabled="{Binding !IsAnalyzingConnection}"/>
+                                            Content="Bağlantıyı Analiz Et"
+                                            IsEnabled="{Binding !IsAnalyzingConnection}"
+                                            Margin="0,0,16,0"/>
+
+                                    <!-- Health Status Indicator -->
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                                IsVisible="{Binding ConnectionHealth, Converter={StaticResource ConnectionHealthToVisibilityConverter}}">
+                                        
+                                        <!-- Icon -->
+                                        <materialIcons:MaterialIcon Kind="{Binding ConnectionHealth, Converter={StaticResource ConnectionHealthToIconConverter}}" 
+                                                                    Width="24" Height="24"
+                                                                    Foreground="{Binding ConnectionHealth, Converter={StaticResource ConnectionHealthToBrushConverter}}"
+                                                                    Margin="0,0,8,0"
+                                                                    ToolTip.Tip="Yeşil: Mükemmel (&lt;300ms) | Sarı: Orta (300ms-1s) | Kırmızı: Kötü (&gt;1s)"/>
+                                        
+                                        <!-- Status Text -->
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding DetailedStatus}"
+                                                       Foreground="{Binding ConnectionHealth, Converter={StaticResource ConnectionHealthToBrushConverter}}"
+                                                       FontWeight="SemiBold"
+                                                       FontSize="14"/>
+                                        </StackPanel>
+                                    </StackPanel>
                                 </StackPanel>
                                 
-                                <TextBlock Text="{Binding PlaylistPreviewSummary}"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"
-                                           FontSize="13"
-                                           TextWrapping="Wrap"
-                                           Margin="0,10,0,0"
-                                           IsVisible="{Binding PlaylistPreviewSummary, Converter={StaticResource StringToVisibilityConverter}}"/>
+                                <!-- Removed detailed summary text as per user request -->
+                                <!-- <TextBlock Text="{Binding PlaylistPreviewSummary}" ... /> -->
                             </StackPanel>
                         </StackPanel>
                     </Grid>
@@ -267,7 +347,7 @@
                             <!-- Cancel Button -->
                             <Button Click="Cancel_Click" Width="120" Height="48" Margin="0,0,16,0"
                                     Classes="CancelBtn"
-                                    Content="Iptal" FontSize="16"/>
+                                    Content="İptal" FontSize="16"/>
                             
                             <!-- Save Button -->
                             <Button Command="{Binding SaveCommand}" Width="140" Height="48"

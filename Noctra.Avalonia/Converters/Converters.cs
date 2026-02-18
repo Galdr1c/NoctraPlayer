@@ -959,3 +959,64 @@ public class EqualityToVisibilityConverter : IValueConverter
 
 
 
+public class ConnectionHealthToBrushConverter : IValueConverter
+{
+    private static readonly IBrush GoodBrush = new SolidColorBrush(Color.Parse("#4CAF50")); // Green
+    private static readonly IBrush WeakBrush = new SolidColorBrush(Color.Parse("#FFC107")); // Amber
+    private static readonly IBrush BadBrush = new SolidColorBrush(Color.Parse("#FF5722"));  // Deep Orange
+    private static readonly IBrush CriticalBrush = new SolidColorBrush(Color.Parse("#F44336")); // Red
+    private static readonly IBrush UnknownBrush = new SolidColorBrush(Color.Parse("#9E9E9E")); // Grey
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is ConnectionHealth health)
+        {
+            return health switch
+            {
+                ConnectionHealth.Good => GoodBrush,
+                ConnectionHealth.Weak => WeakBrush,
+                ConnectionHealth.Bad => BadBrush,
+                ConnectionHealth.Critical => CriticalBrush,
+                _ => UnknownBrush
+            };
+        }
+        return UnknownBrush;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
+}
+
+public class ConnectionHealthToIconConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is ConnectionHealth health)
+        {
+            return health switch
+            {
+                ConnectionHealth.Good => "CheckCircle",
+                ConnectionHealth.Weak => "AlertCircle",
+                ConnectionHealth.Bad => "Alert",
+                ConnectionHealth.Critical => "CloseCircle",
+                _ => "HelpCircle"
+            };
+        }
+        return "HelpCircle";
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
+}
+
+public class ConnectionHealthToVisibilityConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is ConnectionHealth health)
+        {
+            return health != ConnectionHealth.Unknown;
+        }
+        return false;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
+}

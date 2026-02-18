@@ -44,6 +44,24 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - Hatalı/yarım kalan `.nctra` dosyalarının oluşması engellendi.  
 - `PlaylistOrganizerService.cs` içindeki tüm regex tanımları kaldırıldı ve `SeriesInfoParser`'a taşındı.
 - `PlaylistOrganizerService.cs` içindeki `GenerateSimilarityKey` ve `GenerateEpgId` metotları, `SeriesInfoParser`'ın merkezi temizleme ve normalizasyon fonksiyonlarını kullanacak şekilde güncellendi.
+- **Ağ Durumu Algılama (Network Status)**:
+  - Video oynatıcı overlay panelindeki ağ durum göstergesi (Wi-Fi/Ethernet/Mobil veri/Offline) dinamik hale getirildi.
+  - Ethernet tespit mekanizması iyileştirildi; sanal ağ adaptörleri filtrelenerek gerçek internet bağlantısının (Gateway üzerinden) tespiti sağlandı.
+  - `PlayerViewModel` üzerindeki sabit "Wi-Fi" tanımı kaldırılarak dinamik `INetworkService` entegrasyonu sağlandı (Arayüzde yanlış durum gösterimi düzeltildi).
+  - Ağ durumu metninin yanına ilgili ikonlar (Ethernet, Wi-Fi, Mobil veri, Offline) eklendi.
+  - Uygulama artık Ethernet, Wi-Fi ve Çevrimdışı durumlarını sadece "Wi-Fi" yazmak yerine doğru şekilde algılayıp gösteriyor.
+  - Video oynatıcı arayüzünde (Overlay) ve ana ekranda (Header) ağ durumuna göre dinamik ikonlar (Ethernet/Wi-Fi/Offline) eklendi.
+- **Bağlantı Analizi (Connection Analysis)**:
+  - Profil ekleme ekranındaki "Bağlantıyı Analiz Et" butonu güçlendirildi.
+  - **Xtream**: Sunucu erişiminin yanı sıra kullanıcı adı/şifre doğruluğunu da (`player_api.php`) kontrol eder.
+  - **Stalker**: MAC adresi girilmemiş olsa bile sunucu erişilebilirliğini test etmeye izin verir.
+  - **M3U**: Bağlantı hızını (ping) ve HTTP durum kodunu analiz eder.
+  - Analiz sonuçları (renkli ikon ve ms bilgisi) profil türü değiştiğinde otomatik temizlenir.
+- **Profil Yönetimi İyileştirmeleri**:
+  - **Veri Koruma (Caching)**: Profil türleri arasında (Xtream <-> Stalker) geçiş yaparken girilen verilerin kaybolması önlendi.
+  - **Akıllı Temizlik**: Stalker moduna geçerken URL otomatik temizlenir (sadece sunucu bırakılır), Stalker'dan çıkarken MAC adresi kullanıcı adından temizlenir.
+  - Türkçe karakter sorunları ("Ayarlari" -> "Ayarları") giderildi.
+  - Profil ekleme penceresine "Kapat" butonu eklendi ve buton yerleşimleri (Ortalama/Padding) iyileştirildi.
 
 ### Changed
 - README tamamen guncellenerek proje gercekligiyle esitlendi:
@@ -127,10 +145,6 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - `ContentDownloadService` indirme durdurma/otomatik devam mesajlari
     - `VideoPlayerService` oynatma baslatma hata mesaji
 - Uygulama başlangıcında aktif/yarım kalan indirmelerin otomatik olarak devam etmesi sağlandı (stuck durumu giderildi).
-- Video oynatıcı overlay panelindeki ağ durum göstergesi (Wi-Fi/Ethernet/Mobil veri/Offline) dinamik hale getirildi.
-- Ethernet tespit mekanizması iyileştirildi; sanal ağ adaptörleri filtrelenerek gerçek internet bağlantısının (Gateway üzerinden) tespiti sağlandı.
-- `PlayerViewModel` üzerindeki sabit "Wi-Fi" tanımı kaldırılarak dinamik `INetworkService` entegrasyonu sağlandı (Arayüzde yanlış durum gösterimi düzeltildi).
-- Ağ durumu metninin yanına ilgili ikonlar (Ethernet, Wi-Fi, Mobil veri, Offline) eklendi.
 
 ### Performance
 - Indirme sirasinda progress persistence seyreltildi (zaman + byte esik tabanli).
@@ -148,4 +162,15 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - Retry modeli daha hizli hale getirildi (`2` deneme, `120ms` taban gecikme).
     - Kalici HTTP hatalarinda (`400/401/403/404/410`) fail-fast (gereksiz retry yok).
     - Warmup gecikmesi `140ms -> 50ms`.
-    - Preload kapasitesi `180 -> 220`.
+- **Add Profile UI**: Profil ekleme/düzenleme penceresi modernize edildi:
+  - "True" şeklinde görünen hatalı başlıklar düzeltildi.
+  - Pencereye kapatma (X) butonu eklendi.
+  - "Xtream bilgileri dönüştürüldü" uyarı mesajı kaldırıldı.
+  - Buton metinleri ortalandı ve hizalama düzeltildi.
+  - Türkçe karakter sorunları (Ayarlari -> Ayarları, vb.) giderildi.
+  - **Profil Sil** butonu için kırmızı hover efekti ve köşe yumuşatma eklendi.
+  - **Avatar Düzenle** butonu için hover sırasında ikon büyütme efekti eklendi.
+  - **Gelişmiş Bağlantı Analizi**:
+      - URL geçerliliği ve sunucu yanıt süresi (Ping) kontrolü eklendi.
+      - Hata durumlarında detaylı bilgi (404 Bulunamadı, 401 Yetkisiz vb.) gösterimi eklendi.
+      - Bağlantı kalitesine göre renkli ikonlar (Yeşil/Sarı/Kırmızı) entegre edildi.

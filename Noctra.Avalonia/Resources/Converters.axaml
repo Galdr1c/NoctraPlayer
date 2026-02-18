@@ -40,4 +40,7 @@
   <converters:VolumeIconConverter x:Key="VolumeIconConverter" />
   <converters:ChannelTypeToVisibilityConverter x:Key="ChannelTypeToVisibilityConverter" />
   <converters:BoolToDoubleConverter x:Key="BoolToDoubleConverter" />
+  <converters:ConnectionHealthToBrushConverter x:Key="ConnectionHealthToBrushConverter" />
+  <converters:ConnectionHealthToIconConverter x:Key="ConnectionHealthToIconConverter" />
+  <converters:ConnectionHealthToVisibilityConverter x:Key="ConnectionHealthToVisibilityConverter" />
 </ResourceDictionary>
