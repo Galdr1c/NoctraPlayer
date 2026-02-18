@@ -264,7 +264,8 @@
         <Style Selector="Button.ManageModeButtonStyle[Tag=True]"> 
              <Setter Property="Background" Value="{DynamicResource TextPrimaryBrush}"/>
              <Setter Property="Foreground" Value="{DynamicResource Bg0Brush}"/>
-             <Setter Property="BorderThickness" Value="0"/>
+             <Setter Property="BorderThickness" Value="1"/>
+             <Setter Property="BorderBrush" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
     </Window.Styles>
 
@@ -334,11 +335,12 @@
             </StackPanel>
 
             <!-- FOOTER -->
-            <StackPanel Grid.Row="2" HorizontalAlignment="Center" Margin="0,0,0,40">
+            <StackPanel Grid.Row="2" HorizontalAlignment="Stretch" Margin="0,0,0,40">
                 <Button x:Name="ManageProfilesButton"
                         Content="{Binding IsManageMode, Converter={StaticResource BoolToStringConverter}, ConverterParameter='Bitti|Profilleri Yönet'}"
                         Command="{Binding ToggleManageModeCommand}"
                         Classes="ManageModeButtonStyle"
+                        HorizontalAlignment="Center"
                         IsVisible="{Binding Profiles.Count, Converter={StaticResource CountToVisibilityConverter}}"
                         Tag="{Binding IsManageMode}">
                 </Button>

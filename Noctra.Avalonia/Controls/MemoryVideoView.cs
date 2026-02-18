@@ -76,13 +76,20 @@ public class MemoryVideoView : Control
 
     private void DetachPlayer()
     {
+        // Fix: LibVLCSharp throws ArgumentNullException if we pass null.
+        // We must pass no-op delegates to clear the previous ones and break the reference cycle.
+        // FormatCb: (ref IntPtr opaque, IntPtr chroma, ref uint width, ref uint height, ref uint pitches, ref uint lines) -> uint
         _mediaPlayer?.SetVideoFormatCallbacks(
-            (MediaPlayer.LibVLCVideoFormatCb)null!,
-            (MediaPlayer.LibVLCVideoCleanupCb)null!);
+            (ref IntPtr _, IntPtr _, ref uint _, ref uint _, ref uint _, ref uint _) => 0, 
+            (ref IntPtr _) => { });
+            
+        // LockCb: (IntPtr opaque, IntPtr planes) -> IntPtr
+        // UnlockCb: (IntPtr opaque, IntPtr picture, IntPtr planes) -> void
+        // DisplayCb: (IntPtr opaque, IntPtr picture) -> void
         _mediaPlayer?.SetVideoCallbacks(
-            (MediaPlayer.LibVLCVideoLockCb)null!,
-            (MediaPlayer.LibVLCVideoUnlockCb)null!,
-            (MediaPlayer.LibVLCVideoDisplayCb)null!);
+            (IntPtr _, IntPtr _) => IntPtr.Zero,
+            (IntPtr _, IntPtr _, IntPtr _) => { },
+            (IntPtr _, IntPtr _) => { });
 
         Interlocked.Exchange(ref _frameUpdateScheduled, 0);
         ReleaseBuffer();

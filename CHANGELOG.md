@@ -62,6 +62,8 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - **Akıllı Temizlik**: Stalker moduna geçerken URL otomatik temizlenir (sadece sunucu bırakılır), Stalker'dan çıkarken MAC adresi kullanıcı adından temizlenir.
   - Türkçe karakter sorunları ("Ayarlari" -> "Ayarları") giderildi.
   - Profil ekleme penceresine "Kapat" butonu eklendi ve buton yerleşimleri (Ortalama/Padding) iyileştirildi.
+- **Kritik Hata Düzeltmeleri**:
+  - Video oynatıcı penceresi kapatılırken oluşan `System.ArgumentNullException (LibVLCSharp)` çökme sorunu giderildi. Artık bellek temizliği (callback detach) güvenli şekilde yapılıyor.
 
 ### Changed
 - README tamamen guncellenerek proje gercekligiyle esitlendi:
