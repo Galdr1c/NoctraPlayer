@@ -134,7 +134,7 @@ internal static partial class SeriesProgressIdentity
     [GeneratedRegex(@"[Ss]taffel\s*(?<season>\d{1,2}).*?[Ff]olge\s*(?<episode>\d{1,3})", RegexOptions.IgnoreCase)]
     private static partial Regex GermanRegex();
 
-    [GeneratedRegex(@"\b(?:s\d{1,2}e\d{1,3}|\d{1,2}x\d{1,3}|sezon\s*\d{1,2}\s*b(?:o|\u00f6)l(?:u|\u00fc)m\s*\d{1,3}|season\s*\d{1,2}\s*episode\s*\d{1,3}|temporada\s*\d{1,2}\s*(?:episodio|epis(?:o|\u00f3)dio|cap(?:i|\u00ed)tulo)\s*\d{1,3}|saison\s*\d{1,2}\s*(?:episode|\u00e9pisode)\s*\d{1,3}|staffel\s*\d{1,2}\s*folge\s*\d{1,3})\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(?:[Ss]\d{1,2}\s*[Ee]\d{1,3}|\d{1,2}\s*[Xx]\s*\d{1,3}|[Ss]ezon\s*\d{1,2}\s*[Bb](?:o|\u00f6)l(?:u|\u00fc)m\s*\d{1,3}|[Ss]eason\s*\d{1,2}\s*[Ee]pisode\s*\d{1,3}|[Tt]emporada\s*\d{1,2}\s*(?:[Ee]pisodio|epis(?:o|\u00f3)dio|cap(?:i|\u00ed)tulo)\s*\d{1,3}|[Ss]aison\s*\d{1,2}\s*(?:[Ee]pisode|\u00e9pisode)\s*\d{1,3}|[Ss]taffel\s*\d{1,2}\s*[Ff]olge\s*\d{1,3})\b", RegexOptions.IgnoreCase)]
     private static partial Regex EpisodeTokenRegex();
 
     [GeneratedRegex(@"\b(?:4k|2160p|1080p|720p|x264|x265|h264|h265|webrip|webdl|web-dl|bluray|dub|dublaj|altyazi|subtitle)\b", RegexOptions.IgnoreCase)]

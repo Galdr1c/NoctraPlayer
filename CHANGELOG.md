@@ -27,6 +27,12 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - Provider-bagimsiz dizi ilerleme saklama altyapisi eklendi:
   - Yeni tablo: `SeriesEpisodeProgresses` (Profile + normalize series key + sezon + bolum).
   - Schema fixup hem `Avalonia` hem `WPF` girislerinde olusturuluyor.
+- Dizi/Bolum tanima regex kapsamı genişletildi:
+  - İspanyolca (`Temporada`, `Capitulo`), Portekizce, Fransızca (`Saison`) ve Almanca (`Staffel`, `Folge`) desteği eklendi.
+  - Sezon ve bölüm belirteçleri arasındaki boşluklar için tolerans artırıldı (örn: `S01 E01`).
+- Canonical dizi gruplama sistemi geliştirildi:
+  - Farklı provider'lardan gelen benzer isimli diziler artık tek bir dizi altında birleştirilir.
+  - Favori/Listeye ekle aksiyonları canonical anahtar üzerinden tüm eşleşen kayıtlara uygulanır.
 
 ### Changed
 - README tamamen guncellenerek proje gercekligiyle esitlendi:

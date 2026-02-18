@@ -429,7 +429,7 @@ public partial class MediaService : IMediaService
     [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?:[Ss]eason|[Ss]ezon|[Tt]emporada|[Ss]aison|[Ss]taffel)\s*(?<season>\d{1,2})\b", RegexOptions.IgnoreCase)]
     private static partial Regex SeasonOnlyRegex();
 
-    [GeneratedRegex(@"\b(?:[Ss]\d{1,2}[Ee]\d{1,3}|\d{1,2}[Xx]\d{1,3}|[Ss]ezon\s*\d{1,2}\s*[Bb](?:o|\u00f6)l(?:u|\u00fc)m\s*\d{1,3}|[Ss]eason\s*\d{1,2}\s*[Ee]pisode\s*\d{1,3}|[Tt]emporada\s*\d{1,2}\s*(?:[Ee]pisodio|[Ee]pis(?:o|\u00f3)dio|[Cc]ap(?:i|\u00ed)tulo)\s*\d{1,3}|[Ss]aison\s*\d{1,2}\s*(?:[Ee]pisode|[Ee]\u00e9pisode)\s*\d{1,3}|[Ss]taffel\s*\d{1,2}\s*[Ff]olge\s*\d{1,3}|[Ee]p(?:isode)?\s*\d{1,3}|[Bb](?:o|\u00f6)l(?:u|\u00fc)m\s*\d{1,3}|[Ff]olge\s*\d{1,3}|[Cc]ap(?:i|\u00ed)tulo\s*\d{1,3})\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(?:[Ss]\d{1,2}\s*[Ee]\d{1,3}|\d{1,2}\s*[Xx]\s*\d{1,3}|[Ss]ezon\s*\d{1,2}\s*[Bb](?:o|\u00f6)l(?:u|\u00fc)m\s*\d{1,3}|[Ss]eason\s*\d{1,2}\s*[Ee]pisode\s*\d{1,3}|[Tt]emporada\s*\d{1,2}\s*(?:[Ee]pisodio|[Ee]pis(?:o|\u00f3)dio|[Cc]ap(?:i|\u00ed)tulo)\s*\d{1,3}|[Ss]aison\s*\d{1,2}\s*(?:[Ee]pisode|[Ee]\u00e9pisode)\s*\d{1,3}|[Ss]taffel\s*\d{1,2}\s*[Ff]olge\s*\d{1,3}|[Ee]p(?:isode)?\s*\d{1,3}|[Bb](?:o|\u00f6)l(?:u|\u00fc)m\s*\d{1,3}|[Ff]olge\s*\d{1,3}|[Cc]ap(?:i|\u00ed)tulo\s*\d{1,3})\b", RegexOptions.IgnoreCase)]
     private static partial Regex EpisodeTokenRegex();
 
     [GeneratedRegex(@"\s+")]
