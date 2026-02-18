@@ -1001,19 +1001,40 @@ public partial class PlayerViewModel : ObservableObject
         }
 
         var name = rawName.Trim();
+
+        // Remove track numbers and common prefixes
         name = Regex.Replace(
             name,
-            @"^\s*track\s*\d+\s*([:\-\)\.]|\s)\s*",
+            @"^\s*(track|audio|subtitle|ses|altyazı)\s*\d+\s*([:\-\)\.]|\s)\s*",
             string.Empty,
             RegexOptions.IgnoreCase);
 
-        if (Regex.IsMatch(name, @"^\s*track\s*\d+\s*$", RegexOptions.IgnoreCase))
+        // Remove provider tags and common internet release tags
+        name = Regex.Replace(
+            name,
+            @"(#\w+|\[NCTRA\]|\[.*?SEED\]|\[.*?RIP\]|\[.*?WEB\]|\[.*?HD\]|\[.*?TV\])",
+            string.Empty,
+            RegexOptions.IgnoreCase);
+
+        // Remove language codes in brackets or parentheses like (tr), [en]
+        name = Regex.Replace(
+            name,
+            @"\((?i:tr|en|de|fr|es|it|ru|ar|pl|pt|nl|sv|da|no|fi)\)|\b(?i:tr|en|de|fr|es|it|ru|ar|pl|pt|nl|sv|da|no|fi)\b",
+            string.Empty,
+            RegexOptions.IgnoreCase);
+
+        if (Regex.IsMatch(name, @"^\s*(track|audio|subtitle|ses|altyazı)\s*\d+\s*$", RegexOptions.IgnoreCase))
         {
             return fallback;
         }
 
         // Remove bracket characters while keeping inner text: [English] -> English
         name = name.Replace("[", string.Empty).Replace("]", string.Empty);
+        
+        // Clean up separator junk
+        name = Regex.Replace(name, @"\s*[:\-\.]+\s*$", string.Empty); // Trailing
+        name = Regex.Replace(name, @"^[:\-\.]+\s*", string.Empty);    // Leading
+        
         name = Regex.Replace(name, @"\s+", " ").Trim();
         name = CollapseDuplicateLabelParts(name);
 

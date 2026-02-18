@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.RegularExpressions;
+using Noctra.Services;
 
 namespace Noctra.Models;
 
@@ -135,6 +137,36 @@ public class DownloadItem
             }
 
             return $"{ts.Seconds}sn";
+        }
+    }
+
+    [NotMapped]
+    public string BaseDisplayName
+    {
+        get
+        {
+            if (ChannelType != ChannelType.Series || string.IsNullOrWhiteSpace(DisplayName))
+            {
+                return DisplayName;
+            }
+
+            var info = SeriesInfoParser.Parse(DisplayName);
+            return info.SeriesName;
+        }
+    }
+
+    [NotMapped]
+    public string? SeriesInfoText
+    {
+        get
+        {
+            if (ChannelType != ChannelType.Series || string.IsNullOrWhiteSpace(DisplayName))
+            {
+                return null;
+            }
+
+            var info = SeriesInfoParser.Parse(DisplayName);
+            return SeriesInfoParser.GetSeriesInfoText(info.Season, info.Episode);
         }
     }
 

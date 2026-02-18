@@ -57,6 +57,9 @@ public class ContentDownloadService : IContentDownloadService
         _httpClient = httpClient;
         _logger = logger;
         (_encryptionKey, _hmacKey) = CreateCryptoKeys();
+
+        // Ensure worker starts on app launch to process pending/interrupted downloads
+        EnsureQueueWorkerStarted();
     }
 
     public async Task<DownloadContentResult> QueueDownloadAsync(
@@ -555,16 +558,15 @@ public class ContentDownloadService : IContentDownloadService
             {
                 if (item.Status == DownloadStatus.Downloading)
                 {
-                    // App beklenmedik kapandıysa indirme yarım kalır; açılışta kullanıcıdan devam ettirme beklenir.
-                    item.Status = DownloadStatus.Paused;
+                    // App unexpectedly closed; automatically resume by setting back to Queued
+                    item.Status = DownloadStatus.Queued;
                     item.SpeedBytesPerSecond = 0;
                     item.EstimatedSecondsRemaining = null;
                     item.UpdatedAt = DateTime.Now;
                     hasChanges = true;
-                    continue;
+                    // Fall through to add to memory queue below
                 }
-
-                if (item.Status == DownloadStatus.Failed)
+                else if (item.Status == DownloadStatus.Failed)
                 {
                     var hasPartial = !string.IsNullOrWhiteSpace(item.TempFilePath) && File.Exists(item.TempFilePath);
                     if (hasPartial)
@@ -650,13 +652,16 @@ public class ContentDownloadService : IContentDownloadService
 
         if (item.BytesTotal.HasValue &&
             item.BytesTotal.Value > 0 &&
-            resumedBytes >= item.BytesTotal.Value &&
             File.Exists(plainTempPath))
         {
-            await EncryptFileWithRetryAsync(plainTempPath, encryptedPath, extension, localCts.Token);
-            TryDeleteFileWithRetry(plainTempPath);
-            await MarkCompletedAsync(downloadId, encryptedPath, resumedBytes, item.BytesTotal, DateTime.UtcNow);
-            return;
+            var existingLength = new FileInfo(plainTempPath).Length;
+            if (existingLength >= item.BytesTotal.Value || (item.BytesTotal.Value - existingLength < 1024 && existingLength > 1024 * 1024))
+            {
+                await EncryptFileWithRetryAsync(plainTempPath, encryptedPath, extension, localCts.Token);
+                TryDeleteFileWithRetry(plainTempPath);
+                await MarkCompletedAsync(downloadId, encryptedPath, existingLength, item.BytesTotal, DateTime.UtcNow);
+                return;
+            }
         }
 
         item.Status = DownloadStatus.Downloading;
@@ -759,16 +764,28 @@ public class ContentDownloadService : IContentDownloadService
 
             if (totalBytes.HasValue && totalBytes.Value > 0 && downloaded < totalBytes.Value)
             {
-                _logger?.LogWarning(
-                    "Download response ended early for item {DownloadId}. Downloaded={Downloaded}, Expected={Expected}",
-                    downloadId,
-                    downloaded,
-                    totalBytes.Value);
+                var missingBytes = totalBytes.Value - downloaded;
+                var percent = (double)downloaded / totalBytes.Value;
 
-                await TryAutoResumeAfterTransientInterruptionAsync(
-                    downloadId,
-                    $"Sunucu yaniti erken sonlandi ({FormatBytes(downloaded)}/{FormatBytes(totalBytes.Value)}).");
-                return;
+                // If we're extremely close (e.g. within 10KB or >99.98% for large files), treat as complete.
+                // This handles servers that report slightly larger Content-Length than actual stream data.
+                if (missingBytes < 1024 * 10 || (downloaded > 1024 * 1024 * 5 && percent > 0.9998))
+                {
+                    _logger?.LogInformation("Download {DownloadId} finished with minor delta ({Missing} bytes). Treating as completed.", downloadId, missingBytes);
+                }
+                else
+                {
+                    _logger?.LogWarning(
+                        "Download response ended early for item {DownloadId}. Downloaded={Downloaded}, Expected={Expected}",
+                        downloadId,
+                        downloaded,
+                        totalBytes.Value);
+
+                    await TryAutoResumeAfterTransientInterruptionAsync(
+                        downloadId,
+                        $"Sunucu yaniti erken sonlandi ({FormatBytes(downloaded)}/{FormatBytes(totalBytes.Value)}).");
+                    return;
+                }
             }
 
             await EncryptFileWithRetryAsync(plainTempPath, encryptedPath, extension, localCts.Token);
@@ -1212,35 +1229,63 @@ public class ContentDownloadService : IContentDownloadService
 
     private async Task EncryptFileAsync(string sourcePath, string encryptedPath, string originalExtension)
     {
-        await using var input = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 64, true);
-        await using var output = new FileStream(encryptedPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read, 1024 * 64, true);
-
-        var header = $"NOCTRA|2|{originalExtension}|{input.Length}";
-        var headerBytes = Encoding.UTF8.GetBytes(header);
-        await output.WriteAsync(BitConverter.GetBytes(headerBytes.Length));
-        await output.WriteAsync(headerBytes);
-
-        var iv = RandomNumberGenerator.GetBytes(16);
-        await output.WriteAsync(iv);
-
-        using var aes = Aes.Create();
-        aes.Key = _encryptionKey;
-        aes.IV = iv;
-        aes.Mode = CipherMode.CBC;
-        aes.Padding = PaddingMode.PKCS7;
-
-        await using (var crypto = new CryptoStream(output, aes.CreateEncryptor(), CryptoStreamMode.Write, leaveOpen: true))
+        var tempEncryptedPath = encryptedPath + ".tmp";
+        if (File.Exists(tempEncryptedPath))
         {
-            await input.CopyToAsync(crypto);
-            await crypto.FlushAsync();
-            crypto.FlushFinalBlock();
+            TryDeleteFile(tempEncryptedPath);
         }
 
-        output.Position = 0;
-        using var hmac = new HMACSHA256(_hmacKey);
-        var hash = hmac.ComputeHash(output);
-        output.Position = output.Length;
-        await output.WriteAsync(hash);
+        try
+        {
+            await using (var input = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 64, true))
+            await using (var output = new FileStream(tempEncryptedPath, FileMode.Create, FileAccess.Write, FileShare.Read, 1024 * 64, true))
+            {
+                using var hmac = IncrementalHash.CreateHMAC(HashAlgorithmName.SHA256, _hmacKey);
+                await using (var hashingStream = new HashingStream(output, hmac))
+                {
+                    var header = $"NOCTRA|2|{originalExtension}|{input.Length}";
+                    var headerBytes = Encoding.UTF8.GetBytes(header);
+                    
+                    var headLenBytes = BitConverter.GetBytes(headerBytes.Length);
+                    await hashingStream.WriteAsync(headLenBytes);
+                    
+                    await hashingStream.WriteAsync(headerBytes);
+
+                    var iv = RandomNumberGenerator.GetBytes(16);
+                    await hashingStream.WriteAsync(iv);
+
+                    using var aes = Aes.Create();
+                    aes.Key = _encryptionKey;
+                    aes.IV = iv;
+                    aes.Mode = CipherMode.CBC;
+                    aes.Padding = PaddingMode.PKCS7;
+
+                    await using (var crypto = new CryptoStream(hashingStream, aes.CreateEncryptor(), CryptoStreamMode.Write, leaveOpen: true))
+                    {
+                        await input.CopyToAsync(crypto);
+                        await crypto.FlushAsync();
+                        crypto.FlushFinalBlock();
+                    }
+                    
+                    await hashingStream.FlushAsync();
+                }
+
+                var hash = hmac.GetHashAndReset();
+                await output.WriteAsync(hash);
+                await output.FlushAsync();
+            }
+
+            if (File.Exists(encryptedPath))
+            {
+                TryDeleteFileWithRetry(encryptedPath);
+            }
+            
+            File.Move(tempEncryptedPath, encryptedPath);
+        }
+        finally
+        {
+            TryDeleteFile(tempEncryptedPath);
+        }
     }
 
     private async Task EncryptFileWithRetryAsync(
@@ -1716,6 +1761,51 @@ public class ContentDownloadService : IContentDownloadService
             }
 
             Thread.Sleep(80);
+        }
+    }
+
+    private sealed class HashingStream : Stream
+    {
+        private readonly Stream _inner;
+        private readonly IncrementalHash _hmac;
+
+        public HashingStream(Stream inner, IncrementalHash hmac)
+        {
+            _inner = inner;
+            _hmac = hmac;
+        }
+
+        public override bool CanRead => false;
+        public override bool CanSeek => false;
+        public override bool CanWrite => true;
+        public override long Length => _inner.Length;
+        public override long Position
+        {
+            get => _inner.Position;
+            set => throw new NotSupportedException();
+        }
+
+        public override void Flush() => _inner.Flush();
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => _inner.SetLength(value);
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            _inner.Write(buffer, offset, count);
+            _hmac.AppendData(buffer, offset, count);
+        }
+
+        public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            await _inner.WriteAsync(buffer.AsMemory(offset, count), cancellationToken);
+            _hmac.AppendData(buffer, offset, count);
+        }
+
+        public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            await _inner.WriteAsync(buffer, cancellationToken);
+            _hmac.AppendData(buffer.Span);
         }
     }
 

@@ -1,3 +1,6 @@
+using System.Text.RegularExpressions;
+using System.ComponentModel.DataAnnotations.Schema;
+using Noctra.Services;
 namespace Noctra.Models;
 
 /// <summary>
@@ -120,4 +123,26 @@ public class Episode
 
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public bool IsCompleted { get; set; }
+
+    [NotMapped]
+    public string BaseDisplayName
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(Name)) return string.Empty;
+            var info = SeriesInfoParser.Parse(Name);
+            return info.SeriesName;
+        }
+    }
+
+    [NotMapped]
+    public string? SeriesInfoText
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(Name)) return null;
+            var info = SeriesInfoParser.Parse(Name);
+            return SeriesInfoParser.GetSeriesInfoText(info.Season, info.Episode);
+        }
+    }
 }

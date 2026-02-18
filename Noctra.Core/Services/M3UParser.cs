@@ -175,10 +175,7 @@ public partial class M3UParser : IM3UParser
 
         // 2. Başlık ve İsim Analizi (Regex + Keywords)
         // Dizi: S01E01, 1x01, Sezon 1, Bölüm 1
-        if (SeriesPattern1().IsMatch(name) || 
-            SeriesPattern2().IsMatch(name) ||
-            SeriesPattern3().IsMatch(name) || 
-            lowerName.Contains("sezon") || 
+        if (SeriesInfoParser.IsSeries(name) || 
             lowerName.Contains("bolum") ||
             lowerName.Contains("episode"))
         {
@@ -240,15 +237,6 @@ public partial class M3UParser : IM3UParser
         // Varsayılan
         return ChannelType.Live;
     }
-
-    [GeneratedRegex(@"S(\d{1,2})E(\d{1,2})", RegexOptions.IgnoreCase)]
-    private static partial Regex SeriesPattern1();
-
-    [GeneratedRegex(@"(\d{1,2})x(\d{1,2})", RegexOptions.IgnoreCase)]
-    private static partial Regex SeriesPattern2();
-    
-    [GeneratedRegex(@"S(\d{1,2})\s*-\s*E(\d{1,2})", RegexOptions.IgnoreCase)]
-    private static partial Regex SeriesPattern3(); // S01 - E01 formatı
 
     [GeneratedRegex(@"\((19|20)\d{2}\)", RegexOptions.IgnoreCase)]
     private static partial Regex VodPatternYear(); // (1990) - (2099) arası yıllar

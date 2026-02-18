@@ -30,9 +30,20 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - Dizi/Bolum tanima regex kapsamı genişletildi:
   - İspanyolca (`Temporada`, `Capitulo`), Portekizce, Fransızca (`Saison`) ve Almanca (`Staffel`, `Folge`) desteği eklendi.
   - Sezon ve bölüm belirteçleri arasındaki boşluklar için tolerans artırıldı (örn: `S01 E01`).
+  - Çok dilli regex desteği (TR, EN, ES, PT, FR, DE) ile tüm dizi ayrıştırma, tanıma ve normalizasyon mantığı `SeriesInfoParser`'a merkezileştirildi.
+- `MediaService`, `SeriesProgressIdentity`, `M3UParser` ve `MainViewModel` servisleri merkezi parser'ı kullanacak şekilde modernize edildi.
+- Arama ve dizi gruplama için "Canonical Key" (mükemmel analiz) sistemi tüm uygulamada standart hale getirildi.
+- `MetadataService.cs` ve `PlaylistOrganizerService.cs` servisleri merkezi parser'ı ve normalizasyon motorunu kullanacak şekilde modernize edildi, legacy regex'ler kaldırıldı.
 - Canonical dizi gruplama sistemi geliştirildi:
   - Farklı provider'lardan gelen benzer isimli diziler artık tek bir dizi altında birleştirilir.
   - Favori/Listeye ekle aksiyonları canonical anahtar üzerinden tüm eşleşen kayıtlara uygulanır.
+- İndirme tamamlama ve doğrulama sistemi iyileştirildi:
+  - Şifreleme işlemi atomik hale getirildi (`.tmp` üzerinden yazma ve rename).
+  - HMAC doğrulaması için tek-geçişli (`IncrementalHash`) yönteme geçildi (performans artışı).
+  - %99.9 gibi çok küçük farklarda sunucunun bağlantıyı kesmesi durumunda tolerans eklendi.
+  - Hatalı/yarım kalan `.nctra` dosyalarının oluşması engellendi.  
+- `PlaylistOrganizerService.cs` içindeki tüm regex tanımları kaldırıldı ve `SeriesInfoParser`'a taşındı.
+- `PlaylistOrganizerService.cs` içindeki `GenerateSimilarityKey` ve `GenerateEpgId` metotları, `SeriesInfoParser`'ın merkezi temizleme ve normalizasyon fonksiyonlarını kullanacak şekilde güncellendi.
 
 ### Changed
 - README tamamen guncellenerek proje gercekligiyle esitlendi:
@@ -43,6 +54,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - `Indirme Merkezi` gorunumu buton ile ac/kapat modeline cevrildi.
 - Indirme ilerleme bari sabit width hesaplarindan `ProgressBar` kullanimina gecirildi.
 - Indirme durum event akislari optimize edilerek UI refresh modeli iyilestirildi.
+- Daha iyi bir düzen için indirme ekranında ve dizi detay görünümünde dizi adı ve sezon/bölüm bilgileri ayrı ayrı gösterildi.
 - `WatchHistoryService` artik dizi oynatiminda `EpisodeId` disinda provider-bagimsiz episode ilerlemesini de yazar.
 - `MainViewModel.ApplyProfileProgressAsync` artik iki kaynakla calisir:
   - Once mevcut `EpisodeId` gecmisi (mevcut davranis),
@@ -61,6 +73,8 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - Ses/altyazi, kalite ve tam ekran kontrolleri korunur.
   - VOD icin de indirilen oynatim algisi guclendirildi (`.nctra`, `file://`, profile download path),
     boylece offline/indirilen VOD oynatiminda `Indir` ve `Hakkinda` butonlari gizli kalir.
+- **Track Names**: Düzensiz ses ve altyazı etiketlerini temizlemek için geliştirilmiş normalizasyon (sağlayıcı etiketlerini, dil kodlarını ve gereksiz ön ekleri kaldırır)
+- **UI Performance**: İçerik indirme işlemi tamamlandığında İndirmeler sayfasının otomatik yenilenmesi hızlandırıldı (gecikme 900 ms'den 250 ms'ye düşürüldü).
 
 ### Fixed
 - `%100` gorunup tamamlanmama durumu giderildi:
@@ -112,6 +126,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - `AvaloniaDialogService` dialog hata detaylari
     - `ContentDownloadService` indirme durdurma/otomatik devam mesajlari
     - `VideoPlayerService` oynatma baslatma hata mesaji
+- Uygulama başlangıcında aktif/yarım kalan indirmelerin otomatik olarak devam etmesi sağlandı (stuck durumu giderildi).
 
 ### Performance
 - Indirme sirasinda progress persistence seyreltildi (zaman + byte esik tabanli).

@@ -181,6 +181,9 @@ public partial class MainViewModel : ObservableObject
                 if (CurrentProfileId.HasValue)
                 {
                     _ = RefreshDownloadsFromServiceAsync(CurrentProfileId.Value);
+                    
+                    // IF we are in the Downloads view, we want the landing page (grids) to update too.
+                    // We use a short delay to debounce multiple updates and ensure DB is ready.
                     if (ActiveView == AppView.Downloads && !IsDownloadCenterVisible)
                     {
                         ScheduleDownloadsLandingRefresh(CurrentProfileId.Value);
@@ -2642,7 +2645,7 @@ public partial class MainViewModel : ObservableObject
         {
             try
             {
-                await Task.Delay(900, cts.Token);
+                await Task.Delay(250, cts.Token);
                 if (cts.IsCancellationRequested)
                 {
                     return;
@@ -3757,34 +3760,17 @@ public partial class MainViewModel : ObservableObject
     }
 
 
-    private static readonly Regex SeriesEpisodeRegex = new(
-        @"\b(?:s(?:eason)?\s*\d{1,2}\s*e(?:pisode)?\s*\d{1,3}|\d{1,2}\s*x\s*\d{1,3}|sezon\s*\d{1,2}\s*b[oö]l[uü]m\s*\d{1,3}|b[oö]l[uü]m\s*\d{1,3}|ep(?:isode)?\s*\d{1,3})\b",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private static string NormalizeSeriesQuery(string query) => SeriesInfoParser.NormalizeKey(query);
 
-    private static string NormalizeSeriesQuery(string query)
+    private static string ExtractSeriesBaseName(string? displayName) => SeriesInfoParser.Parse(displayName).SeriesName;
+
+    private static (int SeasonNumber, int EpisodeNumber) ParseEpisodeNumbers(string title)
     {
-        if (string.IsNullOrWhiteSpace(query))
-        {
-            return string.Empty;
-        }
-
-        var normalized = SeriesEpisodeRegex.Replace(query, " ");
-        normalized = Regex.Replace(normalized, @"\s+", " ").Trim();
-        return normalized.ToLowerInvariant();
+        var info = SeriesInfoParser.Parse(title);
+        return (info.Season, info.Episode);
     }
 
-    private static string ExtractSeriesBaseName(string? displayName)
-    {
-        if (string.IsNullOrWhiteSpace(displayName))
-        {
-            return "Dizi";
-        }
-
-        var normalized = SeriesEpisodeRegex.Replace(displayName, " ");
-        normalized = Regex.Replace(normalized, @"[\-._]+", " ");
-        normalized = Regex.Replace(normalized, @"\s+", " ").Trim();
-        return string.IsNullOrWhiteSpace(normalized) ? displayName.Trim() : normalized;
-    }
+    private static string NormalizeSeriesTitleForMatching(string? value) => SeriesInfoParser.NormalizeKey(value);
 
     private async Task<string> ResolvePreferredStreamUrlAsync(string? streamUrl)
     {
@@ -3958,51 +3944,6 @@ public partial class MainViewModel : ObservableObject
             .ToList();
     }
 
-    private static (int SeasonNumber, int EpisodeNumber) ParseEpisodeNumbers(string title)
-    {
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            return (1, 1);
-        }
-
-        var sxe = Regex.Match(title, @"[Ss](\d{1,2})\s*[Ee](\d{1,3})", RegexOptions.IgnoreCase);
-        if (sxe.Success)
-        {
-            return (SafeParseInt(sxe.Groups[1].Value, 1), SafeParseInt(sxe.Groups[2].Value, 1));
-        }
-
-        var xFormat = Regex.Match(title, @"(\d{1,2})\s*[Xx]\s*(\d{1,3})", RegexOptions.IgnoreCase);
-        if (xFormat.Success)
-        {
-            return (SafeParseInt(xFormat.Groups[1].Value, 1), SafeParseInt(xFormat.Groups[2].Value, 1));
-        }
-
-        var trFormat = Regex.Match(title, @"[Ss]ezon\s*(\d{1,2}).*?[Bb][oö]l[uü]m\s*(\d{1,3})", RegexOptions.IgnoreCase);
-        if (trFormat.Success)
-        {
-            return (SafeParseInt(trFormat.Groups[1].Value, 1), SafeParseInt(trFormat.Groups[2].Value, 1));
-        }
-
-        return (1, 1);
-    }
-
-    private static int SafeParseInt(string value, int fallback)
-    {
-        return int.TryParse(value, out var parsed) && parsed > 0 ? parsed : fallback;
-    }
-
-    private static string NormalizeSeriesTitleForMatching(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return string.Empty;
-        }
-
-        var normalized = NormalizeSeriesQuery(value);
-        normalized = Regex.Replace(normalized, @"\b(4k|2160p|1080p|720p|x264|x265|h264|h265|webrip|web-dl|bluray)\b", " ");
-        normalized = Regex.Replace(normalized, @"\s+", " ").Trim();
-        return normalized;
-    }
 
     private async Task<Series> LoadSeriesWithProfileProgressAsync(Series series)
     {

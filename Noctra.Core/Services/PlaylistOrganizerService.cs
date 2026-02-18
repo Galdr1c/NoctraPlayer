@@ -232,17 +232,7 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
     /// </summary>
     private static string GenerateSimilarityKey(string name)
     {
-        if (string.IsNullOrWhiteSpace(name)) return "";
-
-        var key = name.ToLowerInvariant();
-
-        // Remove quality tags
-        key = QualityTagRegex().Replace(key, "");
-
-        // Remove special characters, whitespace
-        key = NonAlphanumericRegex().Replace(key, "");
-
-        return key.Trim();
+        return SeriesInfoParser.NormalizeKey(name);
     }
 
     /// <summary>
@@ -297,34 +287,14 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
     /// </summary>
     private static string GenerateEpgId(string name)
     {
-        // Remove country tags like |TR|, |US|
-        var clean = CountryTagRegex().Replace(name, "");
-
-        // Remove quality tags 
-        clean = QualityTagRegex().Replace(clean, "");
-
-        // Remove extra whitespace and trim
-        clean = MultiSpaceRegex().Replace(clean, " ").Trim();
+        // Use central cleaner to get a consistent base name
+        var clean = SeriesInfoParser.CleanSeriesName(name);
 
         // PascalCase: "Show TV" → "ShowTV"  
         return string.Concat(clean.Split(' ', StringSplitOptions.RemoveEmptyEntries));
     }
 
     // Source-generated regexes for performance
-    [GeneratedRegex(@"\b(hd|fhd|uhd|4k|1080p|720p|480p|sd|hevc|h\.?264|h\.?265)\b", RegexOptions.IgnoreCase)]
-    private static partial Regex QualityTagRegex();
-
-    [GeneratedRegex(@"[^a-z0-9]")]
-    private static partial Regex NonAlphanumericRegex();
-
     [GeneratedRegex(@"\b(\d+)\b")]
     private static partial Regex ChannelNumberRegex();
-
-    [GeneratedRegex(@"\|[A-Z]{2}\|\s*", RegexOptions.IgnoreCase)]
-    private static partial Regex CountryTagRegex();
-
-    [GeneratedRegex(@"\s+")]
-    private static partial Regex MultiSpaceRegex();
 }
-
-

@@ -171,63 +171,11 @@ public partial class MediaService : IMediaService
 
     private static (string SeriesName, int Season, int Episode) ParseSeriesEpisodeInfo(string? channelName)
     {
-        if (string.IsNullOrWhiteSpace(channelName))
-        {
-            return ("Bilinmeyen Dizi", 1, 1);
-        }
-
-        var title = channelName.Trim();
-        foreach (var regex in new[]
-                 {
-                     SxeRegex(),
-                     XRegex(),
-                     TurkishRegex(),
-                     EnglishRegex(),
-                     SpanishRegex(),
-                     PortugueseRegex(),
-                     FrenchRegex(),
-                     GermanRegex()
-                 })
-        {
-            var match = regex.Match(title);
-            if (!match.Success)
-            {
-                continue;
-            }
-
-            var rawName = match.Groups["name"].Value;
-            var seriesName = CleanSeriesName(rawName);
-            var season = ParseSafeInt(match.Groups["season"].Value, fallback: 1);
-            var episode = ParseSafeInt(match.Groups["episode"].Value, fallback: 1);
-            return (seriesName, season, episode);
-        }
-
-        var seasonOnly = SeasonOnlyRegex().Match(title);
-        if (seasonOnly.Success)
-        {
-            var rawName = seasonOnly.Groups["name"].Value;
-            var seriesName = CleanSeriesName(rawName);
-            var season = ParseSafeInt(seasonOnly.Groups["season"].Value, fallback: 1);
-            return (seriesName, season, 1);
-        }
-
-        var fallbackName = CleanSeriesName(EpisodeTokenRegex().Replace(title, " "));
-        return (fallbackName, 1, 1);
+        var info = SeriesInfoParser.Parse(channelName);
+        return (info.SeriesName, info.Season, info.Episode);
     }
 
-    private static string CleanSeriesName(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return "Bilinmeyen Dizi";
-        }
-
-        var cleaned = value.Trim();
-        cleaned = EpisodeTokenRegex().Replace(cleaned, " ");
-        cleaned = cleaned.Replace('_', ' ').Replace('.', ' ');
-        cleaned = MultiSpaceRegex().Replace(cleaned, " ").Trim(' ', '-', '|', ':');
-        return string.IsNullOrWhiteSpace(cleaned) ? "Bilinmeyen Dizi" : cleaned;
-    }
+    private static string CleanSeriesName(string? value) => SeriesInfoParser.CleanSeriesName(value);
 
     private static int ParseSafeInt(string? value, int fallback)
     {
@@ -402,38 +350,6 @@ public partial class MediaService : IMediaService
             .ToList();
     }
 
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss](?<season>\d{1,2})\s*[Ee](?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
-    private static partial Regex SxeRegex();
-
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?<season>\d{1,2})\s*[Xx]\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
-    private static partial Regex XRegex();
-
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss]ezon\s*(?<season>\d{1,2}).*?[Bb](?:o|\u00f6)l(?:u|\u00fc)m\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
-    private static partial Regex TurkishRegex();
-
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss]eason\s*(?<season>\d{1,2}).*?[Ee]pisode\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
-    private static partial Regex EnglishRegex();
-
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?:[Tt]emporada|[Tt]emp)\s*(?<season>\d{1,2}).*?(?:[Ee]pisodio|[Cc]ap(?:i|\u00ed)tulo|[Ee]p)\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
-    private static partial Regex SpanishRegex();
-
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?:[Tt]emporada|[Tt]emp)\s*(?<season>\d{1,2}).*?(?:[Ee]pis(?:o|\u00f3)dio|[Ee]p)\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
-    private static partial Regex PortugueseRegex();
-
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss]aison\s*(?<season>\d{1,2}).*?(?:[Ee](?:pisode|\u00e9pisode)|[Ee]p)\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
-    private static partial Regex FrenchRegex();
-
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss]taffel\s*(?<season>\d{1,2}).*?[Ff]olge\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
-    private static partial Regex GermanRegex();
-
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?:[Ss]eason|[Ss]ezon|[Tt]emporada|[Ss]aison|[Ss]taffel)\s*(?<season>\d{1,2})\b", RegexOptions.IgnoreCase)]
-    private static partial Regex SeasonOnlyRegex();
-
-    [GeneratedRegex(@"\b(?:[Ss]\d{1,2}\s*[Ee]\d{1,3}|\d{1,2}\s*[Xx]\s*\d{1,3}|[Ss]ezon\s*\d{1,2}\s*[Bb](?:o|\u00f6)l(?:u|\u00fc)m\s*\d{1,3}|[Ss]eason\s*\d{1,2}\s*[Ee]pisode\s*\d{1,3}|[Tt]emporada\s*\d{1,2}\s*(?:[Ee]pisodio|[Ee]pis(?:o|\u00f3)dio|[Cc]ap(?:i|\u00ed)tulo)\s*\d{1,3}|[Ss]aison\s*\d{1,2}\s*(?:[Ee]pisode|[Ee]\u00e9pisode)\s*\d{1,3}|[Ss]taffel\s*\d{1,2}\s*[Ff]olge\s*\d{1,3}|[Ee]p(?:isode)?\s*\d{1,3}|[Bb](?:o|\u00f6)l(?:u|\u00fc)m\s*\d{1,3}|[Ff]olge\s*\d{1,3}|[Cc]ap(?:i|\u00ed)tulo\s*\d{1,3})\b", RegexOptions.IgnoreCase)]
-    private static partial Regex EpisodeTokenRegex();
-
-    [GeneratedRegex(@"\s+")]
-    private static partial Regex MultiSpaceRegex();
 }
 
 

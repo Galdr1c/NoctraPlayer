@@ -288,46 +288,11 @@ public partial class MetadataService : IMetadataService
     /// </summary>
     private static string CleanSearchQuery(string query)
     {
-        // Remove file extensions
-        query = Path.GetFileNameWithoutExtension(query);
+        if (string.IsNullOrWhiteSpace(query)) return string.Empty;
         
-        // Remove season/episode codes (S01E01, 1x01, S01 - E01)
-        query = SeriesCodeRegex().Replace(query, "");
-        query = SeriesCodeRegex2().Replace(query, "");
-        query = SeriesCodeRegex3().Replace(query, "");
-
-        // Remove quality tags like 1080p, 720p, 4K, HDR, etc.
-        query = QualityTagsRegex().Replace(query, "");
-        
-        // Remove year in parentheses or brackets
-        query = YearRegex().Replace(query, "");
-        
-        // Remove common separators and clean up
-        query = query.Replace(".", " ").Replace("_", " ").Replace("-", " ");
-        
-        // Remove extra whitespace
-        query = ExtraWhitespaceRegex().Replace(query, " ").Trim();
-        
-        return query;
+        // Use generalized series name cleaner which handles seasons, episodes, quality tags and noise
+        return SeriesInfoParser.CleanSeriesName(query);
     }
-    
-    [GeneratedRegex(@"\b(1080p?|720p?|480p?|4K|UHD|HDR|HEVC|x264|x265|BluRay|WEB-?DL|WEB-?Rip|DVDRip|BRRip|HDTV)\b", RegexOptions.IgnoreCase)]
-    private static partial Regex QualityTagsRegex();
-    
-    [GeneratedRegex(@"[\(\[]\d{4}[\)\]]")]
-    private static partial Regex YearRegex();
-    
-    [GeneratedRegex(@"S(\d{1,2})E(\d{1,2})", RegexOptions.IgnoreCase)]
-    private static partial Regex SeriesCodeRegex();
-
-    [GeneratedRegex(@"(\d{1,2})x(\d{1,2})", RegexOptions.IgnoreCase)]
-    private static partial Regex SeriesCodeRegex2();
-    
-    [GeneratedRegex(@"S(\d{1,2})\s*-\s*E(\d{1,2})", RegexOptions.IgnoreCase)]
-    private static partial Regex SeriesCodeRegex3();
-
-    [GeneratedRegex(@"\s+")]
-    private static partial Regex ExtraWhitespaceRegex();
 
     private void EnsureApiKeyLoaded()
     {
@@ -350,5 +315,3 @@ public partial class MetadataService : IMetadataService
         }
     }
 }
-
-
