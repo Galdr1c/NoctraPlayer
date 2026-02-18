@@ -127,6 +127,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - `ContentDownloadService` indirme durdurma/otomatik devam mesajlari
     - `VideoPlayerService` oynatma baslatma hata mesaji
 - Uygulama başlangıcında aktif/yarım kalan indirmelerin otomatik olarak devam etmesi sağlandı (stuck durumu giderildi).
+- Video oynatıcı overlay panelindeki ağ durum göstergesi (Wi-Fi/Ethernet/Mobil veri/Offline) dinamik hale getirildi.
+- Ethernet tespit mekanizması iyileştirildi; sanal ağ adaptörleri filtrelenerek gerçek internet bağlantısının (Gateway üzerinden) tespiti sağlandı.
+- `PlayerViewModel` üzerindeki sabit "Wi-Fi" tanımı kaldırılarak dinamik `INetworkService` entegrasyonu sağlandı (Arayüzde yanlış durum gösterimi düzeltildi).
+- Ağ durumu metninin yanına ilgili ikonlar (Ethernet, Wi-Fi, Mobil veri, Offline) eklendi.
 
 ### Performance
 - Indirme sirasinda progress persistence seyreltildi (zaman + byte esik tabanli).

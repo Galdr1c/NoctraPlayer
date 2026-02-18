@@ -8,6 +8,7 @@ namespace Noctra.ViewModels;
 public partial class VideoOverlayViewModel : ObservableObject, IDisposable
 {
     private readonly IVideoPlayerService _playerService;
+    private readonly INetworkService _networkService;
     private readonly System.Timers.Timer _autoHideTimer;
     [ObservableProperty]
     private bool _isVisible;
@@ -58,7 +59,7 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
     private string _connectionStatus = "Bağlanıyor...";
 
     [ObservableProperty]
-    private string _networkStatus = "Wi-Fi"; // Placeholder for status bar
+    private string _networkStatus = "Offline";
 
     [ObservableProperty]
     private bool _isLive;
@@ -82,9 +83,10 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
     private System.Timers.Timer? _zappingTimer;
     private readonly System.Timers.Timer _volumeToastTimer;
 
-    public VideoOverlayViewModel(IVideoPlayerService playerService)
+    public VideoOverlayViewModel(IVideoPlayerService playerService, INetworkService networkService)
     {
         _playerService = playerService;
+        _networkService = networkService;
         
         // Timer for auto-hide
         _autoHideTimer = new System.Timers.Timer(3000); // 3 seconds
@@ -99,11 +101,19 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
         IsVisible = true;
         RestartAutoHideTimer();
         InitializeClock();
+
+        // Initialize network status
+        NetworkStatus = _networkService.CurrentNetworkStatus;
+        _networkService.NetworkStatusChanged += OnNetworkStatusChanged;
         
         // Subscribe to player events
         _playerService.PlayingChanged += PlayerService_PlayingChanged;
         _playerService.PositionChanged += PlayerService_PositionChanged;
-        // _playerService.VolumeChanged += ... (if supported)
+    }
+
+    private void OnNetworkStatusChanged(object? sender, string status)
+    {
+        NetworkStatus = status;
     }
 
     private void PlayerService_PlayingChanged(object? sender, bool isPlaying)
@@ -363,10 +373,13 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
-        _autoHideTimer.Dispose();
+        _autoHideTimer?.Dispose();
         _clockTimer?.Dispose();
         _zappingTimer?.Dispose();
+        _volumeToastTimer?.Dispose();
+        if (_networkService != null)
+        {
+            _networkService.NetworkStatusChanged -= OnNetworkStatusChanged;
+        }
     }
 }
-
-

@@ -10,7 +10,7 @@ namespace Noctra.ViewModels;
 /// <summary>
 /// Video player view model
 /// </summary>
-public partial class PlayerViewModel : ObservableObject
+public partial class PlayerViewModel : ObservableObject, IDisposable
 {
     private const double OverlayAutoHideDelayMs = 4000;
     private const double NextEpisodePromptTailRatio = 0.06;
@@ -38,6 +38,7 @@ public partial class PlayerViewModel : ObservableObject
     private readonly IEpgService _epgService;
     private readonly IMetadataService _metadataService;
     private readonly IContentDownloadService _contentDownloadService;
+    private readonly INetworkService _networkService;
     private int _playRequestVersion;
 
     [ObservableProperty]
@@ -89,6 +90,9 @@ public partial class PlayerViewModel : ObservableObject
 
     [ObservableProperty]
     private string _networkStatus = "Wi-Fi";
+
+    [ObservableProperty]
+    private string _networkIcon = "Wifi"; // Default icon
 
     [ObservableProperty]
     private string _remainingTime = "-00:00:00";
@@ -241,6 +245,7 @@ public partial class PlayerViewModel : ObservableObject
         IEpgService epgService,
         IMetadataService metadataService,
         IContentDownloadService contentDownloadService,
+        INetworkService networkService,
         IDispatcherService dispatcherService,
         IWatchHistoryService? watchHistoryService = null)
     {
@@ -248,8 +253,13 @@ public partial class PlayerViewModel : ObservableObject
         _epgService = epgService;
         _metadataService = metadataService;
         _contentDownloadService = contentDownloadService;
+        _networkService = networkService;
         _dispatcherService = dispatcherService;
         _watchHistoryService = watchHistoryService;
+
+        // Initialize Network Status
+        UpdateNetworkStatus(_networkService.CurrentNetworkStatus);
+        _networkService.NetworkStatusChanged += OnNetworkStatusChanged;
 
         // Auto-hide timer
         _autoHideTimer = new System.Timers.Timer(OverlayAutoHideDelayMs);
@@ -2385,6 +2395,35 @@ public partial class PlayerViewModel : ObservableObject
         CancelSeekBufferShieldSuppression();
 
         RestartAutoHideTimer();
+    }
+
+    private void OnNetworkStatusChanged(object? sender, string status)
+    {
+        UpdateNetworkStatus(status);
+    }
+
+    private void UpdateNetworkStatus(string status)
+    {
+        NetworkStatus = status;
+        NetworkIcon = status switch
+        {
+            "Ethernet" => "Ethernet",
+            "Wi-Fi" => "Wifi",
+            "Mobil veri" => "SignalCellular4Bar",
+            "Offline" => "WifiOff",
+            _ => "Web"
+        };
+    }
+
+    public void Dispose()
+    {
+        _autoHideTimer?.Dispose();
+        _clockTimer?.Dispose();
+        _watchHistoryTimer?.Dispose();
+        if (_networkService != null)
+        {
+            _networkService.NetworkStatusChanged -= OnNetworkStatusChanged;
+        }
     }
 }
 

@@ -132,6 +132,7 @@ public partial class App : Application
         services.AddSingleton<ILicenseService, LicenseService>();
         services.AddSingleton<LanguageDetectionService>();
         services.AddSingleton<EpgSourceResolver>();
+        services.AddSingleton<INetworkService, NetworkService>();
 
         services.AddSingleton<IDispatcherService, AvaloniaDispatcherService>();
         services.AddSingleton<IDialogService, AvaloniaDialogService>();
