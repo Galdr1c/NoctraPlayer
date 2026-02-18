@@ -28,9 +28,15 @@ public partial class MediaService : IMediaService
             .ThenInclude(se => se.Episodes)
             .Where(s => s.PlaylistId == playlistId)
             .ToListAsync();
-        var seriesGroups = existingSeries
-            .GroupBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+        var seriesGroups = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
+        foreach (var existing in existingSeries.OrderBy(s => s.Id))
+        {
+            var key = BuildSeriesGroupingKey(existing.Name);
+            if (!seriesGroups.ContainsKey(key))
+            {
+                seriesGroups[key] = existing;
+            }
+        }
 
         foreach (var channel in channels)
         {
@@ -38,8 +44,9 @@ public partial class MediaService : IMediaService
             var seriesName = parsed.SeriesName;
             var seasonNum = parsed.Season;
             var episodeNum = parsed.Episode;
+            var seriesKey = BuildSeriesGroupingKey(seriesName);
 
-            if (!seriesGroups.TryGetValue(seriesName, out var series))
+            if (!seriesGroups.TryGetValue(seriesKey, out var series))
             {
                 series = new Series
                 {
@@ -50,7 +57,7 @@ public partial class MediaService : IMediaService
                     IsInMyList = false,
                     IsFavorite = false
                 };
-                seriesGroups[seriesName] = series;
+                seriesGroups[seriesKey] = series;
                 _context.Series.Add(series);
             }
             else
@@ -170,7 +177,17 @@ public partial class MediaService : IMediaService
         }
 
         var title = channelName.Trim();
-        foreach (var regex in new[] { SxeRegex(), XRegex(), TurkishRegex(), EnglishRegex() })
+        foreach (var regex in new[]
+                 {
+                     SxeRegex(),
+                     XRegex(),
+                     TurkishRegex(),
+                     EnglishRegex(),
+                     SpanishRegex(),
+                     PortugueseRegex(),
+                     FrenchRegex(),
+                     GermanRegex()
+                 })
         {
             var match = regex.Match(title);
             if (!match.Success)
@@ -229,36 +246,160 @@ public partial class MediaService : IMediaService
 
     public async Task<List<Series>> GetSeriesAsync(int playlistId)
     {
-        return await _context.Series
+        var allSeries = await _context.Series
             .Include(s => s.Seasons)
             .ThenInclude(sn => sn.Episodes)
+            .AsNoTracking()
             .Where(s => s.PlaylistId == playlistId)
             .ToListAsync();
+
+        if (allSeries.Count <= 1)
+        {
+            return allSeries;
+        }
+
+        var mergedByKey = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
+        foreach (var series in allSeries.OrderBy(s => s.Id))
+        {
+            var key = BuildSeriesGroupingKey(series.Name);
+            if (!mergedByKey.TryGetValue(key, out var target))
+            {
+                mergedByKey[key] = series;
+                continue;
+            }
+
+            MergeSeriesInMemory(target, series);
+        }
+
+        return mergedByKey.Values
+            .OrderBy(s => s.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
     }
     public async Task UpdateSeriesAsync(Series series)
     {
-        Series? dbSeries = null;
-
-        if (series.Id > 0)
+        var normalizedTargetKey = BuildSeriesGroupingKey(series.Name);
+        if (string.IsNullOrWhiteSpace(normalizedTargetKey))
         {
-            dbSeries = await _context.Series.FindAsync(series.Id);
+            return;
         }
 
-        if (dbSeries == null)
+        var candidates = await _context.Series
+            .Where(s => s.PlaylistId == series.PlaylistId)
+            .ToListAsync();
+
+        var toUpdate = candidates
+            .Where(s => string.Equals(BuildSeriesGroupingKey(s.Name), normalizedTargetKey, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (toUpdate.Count == 0 && series.Id > 0)
         {
-            dbSeries = await _context.Series
-                .FirstOrDefaultAsync(s =>
-                    s.PlaylistId == series.PlaylistId &&
-                    s.Name == series.Name);
+            var byId = await _context.Series.FindAsync(series.Id);
+            if (byId != null)
+            {
+                toUpdate.Add(byId);
+            }
         }
 
-        if (dbSeries != null)
+        if (toUpdate.Count == 0)
         {
-            dbSeries.IsInMyList = series.IsInMyList;
-            dbSeries.IsFavorite = series.IsFavorite;
-            _context.Series.Update(dbSeries);
-            await _context.SaveChangesAsync();
+            return;
         }
+
+        foreach (var item in toUpdate)
+        {
+            item.IsInMyList = series.IsInMyList;
+            item.IsFavorite = series.IsFavorite;
+        }
+
+        await _context.SaveChangesAsync();
+    }
+
+    private static string BuildSeriesGroupingKey(string? seriesName)
+    {
+        var normalized = SeriesProgressIdentity.NormalizeSeriesKey(seriesName);
+        if (!string.IsNullOrWhiteSpace(normalized))
+        {
+            return normalized;
+        }
+
+        return NormalizeEpisodeName(seriesName);
+    }
+
+    private static void MergeSeriesInMemory(Series target, Series source)
+    {
+        if (string.IsNullOrWhiteSpace(target.CoverUrl) && !string.IsNullOrWhiteSpace(source.CoverUrl))
+        {
+            target.CoverUrl = source.CoverUrl;
+        }
+
+        if (string.IsNullOrWhiteSpace(target.Plot) && !string.IsNullOrWhiteSpace(source.Plot))
+        {
+            target.Plot = source.Plot;
+        }
+
+        if (string.IsNullOrWhiteSpace(target.Genre) && !string.IsNullOrWhiteSpace(source.Genre))
+        {
+            target.Genre = source.Genre;
+        }
+
+        foreach (var sourceSeason in source.Seasons)
+        {
+            var targetSeason = target.Seasons.FirstOrDefault(s => s.SeasonNumber == sourceSeason.SeasonNumber);
+            if (targetSeason == null)
+            {
+                target.Seasons.Add(sourceSeason);
+                continue;
+            }
+
+            foreach (var sourceEpisode in sourceSeason.Episodes)
+            {
+                var existingEpisode = FindExistingEpisode(
+                    targetSeason,
+                    sourceEpisode.EpisodeNumber,
+                    sourceEpisode.Name,
+                    sourceEpisode.StreamUrl);
+
+                if (existingEpisode == null)
+                {
+                    targetSeason.Episodes.Add(sourceEpisode);
+                    continue;
+                }
+
+                if (existingEpisode.LastWatched == null && sourceEpisode.LastWatched != null)
+                {
+                    existingEpisode.LastWatched = sourceEpisode.LastWatched;
+                }
+
+                if (existingEpisode.WatchedPosition == null && sourceEpisode.WatchedPosition != null)
+                {
+                    existingEpisode.WatchedPosition = sourceEpisode.WatchedPosition;
+                }
+
+                if (existingEpisode.Duration == null && sourceEpisode.Duration != null)
+                {
+                    existingEpisode.Duration = sourceEpisode.Duration;
+                }
+
+                if (string.IsNullOrWhiteSpace(existingEpisode.CoverUrl) && !string.IsNullOrWhiteSpace(sourceEpisode.CoverUrl))
+                {
+                    existingEpisode.CoverUrl = sourceEpisode.CoverUrl;
+                }
+
+                if (string.IsNullOrWhiteSpace(existingEpisode.Plot) && !string.IsNullOrWhiteSpace(sourceEpisode.Plot))
+                {
+                    existingEpisode.Plot = sourceEpisode.Plot;
+                }
+            }
+
+            targetSeason.Episodes = targetSeason.Episodes
+                .OrderBy(e => e.EpisodeNumber)
+                .ThenBy(e => e.Name, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+        }
+
+        target.Seasons = target.Seasons
+            .OrderBy(s => s.SeasonNumber)
+            .ToList();
     }
 
     [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss](?<season>\d{1,2})\s*[Ee](?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
@@ -267,16 +408,28 @@ public partial class MediaService : IMediaService
     [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?<season>\d{1,2})\s*[Xx]\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
     private static partial Regex XRegex();
 
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss]ezon\s*(?<season>\d{1,2}).*?[Bb][oö]l[uü]m\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss]ezon\s*(?<season>\d{1,2}).*?[Bb](?:o|\u00f6)l(?:u|\u00fc)m\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
     private static partial Regex TurkishRegex();
 
     [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss]eason\s*(?<season>\d{1,2}).*?[Ee]pisode\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
     private static partial Regex EnglishRegex();
 
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?:[Ss]eason|[Ss]ezon)\s*(?<season>\d{1,2})\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?:[Tt]emporada|[Tt]emp)\s*(?<season>\d{1,2}).*?(?:[Ee]pisodio|[Cc]ap(?:i|\u00ed)tulo|[Ee]p)\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SpanishRegex();
+
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?:[Tt]emporada|[Tt]emp)\s*(?<season>\d{1,2}).*?(?:[Ee]pis(?:o|\u00f3)dio|[Ee]p)\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
+    private static partial Regex PortugueseRegex();
+
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss]aison\s*(?<season>\d{1,2}).*?(?:[Ee](?:pisode|\u00e9pisode)|[Ee]p)\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
+    private static partial Regex FrenchRegex();
+
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss]taffel\s*(?<season>\d{1,2}).*?[Ff]olge\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
+    private static partial Regex GermanRegex();
+
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?:[Ss]eason|[Ss]ezon|[Tt]emporada|[Ss]aison|[Ss]taffel)\s*(?<season>\d{1,2})\b", RegexOptions.IgnoreCase)]
     private static partial Regex SeasonOnlyRegex();
 
-    [GeneratedRegex(@"\b(?:[Ss]\d{1,2}[Ee]\d{1,3}|\d{1,2}[Xx]\d{1,3}|[Ss]ezon\s*\d{1,2}\s*[Bb][oö]l[uü]m\s*\d{1,3}|[Ee]p(?:isode)?\s*\d{1,3}|[Bb][oö]l[uü]m\s*\d{1,3})\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(?:[Ss]\d{1,2}[Ee]\d{1,3}|\d{1,2}[Xx]\d{1,3}|[Ss]ezon\s*\d{1,2}\s*[Bb](?:o|\u00f6)l(?:u|\u00fc)m\s*\d{1,3}|[Ss]eason\s*\d{1,2}\s*[Ee]pisode\s*\d{1,3}|[Tt]emporada\s*\d{1,2}\s*(?:[Ee]pisodio|[Ee]pis(?:o|\u00f3)dio|[Cc]ap(?:i|\u00ed)tulo)\s*\d{1,3}|[Ss]aison\s*\d{1,2}\s*(?:[Ee]pisode|[Ee]\u00e9pisode)\s*\d{1,3}|[Ss]taffel\s*\d{1,2}\s*[Ff]olge\s*\d{1,3}|[Ee]p(?:isode)?\s*\d{1,3}|[Bb](?:o|\u00f6)l(?:u|\u00fc)m\s*\d{1,3}|[Ff]olge\s*\d{1,3}|[Cc]ap(?:i|\u00ed)tulo\s*\d{1,3})\b", RegexOptions.IgnoreCase)]
     private static partial Regex EpisodeTokenRegex();
 
     [GeneratedRegex(@"\s+")]

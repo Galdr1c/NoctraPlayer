@@ -4045,41 +4045,213 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
+        var profileId = CurrentProfileId.Value;
         var episodeIds = episodes
             .Where(e => e.Id > 0)
             .Select(e => e.Id)
             .Distinct()
             .ToList();
-
-        if (episodeIds.Count == 0)
+        var historyByEpisodeId = new Dictionary<int, WatchHistory>();
+        if (episodeIds.Count > 0)
         {
-            return;
+            var latestEpisodeHistories = await db.WatchHistories
+                .AsNoTracking()
+                .Where(h => h.ProfileId == profileId && h.EpisodeId.HasValue && episodeIds.Contains(h.EpisodeId.Value))
+                .GroupBy(h => h.EpisodeId!.Value)
+                .Select(g => g.OrderByDescending(x => x.WatchedAt).First())
+                .ToListAsync();
+
+            historyByEpisodeId = latestEpisodeHistories.ToDictionary(h => h.EpisodeId!.Value);
         }
 
-        var latestEpisodeHistories = await db.WatchHistories
-            .Where(h => h.ProfileId == CurrentProfileId.Value && h.EpisodeId.HasValue && episodeIds.Contains(h.EpisodeId.Value))
-            .GroupBy(h => h.EpisodeId!.Value)
-            .Select(g => g.OrderByDescending(x => x.WatchedAt).First())
-            .ToListAsync();
+        var seriesKey = SeriesProgressIdentity.NormalizeSeriesKey(series.Name);
+        var episodeProgressByKey = new Dictionary<string, SeriesProgressSnapshot>(StringComparer.OrdinalIgnoreCase);
 
-        if (latestEpisodeHistories.Count == 0)
+        if (!string.IsNullOrWhiteSpace(seriesKey))
         {
-            return;
+            var seasonNumbers = series.Seasons
+                .Select(s => Math.Max(1, s.SeasonNumber))
+                .Distinct()
+                .ToList();
+
+            var persistedProgress = await db.SeriesEpisodeProgresses
+                .AsNoTracking()
+                .Where(p =>
+                    p.ProfileId == profileId &&
+                    p.SeriesKey == seriesKey &&
+                    seasonNumbers.Contains(p.SeasonNumber))
+                .ToListAsync();
+
+            foreach (var item in persistedProgress)
+            {
+                var key = SeriesProgressIdentity.BuildEpisodeKey(item.SeasonNumber, item.EpisodeNumber);
+                episodeProgressByKey[key] = new SeriesProgressSnapshot(
+                    item.LastWatchedAt,
+                    item.StoppedAt,
+                    item.Duration,
+                    item.Completed);
+            }
+
+            if (episodeProgressByKey.Count == 0)
+            {
+                var legacySnapshots = await LoadLegacySeriesProgressSnapshotsAsync(db, profileId, seriesKey);
+                if (legacySnapshots.Count > 0)
+                {
+                    episodeProgressByKey = legacySnapshots;
+                    await PersistSeriesProgressSnapshotsAsync(db, profileId, series.Name, seriesKey, legacySnapshots);
+                }
+            }
         }
 
-        var historyByEpisodeId = latestEpisodeHistories.ToDictionary(h => h.EpisodeId!.Value);
         foreach (var episode in episodes)
         {
-            if (!historyByEpisodeId.TryGetValue(episode.Id, out var history))
+            if (episode.Id > 0 && historyByEpisodeId.TryGetValue(episode.Id, out var history))
+            {
+                episode.LastWatched = history.WatchedAt;
+                episode.WatchedPosition = history.StoppedAt;
+                episode.IsCompleted = history.Completed;
+                continue;
+            }
+
+            var (seasonNumber, episodeNumber) = SeriesProgressIdentity.ResolveSeasonEpisode(episode);
+            var key = SeriesProgressIdentity.BuildEpisodeKey(seasonNumber, episodeNumber);
+            if (!episodeProgressByKey.TryGetValue(key, out var snapshot))
             {
                 continue;
             }
 
-            episode.LastWatched = history.WatchedAt;
-            episode.WatchedPosition = history.StoppedAt;
-            episode.IsCompleted = history.Completed;
+            episode.LastWatched = snapshot.LastWatchedAt;
+            episode.WatchedPosition = snapshot.StoppedAt;
+            episode.IsCompleted = snapshot.Completed;
+            if (snapshot.Duration.HasValue && snapshot.Duration.Value.TotalSeconds > 0)
+            {
+                episode.Duration = snapshot.Duration;
+            }
         }
     }
+
+    private async Task<Dictionary<string, SeriesProgressSnapshot>> LoadLegacySeriesProgressSnapshotsAsync(
+        AppDbContext db,
+        int profileId,
+        string seriesKey)
+    {
+        var rows = await db.WatchHistories
+            .AsNoTracking()
+            .Where(h => h.ProfileId == profileId && h.EpisodeId.HasValue)
+            .Include(h => h.Episode)
+            .ThenInclude(e => e!.Season)
+            .ThenInclude(s => s!.Series)
+            .OrderByDescending(h => h.WatchedAt)
+            .ToListAsync();
+
+        var snapshots = new Dictionary<string, SeriesProgressSnapshot>(StringComparer.OrdinalIgnoreCase);
+        foreach (var row in rows)
+        {
+            var episode = row.Episode;
+            var rowSeriesName = episode?.Season?.Series?.Name;
+            if (string.IsNullOrWhiteSpace(rowSeriesName))
+            {
+                continue;
+            }
+
+            var rowSeriesKey = SeriesProgressIdentity.NormalizeSeriesKey(rowSeriesName);
+            if (!string.Equals(rowSeriesKey, seriesKey, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var (seasonNumber, episodeNumber) = SeriesProgressIdentity.ResolveSeasonEpisode(episode!);
+            var key = SeriesProgressIdentity.BuildEpisodeKey(seasonNumber, episodeNumber);
+            if (snapshots.ContainsKey(key))
+            {
+                continue;
+            }
+
+            snapshots[key] = new SeriesProgressSnapshot(
+                row.WatchedAt,
+                row.StoppedAt,
+                episode?.Duration,
+                row.Completed);
+        }
+
+        return snapshots;
+    }
+
+    private async Task PersistSeriesProgressSnapshotsAsync(
+        AppDbContext db,
+        int profileId,
+        string seriesTitle,
+        string seriesKey,
+        IReadOnlyDictionary<string, SeriesProgressSnapshot> snapshots)
+    {
+        if (snapshots.Count == 0)
+        {
+            return;
+        }
+
+        var parsedEntries = new List<(int SeasonNumber, int EpisodeNumber, SeriesProgressSnapshot Snapshot)>();
+        foreach (var entry in snapshots)
+        {
+            var token = entry.Key;
+            if (string.IsNullOrWhiteSpace(token) || token.Length < 9)
+            {
+                continue;
+            }
+
+            if (!int.TryParse(token.AsSpan(1, 3), out var seasonNumber) ||
+                !int.TryParse(token.AsSpan(5, 4), out var episodeNumber))
+            {
+                continue;
+            }
+
+            parsedEntries.Add((seasonNumber, episodeNumber, entry.Value));
+        }
+
+        if (parsedEntries.Count == 0)
+        {
+            return;
+        }
+
+        var existingKeys = await db.SeriesEpisodeProgresses
+            .AsNoTracking()
+            .Where(p => p.ProfileId == profileId && p.SeriesKey == seriesKey)
+            .Select(p => new { p.SeasonNumber, p.EpisodeNumber })
+            .ToListAsync();
+
+        var existingKeySet = new HashSet<string>(
+            existingKeys.Select(k => SeriesProgressIdentity.BuildEpisodeKey(k.SeasonNumber, k.EpisodeNumber)),
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var parsed in parsedEntries)
+        {
+            var key = SeriesProgressIdentity.BuildEpisodeKey(parsed.SeasonNumber, parsed.EpisodeNumber);
+            if (!existingKeySet.Add(key))
+            {
+                continue;
+            }
+
+            db.SeriesEpisodeProgresses.Add(new SeriesEpisodeProgress
+            {
+                ProfileId = profileId,
+                SeriesKey = seriesKey,
+                SeriesTitle = seriesTitle,
+                SeasonNumber = parsed.SeasonNumber,
+                EpisodeNumber = parsed.EpisodeNumber,
+                LastWatchedAt = parsed.Snapshot.LastWatchedAt,
+                StoppedAt = parsed.Snapshot.StoppedAt,
+                Duration = parsed.Snapshot.Duration,
+                Completed = parsed.Snapshot.Completed
+            });
+        }
+
+        await db.SaveChangesAsync();
+    }
+
+    private sealed record SeriesProgressSnapshot(
+        DateTime LastWatchedAt,
+        TimeSpan StoppedAt,
+        TimeSpan? Duration,
+        bool Completed);
 
     private Channel BuildSeriesEpisodeChannel(Episode episode)
     {

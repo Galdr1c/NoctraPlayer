@@ -24,6 +24,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - Indirilen dosyalar icin klasor hiyerarsisi eklendi:
   - `.../Downloads/profile_{id}/Filmler/{Film Adi}/`
   - `.../Downloads/profile_{id}/Diziler/{Dizi Adi}/Sezon XX/`
+- Provider-bagimsiz dizi ilerleme saklama altyapisi eklendi:
+  - Yeni tablo: `SeriesEpisodeProgresses` (Profile + normalize series key + sezon + bolum).
+  - Schema fixup hem `Avalonia` hem `WPF` girislerinde olusturuluyor.
 
 ### Changed
 - README tamamen guncellenerek proje gercekligiyle esitlendi:
@@ -34,6 +37,12 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - `Indirme Merkezi` gorunumu buton ile ac/kapat modeline cevrildi.
 - Indirme ilerleme bari sabit width hesaplarindan `ProgressBar` kullanimina gecirildi.
 - Indirme durum event akislari optimize edilerek UI refresh modeli iyilestirildi.
+- `WatchHistoryService` artik dizi oynatiminda `EpisodeId` disinda provider-bagimsiz episode ilerlemesini de yazar.
+- `MainViewModel.ApplyProfileProgressAsync` artik iki kaynakla calisir:
+  - Once mevcut `EpisodeId` gecmisi (mevcut davranis),
+  - Sonra provider-bagimsiz `SeriesEpisodeProgresses` kayitlari.
+- Eski kayitlar icin tek seferlik gecis eklendi:
+  - Uygun dizi acildiginda legacy watch-history satirlari yeni provider-bagimsiz tabloya tasinir.
 - `Tamamlanan indirmeler` listesi oturum bazli olacak sekilde guncellendi (uygulama yeniden acilisinda sifirdan baslar).
 - Oynatma akisinda online oncelik modeli eklendi:
   - `Downloads` disinda ve ag mevcutsa kaynak URL tercih edilir
@@ -51,6 +60,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - `%100` gorunup tamamlanmama durumu giderildi:
   - Yazma stream kapanisi sonrasi sifreleme/finalize garantilendi.
   - Kismen tamamlanmis dosyalarda finalize fallback duzeltildi.
+- Provider degisiminde dizi bolum progress/tick kaybinin ana nedeni giderildi:
+  - Dizi ilerlemesi artik playlist/episode id degisiminden bagimsiz okunur.
+- Profil silme akislarinda (`AddProfileViewModel` / `ProfilesViewModel`) yeni
+  `SeriesEpisodeProgresses` kayitlari da temizleniyor.
 - Ag kesintisi/yanit alamama durumlarinda indirmenin kayitlardan kaybolmasi engellendi.
 - `Paused/Resume` davranisinda uygulama yeniden acilisi sonrasi durum toparlama duzeltildi.
 - Iptal edilen indirmelerde artik dosya/artik temizligi daha guvenilir.

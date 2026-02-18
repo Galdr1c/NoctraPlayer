@@ -25,6 +25,8 @@ public class WatchHistoryService : IWatchHistoryService
             return;
         }
 
+        var watchedAt = DateTime.Now;
+
         var history = await _context.WatchHistories
             .FirstOrDefaultAsync(w => w.ProfileId == profileId && 
                                      (channelId.HasValue ? w.ChannelId == channelId : w.EpisodeId == episodeId));
@@ -36,14 +38,14 @@ public class WatchHistoryService : IWatchHistoryService
                 ProfileId = profileId,
                 ChannelId = channelId,
                 EpisodeId = episodeId,
-                WatchedAt = DateTime.Now
+                WatchedAt = watchedAt
             };
             _context.WatchHistories.Add(history);
         }
 
         var isCompletedNow = history.Completed || completed;
         history.StoppedAt = isCompletedNow && duration.HasValue ? duration.Value : position;
-        history.WatchedAt = DateTime.Now;
+        history.WatchedAt = watchedAt;
         history.Completed = isCompletedNow;
         
         // Update total watched duration (approximate increment)
@@ -51,7 +53,10 @@ public class WatchHistoryService : IWatchHistoryService
 
         if (episodeId.HasValue)
         {
-            var episode = await _context.Episodes.FindAsync(episodeId.Value);
+            var episode = await _context.Episodes
+                .Include(e => e.Season)
+                .ThenInclude(s => s!.Series)
+                .FirstOrDefaultAsync(e => e.Id == episodeId.Value);
             if (episode != null)
             {
                 episode.LastWatched = history.WatchedAt;
@@ -60,6 +65,14 @@ public class WatchHistoryService : IWatchHistoryService
                 {
                     episode.Duration = duration.Value;
                 }
+
+                await UpsertSeriesProgressAsync(
+                    profileId,
+                    episode,
+                    history.StoppedAt,
+                    history.Completed,
+                    duration,
+                    watchedAt);
             }
         }
         else if (channelId.HasValue)
@@ -77,6 +90,69 @@ public class WatchHistoryService : IWatchHistoryService
         }
 
         await _context.SaveChangesAsync();
+    }
+
+    private async Task UpsertSeriesProgressAsync(
+        int profileId,
+        Episode episode,
+        TimeSpan stoppedAt,
+        bool completed,
+        TimeSpan? duration,
+        DateTime watchedAt)
+    {
+        var seriesTitle = episode.Season?.Series?.Name;
+        if (string.IsNullOrWhiteSpace(seriesTitle))
+        {
+            seriesTitle = episode.Name;
+        }
+
+        var seriesKey = SeriesProgressIdentity.NormalizeSeriesKey(seriesTitle);
+        if (string.IsNullOrWhiteSpace(seriesKey))
+        {
+            return;
+        }
+
+        var (seasonNumber, episodeNumber) = SeriesProgressIdentity.ResolveSeasonEpisode(episode);
+        var existing = await _context.SeriesEpisodeProgresses
+            .FirstOrDefaultAsync(p =>
+                p.ProfileId == profileId &&
+                p.SeriesKey == seriesKey &&
+                p.SeasonNumber == seasonNumber &&
+                p.EpisodeNumber == episodeNumber);
+
+        var isCompletedNow = existing?.Completed == true || completed;
+        var finalStoppedAt = isCompletedNow && duration.HasValue
+            ? duration.Value
+            : stoppedAt;
+
+        if (existing == null)
+        {
+            _context.SeriesEpisodeProgresses.Add(new SeriesEpisodeProgress
+            {
+                ProfileId = profileId,
+                SeriesKey = seriesKey,
+                SeriesTitle = seriesTitle ?? string.Empty,
+                SeasonNumber = seasonNumber,
+                EpisodeNumber = episodeNumber,
+                LastWatchedAt = watchedAt,
+                StoppedAt = finalStoppedAt,
+                Duration = duration,
+                Completed = isCompletedNow
+            });
+            return;
+        }
+
+        existing.SeriesTitle = string.IsNullOrWhiteSpace(existing.SeriesTitle)
+            ? seriesTitle ?? string.Empty
+            : existing.SeriesTitle;
+        existing.LastWatchedAt = watchedAt;
+        existing.StoppedAt = finalStoppedAt;
+        existing.Completed = isCompletedNow;
+
+        if (duration.HasValue && duration.Value.TotalSeconds > 0)
+        {
+            existing.Duration = duration.Value;
+        }
     }
 
     public async Task<List<WatchHistory>> GetHistoryAsync(int profileId)

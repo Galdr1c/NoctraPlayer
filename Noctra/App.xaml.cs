@@ -157,6 +157,27 @@ public partial class App : Application
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN IntroStartSec REAL;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN IntroEndSec REAL;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN CreditsStartSec REAL;"); } catch { }
+
+        // 5. Provider-independent series episode progress
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync(@"
+CREATE TABLE IF NOT EXISTS SeriesEpisodeProgresses (
+    Id INTEGER NOT NULL CONSTRAINT PK_SeriesEpisodeProgresses PRIMARY KEY AUTOINCREMENT,
+    ProfileId INTEGER NOT NULL,
+    SeriesKey TEXT NOT NULL,
+    SeriesTitle TEXT NOT NULL,
+    SeasonNumber INTEGER NOT NULL,
+    EpisodeNumber INTEGER NOT NULL,
+    LastWatchedAt TEXT NOT NULL,
+    StoppedAt TEXT NOT NULL,
+    Duration TEXT NULL,
+    Completed INTEGER NOT NULL DEFAULT 0
+);");
+            await context.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_SeriesEpisodeProgresses_ProfileId ON SeriesEpisodeProgresses(ProfileId);");
+            await context.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX IF NOT EXISTS IX_SeriesEpisodeProgresses_UniqueEpisode ON SeriesEpisodeProgresses(ProfileId, SeriesKey, SeasonNumber, EpisodeNumber);");
+        }
+        catch { }
     }
 
     private static async Task PreloadPopularImagesAsync(AppDbContext context, IImageCacheService imageCache)

@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<Profile> Profiles { get; set; }
     public DbSet<ProviderAccount> ProviderAccounts { get; set; }
     public DbSet<WatchHistory> WatchHistories { get; set; }
+    public DbSet<SeriesEpisodeProgress> SeriesEpisodeProgresses { get; set; }
     public DbSet<DownloadItem> DownloadItems { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
@@ -127,6 +128,22 @@ public class AppDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.EpisodeId)
                   .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<SeriesEpisodeProgress>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.SeriesKey).IsRequired().HasMaxLength(512);
+            entity.Property(e => e.SeriesTitle).IsRequired().HasMaxLength(255);
+
+            entity.HasOne(e => e.Profile)
+                  .WithMany()
+                  .HasForeignKey(e => e.ProfileId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.ProfileId);
+            entity.HasIndex(e => new { e.ProfileId, e.SeriesKey, e.SeasonNumber, e.EpisodeNumber })
+                  .IsUnique();
         });
 
         modelBuilder.Entity<DownloadItem>(entity =>

@@ -556,6 +556,10 @@ public partial class AddProfileViewModel : ObservableObject
                 .Where(h => h.ProfileId == profileId)
                 .ExecuteDeleteAsync();
 
+            await _context.SeriesEpisodeProgresses
+                .Where(p => p.ProfileId == profileId)
+                .ExecuteDeleteAsync();
+
             await _context.Playlists
                 .Where(p => p.ProfileId == profileId)
                 .ExecuteDeleteAsync();
