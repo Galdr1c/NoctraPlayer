@@ -8,6 +8,18 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### Added
+- **Picture-in-Picture (PiP) Architecture Modernizasyonu** (2026-02-19):
+    - **Single-Window Mimarisi**: VLC (Direct3D11) motorunun Windows üzerinde HWND (pencere tutamacı) kilitlemesi nedeniyle oluşan siyah ekran ve çökme sorunlarını gidermek için tasarlanmıştır. PiP modu artık harici bir pencere açmak yerine, `MainWindow`'u minimal bir "Shell" haline getirerek mevcut HWND'yi korur.
+    - **8 Yönlü Orantılı Boyutlandırma**: Pencereyi 4 köşe ve 4 kenardan, 16:9 en-boy oranını koruyacak şekilde büyütüp küçülten özel bir vektörel boyutlandırma mantığı eklendi.
+    - **Tüm Yüzeyden Sürükleme**: `MouseCaptureLayer` üzerinden tüm video yüzeyini kapsayan global bir sürükleme (Window Move Drag) sistemi entegre edildi.
+    - **1:1 Kontrol Tasarımı & Estetik**: PiP arayüzü görseldekiyle birebir örtüşmesi için iyileştirildi. Orta kontrollere dairesel `Play/Pause` ikonları eklendi. Pencere kenarlarına 12px köşe radiusu ve şık bir çerçeve (`PiPFrame`) uygulandı.
+    - **Akıcı Boyutlandırma (Jitter-Free)**: Boyutlandırma mantığı piksel bazlı yuvarlama (pixel snap) ile optimize edilerek, büyütme/küçültme sırasındaki titremeler tamamen giderildi.
+    - **Gelişmiş Kırpma (Clipping)**: Videonun köşeleri, PiP çerçevesinin kavislerine uyacak şekilde `PiPContainer` üzerinden dinamik olarak kırpıldı.
+    - **Çift Tıklama Kararlılığı (Double-Click Fix)**: PiP modunda çift tıklama yapıldığında pencerenin bug'a girmesi engellendi. Artık çift tıklama, pencereyi güvenli bir şekilde tam ekran moduna döndürüyor.
+    - **Olay Yönetimi (Event Handling)**: Fare tıklama olayları (`Handled = true`) izole edilerek, işletim sistemi seviyesindeki istenmeyen pencere komutlarının arayüzü bozması önlendi.
+    - **Arayüz Restorasyonu (Layout Fix)**: PiP'den ana pencereye dönüşte `Dispatcher` üzerindeki `Background` önceliği kullanılarak, pencere boyutları ve içerik görünürlüğü "Atomic Restore" yöntemiyle senkronize edildi.
+    - **Premium Estetik**: `Border.BoxShadow` ve transparan yüzen kontrol barı ile modern, native hissettiren bir görünüm sağlandı.
+    - **Etkileşim Güvenliği**: PiP modunda `PlayerOverlayLayer` tamamen devre dışı bırakılarak, sadece PiP'e özel kontrol barının aktif kalması sağlandı (karışıklık önlendi).
 - `Avalonia` ana istemci tarafinda indirilebilir icerik sistemi (`DownloadItems`) eklendi.
 - `Indirme Merkezi` ve `Indirilenler` ayri gorunumleri eklendi.
 - Indirme listesinde:

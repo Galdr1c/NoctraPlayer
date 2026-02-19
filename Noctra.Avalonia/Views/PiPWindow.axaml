@@ -11,7 +11,7 @@
         SystemDecorations="None"
         Topmost="True"
         CanResize="True"
-        ShowInTaskbar="False"
+        ShowInTaskbar="True"
         Background="Black"
         mc:Ignorable="d">
 

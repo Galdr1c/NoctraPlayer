@@ -25,12 +25,35 @@
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
       <Setter Property="RenderTransform" Value="rotate(120deg)"/>
     </Style>
+    <Style Selector="Button.pipButton">
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="FocusAdorner" Value="{x:Null}"/>
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.15"/>
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.pipButton:pointerover">
+      <Setter Property="Background" Value="#33FFFFFF"/>
+    </Style>
+    <Style Selector="Button.pipButton:pressed">
+        <Setter Property="Background" Value="#44FFFFFF"/>
+        <Setter Property="RenderTransform" Value="scale(0.95)"/>
+    </Style>
+    <Style Selector="materialIcons|MaterialIcon.cornerMask">
+        <Setter Property="Foreground" Value="Black"/>
+        <Setter Property="Width" Value="12"/>
+        <Setter Property="Height" Value="12"/>
+        <Setter Property="ZIndex" Value="5000"/>
+    </Style>
   </Window.Styles>
 
   <Grid RowDefinitions="64,*,48">
 
     <!-- ========== HEADER BAR ========== -->
-    <Border Grid.Row="0" Background="{DynamicResource HeaderGradientBrush}" Padding="24,0" PointerPressed="HeaderBar_PointerPressed">
+    <Border x:Name="HeaderBar" Grid.Row="0" Background="{DynamicResource HeaderGradientBrush}" Padding="24,0" PointerPressed="HeaderBar_PointerPressed">
       <Grid ColumnDefinitions="Auto,*,Auto">
         <!-- Logo -->
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="12" Margin="8,0,0,0">
@@ -66,10 +89,10 @@
     </Border>
 
     <!-- ========== MAIN CONTENT AREA ========== -->
-    <Grid Grid.Row="1" ColumnDefinitions="280,*">
+    <Grid x:Name="MainContentArea" Grid.Row="1" ColumnDefinitions="280,*">
 
       <!-- SIDEBAR -->
-      <Border Grid.Column="0" Background="{DynamicResource Bg1Brush}">
+      <Border x:Name="SideBar" Grid.Column="0" Background="{DynamicResource Bg1Brush}">
         <StackPanel Margin="16,24,16,16">
           <!-- Home -->
           <Button Classes="navItem" Click="NavigateHome_Click" Cursor="Hand"
@@ -1177,16 +1200,142 @@
 
 
     <!-- Player Area (full window overlay) -->
-    <Grid x:Name="PlayerArea" Grid.RowSpan="3" Background="Black" IsVisible="False" ClipToBounds="True" ZIndex="5000">
-      <controls:MemoryVideoView x:Name="VideoSurface">
-          <controls:MemoryVideoView.OverlayContent>
-              <Grid>
-                  <views:WatermarkView DataContext="{Binding WatermarkViewModel}" ZIndex="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,100"/>
-                  <Border x:Name="MouseCaptureLayer"
-                          ZIndex="2500"
-                          Background="Transparent"
-                          PointerMoved="MouseCaptureLayer_PointerMoved"
-                          PointerPressed="MouseCaptureLayer_PointerPressed"/>
+    <Grid x:Name="PlayerArea" Grid.RowSpan="3" Background="Transparent" IsVisible="False" ClipToBounds="True" ZIndex="5000">
+      <!-- Main Content Container with Rounded Corners for PiP -->
+      <Border x:Name="PiPContainer"
+              CornerRadius="0"
+              ClipToBounds="True"
+              Background="Black">
+          <controls:MemoryVideoView x:Name="VideoSurface">
+              <controls:MemoryVideoView.OverlayContent>
+                  <Grid>
+                      <views:WatermarkView x:Name="PiPWatermark" DataContext="{Binding WatermarkViewModel}" ZIndex="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,100"/>
+                      <Border x:Name="MouseCaptureLayer"
+                              ZIndex="2500"
+                              Background="Transparent"
+                              PointerMoved="MouseCaptureLayer_PointerMoved"
+                              PointerPressed="MouseCaptureLayer_PointerPressed"/>
+
+                      <!-- PiP Window Frame (Border & Shadows) - Visible only in PiP -->
+                      <Border x:Name="PiPFrame"
+                              BorderBrush="#44FFFFFF"
+                              BorderThickness="1"
+                              CornerRadius="12"
+                              IsVisible="{Binding #PiPCentralControls.IsVisible}"
+                              ZIndex="5001"
+                              IsHitTestVisible="False">
+                          <Border.BoxShadow>
+                              <BoxShadows>0 10 40 0 #AA000000</BoxShadows>
+                          </Border.BoxShadow>
+                      </Border>
+
+                      <!-- Corner Masks (to hide rectangular video corners) -->
+                      <Canvas HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ZIndex="5000" IsHitTestVisible="False">
+                          <!-- Top Left -->
+                          <Path Data="M 0,12 L 0,0 L 12,0 A 12,12 0 0 0 0,12 Z" Fill="Black" Canvas.Left="0" Canvas.Top="0"/>
+                          <!-- Top Right -->
+                          <Path Data="M 0,0 L 12,0 L 12,12 A 12,12 0 0 0 0,0 Z" Fill="Black" Canvas.Right="0" Canvas.Top="0"/>
+                          <!-- Bottom Left -->
+                          <Path Data="M 0,0 L 0,12 L 12,12 A 12,12 0 0 1 0,0 Z" Fill="Black" Canvas.Left="0" Canvas.Bottom="0"/>
+                          <!-- Bottom Right -->
+                          <Path Data="M 0,12 L 12,12 L 12,0 A 12,12 0 0 1 0,12 Z" Fill="Black" Canvas.Right="0" Canvas.Bottom="0"/>
+                      </Canvas>
+
+                  <!-- PiP Central Controls (Netflix Style) -->
+                  <StackPanel x:Name="PiPCentralControls"
+                              Orientation="Horizontal"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Spacing="40"
+                              IsVisible="False"
+                              ZIndex="6000"
+                              DataContext="{Binding #OverlayControl.DataContext}"
+                              x:DataType="vm:PlayerViewModel">
+                      
+                      <!-- Skip Backward 10s -->
+                      <Button Command="{Binding SkipBackwardCommand}" CommandParameter="10"
+                              Width="48" Height="48"
+                              Background="Transparent" BorderThickness="0"
+                              Classes="pipButton" ToolTip.Tip="10 sn Geri">
+                          <materialIcons:MaterialIcon Kind="Rewind" Width="36" Height="36" Foreground="White" Opacity="0.9"/>
+                      </Button>
+
+                      <!-- Play/Pause (Large Center) -->
+                      <Button Command="{Binding PlayPauseCommand}"
+                              Width="80" Height="80"
+                              Background="Transparent" BorderThickness="0"
+                              Classes="pipButton" ToolTip.Tip="Oynat/Duraklat">
+                          <Grid>
+                              <materialIcons:MaterialIcon Kind="PauseCircleOutline" 
+                                                          Width="72" Height="72" Foreground="White" 
+                                                          IsVisible="{Binding IsPlaying}"/>
+                              <materialIcons:MaterialIcon Kind="PlayCircleOutline" 
+                                                          Width="72" Height="72" Foreground="White" 
+                                                          IsVisible="{Binding IsPlaying, Converter={StaticResource InverseBoolConverter}}"/>
+                          </Grid>
+                      </Button>
+
+                      <!-- Skip Forward 10s -->
+                      <Button Command="{Binding SkipForwardCommand}" CommandParameter="10"
+                              Width="48" Height="48"
+                              Background="Transparent" BorderThickness="0"
+                              Classes="pipButton" ToolTip.Tip="10 sn İleri">
+                          <materialIcons:MaterialIcon Kind="FastForward" Width="36" Height="36" Foreground="White" Opacity="0.9"/>
+                      </Button>
+                  </StackPanel>
+
+                  <!-- PiP Bottom-Right Controls -->
+                  <Button x:Name="PiPBottomControls"
+                          HorizontalAlignment="Right"
+                          VerticalAlignment="Bottom"
+                          Margin="12"
+                          Width="40" Height="40"
+                          Background="Transparent" BorderThickness="0"
+                          Click="PiPReturn_Click"
+                          IsVisible="False"
+                          ZIndex="6000"
+                          Classes="pipButton"
+                          ToolTip.Tip="Tam ekrana dön">
+                      <materialIcons:MaterialIcon Kind="ArrowExpand" Width="24" Height="24" Foreground="White" Opacity="0.9"/>
+                  </Button>
+
+                  <!-- PiP Resize Grips (8-way proportional) -->
+                  <!-- Corners -->
+                  <Border HorizontalAlignment="Left" VerticalAlignment="Top" Width="24" Height="24" Background="Transparent" 
+                          Cursor="TopLeftCorner" PointerPressed="PiPCornerResize_PointerPressed" 
+                          PointerMoved="PiPCornerResize_PointerMoved" PointerReleased="PiPCornerResize_PointerReleased"
+                          Tag="TopLeft" ZIndex="7000" IsVisible="{Binding #PiPBottomControls.IsVisible}"/>
+                  <Border HorizontalAlignment="Right" VerticalAlignment="Top" Width="24" Height="24" Background="Transparent" 
+                          Cursor="TopRightCorner" PointerPressed="PiPCornerResize_PointerPressed" 
+                          PointerMoved="PiPCornerResize_PointerMoved" PointerReleased="PiPCornerResize_PointerReleased"
+                          Tag="TopRight" ZIndex="7000" IsVisible="{Binding #PiPBottomControls.IsVisible}"/>
+                  <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Width="24" Height="24" Background="Transparent" 
+                          Cursor="BottomLeftCorner" PointerPressed="PiPCornerResize_PointerPressed" 
+                          PointerMoved="PiPCornerResize_PointerMoved" PointerReleased="PiPCornerResize_PointerReleased"
+                          Tag="BottomLeft" ZIndex="7000" IsVisible="{Binding #PiPBottomControls.IsVisible}"/>
+                  <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="24" Height="24" Background="Transparent" 
+                          Cursor="BottomRightCorner" PointerPressed="PiPCornerResize_PointerPressed" 
+                          PointerMoved="PiPCornerResize_PointerMoved" PointerReleased="PiPCornerResize_PointerReleased"
+                          Tag="BottomRight" ZIndex="7000" IsVisible="{Binding #PiPBottomControls.IsVisible}"/>
+                  
+                  <!-- Edges -->
+                  <Border HorizontalAlignment="Stretch" VerticalAlignment="Top" Height="8" Margin="24,0" Background="Transparent" 
+                          Cursor="SizeNorthSouth" PointerPressed="PiPCornerResize_PointerPressed" 
+                          PointerMoved="PiPCornerResize_PointerMoved" PointerReleased="PiPCornerResize_PointerReleased"
+                          Tag="Top" ZIndex="7000" IsVisible="{Binding #PiPBottomControls.IsVisible}"/>
+                  <Border HorizontalAlignment="Stretch" VerticalAlignment="Bottom" Height="8" Margin="24,0" Background="Transparent" 
+                          Cursor="SizeNorthSouth" PointerPressed="PiPCornerResize_PointerPressed" 
+                          PointerMoved="PiPCornerResize_PointerMoved" PointerReleased="PiPCornerResize_PointerReleased"
+                          Tag="Bottom" ZIndex="7000" IsVisible="{Binding #PiPBottomControls.IsVisible}"/>
+                  <Border HorizontalAlignment="Left" VerticalAlignment="Stretch" Width="8" Margin="0,24" Background="Transparent" 
+                          Cursor="SizeWestEast" PointerPressed="PiPCornerResize_PointerPressed" 
+                          PointerMoved="PiPCornerResize_PointerMoved" PointerReleased="PiPCornerResize_PointerReleased"
+                          Tag="Left" ZIndex="7000" IsVisible="{Binding #PiPBottomControls.IsVisible}"/>
+                  <Border HorizontalAlignment="Right" VerticalAlignment="Stretch" Width="8" Margin="0,24" Background="Transparent" 
+                          Cursor="SizeWestEast" PointerPressed="PiPCornerResize_PointerPressed" 
+                          PointerMoved="PiPCornerResize_PointerMoved" PointerReleased="PiPCornerResize_PointerReleased"
+                          Tag="Right" ZIndex="7000" IsVisible="{Binding #PiPBottomControls.IsVisible}"/>
+
                   <Grid x:Name="PlayerOverlayLayer" ZIndex="2600">
                     <views:VideoOverlayView x:Name="OverlayControl" ZIndex="2"/>
                     <!-- Next Episode Prompt (binds to PlayerViewModel via OverlayControl's DataContext) -->
@@ -1213,10 +1362,11 @@
               </Grid>
           </controls:MemoryVideoView.OverlayContent>
       </controls:MemoryVideoView>
+      </Border>
     </Grid>
 
     <!-- ========== STATUS BAR ========== -->
-    <Border Grid.Row="2" Background="{DynamicResource HeaderGradientBrush}">
+    <Border x:Name="StatusBar" Grid.Row="2" Background="{DynamicResource HeaderGradientBrush}">
       <Grid Margin="24,0" ColumnDefinitions="*,Auto">
         <TextBlock Text="{Binding StatusMessage}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
         <Border Grid.Column="1" Background="{DynamicResource AccentBrush}" CornerRadius="{DynamicResource RadiusPill}" Padding="14,6">

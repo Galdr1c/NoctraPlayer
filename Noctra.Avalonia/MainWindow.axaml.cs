@@ -468,7 +468,10 @@ public partial class MainWindow : Window
         OpenProfileSelection();
     }
 
-    private Views.PiPWindow? _pipWindow;
+    private WindowState _savedWindowState;
+    private Size _savedWindowSize;
+    private PixelPoint _savedWindowPosition;
+    private SystemDecorations _savedSystemDecorations;
     private bool _isPiPMode;
 
     private void PlayerViewModel_PiPRequested(object? sender, EventArgs e)
@@ -476,66 +479,233 @@ public partial class MainWindow : Window
         OpenPiP();
     }
 
-    private void OpenPiP()
+    public void OpenPiP()
     {
-        if (_pipWindow != null) { _pipWindow.Activate(); return; }
-
-        var player = _videoPlayerService.GetMediaPlayer();
-        if (player == null || !_videoPlayerService.IsPlaying) return;
+        if (_isPiPMode) return;
+        if (!_videoPlayerService.IsPlaying) return;
 
         _isPiPMode = true;
 
-        _pipWindow = new Views.PiPWindow();
-        _pipWindow.ReturnRequested += (_, _) => ClosePiP(returnToMain: true);
-        _pipWindow.Closed += (_, _) =>
+        // 1. Mevcut durumu kaydet
+        _savedWindowState = WindowState;
+        _savedWindowSize = new Size(Width, Height);
+        _savedWindowPosition = Position;
+        _savedSystemDecorations = SystemDecorations;
+
+        // 2. Normal moda geç ve dekorasyonları kaldır
+        WindowState = WindowState.Normal;
+        SystemDecorations = SystemDecorations.None;
+
+        // 3. UI bileşenlerini gizle, sadece PlayerArea kalsın
+        HeaderBar.IsVisible = false;
+        MainContentArea.IsVisible = false;
+        StatusBar.IsVisible = false;
+        PiPWatermark.IsVisible = false; // PiP modunda watermark ekranı kapatıyor
+        // MouseCaptureLayer.IsHitTestVisible = true; // PiP modunda tıklayınca sürüklemeyi sağlayacağız
+        Grid.SetRowSpan(PlayerArea, 3); // Ensure it covers everything regardless of hidden rows
+
+        // 4. Küçük PiP boyutuna geç
+        const double pipWidth = 400;
+        const double pipHeight = 225;
+
+        // MinWidth/Height kısıtlamalarını geçici olarak esnet
+        MinWidth = 0;
+        MinHeight = 0;
+
+        Width = pipWidth;
+        Height = pipHeight;
+
+        // 5. Ekranın sağ alt köşesine taşı
+        var screen = Screens.Primary;
+        if (screen != null)
         {
-            if (_isPiPMode) ClosePiP(returnToMain: true);
-        };
-
-        _pipWindow.VideoSurface.NativeHandleReady += OnPiPHandleReady;
-
-        void OnPiPHandleReady(object? s, EventArgs e)
-        {
-            if (_pipWindow != null)
-            {
-                _pipWindow.VideoSurface.NativeHandleReady -= OnPiPHandleReady;
-
-                // KRİTİK SIRA:
-                // 1. ÖNCE PiP HWND'ye player'ı ver (VLC render loop PiP'e geçer)
-                _pipWindow.AttachPlayer(player);
-            }
-
-            // 2. SONRA ana HWND'yi serbest bırak (VLC zaten PiP'te, null'u umursamaz)
-            VideoSurface.MediaPlayer = null;
-
-            // 3. Ana pencereyi gizle
-            this.Hide();
+            var wa = screen.WorkingArea;
+            Position = new PixelPoint(
+                (int)(wa.X + wa.Width - pipWidth - 24),
+                (int)(wa.Y + wa.Height - pipHeight - 24)
+            );
         }
 
-        _pipWindow.Show();
+        // 6. PiP Kontrollerini ve Çerçeveyi göster
+        PiPCentralControls.IsVisible = true;
+        PiPBottomControls.IsVisible = true;
+        PiPContainer.CornerRadius = new CornerRadius(12);
+        PlayerOverlayLayer.IsVisible = false; // Tüm overlay katmanını gizle (pip'te sadece pip kontrolleri)
+
+        // 7. En üstte tut
+        Topmost = true;
+        
+        // WindowState'in Normal olduğundan emin ol (bazı platformlarda MinWidth/Height sonrası bozulabiliyor)
+        WindowState = WindowState.Normal;
     }
 
     private void ClosePiP(bool returnToMain)
     {
-        if (_pipWindow == null) return;
-
+        if (!_isPiPMode) return;
         _isPiPMode = false;
-        var player = _videoPlayerService.GetMediaPlayer();
 
-        // KRİTİK SIRA:
-        // 1. ÖNCE ana HWND'ye player'ı ver (VideoSurface HWND zaten var, NativeHandleReady bekleme)
-        if (player != null)
-            VideoSurface.MediaPlayer = player;
+        // 1. Önce pencere boyutlarını ve dekorasyonları geri al (Layout için kritik)
+        Topmost = false;
+        SystemDecorations = _savedSystemDecorations;
+        
+        MinWidth = 1000; // Orijinal min değerler
+        MinHeight = 600;
+        
+        Width = _savedWindowSize.Width;
+        Height = _savedWindowSize.Height;
+        Position = _savedWindowPosition;
+        WindowState = _savedWindowState;
 
-        // 2. SONRA PiP'ten söküp kapat
-        _pipWindow.DetachPlayer();
-        var tempWindow = _pipWindow;
-        _pipWindow = null;
-        try { tempWindow.Close(); } catch { }
+        // 2. RowSpan'i sıfırla ki tüm alanı kaplamaya devam etsin (Orijinal değer 3)
+        Grid.SetRowSpan(PlayerArea, 3);
 
-        // 3. Ana pencereyi göster
-        this.Show();
-        this.Activate();
+        // 3. Görünürlüğü GÜVENLİ bir şekilde geri al (Layout bozulmasını önlemek için gecikmeli)
+        PiPCentralControls.IsVisible = false;
+        PiPBottomControls.IsVisible = false;
+        PiPContainer.CornerRadius = new CornerRadius(0);
+        
+        // Dispatcher ile bir sonraki frame'e atarsak pencere boyutları tam oturmuş olur
+        Dispatcher.UIThread.Post(() => {
+            HeaderBar.IsVisible = true;
+            MainContentArea.IsVisible = true;
+            StatusBar.IsVisible = true;
+            PiPWatermark.IsVisible = true;
+            MouseCaptureLayer.IsHitTestVisible = true;
+            PlayerOverlayLayer.IsVisible = true;
+            
+            // Layout geçişini zorla tazele
+            InvalidateVisual();
+        }, DispatcherPriority.Background);
+
+        // 4. Eğer kapatıldıysa (return değilse) player'ı da durdur
+        if (!returnToMain)
+        {
+            _playerViewModel.ClosePlayerCommand.Execute(null);
+        }
+    }
+
+    private void PiPDrag_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            // Ensure we are in a state that allows dragging
+            if (WindowState == WindowState.Normal)
+                BeginMoveDrag(e);
+        }
+    }
+
+    private void PiPReturn_Click(object? sender, RoutedEventArgs e) => ClosePiP(returnToMain: true);
+    
+    private void PiPClose_Click(object? sender, RoutedEventArgs e) => ClosePiP(returnToMain: false);
+
+    private bool _isResizing;
+    private string? _resizeCorner;
+    private Point _resizeStartPoint;
+    private Rect _resizeStartBounds;
+
+    private void PiPCornerResize_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!_isPiPMode) return;
+        var border = sender as Border;
+        if (border == null) return;
+        
+        // Pencereyi öne getir ve odağı al (Gecikmeyi önlemek için)
+        Activate();
+        Focus();
+        
+        _isResizing = true;
+        _resizeCorner = border.Tag?.ToString();
+        
+        // Global (Screen) koordinatları kullanmak titremeyi engeller
+        var visualRoot = VisualRoot as TopLevel;
+        if (visualRoot == null) return;
+        
+        _resizeStartPoint = visualRoot.PointToScreen(e.GetPosition(this)).ToPoint(1.0);
+        _resizeStartBounds = new Rect(Position.X, Position.Y, Width, Height);
+        
+        e.Pointer.Capture(border);
+        e.Handled = true;
+    }
+
+    private void PiPCornerResize_PointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (!_isResizing) return;
+        
+        var visualRoot = VisualRoot as TopLevel;
+        if (visualRoot == null) return;
+        
+        var currentPoint = visualRoot.PointToScreen(e.GetPosition(this)).ToPoint(1.0);
+        var deltaX = currentPoint.X - _resizeStartPoint.X;
+        var deltaY = currentPoint.Y - _resizeStartPoint.Y;
+        
+        const double aspectRatio = 16.0 / 9.0;
+        
+        double newWidth = _resizeStartBounds.Width;
+        double newHeight = _resizeStartBounds.Height;
+        double newX = _resizeStartBounds.X;
+        double newY = _resizeStartBounds.Y;
+
+        switch (_resizeCorner)
+        {
+            case "BottomRight":
+            case "Right":
+                newWidth = Math.Max(240, _resizeStartBounds.Width + deltaX);
+                newHeight = newWidth / aspectRatio;
+                break;
+            case "Bottom":
+                newHeight = Math.Max(135, _resizeStartBounds.Height + deltaY);
+                newWidth = newHeight * aspectRatio;
+                break;
+            case "BottomLeft":
+            case "Left":
+                newWidth = Math.Max(240, _resizeStartBounds.Width - deltaX);
+                newHeight = newWidth / aspectRatio;
+                newX = _resizeStartBounds.Right - newWidth;
+                break;
+            case "TopRight":
+                newWidth = Math.Max(240, _resizeStartBounds.Width + deltaX);
+                newHeight = newWidth / aspectRatio;
+                newY = _resizeStartBounds.Bottom - newHeight;
+                break;
+            case "Top":
+                newHeight = Math.Max(135, _resizeStartBounds.Height - deltaY);
+                newWidth = newHeight * aspectRatio;
+                newY = _resizeStartBounds.Bottom - newHeight;
+                break;
+            case "TopLeft":
+                newWidth = Math.Max(240, _resizeStartBounds.Width - deltaX);
+                newHeight = newWidth / aspectRatio;
+                newX = _resizeStartBounds.Right - newWidth;
+                newY = _resizeStartBounds.Bottom - newHeight;
+                break;
+        }
+
+        // Titremeyi önlemek için pixel snap ve casting optimizasyonu
+        int finalWidth = (int)Math.Round(newWidth);
+        int finalHeight = (int)Math.Round(newHeight);
+        int finalX = (int)Math.Round(newX);
+        int finalY = (int)Math.Round(newY);
+
+        if ((int)Width != finalWidth || (int)Height != finalHeight)
+        {
+            Width = finalWidth;
+            Height = finalHeight;
+        }
+
+        var newPos = new PixelPoint(finalX, finalY);
+        if (Position != newPos)
+        {
+            Position = newPos;
+        }
+    }
+
+    private void PiPCornerResize_PointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_isResizing)
+        {
+            _isResizing = false;
+            e.Pointer.Capture(null);
+        }
     }
 
     private void MouseCaptureLayer_PointerPressed(object? sender, PointerPressedEventArgs e)
@@ -551,14 +721,31 @@ public partial class MainWindow : Window
             return;
         }
 
+        // PiP modunda tüm yüzeyden sürükleme yap
+        if (_isPiPMode)
+        {
+            if (e.ClickCount >= 2)
+            {
+                ClosePiP(true);
+            }
+            else if (WindowState == WindowState.Normal)
+            {
+                BeginMoveDrag(e);
+            }
+            e.Handled = true;
+            return;
+        }
+
         if (e.ClickCount >= 2)
         {
             _playerViewModel.ToggleFullScreenCommand.Execute(null);
+            e.Handled = true;
             return;
         }
 
         _playerViewModel.PlayPauseCommand.Execute(null);
         _playerViewModel.UserInteractionCommand.Execute(null);
+        e.Handled = true;
     }
 
     private void MouseCaptureLayer_PointerMoved(object? sender, PointerEventArgs e)

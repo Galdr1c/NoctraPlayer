@@ -33,24 +33,18 @@ public partial class PiPWindow : Window
     public void AttachPlayer(MediaPlayer player)
     {
         _player = player;
-         // Ensure the main window has detached it effectively before this, 
-         // but setting it here should claim the HWND for this view.
         PiPVideoSurface.MediaPlayer = _player;
         UpdatePlayPauseIcon();
         
         // Subscribe to events to keep UI in sync
         if (_player != null)
         {
-            // Force play if it was playing, sometimes HWND switch pauses it or needs a kick
-            bool wasPlaying = _player.IsPlaying;
-            if (wasPlaying)
-            {
-               _player.Play();
-            }
-
             _player.Playing += OnPlayerStateChanged;
             _player.Paused += OnPlayerStateChanged;
             _player.Stopped += OnPlayerStateChanged;
+            
+            // Explicit Play kick just in case
+            if (_player.IsPlaying) _player.Play();
         }
     }
 

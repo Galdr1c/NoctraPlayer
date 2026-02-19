@@ -97,53 +97,61 @@ public class MemoryVideoView : NativeControlHost
         _rootWindow = null;
     }
 
-    private void Attach()
+    public void ForceRefresh()
     {
-        if (_mediaPlayer == null || _platformHandle == null) return;
-
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            _mediaPlayer.Hwnd = _platformHandle.Handle;
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            _mediaPlayer.XWindow = (uint)_platformHandle.Handle;
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            _mediaPlayer.NsObject = _platformHandle.Handle;
+        Attach();
     }
 
-    private void Detach()
+    private void Attach()
     {
         if (_mediaPlayer == null || _platformHandle == null) return;
 
         try
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                _mediaPlayer.Hwnd = _platformHandle.Handle;
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                _mediaPlayer.XWindow = (uint)_platformHandle.Handle;
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                _mediaPlayer.NsObject = _platformHandle.Handle;
+        }
+        catch { }
+    }
+
+    private void Detach()
+    {
+        if (_mediaPlayer == null || _platformHandle == null) return;
+
+        var player = _mediaPlayer;
+        var handle = _platformHandle.Handle;
+
+        // Note: We don't use Post here because we want to detach 
+        // immediately before the control is destroyed or handle becomes invalid.
+        try
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                // Only clear if the player is still rendering to our handle.
-                // If it's already been pointed to another HWND (handoff), leave it alone!
-                if (_mediaPlayer.Hwnd == _platformHandle.Handle)
+                if (player.Hwnd == handle)
                 {
-                    _mediaPlayer.Hwnd = IntPtr.Zero;
+                    player.Hwnd = IntPtr.Zero;
                 }
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                if (_mediaPlayer.XWindow == (uint)_platformHandle.Handle)
+                if (player.XWindow == (uint)handle)
                 {
-                    _mediaPlayer.XWindow = 0;
+                    player.XWindow = 0;
                 }
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                if (_mediaPlayer.NsObject == _platformHandle.Handle)
+                if (player.NsObject == handle)
                 {
-                    _mediaPlayer.NsObject = IntPtr.Zero;
+                    player.NsObject = IntPtr.Zero;
                 }
             }
         }
-        catch
-        {
-            // Fallback if property is not readable or throws
-            // Usually we want to be safe and not clear if we are unsure during handoff
-        }
+        catch { }
     }
 
     // ─── Overlay Management ───────────────────────────────────────
