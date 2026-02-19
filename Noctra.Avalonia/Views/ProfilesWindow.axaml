@@ -272,7 +272,7 @@
     <Border CornerRadius="{DynamicResource RadiusMedium}" ClipToBounds="True"
             Background="{DynamicResource BackgroundGradientBrush}">
 
-        <Grid RowDefinitions="Auto,*,Auto">
+        <Grid RowDefinitions="Auto,*">
             
             <!-- HEADER -->
             <Grid Grid.Row="0" Margin="32,24" ColumnDefinitions="*,Auto">
@@ -298,53 +298,60 @@
                 </StackPanel>
             </Grid>
 
-            <!-- MAIN CONTENT -->
-            <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <!-- SCROLLABLE CONTENT -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="0,0,0,50">
+                    
+                    <!-- MAIN CONTENT -->
+                    <StackPanel Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center">
 
-                <!-- Titles -->
-                <TextBlock Text="Kim izliyor?"
-                           FontSize="64" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"
-                           HorizontalAlignment="Center"/>
-                <TextBlock Text="Profil seçin"
-                           FontSize="18" Foreground="{DynamicResource TextMutedBrush}"
-                           HorizontalAlignment="Center" Margin="0,12,0,56"/>
+                        <!-- Titles -->
+                        <TextBlock Text="Kim izliyor?"
+                                   FontSize="64" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="Profil seçin"
+                                   FontSize="18" Foreground="{DynamicResource TextMutedBrush}"
+                                   HorizontalAlignment="Center" Margin="0,12,0,56"/>
 
-                <!-- Profile Grid -->
-                <WrapPanel HorizontalAlignment="Center" MaxWidth="900">
-                    <ItemsControl ItemsSource="{Binding Profiles}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel ItemWidth="192" ItemHeight="200"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Classes="ProfileCardStyle"
-                                        Click="SelectProfile_Click"
-                                        Margin="16,16,16,24"/>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                        <!-- Profile Grid -->
+                        <WrapPanel HorizontalAlignment="Center" MaxWidth="900">
+                            <ItemsControl ItemsSource="{Binding Profiles}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel ItemWidth="192" ItemHeight="200"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Classes="ProfileCardStyle"
+                                                Click="SelectProfile_Click"
+                                                Margin="16,16,16,24"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
 
-                    <!-- Add Profile Button -->
-                    <Button Classes="AddProfileButtonStyle"
-                            Command="{Binding AddProfileCommand}"
-                            Margin="16,16,16,24"
-                            IsVisible="{Binding IsManageMode, Converter={StaticResource InverseBoolConverter}}"/>
-                </WrapPanel>
-            </StackPanel>
+                            <!-- Add Profile Button -->
+                            <Button Classes="AddProfileButtonStyle"
+                                    Command="{Binding AddProfileCommand}"
+                                    Margin="16,16,16,24"
+                                    IsVisible="{Binding IsManageMode, Converter={StaticResource InverseBoolConverter}}"/>
+                        </WrapPanel>
+                    </StackPanel>
 
-            <!-- FOOTER -->
-            <StackPanel Grid.Row="2" HorizontalAlignment="Stretch" Margin="0,0,0,40">
-                <Button x:Name="ManageProfilesButton"
-                        Content="{Binding IsManageMode, Converter={StaticResource BoolToStringConverter}, ConverterParameter='Bitti|Profilleri Yönet'}"
-                        Command="{Binding ToggleManageModeCommand}"
-                        Classes="ManageModeButtonStyle"
-                        HorizontalAlignment="Center"
-                        IsVisible="{Binding Profiles.Count, Converter={StaticResource CountToVisibilityConverter}}"
-                        Tag="{Binding IsManageMode}">
-                </Button>
-            </StackPanel>
+                    <!-- FOOTER -->
+                    <StackPanel HorizontalAlignment="Stretch">
+                        <Button x:Name="ManageProfilesButton"
+                                Content="{Binding IsManageMode, Converter={StaticResource BoolToStringConverter}, ConverterParameter='Bitti|Profilleri Yönet'}"
+                                Command="{Binding ToggleManageModeCommand}"
+                                Classes="ManageModeButtonStyle"
+                                HorizontalAlignment="Center"
+                                IsVisible="{Binding Profiles.Count, Converter={StaticResource CountToVisibilityConverter}}"
+                                Tag="{Binding IsManageMode}">
+                        </Button>
+                    </StackPanel>
+
+                </StackPanel>
+            </ScrollViewer>
         </Grid>
     </Border>
 

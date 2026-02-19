@@ -75,6 +75,38 @@ public partial class SettingsViewModel : ObservableObject
     private int _epgRefreshFrequencyHours;
 
     [ObservableProperty]
+    private int _channelListRefreshFrequencyIndex;
+
+    [ObservableProperty]
+    private int _epgRefreshFrequencyIndex;
+
+    partial void OnChannelListRefreshFrequencyIndexChanged(int value)
+    {
+        ChannelListRefreshFrequencyHours = value switch
+        {
+            1 => 1,
+            2 => 3,
+            3 => 6,
+            4 => 12,
+            5 => 24,
+            _ => 0
+        };
+    }
+
+    partial void OnEpgRefreshFrequencyIndexChanged(int value)
+    {
+        EpgRefreshFrequencyHours = value switch
+        {
+            1 => 1,
+            2 => 3,
+            3 => 6,
+            4 => 12,
+            5 => 24,
+            _ => 0
+        };
+    }
+
+    [ObservableProperty]
     private string _customEpgUrl = string.Empty;
 
     partial void OnIsDarkThemeChanged(bool value)
@@ -145,12 +177,18 @@ public partial class SettingsViewModel : ObservableObject
         _scopeFactory = scopeFactory;
         
         _mainViewModel.PropertyChanged += MainViewModel_PropertyChanged;
+        _settingsService.SettingsChanged += OnSettingsService_Changed;
         
         LoadSettings();
         LoadProfileInfo();
         _ = ScanChannelListStatsCoreAsync(updateStatusMessage: false);
         _ = ScanEpgStatsCoreAsync(updateStatusMessage: false);
         _ = _mainViewModel.RefreshCurrentProfileExpirationAsync();
+    }
+
+    private void OnSettingsService_Changed()
+    {
+        LoadSettings();
     }
 
     private void MainViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -292,6 +330,27 @@ public partial class SettingsViewModel : ObservableObject
         AppLanguage = string.IsNullOrWhiteSpace(s.Language) ? "tr" : s.Language;
         ChannelListRefreshFrequencyHours = s.ChannelListRefreshFrequencyHours;
         EpgRefreshFrequencyHours = s.EpgRefreshFrequencyHours;
+        
+        ChannelListRefreshFrequencyIndex = ChannelListRefreshFrequencyHours switch
+        {
+            1 => 1,
+            3 => 2,
+            6 => 3,
+            12 => 4,
+            24 => 5,
+            _ => 0
+        };
+
+        EpgRefreshFrequencyIndex = EpgRefreshFrequencyHours switch
+        {
+            1 => 1,
+            3 => 2,
+            6 => 3,
+            12 => 4,
+            24 => 5,
+            _ => 0
+        };
+
         CustomEpgUrl = s.CustomEpgUrl ?? string.Empty;
         
         // TMDB
@@ -651,10 +710,6 @@ public partial class SettingsViewModel : ObservableObject
     {
         _settingsService.ResetToDefaults();
         LoadSettings();
-        StatusMessage = "Ayarlar varsayılana sıfırlandı";
+        StatusMessage = "Ayarlar varsayılanına sıfırlandı";
     }
 }
-
-
-
-

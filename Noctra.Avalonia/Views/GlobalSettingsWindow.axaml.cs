@@ -21,14 +21,26 @@ public partial class GlobalSettingsWindow : Window
         DataContext = viewModel;
         UpdateThemeSelection(viewModel.Settings.IsDarkTheme);
 
-        // Window dragging
-        PointerPressed += (s, e) =>
-        {
-            if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-            {
-                BeginMoveDrag(e);
+        // Listen for changes to update UI selection
+        viewModel.PropertyChanged += (s, e) => {
+            if (e.PropertyName == nameof(GlobalSettingsViewModel.Settings)) {
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => UpdateThemeSelection(viewModel.Settings.IsDarkTheme));
             }
         };
+
+        viewModel.Settings.PropertyChanged += (s, e) => {
+            if (e.PropertyName == nameof(GlobalSettings.IsDarkTheme)) {
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => UpdateThemeSelection(viewModel.Settings.IsDarkTheme));
+            }
+        };
+    }
+
+    private void Header_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            BeginMoveDrag(e);
+        }
     }
 
     private void CloseButton_Click(object? sender, RoutedEventArgs e)

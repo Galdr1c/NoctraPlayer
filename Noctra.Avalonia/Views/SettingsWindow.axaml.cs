@@ -27,6 +27,13 @@ public partial class SettingsWindow : Window
 
         // Set initial theme selection
         UpdateThemeSelection(_viewModel.IsDarkTheme);
+
+        // Listen for changes to update UI selection
+        _viewModel.PropertyChanged += (s, e) => {
+            if (e.PropertyName == nameof(SettingsViewModel.IsDarkTheme)) {
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => UpdateThemeSelection(_viewModel.IsDarkTheme));
+            }
+        };
     }
 
     private void Header_PointerPressed(object? sender, PointerPressedEventArgs e)

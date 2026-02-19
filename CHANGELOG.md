@@ -106,7 +106,20 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - Pencere boyutu değişimi ve Fullscreen geçişlerinde kontrollerin kaybolmaması için Z-Order (`Topmost`) yönetim mekanizması geliştirildi.
     - Alt-Tab geçişlerinde overlay penceresinin diğer uygulamaların üzerinde kalmaması için Aktivasyon takibi eklendi.
     - **Performans Optimizasyonu**: Pencere yeniden boyutlandırma ve taşıma sırasında overlay'in geriden gelmesi (lag) "Hide-on-Interaction" (Debounce) yöntemiyle çözüldü. Hareket bitince overlay anında ve pürüzsüzce belirir.
-- `%100` gorunup tamamlanmama durumu giderildi:
+- **Ayarlar ve Görünüm İyileştirmeleri** (2026-02-19):
+  - **Premium Sekme Tasarımı**: Ayarlar penceresindeki sekmeler (Profil, Görünüm vb.) tamamen yenilendi.
+    - Özel `ControlTemplate` ile modern seçim göstergesi (indicator) ve pürüzsüz hover efektleri eklendi.
+    - Tüm sekme ikonları yüksek kaliteli `MaterialIcon` kütüphanesine geçirildi.
+  - **Akıllı ComboBox Seçimi**: Yenileme sıklığı gibi açılır menülerin boş görünmesi sorunu, `Index` bazlı eşleştirme sistemiyle giderildi; artık varsayılan seçenekler otomatik seçili gelir.
+  - **Canlı Senkronizasyon**: Ayarlarda yapılan yenileme sıklığı (EPG/Kanal) değişikliklerinin arka plandaki zamanlayıcılara anında yansıması sağlandı (yeniden başlatma gerektirmez).
+  - **Düzen ve Boşluk Düzeltmeleri**:
+    - `Padding` yerine `Margin` sistemine geçilerek tüm temalarda kararlı alt boşluk sağlandı (60px-80px arası optimize edildi).
+    - `ProfilesWindow` (Profil Yönetimi) ekranına tam `ScrollViewer` desteği eklendi, butonların kesilmesi engellendi.
+  - **Kritik Hata Düzeltmeleri**:
+    - Kapat butonu görünürlüğü artırıldı (Material Icon entegrasyonu).
+    - Türkçe karakter hataları, özellikle "Hakkında" bölümündeki metinlerde ("Tum Haklari" -> "Tüm Hakları") düzeltildi.
+    - Ayarlar penceresi açıkken yapılan değişikliklerin diğer tüm pencerelerde anında güncellenmesi sağlandı.
+- Uygulama başlangıcında aktif/yarım kalan indirmelerin otomatik olarak devam etmesi sağlandı (stuck durumu giderildi).
   - Yazma stream kapanisi sonrasi sifreleme/finalize garantilendi.
   - Kismen tamamlanmis dosyalarda finalize fallback duzeltildi.
 - Provider degisiminde dizi bolum progress/tick kaybinin ana nedeni giderildi:

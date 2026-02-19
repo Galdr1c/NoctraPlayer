@@ -12,7 +12,8 @@
         CanResize="False"
         TransparencyLevelHint="Transparent"
         Background="Transparent"
-        FontFamily="{StaticResource DefaultFontFamily}">
+        FontFamily="{StaticResource DefaultFontFamily}"
+        xmlns:materialIcons="using:Material.Icons.Avalonia">
 
     <Window.Styles>
         <!-- Close Button Style -->
@@ -20,23 +21,20 @@
             <Setter Property="Width" Value="48"/>
             <Setter Property="Height" Value="48"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <ControlTemplate>
                     <Border x:Name="CloseBg" Background="{TemplateBinding Background}" CornerRadius="24">
-                        <ContentPresenter HorizontalAlignment="Center" 
-                                          VerticalAlignment="Center"
-                                          Margin="0,-4,0,0"/>
+                        <materialIcons:MaterialIcon x:Name="CloseIcon" Kind="Close" Width="24" Height="24"
+                                                    Foreground="{DynamicResource TextMutedBrush}"
+                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                 </ControlTemplate>
             </Setter>
         </Style>
         <Style Selector="Button.CloseButtonStyle:pointerover /template/ Border#CloseBg">
-            <Setter Property="Background" Value="{DynamicResource Surface0Brush}"/>
+            <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
         </Style>
-        <Style Selector="Button.CloseButtonStyle:pointerover">
+        <Style Selector="Button.CloseButtonStyle:pointerover /template/ materialIcons|MaterialIcon#CloseIcon">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
 
@@ -117,7 +115,9 @@
                  ========================================== -->
             <Grid Grid.Row="0" 
                   Margin="32,24,32,24"
-                  Height="48">
+                  Height="48"
+                  Background="Transparent"
+                  PointerPressed="Header_PointerPressed">
                 <TextBlock Text="Ayarlar" 
                            FontSize="28" 
                            FontWeight="Bold" 
@@ -125,11 +125,11 @@
                            VerticalAlignment="Center"/>
                 
                 <!-- Close Button -->
-                <Button Content="×"
-                        HorizontalAlignment="Right"
+                <Button HorizontalAlignment="Right"
                         Click="CloseButton_Click"
-                        FontSize="32"
-                        Classes="CloseButtonStyle"/>
+                        Classes="CloseButtonStyle">
+                    <materialIcons:MaterialIcon Kind="Close" Width="24" Height="24"/>
+                </Button>
             </Grid>
 
             <!-- ==========================================
@@ -137,8 +137,8 @@
                  ========================================== -->
             <ScrollViewer Grid.Row="1" 
                           VerticalScrollBarVisibility="Auto"
-                          Padding="32,0,32,32">
-                <StackPanel MaxWidth="650">
+                          Padding="32,0,32,0">
+                <StackPanel MaxWidth="650" Margin="0,0,0,40">
 
                     <!-- APPEARANCE SECTION -->
                     <Border Background="{DynamicResource Surface0Brush}" 
@@ -297,7 +297,9 @@
                                 </StackPanel>
 
                                 <ComboBox Grid.Column="1"
-                                          SelectedIndex="0"
+                                          Theme="{StaticResource ModernComboBox}"
+                                          SelectedValue="{Binding Settings.Language, Mode=TwoWay}"
+                                          SelectedValueBinding="{Binding Tag}"
                                           Width="180">
                                     <ComboBoxItem Content="Türkçe" Tag="tr"/>
                                     <ComboBoxItem Content="English" Tag="en"/>
@@ -468,7 +470,7 @@
                                                FontSize="14"
                                                Foreground="{DynamicResource TextMutedBrush}"
                                                Margin="0,4,0,0"/>
-                                    <TextBlock Text="(c) 2026 Tum Haklari Saklidir"
+                                    <TextBlock Text="(c) 2026 Tüm Hakları Saklıdır"
                                                FontSize="13"
                                                Foreground="{DynamicResource TextMutedBrush}"
                                                Margin="0,4,0,0"/>

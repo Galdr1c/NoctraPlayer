@@ -40,6 +40,13 @@ public partial class GlobalSettingsViewModel : ObservableObject
         _dialogService = dialogService;
         _settingsService = settingsService;
         
+        _settingsService.SettingsChanged += OnSettingsService_Changed;
+        
+        LoadSettings();
+    }
+
+    private void OnSettingsService_Changed()
+    {
         LoadSettings();
     }
 
@@ -131,5 +138,3 @@ public partial class GlobalSettings : ObservableObject
     [ObservableProperty]
     private bool _analytics = false;
 }
-
-

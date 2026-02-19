@@ -120,7 +120,7 @@ public class AppSettings
     /// <summary>
     /// EPG otomatik yenileme sikligi (saat). 0 = Kapali (manuel)
     /// </summary>
-    public int EpgRefreshFrequencyHours { get; set; } = 6;
+    public int EpgRefreshFrequencyHours { get; set; } = 24;
 
     /// <summary>
     /// EPG icin kullanicinin verdigi ozel URL (opsiyonel)

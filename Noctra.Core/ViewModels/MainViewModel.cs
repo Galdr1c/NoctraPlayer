@@ -173,7 +173,8 @@ public partial class MainViewModel : ObservableObject
         _dispatcherService = dispatcherService;
         _logger = logger;
         WatermarkViewModel = watermarkViewModel;
-        _settingsService.SettingsChanged += ApplyRefreshSchedulesFromSettings;
+        _settingsService.SettingsChanged += OnSettingsService_Changed;
+        InitializeAsync();
         _contentDownloadService.DownloadsChanged += (_, _) =>
         {
             _dispatcherService.BeginInvoke(() =>
@@ -197,6 +198,11 @@ public partial class MainViewModel : ObservableObject
     {
         // Otomatik yükleme yerine profil yüklenmesini bekle
         return Task.CompletedTask;
+    }
+
+    private void OnSettingsService_Changed()
+    {
+        ApplyRefreshSchedulesFromSettings();
     }
 
     [ObservableProperty]
@@ -1631,25 +1637,17 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
 
-            // Daily cache: if today's EPG already exists for this playlist and user didn't force refresh, skip download.
-            if (!forceRefresh && SelectedPlaylist != null)
+            // Initial EPG visibility check: ensure we have programs in DB if not refreshing
+        if (!forceRefresh && SelectedPlaylist != null)
+        {
+            var hasCachedPrograms = await HasEpgForChannelsAsync(db, channelsForMapping);
+            if (hasCachedPrograms && isBackgroundSync)
             {
-                var playlistState = await db.Playlists
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(p => p.Id == SelectedPlaylist.Id);
-
-                var alreadyUpdatedToday = playlistState?.EpgLastUpdated?.Date == DateTime.Now.Date;
-                var hasCachedPrograms = await HasEpgForChannelsAsync(db, channelsForMapping);
-
-                if (alreadyUpdatedToday && hasCachedPrograms)
-                {
-                    if (!isBackgroundSync)
-                    {
-                        StatusMessage = "EPG önbellekten kullanılıyor";
-                    }
-                    return;
-                }
+                // In background sync, if we have programs, we still continue to download based on timer
+                // but we can skip if we really want to save bandwidth. 
+                // However, the user wants "direct connection" and no forced limits.
             }
+        }
 
             // 1. Provider EPG URL (Xtream)
             string? providerEpgUrl = null;
