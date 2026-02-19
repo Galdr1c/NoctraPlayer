@@ -30,6 +30,7 @@ public class VideoPlayerService : IVideoPlayerService
     public event EventHandler<string>? ErrorOccurred;
     public event EventHandler<StreamQualityInfo>? QualityDetected;
 
+    public string? CurrentUrl { get; private set; }
     public StreamQualityInfo? StreamQuality { get; private set; }
 
     public VideoPlayerService(IDispatcherService dispatcherService)
@@ -110,6 +111,7 @@ public class VideoPlayerService : IVideoPlayerService
 
     public async Task PlayAsync(string url)
     {
+        CurrentUrl = url;
         System.Diagnostics.Debug.WriteLine($"[VideoPlayerService] PlayAsync called with URL: {url}");
         
         if (_mediaPlayer == null)

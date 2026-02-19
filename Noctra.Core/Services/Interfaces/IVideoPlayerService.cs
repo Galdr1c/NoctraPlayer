@@ -8,6 +8,11 @@ namespace Noctra.Services.Interfaces;
 public interface IVideoPlayerService : IDisposable
 {
     /// <summary>
+    /// Şuan oynatılan URL
+    /// </summary>
+    string? CurrentUrl { get; }
+
+    /// <summary>
     /// Stream oynatmayı başlatır
     /// </summary>
     /// <param name="url">Stream URL</param>

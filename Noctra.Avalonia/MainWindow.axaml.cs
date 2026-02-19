@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -43,7 +44,7 @@ public partial class MainWindow : Window
         OverlayControl.DataContext = _playerViewModel;
         NextEpisodePrompt.DataContext = _playerViewModel;
         VideoSurface.MediaPlayer = _videoPlayerService.GetMediaPlayer();
-        MiniVideoSurface.MediaPlayer = null;
+        // MiniVideoSurface.MediaPlayer = null;
         AddHandler(KeyDownEvent, MainWindow_KeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
         Closed += OnClosed;
         _mainViewModel.OnMediaSelected += MainViewModel_OnMediaSelected;
@@ -54,6 +55,7 @@ public partial class MainWindow : Window
         _playerViewModel.EpisodeRequested += PlayerViewModel_EpisodeRequested;
         _playerViewModel.EpisodeProgressUpdated += PlayerViewModel_EpisodeProgressUpdated;
         _playerViewModel.NextEpisodeRequested += PlayerViewModel_NextEpisodeRequested;
+        _playerViewModel.PiPRequested += PlayerViewModel_PiPRequested;
     }
 
     private void OnClosed(object? sender, EventArgs e)
@@ -66,8 +68,12 @@ public partial class MainWindow : Window
         _playerViewModel.EpisodeRequested -= PlayerViewModel_EpisodeRequested;
         _playerViewModel.EpisodeProgressUpdated -= PlayerViewModel_EpisodeProgressUpdated;
         _playerViewModel.NextEpisodeRequested -= PlayerViewModel_NextEpisodeRequested;
+        _playerViewModel.NextEpisodeRequested -= PlayerViewModel_NextEpisodeRequested;
+        _playerViewModel.PiPRequested -= PlayerViewModel_PiPRequested;
+        // VideoSurface.MediaPlayer = null; // Handled in ClosePiP or let it be cleared
+        ClosePiP(false); 
         VideoSurface.MediaPlayer = null;
-        MiniVideoSurface.MediaPlayer = null;
+        // _pipWindow?.ClosePiP(); // Removed old method call
         _imageWarmupCts?.Cancel();
         _imageWarmupCts?.Dispose();
         _imageWarmupCts = null;
@@ -247,7 +253,7 @@ public partial class MainWindow : Window
                 _playerViewModel.SetCurrentEpisode(null, null);
             }
 
-            HideMiniPlayer();
+            // HideMiniPlayer();
             PlayerArea.IsVisible = true;
             _playerViewModel.IsLocked = false;
             _playerViewModel.UserInteractionCommand.Execute(null);
@@ -294,7 +300,7 @@ public partial class MainWindow : Window
     {
         PlayerArea.IsVisible = false;
         _playerViewModel.IsLocked = false;
-        UpdateMiniPlayerVisibility();
+        ClosePiP(false);
     }
 
     private async void MainViewModel_RequestEditChannel(Channel channel)
@@ -424,7 +430,7 @@ public partial class MainWindow : Window
 
         if (e.PropertyName == nameof(PlayerViewModel.IsPlaying))
         {
-            UpdateMiniPlayerVisibility();
+            // UpdateMiniPlayerVisibility(); // Removed
         }
 
         if (e.PropertyName == nameof(PlayerViewModel.IsNextEpisodePromptVisible))
@@ -463,22 +469,129 @@ public partial class MainWindow : Window
         OpenProfileSelection();
     }
 
-    private void HideMiniPlayer()
+    private Views.PiPWindow? _pipWindow;
+    private bool _isPiPMode;
+
+    private void PlayerViewModel_PiPRequested(object? sender, EventArgs e)
     {
-        MiniPlayer.IsVisible = false;
-        MiniVideoSurface.MediaPlayer = null;
+        OpenPiP();
     }
 
-    private void UpdateMiniPlayerVisibility()
+    private void OpenPiP()
     {
-        if (PlayerArea.IsVisible || !_videoPlayerService.IsPlaying)
+        if (_pipWindow != null)
         {
-            HideMiniPlayer();
+            _pipWindow.Activate();
             return;
         }
 
-        MiniVideoSurface.MediaPlayer = _videoPlayerService.GetMediaPlayer();
-        MiniPlayer.IsVisible = true;
+        var player = _videoPlayerService.GetMediaPlayer();
+        if (player == null || !_videoPlayerService.IsPlaying)
+        {
+            return;
+        }
+
+        _isPiPMode = true;
+
+        // 1. Pencereyi oluştur
+        _pipWindow = new Views.PiPWindow();
+        _pipWindow.ReturnRequested += (_, _) => ClosePiP(returnToMain: true);
+        
+        _pipWindow.Closed += (_, _) => 
+        { 
+            if (_pipWindow != null)
+                ClosePiP(returnToMain: true); 
+        };
+
+        // 2. HWND hazır olunca işlemleri yap
+        _pipWindow.VideoSurface.NativeHandleReady += OnPiPHandleReady;
+
+        async void OnPiPHandleReady(object? s, EventArgs e)
+        {
+            if (_pipWindow != null)
+            {
+                _pipWindow.VideoSurface.NativeHandleReady -= OnPiPHandleReady;
+                
+                // Small delay to ensure the native window is fully settled in the OS
+                await Task.Delay(100);
+
+                // Önce Player'ı Main'den sök
+                VideoSurface.MediaPlayer = null;
+                
+                // PiP'e tak
+                if (_pipWindow != null)
+                {
+                    _pipWindow.AttachPlayer(player);
+                    
+                    // Main'i gizle (PiP artık açık olduğu için uygulama kapanmaz)
+                    this.Hide();
+                }
+            }
+        }
+
+        // 3. Pencereyi göster (Bu işlem NativeHandleReady'i tetikler)
+        _pipWindow.Show();
+    }
+
+    private void ClosePiP(bool returnToMain)
+    {
+        if (_pipWindow == null)
+        {
+            return;
+        }
+
+        _isPiPMode = false;
+        var player = _videoPlayerService.GetMediaPlayer();
+
+        // 1. PiP'ten player'ı söküp ana ekrana geri ver
+        _pipWindow.DetachPlayer();
+
+        // Window closing handled by checking IsVisible or calling Close if checking explicitly
+        var tempWindow = _pipWindow;
+        _pipWindow = null;
+        
+        // Eğer pencere hala açıksa kapat
+        try { tempWindow.Close(); } catch { }
+
+        // Ana pencereyi göster
+        this.Show();
+        this.Activate(); // Öne getir
+
+        if (returnToMain && player != null)
+        {
+            // HWND yeniden oluşur (Show() çağrılınca)
+            // NativeHandleReady burada da beklemek gerekiyor
+            VideoSurface.NativeHandleReady += OnMainHandleReady;
+
+            void OnMainHandleReady(object? s, EventArgs e)
+            {
+                VideoSurface.NativeHandleReady -= OnMainHandleReady;
+                VideoSurface.MediaPlayer = player;
+            }
+        }
+        else
+        {
+             // returnToMain false olsa bile ana pencereyi geri getirmek zorundayız (Show() yukarıda çağrıldı).
+             // Ancak belki oynatımı durdurmak isteriz?
+             // Kullanıcı "pip penceresi kapanana kadar" dedi, yani kapanınca ana pencere gelmeli.
+             if (player != null)
+             {
+                 VideoSurface.NativeHandleReady += OnMainHandleReadyRest;
+
+                 void OnMainHandleReadyRest(object? s, EventArgs e)
+                 {
+                     VideoSurface.NativeHandleReady -= OnMainHandleReadyRest;
+                     VideoSurface.MediaPlayer = player;
+                     // Eğer kullanıcı özellikle durdurduysa (ReturnRequested ile değil, X ile)
+                     // Belki play/pause durumu korunmalı?
+                     // Şimdilik mevcut mantığı koruyalım.
+                     if (_videoPlayerService.IsPlaying)
+                     {
+                         // _playerViewModel.PlayPauseCommand.Execute(null); // Gerekirse durdur
+                     }
+                 }
+             }
+        }
     }
 
     private void MouseCaptureLayer_PointerPressed(object? sender, PointerPressedEventArgs e)
@@ -514,14 +627,7 @@ public partial class MainWindow : Window
         _playerViewModel.UserInteractionCommand.Execute(null);
     }
 
-    private void CloseMiniPlayer_Click(object? sender, RoutedEventArgs e)
-    {
-        HideMiniPlayer();
-        if (_videoPlayerService.IsPlaying)
-        {
-            _playerViewModel.StopCommand.Execute(null);
-        }
-    }
+
 
     private void HomeView_ScrollChanged(object? sender, ScrollChangedEventArgs e)
     {

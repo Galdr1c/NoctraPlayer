@@ -33,6 +33,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         public double Seconds { get; }
     }
+    public event EventHandler? PiPRequested;
 
     private readonly IVideoPlayerService _videoPlayerService;
     private readonly IEpgService _epgService;
@@ -2240,6 +2241,12 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     partial void OnSelectedSubtitleTrackChanged(int value)
     {
         // Applied directly in SetSubtitleTrack command.
+    }
+
+    [RelayCommand]
+    private void EnterPiP()
+    {
+        PiPRequested?.Invoke(this, EventArgs.Empty);
     }
 
     [RelayCommand]

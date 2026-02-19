@@ -1174,39 +1174,7 @@
       </Grid>
     </Grid>
 
-    <!-- Mini Player (Picture-in-Picture) -->
-    <Border x:Name="MiniPlayer"
-            Width="320" Height="180"
-            CornerRadius="12"
-            Background="Black"
-            HorizontalAlignment="Right"
-            VerticalAlignment="Bottom"
-            Margin="24"
-            IsVisible="False"
-            ZIndex="4900"
-            BoxShadow="0 12 28 0 #66000000">
-      <Grid>
-        <controls:MemoryVideoView x:Name="MiniVideoSurface">
-            <controls:MemoryVideoView.OverlayContent>
-                <Grid>
-                    <Border Background="{DynamicResource HeroOverlayBrush}" IsHitTestVisible="False"/>
-                    <Button HorizontalAlignment="Right"
-                            VerticalAlignment="Top"
-                            Margin="8"
-                            Width="28" Height="28"
-                            Background="#AA000000"
-                            Foreground="White"
-                            BorderThickness="0"
-                            Cursor="Hand"
-                            CornerRadius="14"
-                            Click="CloseMiniPlayer_Click">
-                      <materialIcons:MaterialIcon Kind="Close" Width="14" Height="14" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Button>
-                </Grid>
-            </controls:MemoryVideoView.OverlayContent>
-        </controls:MemoryVideoView>
-      </Grid>
-    </Border>
+
 
     <!-- Player Area (full window overlay) -->
     <Grid x:Name="PlayerArea" Grid.RowSpan="3" Background="Black" IsVisible="False" ClipToBounds="True" ZIndex="5000">

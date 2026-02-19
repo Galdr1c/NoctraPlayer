@@ -64,10 +64,13 @@ public class MemoryVideoView : NativeControlHost
         }
     }
 
+    public event EventHandler? NativeHandleReady;
+
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {
         _platformHandle = base.CreateNativeControlCore(parent);
         Attach();
+        NativeHandleReady?.Invoke(this, EventArgs.Empty);
         return _platformHandle;
     }
 
@@ -142,6 +145,7 @@ public class MemoryVideoView : NativeControlHost
             _rootWindow.SizeChanged += Root_SizeChanged;
             _rootWindow.Activated += Root_Activated;
             _rootWindow.Deactivated += Root_Deactivated;
+            _rootWindow.PropertyChanged += Root_PropertyChanged;
         }
 
         // Initial update
@@ -165,12 +169,21 @@ public class MemoryVideoView : NativeControlHost
             _rootWindow.SizeChanged -= Root_SizeChanged;
             _rootWindow.Activated -= Root_Activated;
             _rootWindow.Deactivated -= Root_Deactivated;
+            _rootWindow.PropertyChanged -= Root_PropertyChanged;
         }
 
         if (_overlayWindow != null)
         {
             _overlayWindow.Close();
             _overlayWindow = null;
+        }
+    }
+
+    private void Root_PropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        if (e.Property == Window.IsVisibleProperty)
+        {
+            UpdateOverlayState(this.IsEffectivelyVisible);
         }
     }
 
