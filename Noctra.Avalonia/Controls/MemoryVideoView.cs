@@ -111,14 +111,39 @@ public class MemoryVideoView : NativeControlHost
 
     private void Detach()
     {
-        if (_mediaPlayer == null) return;
+        if (_mediaPlayer == null || _platformHandle == null) return;
 
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            _mediaPlayer.Hwnd = IntPtr.Zero;
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            _mediaPlayer.XWindow = 0;
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            _mediaPlayer.NsObject = IntPtr.Zero;
+        try
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                // Only clear if the player is still rendering to our handle.
+                // If it's already been pointed to another HWND (handoff), leave it alone!
+                if (_mediaPlayer.Hwnd == _platformHandle.Handle)
+                {
+                    _mediaPlayer.Hwnd = IntPtr.Zero;
+                }
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                if (_mediaPlayer.XWindow == (uint)_platformHandle.Handle)
+                {
+                    _mediaPlayer.XWindow = 0;
+                }
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                if (_mediaPlayer.NsObject == _platformHandle.Handle)
+                {
+                    _mediaPlayer.NsObject = IntPtr.Zero;
+                }
+            }
+        }
+        catch
+        {
+            // Fallback if property is not readable or throws
+            // Usually we want to be safe and not clear if we are unsure during handoff
+        }
     }
 
     // ─── Overlay Management ───────────────────────────────────────

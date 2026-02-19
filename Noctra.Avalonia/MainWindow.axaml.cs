@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -479,119 +478,64 @@ public partial class MainWindow : Window
 
     private void OpenPiP()
     {
-        if (_pipWindow != null)
-        {
-            _pipWindow.Activate();
-            return;
-        }
+        if (_pipWindow != null) { _pipWindow.Activate(); return; }
 
         var player = _videoPlayerService.GetMediaPlayer();
-        if (player == null || !_videoPlayerService.IsPlaying)
-        {
-            return;
-        }
+        if (player == null || !_videoPlayerService.IsPlaying) return;
 
         _isPiPMode = true;
 
-        // 1. Pencereyi oluştur
         _pipWindow = new Views.PiPWindow();
         _pipWindow.ReturnRequested += (_, _) => ClosePiP(returnToMain: true);
-        
-        _pipWindow.Closed += (_, _) => 
-        { 
-            if (_pipWindow != null)
-                ClosePiP(returnToMain: true); 
+        _pipWindow.Closed += (_, _) =>
+        {
+            if (_isPiPMode) ClosePiP(returnToMain: true);
         };
 
-        // 2. HWND hazır olunca işlemleri yap
         _pipWindow.VideoSurface.NativeHandleReady += OnPiPHandleReady;
 
-        async void OnPiPHandleReady(object? s, EventArgs e)
+        void OnPiPHandleReady(object? s, EventArgs e)
         {
             if (_pipWindow != null)
             {
                 _pipWindow.VideoSurface.NativeHandleReady -= OnPiPHandleReady;
-                
-                // Small delay to ensure the native window is fully settled in the OS
-                await Task.Delay(100);
 
-                // Önce Player'ı Main'den sök
-                VideoSurface.MediaPlayer = null;
-                
-                // PiP'e tak
-                if (_pipWindow != null)
-                {
-                    _pipWindow.AttachPlayer(player);
-                    
-                    // Main'i gizle (PiP artık açık olduğu için uygulama kapanmaz)
-                    this.Hide();
-                }
+                // KRİTİK SIRA:
+                // 1. ÖNCE PiP HWND'ye player'ı ver (VLC render loop PiP'e geçer)
+                _pipWindow.AttachPlayer(player);
             }
+
+            // 2. SONRA ana HWND'yi serbest bırak (VLC zaten PiP'te, null'u umursamaz)
+            VideoSurface.MediaPlayer = null;
+
+            // 3. Ana pencereyi gizle
+            this.Hide();
         }
 
-        // 3. Pencereyi göster (Bu işlem NativeHandleReady'i tetikler)
         _pipWindow.Show();
     }
 
     private void ClosePiP(bool returnToMain)
     {
-        if (_pipWindow == null)
-        {
-            return;
-        }
+        if (_pipWindow == null) return;
 
         _isPiPMode = false;
         var player = _videoPlayerService.GetMediaPlayer();
 
-        // 1. PiP'ten player'ı söküp ana ekrana geri ver
-        _pipWindow.DetachPlayer();
+        // KRİTİK SIRA:
+        // 1. ÖNCE ana HWND'ye player'ı ver (VideoSurface HWND zaten var, NativeHandleReady bekleme)
+        if (player != null)
+            VideoSurface.MediaPlayer = player;
 
-        // Window closing handled by checking IsVisible or calling Close if checking explicitly
+        // 2. SONRA PiP'ten söküp kapat
+        _pipWindow.DetachPlayer();
         var tempWindow = _pipWindow;
         _pipWindow = null;
-        
-        // Eğer pencere hala açıksa kapat
         try { tempWindow.Close(); } catch { }
 
-        // Ana pencereyi göster
+        // 3. Ana pencereyi göster
         this.Show();
-        this.Activate(); // Öne getir
-
-        if (returnToMain && player != null)
-        {
-            // HWND yeniden oluşur (Show() çağrılınca)
-            // NativeHandleReady burada da beklemek gerekiyor
-            VideoSurface.NativeHandleReady += OnMainHandleReady;
-
-            void OnMainHandleReady(object? s, EventArgs e)
-            {
-                VideoSurface.NativeHandleReady -= OnMainHandleReady;
-                VideoSurface.MediaPlayer = player;
-            }
-        }
-        else
-        {
-             // returnToMain false olsa bile ana pencereyi geri getirmek zorundayız (Show() yukarıda çağrıldı).
-             // Ancak belki oynatımı durdurmak isteriz?
-             // Kullanıcı "pip penceresi kapanana kadar" dedi, yani kapanınca ana pencere gelmeli.
-             if (player != null)
-             {
-                 VideoSurface.NativeHandleReady += OnMainHandleReadyRest;
-
-                 void OnMainHandleReadyRest(object? s, EventArgs e)
-                 {
-                     VideoSurface.NativeHandleReady -= OnMainHandleReadyRest;
-                     VideoSurface.MediaPlayer = player;
-                     // Eğer kullanıcı özellikle durdurduysa (ReturnRequested ile değil, X ile)
-                     // Belki play/pause durumu korunmalı?
-                     // Şimdilik mevcut mantığı koruyalım.
-                     if (_videoPlayerService.IsPlaying)
-                     {
-                         // _playerViewModel.PlayPauseCommand.Execute(null); // Gerekirse durdur
-                     }
-                 }
-             }
-        }
+        this.Activate();
     }
 
     private void MouseCaptureLayer_PointerPressed(object? sender, PointerPressedEventArgs e)
