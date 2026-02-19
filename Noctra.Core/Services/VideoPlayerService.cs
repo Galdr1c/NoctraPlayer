@@ -42,8 +42,6 @@ public class VideoPlayerService : IVideoPlayerService
         {
             // Hardware Acceleration
             "--avcodec-hw=dxva2",
-            "--ffmpeg-hw",
-            "--vout=direct3d11",           // DirectX 11 renderer
             "--avcodec-skip-frame=0",
             "--avcodec-skip-idct=0",
             "--avcodec-fast",

@@ -526,7 +526,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         else
         {
             _watchHistoryTimer.Stop();
-        
+        }
 
         // Always query DB-backed EPG; IsLoaded flag may belong to another service instance.
         var program = await _epgService.GetCurrentProgramAsync(channel);

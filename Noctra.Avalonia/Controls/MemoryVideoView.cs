@@ -70,6 +70,11 @@ public class MemoryVideoView : Control
         if (player == null) return;
 
         _mediaPlayer = player;
+
+        // LibVLC'ye "native window yok, callback kullan" de.
+        // Bu olmadan --vout=direct3d11 kaldırıldığında LibVLC kendi penceresini açıyor.
+        _mediaPlayer.Hwnd = IntPtr.Zero;
+
         _mediaPlayer.SetVideoFormatCallbacks(_formatCallback, _cleanupCallback);
         _mediaPlayer.SetVideoCallbacks(_lockCallback, _unlockCallback, _displayCallback);
     }
@@ -214,10 +219,31 @@ public class MemoryVideoView : Control
     {
         base.Render(context);
 
-        if (_bitmap != null)
+        var bmp = _bitmap;
+        if (bmp == null) return;
+
+        // H.264/HEVC codecs align frames to 16-pixel boundaries.
+        // VLC may report padded dimensions (e.g. 1920x1090 instead of 1920x1080).
+        // Query the real video dimensions and use them as source rect
+        // to crop the codec padding rows that contain garbage data.
+        var srcW = bmp.PixelSize.Width;
+        var srcH = bmp.PixelSize.Height;
+
+        var mp = _mediaPlayer;
+        if (mp != null)
         {
-            context.DrawImage(_bitmap, new Rect(0, 0, Bounds.Width, Bounds.Height));
+            uint realW = 0, realH = 0;
+            if (mp.Size(0, ref realW, ref realH) && realW > 0 && realH > 0)
+            {
+                // Use real dimensions (e.g. 1920x1080), not padded ones (1920x1090)
+                srcW = (int)Math.Min(realW, (uint)srcW);
+                srcH = (int)Math.Min(realH, (uint)srcH);
+            }
         }
+
+        var src = new Rect(0, 0, srcW, srcH);
+        var dst = new Rect(0, 0, Bounds.Width, Bounds.Height);
+        context.DrawImage(bmp, src, dst);
     }
 
     private void ReleaseBuffer()

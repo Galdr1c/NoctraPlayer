@@ -682,6 +682,8 @@
                 </ScrollViewer>
             </Grid>
 
+        </Grid>
+
         <!-- Buffer Shield: Keep screen black while stream reconnects/buffers -->
         <Border Background="Black"
                 IsHitTestVisible="True"
