@@ -37,33 +37,22 @@ public class VideoPlayerService : IVideoPlayerService
         _dispatcherService = dispatcherService;
         LibVLCSharp.Shared.Core.Initialize();
         
-        // Noctra optimized options
+        // Full options for NativeControlHost (HWND) rendering
         var options = new string[]
         {
-            // Hardware Acceleration
+            // Hardware Acceleration + Direct3D11 for HWND rendering
             "--avcodec-hw=dxva2",
-            "--avcodec-skip-frame=0",
-            "--avcodec-skip-idct=0",
-            "--avcodec-fast",
+            "--vout=direct3d11",
             
-            // Network Options
+            // Network
             $"--network-caching={NetworkCachingMs}",
-            $"--live-caching={LiveCachingMs}",         // Canlı TV için daha az buffer
+            $"--live-caching={LiveCachingMs}",
             "--file-caching=1000",
-            
-            // RTSP Options
-            "--rtsp-tcp",                  // TCP kullan (UDP yerine, daha stabil)
-            "--rtsp-frame-buffer-size=500000",
-            
-            // Sync Options
-            "--clock-jitter=0",
-            "--clock-synchro=0",
-            "--no-audio-time-stretch",
+            "--rtsp-tcp",
             
             // Performance
-            "--drop-late-frames",          // Geciken frame'leri at
-            "--skip-frames",               // FPS drop'ta frame atla
-            "--avcodec-threads=4",         // Multi-threading
+            "--drop-late-frames",
+            "--skip-frames",
             
             // Logging
             "--verbose=0",

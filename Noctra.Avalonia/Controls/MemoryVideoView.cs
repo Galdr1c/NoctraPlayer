@@ -1,46 +1,40 @@
 using System;
 using System.Runtime.InteropServices;
-using System.Threading;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Data;
+using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using LibVLCSharp.Shared;
 
 namespace Noctra.Avalonia.Controls;
 
-public class MemoryVideoView : Control
+/// <summary>
+/// NativeControlHost-based video view with floating overlay support.
+/// VLC renders directly to a native HWND (artifact-free).
+/// Use the <see cref="OverlayContent"/> property to place Avalonia controls on top.
+/// </summary>
+public class MemoryVideoView : NativeControlHost
 {
     public static readonly StyledProperty<MediaPlayer?> MediaPlayerProperty =
         AvaloniaProperty.Register<MemoryVideoView, MediaPlayer?>(nameof(MediaPlayer));
 
-    private static readonly byte[] Rv32 = [0x52, 0x56, 0x33, 0x32];
+    public static readonly StyledProperty<Control?> OverlayContentProperty =
+        AvaloniaProperty.Register<MemoryVideoView, Control?>(nameof(OverlayContent));
 
-    private readonly object _sync = new();
-    private readonly MediaPlayer.LibVLCVideoFormatCb _formatCallback;
-    private readonly MediaPlayer.LibVLCVideoCleanupCb _cleanupCallback;
-    private readonly MediaPlayer.LibVLCVideoLockCb _lockCallback;
-    private readonly MediaPlayer.LibVLCVideoUnlockCb _unlockCallback;
-    private readonly MediaPlayer.LibVLCVideoDisplayCb _displayCallback;
-
-    private int _frameUpdateScheduled;
-    private WriteableBitmap? _bitmap;
     private MediaPlayer? _mediaPlayer;
-    private IntPtr _videoBuffer;
-    private int _width;
-    private int _height;
-
-    public MemoryVideoView()
-    {
-        // Keep delegate references alive for native callbacks.
-        _formatCallback = VideoFormat;
-        _cleanupCallback = CleanupVideo;
-        _lockCallback = LockVideo;
-        _unlockCallback = UnlockVideo;
-        _displayCallback = DisplayVideo;
-    }
+    private IPlatformHandle? _platformHandle;
+    
+    // Floating overlay window to solve HWND airspace issue
+    private Window? _overlayWindow;
+    private Window? _rootWindow;
+    private bool _isAttached;
+    private bool _isRootActive = true;
+    private DispatcherTimer? _debounceTimer;
 
     public MediaPlayer? MediaPlayer
     {
@@ -48,215 +42,270 @@ public class MemoryVideoView : Control
         set => SetValue(MediaPlayerProperty, value);
     }
 
+    public Control? OverlayContent
+    {
+        get => GetValue(OverlayContentProperty);
+        set => SetValue(OverlayContentProperty, value);
+    }
+
+    static MemoryVideoView()
+    {
+        OverlayContentProperty.Changed.AddClassHandler<MemoryVideoView>((x, e) => x.OnOverlayContentChanged(e));
+    }
+
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-
         if (change.Property == MediaPlayerProperty)
         {
-            DetachPlayer();
-            AttachPlayer(change.NewValue as MediaPlayer);
+            Detach();
+            _mediaPlayer = change.NewValue as MediaPlayer;
+            Attach();
         }
+    }
+
+    protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
+    {
+        _platformHandle = base.CreateNativeControlCore(parent);
+        Attach();
+        return _platformHandle;
+    }
+
+    protected override void DestroyNativeControlCore(IPlatformHandle control)
+    {
+        Detach();
+        base.DestroyNativeControlCore(control);
+        _platformHandle = null;
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        _isAttached = true;
+        _rootWindow = e.Root as Window;
+        InitializeOverlay();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
-        DetachPlayer();
+        _isAttached = false;
+        DestroyOverlay();
+        _rootWindow = null;
     }
 
-    private void AttachPlayer(MediaPlayer? player)
+    private void Attach()
     {
-        if (player == null) return;
+        if (_mediaPlayer == null || _platformHandle == null) return;
 
-        _mediaPlayer = player;
-
-        // LibVLC'ye "native window yok, callback kullan" de.
-        // Bu olmadan --vout=direct3d11 kaldırıldığında LibVLC kendi penceresini açıyor.
-        _mediaPlayer.Hwnd = IntPtr.Zero;
-
-        _mediaPlayer.SetVideoFormatCallbacks(_formatCallback, _cleanupCallback);
-        _mediaPlayer.SetVideoCallbacks(_lockCallback, _unlockCallback, _displayCallback);
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            _mediaPlayer.Hwnd = _platformHandle.Handle;
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            _mediaPlayer.XWindow = (uint)_platformHandle.Handle;
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            _mediaPlayer.NsObject = _platformHandle.Handle;
     }
 
-    private void DetachPlayer()
+    private void Detach()
     {
-        // Fix: LibVLCSharp throws ArgumentNullException if we pass null.
-        // We must pass no-op delegates to clear the previous ones and break the reference cycle.
-        // FormatCb: (ref IntPtr opaque, IntPtr chroma, ref uint width, ref uint height, ref uint pitches, ref uint lines) -> uint
-        _mediaPlayer?.SetVideoFormatCallbacks(
-            (ref IntPtr _, IntPtr _, ref uint _, ref uint _, ref uint _, ref uint _) => 0, 
-            (ref IntPtr _) => { });
+        if (_mediaPlayer == null) return;
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            _mediaPlayer.Hwnd = IntPtr.Zero;
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            _mediaPlayer.XWindow = 0;
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            _mediaPlayer.NsObject = IntPtr.Zero;
+    }
+
+    // ─── Overlay Management ───────────────────────────────────────
+
+    private void OnOverlayContentChanged(AvaloniaPropertyChangedEventArgs e)
+    {
+        if (_overlayWindow != null)
+        {
+            _overlayWindow.Content = e.NewValue as Control;
+        }
+    }
+
+    private void InitializeOverlay()
+    {
+        LayoutUpdated += OnLayoutUpdated;
+        
+        // Initialize debounce timer for resize/move operations
+        _debounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+        _debounceTimer.Tick += DebounceTimer_Tick;
+
+        if (_rootWindow != null)
+        {
+            _rootWindow.PositionChanged += Root_PositionChanged;
+            _rootWindow.SizeChanged += Root_SizeChanged;
+            _rootWindow.Activated += Root_Activated;
+            _rootWindow.Deactivated += Root_Deactivated;
+        }
+
+        // Initial update
+        OnLayoutUpdated(this, EventArgs.Empty);
+    }
+
+    private void DestroyOverlay()
+    {
+        LayoutUpdated -= OnLayoutUpdated;
+
+        if (_debounceTimer != null)
+        {
+            _debounceTimer.Stop();
+            _debounceTimer.Tick -= DebounceTimer_Tick;
+            _debounceTimer = null;
+        }
+
+        if (_rootWindow != null)
+        {
+            _rootWindow.PositionChanged -= Root_PositionChanged;
+            _rootWindow.SizeChanged -= Root_SizeChanged;
+            _rootWindow.Activated -= Root_Activated;
+            _rootWindow.Deactivated -= Root_Deactivated;
+        }
+
+        if (_overlayWindow != null)
+        {
+            _overlayWindow.Close();
+            _overlayWindow = null;
+        }
+    }
+
+    private void OnLayoutUpdated(object? sender, EventArgs e)
+    {
+        // Don't update if we are currently debouncing (resizing/moving)
+        if (_debounceTimer != null && _debounceTimer.IsEnabled) return;
+
+        // Check visibility and update overlay
+        UpdateOverlayState(this.IsEffectivelyVisible);
+    }
+
+    private void Root_Activated(object? sender, EventArgs e)
+    {
+        _isRootActive = true;
+        if (_debounceTimer == null || !_debounceTimer.IsEnabled)
+        {
+             if (_overlayWindow != null && this.IsEffectivelyVisible)
+             {
+                 _overlayWindow.Topmost = true;
+                 _overlayWindow.Show();
+             }
+        }
+    }
+
+    private void Root_Deactivated(object? sender, EventArgs e)
+    {
+        _isRootActive = false;
+        if (_overlayWindow != null)
+        {
+            _overlayWindow.Topmost = false; 
+        }
+    }
+
+    private void Root_PositionChanged(object? sender, PixelPointEventArgs e)
+    {
+        HandleWindowMovement();
+    }
+
+    private void Root_SizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        HandleWindowMovement();
+    }
+
+    private void HandleWindowMovement()
+    {
+        if (_overlayWindow == null) return;
+        
+        // Hide overlay to avoid "laggy follower" effect
+        if (_overlayWindow.IsVisible) 
+            _overlayWindow.Hide();
             
-        // LockCb: (IntPtr opaque, IntPtr planes) -> IntPtr
-        // UnlockCb: (IntPtr opaque, IntPtr picture, IntPtr planes) -> void
-        // DisplayCb: (IntPtr opaque, IntPtr picture) -> void
-        _mediaPlayer?.SetVideoCallbacks(
-            (IntPtr _, IntPtr _) => IntPtr.Zero,
-            (IntPtr _, IntPtr _, IntPtr _) => { },
-            (IntPtr _, IntPtr _) => { });
-
-        Interlocked.Exchange(ref _frameUpdateScheduled, 0);
-        ReleaseBuffer();
-        _bitmap = null;
-        _mediaPlayer = null;
+        // Restart timer
+        _debounceTimer?.Stop();
+        _debounceTimer?.Start();
     }
 
-    private uint VideoFormat(ref IntPtr opaque, IntPtr chroma, ref uint width, ref uint height, ref uint pitches, ref uint lines)
+    private void DebounceTimer_Tick(object? sender, EventArgs e)
     {
-        try
+        _debounceTimer?.Stop();
+        
+        // Window movement finished, reshow overlay
+        if (this.IsEffectivelyVisible)
         {
-            var requestedWidth = (int)width;
-            var requestedHeight = (int)height;
-            if (requestedWidth <= 0 || requestedHeight <= 0)
-            {
-                return 0;
-            }
-
-            // "RV32" = BGRA 32bpp
-            Marshal.Copy(Rv32, 0, chroma, 4);
-
-            var pitch = (uint)(requestedWidth * 4);
-            pitches = pitch;
-            lines = (uint)requestedHeight;
-
-            lock (_sync)
-            {
-                if (_videoBuffer != IntPtr.Zero)
-                {
-                    Marshal.FreeHGlobal(_videoBuffer);
-                }
-
-                _width = requestedWidth;
-                _height = requestedHeight;
-                _videoBuffer = Marshal.AllocHGlobal((int)(pitch * requestedHeight));
-            }
-
-            Dispatcher.UIThread.Post(() =>
-            {
-                _bitmap = new WriteableBitmap(
-                    new PixelSize(requestedWidth, requestedHeight),
-                    new Vector(96, 96),
-                    PixelFormat.Bgra8888,
-                    AlphaFormat.Premul);
-                InvalidateVisual();
-            }, DispatcherPriority.Render);
-
-            return 1;
-        }
-        catch
-        {
-            return 0;
+             UpdateOverlayState(true);
         }
     }
 
-    private void CleanupVideo(ref IntPtr opaque)
+    private void UpdateOverlayState(bool visible)
     {
-        ReleaseBuffer();
-    }
-
-    private IntPtr LockVideo(IntPtr opaque, IntPtr planes)
-    {
-        var buffer = _videoBuffer;
-        if (buffer == IntPtr.Zero)
+        if (visible)
         {
-            return IntPtr.Zero;
-        }
-
-        Marshal.WriteIntPtr(planes, buffer);
-        return buffer;
-    }
-
-    private void UnlockVideo(IntPtr opaque, IntPtr picture, IntPtr planes)
-    {
-        // no-op
-    }
-
-    private void DisplayVideo(IntPtr opaque, IntPtr picture)
-    {
-        if (Interlocked.Exchange(ref _frameUpdateScheduled, 1) == 1)
-        {
-            return;
-        }
-
-        Dispatcher.UIThread.Post(() =>
-        {
-            try
+            if (_overlayWindow == null)
             {
-                lock (_sync)
-                {
-                    if (_bitmap == null || _videoBuffer == IntPtr.Zero || _width <= 0 || _height <= 0)
-                    {
-                        return;
-                    }
-
-                    using var fb = _bitmap.Lock();
-                    unsafe
-                    {
-                        var dest = fb.Address.ToPointer();
-                        var src = _videoBuffer.ToPointer();
-                        var destBytes = (long)fb.RowBytes * fb.Size.Height;
-                        var srcBytes = (long)_width * _height * 4;
-                        var bytes = Math.Min(destBytes, srcBytes);
-                        Buffer.MemoryCopy(src, dest, destBytes, bytes);
-                    }
-                }
-
-                InvalidateVisual();
+                CreateOverlayWindow();
             }
-            catch
+            
+            if (_overlayWindow != null)
             {
-                // Keep player alive even if one frame copy fails.
-            }
-            finally
-            {
-                Interlocked.Exchange(ref _frameUpdateScheduled, 0);
-            }
-        }, DispatcherPriority.Render);
-    }
-
-    public override void Render(DrawingContext context)
-    {
-        base.Render(context);
-
-        var bmp = _bitmap;
-        if (bmp == null) return;
-
-        // H.264/HEVC codecs align frames to 16-pixel boundaries.
-        // VLC may report padded dimensions (e.g. 1920x1090 instead of 1920x1080).
-        // Query the real video dimensions and use them as source rect
-        // to crop the codec padding rows that contain garbage data.
-        var srcW = bmp.PixelSize.Width;
-        var srcH = bmp.PixelSize.Height;
-
-        var mp = _mediaPlayer;
-        if (mp != null)
-        {
-            uint realW = 0, realH = 0;
-            if (mp.Size(0, ref realW, ref realH) && realW > 0 && realH > 0)
-            {
-                // Use real dimensions (e.g. 1920x1080), not padded ones (1920x1090)
-                srcW = (int)Math.Min(realW, (uint)srcW);
-                srcH = (int)Math.Min(realH, (uint)srcH);
+                UpdateOverlayPosition();
+                _overlayWindow.Show();
             }
         }
-
-        var src = new Rect(0, 0, srcW, srcH);
-        var dst = new Rect(0, 0, Bounds.Width, Bounds.Height);
-        context.DrawImage(bmp, src, dst);
+        else
+        {
+            _overlayWindow?.Hide();
+        }
     }
 
-    private void ReleaseBuffer()
+    private void CreateOverlayWindow()
     {
-        lock (_sync)
-        {
-            if (_videoBuffer == IntPtr.Zero)
-            {
-                return;
-            }
+        if (_rootWindow == null) return;
 
-            Marshal.FreeHGlobal(_videoBuffer);
-            _videoBuffer = IntPtr.Zero;
+        _overlayWindow = new Window
+        {
+            SystemDecorations = SystemDecorations.None,
+            TransparencyLevelHint = [WindowTransparencyLevel.Transparent],
+            Background = Brushes.Transparent,
+            ShowInTaskbar = false,
+            CanResize = false,
+            Title = "VideoOverlay",
+            SizeToContent = SizeToContent.Manual,
+            Topmost = true, 
+            Focusable = false, 
+            Content = OverlayContent
+        };
+
+        _overlayWindow.Show(_rootWindow);
+    }
+
+    private void UpdateOverlayPosition()
+    {
+        if (_overlayWindow == null || !_isAttached || _rootWindow == null) return;
+
+        try 
+        {
+            var topLeft = this.PointToScreen(new Point(0, 0));
+            
+            if (_overlayWindow.Position != topLeft)
+                _overlayWindow.Position = topLeft;
+                
+            if (_overlayWindow.Width != Bounds.Width)
+                _overlayWindow.Width = Bounds.Width;
+                
+            if (_overlayWindow.Height != Bounds.Height)
+                _overlayWindow.Height = Bounds.Height;
+
+             if (_isRootActive && !_overlayWindow.Topmost)
+             {
+                 _overlayWindow.Topmost = true;
+             }
+        }
+        catch (Exception)
+        {
+            // Ignore layout measurement errors during transitions
         }
     }
 }

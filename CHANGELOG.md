@@ -97,6 +97,15 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **UI Performance**: İçerik indirme işlemi tamamlandığında İndirmeler sayfasının otomatik yenilenmesi hızlandırıldı (gecikme 900 ms'den 250 ms'ye düşürüldü).
 
 ### Fixed
+- **Video Player Görüntü ve Arayüz Düzeltmeleri** (2026-02-19):
+  - **Artifact Çözümü**: VLC `vmem` modülü kaynaklı görüntü bozulmaları (dikdörtgen artifact) giderildi.
+    - Render motoru `NativeControlHost` (doğrudan HWND) altyapısına geçirildi.
+    - Bu sayede buffer kopyalama ve chroma dönüşüm işlemleri aradan çıkarılarak saf, donanım hızlandırmalı ve artifact'siz görüntü sağlandı.
+  - **Overlay İyileştirmesi**: Native pencere üzerinde arayüz çizimi (Airspace sorunu) çözüldü.
+    - Kontroller (Play/Pause, Seek, vb.) için video penceresi ile senkronize çalışan **Floating Transparent Window** teknolojisi eklendi.
+    - Pencere boyutu değişimi ve Fullscreen geçişlerinde kontrollerin kaybolmaması için Z-Order (`Topmost`) yönetim mekanizması geliştirildi.
+    - Alt-Tab geçişlerinde overlay penceresinin diğer uygulamaların üzerinde kalmaması için Aktivasyon takibi eklendi.
+    - **Performans Optimizasyonu**: Pencere yeniden boyutlandırma ve taşıma sırasında overlay'in geriden gelmesi (lag) "Hide-on-Interaction" (Debounce) yöntemiyle çözüldü. Hareket bitince overlay anında ve pürüzsüzce belirir.
 - `%100` gorunup tamamlanmama durumu giderildi:
   - Yazma stream kapanisi sonrasi sifreleme/finalize garantilendi.
   - Kismen tamamlanmis dosyalarda finalize fallback duzeltildi.
