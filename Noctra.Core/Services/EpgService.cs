@@ -38,6 +38,7 @@ public class EpgService : IEpgService
             return;
         }
 
+        _context.ChangeTracker.AutoDetectChangesEnabled = false;
         try
         {
             LastError = null; // Clear previous error
@@ -277,6 +278,7 @@ public class EpgService : IEpgService
         }
         finally
         {
+            _context.ChangeTracker.AutoDetectChangesEnabled = true;
             _loadSemaphore.Release();
         }
     }
@@ -449,6 +451,7 @@ public class EpgService : IEpgService
         if (!string.IsNullOrEmpty(channel.TvgId))
         {
             var program = await _context.EpgPrograms
+                .AsNoTracking()
                 .Where(p => p.ChannelId == channel.TvgId && p.StartTime <= now && p.EndTime > now)
                 .FirstOrDefaultAsync();
 
@@ -458,6 +461,7 @@ public class EpgService : IEpgService
         // Level 2: Try Internal Id (Secondary EPG mapped by Name)
         var internalId = channel.Id.ToString();
         var programByInternalId = await _context.EpgPrograms
+            .AsNoTracking()
             .Where(p => p.ChannelId == internalId && p.StartTime <= now && p.EndTime > now)
             .FirstOrDefaultAsync();
 
@@ -478,6 +482,7 @@ public class EpgService : IEpgService
         var toUtc = to.ToUniversalTime();
 
         return await _context.EpgPrograms
+            .AsNoTracking()
             .Where(p => p.ChannelId == channelId && p.StartTime >= fromUtc && p.StartTime <= toUtc)
             .OrderBy(p => p.StartTime)
             .ToListAsync();
@@ -487,6 +492,7 @@ public class EpgService : IEpgService
     {
         var now = DateTime.UtcNow;
         return await _context.EpgPrograms
+            .AsNoTracking()
             .Where(p => p.ChannelId == channelId && p.StartTime > now)
             .OrderBy(p => p.StartTime)
             .Take(count)
@@ -498,6 +504,7 @@ public class EpgService : IEpgService
         var todayStart = DateTime.UtcNow.Date;
         var todayEnd = todayStart.AddDays(1);
         return await _context.EpgPrograms
+            .AsNoTracking()
             .Where(p => p.ChannelId == channelId && p.StartTime >= todayStart && p.StartTime < todayEnd)
             .OrderBy(p => p.StartTime)
             .ToListAsync();

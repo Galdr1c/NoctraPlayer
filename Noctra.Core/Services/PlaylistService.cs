@@ -316,6 +316,7 @@ public class PlaylistService : IPlaylistService
         }
         
         return await query
+            .AsNoTracking()
             .OrderByDescending(p => p.CreatedAt)
             .ToListAsync();
     }
@@ -323,6 +324,7 @@ public class PlaylistService : IPlaylistService
     public async Task<Playlist> RefreshAsync(int playlistId)
     {
         var playlist = await _context.Playlists
+            .AsNoTracking()
             .Include(p => p.Channels)
             .FirstOrDefaultAsync(p => p.Id == playlistId);
 
@@ -412,6 +414,7 @@ public class PlaylistService : IPlaylistService
     public async Task<List<Channel>> GetChannelsAsync(int playlistId)
     {
         return await _context.Channels
+            .AsNoTracking()
             .Where(c => c.PlaylistId == playlistId)
             .OrderBy(c => c.GroupTitle)
             .ThenBy(c => c.Name)
@@ -440,12 +443,10 @@ public class PlaylistService : IPlaylistService
             .ToListAsync();
     }
 
-    /// <summary>
-    /// Get only group names for fast initial loading
-    /// </summary>
     public async Task<List<string>> GetGroupsAsync(int playlistId)
     {
         return await _context.Channels
+            .AsNoTracking()
             .Where(c => c.PlaylistId == playlistId && c.GroupTitle != null)
             .Select(c => c.GroupTitle!.Trim())
             .Distinct()
@@ -456,6 +457,7 @@ public class PlaylistService : IPlaylistService
     public async Task<List<string>> GetGroupsByTypeAsync(int playlistId, ChannelType type)
     {
         return await _context.Channels
+            .AsNoTracking()
             .Where(c => c.PlaylistId == playlistId && c.Type == type && c.GroupTitle != null)
             .Select(c => c.GroupTitle!.Trim())
             .Distinct()

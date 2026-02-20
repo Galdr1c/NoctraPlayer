@@ -296,11 +296,7 @@ public partial class MetadataService : IMetadataService
 
     private void EnsureApiKeyLoaded()
     {
-        if (!string.IsNullOrWhiteSpace(_apiKey))
-        {
-            return;
-        }
-
+        // Always check current settings first to allow runtime updates
         var fromSettings = _settingsService?.Settings?.TmdbApiKey;
         if (!string.IsNullOrWhiteSpace(fromSettings))
         {
@@ -308,6 +304,7 @@ public partial class MetadataService : IMetadataService
             return;
         }
 
+        // If not in settings, fallback to environment variable
         var fromEnv = Environment.GetEnvironmentVariable("TMDB_API_KEY");
         if (!string.IsNullOrWhiteSpace(fromEnv))
         {

@@ -43,9 +43,7 @@ public class ChannelService : IChannelService
             dbChannel.IsInMyList = channel.IsInMyList;
             dbChannel.LastWatched = channel.LastWatched;
             
-            _context.Channels.Update(dbChannel);
             await _context.SaveChangesAsync();
         }
     }
 }
-
