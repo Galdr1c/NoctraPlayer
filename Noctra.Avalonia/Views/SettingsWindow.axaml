@@ -18,12 +18,6 @@
         FontFamily="{StaticResource DefaultFontFamily}">
 
     <Window.Resources>
-        <!-- Settings Item Path Geometries -->
-        <StreamGeometry x:Key="IconPlayback">M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M10,16.5V7.5L16,12L10,16.5Z</StreamGeometry>
-        <StreamGeometry x:Key="IconSubtitles">M19,4H5A2,2 0 0,0 3,6V18A2,2 0 0,0 5,20H19A2,2 0 0,0 21,18V6A2,2 0 0,0 19,4M11,11H8.5V10.5H7V13.5H8.5V13H11V14A1,1 0 0,1 10,15H7A1,1 0 0,1 6,14V10A1,1 0 0,1 7,9H10A1,1 0 0,1 11,10V11M18,11H15.5V10.5H14V13.5H15.5V13H18V14A1,1 0 0,1 17,15H14A1,1 0 0,1 13,14V10A1,1 0 0,1 14,9H17A1,1 0 0,1 18,10V11Z</StreamGeometry>
-        <StreamGeometry x:Key="IconDownloads">M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z</StreamGeometry>
-        <StreamGeometry x:Key="IconAppearance">M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 15,19A2,2 0 0,1 17,17H19A3,3 0 0,0 22,14C22,8.48 17,4 12,2M6.5,10A1.5,1.5 0 0,1 5,8.5A1.5,1.5 0 0,1 6.5,7A1.5,1.5 0 0,1 8,8.5A1.5,1.5 0 0,1 6.5,10M9.5,14A1.5,1.5 0 0,1 8,12.5A1.5,1.5 0 0,1 9.5,11A1.5,1.5 0 0,1 11,12.5A1.5,1.5 0 0,1 9.5,14M14.5,14A1.5,1.5 0 0,1 13,12.5A1.5,1.5 0 0,1 14.5,11A1.5,1.5 0 0,1 16,12.5A1.5,1.5 0 0,1 14.5,14M17.5,10A1.5,1.5 0 0,1 16,8.5A1.5,1.5 0 0,1 17.5,7A1.5,1.5 0 0,1 19,8.5A1.5,1.5 0 0,1 17.5,10Z</StreamGeometry>
-        <StreamGeometry x:Key="IconProfile">M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z</StreamGeometry>
     </Window.Resources>
 
     <Window.Styles>
@@ -134,9 +128,7 @@
                 </StackPanel>
 
                 <Button HorizontalAlignment="Right" Click="CloseButton_Click"
-                        Classes="CloseButtonStyle">
-                    <materialIcons:MaterialIcon Kind="Close" Width="24" Height="24"/>
-                </Button>
+                        Classes="CloseButtonStyle"/>
             </Grid>
 
             <!-- CONTENT -->
@@ -243,7 +235,7 @@
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <materialIcons:MaterialIcon Kind="PlayCircleOutline" Width="20" Height="20" />
-                            <TextBlock Text="Kişiselleştirme" VerticalAlignment="Center"/>
+                            <TextBlock Text="Oynatma &amp; İndirme" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,0,0">

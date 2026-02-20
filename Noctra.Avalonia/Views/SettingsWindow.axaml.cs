@@ -25,15 +25,25 @@ public partial class SettingsWindow : Window
         _viewModel = viewModel;
         DataContext = viewModel;
 
-        // Set initial theme selection
         UpdateThemeSelection(_viewModel.IsDarkTheme);
+        _viewModel.PropertyChanged += ViewModel_PropertyChanged;
+    }
 
-        // Listen for changes to update UI selection
-        _viewModel.PropertyChanged += (s, e) => {
-            if (e.PropertyName == nameof(SettingsViewModel.IsDarkTheme)) {
-                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => UpdateThemeSelection(_viewModel.IsDarkTheme));
-            }
-        };
+    private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SettingsViewModel.IsDarkTheme))
+        {
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => UpdateThemeSelection(_viewModel.IsDarkTheme));
+        }
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        if (_viewModel != null)
+        {
+            _viewModel.PropertyChanged -= ViewModel_PropertyChanged;
+        }
+        base.OnClosed(e);
     }
 
     private void Header_PointerPressed(object? sender, PointerPressedEventArgs e)

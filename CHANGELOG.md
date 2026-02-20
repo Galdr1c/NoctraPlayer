@@ -16,6 +16,13 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - **Performans ve Bakım Kolaylığı**: Ana pencere kodu (XAML ve C#) büyük ölçüde sadeleştirildi. Görüntüleme mantığı, kaydırma efektleri (Parallax) ve sayfalama algoritmaları yalnızca ilgili görünümler belleğe yüklendiğinde ve kendi içlerinde çalışacak şekilde izole edildi.
     - **Modüler Bağlam Menüleri (Context Menus)**: Medya (Kanal/Dizi) sağ tık ve "Listeme Ekle / Favorilere Ekle" gibi dinamik eylemler genel `MainWindow` dosyasından çıkarılıp her UserControl'ün kendi özgü ve güvenli alanına taşındı.  
     - **Derleme Hataları ve Ad Alanı Temizliği**: Bileşen ayrımı sırasında oluşan `x:Name` çakışmaları (CS0542) ve ad alanı çakışmaları (`global::Avalonia.Controls.StyledElement`, `global::Avalonia.Media` - CS0234) kalıcı olarak çözüldü.
+- **SettingsWindow İyileştirmeleri ve Bellek Yönetimi** (2026-02-20):
+    - **Kritik Bellek Sızıntısı (Memory Leak) Giderildi**: `SettingsWindow.axaml.cs` içerisinde `SettingsViewModel`'a yapılan anonim event aboneliği isimli metoda dönüştürüldü ve `OnClosed` aşamasında abonelik temizliği (Unsubscribe) eklendi.
+    - **Kopya-Yapıştır Hataları Düzeltildi**: Oynatma sekmesindeki hatalı "Kişiselleştirme" başlığı "Oynatma & İndirme" olarak düzeltildi.
+    - **XAML Temizliği ve Optimizasyon**: `SettingsWindow.axaml` içerisindeki redundan (gereksiz) `MaterialIcon` tanımları ve kullanılmayan `StreamGeometry` kaynakları projeden kaldırılarak dosya boyutu küçültüldü.
+    - **Profil Yönetimi Mantığı Sadeleştirildi**: Profil seçme ekranına dönüş fonksiyonu daha güvenli ve temiz bir yapıya kavuşturuldu.
+- **UpsellWindow Temiz Kod (Clean Code) Uygulaması** (2026-02-20):
+    - **Pencere Sürükleme Mantığı Modernize Edildi**: `UpsellWindow.axaml.cs` içindeki anonim lambda ile kurulan sürükleme (dragging) sistemi, daha "temiz" ve standartlara uygun olan `OnPointerPressed` override metoduna taşındı.
 
 - **Picture-in-Picture (PiP) Architecture Modernizasyonu** (2026-02-19):
     - **Single-Window Mimarisi**: VLC (Direct3D11) motorunun Windows üzerinde HWND (pencere tutamacı) kilitlemesi nedeniyle oluşan siyah ekran ve çökme sorunlarını gidermek için tasarlanmıştır. PiP modu artık harici bir pencere açmak yerine, `MainWindow`'u minimal bir "Shell" haline getirerek mevcut HWND'yi korur.

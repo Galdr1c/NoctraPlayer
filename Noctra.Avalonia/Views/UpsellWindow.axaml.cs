@@ -9,15 +9,15 @@ public partial class UpsellWindow : Window
     public UpsellWindow()
     {
         InitializeComponent();
+    }
 
-        // Window dragging
-        PointerPressed += (s, e) =>
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        base.OnPointerPressed(e);
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
-            if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-            {
-                BeginMoveDrag(e);
-            }
-        };
+            BeginMoveDrag(e);
+        }
     }
 
     private void Close_Click(object? sender, RoutedEventArgs e)
