@@ -15,24 +15,38 @@ public partial class GlobalSettingsWindow : Window
     {
     }
 
+    private GlobalSettingsViewModel? _viewModel;
+
     public GlobalSettingsWindow(GlobalSettingsViewModel viewModel)
     {
         InitializeComponent();
         DataContext = viewModel;
+        _viewModel = viewModel;
+        
         UpdateThemeSelection(viewModel.Settings.IsDarkTheme);
 
-        // Listen for changes to update UI selection
-        viewModel.PropertyChanged += (s, e) => {
-            if (e.PropertyName == nameof(GlobalSettingsViewModel.Settings)) {
-                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => UpdateThemeSelection(viewModel.Settings.IsDarkTheme));
-            }
-        };
+        // İsimlendirilmiş metotlarla abone ol
+        _viewModel.PropertyChanged += ViewModel_PropertyChanged;
+        if (_viewModel.Settings != null)
+        {
+            _viewModel.Settings.PropertyChanged += Settings_PropertyChanged;
+        }
+    }
 
-        viewModel.Settings.PropertyChanged += (s, e) => {
-            if (e.PropertyName == nameof(GlobalSettings.IsDarkTheme)) {
-                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => UpdateThemeSelection(viewModel.Settings.IsDarkTheme));
-            }
-        };
+    private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(GlobalSettingsViewModel.Settings))
+        {
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => UpdateThemeSelection(_viewModel!.Settings.IsDarkTheme));
+        }
+    }
+
+    private void Settings_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(GlobalSettings.IsDarkTheme))
+        {
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => UpdateThemeSelection(_viewModel!.Settings.IsDarkTheme));
+        }
     }
 
     private void Header_PointerPressed(object? sender, PointerPressedEventArgs e)
@@ -88,5 +102,19 @@ public partial class GlobalSettingsWindow : Window
             DarkCheckmark.IsVisible = false;
             LightCheckmark.IsVisible = true;
         }
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        // Pencere kapanırken abonelikleri KESİNLİKLE kaldır
+        if (_viewModel != null)
+        {
+            _viewModel.PropertyChanged -= ViewModel_PropertyChanged;
+            if (_viewModel.Settings != null)
+            {
+                _viewModel.Settings.PropertyChanged -= Settings_PropertyChanged;
+            }
+        }
+        base.OnClosed(e);
     }
 }
