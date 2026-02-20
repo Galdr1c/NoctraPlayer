@@ -93,7 +93,7 @@ public class NetworkService : INetworkService, IDisposable
                 }
             }
         }
-        catch (Exception ex)
+        catch
         {
             _currentStatus = "Bilinmiyor";
         }

@@ -11,9 +11,29 @@ public class SettingsService : ISettingsService
 {
     private readonly ILogger<SettingsService>? _logger;
     private readonly string _settingsPath;
-    private AppSettings _settings = new();
-    
-    public AppSettings Settings => _settings;
+    private AppSettings? _settings;
+    private bool _isLoaded;
+    private readonly object _lock = new();
+
+    public AppSettings Settings
+    {
+        get
+        {
+            if (!_isLoaded)
+            {
+                lock (_lock)
+                {
+                    if (!_isLoaded)
+                    {
+                        LoadSync();
+                        _isLoaded = true;
+                    }
+                }
+            }
+            return _settings!;
+        }
+    }
+
     public event Action? SettingsChanged;
     
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -34,11 +54,11 @@ public class SettingsService : ISettingsService
         Directory.CreateDirectory(appDataPath);
         _settingsPath = Path.Combine(appDataPath, "settings.json");
         
-        // Varsayılan indirme yolunu ayarla
-        _settings.DownloadPath = Path.Combine(appDataPath, "Downloads");
-        
-        // Başlangıçta yükle (sync)
-        LoadSync();
+        // Varsayılan değerlerle başlat
+        _settings = new AppSettings
+        {
+            DownloadPath = Path.Combine(appDataPath, "Downloads")
+        };
     }
     
     public async Task LoadAsync()
@@ -48,6 +68,7 @@ public class SettingsService : ISettingsService
             if (!File.Exists(_settingsPath))
             {
                 _logger?.LogInformation("Settings file not found, using defaults");
+                _isLoaded = true;
                 return;
             }
             
@@ -57,6 +78,7 @@ public class SettingsService : ISettingsService
             if (loaded != null)
             {
                 _settings = loaded;
+                _isLoaded = true;
                 System.Diagnostics.Debug.WriteLine($"[SettingsService] Settings loaded: IsDarkTheme={_settings.IsDarkTheme}");
                 _logger?.LogInformation("Settings loaded from {Path}", _settingsPath);
             }
@@ -72,13 +94,19 @@ public class SettingsService : ISettingsService
         try
         {
             if (!File.Exists(_settingsPath))
+            {
+                _isLoaded = true;
                 return;
+            }
             
             var json = File.ReadAllText(_settingsPath);
             var loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
             
             if (loaded != null)
+            {
                 _settings = loaded;
+                _isLoaded = true;
+            }
         }
         catch (Exception ex)
         {
@@ -104,7 +132,7 @@ public class SettingsService : ISettingsService
     
     public void ResetToDefaults()
     {
-        var defaultDownloadPath = _settings.DownloadPath; // Keep download path
+        var defaultDownloadPath = Settings.DownloadPath; // Keep download path
         _settings = new AppSettings
         {
             DownloadPath = defaultDownloadPath

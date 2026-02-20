@@ -20,6 +20,15 @@ internal sealed class Program
         StartupDiagnostics.Initialize();
         StartupDiagnostics.Log("Program.Main entered.");
 
+        try 
+        {
+            LibVLCSharp.Shared.Core.Initialize();
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.LogException("Failed to initialize LibVLC core", ex);
+        }
+
         try
         {
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);

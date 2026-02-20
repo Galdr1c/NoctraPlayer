@@ -36,7 +36,6 @@ public class VideoPlayerService : IVideoPlayerService
     public VideoPlayerService(IDispatcherService dispatcherService)
     {
         _dispatcherService = dispatcherService;
-        LibVLCSharp.Shared.Core.Initialize();
         
         // Full options for NativeControlHost (HWND) rendering
         var options = new string[]
