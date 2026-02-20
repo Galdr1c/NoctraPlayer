@@ -8,6 +8,12 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### Added
+- **MainWindow Mimari Optimizasyonu (Refactoring)** (2026-02-20):
+    - **Bileşen Odaklı Yapı (Component-Based)**: `MainWindow.axaml` içerisinde bulunan tüm ana görünümler (`HomeView`, `LiveView`, `MoviesView`, `SeriesView`, `MyListView`, `DownloadsView`, `HistoryView`, `FavoritesView`, `SearchView`) kendi bağımsız `UserControl` (.axaml ve .cs) dosyalarına ayrıldı.
+    - **Performans ve Bakım Kolaylığı**: Ana pencere kodu (XAML ve C#) büyük ölçüde sadeleştirildi. Görüntüleme mantığı, kaydırma efektleri (Parallax) ve sayfalama algoritmaları yalnızca ilgili görünümler belleğe yüklendiğinde ve kendi içlerinde çalışacak şekilde izole edildi.
+    - **Modüler Bağlam Menüleri (Context Menus)**: Medya (Kanal/Dizi) sağ tık ve "Listeme Ekle / Favorilere Ekle" gibi dinamik eylemler genel `MainWindow` dosyasından çıkarılıp her UserControl'ün kendi özgü ve güvenli alanına taşındı.  
+    - **Derleme Hataları ve Ad Alanı Temizliği**: Bileşen ayrımı sırasında oluşan `x:Name` çakışmaları (CS0542) ve ad alanı çakışmaları (`global::Avalonia.Controls.StyledElement`, `global::Avalonia.Media` - CS0234) kalıcı olarak çözüldü.
+
 - **Picture-in-Picture (PiP) Architecture Modernizasyonu** (2026-02-19):
     - **Single-Window Mimarisi**: VLC (Direct3D11) motorunun Windows üzerinde HWND (pencere tutamacı) kilitlemesi nedeniyle oluşan siyah ekran ve çökme sorunlarını gidermek için tasarlanmıştır. PiP modu artık harici bir pencere açmak yerine, `MainWindow`'u minimal bir "Shell" haline getirerek mevcut HWND'yi korur.
     - **8 Yönlü Orantılı Boyutlandırma**: Pencereyi 4 köşe ve 4 kenardan, 16:9 en-boy oranını koruyacak şekilde büyütüp küçülten özel bir vektörel boyutlandırma mantığı eklendi.

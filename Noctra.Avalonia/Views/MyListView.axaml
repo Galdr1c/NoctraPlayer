@@ -1,0 +1,43 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Noctra.ViewModels"
+             xmlns:models="using:Noctra.Models"
+             xmlns:controls="using:Noctra.Avalonia.Controls"
+             xmlns:views="using:Noctra.Avalonia.Views"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="600"
+             x:Class="Noctra.Avalonia.Views.MyListView"
+             x:DataType="vm:MainViewModel">
+    <ScrollViewer x:Name="MyListScrollViewer" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.MyList}}">
+          <StackPanel Margin="24">
+            <TextBlock Text="Listem" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
+            <ItemsControl ItemsSource="{Binding MyList}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:CompileBindings="False">
+                  <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                          Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}">
+                    <Button.ContextMenu>
+                      <ContextMenu>
+                        <MenuItem Header="Listeden &#199;&#305;kar"
+                                  Click="Context_RemoveFromMyList_Click"
+                                  Tag="{Binding}" CommandParameter="{Binding}"/>
+                      </ContextMenu>
+                    </Button.ContextMenu>
+                    <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
+                      <StackPanel><Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12"><controls:RemoteImage Width="60" Stretch="Uniform" Url="{Binding CoverUrl}"/></Border><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/></StackPanel>
+                    </Border>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0" IsVisible="{Binding ShowMyListEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
+              <Image Source="avares://Noctra.Avalonia/Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>
+              <TextBlock Text="Listeniz bo&#351;" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" Margin="0,14,0,6"/>
+              <TextBlock Text="&#304;&#231;erik ekledi&#287;inizde burada g&#246;r&#252;necek." FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+</UserControl>

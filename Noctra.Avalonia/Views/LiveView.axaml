@@ -1,0 +1,59 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Noctra.ViewModels"
+             xmlns:models="using:Noctra.Models"
+             xmlns:controls="using:Noctra.Avalonia.Controls"
+             xmlns:views="using:Noctra.Avalonia.Views"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="600"
+             x:Class="Noctra.Avalonia.Views.LiveView"
+             x:DataType="vm:MainViewModel">
+    <ScrollViewer x:Name="LiveScrollViewer" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Live}}"
+                      ScrollChanged="LiveView_ScrollChanged">
+          <StackPanel Margin="24">
+            <Grid Margin="0,0,0,24" ColumnDefinitions="*,Auto">
+              <TextBlock Text="Canl&#305; TV" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                <ComboBox Width="260" ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}"/>
+                <Button Content="T&#252;m&#252;" Width="64" Click="ClearGroupSelection_Click"/>
+                <ComboBox Width="240" ItemsSource="{Binding SortOptions}" SelectedValue="{Binding SelectedSortOrder}" SelectedValueBinding="{Binding Key}" DisplayMemberBinding="{Binding Value}"/>
+              </StackPanel>
+            </Grid>
+            <ItemsControl ItemsSource="{Binding FilteredChannels}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Channel">
+                  <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                    <Button.ContextFlyout>
+                      <MenuFlyout>
+                        <MenuItem Header="Favorilere Ekle/&#199;&#305;kar"
+                                  Click="Context_ToggleFavorite_Click"
+                                  Tag="{Binding}" CommandParameter="{Binding}"
+                                  IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
+                      </MenuFlyout>
+                    </Button.ContextFlyout>
+                    <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
+                      <StackPanel Spacing="6">
+                        <Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12">
+                          <controls:RemoteImage Width="60" Stretch="Uniform" Url="{Binding CoverUrl}"/>
+                        </Border>
+                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center"/>
+                      </StackPanel>
+                    </Border>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0"
+                        IsVisible="{Binding FilteredChannels.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=invert}">
+              <Image Source="avares://Noctra.Avalonia/Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>
+              <TextBlock Text="Kanal bulunamad&#305;" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" Margin="0,14,0,6"/>
+              <TextBlock Text="Bu filtrede g&#246;sterilecek canl&#305; kanal yok." FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+</UserControl>

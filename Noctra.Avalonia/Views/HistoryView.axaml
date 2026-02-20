@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Noctra.ViewModels"
+             xmlns:models="using:Noctra.Models"
+             xmlns:controls="using:Noctra.Avalonia.Controls"
+             xmlns:views="using:Noctra.Avalonia.Views"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="600"
+             x:Class="Noctra.Avalonia.Views.HistoryView"
+             x:DataType="vm:MainViewModel">
+    <ScrollViewer x:Name="HistoryScrollViewer" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.History}}">
+          <StackPanel Margin="24">
+            <TextBlock Text="Ge&#231;mi&#351;" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
+            <TextBlock Text="Canl&#305; TV" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"
+                       IsVisible="{Binding HistoryLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
+            <ItemsControl ItemsSource="{Binding HistoryLiveChannels}" IsVisible="{Binding HistoryLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Channel">
+                  <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                    <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
+                      <StackPanel><Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12"><controls:RemoteImage Width="60" Stretch="Uniform" Url="{Binding CoverUrl}"/></Border><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding LastWatched, StringFormat='Son: {0:dd.MM.yyyy HH:mm}'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><Border Height="3" Background="#33FFFFFF" Margin="0,10,0,0" IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}"><Border Width="{Binding ., Converter={StaticResource WatchedProgressWidthConverter}, ConverterParameter=160}" Background="{DynamicResource AccentBrush}" HorizontalAlignment="Left"/></Border></StackPanel>
+                    </Border>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Text="Diziler" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,12"
+                       IsVisible="{Binding HistorySeriesChannels.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
+            <ItemsControl ItemsSource="{Binding HistorySeriesChannels}" IsVisible="{Binding HistorySeriesChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Channel">
+                  <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                    <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
+                      <StackPanel><Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12"><controls:RemoteImage Width="60" Stretch="Uniform" Url="{Binding CoverUrl}"/></Border><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding LastWatched, StringFormat='Son: {0:dd.MM.yyyy HH:mm}'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><Border Height="3" Background="#33FFFFFF" Margin="0,10,0,0" IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}"><Border Width="{Binding ., Converter={StaticResource WatchedProgressWidthConverter}, ConverterParameter=160}" Background="{DynamicResource AccentBrush}" HorizontalAlignment="Left"/></Border></StackPanel>
+                    </Border>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Text="Filmler" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,12"
+                       IsVisible="{Binding HistoryVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
+            <ItemsControl ItemsSource="{Binding HistoryVodChannels}" IsVisible="{Binding HistoryVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Channel">
+                  <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+                    <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
+                      <StackPanel><Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12"><controls:RemoteImage Width="60" Stretch="Uniform" Url="{Binding CoverUrl}"/></Border><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding LastWatched, StringFormat='Son: {0:dd.MM.yyyy HH:mm}'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center" TextTrimming="CharacterEllipsis"/><Border Height="3" Background="#33FFFFFF" Margin="0,10,0,0" IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}"><Border Width="{Binding ., Converter={StaticResource WatchedProgressWidthConverter}, ConverterParameter=160}" Background="{DynamicResource AccentBrush}" HorizontalAlignment="Left"/></Border></StackPanel>
+                    </Border>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0" IsVisible="{Binding ShowHistoryEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
+              <Image Source="avares://Noctra.Avalonia/Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>
+              <TextBlock Text="Ge&#231;mi&#351; bo&#351;" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" Margin="0,14,0,6"/>
+              <TextBlock Text="&#304;zledi&#287;iniz i&#231;erikler burada listelenecek." FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+</UserControl>
