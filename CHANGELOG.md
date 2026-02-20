@@ -83,6 +83,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **Kritik Hata Düzeltmeleri**:
   - Video oynatıcı penceresi kapatılırken oluşan `System.ArgumentNullException (LibVLCSharp)` çökme sorunu giderildi. Artık bellek temizliği (callback detach) güvenli şekilde yapılıyor.
 
+### Removed
+- `PiPWindow.axaml` ve `PiPWindow.axaml.cs`: Yeni Single-Window PiP mimarisine geçiş nedeniyle tamamen atıl (deprecated) duruma düştüğü için projeden kaldırıldı.
+
 ### Changed
 - README tamamen guncellenerek proje gercekligiyle esitlendi:
   - Avalonia ana uygulama
