@@ -66,6 +66,20 @@ public class MemoryVideoView : NativeControlHost
 
     public event EventHandler? NativeHandleReady;
 
+    public Task WaitForHandleReadyAsync()
+    {
+        if (_platformHandle != null) return Task.CompletedTask;
+        var tcs = new TaskCompletionSource();
+        EventHandler? handler = null;
+        handler = (s, e) =>
+        {
+            NativeHandleReady -= handler;
+            tcs.TrySetResult();
+        };
+        NativeHandleReady += handler;
+        return tcs.Task;
+    }
+
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {
         _platformHandle = base.CreateNativeControlCore(parent);

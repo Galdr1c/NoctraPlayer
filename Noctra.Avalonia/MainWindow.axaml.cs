@@ -146,6 +146,13 @@ public partial class MainWindow : Window
             // HideMiniPlayer();
             PlayerArea.IsVisible = true;
             _playerViewModel.IsLocked = false;
+            
+            // Wait for native control to be created by Avalonia before playing.
+            // This prevents LibVLC from falling back to pop-up Direct3D windows.
+            var timeoutTask = Task.Delay(1000);
+            var readyTask = VideoSurface.WaitForHandleReadyAsync();
+            await Task.WhenAny(readyTask, timeoutTask);
+            
             _playerViewModel.UserInteractionCommand.Execute(null);
             await _playerViewModel.PlayChannelAsync(channel);
             Dispatcher.UIThread.Post(() => OverlayControl.Focus(), DispatcherPriority.Input);

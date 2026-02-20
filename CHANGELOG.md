@@ -83,9 +83,20 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **Kritik Hata Düzeltmeleri**:
   - Video oynatıcı penceresi kapatılırken oluşan `System.ArgumentNullException (LibVLCSharp)` çökme sorunu giderildi. Artık bellek temizliği (callback detach) güvenli şekilde yapılıyor.
 
+### Issues Resolved
+- **Controls Persisting Unintentionally**: Resim içinde resim (PiP) kontrolleri ana oynatıcıda göründü ve otomatik olarak gizlenmeyi reddetti.
+- Görünürlüklerini kesin olarak bağlamak için bir `IsPiPMode` izleyici ve bir `IsPiPControlsVisible` hesaplanmış özelliği eklendi. Etkinliksizlik zamanlayıcısı 4,0 saniyeden 2,5 saniyeye kısaltıldı.
+- **Visual PiP Jitter**: Belirli köşelerden yeniden boyutlandırma, ciddi kullanıcı arayüzü titremesine neden oluyordu.
+- 8 yönlü sürekli yeniden boyutlandırma temiz bir `WindowResizeService`'e çıkarıldı ve titremeye eğilimli tutamaçlar (TopLeft, Top, Left) kaldırıldı, böylece PiP için düzgün sınır eşlemesi korundu.
+- **Corner "Ears" Bleeding**: Koyu renkli, sözde yuvarlak köşeli bir öğe, şeffaf sınırların dışına taşmıştı.
+- Tüm sözde köşe maskeleri kaldırıldı ve PiP sınırlarının, `CornerRadius="0"` ile işletim sisteminin yerel dikdörtgen çerçevesine uyması sağlandı.
+- **VLC External Output Window**: PiP'i kapattıktan sonra, yeni bir video açmak bazen LibVLC'nin uygulama içinde render etmek yerine ayrı bir Direct3D penceresi oluşturmasına neden oluyordu.
+- `MemoryVideoView` içinde `WaitForHandleReadyAsync`'i kullanıma sunarak ve `PlayChannelAsync`'i çalıştırmadan önce bekleyerek kritik bir UI iş parçacığı yarış durumunu düzelttik; bu sayede LibVLC her zaman geçerli bir `HWND`'ye bağlanır.
+
+### Testing and Verification
+
 ### Fixed
 - **Picture-in-Picture (PiP) Hata Düzeltmeleri**:
-  - `MainWindow.axaml` içerisinde PiP butonlarının görünürlüğü (IsVisible), `PlayerViewModel` altındaki inaktivite sayacına (`IsVisible` -> `IsPiPControlsVisible` computed property) dinamik (Binding) olarak bağlandı. Kontroller artık ana oyuncuya sızmıyor ve PiP modundayken 2.5 saniye (4 saniyeden düşürüldü) hareketsizlikten sonra otomatik gizleniyor.
   - PiP modunda şeffaf çerçeve dışına taşan ve "fare kulağı" ("ears") gibi siyah üçgenlere yol açan yapay köşelikler (Corner Masks) için köklü çözüme gidildi. `PiPContainer` ve `PiPFrame` çerçevelerinin `CornerRadius` değeri sıfırlanarak, PiP penceresinin işletim sisteminde keskin, net bir formda (dikdörtgen) görüntülenmesi sağlandı. Orijinal dev oynatıcıyı taklit etmeye çalışan sahte Corner Masks XAML kodu ve C# logic tetikleyicileri gereksiz karmaşıklığı önlemek için projeden tamamen çıkartıldı. `MainWindow.axaml.cs` temizlendi.
   - PiP penceresinin boyutlandırılmasında, işletim sistemi koordinat uyumsuzluğundan kaynaklanan "titreme" (jitter) sorununu gidermek amacıyla sadece orantıyı (16:9) koruyan en stabil tutamaklar (BottomRight, Right, Bottom) aktif bırakıldı; sorun çıkaran 5 farklı tutamak (TopLeft, Top, vb.) kapatıldı.
 
