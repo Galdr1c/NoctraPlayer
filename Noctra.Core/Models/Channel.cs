@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Noctra.Models;
 
@@ -80,7 +81,7 @@ public partial class Channel : ObservableObject
     public TimeSpan? Duration { get; set; }
     public TimeSpan? WatchedPosition { get; set; }
     
-    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    [NotMapped]
     public double WatchedPercentage
     {
         get
@@ -96,10 +97,10 @@ public partial class Channel : ObservableObject
     // Navigation property
     public Playlist? Playlist { get; set; }
     
-    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    [NotMapped]
     public string? CoverUrl => !string.IsNullOrEmpty(BackdropUrl) ? BackdropUrl : LogoUrl;
     
-    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    [NotMapped]
     public string? Description => Plot;
 
     partial void OnLogoUrlChanged(string? value)

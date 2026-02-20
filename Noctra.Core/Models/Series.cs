@@ -34,10 +34,10 @@ public class Series
         }
     }
 
-    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    [NotMapped]
     public string? GroupTitle => Genre;
 
-    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    [NotMapped]
     public int SeasonCountSafe
     {
         get
@@ -108,7 +108,7 @@ public class Episode
     // Navigation property
     public Season? Season { get; set; }
 
-    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    [NotMapped]
     public double WatchedPercentage
     {
         get
