@@ -393,7 +393,7 @@
                       <Border x:Name="PiPFrame"
                               BorderBrush="#44FFFFFF"
                               BorderThickness="1"
-                              CornerRadius="12"
+                              CornerRadius="0"
                               IsVisible="{Binding #PiPCentralControls.IsVisible}"
                               ZIndex="5001"
                               IsHitTestVisible="False">
@@ -402,25 +402,13 @@
                           </Border.BoxShadow>
                       </Border>
 
-                      <!-- Corner Masks (to hide rectangular video corners) -->
-                      <Canvas HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ZIndex="5000" IsHitTestVisible="False">
-                          <!-- Top Left -->
-                          <Path Data="M 0,12 L 0,0 L 12,0 A 12,12 0 0 0 0,12 Z" Fill="Black" Canvas.Left="0" Canvas.Top="0"/>
-                          <!-- Top Right -->
-                          <Path Data="M 0,0 L 12,0 L 12,12 A 12,12 0 0 0 0,0 Z" Fill="Black" Canvas.Right="0" Canvas.Top="0"/>
-                          <!-- Bottom Left -->
-                          <Path Data="M 0,0 L 0,12 L 12,12 A 12,12 0 0 1 0,0 Z" Fill="Black" Canvas.Left="0" Canvas.Bottom="0"/>
-                          <!-- Bottom Right -->
-                          <Path Data="M 0,12 L 12,12 L 12,0 A 12,12 0 0 1 0,12 Z" Fill="Black" Canvas.Right="0" Canvas.Bottom="0"/>
-                      </Canvas>
-
                   <!-- PiP Central Controls (Netflix Style) -->
                   <StackPanel x:Name="PiPCentralControls"
                               Orientation="Horizontal"
                               HorizontalAlignment="Center"
                               VerticalAlignment="Center"
                               Spacing="40"
-                              IsVisible="False"
+                              IsVisible="{Binding IsPiPControlsVisible}"
                               ZIndex="6000"
                               DataContext="{Binding #OverlayControl.DataContext}"
                               x:DataType="vm:PlayerViewModel">
@@ -465,45 +453,25 @@
                           Width="40" Height="40"
                           Background="Transparent" BorderThickness="0"
                           Click="PiPReturn_Click"
-                          IsVisible="False"
+                          IsVisible="{Binding #PiPCentralControls.IsVisible}"
                           ZIndex="6000"
                           Classes="pipButton"
                           ToolTip.Tip="Tam ekrana dön">
                       <materialIcons:MaterialIcon Kind="ArrowExpand" Width="24" Height="24" Foreground="White" Opacity="0.9"/>
                   </Button>
 
-                  <!-- PiP Resize Grips (8-way proportional) -->
+                  <!-- PiP Resize Grips (Proportional) -->
                   <!-- Corners -->
-                  <Border HorizontalAlignment="Left" VerticalAlignment="Top" Width="24" Height="24" Background="Transparent" 
-                          Cursor="TopLeftCorner" PointerPressed="PiPCornerResize_PointerPressed" 
-                          PointerMoved="PiPCornerResize_PointerMoved" PointerReleased="PiPCornerResize_PointerReleased"
-                          Tag="TopLeft" ZIndex="7000" IsVisible="{Binding #PiPBottomControls.IsVisible}"/>
-                  <Border HorizontalAlignment="Right" VerticalAlignment="Top" Width="24" Height="24" Background="Transparent" 
-                          Cursor="TopRightCorner" PointerPressed="PiPCornerResize_PointerPressed" 
-                          PointerMoved="PiPCornerResize_PointerMoved" PointerReleased="PiPCornerResize_PointerReleased"
-                          Tag="TopRight" ZIndex="7000" IsVisible="{Binding #PiPBottomControls.IsVisible}"/>
-                  <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Width="24" Height="24" Background="Transparent" 
-                          Cursor="BottomLeftCorner" PointerPressed="PiPCornerResize_PointerPressed" 
-                          PointerMoved="PiPCornerResize_PointerMoved" PointerReleased="PiPCornerResize_PointerReleased"
-                          Tag="BottomLeft" ZIndex="7000" IsVisible="{Binding #PiPBottomControls.IsVisible}"/>
+                  <!-- TopLeft, TopRight, BottomLeft removed to prevent jitter -->
+
                   <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="24" Height="24" Background="Transparent" 
                           Cursor="BottomRightCorner" PointerPressed="PiPCornerResize_PointerPressed" 
                           PointerMoved="PiPCornerResize_PointerMoved" PointerReleased="PiPCornerResize_PointerReleased"
                           Tag="BottomRight" ZIndex="7000" IsVisible="{Binding #PiPBottomControls.IsVisible}"/>
                   
                   <!-- Edges -->
-                  <Border HorizontalAlignment="Stretch" VerticalAlignment="Top" Height="8" Margin="24,0" Background="Transparent" 
-                          Cursor="SizeNorthSouth" PointerPressed="PiPCornerResize_PointerPressed" 
-                          PointerMoved="PiPCornerResize_PointerMoved" PointerReleased="PiPCornerResize_PointerReleased"
-                          Tag="Top" ZIndex="7000" IsVisible="{Binding #PiPBottomControls.IsVisible}"/>
-                  <Border HorizontalAlignment="Stretch" VerticalAlignment="Bottom" Height="8" Margin="24,0" Background="Transparent" 
-                          Cursor="SizeNorthSouth" PointerPressed="PiPCornerResize_PointerPressed" 
-                          PointerMoved="PiPCornerResize_PointerMoved" PointerReleased="PiPCornerResize_PointerReleased"
-                          Tag="Bottom" ZIndex="7000" IsVisible="{Binding #PiPBottomControls.IsVisible}"/>
-                  <Border HorizontalAlignment="Left" VerticalAlignment="Stretch" Width="8" Margin="0,24" Background="Transparent" 
-                          Cursor="SizeWestEast" PointerPressed="PiPCornerResize_PointerPressed" 
-                          PointerMoved="PiPCornerResize_PointerMoved" PointerReleased="PiPCornerResize_PointerReleased"
-                          Tag="Left" ZIndex="7000" IsVisible="{Binding #PiPBottomControls.IsVisible}"/>
+                  <!-- Top and Left removed to prevent jitter -->
+
                   <Border HorizontalAlignment="Right" VerticalAlignment="Stretch" Width="8" Margin="0,24" Background="Transparent" 
                           Cursor="SizeWestEast" PointerPressed="PiPCornerResize_PointerPressed" 
                           PointerMoved="PiPCornerResize_PointerMoved" PointerReleased="PiPCornerResize_PointerReleased"

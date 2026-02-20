@@ -12,7 +12,7 @@ namespace Noctra.ViewModels;
 /// </summary>
 public partial class PlayerViewModel : ObservableObject, IDisposable
 {
-    private const double OverlayAutoHideDelayMs = 4000;
+    private const double OverlayAutoHideDelayMs = 2500;
     private const double NextEpisodePromptTailRatio = 0.06;
     private const double NextEpisodePromptMinTailSeconds = 25;
     private const double NextEpisodePromptMaxTailSeconds = 180;
@@ -43,6 +43,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private int _playRequestVersion;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPiPControlsVisible))]
     private bool _isVisible = true;
 
     [ObservableProperty]
@@ -56,6 +57,12 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private bool _isLocked;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPiPControlsVisible))]
+    private bool _isPiPMode;
+
+    public bool IsPiPControlsVisible => IsVisible && IsPiPMode;
 
     [ObservableProperty]
     private string _currentTimeStr = "00:00";

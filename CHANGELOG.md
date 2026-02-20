@@ -83,10 +83,17 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **Kritik Hata Düzeltmeleri**:
   - Video oynatıcı penceresi kapatılırken oluşan `System.ArgumentNullException (LibVLCSharp)` çökme sorunu giderildi. Artık bellek temizliği (callback detach) güvenli şekilde yapılıyor.
 
+### Fixed
+- **Picture-in-Picture (PiP) Hata Düzeltmeleri**:
+  - `MainWindow.axaml` içerisinde PiP butonlarının görünürlüğü (IsVisible), `PlayerViewModel` altındaki inaktivite sayacına (`IsVisible` -> `IsPiPControlsVisible` computed property) dinamik (Binding) olarak bağlandı. Kontroller artık ana oyuncuya sızmıyor ve PiP modundayken 2.5 saniye (4 saniyeden düşürüldü) hareketsizlikten sonra otomatik gizleniyor.
+  - PiP modunda şeffaf çerçeve dışına taşan ve "fare kulağı" ("ears") gibi siyah üçgenlere yol açan yapay köşelikler (Corner Masks) için köklü çözüme gidildi. `PiPContainer` ve `PiPFrame` çerçevelerinin `CornerRadius` değeri sıfırlanarak, PiP penceresinin işletim sisteminde keskin, net bir formda (dikdörtgen) görüntülenmesi sağlandı. Orijinal dev oynatıcıyı taklit etmeye çalışan sahte Corner Masks XAML kodu ve C# logic tetikleyicileri gereksiz karmaşıklığı önlemek için projeden tamamen çıkartıldı. `MainWindow.axaml.cs` temizlendi.
+  - PiP penceresinin boyutlandırılmasında, işletim sistemi koordinat uyumsuzluğundan kaynaklanan "titreme" (jitter) sorununu gidermek amacıyla sadece orantıyı (16:9) koruyan en stabil tutamaklar (BottomRight, Right, Bottom) aktif bırakıldı; sorun çıkaran 5 farklı tutamak (TopLeft, Top, vb.) kapatıldı.
+
 ### Removed
 - `PiPWindow.axaml` ve `PiPWindow.axaml.cs`: Yeni Single-Window PiP mimarisine geçiş nedeniyle tamamen atıl (deprecated) duruma düştüğü için projeden kaldırıldı.
 
 ### Changed
+- **PiP Mimari Soyutlaması**: `MainWindow` içerisinde bulunan karmaşık 8-yönlü, orantı-korumalı (16:9) Picture-in-Picture yeniden boyutlandırma matematiği ve durum değişkenleri, temiz kod (Clean Code) prensipleri gereği yeni `WindowResizeService` sınıfına soyutlandı. `MainWindow.axaml.cs` dosyasının boyut ve karmaşıklığı büyük ölçüde azaltıldı.
 - README tamamen guncellenerek proje gercekligiyle esitlendi:
   - Avalonia ana uygulama
   - WPF legacy notu
@@ -118,6 +125,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **UI Performance**: İçerik indirme işlemi tamamlandığında İndirmeler sayfasının otomatik yenilenmesi hızlandırıldı (gecikme 900 ms'den 250 ms'ye düşürüldü).
 
 ### Fixed
+- **PiP Etkileşim Gecikmesi ve Çizim Titremesi (Jitter) Çözümleri** (2026-02-20):
+  - **Interaction Delay Fix**: PiP modundayken pencereyi taşımak veya boyutlandırmak için "iki kez tıklama" zorunluluğu giderildi. Artık ilk tıklamadan itibaren pencere sürüklenip/boyutlandırılabiliyor. Bu düzeltme, tıklamayı yutan gereksiz odaklanma (Focus) çağrılarının kaldırılması ve `Handled` bayraklarının (flags) yeniden düzenlenmesiyle sağlandı.
+  - **Anti-Jitter (Titreme Önleyici)**: Pencereyi Top (Üst) ve Left (Sol) kenarlarından 16:9 boyutlandırırken işletim sistemi seviyesinde oluşan titremeler engellendi. Boyutlandırma esnasında pozisyon ve ebat güncellemeleri parçalanmak yerine `Dispatcher.UIThread.Post` (Render Önceliği) ile tek bir atomik çizim karesinde birleştirilerek mükemmel bir akıcılık elde edildi.
 - **Video Player Görüntü ve Arayüz Düzeltmeleri** (2026-02-19):
   - **Artifact Çözümü**: VLC `vmem` modülü kaynaklı görüntü bozulmaları (dikdörtgen artifact) giderildi.
     - Render motoru `NativeControlHost` (doğrudan HWND) altyapısına geçirildi.

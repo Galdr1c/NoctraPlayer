@@ -12,6 +12,7 @@ using Noctra.Models;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
+using Noctra.Avalonia.Services;
 
 namespace Noctra.Avalonia;
 
@@ -20,6 +21,7 @@ public partial class MainWindow : Window
     private readonly IVideoPlayerService _videoPlayerService;
     private readonly MainViewModel _mainViewModel;
     private readonly PlayerViewModel _playerViewModel;
+    private readonly WindowResizeService _windowResizeService;
     private CancellationTokenSource? _imageWarmupCts;
 
     public MainWindow()
@@ -37,6 +39,7 @@ public partial class MainWindow : Window
         _mainViewModel = mainViewModel;
         _playerViewModel = playerViewModel;
         _videoPlayerService = videoPlayerService;
+        _windowResizeService = new WindowResizeService(this);
         DataContext = _mainViewModel;
 
         PlayerOverlayLayer.DataContext = _playerViewModel;
@@ -373,6 +376,7 @@ public partial class MainWindow : Window
         if (!_videoPlayerService.IsPlaying) return;
 
         _isPiPMode = true;
+        _playerViewModel.IsPiPMode = true;
 
         // 1. Mevcut durumu kaydet
         _savedWindowState = WindowState;
@@ -415,9 +419,7 @@ public partial class MainWindow : Window
         }
 
         // 6. PiP Kontrollerini ve Çerçeveyi göster
-        PiPCentralControls.IsVisible = true;
-        PiPBottomControls.IsVisible = true;
-        PiPContainer.CornerRadius = new CornerRadius(12);
+        PiPContainer.CornerRadius = new CornerRadius(0);
         PlayerOverlayLayer.IsVisible = false; // Tüm overlay katmanını gizle (pip'te sadece pip kontrolleri)
 
         // 7. En üstte tut
@@ -431,6 +433,7 @@ public partial class MainWindow : Window
     {
         if (!_isPiPMode) return;
         _isPiPMode = false;
+        _playerViewModel.IsPiPMode = false;
 
         // 1. Önce pencere boyutlarını ve dekorasyonları geri al (Layout için kritik)
         Topmost = false;
@@ -448,8 +451,6 @@ public partial class MainWindow : Window
         Grid.SetRowSpan(PlayerArea, 3);
 
         // 3. Görünürlüğü GÜVENLİ bir şekilde geri al (Layout bozulmasını önlemek için gecikmeli)
-        PiPCentralControls.IsVisible = false;
-        PiPBottomControls.IsVisible = false;
         PiPContainer.CornerRadius = new CornerRadius(0);
         
         // Dispatcher ile bir sonraki frame'e atarsak pencere boyutları tam oturmuş olur
@@ -486,114 +487,22 @@ public partial class MainWindow : Window
     
     private void PiPClose_Click(object? sender, RoutedEventArgs e) => ClosePiP(returnToMain: false);
 
-    private bool _isResizing;
-    private string? _resizeCorner;
-    private Point _resizeStartPoint;
-    private Rect _resizeStartBounds;
-
     private void PiPCornerResize_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (!_isPiPMode) return;
-        var border = sender as Border;
-        if (border == null) return;
-        
-        // Pencereyi öne getir ve odağı al (Gecikmeyi önlemek için)
-        Activate();
-        Focus();
-        
-        _isResizing = true;
-        _resizeCorner = border.Tag?.ToString();
-        
-        // Global (Screen) koordinatları kullanmak titremeyi engeller
-        var visualRoot = VisualRoot as TopLevel;
-        if (visualRoot == null) return;
-        
-        _resizeStartPoint = visualRoot.PointToScreen(e.GetPosition(this)).ToPoint(1.0);
-        _resizeStartBounds = new Rect(Position.X, Position.Y, Width, Height);
-        
-        e.Pointer.Capture(border);
-        e.Handled = true;
+        _windowResizeService.BeginResize(sender, e);
     }
 
     private void PiPCornerResize_PointerMoved(object? sender, PointerEventArgs e)
     {
-        if (!_isResizing) return;
-        
-        var visualRoot = VisualRoot as TopLevel;
-        if (visualRoot == null) return;
-        
-        var currentPoint = visualRoot.PointToScreen(e.GetPosition(this)).ToPoint(1.0);
-        var deltaX = currentPoint.X - _resizeStartPoint.X;
-        var deltaY = currentPoint.Y - _resizeStartPoint.Y;
-        
-        const double aspectRatio = 16.0 / 9.0;
-        
-        double newWidth = _resizeStartBounds.Width;
-        double newHeight = _resizeStartBounds.Height;
-        double newX = _resizeStartBounds.X;
-        double newY = _resizeStartBounds.Y;
-
-        switch (_resizeCorner)
-        {
-            case "BottomRight":
-            case "Right":
-                newWidth = Math.Max(240, _resizeStartBounds.Width + deltaX);
-                newHeight = newWidth / aspectRatio;
-                break;
-            case "Bottom":
-                newHeight = Math.Max(135, _resizeStartBounds.Height + deltaY);
-                newWidth = newHeight * aspectRatio;
-                break;
-            case "BottomLeft":
-            case "Left":
-                newWidth = Math.Max(240, _resizeStartBounds.Width - deltaX);
-                newHeight = newWidth / aspectRatio;
-                newX = _resizeStartBounds.Right - newWidth;
-                break;
-            case "TopRight":
-                newWidth = Math.Max(240, _resizeStartBounds.Width + deltaX);
-                newHeight = newWidth / aspectRatio;
-                newY = _resizeStartBounds.Bottom - newHeight;
-                break;
-            case "Top":
-                newHeight = Math.Max(135, _resizeStartBounds.Height - deltaY);
-                newWidth = newHeight * aspectRatio;
-                newY = _resizeStartBounds.Bottom - newHeight;
-                break;
-            case "TopLeft":
-                newWidth = Math.Max(240, _resizeStartBounds.Width - deltaX);
-                newHeight = newWidth / aspectRatio;
-                newX = _resizeStartBounds.Right - newWidth;
-                newY = _resizeStartBounds.Bottom - newHeight;
-                break;
-        }
-
-        // Titremeyi önlemek için pixel snap ve casting optimizasyonu
-        int finalWidth = (int)Math.Round(newWidth);
-        int finalHeight = (int)Math.Round(newHeight);
-        int finalX = (int)Math.Round(newX);
-        int finalY = (int)Math.Round(newY);
-
-        if ((int)Width != finalWidth || (int)Height != finalHeight)
-        {
-            Width = finalWidth;
-            Height = finalHeight;
-        }
-
-        var newPos = new PixelPoint(finalX, finalY);
-        if (Position != newPos)
-        {
-            Position = newPos;
-        }
+        if (!_isPiPMode) return;
+        _windowResizeService.UpdateResize(e);
     }
 
     private void PiPCornerResize_PointerReleased(object? sender, PointerReleasedEventArgs e)
     {
-        if (_isResizing)
-        {
-            _isResizing = false;
-            e.Pointer.Capture(null);
-        }
+        if (!_isPiPMode) return;
+        _windowResizeService.EndResize(e);
     }
 
     private void MouseCaptureLayer_PointerPressed(object? sender, PointerPressedEventArgs e)
