@@ -140,7 +140,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ### Fixed
 - **PiP Etkileşim Gecikmesi ve Çizim Titremesi (Jitter) Çözümleri** (2026-02-20):
-  - **Interaction Delay Fix**: PiP modundayken pencereyi taşımak veya boyutlandırmak için "iki kez tıklama" zorunluluğu giderildi. Artık ilk tıklamadan itibaren pencere sürüklenip/boyutlandırılabiliyor. Bu düzeltme, tıklamayı yutan gereksiz odaklanma (Focus) çağrılarının kaldırılması ve `Handled` bayraklarının (flags) yeniden düzenlenmesiyle sağlandı.
+  - ~~**Interaction Delay Fix**: PiP modundayken pencereyi taşımak veya boyutlandırmak için "iki kez tıklama" zorunluluğu giderildi.~~ *(Kullanıcı isteği üzerine bu düzeltme geri alındı. Orijinal "önce odaklan, sonra tıkla/sürükle" deneyimi `Activate()` ve `Focus()` çağrılarıyla geri getirildi).*
+  - **PiP ESC Kapatma Hatası**: PiP modundayken `ESC` tuşuna basıldığında videonun tamamen kapanması hatası giderildi. Artık sadece PiP modundan çıkılıp ana pencereye dönülüyor.
+  - **PiP Kontrol Görünmezlik Hatası (Double Click)**: PiP üzerine çift tıklandığında veya odaklanıldığında kontrollerin kaybolması/buga girmesi sorunu çözüldü. Artık fare tıklamaları `UserInteractionCommand` aracılığıyla arayüz zamanlayıcısını (AutoHideTimer) doğru şekilde tetikliyor.
   - **Anti-Jitter (Titreme Önleyici)**: Pencereyi Top (Üst) ve Left (Sol) kenarlarından 16:9 boyutlandırırken işletim sistemi seviyesinde oluşan titremeler engellendi. Boyutlandırma esnasında pozisyon ve ebat güncellemeleri parçalanmak yerine `Dispatcher.UIThread.Post` (Render Önceliği) ile tek bir atomik çizim karesinde birleştirilerek mükemmel bir akıcılık elde edildi.
 - **Video Player Görüntü ve Arayüz Düzeltmeleri** (2026-02-19):
   - **Artifact Çözümü**: VLC `vmem` modülü kaynaklı görüntü bozulmaları (dikdörtgen artifact) giderildi.

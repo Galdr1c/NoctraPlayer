@@ -246,22 +246,20 @@ public class MemoryVideoView : NativeControlHost
     private void Root_Activated(object? sender, EventArgs e)
     {
         _isRootActive = true;
-        if (_overlayWindow != null && this.IsEffectivelyVisible)
+        if (_debounceTimer == null || !_debounceTimer.IsEnabled)
         {
-            // Ana pencerenin Topmost durumuna göre senkronize et
-            _overlayWindow.Topmost = _rootWindow?.Topmost ?? true;
-            if (!_overlayWindow.IsVisible) _overlayWindow.Show();
+             if (_overlayWindow != null && this.IsEffectivelyVisible)
+             {
+                 _overlayWindow.Topmost = true;
+                 _overlayWindow.Show();
+             }
         }
     }
 
     private void Root_Deactivated(object? sender, EventArgs e)
     {
         _isRootActive = false;
-        
-        // Değişiklik: Eğer ana pencere (MainWindow) PiP modundayken Topmost ise, 
-        // Overlay penceresi de Topmost kalmaya devam ETMELİDİR. 
-        // Aksi takdirde inaktifken ilk tıklama boşa gider.
-        if (_overlayWindow != null && _rootWindow != null && !_rootWindow.Topmost)
+        if (_overlayWindow != null)
         {
             _overlayWindow.Topmost = false; 
         }
@@ -281,10 +279,11 @@ public class MemoryVideoView : NativeControlHost
     {
         if (_overlayWindow == null) return;
         
-        // Değişiklik: _overlayWindow.Hide() KODUNU KALDIRDIK.
-        // Pencere boyutlanırken overlay'i gizlemek yerine pozisyonunu senkronize olarak güncelliyoruz.
-        UpdateOverlayPosition();
+        // Hide overlay to avoid "laggy follower" effect
+        if (_overlayWindow.IsVisible) 
+            _overlayWindow.Hide();
             
+        // Restart timer
         _debounceTimer?.Stop();
         _debounceTimer?.Start();
     }
@@ -293,11 +292,8 @@ public class MemoryVideoView : NativeControlHost
     {
         _debounceTimer?.Stop();
         
-        // İsteğe bağlı ekstra güvenlik: Hareket bittiğinde görünürlüğü kesinleştir.
-        if (this.IsEffectivelyVisible && _overlayWindow != null && !_overlayWindow.IsVisible)
-        {
-             UpdateOverlayState(true);
-        }
+        // Window movement finished, reshow overlay or hide it if effectively hidden
+        UpdateOverlayState(this.IsEffectivelyVisible);
     }
 
     private void UpdateOverlayState(bool visible)

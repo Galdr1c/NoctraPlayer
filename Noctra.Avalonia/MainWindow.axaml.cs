@@ -45,6 +45,8 @@ public partial class MainWindow : Window
         PlayerOverlayLayer.DataContext = _playerViewModel;
         OverlayControl.DataContext = _playerViewModel;
         NextEpisodePrompt.DataContext = _playerViewModel;
+        PiPCentralControls.DataContext = _playerViewModel;
+        PiPBottomControls.DataContext = _playerViewModel;
         VideoSurface.MediaPlayer = _videoPlayerService.GetMediaPlayer();
         // MiniVideoSurface.MediaPlayer = null;
         AddHandler(KeyDownEvent, MainWindow_KeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
@@ -287,6 +289,10 @@ public partial class MainWindow : Window
                 {
                     _playerViewModel.ToggleFullScreenCommand.Execute(null);
                 }
+                else if (_isPiPMode)
+                {
+                    ClosePiP(true);
+                }
                 else
                 {
                     _playerViewModel.ClosePlayerCommand.Execute(null);
@@ -439,6 +445,8 @@ public partial class MainWindow : Window
         }
 
         // 6. PiP Kontrollerini ve Çerçeveyi göster
+        PiPCentralControls.IsVisible = true;
+        PiPBottomControls.IsVisible = true;
         PiPContainer.CornerRadius = new CornerRadius(0);
         PlayerOverlayLayer.IsVisible = false; // Tüm overlay katmanını gizle (pip'te sadece pip kontrolleri)
 
@@ -471,6 +479,8 @@ public partial class MainWindow : Window
         Grid.SetRowSpan(PlayerArea, 3);
 
         // 3. Görünürlüğü GÜVENLİ bir şekilde geri al (Layout bozulmasını önlemek için gecikmeli)
+        PiPCentralControls.IsVisible = false;
+        PiPBottomControls.IsVisible = false;
         PiPContainer.CornerRadius = new CornerRadius(0);
         
         // Dispatcher ile bir sonraki frame'e atarsak pencere boyutları tam oturmuş olur
@@ -561,6 +571,10 @@ public partial class MainWindow : Window
         // PiP modunda tüm yüzeyden sürükleme yap
         if (_isPiPMode)
         {
+            Activate();
+            Focus();
+            _playerViewModel.UserInteractionCommand.Execute(null);
+            
             if (e.ClickCount >= 2)
             {
                 ClosePiP(true);
@@ -569,7 +583,6 @@ public partial class MainWindow : Window
             {
                 BeginMoveDrag(e);
             }
-            e.Handled = true;
             return;
         }
 

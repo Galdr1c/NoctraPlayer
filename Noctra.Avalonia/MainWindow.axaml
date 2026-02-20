@@ -410,7 +410,6 @@
                               Spacing="40"
                               IsVisible="{Binding IsPiPControlsVisible}"
                               ZIndex="6000"
-                              DataContext="{Binding #OverlayControl.DataContext}"
                               x:DataType="vm:PlayerViewModel">
                       
                       <!-- VOD Skip Backward 10s -->

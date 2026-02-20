@@ -42,7 +42,6 @@ public class WindowResizeService
         _resizeStartBounds = new Rect(_window.Position.X, _window.Position.Y, _window.Width, _window.Height);
         
         e.Pointer.Capture(border);
-        e.Handled = true;
     }
 
     public void UpdateResize(PointerEventArgs e)
