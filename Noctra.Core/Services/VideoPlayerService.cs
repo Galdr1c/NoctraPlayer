@@ -9,8 +9,8 @@ namespace Noctra.Services;
 /// </summary>
 public class VideoPlayerService : IVideoPlayerService
 {
-    private const int NetworkCachingMs = 500;
-    private const int LiveCachingMs = 500;
+    private const int NetworkCachingMs = 3000;
+    private const int LiveCachingMs = 3000;
 
     private LibVLC? _libVLC;
     private MediaPlayer? _mediaPlayer;
@@ -179,12 +179,13 @@ public class VideoPlayerService : IVideoPlayerService
         try
         {
             if (_libVLC == null) return;
-            var media = new Media(_libVLC, new Uri(url));
-
+            var media = new Media(_libVLC, url, FromType.FromLocation);
             
             // Stream ayarları
             media.AddOption($":network-caching={NetworkCachingMs}");
             media.AddOption($":live-caching={LiveCachingMs}");
+            media.AddOption(":http-user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+            media.AddOption(":http-reconnect=true");
             
             _mediaPlayer.Media = media;
             
@@ -198,10 +199,14 @@ public class VideoPlayerService : IVideoPlayerService
             _mediaPlayer.EncounteredError += OnError;
             _mediaPlayer.Play();
             
-            // 5 saniye bekle - başarılı başladı mı?
+            // 5 saniye bekle - başarılı başladı mı? Veya hata verirse hemen kır
             try
             {
-                await Task.Delay(5000, cancellationToken);
+                for (int i = 0; i < 50; i++)
+                {
+                    if (errorOccurred) break;
+                    await Task.Delay(100, cancellationToken);
+                }
             }
             catch (TaskCanceledException)
             {
@@ -221,7 +226,7 @@ public class VideoPlayerService : IVideoPlayerService
                 _retryCount++;
                 try
                 {
-                    await Task.Delay(2000, cancellationToken); // 2 saniye bekle
+                    await Task.Delay(1500, cancellationToken); // 1.5 saniye bekle
                 }
                 catch (TaskCanceledException)
                 {
