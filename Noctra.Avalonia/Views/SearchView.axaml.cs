@@ -14,6 +14,7 @@ public partial class SearchView : UserControl
 
     private MainViewModel? ViewModel => DataContext as MainViewModel;
 
+    
     private async void Context_AddToMyList_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not MenuItem menuItem) return;

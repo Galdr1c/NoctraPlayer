@@ -47,7 +47,7 @@ public partial class HomeView : UserControl
         }
     }
 
-    // Shared Context menu handlers
+    
     private async void Context_AddToMyList_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not MenuItem menuItem) return;
@@ -91,12 +91,10 @@ public partial class HomeView : UserControl
             var parent = placementControl.Parent;
             while (parent != null)
             {
-                if (parent.DataContext is Channel || parent.DataContext is Series) return parent.DataContext;
+                if (parent is global::Avalonia.StyledElement styled && (styled.DataContext is Channel || styled.DataContext is Series)) return styled.DataContext;
                 parent = parent.Parent;
             }
         }
         return null;
     }
 }
-
-
