@@ -2,8 +2,10 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Noctra.Avalonia.Services;
 using Noctra.Avalonia.Views;
 using Noctra.Data;
@@ -68,10 +70,67 @@ public partial class App : Application
 
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
-                var profilesWindow = Services.GetRequiredService<ProfilesWindow>();
-                profilesWindow.DisableAutoSelect = true;
-                desktop.MainWindow = profilesWindow;
-                StartupDiagnostics.Log("ProfilesWindow resolved and assigned as startup window.");
+                // Show lightweight splash screen immediately
+                var splashWindow = new Views.SplashWindow();
+                desktop.MainWindow = splashWindow;
+
+                // Fire and forget warmup
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        StartupDiagnostics.Log("Background warmup started.");
+                        
+                        // 1. Warmup Settings (Lazy load trigger)
+                        var settingsService = Services.GetRequiredService<ISettingsService>();
+                        var _ = settingsService.Settings; 
+                        StartupDiagnostics.Log("Settings warmed up.");
+
+                        // 2. Warmup EF Core (Triggers first-time model compilation)
+                        using (var scope = Services.CreateScope())
+                        {
+                            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                            await db.Profiles.AnyAsync();
+                            StartupDiagnostics.Log("EF Core warmed up.");
+                        }
+
+                        // 3. Resolve MainWindow/ProfilesWindow early (Builds UI tree in background if possible, or sets up DI graph)
+                        // Note: Avalonia UI controls MUST be created on the UI thread. 
+                        // We will use Dispatcher.UIThread.InvokeAsync to create the window.
+                        var profilesWindow = await Dispatcher.UIThread.InvokeAsync(() => 
+                        {
+                            var win = Services.GetRequiredService<ProfilesWindow>();
+                            win.DisableAutoSelect = true;
+                            return win;
+                        });
+                        
+                        StartupDiagnostics.Log("ProfilesWindow resolved.");
+
+                        // Transition to Main Window
+                        await Dispatcher.UIThread.InvokeAsync(() =>
+                        {
+                            desktop.MainWindow = profilesWindow;
+                            profilesWindow.Show();
+                            splashWindow.Close();
+                            StartupDiagnostics.Log("Transitioned from Splash to ProfilesWindow.");
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        StartupDiagnostics.LogException("Startup warmup failed", ex);
+                        
+                        // Fallback: Just try to open the app anyway if warmup fails
+                        await Dispatcher.UIThread.InvokeAsync(() =>
+                        {
+                            var win = Services.GetRequiredService<ProfilesWindow>();
+                            win.DisableAutoSelect = true;
+                            desktop.MainWindow = win;
+                            win.Show();
+                            splashWindow.Close();
+                        });
+                    }
+                });
+
                 desktop.Exit += (_, _) =>
                 {
                     try
