@@ -10,7 +10,9 @@ using Noctra.Data;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
+using Noctra.Core.Services;
 using System.Globalization;
+
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -120,8 +122,10 @@ public partial class App : Application
         services.AddTransient<IMetadataService, MetadataService>();
         services.AddTransient<IXtreamCodesService, XtreamCodesService>();
         services.AddTransient<IStalkerPortalService, StalkerPortalService>();
+        services.AddTransient<ICacheService, CacheService>();
 
         services.AddScoped<IPlaylistService, PlaylistService>();
+
         services.AddScoped<IPlaylistOrganizerService, PlaylistOrganizerService>();
         services.AddScoped<IMediaService, MediaService>();
         services.AddScoped<IChannelService, ChannelService>();

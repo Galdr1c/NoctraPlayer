@@ -20,6 +20,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - **Kritik Bellek Sızıntısı (Memory Leak) Giderildi**: `SettingsWindow.axaml.cs` içerisinde `SettingsViewModel`'a yapılan anonim event aboneliği isimli metoda dönüştürüldü ve `OnClosed` aşamasında abonelik temizliği (Unsubscribe) eklendi.
     - **Kopya-Yapıştır Hataları Düzeltildi**: Oynatma sekmesindeki hatalı "Kişiselleştirme" başlığı "Oynatma & İndirme" olarak düzeltildi.
     - **XAML Temizliği ve Optimizasyon**: `SettingsWindow.axaml` içerisindeki redundan (gereksiz) `MaterialIcon` tanımları ve kullanılmayan `StreamGeometry` kaynakları projeden kaldırılarak dosya boyutu küçültüldü.
+    - **Dinamik Önbellek (Cache) Yönetimi**: Ayarlar ekranındaki "Önbellek boyutu" artık "234 MB" gibi sabit bir değer göstermek yerine; resim önbelleği (`image-cache`), geçici dosyalar (`TempPlayback`) ve logların gerçek boyutunu hesaplıyor. "Önbelleği Temizle" butonu artık tüm bu geçici verileri diskten gerçekten siliyor.
     - **Profil Yönetimi Mantığı Sadeleştirildi**: Profil seçme ekranına dönüş fonksiyonu daha güvenli ve temiz bir yapıya kavuşturuldu.
 - **UpsellWindow Temiz Kod (Clean Code) Uygulaması** (2026-02-20):
     - **Pencere Sürükleme Mantığı Modernize Edildi**: `UpsellWindow.axaml.cs` içindeki anonim lambda ile kurulan sürükleme (dragging) sistemi, daha "temiz" ve standartlara uygun olan `OnPointerPressed` override metoduna taşındı.
@@ -42,6 +43,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - **CancellationToken Desteği Eklendi (ISP)**: `IMetadataService`, `IMediaService` ve `IChannelService` gibi kritik asenkron servis metotlarına `CancellationToken` desteği eklendi. Bu sayede HTTP istekleri ve veritabanı işlemleri kullanıcı arayüzden ayrıldığında iptal edilebilir hale getirilerek kaynak yönetimi optimize edildi.
     - **Nullable Event Tanımları Fixlendi**: `ILicenseService.cs` (Interface) üzerindeki `SubscriptionChanged` event tanımındaki eksik `?` (nullable reference type) operatörü eklenerek uygulama genelindeki event standartlarıyla tutarlılık sağlandı.
     - **Arayüz Dokümantasyonu Geliştirildi**: `IMediaService`, `IDialogService` ve `IDispatcherService` arayüzleri, metot ve parametre açıklamalarını içeren standart XML dokümantasyon yorumlarıyla zenginleştirildi.
+- **Loglama ve Hata Takibi İyileştirmeleri (StartupDiagnostics)** (2026-02-20):
+    - **Startup Log Rotasyonu**: `startup.log` dosyasının kontrolsüz büyümesini engellemek için 1MB sınırı eklendi. Dosya bu sınırı aştığında otomatik olarak son 500KB'ı tutacak ve satır bütünlüğünü koruyacak (newline preservation) şekilde kırpılıyor.
+    - **Akıllı Dosya Yolu Çözümleme**: Log dizinine erişilemediği durumlarda (permission/path errors) otomatik olarak `TempPath` dizinine düşen (fallback) hata-toleranslı dosya yolu sistemi eklendi.
+    - **Gereksiz Log Temizliği**: Artık kullanılmayan `mobile_startup_trace.log` ve `mobile_crash.log` gibi eski log dosyaları projeden temizlendi.
+    - **Resim Yükleme İptalleri**: `RemoteImage` bileşeninde sayfa geçişleri sırasında oluşan `TaskCanceledException` hataları artık "hata" olarak değil, normal bir "iptal" işlemi olarak loglanıyor (Gürültü azaltıldı).
     - **Indirme Boyutu Formatlama Optimizasyonu**: `DownloadItem.cs` içerisindeki `FormatBytes` metodu, her çağrıda yeni bir string dizisi oluşturmak yerine `static readonly` bir dizi kullanacak şekilde optimize edildi. Bu sayede hızlı güncellenen indirme süreçlerinde Garbage Collector üzerindeki baskı azaltıldı.
     - **Model Nitelikleri Refaktör Edildi**: `Channel.cs` ve `Series.cs` sınıflarında kullanılan gereksiz uzun `[NotMapped]` nitelik yolları, `using` bildirimleri kullanılarak sadeleştirildi.
     - **Global UTC Zaman Standartı**: Uygulama genelinde (Models, ViewModels, Services) tüm veritabanı zaman damgaları ve abonelik/deneme süresi hesaplamaları `DateTime.UtcNow` standardına taşındı. Bu sayede zaman dilimi uyumsuzlukları ve yerel saat manipülasyonu kaynaklı riskler minimize edildi.
@@ -52,6 +58,8 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
         - Otomatik ülke tespiti eşik değeri yükseltildi (%10/5 kanal → %20/20 kanal) — az sayıda kanal için gereksiz yere büyük EPG dosyalarının (140MB+) indirilmesi engellendi.
         - EPG indirme zaman aşımı süresi büyük dosyalar için 5 dakikadan 10 dakikaya çıkarıldı.
     - **EPG Zaman Dilimi Uyumluluğu Teyidi**: EPG programlarının veritabanına her zaman UTC formatında kaydedildiği (`EpgService` üzerinden) ve `EpgProgram` sınıfındaki aktiflik/ilerleme hesaplamalarının `UtcNow` ile %100 uyumlu çalıştığı doğrulanmıştır.
+- **Veri Temizliği ve Bakım** (2026-02-20):
+    - **Eski Veritabanı Kalıntısı Temizlendi**: Uygulama klasöründe (LocalApplicationData) kalan ve kullanılmayan `noctra_avalonia_v1.db` (24MB) dosyası silinerek disk alanı kazanıldı.
 - **Bellek Yönetimi ve Sızıntı Giderilmesi (Memory Leak Prevention)** (2026-02-20):
     - **GlobalSettingsViewModel Event Leak Çözüldü**: `GlobalSettingsViewModel` sınıfına `IDisposable` arayüzü eklendi. `SettingsChanged` ve `PropertyChanged` event abonelikleri `Dispose()` metodu içerisinde temizlenerek, Ayarlar sayfası her açıldığında bellekte yeni nesnelerin birikmesi ve sızıntı yapması (Ghost Object Leak) engellendi.
 

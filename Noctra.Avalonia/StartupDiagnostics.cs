@@ -20,6 +20,7 @@ internal static class StartupDiagnostics
             }
 
             _logFilePath = ResolveLogPath();
+            RotateLogIfNeeded();
 
             AppDomain.CurrentDomain.UnhandledException += (_, e) =>
             {
@@ -40,6 +41,40 @@ internal static class StartupDiagnostics
 
             _initialized = true;
             Log("Startup diagnostics initialized.");
+        }
+    }
+
+    /// <summary>
+    /// Log dosyası 1MB'ı aşarsa son 500KB'ı tutar, geri kalanını siler.
+    /// </summary>
+    private static void RotateLogIfNeeded()
+    {
+        try
+        {
+            const long maxSizeBytes = 1 * 1024 * 1024; // 1 MB
+            const long keepBytes = 500 * 1024;          // 500 KB
+
+            if (!File.Exists(_logFilePath)) return;
+
+            var fileInfo = new FileInfo(_logFilePath);
+            if (fileInfo.Length <= maxSizeBytes) return;
+
+            // Read only the last keepBytes
+            var allBytes = File.ReadAllBytes(_logFilePath);
+            var tail = allBytes.AsSpan((int)(allBytes.Length - keepBytes));
+            
+            // Find the first newline in the tail to avoid partial lines
+            var newlineIndex = tail.IndexOf((byte)'\n');
+            if (newlineIndex >= 0 && newlineIndex < tail.Length - 1)
+            {
+                tail = tail[(newlineIndex + 1)..];
+            }
+
+            File.WriteAllBytes(_logFilePath, tail.ToArray());
+        }
+        catch
+        {
+            // Log rotation should never crash startup
         }
     }
 

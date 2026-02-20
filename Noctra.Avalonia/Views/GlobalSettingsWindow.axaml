@@ -418,10 +418,11 @@
                                 </StackPanel>
 
                                 <TextBlock Grid.Column="1"
-                                          Text="234 MB"
-                                          FontSize="16"
-                                          Foreground="{DynamicResource TextMutedBrush}"
-                                          VerticalAlignment="Center"/>
+                                           Text="{Binding CacheSizeString}"
+                                           FontSize="16"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           VerticalAlignment="Center"/>
+
                             </Grid>
 
                             <!-- Clear cache button -->

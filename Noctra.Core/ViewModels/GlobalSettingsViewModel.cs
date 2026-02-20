@@ -2,7 +2,9 @@
 using CommunityToolkit.Mvvm.Input;
 using Noctra.Services.Interfaces;
 using Noctra.Services;
+using Noctra.Core.Services;
 using System;
+
 using System.ComponentModel;
 using System.Threading.Tasks;
 
@@ -13,6 +15,10 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     private readonly IThemeService _themeService;
     private readonly IDialogService _dialogService;
     private readonly ISettingsService _settingsService;
+    private readonly ICacheService _cacheService;
+
+    [ObservableProperty]
+    private string _cacheSizeString = "0 B";
 
     private GlobalSettings _settings = new();
     public GlobalSettings Settings
@@ -34,15 +40,23 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     public GlobalSettingsViewModel(
         IThemeService themeService,
         IDialogService dialogService,
-        ISettingsService settingsService)
+        ISettingsService settingsService,
+        ICacheService cacheService)
     {
         _themeService = themeService;
         _dialogService = dialogService;
         _settingsService = settingsService;
+        _cacheService = cacheService;
         
         _settingsService.SettingsChanged += OnSettingsService_Changed;
         
         LoadSettings();
+        _ = UpdateCacheSizeAsync();
+    }
+
+    private async Task UpdateCacheSizeAsync()
+    {
+        CacheSizeString = await _cacheService.GetCacheSizeStringAsync();
     }
 
     private void OnSettingsService_Changed()
@@ -87,8 +101,8 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         {
             try
             {
-                // Clear cache logic
-                await Task.Delay(500); // Simulate clearing
+                await _cacheService.ClearCacheAsync();
+                await UpdateCacheSizeAsync();
                 
                 await _dialogService.ShowMessageAsync(
                     "Başarılı",
