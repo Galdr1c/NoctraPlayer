@@ -115,10 +115,7 @@ public class AvaloniaImageCacheService
         {
             if (entry.Value.ExpiresAt <= now)
             {
-                if (_memoryCache.TryRemove(entry.Key, out var removed))
-                {
-                    removed.Image.Dispose();
-                }
+                _memoryCache.TryRemove(entry.Key, out _);
             }
         }
     }
@@ -129,9 +126,8 @@ public class AvaloniaImageCacheService
         _memoryCache.AddOrUpdate(
             url,
             _ => newEntry,
-            (_, existing) =>
+            (url, existing) =>
             {
-                existing.Image.Dispose();
                 return newEntry;
             });
     }

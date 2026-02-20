@@ -23,6 +23,8 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - **Profil Yönetimi Mantığı Sadeleştirildi**: Profil seçme ekranına dönüş fonksiyonu daha güvenli ve temiz bir yapıya kavuşturuldu.
 - **UpsellWindow Temiz Kod (Clean Code) Uygulaması** (2026-02-20):
     - **Pencere Sürükleme Mantığı Modernize Edildi**: `UpsellWindow.axaml.cs` içindeki anonim lambda ile kurulan sürükleme (dragging) sistemi, daha "temiz" ve standartlara uygun olan `OnPointerPressed` override metoduna taşındı.
+- **AvaloniaImageCacheService Kritik Çökme (Crash) Tespiti ve Çözümü** (2026-02-20):
+    - **Bellek Yönetimi Düzeltildi**: Resim önbelleğinde (cache) süresi dolan Bitmap nesnelerinin manuel olarak `Dispose()` edilmesi engellendi. Bu durumun, resim o sırada ekranda gösterilirken render motoruyla (UI Thread) çakışarak uygulamayı çökertme riski (Access Violation) ortadan kaldırıldı. Bellek yönetimi güvenli bir şekilde .NET Çöp Toplayıcısına (GC) bırakıldı.
 
 - **Picture-in-Picture (PiP) Architecture Modernizasyonu** (2026-02-19):
     - **Single-Window Mimarisi**: VLC (Direct3D11) motorunun Windows üzerinde HWND (pencere tutamacı) kilitlemesi nedeniyle oluşan siyah ekran ve çökme sorunlarını gidermek için tasarlanmıştır. PiP modu artık harici bir pencere açmak yerine, `MainWindow`'u minimal bir "Shell" haline getirerek mevcut HWND'yi korur.
