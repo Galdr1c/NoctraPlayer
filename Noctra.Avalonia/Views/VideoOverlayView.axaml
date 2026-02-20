@@ -220,6 +220,13 @@
                             <materialIcons:MaterialIcon Kind="Rewind" Width="24" Height="24" Foreground="White"/>
                         </Button>
 
+                        <Button x:Name="PlayPreviousLiveChannelBtn"
+                                Click="PlayPreviousLiveChannel_Click"
+                                Margin="0,0,32,0"
+                                IsVisible="{Binding IsLiveContent}">
+                            <materialIcons:MaterialIcon Kind="SkipPrevious" Width="24" Height="24" Foreground="White"/>
+                        </Button>
+
                         <Button Command="{Binding PlayPauseCommand}"
                                 Width="64" Height="64">
                             <Grid>
@@ -234,6 +241,13 @@
                                 Margin="32,0,0,0"
                                 IsVisible="{Binding !IsLiveContent}">
                             <materialIcons:MaterialIcon Kind="FastForward" Width="24" Height="24" Foreground="White"/>
+                        </Button>
+
+                        <Button x:Name="PlayNextLiveChannelBtn"
+                                Click="PlayNextLiveChannel_Click"
+                                Margin="32,0,0,0"
+                                IsVisible="{Binding IsLiveContent}">
+                            <materialIcons:MaterialIcon Kind="SkipNext" Width="24" Height="24" Foreground="White"/>
                         </Button>
                     </StackPanel>
 

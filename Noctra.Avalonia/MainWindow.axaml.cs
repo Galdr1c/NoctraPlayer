@@ -57,6 +57,8 @@ public partial class MainWindow : Window
         _playerViewModel.EpisodeRequested += PlayerViewModel_EpisodeRequested;
         _playerViewModel.EpisodeProgressUpdated += PlayerViewModel_EpisodeProgressUpdated;
         _playerViewModel.NextEpisodeRequested += PlayerViewModel_NextEpisodeRequested;
+        _playerViewModel.NextLiveChannelRequested += PlayerViewModel_NextLiveChannelRequested;
+        _playerViewModel.PreviousLiveChannelRequested += PlayerViewModel_PreviousLiveChannelRequested;
         _playerViewModel.PiPRequested += PlayerViewModel_PiPRequested;
     }
 
@@ -70,7 +72,8 @@ public partial class MainWindow : Window
         _playerViewModel.EpisodeRequested -= PlayerViewModel_EpisodeRequested;
         _playerViewModel.EpisodeProgressUpdated -= PlayerViewModel_EpisodeProgressUpdated;
         _playerViewModel.NextEpisodeRequested -= PlayerViewModel_NextEpisodeRequested;
-        _playerViewModel.NextEpisodeRequested -= PlayerViewModel_NextEpisodeRequested;
+        _playerViewModel.NextLiveChannelRequested -= PlayerViewModel_NextLiveChannelRequested;
+        _playerViewModel.PreviousLiveChannelRequested -= PlayerViewModel_PreviousLiveChannelRequested;
         _playerViewModel.PiPRequested -= PlayerViewModel_PiPRequested;
         // VideoSurface.MediaPlayer = null; // Handled in ClosePiP or let it be cleared
         ClosePiP(false); 
@@ -178,6 +181,16 @@ public partial class MainWindow : Window
     private void PlayerViewModel_EpisodeProgressUpdated(object? sender, Episode episode)
     {
         _mainViewModel.SyncEpisodeProgress(episode);
+    }
+
+    private void PlayerViewModel_NextLiveChannelRequested(object? sender, EventArgs e)
+    {
+        _mainViewModel.PlayNextLiveChannelCommand.Execute(null);
+    }
+
+    private void PlayerViewModel_PreviousLiveChannelRequested(object? sender, EventArgs e)
+    {
+        _mainViewModel.PlayPreviousLiveChannelCommand.Execute(null);
     }
 
     private void MainViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -477,6 +490,26 @@ public partial class MainWindow : Window
         if (!returnToMain)
         {
             _playerViewModel.ClosePlayerCommand.Execute(null);
+        }
+    }
+
+    private void PlayPreviousLiveChannelPiP_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_playerViewModel != null && _playerViewModel.IsLiveContent)
+        {
+            _playerViewModel.PlayPreviousLiveChannelCommand.Execute(null);
+            _playerViewModel.UserInteractionCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
+    private void PlayNextLiveChannelPiP_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_playerViewModel != null && _playerViewModel.IsLiveContent)
+        {
+            _playerViewModel.PlayNextLiveChannelCommand.Execute(null);
+            _playerViewModel.UserInteractionCommand.Execute(null);
+            e.Handled = true;
         }
     }
 

@@ -145,6 +145,8 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _newPlaylistUrl = string.Empty;
 
+    private List<Channel>? _livePlaybackContext;
+
     public WatermarkViewModel WatermarkViewModel { get; }
 
     public IReadOnlyList<KeyValuePair<ChannelSortOrder, string>> SortOptions { get; } = new List<KeyValuePair<ChannelSortOrder, string>>
@@ -1252,6 +1254,44 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void PlayNextLiveChannel()
+    {
+        if (_livePlaybackContext == null || _livePlaybackContext.Count == 0 || SelectedChannel == null)
+        {
+            return;
+        }
+
+        var currentIndex = _livePlaybackContext.FindIndex(c => c.Id == SelectedChannel.Id);
+        if (currentIndex == -1) 
+        {
+            return;
+        }
+
+        var nextIndex = (currentIndex + 1) % _livePlaybackContext.Count;
+        SelectChannel(_livePlaybackContext[nextIndex]);
+    }
+
+    [RelayCommand]
+    private void PlayPreviousLiveChannel()
+    {
+        if (_livePlaybackContext == null || _livePlaybackContext.Count == 0 || SelectedChannel == null)
+        {
+            return;
+        }
+
+        var currentIndex = _livePlaybackContext.FindIndex(c => c.Id == SelectedChannel.Id);
+        if (currentIndex == -1)
+        {
+            return;
+        }
+
+        var prevIndex = currentIndex - 1;
+        if (prevIndex < 0) prevIndex = _livePlaybackContext.Count - 1;
+
+        SelectChannel(_livePlaybackContext[prevIndex]);
+    }
+
+    [RelayCommand]
     private void SelectChannel(Channel channel)
     {
         using var scope = _scopeFactory.CreateScope();
@@ -1266,6 +1306,30 @@ public partial class MainViewModel : ObservableObject
             CurrentEpisodePlaybackContext = null;
             NextEpisodePlaybackContext = null;
             CurrentSeriesPlaybackContext = null;
+            
+            if (channel.Type == ChannelType.Live)
+            {
+                // Is this channel in our currently displayed FilteredChannels?
+                if (ActiveView == AppView.Live && FilteredChannels.Any(c => c.Id == channel.Id))
+                {
+                    _livePlaybackContext = FilteredChannels.ToList();
+                }
+                else
+                {
+                    var groupChannels = Channels.Where(c => c.GroupTitle == channel.GroupTitle && c.Type == ChannelType.Live);
+                    _livePlaybackContext = SelectedSortOrder switch
+                    {
+                        ChannelSortOrder.NameAsc => groupChannels.OrderBy(c => c.Name).ToList(),
+                        ChannelSortOrder.NameDesc => groupChannels.OrderByDescending(c => c.Name).ToList(),
+                        ChannelSortOrder.OldestFirst => groupChannels.OrderBy(c => c.Id).ToList(),
+                        _ => groupChannels.OrderByDescending(c => c.Id).ToList() // ChannelSortOrder.NewestFirst
+                    };
+                }
+            }
+            else
+            {
+                _livePlaybackContext = null;
+            }
         }
         
         SelectedChannel = channel;
@@ -3723,6 +3787,39 @@ public partial class MainViewModel : ObservableObject
                 CurrentEpisodePlaybackContext = null;
                 NextEpisodePlaybackContext = null;
                 CurrentSeriesPlaybackContext = null;
+                
+                if (channel.Type == ChannelType.Live)
+                {
+                    if (ActiveView == AppView.Live && FilteredChannels.Any(c => c.Id == channel.Id))
+                    {
+                        _livePlaybackContext = FilteredChannels.ToList();
+                    }
+                    else
+                    {
+                        var groupChannels = Channels.Where(c => c.GroupTitle == channel.GroupTitle && c.Type == ChannelType.Live).ToList();
+                        
+                        if (groupChannels.Count == 0 && channel.PlaylistId > 0)
+                        {
+                            using var scope = _scopeFactory.CreateScope();
+                            var db = scope.ServiceProvider.GetRequiredService<Data.AppDbContext>();
+                            groupChannels = await db.Channels
+                                .Where(c => c.PlaylistId == channel.PlaylistId && c.Type == ChannelType.Live && c.GroupTitle == channel.GroupTitle)
+                                .ToListAsync();
+                        }
+
+                        _livePlaybackContext = SelectedSortOrder switch
+                        {
+                            ChannelSortOrder.NameAsc => groupChannels.OrderBy(c => c.Name).ToList(),
+                            ChannelSortOrder.NameDesc => groupChannels.OrderByDescending(c => c.Name).ToList(),
+                            ChannelSortOrder.OldestFirst => groupChannels.OrderBy(c => c.Id).ToList(),
+                            _ => groupChannels.OrderByDescending(c => c.Id).ToList()
+                        };
+                    }
+                }
+                else
+                {
+                    _livePlaybackContext = null;
+                }
             }
 
             SelectedChannel = channel;

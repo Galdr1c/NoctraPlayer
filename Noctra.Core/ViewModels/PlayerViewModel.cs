@@ -2294,6 +2294,20 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     }
 
     public event EventHandler? CloseRequested;
+    public event EventHandler? NextLiveChannelRequested;
+    public event EventHandler? PreviousLiveChannelRequested;
+
+    [RelayCommand]
+    private void PlayNextLiveChannel()
+    {
+        NextLiveChannelRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    [RelayCommand]
+    private void PlayPreviousLiveChannel()
+    {
+        PreviousLiveChannelRequested?.Invoke(this, EventArgs.Empty);
+    }
 
     [RelayCommand]
     private void UserInteraction() => RestartAutoHideTimer();

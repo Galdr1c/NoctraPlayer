@@ -413,12 +413,23 @@
                               DataContext="{Binding #OverlayControl.DataContext}"
                               x:DataType="vm:PlayerViewModel">
                       
-                      <!-- Skip Backward 10s -->
+                      <!-- VOD Skip Backward 10s -->
                       <Button Command="{Binding SkipBackwardCommand}" CommandParameter="10"
                               Width="48" Height="48"
+                              IsVisible="{Binding !IsLiveContent}"
                               Background="Transparent" BorderThickness="0"
                               Classes="pipButton" ToolTip.Tip="10 sn Geri">
                           <materialIcons:MaterialIcon Kind="Rewind" Width="36" Height="36" Foreground="White" Opacity="0.9"/>
+                      </Button>
+
+                      <!-- Live TV Previous Channel -->
+                      <Button x:Name="PlayPreviousLiveChannelPiPBtn"
+                              Click="PlayPreviousLiveChannelPiP_Click"
+                              Width="48" Height="48"
+                              IsVisible="{Binding IsLiveContent}"
+                              Background="Transparent" BorderThickness="0"
+                              Classes="pipButton" ToolTip.Tip="Önceki Kanal">
+                          <materialIcons:MaterialIcon Kind="SkipPrevious" Width="36" Height="36" Foreground="White" Opacity="0.9"/>
                       </Button>
 
                       <!-- Play/Pause (Large Center) -->
@@ -436,12 +447,23 @@
                           </Grid>
                       </Button>
 
-                      <!-- Skip Forward 10s -->
+                      <!-- VOD Skip Forward 10s -->
                       <Button Command="{Binding SkipForwardCommand}" CommandParameter="10"
                               Width="48" Height="48"
+                              IsVisible="{Binding !IsLiveContent}"
                               Background="Transparent" BorderThickness="0"
                               Classes="pipButton" ToolTip.Tip="10 sn İleri">
                           <materialIcons:MaterialIcon Kind="FastForward" Width="36" Height="36" Foreground="White" Opacity="0.9"/>
+                      </Button>
+
+                      <!-- Live TV Next Channel -->
+                      <Button x:Name="PlayNextLiveChannelPiPBtn"
+                              Click="PlayNextLiveChannelPiP_Click"
+                              Width="48" Height="48"
+                              IsVisible="{Binding IsLiveContent}"
+                              Background="Transparent" BorderThickness="0"
+                              Classes="pipButton" ToolTip.Tip="Sonraki Kanal">
+                          <materialIcons:MaterialIcon Kind="SkipNext" Width="36" Height="36" Foreground="White" Opacity="0.9"/>
                       </Button>
                   </StackPanel>
 

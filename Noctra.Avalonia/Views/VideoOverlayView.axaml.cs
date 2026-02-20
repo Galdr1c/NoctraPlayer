@@ -200,11 +200,21 @@ public partial class VideoOverlayView : UserControl
                     _playerViewModel.SkipBackwardCommand.Execute(10);
                     e.Handled = true;
                 }
+                else
+                {
+                    _playerViewModel.PlayPreviousLiveChannelCommand.Execute(null);
+                    e.Handled = true;
+                }
                 break;
             case Key.Right:
                 if (!_playerViewModel.IsLiveContent)
                 {
                     _playerViewModel.SkipForwardCommand.Execute(10);
+                    e.Handled = true;
+                }
+                else
+                {
+                    _playerViewModel.PlayNextLiveChannelCommand.Execute(null);
                     e.Handled = true;
                 }
                 break;
@@ -325,6 +335,26 @@ public partial class VideoOverlayView : UserControl
         if (topLevel != null)
         {
             topLevel.Cursor = cursor;
+        }
+    }
+
+    private void PlayPreviousLiveChannel_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_playerViewModel != null && _playerViewModel.IsLiveContent)
+        {
+            _playerViewModel.PlayPreviousLiveChannelCommand.Execute(null);
+            _playerViewModel.UserInteractionCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
+    private void PlayNextLiveChannel_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_playerViewModel != null && _playerViewModel.IsLiveContent)
+        {
+            _playerViewModel.PlayNextLiveChannelCommand.Execute(null);
+            _playerViewModel.UserInteractionCommand.Execute(null);
+            e.Handled = true;
         }
     }
 }

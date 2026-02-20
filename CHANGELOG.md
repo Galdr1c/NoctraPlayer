@@ -8,6 +8,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### Added
+- **Canlı TV Kanal Navigasyonu**: Canlı TV yayınları için oynatıcı arayüzüne (overlay ve PiP) özel "Önceki Kanal" ve "Sonraki Kanal" butonları eklendi. (VOD ve Dizilerdeki 10 saniye atlama butonlarının yerini alır.)
+  - **Dinamik Bağlam Çözümlemesi**: İzlenen kanal Geçmiş veya Arama ekranından başlatılmış olsa bile, sıradaki kanalın sıfırdan veritabanı (`AppDbContext`) üzerinden sorgulanıp oynatım listesine dahil edilmesini sağlayan veritabanı fallback sistemi eklendi. Gruptaki kanallar her koşulda sıralı şekilde atlatılabilir.
+  - **PiP Etkileşimi**: Saydam köşe sorunlarını aşmak ve Avalonia'nın tıklama yutma hatalarını engellemek için PiP ekranındaki kanal geçiş butonları native `Click` event'leri ile C# arka planına bağlandı.
 - **MainWindow Mimari Optimizasyonu (Refactoring)** (2026-02-20):
     - **Bileşen Odaklı Yapı (Component-Based)**: `MainWindow.axaml` içerisinde bulunan tüm ana görünümler (`HomeView`, `LiveView`, `MoviesView`, `SeriesView`, `MyListView`, `DownloadsView`, `HistoryView`, `FavoritesView`, `SearchView`) kendi bağımsız `UserControl` (.axaml ve .cs) dosyalarına ayrıldı.
     - **Performans ve Bakım Kolaylığı**: Ana pencere kodu (XAML ve C#) büyük ölçüde sadeleştirildi. Görüntüleme mantığı, kaydırma efektleri (Parallax) ve sayfalama algoritmaları yalnızca ilgili görünümler belleğe yüklendiğinde ve kendi içlerinde çalışacak şekilde izole edildi.
