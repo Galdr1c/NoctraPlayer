@@ -48,7 +48,9 @@ public partial class MainWindow : Window
         PiPCentralControls.DataContext = _playerViewModel;
         PiPBottomControls.DataContext = _playerViewModel;
         VideoSurface.MediaPlayer = _videoPlayerService.GetMediaPlayer();
+        _videoPlayerService.MediaPlayerReady += VideoPlayerService_MediaPlayerReady;
         // MiniVideoSurface.MediaPlayer = null;
+
         AddHandler(KeyDownEvent, MainWindow_KeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
         Closed += OnClosed;
         _mainViewModel.OnMediaSelected += MainViewModel_OnMediaSelected;
@@ -77,16 +79,25 @@ public partial class MainWindow : Window
         _playerViewModel.NextLiveChannelRequested -= PlayerViewModel_NextLiveChannelRequested;
         _playerViewModel.PreviousLiveChannelRequested -= PlayerViewModel_PreviousLiveChannelRequested;
         _playerViewModel.PiPRequested -= PlayerViewModel_PiPRequested;
+        _videoPlayerService.MediaPlayerReady -= VideoPlayerService_MediaPlayerReady;
+        
         // VideoSurface.MediaPlayer = null; // Handled in ClosePiP or let it be cleared
         ClosePiP(false); 
         VideoSurface.MediaPlayer = null;
         // _pipWindow?.ClosePiP(); // Removed old method call
+
         _imageWarmupCts?.Cancel();
         _imageWarmupCts?.Dispose();
         _imageWarmupCts = null;
     }
 
+    private void VideoPlayerService_MediaPlayerReady(object? sender, LibVLCSharp.Shared.MediaPlayer? mp)
+    {
+        VideoSurface.MediaPlayer = mp;
+    }
+
     // === Window Chrome ===
+
     private void HeaderBar_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         BeginMoveDrag(e);

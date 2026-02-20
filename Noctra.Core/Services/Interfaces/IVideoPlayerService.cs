@@ -94,9 +94,15 @@ public interface IVideoPlayerService : IDisposable
     event EventHandler<double>? PositionChanged;
 
     /// <summary>
+    /// Medya oynatıcı asenkron olarak başlatıldığında (hazır olduğunda) tetiklenir
+    /// </summary>
+    event EventHandler<LibVLCSharp.Shared.MediaPlayer?>? MediaPlayerReady;
+
+    /// <summary>
     /// Medya doğal olarak sona ulaştığında
     /// </summary>
     event EventHandler? PlaybackEnded;
+
     
     /// <summary>
     /// LibVLC MediaPlayer nesnesini döner (Sadece UI/VideoView bağlama için)

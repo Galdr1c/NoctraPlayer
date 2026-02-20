@@ -12,7 +12,7 @@ public class VideoPlayerService : IVideoPlayerService
     private const int NetworkCachingMs = 500;
     private const int LiveCachingMs = 500;
 
-    private readonly LibVLC _libVLC;
+    private LibVLC? _libVLC;
     private MediaPlayer? _mediaPlayer;
     private readonly IDispatcherService _dispatcherService;
     private bool _disposed;
@@ -23,8 +23,12 @@ public class VideoPlayerService : IVideoPlayerService
     private CancellationTokenSource? _qualityMonitorCts;
     private CancellationTokenSource? _playCts;
     private long _playGeneration;
+    private readonly SemaphoreSlim _initLock = new(1, 1);
+    private bool _isInitialized;
 
+    public event EventHandler<MediaPlayer?>? MediaPlayerReady;
     public event EventHandler<bool>? PlayingChanged;
+
     public event EventHandler<double>? PositionChanged;
     public event EventHandler? PlaybackEnded;
     public event EventHandler<string>? ErrorOccurred;
@@ -37,32 +41,52 @@ public class VideoPlayerService : IVideoPlayerService
     {
         _dispatcherService = dispatcherService;
         
-        // Full options for NativeControlHost (HWND) rendering
-        var options = new string[]
+        // Start initialization in the background so we don't block the UI thread
+        _ = InitializeAsync();
+    }
+
+    private async Task InitializeAsync()
+    {
+        await _initLock.WaitAsync();
+        try
         {
-            // Hardware Acceleration + Direct3D11 for HWND rendering
-            "--avcodec-hw=dxva2",
-            "--vout=direct3d11",
+            if (_isInitialized) return;
+
+            await Task.Run(() => 
+            {
+                LibVLCSharp.Shared.Core.Initialize();
+                
+                var options = new string[]
+                {
+                    "--avcodec-hw=dxva2",
+                    "--vout=direct3d11",
+                    $"--network-caching={NetworkCachingMs}",
+                    $"--live-caching={LiveCachingMs}",
+                    "--file-caching=1000",
+                    "--rtsp-tcp",
+                    "--drop-late-frames",
+                    "--skip-frames",
+                    "--verbose=0",
+                    "--quiet"
+                };
+                
+                _libVLC = new LibVLC(options);
+                _mediaPlayer = new MediaPlayer(_libVLC);
+            });
+
+            SetupEventHandlers();
+            _isInitialized = true;
             
-            // Network
-            $"--network-caching={NetworkCachingMs}",
-            $"--live-caching={LiveCachingMs}",
-            "--file-caching=1000",
-            "--rtsp-tcp",
-            
-            // Performance
-            "--drop-late-frames",
-            "--skip-frames",
-            
-            // Logging
-            "--verbose=0",
-            "--quiet"
-        };
-        
-        _libVLC = new LibVLC(options);
-        _mediaPlayer = new MediaPlayer(_libVLC);
-        
-        SetupEventHandlers();
+            _dispatcherService.BeginInvoke(() => MediaPlayerReady?.Invoke(this, _mediaPlayer));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[VideoPlayerService] VLC Init failed: {ex.Message}");
+        }
+        finally
+        {
+            _initLock.Release();
+        }
     }
 
     private void SetupEventHandlers()
@@ -113,11 +137,17 @@ public class VideoPlayerService : IVideoPlayerService
         CurrentUrl = url;
         System.Diagnostics.Debug.WriteLine($"[VideoPlayerService] PlayAsync called with URL: {url}");
         
+        if (!_isInitialized)
+        {
+            await InitializeAsync();
+        }
+
         if (_mediaPlayer == null)
         {
             System.Diagnostics.Debug.WriteLine("[VideoPlayerService] ERROR: _mediaPlayer is null!");
             return;
         }
+
         
         _retryCount = 0;
         var generation = Interlocked.Increment(ref _playGeneration);
@@ -148,7 +178,9 @@ public class VideoPlayerService : IVideoPlayerService
 
         try
         {
+            if (_libVLC == null) return;
             var media = new Media(_libVLC, new Uri(url));
+
             
             // Stream ayarları
             media.AddOption($":network-caching={NetworkCachingMs}");
@@ -537,7 +569,7 @@ public class VideoPlayerService : IVideoPlayerService
         StopQualityMonitoring();
         _mediaPlayer?.Stop();
         _mediaPlayer?.Dispose();
-        _libVLC.Dispose();
+        _libVLC?.Dispose();
         
         _disposed = true;
         GC.SuppressFinalize(this);
