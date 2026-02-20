@@ -64,64 +64,102 @@ public class EpgSourceResolver
     };
 
     /// <summary>
-    /// Verilen parametrelere göre EPG URL listesini öncelik sırasına göre döndürür
+    /// Verilen parametrelere göre EPG URL listesini öncelik sırasına ve country listesine göre döndürür.
+    /// Priority 0: Custom EPG
+    /// Priority 1: Provider EPG
+    /// Priority 2: M3U x-tvg-url
+    /// Priority 3: iptv-epg.org (ülkelere göre)
+    /// Priority 4: Global Fallback
     /// </summary>
-    /// <param name="countryCode">Tespit edilen ülke kodu (2 harf)</param>
-    /// <param name="providerEpgUrl">Provider'ın kendi EPG URL'i (Xtream/Stalker)</param>
-    /// <param name="m3uEpgUrl">M3U dosyasındaki x-tvg-url</param>
-    /// <returns>Öncelik sırasına göre EPG URL listesi</returns>
-    public List<EpgSource> ResolveEpgSources(string countryCode, string? providerEpgUrl = null, string? m3uEpgUrl = null)
+    public List<EpgSource> ResolveEpgSources(List<string> countryCodes, string? providerEpgUrl = null, string? m3uEpgUrl = null, string? customEpgUrl = null, bool hasUsableTvgIds = false)
     {
         var sources = new List<EpgSource>();
+
+        // 0. Kullanıcının özel EPG URL'i (ayarlardan — EN YÜKSEK ÖNCELİK)
+        if (!string.IsNullOrWhiteSpace(customEpgUrl))
+        {
+            sources.Add(new EpgSource
+            {
+                Url = customEpgUrl,
+                Priority = 0,
+                Type = EpgSourceType.CustomUrl,
+                IsPrimary = hasUsableTvgIds
+            });
+        }
 
         // 1. Provider EPG (en güvenilir — aynı channel ID'leri kullanır)
         if (!string.IsNullOrWhiteSpace(providerEpgUrl))
         {
-            sources.Add(new EpgSource
+            if (!sources.Any(s => s.Url == providerEpgUrl))
             {
-                Url = providerEpgUrl,
-                Priority = 1,
-                Type = EpgSourceType.Provider,
-                IsPrimary = true // Provider ID'leri M3U TvgId ile eşleşir
-            });
+                sources.Add(new EpgSource
+                {
+                    Url = providerEpgUrl,
+                    Priority = 1,
+                    Type = EpgSourceType.Provider,
+                    IsPrimary = true // Provider ID'leri kanal TvgId veya Id ile eşleşir
+                });
+            }
         }
 
         // 2. M3U x-tvg-url
         if (!string.IsNullOrWhiteSpace(m3uEpgUrl))
         {
-            sources.Add(new EpgSource
+            if (!sources.Any(s => s.Url == m3uEpgUrl))
             {
-                Url = m3uEpgUrl,
-                Priority = 2,
-                Type = EpgSourceType.M3UHeader,
-                IsPrimary = sources.Count == 0 // Sadece provider yoksa primary
-            });
+                sources.Add(new EpgSource
+                {
+                    Url = m3uEpgUrl,
+                    Priority = 2,
+                    Type = EpgSourceType.M3UHeader,
+                    IsPrimary = string.IsNullOrEmpty(providerEpgUrl) // Sadece provider yoksa primary sayılır
+                });
+            }
         }
 
-        // 3. iptv-epg.orgg (ülke bazlı) — HER ZAMAN secondary (isim eşleştirmesi ile)
-        var code = countryCode.ToLowerInvariant();
-        sources.Add(new EpgSource
+        // 3. iptv-epg.org (country loops)
+        foreach (var countryCode in countryCodes)
         {
-            Url = string.Format(IptvEpgOrgTemplate, code),
-            Priority = 3,
-            Type = EpgSourceType.IptvEpgOrg,
-            IsPrimary = false, // ASLA primary değil — farklı channel ID'leri var
-            ClearBeforeLoad = sources.Count == 0 // Provider/M3U yoksa önce temizle
-        });
-
-        // 4. Global fallback (bilinen ülkelerin özel URL'leri yoksa)
-        if (!CountryEpgSources.ContainsKey(countryCode))
-        {
-            sources.Add(new EpgSource
+            var code = countryCode.ToLowerInvariant();
+            var countryUrl = string.Format(IptvEpgOrgTemplate, code);
+            
+            if (!sources.Any(s => s.Url == countryUrl))
             {
-                Url = GlobalFallbackUrl,
-                Priority = 4,
-                Type = EpgSourceType.GlobalFallback,
-                IsPrimary = false
-            });
+                sources.Add(new EpgSource
+                {
+                    Url = countryUrl,
+                    Priority = 3,
+                    Type = EpgSourceType.IptvEpgOrg,
+                    IsPrimary = false 
+                });
+            }
         }
 
-        return sources.OrderBy(s => s.Priority).ToList();
+        // 4. Global fallback (sadece eğer bilinen bir ülke listesinde yoksa vs. ama genelde ekleriz)
+        // Check if any of the provided countries are in our known dictionary, if not add fallback.
+        bool hasKnownCountry = countryCodes.Any(c => CountryEpgSources.ContainsKey(c));
+        if (!hasKnownCountry)
+        {
+            if (!sources.Any(s => s.Url == GlobalFallbackUrl))
+            {
+                sources.Add(new EpgSource
+                {
+                    Url = GlobalFallbackUrl,
+                    Priority = 4,
+                    Type = EpgSourceType.GlobalFallback,
+                    IsPrimary = false
+                });
+            }
+        }
+
+        // Sort by priority and set ClearBeforeLoad only for the very first item
+        var finalSources = sources.OrderBy(s => s.Priority).ToList();
+        for (int i = 0; i < finalSources.Count; i++)
+        {
+            finalSources[i].ClearBeforeLoad = (i == 0);
+        }
+
+        return finalSources;
     }
 
     /// <summary>

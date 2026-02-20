@@ -1726,7 +1726,7 @@ public partial class MainViewModel : ObservableObject
             var channelNames = channelsForMapping.Select(c => c.Name ?? "").ToList();
             // Detect top countries (limit to top 3 to avoid excessive downloads)
             var detectedCountries = languageDetection.DetectCountries(channelNames)
-                .Where(c => c.Percentage > 10 || c.ChannelCount > 5) // Min threshold
+                .Where(c => c.Percentage > 20 || c.ChannelCount > 20) // Min threshold — prevents downloading huge EPG files for marginal matches
                 .Take(3)
                 .ToList();
 
@@ -1736,73 +1736,18 @@ public partial class MainViewModel : ObservableObject
             _logger?.LogDebug($"[MainViewModel] Detected countries: {string.Join(", ", detectedCountries.Select(c => c.CountryCode))}");
 
             // 3. EPG kaynaklarını topla
-            var distinctSources = new List<Services.EpgSource>();
-            
-            // a) Provider Source (Primary) - Only once
-            if (!string.IsNullOrEmpty(providerEpgUrl))
-            {
-                distinctSources.Add(new Services.EpgSource 
-                { 
-                    Url = providerEpgUrl, 
-                    Priority = 1, 
-                    Type = Services.EpgSourceType.Provider,
-                    IsPrimary = true 
-                });
-            }
-
-            // b) Playlist'te saklanan / M3U başlığından gelen EPG URL'i
+            var countryCodes = detectedCountries.Select(c => c.CountryCode).ToList();
             var playlistEpgUrl = (SelectedPlaylist?.EpgUrl ?? string.Empty).Trim();
-            if (Uri.TryCreate(playlistEpgUrl, UriKind.Absolute, out _) &&
-                !distinctSources.Any(s => string.Equals(s.Url, playlistEpgUrl, StringComparison.OrdinalIgnoreCase)))
-            {
-                distinctSources.Add(new Services.EpgSource
-                {
-                    Url = playlistEpgUrl,
-                    Priority = 2,
-                    Type = Services.EpgSourceType.M3UHeader,
-                    IsPrimary = string.IsNullOrEmpty(providerEpgUrl)
-                });
-            }
-
-            // c) Country-specific sources (iptv-epg.org etc)
-            foreach (var (countryCode, _, _) in detectedCountries)
-            {
-                var countrySources = epgSourceResolver.ResolveEpgSources(countryCode);
-                foreach (var source in countrySources)
-                {
-                    // Skip if provider (already added) or if already in list
-                    if (source.Type == Services.EpgSourceType.Provider) continue;
-                    
-                    // Avoid duplicates based on URL
-                    if (!distinctSources.Any(s => s.Url == source.Url))
-                    {
-                        distinctSources.Add(source);
-                    }
-                }
-            }
-
-            // Sort by priority
-            var epgSources = distinctSources.OrderBy(s => s.Priority).ToList();
-
-            // Optional custom EPG URL from settings (highest priority when provided)
             var customEpgUrl = (_settingsService.Settings.CustomEpgUrl ?? string.Empty).Trim();
-            if (Uri.TryCreate(customEpgUrl, UriKind.Absolute, out _))
-            {
-                var hasUsableTvgIds = channelsForMapping.Any(c => !string.IsNullOrWhiteSpace(c.TvgId));
-                epgSources.Insert(0, new Services.EpgSource
-                {
-                    Url = customEpgUrl,
-                    Priority = 0,
-                    Type = Services.EpgSourceType.CustomUrl,
-                    IsPrimary = hasUsableTvgIds
-                });
-            }
-
-            // Ensure we only clear the DB once (at the start), not for every source
-            for (int i = 0; i < epgSources.Count; i++)
-            {
-                epgSources[i].ClearBeforeLoad = (i == 0);
-            }
+            
+            var hasUsableTvgIds = channelsForMapping.Any(c => !string.IsNullOrWhiteSpace(c.TvgId));
+            
+            var epgSources = epgSourceResolver.ResolveEpgSources(
+                countryCodes, 
+                providerEpgUrl, 
+                playlistEpgUrl, 
+                Uri.TryCreate(customEpgUrl, UriKind.Absolute, out _) ? customEpgUrl : null,
+                hasUsableTvgIds);
 
             if (!isBackgroundSync)
             {

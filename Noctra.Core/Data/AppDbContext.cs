@@ -86,8 +86,7 @@ public class AppDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.ChannelId).IsRequired();
             entity.Property(e => e.Title).IsRequired().HasMaxLength(255);
-            entity.HasIndex(e => e.ChannelId);
-            entity.HasIndex(e => new { e.StartTime, e.EndTime });
+            entity.HasIndex(e => new { e.ChannelId, e.StartTime, e.EndTime });
         });
 
         // ProviderAccount Configuration

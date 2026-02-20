@@ -44,8 +44,7 @@ public class EpgService : IEpgService
             LastError = null; // Clear previous error
             if (string.IsNullOrEmpty(epgUrl)) return;
 
-            // ... (rest of the logic) ...
-            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
             using var response = await NetworkRetry.ExecuteAsync(
                 () => _httpClient.GetAsync(epgUrl, HttpCompletionOption.ResponseHeadersRead, cts.Token),
                 cancellationToken: cts.Token).ConfigureAwait(false);

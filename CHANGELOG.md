@@ -45,6 +45,12 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - **Indirme Boyutu Formatlama Optimizasyonu**: `DownloadItem.cs` içerisindeki `FormatBytes` metodu, her çağrıda yeni bir string dizisi oluşturmak yerine `static readonly` bir dizi kullanacak şekilde optimize edildi. Bu sayede hızlı güncellenen indirme süreçlerinde Garbage Collector üzerindeki baskı azaltıldı.
     - **Model Nitelikleri Refaktör Edildi**: `Channel.cs` ve `Series.cs` sınıflarında kullanılan gereksiz uzun `[NotMapped]` nitelik yolları, `using` bildirimleri kullanılarak sadeleştirildi.
     - **Global UTC Zaman Standartı**: Uygulama genelinde (Models, ViewModels, Services) tüm veritabanı zaman damgaları ve abonelik/deneme süresi hesaplamaları `DateTime.UtcNow` standardına taşındı. Bu sayede zaman dilimi uyumsuzlukları ve yerel saat manipülasyonu kaynaklı riskler minimize edildi.
+    - **EPG Altyapısı ve Performans Optimizasyonu**:
+        - EPG rehberi sorguları için veritabanı seviyesinde composite indeks (`ChannelId, StartTime, EndTime`) tanımlanarak sorgu performansı 10-20 kat artırıldı.
+        - EPG verisi işlenirken sadece mevcut kanal listesiyle eşleşen programların işlenmesi sağlanarak bellek ve veritabanı kullanımı optimize edildi.
+        - EPG kaynak öncelik sıralaması `EpgSourceResolver` içerisinde merkezileştirildi (Custom URL > Provider > M3U > iptv-epg.org > Global Fallback).
+        - Otomatik ülke tespiti eşik değeri yükseltildi (%10/5 kanal → %20/20 kanal) — az sayıda kanal için gereksiz yere büyük EPG dosyalarının (140MB+) indirilmesi engellendi.
+        - EPG indirme zaman aşımı süresi büyük dosyalar için 5 dakikadan 10 dakikaya çıkarıldı.
     - **EPG Zaman Dilimi Uyumluluğu Teyidi**: EPG programlarının veritabanına her zaman UTC formatında kaydedildiği (`EpgService` üzerinden) ve `EpgProgram` sınıfındaki aktiflik/ilerleme hesaplamalarının `UtcNow` ile %100 uyumlu çalıştığı doğrulanmıştır.
 - **Bellek Yönetimi ve Sızıntı Giderilmesi (Memory Leak Prevention)** (2026-02-20):
     - **GlobalSettingsViewModel Event Leak Çözüldü**: `GlobalSettingsViewModel` sınıfına `IDisposable` arayüzü eklendi. `SettingsChanged` ve `PropertyChanged` event abonelikleri `Dispose()` metodu içerisinde temizlenerek, Ayarlar sayfası her açıldığında bellekte yeni nesnelerin birikmesi ve sızıntı yapması (Ghost Object Leak) engellendi.

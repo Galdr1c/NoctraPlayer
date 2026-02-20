@@ -149,7 +149,7 @@ public class PlaylistService : IPlaylistService
 
                     var channelNames = channelSnapshot.Select(c => c.Name ?? "").ToList();
                     var countryCandidates = _languageDetection.DetectCountries(channelNames)
-                        .Where(c => c.Percentage > 10 || c.ChannelCount > 5)
+                        .Where(c => c.Percentage > 20 || c.ChannelCount > 20)
                         .Select(c => c.CountryCode)
                         .Distinct(StringComparer.OrdinalIgnoreCase)
                         .Take(3)
@@ -161,14 +161,9 @@ public class PlaylistService : IPlaylistService
                     }
 
                     var detectedCountry = countryCandidates[0];
-                    var epgSources = countryCandidates
-                        .SelectMany(country => _epgSourceResolver.ResolveEpgSources(
-                            country,
-                            m3uEpgUrl: NormalizeEpgUrl(detectedEpgUrl)))
-                        .GroupBy(source => source.Url, StringComparer.OrdinalIgnoreCase)
-                        .Select(group => group.First())
-                        .OrderBy(source => source.Priority)
-                        .ToList();
+                    var epgSources = _epgSourceResolver.ResolveEpgSources(
+                        countryCandidates,
+                        m3uEpgUrl: NormalizeEpgUrl(detectedEpgUrl));
 
                     for (var i = 0; i < epgSources.Count; i++)
                     {
@@ -702,7 +697,7 @@ public class PlaylistService : IPlaylistService
         }
 
         foreach (var country in _languageDetection.DetectCountries(channelNames)
-            .Where(c => c.Percentage > 10 || c.ChannelCount > 5)
+            .Where(c => c.Percentage > 20 || c.ChannelCount > 20)
             .Select(c => c.CountryCode))
         {
             if (!countryCandidates.Contains(country, StringComparer.OrdinalIgnoreCase))
@@ -719,15 +714,9 @@ public class PlaylistService : IPlaylistService
         playlist.DetectedCountry = countryCandidates[0];
 
         // EPG kaynaklarını çöz (çoklu ülke + tekilleştirme)
-        var epgSources = countryCandidates
-            .Take(3)
-            .SelectMany(country => _epgSourceResolver.ResolveEpgSources(
-                country,
-                m3uEpgUrl: playlist.EpgUrl))
-            .GroupBy(source => source.Url, StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First())
-            .OrderBy(source => source.Priority)
-            .ToList();
+        var epgSources = _epgSourceResolver.ResolveEpgSources(
+            countryCandidates,
+            m3uEpgUrl: playlist.EpgUrl);
 
         for (var i = 0; i < epgSources.Count; i++)
         {
