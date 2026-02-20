@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace Noctra.Services;
 
@@ -16,9 +17,10 @@ public class XtreamCodesService : IXtreamCodesService
 
     private readonly HttpClient _httpClient;
     private static readonly ConcurrentDictionary<string, CachedAuthState> AuthCache = new(StringComparer.Ordinal);
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> AuthLocks = new(StringComparer.Ordinal);
     private static readonly TimeSpan SuccessAuthTtl = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan FailedAuthTtl = TimeSpan.FromSeconds(30);
+    private static DateTimeOffset _lastCleanup = DateTimeOffset.UtcNow;
+    private static readonly object CleanupLock = new();
 
     public XtreamCodesService(HttpClient httpClient)
     {
@@ -98,28 +100,65 @@ public class XtreamCodesService : IXtreamCodesService
         CancellationToken cancellationToken)
     {
         var cacheKey = BuildAuthCacheKey(normalizedBaseUrl, username, password);
-        if (AuthCache.TryGetValue(cacheKey, out var cached) && cached.ExpiresAt > DateTimeOffset.UtcNow)
+        
+        // Periyodik temizlik yap (her 30 dakikada bir)
+        if (DateTimeOffset.UtcNow - _lastCleanup > TimeSpan.FromMinutes(30))
         {
-            return cached.IsAuthenticated;
+            CleanupExpiredAuths();
         }
 
-        var authLock = AuthLocks.GetOrAdd(cacheKey, _ => new SemaphoreSlim(1, 1));
-        await authLock.WaitAsync(cancellationToken);
+        var state = AuthCache.GetOrAdd(cacheKey, _ => new CachedAuthState());
+
+        if (state.IsAuthenticated.HasValue && state.ExpiresAt > DateTimeOffset.UtcNow)
+        {
+            return state.IsAuthenticated.Value;
+        }
+
+        await state.Lock.WaitAsync(cancellationToken);
         try
         {
-            if (AuthCache.TryGetValue(cacheKey, out cached) && cached.ExpiresAt > DateTimeOffset.UtcNow)
+            if (state.IsAuthenticated.HasValue && state.ExpiresAt > DateTimeOffset.UtcNow)
             {
-                return cached.IsAuthenticated;
+                return state.IsAuthenticated.Value;
             }
 
             var authenticated = await AuthenticateAsync(normalizedBaseUrl, username, password, cancellationToken);
             var ttl = authenticated ? SuccessAuthTtl : FailedAuthTtl;
-            AuthCache[cacheKey] = new CachedAuthState(authenticated, DateTimeOffset.UtcNow.Add(ttl));
+            
+            state.IsAuthenticated = authenticated;
+            state.ExpiresAt = DateTimeOffset.UtcNow.Add(ttl);
+            
             return authenticated;
         }
         finally
         {
-            authLock.Release();
+            state.Lock.Release();
+        }
+    }
+
+    private static void CleanupExpiredAuths()
+    {
+        if (!Monitor.TryEnter(CleanupLock)) return;
+        try
+        {
+            var now = DateTimeOffset.UtcNow;
+            var expiredKeys = AuthCache
+                .Where(kvp => kvp.Value.IsAuthenticated.HasValue && kvp.Value.ExpiresAt < now)
+                .Select(kvp => kvp.Key)
+                .ToList();
+
+            foreach (var key in expiredKeys)
+            {
+                if (AuthCache.TryRemove(key, out var state))
+                {
+                    state.Lock.Dispose();
+                }
+            }
+            _lastCleanup = now;
+        }
+        finally
+        {
+            Monitor.Exit(CleanupLock);
         }
     }
 
@@ -611,6 +650,10 @@ public class XtreamCodesService : IXtreamCodesService
         }
     }
 
-    private readonly record struct CachedAuthState(bool IsAuthenticated, DateTimeOffset ExpiresAt);
+    private sealed class CachedAuthState
+    {
+        public bool? IsAuthenticated { get; set; }
+        public DateTimeOffset ExpiresAt { get; set; }
+        public SemaphoreSlim Lock { get; } = new(1, 1);
+    }
 }
-

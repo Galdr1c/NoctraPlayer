@@ -18,7 +18,7 @@ public class WatchHistoryService : IWatchHistoryService
         _context = context;
     }
 
-    public async Task TrackWatchAsync(int profileId, int? channelId, int? episodeId, TimeSpan position, bool completed = false, TimeSpan? duration = null)
+    public async Task TrackWatchAsync(int profileId, int? channelId, int? episodeId, TimeSpan position, bool completed = false, TimeSpan? duration = null, TimeSpan? incrementDelta = null)
     {
         if (!channelId.HasValue && !episodeId.HasValue)
         {
@@ -48,8 +48,8 @@ public class WatchHistoryService : IWatchHistoryService
         history.WatchedAt = watchedAt;
         history.Completed = isCompletedNow;
         
-        // Update total watched duration (approximate increment)
-        history.WatchedDuration += TimeSpan.FromSeconds(5);
+        // Update total watched duration using the provided delta
+        history.WatchedDuration += incrementDelta ?? TimeSpan.Zero;
 
         if (episodeId.HasValue)
         {
@@ -167,12 +167,9 @@ public class WatchHistoryService : IWatchHistoryService
 
     public async Task ClearHistoryAsync(int profileId)
     {
-        var history = await _context.WatchHistories
+        await _context.WatchHistories
             .Where(h => h.ProfileId == profileId)
-            .ToListAsync();
-            
-        _context.WatchHistories.RemoveRange(history);
-        await _context.SaveChangesAsync();
+            .ExecuteDeleteAsync();
     }
 
     public async Task<WatchHistory?> GetLatestForMediaAsync(int profileId, int? channelId, int? episodeId)
@@ -190,17 +187,10 @@ public class WatchHistoryService : IWatchHistoryService
         }
 
         var cutoff = DateTime.Now.AddDays(-days);
-        var staleRows = await _context.WatchHistories
+
+        await _context.WatchHistories
             .Where(h => h.ProfileId == profileId && h.WatchedAt < cutoff)
-            .ToListAsync();
-
-        if (staleRows.Count == 0)
-        {
-            return;
-        }
-
-        _context.WatchHistories.RemoveRange(staleRows);
-        await _context.SaveChangesAsync();
+            .ExecuteDeleteAsync();
     }
 }
 

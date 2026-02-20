@@ -243,6 +243,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private readonly System.Timers.Timer _autoHideTimer;
     private readonly System.Timers.Timer _clockTimer;
     private readonly System.Timers.Timer _watchHistoryTimer;
+    private DateTime _lastWatchHistoryUpdateUtc = DateTime.MinValue;
     public int? CurrentProfileId { get; set; }
 
     public PlayerViewModel(
@@ -529,6 +530,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         // Start watch history tracking for VOD content
         if (!IsLiveContent)
         {
+            _lastWatchHistoryUpdateUtc = DateTime.UtcNow;
             _watchHistoryTimer.Start();
         }
         else
@@ -609,10 +611,17 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         if (_watchHistoryService == null || CurrentProfileId == null || CurrentChannel == null || !IsPlaying)
             return;
 
-        await FlushWatchHistoryAsync(force: false);
+        var nowUtc = DateTime.UtcNow;
+        var delta = _lastWatchHistoryUpdateUtc == DateTime.MinValue 
+            ? TimeSpan.Zero 
+            : nowUtc - _lastWatchHistoryUpdateUtc;
+            
+        _lastWatchHistoryUpdateUtc = nowUtc;
+
+        await FlushWatchHistoryAsync(force: false, incrementDelta: delta);
     }
 
-    private async Task FlushWatchHistoryAsync(bool force)
+    private async Task FlushWatchHistoryAsync(bool force, TimeSpan? incrementDelta = null)
     {
         if (_watchHistoryService == null || CurrentProfileId == null || CurrentChannel == null)
         {
@@ -639,7 +648,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 isEpisodePlayback ? _currentEpisode!.Id : null,
                 currentPosition,
                 isCompleted,
-                currentDuration
+                currentDuration,
+                incrementDelta
             );
 
             if (isEpisodePlayback && _currentEpisode != null)
