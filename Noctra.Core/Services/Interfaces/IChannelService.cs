@@ -10,12 +10,12 @@ public interface IChannelService
     /// <summary>
     /// Kanal bilgilerini günceller (Favori, Son izlenme vb.)
     /// </summary>
-    Task UpdateChannelAsync(Channel channel);
+    Task UpdateChannelAsync(Channel channel, CancellationToken cancellationToken = default);
     
     /// <summary>
     /// Kanal ID'sine göre tek bir kanalı getirir
     /// </summary>
-    Task<Channel?> GetByIdAsync(int id);
+    Task<Channel?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
 }
 
 

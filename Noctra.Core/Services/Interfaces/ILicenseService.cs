@@ -22,7 +22,7 @@ public interface ILicenseService
     Task RefreshSubscriptionStatusAsync();
     void SetTierForTesting(SubscriptionTier tier);
     
-    event Action SubscriptionChanged;
+    event Action? SubscriptionChanged;
 }
 
 

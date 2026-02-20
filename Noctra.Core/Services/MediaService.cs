@@ -15,11 +15,11 @@ public partial class MediaService : IMediaService
         _context = context;
     }
 
-    public async Task AggregateContentAsync(int playlistId)
+    public async Task AggregateContentAsync(int playlistId, CancellationToken cancellationToken = default)
     {
         var channels = await _context.Channels
             .Where(c => c.PlaylistId == playlistId && c.Type == ChannelType.Series)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         if (!channels.Any()) return;
 
@@ -27,7 +27,7 @@ public partial class MediaService : IMediaService
             .Include(s => s.Seasons)
             .ThenInclude(se => se.Episodes)
             .Where(s => s.PlaylistId == playlistId)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
         var seriesGroups = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
         foreach (var existing in existingSeries.OrderBy(s => s.Id))
         {
@@ -107,7 +107,7 @@ public partial class MediaService : IMediaService
             season.Episodes.Add(episode);
         }
 
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
     private static Episode? FindExistingEpisode(Season season, int episodeNumber, string? episodeName, string? streamUrl)
@@ -192,14 +192,14 @@ public partial class MediaService : IMediaService
         return fallback;
     }
 
-    public async Task<List<Series>> GetSeriesAsync(int playlistId)
+    public async Task<List<Series>> GetSeriesAsync(int playlistId, CancellationToken cancellationToken = default)
     {
         var allSeries = await _context.Series
             .Include(s => s.Seasons)
             .ThenInclude(sn => sn.Episodes)
             .AsNoTracking()
             .Where(s => s.PlaylistId == playlistId)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         if (allSeries.Count <= 1)
         {
@@ -223,7 +223,7 @@ public partial class MediaService : IMediaService
             .OrderBy(s => s.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
     }
-    public async Task UpdateSeriesAsync(Series series)
+    public async Task UpdateSeriesAsync(Series series, CancellationToken cancellationToken = default)
     {
         var normalizedTargetKey = BuildSeriesGroupingKey(series.Name);
         if (string.IsNullOrWhiteSpace(normalizedTargetKey))
@@ -233,7 +233,7 @@ public partial class MediaService : IMediaService
 
         var candidates = await _context.Series
             .Where(s => s.PlaylistId == series.PlaylistId)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         var toUpdate = candidates
             .Where(s => string.Equals(BuildSeriesGroupingKey(s.Name), normalizedTargetKey, StringComparison.OrdinalIgnoreCase))
@@ -241,7 +241,7 @@ public partial class MediaService : IMediaService
 
         if (toUpdate.Count == 0 && series.Id > 0)
         {
-            var byId = await _context.Series.FindAsync(series.Id);
+            var byId = await _context.Series.FindAsync(new object[] { series.Id }, cancellationToken);
             if (byId != null)
             {
                 toUpdate.Add(byId);
@@ -259,7 +259,7 @@ public partial class MediaService : IMediaService
             item.IsFavorite = series.IsFavorite;
         }
 
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
     private static string BuildSeriesGroupingKey(string? seriesName)

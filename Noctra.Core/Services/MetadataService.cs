@@ -47,7 +47,7 @@ public partial class MetadataService : IMetadataService
         _apiKey = apiKey;
     }
     
-    public async Task<ChannelMetadata?> FetchMetadataAsync(string searchQuery, ChannelType? type = null)
+    public async Task<ChannelMetadata?> FetchMetadataAsync(string searchQuery, ChannelType? type = null, CancellationToken cancellationToken = default)
     {
         EnsureApiKeyLoaded();
 
@@ -80,7 +80,7 @@ public partial class MetadataService : IMetadataService
                 url = $"{TMDB_BASE_URL}/search/multi?api_key={_apiKey}&query={Uri.EscapeDataString(cleanQuery)}&include_adult=false&language=tr-TR";
             }
             
-            var response = await _httpClient.GetAsync(url);
+            var response = await _httpClient.GetAsync(url, cancellationToken);
             
             if (!response.IsSuccessStatusCode)
             {
@@ -88,7 +88,7 @@ public partial class MetadataService : IMetadataService
                 return null;
             }
             
-            var data = await response.Content.ReadFromJsonAsync<TmdbSearchResponse>();
+            var data = await response.Content.ReadFromJsonAsync<TmdbSearchResponse>(cancellationToken: cancellationToken);
             
             if (data?.Results == null || data.Results.Count == 0)
                 return null;
@@ -120,10 +120,10 @@ public partial class MetadataService : IMetadataService
             
             // Get detailed info (Cast, Director, etc.)
             var mediaType = best.MediaType ?? (type == ChannelType.VOD ? "movie" : "tv");
-            var details = await FetchDetailsAsync(best.Id, mediaType);
+            var details = await FetchDetailsAsync(best.Id, mediaType, cancellationToken);
             
             // Get genre names
-            var genres = await GetGenresAsync(best.GenreIds);
+            var genres = await GetGenresAsync(best.GenreIds, cancellationToken);
             
             var metadata = new ChannelMetadata
             {
@@ -160,14 +160,14 @@ public partial class MetadataService : IMetadataService
         }
     }
     
-    private async Task<TmdbDetail?> FetchDetailsAsync(int id, string mediaType)
+    private async Task<TmdbDetail?> FetchDetailsAsync(int id, string mediaType, CancellationToken cancellationToken)
     {
         try
         {
             var endpoint = mediaType == "movie" ? "movie" : "tv";
             var url = $"{TMDB_BASE_URL}/{endpoint}/{id}?api_key={_apiKey}&append_to_response=credits&language=tr-TR";
             
-            return await _httpClient.GetFromJsonAsync<TmdbDetail>(url);
+            return await _httpClient.GetFromJsonAsync<TmdbDetail>(url, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -176,13 +176,13 @@ public partial class MetadataService : IMetadataService
         }
     }
 
-    public async Task EnrichChannelAsync(Channel channel)
+    public async Task EnrichChannelAsync(Channel channel, CancellationToken cancellationToken = default)
     {
         if (channel.Type == ChannelType.Live)
             return; // Don't enrich live channels
         
         // Kanal türünü geçirerek aramayı daralt
-        var metadata = await FetchMetadataAsync(channel.Name, channel.Type);
+        var metadata = await FetchMetadataAsync(channel.Name, channel.Type, cancellationToken);
         
         if (metadata == null)
             return;
@@ -200,28 +200,28 @@ public partial class MetadataService : IMetadataService
             channel.LogoUrl = metadata.PosterUrl;
     }
     
-    public async Task EnrichChannelsAsync(IEnumerable<Channel> channels, IProgress<int>? progress = null)
+    public async Task EnrichChannelsAsync(IEnumerable<Channel> channels, IProgress<int>? progress = null, CancellationToken cancellationToken = default)
     {
         var vodChannels = channels.Where(c => c.Type != ChannelType.Live).ToList();
         var processed = 0;
         
         foreach (var channel in vodChannels)
         {
-            await EnrichChannelAsync(channel);
+            await EnrichChannelAsync(channel, cancellationToken);
             processed++;
             progress?.Report(processed * 100 / vodChannels.Count);
             
             // Rate limiting - TMDB allows ~40 requests per 10 seconds
-            await Task.Delay(250);
+            await Task.Delay(250, cancellationToken);
         }
     }
     
-    public async Task<List<string>> GetGenresAsync(List<int> genreIds)
+    public async Task<List<string>> GetGenresAsync(List<int> genreIds, CancellationToken cancellationToken = default)
     {
         if (genreIds.Count == 0)
             return new List<string>();
         
-        await EnsureGenresCachedAsync();
+        await EnsureGenresCachedAsync(cancellationToken);
         
         var genres = new List<string>();
         
@@ -242,12 +242,12 @@ public partial class MetadataService : IMetadataService
         _tvGenres = null;
     }
     
-    private async Task EnsureGenresCachedAsync()
+    private async Task EnsureGenresCachedAsync(CancellationToken cancellationToken)
     {
         if (_movieGenres != null && _tvGenres != null)
             return;
         
-        await _genreLock.WaitAsync();
+        await _genreLock.WaitAsync(cancellationToken);
         try
         {
             if (_movieGenres != null && _tvGenres != null)
@@ -255,12 +255,12 @@ public partial class MetadataService : IMetadataService
             
             // Fetch movie genres
             var movieGenreUrl = $"{TMDB_BASE_URL}/genre/movie/list?api_key={_apiKey}&language=tr-TR";
-            var movieResponse = await _httpClient.GetFromJsonAsync<TmdbGenreResponse>(movieGenreUrl);
+            var movieResponse = await _httpClient.GetFromJsonAsync<TmdbGenreResponse>(movieGenreUrl, cancellationToken);
             _movieGenres = movieResponse?.Genres.ToDictionary(g => g.Id, g => g.Name) ?? new();
             
             // Fetch TV genres
             var tvGenreUrl = $"{TMDB_BASE_URL}/genre/tv/list?api_key={_apiKey}&language=tr-TR";
-            var tvResponse = await _httpClient.GetFromJsonAsync<TmdbGenreResponse>(tvGenreUrl);
+            var tvResponse = await _httpClient.GetFromJsonAsync<TmdbGenreResponse>(tvGenreUrl, cancellationToken);
             _tvGenres = tvResponse?.Genres.ToDictionary(g => g.Id, g => g.Name) ?? new();
         }
         catch (Exception ex)
