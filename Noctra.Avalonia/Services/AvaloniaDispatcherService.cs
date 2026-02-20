@@ -29,7 +29,7 @@ public sealed class AvaloniaDispatcherService : IDispatcherService
             return;
         }
 
-        var tcs = new TaskCompletionSource<object?>();
+        var tcs = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
         Dispatcher.UIThread.Post(async () =>
         {
             try
@@ -52,7 +52,7 @@ public sealed class AvaloniaDispatcherService : IDispatcherService
             return Task.FromResult(function());
         }
 
-        var tcs = new TaskCompletionSource<T>();
+        var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
         Dispatcher.UIThread.Post(() =>
         {
             try
@@ -74,7 +74,7 @@ public sealed class AvaloniaDispatcherService : IDispatcherService
             return await function();
         }
 
-        var tcs = new TaskCompletionSource<T>();
+        var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
         Dispatcher.UIThread.Post(async () =>
         {
             try
