@@ -1,10 +1,9 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Noctra.Data;
 using Noctra.Avalonia.Views;
+using Noctra.Models;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
 
@@ -63,19 +62,10 @@ public sealed class AvaloniaDialogService : IDialogService
         return result == true;
     }
 
-    public async Task<bool> ShowEditProfileAsync(int profileId)
+    public async Task<bool> ShowEditProfileAsync(Profile profile)
     {
         var owner = GetMainWindow();
         using var scope = _services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var profile = await db.Profiles
-            .Include(p => p.ProviderAccount)
-            .FirstOrDefaultAsync(p => p.Id == profileId);
-        if (profile == null)
-        {
-            return false;
-        }
-
         var window = scope.ServiceProvider.GetRequiredService<AddProfileWindow>();
         if (window.DataContext is Noctra.ViewModels.AddProfileViewModel vm)
         {

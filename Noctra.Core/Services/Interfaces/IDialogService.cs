@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using Noctra.Models;
+using System.Threading.Tasks;
 
 namespace Noctra.Services.Interfaces;
 
@@ -9,6 +10,6 @@ public interface IDialogService
     Task<bool> ShowConfirmationAsync(string title, string message);
     Task ShowUpsellAsync();
     Task<bool> ShowAddProfileAsync();
-    Task<bool> ShowEditProfileAsync(int profileId);
+    Task<bool> ShowEditProfileAsync(Profile profile);
 }
 
