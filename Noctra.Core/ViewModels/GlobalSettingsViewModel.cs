@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Noctra.ViewModels;
 
-public partial class GlobalSettingsViewModel : ObservableObject
+public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
 {
     private readonly IThemeService _themeService;
     private readonly IDialogService _dialogService;
@@ -118,6 +118,18 @@ public partial class GlobalSettingsViewModel : ObservableObject
         _ = _settingsService.SaveAsync();
     }
 
+    public void Dispose()
+    {
+        if (_settingsService != null)
+        {
+            _settingsService.SettingsChanged -= OnSettingsService_Changed;
+        }
+
+        if (_settings != null)
+        {
+            _settings.PropertyChanged -= OnSettingsPropertyChanged;
+        }
+    }
 }
 
 // Global Settings Model

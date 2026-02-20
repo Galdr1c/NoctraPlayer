@@ -12,9 +12,8 @@ public partial class AddProfileViewModel : ObservableObject
 {
     private const string StalkerMacPrefix = "00:1A:79:";
     private const string ProfilesLimitKey = "profiles";
-    private static readonly System.Text.RegularExpressions.Regex StalkerMacRegex = new(
-        "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$",
-        System.Text.RegularExpressions.RegexOptions.Compiled);
+    [System.Text.RegularExpressions.GeneratedRegex("^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$")]
+    private static partial System.Text.RegularExpressions.Regex StalkerMacRegex();
     private readonly AppDbContext _context;
     private readonly IDispatcherService _dispatcherService;
     private readonly IAvatarService _avatarService;
@@ -458,7 +457,7 @@ public partial class AddProfileViewModel : ObservableObject
             return;
         }
 
-        UrlError = StalkerMacRegex.IsMatch(currentUsername.Trim())
+        UrlError = StalkerMacRegex().IsMatch(currentUsername.Trim())
             ? null
             : "MAC adresi geçersiz. Örnek: 00:1A:79:AA:BB:CC";
     }
@@ -726,7 +725,7 @@ public partial class AddProfileViewModel : ObservableObject
                 return false;
             }
 
-            if (!StalkerMacRegex.IsMatch(Username.Trim()))
+            if (!StalkerMacRegex().IsMatch(Username.Trim()))
             {
                 UrlError = "MAC adresi geçersiz. Örnek: 00:1A:79:AA:BB:CC";
                 return false;

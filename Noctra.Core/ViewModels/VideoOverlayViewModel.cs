@@ -9,6 +9,7 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
 {
     private readonly IVideoPlayerService _playerService;
     private readonly INetworkService _networkService;
+    private readonly IDispatcherService _dispatcherService;
     private readonly System.Timers.Timer _autoHideTimer;
     [ObservableProperty]
     private bool _isVisible;
@@ -79,10 +80,11 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
     private bool _isUpdatingFromService;
     private readonly System.Timers.Timer _volumeToastTimer;
 
-    public VideoOverlayViewModel(IVideoPlayerService playerService, INetworkService networkService)
+    public VideoOverlayViewModel(IVideoPlayerService playerService, INetworkService networkService, IDispatcherService dispatcherService)
     {
         _playerService = playerService;
         _networkService = networkService;
+        _dispatcherService = dispatcherService;
         
         // Timer for auto-hide
         _autoHideTimer = new System.Timers.Timer(3000); // 3 seconds
@@ -91,7 +93,7 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
 
         // Timer for volume toast
         _volumeToastTimer = new System.Timers.Timer(2000); // 2 seconds
-        _volumeToastTimer.Elapsed += (s, e) => IsVolumeToastVisible = false;
+        _volumeToastTimer.Elapsed += (s, e) => _dispatcherService.Invoke(() => IsVolumeToastVisible = false);
         _volumeToastTimer.AutoReset = false;
 
         IsVisible = true;
@@ -306,7 +308,7 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
     {
         if (!IsLocked)
         {
-            IsVisible = false;
+            _dispatcherService.Invoke(() => IsVisible = false);
         }
     }
 
@@ -336,7 +338,11 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
     public void InitializeClock()
     {
         _clockTimer = new System.Timers.Timer(1000);
-        _clockTimer.Elapsed += (s, e) => CurrentTimeStr = DateTime.Now.ToString("HH:mm");
+        _clockTimer.Elapsed += (s, e) => 
+        {
+            var now = DateTime.Now.ToString("HH:mm");
+            _dispatcherService.Invoke(() => CurrentTimeStr = now);
+        };
         _clockTimer.Start();
         CurrentTimeStr = DateTime.Now.ToString("HH:mm");
     }
