@@ -120,8 +120,8 @@ public class ContentDownloadService : IContentDownloadService
             BytesTotal = null,
             SpeedBytesPerSecond = 0,
             EstimatedSecondsRemaining = null,
-            CreatedAt = DateTime.Now,
-            UpdatedAt = DateTime.Now
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
         db.DownloadItems.Add(item);
@@ -260,8 +260,8 @@ public class ContentDownloadService : IContentDownloadService
                 item.EstimatedSecondsRemaining = 0;
                 item.TempFilePath = null;
                 item.ErrorMessage = null;
-                item.CompletedAt ??= DateTime.Now;
-                item.UpdatedAt = DateTime.Now;
+                item.CompletedAt ??= DateTime.UtcNow;
+                item.UpdatedAt = DateTime.UtcNow;
                 await db.SaveChangesAsync(cancellationToken);
             }
 
@@ -333,7 +333,7 @@ public class ContentDownloadService : IContentDownloadService
                 return Task.CompletedTask;
             }
 
-            var threshold = DateTime.Now.AddMinutes(-2);
+            var threshold = DateTime.UtcNow.AddMinutes(-2);
             foreach (var file in Directory.EnumerateFiles(cacheRoot, "*" + PlaybackCacheExtension))
             {
                 try
@@ -461,7 +461,7 @@ public class ContentDownloadService : IContentDownloadService
         if (item.Status is DownloadStatus.Queued or DownloadStatus.Downloading)
         {
             item.Status = DownloadStatus.Paused;
-            item.UpdatedAt = DateTime.Now;
+            item.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(cancellationToken);
             DownloadsChanged?.Invoke(this, EventArgs.Empty);
         }
@@ -493,7 +493,7 @@ public class ContentDownloadService : IContentDownloadService
 
         item.Status = DownloadStatus.Queued;
         item.ErrorMessage = null;
-        item.UpdatedAt = DateTime.Now;
+        item.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
 
         if (_queuedIds.TryAdd(downloadId, 1))
@@ -562,7 +562,7 @@ public class ContentDownloadService : IContentDownloadService
                     item.Status = DownloadStatus.Queued;
                     item.SpeedBytesPerSecond = 0;
                     item.EstimatedSecondsRemaining = null;
-                    item.UpdatedAt = DateTime.Now;
+                    item.UpdatedAt = DateTime.UtcNow;
                     hasChanges = true;
                     // Fall through to add to memory queue below
                 }
@@ -574,7 +574,7 @@ public class ContentDownloadService : IContentDownloadService
                         item.Status = DownloadStatus.Paused;
                         item.SpeedBytesPerSecond = 0;
                         item.EstimatedSecondsRemaining = null;
-                        item.UpdatedAt = DateTime.Now;
+                        item.UpdatedAt = DateTime.UtcNow;
                         hasChanges = true;
                     }
 
@@ -619,7 +619,7 @@ public class ContentDownloadService : IContentDownloadService
         {
             item.Status = DownloadStatus.Failed;
             item.ErrorMessage = wifiMessage;
-            item.UpdatedAt = DateTime.Now;
+            item.UpdatedAt = DateTime.UtcNow;
             await startDb.SaveChangesAsync();
             DownloadsChanged?.Invoke(this, EventArgs.Empty);
             return;
@@ -666,7 +666,7 @@ public class ContentDownloadService : IContentDownloadService
 
         item.Status = DownloadStatus.Downloading;
         item.ErrorMessage = null;
-        item.UpdatedAt = DateTime.Now;
+        item.UpdatedAt = DateTime.UtcNow;
         item.BytesDownloaded = resumedBytes;
         item.SpeedBytesPerSecond = 0;
         item.EstimatedSecondsRemaining = null;
@@ -739,7 +739,7 @@ public class ContentDownloadService : IContentDownloadService
                             item.BytesTotal = totalBytes;
                             item.SpeedBytesPerSecond = speed;
                             item.EstimatedSecondsRemaining = eta;
-                            item.UpdatedAt = DateTime.Now;
+                            item.UpdatedAt = DateTime.UtcNow;
                             await startDb.SaveChangesAsync(localCts.Token);
                             DownloadsChanged?.Invoke(this, EventArgs.Empty);
                             lastPersistTick = now;
@@ -991,7 +991,7 @@ public class ContentDownloadService : IContentDownloadService
             {
                 TryDeleteFileWithRetry(item.TempFilePath);
                 item.TempFilePath = null;
-                item.UpdatedAt = DateTime.Now;
+                item.UpdatedAt = DateTime.UtcNow;
                 changed = true;
             }
         }
@@ -1028,8 +1028,8 @@ public class ContentDownloadService : IContentDownloadService
         var elapsed = Math.Max(0.5, (DateTime.UtcNow - startedAtUtc).TotalSeconds);
         item.SpeedBytesPerSecond = downloaded / elapsed;
         item.EstimatedSecondsRemaining = 0;
-        item.CompletedAt = DateTime.Now;
-        item.UpdatedAt = DateTime.Now;
+        item.CompletedAt = DateTime.UtcNow;
+        item.UpdatedAt = DateTime.UtcNow;
         item.ErrorMessage = null;
         await db.SaveChangesAsync();
 
@@ -1051,7 +1051,7 @@ public class ContentDownloadService : IContentDownloadService
         item.Status = DownloadStatus.Paused;
         item.SpeedBytesPerSecond = 0;
         item.EstimatedSecondsRemaining = null;
-        item.UpdatedAt = DateTime.Now;
+        item.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         DownloadsChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -1070,7 +1070,7 @@ public class ContentDownloadService : IContentDownloadService
         item.ErrorMessage = message;
         item.SpeedBytesPerSecond = 0;
         item.EstimatedSecondsRemaining = null;
-        item.UpdatedAt = DateTime.Now;
+        item.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         DownloadsChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -1202,7 +1202,7 @@ public class ContentDownloadService : IContentDownloadService
         item.ErrorMessage = message;
         item.SpeedBytesPerSecond = 0;
         item.EstimatedSecondsRemaining = null;
-        item.UpdatedAt = DateTime.Now;
+        item.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         DownloadsChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -1720,7 +1720,7 @@ public class ContentDownloadService : IContentDownloadService
             }
         }
 
-        return Path.Combine(directory, $"{fileNameWithoutExtension}_{DateTime.Now:yyyyMMdd_HHmmss}{extension}");
+        return Path.Combine(directory, $"{fileNameWithoutExtension}_{DateTime.UtcNow:yyyyMMdd_HHmmss}{extension}");
     }
 
     private static string ComputeSha1(string value)

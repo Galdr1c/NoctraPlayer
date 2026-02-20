@@ -1336,7 +1336,7 @@ public partial class MainViewModel : ObservableObject
         StatusMessage = $"Seçildi: {channel.Name}";
         
         // Update last watched
-        channel.LastWatched = DateTime.Now;
+        channel.LastWatched = DateTime.UtcNow;
         _ = channelService.UpdateChannelAsync(channel);
         UpdateHistoryChannels();
 
@@ -1583,7 +1583,7 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
 
-            playlist.LastUpdated = DateTime.Now;
+            playlist.LastUpdated = DateTime.UtcNow;
             await db.SaveChangesAsync();
 
             if (SelectedPlaylist?.Id == playlistId)
@@ -1884,7 +1884,7 @@ public partial class MainViewModel : ObservableObject
                             SelectedPlaylist.EpgUrl = successfulSourceUrl;
                         }
 
-                        playlistToUpdate.EpgLastUpdated = DateTime.Now;
+                        playlistToUpdate.EpgLastUpdated = DateTime.UtcNow;
                         playlistToUpdate.EpgLastError = null;
                         await db.SaveChangesAsync();
                         SelectedPlaylist.EpgLastUpdated = playlistToUpdate.EpgLastUpdated;

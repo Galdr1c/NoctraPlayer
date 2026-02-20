@@ -36,7 +36,7 @@ public partial class Profile : ObservableObject
 
     public DateTime LastUsed { get; set; } = DateTime.MinValue;
     
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public string Initials => !string.IsNullOrEmpty(Name) ? Name.Substring(0, 1).ToUpper() : "?";
 }

@@ -267,7 +267,7 @@ public class EpgService : IEpgService
             }
 
             IsLoaded = true;
-            LastUpdated = DateTime.Now;
+            LastUpdated = DateTime.UtcNow;
         }
         catch (Exception ex)
         {

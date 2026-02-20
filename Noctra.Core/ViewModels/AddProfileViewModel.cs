@@ -1090,7 +1090,7 @@ public partial class AddProfileViewModel : ObservableObject
                     ProviderAccount = account,
                     Avatar = SelectedAvatar,
                     IsChild = IsChild,
-                    LastUsed = DateTime.Now
+                    LastUsed = DateTime.UtcNow
                 };
                 _context.Profiles.Add(profile);
             }

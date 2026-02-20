@@ -105,8 +105,8 @@ public class PlaylistService : IPlaylistService
             Name = name,
             Url = sourceUrl,
             ProfileId = profileId,
-            CreatedAt = DateTime.Now,
-            LastUpdated = DateTime.Now,
+            CreatedAt = DateTime.UtcNow,
+            LastUpdated = DateTime.UtcNow,
             ChannelCount = channels.Count,
             IsActive = true,
             EpgUrl = NormalizeEpgUrl(detectedEpgUrl)
@@ -223,7 +223,7 @@ public class PlaylistService : IPlaylistService
                         if (!string.IsNullOrWhiteSpace(usedEpgUrl))
                         {
                             playlistToUpdate.EpgUrl = usedEpgUrl;
-                            playlistToUpdate.EpgLastUpdated = DateTime.Now;
+                            playlistToUpdate.EpgLastUpdated = DateTime.UtcNow;
                             playlistToUpdate.EpgLastError = null;
                         }
 
@@ -272,8 +272,8 @@ public class PlaylistService : IPlaylistService
                 Name = name,
                 FilePath = filePath,
                 ProfileId = profileId,
-                CreatedAt = DateTime.Now,
-                LastUpdated = DateTime.Now,
+                CreatedAt = DateTime.UtcNow,
+                LastUpdated = DateTime.UtcNow,
                 ChannelCount = channels.Count,
                 IsActive = true,
                 EpgUrl = detectedEpgUrl
@@ -337,7 +337,7 @@ public class PlaylistService : IPlaylistService
             latestRemoteMetadata = await TryFetchRemoteMetadataAsync(playlist.Url, playlist);
             if (latestRemoteMetadata?.IsUnchanged == true)
             {
-                playlist.LastUpdated = DateTime.Now;
+                playlist.LastUpdated = DateTime.UtcNow;
                 UpdatePlaylistSourceMetadata(playlist, latestRemoteMetadata);
                 await _context.SaveChangesAsync();
                 return playlist;
@@ -370,7 +370,7 @@ public class PlaylistService : IPlaylistService
 
         if (channelsToAdd.Count == 0)
         {
-            playlist.LastUpdated = DateTime.Now;
+            playlist.LastUpdated = DateTime.UtcNow;
             if (latestRemoteMetadata != null)
             {
                 UpdatePlaylistSourceMetadata(playlist, latestRemoteMetadata);
@@ -386,7 +386,7 @@ public class PlaylistService : IPlaylistService
 
         _context.Channels.AddRange(channelsToAdd);
         playlist.ChannelCount = playlist.Channels.Count + channelsToAdd.Count;
-        playlist.LastUpdated = DateTime.Now;
+        playlist.LastUpdated = DateTime.UtcNow;
         if (latestRemoteMetadata != null)
         {
             UpdatePlaylistSourceMetadata(playlist, latestRemoteMetadata);
@@ -756,7 +756,7 @@ public class PlaylistService : IPlaylistService
                 }
 
                 playlist.EpgUrl = source.Url;
-                playlist.EpgLastUpdated = DateTime.Now;
+                playlist.EpgLastUpdated = DateTime.UtcNow;
                 playlist.EpgLastError = null;
                 await _context.SaveChangesAsync();
                 System.Diagnostics.Debug.WriteLine($"[PlaylistService] RefreshEpg success: {source.Type} (+{afterCount - beforeCount})");

@@ -657,7 +657,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 var finalCompleted = _currentEpisode.IsCompleted || isCompleted;
                 _dispatcherService.BeginInvoke(() =>
                 {
-                    _currentEpisode.LastWatched = DateTime.Now;
+                    _currentEpisode.LastWatched = DateTime.UtcNow;
                     _currentEpisode.WatchedPosition = finalCompleted && currentDuration.HasValue
                         ? currentDuration.Value
                         : currentPosition;
@@ -685,7 +685,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         // Retry if we have fallback "Program bilgisi yok"
         bool isFallback = CurrentProgram.Title == "Program bilgisi yok";
 
-        if (DateTime.Now > CurrentProgram.EndTime || isFallback)
+        if (DateTime.UtcNow > CurrentProgram.EndTime || isFallback)
         {
             // Program finished or fallback exists, fetch updated program
             var newProgram = await _epgService.GetCurrentProgramAsync(CurrentChannel);
@@ -836,7 +836,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     private EpgProgram GetFallbackProgram()
     {
-        var now = DateTime.Now;
+        var now = DateTime.UtcNow;
         return new EpgProgram 
         { 
             Title = "Program bilgisi yok",

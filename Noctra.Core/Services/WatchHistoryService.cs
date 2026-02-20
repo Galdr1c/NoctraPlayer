@@ -25,7 +25,7 @@ public class WatchHistoryService : IWatchHistoryService
             return;
         }
 
-        var watchedAt = DateTime.Now;
+        var watchedAt = DateTime.UtcNow;
 
         var history = await _context.WatchHistories
             .FirstOrDefaultAsync(w => w.ProfileId == profileId && 
@@ -186,7 +186,7 @@ public class WatchHistoryService : IWatchHistoryService
             return;
         }
 
-        var cutoff = DateTime.Now.AddDays(-days);
+        var cutoff = DateTime.UtcNow.AddDays(-days);
 
         await _context.WatchHistories
             .Where(h => h.ProfileId == profileId && h.WatchedAt < cutoff)

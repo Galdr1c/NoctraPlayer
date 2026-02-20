@@ -109,7 +109,7 @@ public partial class ProfilesViewModel : ObservableObject
         var dbProfile = await _context.Profiles.FindAsync(profile.Id);
         if (dbProfile != null)
         {
-            dbProfile.LastUsed = DateTime.Now;
+            dbProfile.LastUsed = DateTime.UtcNow;
             await _context.SaveChangesAsync();
         }
 

@@ -245,7 +245,7 @@ public partial class SettingsViewModel : ObservableObject
             ProfileCreatedAt = _mainViewModel.CurrentProfile.CreatedAt;
             
             // If CreatedAt is default (min value), set it to Now for display or handle it
-            if (ProfileCreatedAt == DateTime.MinValue) ProfileCreatedAt = DateTime.Now;
+            if (ProfileCreatedAt == DateTime.MinValue) ProfileCreatedAt = DateTime.UtcNow;
 
             if (_mainViewModel.CurrentProfile.ProviderAccount != null)
             {
@@ -262,7 +262,7 @@ public partial class SettingsViewModel : ObservableObject
                 
                 if (ExpirationDate.HasValue)
                 {
-                    var daysLeft = (ExpirationDate.Value - DateTime.Now).TotalDays;
+                    var daysLeft = (ExpirationDate.Value - DateTime.UtcNow).TotalDays;
                     if (daysLeft < 0) ExpirationStatus = "Süresi Dolmuş";
                     else if (daysLeft < 7) ExpirationStatus = $"{Math.Ceiling(daysLeft)} Gün Kaldı (Yakında Bitiyor)";
                     else ExpirationStatus = $"{Math.Ceiling(daysLeft)} Gün Kaldı";
@@ -597,18 +597,18 @@ public partial class SettingsViewModel : ObservableObject
 
     private async Task WatchEpgRefreshOutcomeAsync(CancellationToken cancellationToken)
     {
-        var startedAt = DateTime.Now.AddSeconds(-2);
-        var timeoutAt = DateTime.Now.AddMinutes(3);
+        var startedAt = DateTime.UtcNow.AddSeconds(-2);
+        var timeoutAt = DateTime.UtcNow.AddMinutes(3);
 
         try
         {
-            while (!cancellationToken.IsCancellationRequested && DateTime.Now < timeoutAt)
+            while (!cancellationToken.IsCancellationRequested && DateTime.UtcNow < timeoutAt)
             {
                 try
                 {
                     await Task.Delay(1500, cancellationToken);
                     await ScanEpgStatsCoreAsync(updateStatusMessage: false);
-                    var elapsed = DateTime.Now - startedAt;
+                    var elapsed = DateTime.UtcNow - startedAt;
                     var dynamicPercent = Math.Min(95, 10 + (int)(elapsed.TotalSeconds / 2.0));
                     if (dynamicPercent > RefreshProgressPercent)
                     {

@@ -9,7 +9,7 @@ public class Playlist
     public string Name { get; set; } = string.Empty;
     public string? Url { get; set; }
     public string? FilePath { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastUpdated { get; set; }
     public bool IsActive { get; set; } = true;
     public int ChannelCount { get; set; }

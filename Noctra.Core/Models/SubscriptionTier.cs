@@ -72,11 +72,11 @@ public class SubscriptionInfo
     public DateTime? ExpiresAt { get; set; }
     public bool IsTrialPeriod { get; set; }
     public int TrialDaysRemaining => IsTrialPeriod && ExpiresAt.HasValue 
-        ? Math.Max(0, (ExpiresAt.Value - DateTime.Now).Days) 
+        ? Math.Max(0, (ExpiresAt.Value - DateTime.UtcNow).Days) 
         : 0;
     
     public bool IsPremiumOrHigher => Tier >= SubscriptionTier.Premium;
-    public bool IsExpired => ExpiresAt.HasValue && ExpiresAt.Value < DateTime.Now;
+    public bool IsExpired => ExpiresAt.HasValue && ExpiresAt.Value < DateTime.UtcNow;
 }
 
 
