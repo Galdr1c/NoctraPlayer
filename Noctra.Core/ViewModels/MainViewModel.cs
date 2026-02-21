@@ -1888,7 +1888,8 @@ public partial class MainViewModel : ObservableObject
                         // Don't overwrite last error if we already had success
                         if (!anySuccess) 
                         {
-                            lastSourceError = $"{source.Type}: 0 program";
+                            var mapInfo = source.IsPrimary ? "" : $" (Map: {_epgService.LastChannelMapCount} ch)";
+                            lastSourceError = $"{source.Type}: 0 program{mapInfo}";
                         }
                         _logger?.LogDebug($"[MainViewModel] EPG source returned 0 programs: {source.Type}");
                     }

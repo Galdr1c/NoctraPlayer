@@ -22,6 +22,7 @@ public class EpgService : IEpgService
     public bool IsLoaded { get; private set; }
     public DateTime? LastUpdated { get; private set; }
     public string? LastError { get; private set; }
+    public int LastChannelMapCount { get; private set; }
 
     public EpgService(IDbContextFactory<AppDbContext> contextFactory, HttpClient httpClient, ILogger<EpgService>? logger = null)
     {
@@ -41,11 +42,17 @@ public class EpgService : IEpgService
         try
         {
             LastError = null; // Clear previous error
+            LastChannelMapCount = 0;
             if (string.IsNullOrEmpty(epgUrl)) return;
 
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+
+            // Use HttpRequestMessage to set headers, avoiding GetAsync default behavior
+            using var request = new HttpRequestMessage(HttpMethod.Get, epgUrl);
+            request.Headers.Accept.ParseAdd("application/xml, text/xml, */*; q=0.01");
+
             using var response = await NetworkRetry.ExecuteAsync(
-                () => _httpClient.GetAsync(epgUrl, HttpCompletionOption.ResponseHeadersRead, cts.Token),
+                () => _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token),
                 cancellationToken: cts.Token).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
@@ -65,6 +72,13 @@ public class EpgService : IEpgService
                 DtdProcessing = System.Xml.DtdProcessing.Ignore 
             };
             using var reader = System.Xml.XmlReader.Create(dataStream, settings);
+
+            // Move to content and check for HTML (Cloudflare block)
+            await reader.MoveToContentAsync().ConfigureAwait(false);
+            if (reader.Name.Equals("html", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new Exception("EPG content appears to be HTML (Cloudflare block?)");
+            }
 
             if (isPrimary)
             {
@@ -126,6 +140,8 @@ public class EpgService : IEpgService
                 }
             }
 
+            LastChannelMapCount = channelMap.Count;
+
             var programs = new List<EpgProgram>();
             var batchSize = 2000;
             var windowStartUtc = DateTime.UtcNow.Date;
@@ -135,7 +151,7 @@ public class EpgService : IEpgService
             context.ChangeTracker.AutoDetectChangesEnabled = false;
             try
             {
-                while (await reader.ReadAsync().ConfigureAwait(false))
+                do
                 {
                     if (reader.NodeType == System.Xml.XmlNodeType.Element)
                     {
@@ -259,7 +275,7 @@ public class EpgService : IEpgService
                             }
                         }
                     }
-                }
+                } while (await reader.ReadAsync().ConfigureAwait(false));
 
                 // Final batch
                 if (programs.Any())

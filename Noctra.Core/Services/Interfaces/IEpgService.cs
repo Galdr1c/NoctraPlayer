@@ -60,6 +60,11 @@ public interface IEpgService
     string? LastError { get; }
 
     /// <summary>
+    /// Son işlemde kullanılan mapping kanal sayısı
+    /// </summary>
+    int LastChannelMapCount { get; }
+
+    /// <summary>
     /// Toplam EPG program sayısını getirir (İstatistik için)
     /// </summary>
     Task<int> GetTotalProgramCountAsync();

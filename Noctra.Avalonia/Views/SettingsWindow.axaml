@@ -607,11 +607,16 @@
             <!-- FOOTER -->
             <Border Grid.Row="2" Padding="32,16" Background="{DynamicResource SurfaceBrush}" CornerRadius="0,0,16,16" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
                 <Grid>
-                    <Button Content="Varsayılanlara Sıfırla" Command="{Binding ResetToDefaultsCommand}" 
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button Grid.Column="0" Content="Varsayılanlara Sıfırla" Command="{Binding ResetToDefaultsCommand}"
                             HorizontalAlignment="Left" Padding="20,10"/>
                     
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,20,0" FontWeight="SemiBold"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,20,0" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="500"/>
                         <Button Content="Ayarları Kaydet" Command="{Binding SaveSettingsCommand}" 
                                 Padding="32,12" FontSize="15"/>
                     </StackPanel>
