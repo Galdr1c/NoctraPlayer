@@ -224,6 +224,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - **Düzen ve Boşluk Düzeltmeleri**:
     - `Padding` yerine `Margin` sistemine geçilerek tüm temalarda kararlı alt boşluk sağlandı (60px-80px arası optimize edildi).
   - **Async Void Güvenliği ve Hata Yönetimi**: Avalonia View ve Window sınıflarındaki (`LiveView`, `MoviesView`, `SeriesView`, `ProfilesWindow`, vb.) tüm `async void` olay işleyicileri `try-catch` bloklarına alınarak uygulama çökmesi (Crash) riski ortadan kaldırıldı. Hatalar artık `MainViewModel.StatusMessage` üzerinden kullanıcıya bildiriliyor.
+  - **Thread-Safe Pencere Yönetimi**: `ProfilesWindow` içerisindeki `_isAddProfileWindowOpen` bayrağı `Interlocked.CompareExchange` kullanılarak thread-safe hale getirildi, böylece hızlı çift tıklamalarda birden fazla pencere açılması engellendi.
   - **Namespace ve Derleme Hataları Giderildi**: `AvaloniaDialogService` ve `SettingsWindow` içerisindeki eksik `using` ifadeleri ve yanlış metot referansları düzeltildi.
   - **Kritik Hata Düzeltmeleri**:
     - Kapat butonu görünürlüğü artırıldı (Material Icon entegrasyonu).

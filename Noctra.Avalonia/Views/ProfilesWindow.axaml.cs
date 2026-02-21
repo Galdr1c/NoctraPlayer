@@ -21,7 +21,7 @@ public partial class ProfilesWindow : Window
     private readonly MainWindow _mainWindow;
     private readonly MainViewModel _mainViewModel;
     private bool _autoSelectTriggered;
-    private bool _isAddProfileWindowOpen;
+    private int _isAddProfileWindowOpen; // 0 = closed, 1 = open
 
     public bool DisableAutoSelect { get; set; }
 
@@ -177,12 +177,11 @@ public partial class ProfilesWindow : Window
 
     private async void OpenAddProfileWindow(Profile? profileToEdit)
     {
-        if (_isAddProfileWindowOpen)
+        if (System.Threading.Interlocked.CompareExchange(ref _isAddProfileWindowOpen, 1, 0) != 0)
         {
             return;
         }
 
-        _isAddProfileWindowOpen = true;
         try
         {
             bool success;
@@ -202,7 +201,7 @@ public partial class ProfilesWindow : Window
         }
         finally
         {
-            _isAddProfileWindowOpen = false;
+            System.Threading.Interlocked.Exchange(ref _isAddProfileWindowOpen, 0);
         }
     }
 
