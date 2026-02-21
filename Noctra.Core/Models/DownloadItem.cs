@@ -25,7 +25,7 @@ public class DownloadItem
     public string DisplayName { get; set; } = string.Empty;
     public string? PosterUrl { get; set; }
     public string SourceUrl { get; set; } = string.Empty;
-    public string? LocalEncryptedPath { get; set; }
+    public string? LocalFilePath { get; set; }
     public string? TempFilePath { get; set; }
     public string? AudioTracksJson { get; set; }
     public string? SubtitleTracksJson { get; set; }

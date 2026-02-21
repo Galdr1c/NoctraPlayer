@@ -7,7 +7,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
-### Added
+- **İndirme Şifreleme Sisteminin Kaldırılması ve Kuyruk İyileştirmeleri** (2026-02-21 14:07):
+  - **SSD Ömür Koruması ve Performans**: İstemci tarafı indirme şifreleme/şifre çözme sistemi tamamen kaldırıldı. Bu sayede gereksiz G/Ç (I/O) yükü ve SSD aşınması engellendi, yerel içeriklerin oynatım hızı artırıldı.
+  - **Doğrudan Kayıt**: İndirilen dosyalar artık ara şifreli formatlar (`.nctra`) yerine doğrudan son hedef formatında kaydediliyor.
+  - **Veritabanı Şeması Otomatik Geçişi**: `DownloadItems` tablosundaki `LocalEncryptedPath` kolonu otomatik olarak `LocalFilePath` olarak yeniden adlandırıldı.
+  - **Eski Format Temizliği**: Eski `.nctra` dosyaları artık desteklenmiyor; uygulama başlangıcında bu dosyalar "eski format" olarak işaretlenir ve `TempPlayback` dizini tamamen temizlenir.
+  - **Ethernet Üzerinden İndirme Desteği**: 'Yalnızca Wi-Fi' ayarı açık olsa bile Ethernet bağlantısı üzerinden indirme yapılmasına izin verildi.
+  - **Dizin Adlandırma Düzeltmesi**: `Profile_` dizin yapısındaki büyük/küçük harf uyumsuzluğu giderilerek İndirme Merkezi ve disk alanı gösterimi düzeltildi.
+  - **Gelişmiş Yerel Yol Tespiti**: `PlayerViewModel` artık yerel dosyaları dosya uzantısından bağımsız olarak, mutlak yol doğrulamasıyla tespit edebiliyor.
 - **Kapsamlı Servis Refaktörü ve Service Locator Arındırma** (2026-02-21 12:36):
   - **ObservableCollection Performans İyileştirmesi**: `MainViewModel` içerisindeki UI'a bağlı tüm listeler `ObservableCollection<T>` tipine dönüştürüldü ve `SetItems` yardımcı metodu ile sadece içerikleri güncellenerek sayfa geçişlerindeki arayüz titremeleri (UI flicker) engellendi.
   - **VideoPlayer Null Koruması**: `VideoPlayerService` içerisinde `CS8602` uyarısına neden olan olası boş referans hataları (null reference) yerel değişken kopyalamaları ve `null` kontrolleri ile kalıcı olarak giderildi.

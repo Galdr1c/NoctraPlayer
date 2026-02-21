@@ -2117,24 +2117,31 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             return false;
         }
 
-        if (normalized.StartsWith("file://", StringComparison.OrdinalIgnoreCase) ||
-            normalized.StartsWith(@"\\", StringComparison.Ordinal))
+        // Handle file:// URIs
+        if (normalized.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
         {
-            if (normalized.StartsWith("file://", StringComparison.OrdinalIgnoreCase) &&
-                Uri.TryCreate(normalized, UriKind.Absolute, out var fileUri))
+            if (Uri.TryCreate(normalized, UriKind.Absolute, out var fileUri))
             {
-                return File.Exists(fileUri.LocalPath);
+                return fileUri.IsFile && File.Exists(fileUri.LocalPath);
             }
+        }
 
+        // Handle Windows UNC paths or local drive paths
+        var isLocal = normalized.StartsWith(@"\\", StringComparison.Ordinal) ||
+                      Regex.IsMatch(normalized, @"^[a-zA-Z]:[\\/]");
+        
+        if (isLocal)
+        {
             return File.Exists(normalized);
         }
 
-        if (!Regex.IsMatch(normalized, @"^[a-zA-Z]:[\\/]"))
+        // Handle Unix-style absolute paths
+        if (normalized.StartsWith("/", StringComparison.Ordinal))
         {
-            return false;
+            return File.Exists(normalized);
         }
 
-        return File.Exists(normalized);
+        return false;
     }
 
     private static bool LooksLikeDownloadedPlaybackStreamUrl(string? streamUrl)
@@ -2144,39 +2151,21 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             return false;
         }
 
-        var normalized = streamUrl.Trim().Trim('"', '\'');
-        if (normalized.Length < 4)
-        {
-            return false;
-        }
-
-        if (normalized.StartsWith("file://", StringComparison.OrdinalIgnoreCase) &&
-            Uri.TryCreate(normalized, UriKind.Absolute, out var fileUri) &&
-            fileUri.IsFile)
-        {
-            normalized = fileUri.LocalPath;
-        }
-
-        var isLocalPath = normalized.StartsWith(@"\\", StringComparison.Ordinal) ||
-                          Regex.IsMatch(normalized, @"^[a-zA-Z]:[\\/]");
-        if (!isLocalPath)
-        {
-            return false;
-        }
-
-        var lowered = normalized.Replace('/', '\\').ToLowerInvariant();
-        if (lowered.EndsWith(".nctra", StringComparison.Ordinal) ||
-            lowered.EndsWith(".nctra.part", StringComparison.Ordinal))
+        // If it's a known local file, it's a download candidate
+        if (IsDownloadedStreamUrl(streamUrl))
         {
             return true;
         }
 
-        if (lowered.Contains(@"\noctra\downloads\profile_", StringComparison.Ordinal))
+        var normalized = streamUrl.Trim().Trim('"', '\'').ToLowerInvariant();
+        
+        // Even if file doesn't exist yet (e.g. in progress), if it's in our download folder structure
+        if (normalized.Contains(@"\noctra\downloads\profile_") || normalized.Contains("/noctra/downloads/profile_"))
         {
             return true;
         }
 
-        return File.Exists(normalized);
+        return false;
     }
 
     private void SetPlaybackPosition(double position)

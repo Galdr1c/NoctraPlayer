@@ -306,7 +306,7 @@ CREATE TABLE IF NOT EXISTS DownloadItems (
     DisplayName TEXT NOT NULL,
     PosterUrl TEXT NULL,
     SourceUrl TEXT NOT NULL,
-    LocalEncryptedPath TEXT NULL,
+    LocalFilePath TEXT NULL,
     TempFilePath TEXT NULL,
     AudioTracksJson TEXT NULL,
     SubtitleTracksJson TEXT NULL,
@@ -323,7 +323,23 @@ CREATE TABLE IF NOT EXISTS DownloadItems (
             await context.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_DownloadItems_ProfileId ON DownloadItems(ProfileId);");
             await context.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_DownloadItems_Status ON DownloadItems(Status);");
             await context.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_DownloadItems_ProfileStatusCreated ON DownloadItems(ProfileId, Status, CreatedAt);");
-            await context.Database.ExecuteSqlRawAsync("ALTER TABLE DownloadItems ADD COLUMN TempFilePath TEXT;");
+            
+            // Fix: Rename LocalEncryptedPath to LocalFilePath if it's an old database
+            try
+            {
+                await context.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE DownloadItems RENAME COLUMN LocalEncryptedPath TO LocalFilePath;");
+            }
+            catch { }
+
+            // Cleanup: Mark old encrypted files as failed/obsolete
+            try
+            {
+                await context.Database.ExecuteSqlRawAsync(
+                    "UPDATE DownloadItems SET Status = 4, ErrorMessage = 'Eski format. Lütfen tekrar indirin.' " +
+                    "WHERE LocalFilePath LIKE '%.nctra' AND Status = 3;");
+            }
+            catch { }
         }
         catch { }
 

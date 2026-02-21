@@ -15,9 +15,6 @@ namespace Noctra.Services;
 
 public class ContentDownloadService : IContentDownloadService
 {
-    private const string EncryptedExtension = ".nctra";
-    private const string DownloadTempExtension = ".nctra.part";
-    private const string PlaybackCacheExtension = ".playcache";
     private const int ProgressPersistIntervalMs = 1800;
     private const long ProgressPersistMinDeltaBytes = 1024 * 1024; // 1 MB
     private const int MaxAutoResumeAttempts = 3;
@@ -39,8 +36,6 @@ public class ContentDownloadService : IContentDownloadService
     private readonly ConcurrentDictionary<int, byte> _cancelRequestedIds = new();
     private readonly ConcurrentDictionary<int, int> _autoResumeAttempts = new();
     private readonly ConcurrentDictionary<int, DateTime> _lastCleanupUtcByProfile = new();
-    private readonly byte[] _encryptionKey;
-    private readonly byte[] _hmacKey;
     private int _isQueueWorkerStarted;
 
     public event EventHandler? DownloadsChanged;
@@ -55,7 +50,6 @@ public class ContentDownloadService : IContentDownloadService
         _contextFactory = contextFactory;
         _httpClient = httpClient;
         _logger = logger;
-        (_encryptionKey, _hmacKey) = CreateCryptoKeys();
 
         // Ensure worker starts on app launch to process pending/interrupted downloads
         EnsureQueueWorkerStarted();
@@ -76,7 +70,7 @@ public class ContentDownloadService : IContentDownloadService
         }
 
         var normalizedSource = request.SourceUrl.Trim().Trim('"', '\'');
-        if (IsEncryptedLocalPath(normalizedSource))
+        if (IsLocalFilePath(normalizedSource))
         {
             return new DownloadContentResult(true, true, "Icerik zaten yerel indirildi.");
         }
@@ -136,141 +130,13 @@ public class ContentDownloadService : IContentDownloadService
         return new DownloadContentResult(true, false, "Indirme kuyruga eklendi.", item.Id);
     }
 
-    public async Task<string> ResolvePlayableUrlAsync(
+    public Task<string> ResolvePlayableUrlAsync(
         string streamUrl,
         CancellationToken cancellationToken = default)
     {
-        await CleanupPlaybackCacheAsync(cancellationToken);
-
-        if (!IsEncryptedLocalPath(streamUrl))
-        {
-            return streamUrl;
-        }
-
-        if (!File.Exists(streamUrl))
-        {
-            var fallback = await TryRestoreMissingLocalPathAsync(streamUrl, cancellationToken);
-            if (!string.IsNullOrWhiteSpace(fallback))
-            {
-                return fallback;
-            }
-
-            return streamUrl;
-        }
-
-        var cacheRoot = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Noctra",
-            "TempPlayback");
-        Directory.CreateDirectory(cacheRoot);
-
-        var cacheName = $"{ComputeSha1(streamUrl)}{PlaybackCacheExtension}";
-        var cachePath = Path.Combine(cacheRoot, cacheName);
-        if (File.Exists(cachePath) && new FileInfo(cachePath).Length > 0)
-        {
-            return cachePath;
-        }
-
-        try
-        {
-            await DecryptFileAsync(streamUrl, cachePath, cancellationToken);
-        }
-        catch (InvalidDataException)
-        {
-            // Corrupted/mismatched encrypted file: attempt one-time repair from persisted temp payload.
-            var repaired = await TryRepairEncryptedDownloadAsync(streamUrl, cancellationToken);
-            if (!repaired)
-            {
-                throw;
-            }
-
-            await DecryptFileAsync(streamUrl, cachePath, cancellationToken);
-        }
-        try
-        {
-            File.SetAttributes(cachePath, FileAttributes.Hidden | FileAttributes.Temporary);
-        }
-        catch
-        {
-            // no-op
-        }
-        return cachePath;
+        return Task.FromResult(streamUrl);
     }
 
-    private async Task<bool> TryRepairEncryptedDownloadAsync(
-        string encryptedPath,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var normalizedEncryptedPath = NormalizePath(encryptedPath);
-            using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
-            var candidates = await db.DownloadItems
-                .Where(d => d.LocalEncryptedPath != null)
-                .ToListAsync(cancellationToken);
-
-            var item = candidates.FirstOrDefault(d =>
-                string.Equals(NormalizePath(d.LocalEncryptedPath), normalizedEncryptedPath, StringComparison.OrdinalIgnoreCase));
-            if (item == null && candidates.Count > 0)
-            {
-                item = candidates.FirstOrDefault(d =>
-                    string.Equals(Path.GetFileName(d.LocalEncryptedPath), Path.GetFileName(normalizedEncryptedPath), StringComparison.OrdinalIgnoreCase));
-            }
-
-            var tempPath = item?.TempFilePath;
-            if (string.IsNullOrWhiteSpace(tempPath) || !File.Exists(tempPath))
-            {
-                var siblingTemp = normalizedEncryptedPath + ".part";
-                if (File.Exists(siblingTemp))
-                {
-                    tempPath = siblingTemp;
-                }
-            }
-
-            if (string.IsNullOrWhiteSpace(tempPath) || !File.Exists(tempPath))
-            {
-                return false;
-            }
-
-            var tempLength = new FileInfo(tempPath).Length;
-            if (tempLength <= 0)
-            {
-                return false;
-            }
-
-            var extension = ResolveExtensionFromSource(item?.SourceUrl ?? string.Empty);
-            if (File.Exists(normalizedEncryptedPath))
-            {
-                TryDeleteFileWithRetry(normalizedEncryptedPath);
-            }
-
-            await EncryptFileWithRetryAsync(tempPath, normalizedEncryptedPath, extension, cancellationToken);
-            TryDeleteFileWithRetry(tempPath);
-
-            if (item != null)
-            {
-                item.LocalEncryptedPath = normalizedEncryptedPath;
-                item.Status = DownloadStatus.Completed;
-                item.BytesDownloaded = tempLength;
-                item.BytesTotal = tempLength;
-                item.SpeedBytesPerSecond = 0;
-                item.EstimatedSecondsRemaining = 0;
-                item.TempFilePath = null;
-                item.ErrorMessage = null;
-                item.CompletedAt ??= DateTime.UtcNow;
-                item.UpdatedAt = DateTime.UtcNow;
-                await db.SaveChangesAsync(cancellationToken);
-            }
-
-            DownloadsChanged?.Invoke(this, EventArgs.Empty);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogWarning(ex, "Encrypted download repair failed for path {EncryptedPath}", encryptedPath);
-            return false;
-        }
-    }
 
     private static string NormalizePath(string? path)
     {
@@ -298,12 +164,12 @@ public class ContentDownloadService : IContentDownloadService
     }
 
     private async Task<string?> TryRestoreMissingLocalPathAsync(
-        string missingEncryptedPath,
+        string missingPath,
         CancellationToken cancellationToken)
     {
         using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var item = await db.DownloadItems
-            .FirstOrDefaultAsync(d => d.LocalEncryptedPath == missingEncryptedPath, cancellationToken);
+            .FirstOrDefaultAsync(d => d.LocalFilePath == missingPath, cancellationToken);
         if (item == null)
         {
             return null;
@@ -318,39 +184,7 @@ public class ContentDownloadService : IContentDownloadService
 
     public Task CleanupPlaybackCacheAsync(CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var cacheRoot = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Noctra",
-                "TempPlayback");
-            if (!Directory.Exists(cacheRoot))
-            {
-                return Task.CompletedTask;
-            }
-
-            var threshold = DateTime.UtcNow.AddMinutes(-2);
-            foreach (var file in Directory.EnumerateFiles(cacheRoot, "*" + PlaybackCacheExtension))
-            {
-                try
-                {
-                    var info = new FileInfo(file);
-                    if (info.LastWriteTime <= threshold)
-                    {
-                        File.Delete(file);
-                    }
-                }
-                catch
-                {
-                    // no-op
-                }
-            }
-        }
-        catch
-        {
-            // no-op
-        }
-
+        // No-op as TempPlayback is no longer used
         return Task.CompletedTask;
     }
 
@@ -394,7 +228,7 @@ public class ContentDownloadService : IContentDownloadService
 
         foreach (var item in items)
         {
-            TryDeleteFile(item.LocalEncryptedPath);
+            TryDeleteFile(item.LocalFilePath);
             TryDeleteFile(item.TempFilePath);
         }
 
@@ -620,11 +454,11 @@ public class ContentDownloadService : IContentDownloadService
         var downloadDirectory = EnsureItemDownloadDirectory(profileDownloadDirectory, item);
         var extension = ResolveExtensionFromSource(item.SourceUrl);
         var safeName = BuildItemFileStem(item);
-        var encryptedPath = string.IsNullOrWhiteSpace(item.LocalEncryptedPath)
-            ? CreateUniquePath(downloadDirectory, safeName, EncryptedExtension)
-            : item.LocalEncryptedPath!;
+        var finalPath = string.IsNullOrWhiteSpace(item.LocalFilePath)
+            ? CreateUniquePath(downloadDirectory, safeName, extension)
+            : item.LocalFilePath!;
         var plainTempPath = string.IsNullOrWhiteSpace(item.TempFilePath)
-            ? CreateUniquePath(downloadDirectory, safeName, DownloadTempExtension)
+            ? CreateUniquePath(downloadDirectory, safeName, extension + ".part")
             : item.TempFilePath!;
         _activeTempFiles[downloadId] = plainTempPath;
         var candidates = BuildDownloadCandidates(item.SourceUrl, settings.DownloadQuality);
@@ -634,9 +468,9 @@ public class ContentDownloadService : IContentDownloadService
             resumedBytes = 0;
         }
 
-        if (File.Exists(encryptedPath) && new FileInfo(encryptedPath).Length > 0)
+        if (File.Exists(finalPath) && new FileInfo(finalPath).Length > 0)
         {
-            await MarkCompletedAsync(downloadId, encryptedPath, resumedBytes, item.BytesTotal ?? resumedBytes, DateTime.UtcNow);
+            await MarkCompletedAsync(downloadId, finalPath, resumedBytes, item.BytesTotal ?? resumedBytes, DateTime.UtcNow);
             return;
         }
 
@@ -647,9 +481,8 @@ public class ContentDownloadService : IContentDownloadService
             var existingLength = new FileInfo(plainTempPath).Length;
             if (existingLength >= item.BytesTotal.Value || (item.BytesTotal.Value - existingLength < 1024 && existingLength > 1024 * 1024))
             {
-                await EncryptFileWithRetryAsync(plainTempPath, encryptedPath, extension, localCts.Token);
-                TryDeleteFileWithRetry(plainTempPath);
-                await MarkCompletedAsync(downloadId, encryptedPath, existingLength, item.BytesTotal, DateTime.UtcNow);
+                File.Move(plainTempPath, finalPath, overwrite: true);
+                await MarkCompletedAsync(downloadId, finalPath, existingLength, item.BytesTotal, DateTime.UtcNow);
                 return;
             }
         }
@@ -660,7 +493,7 @@ public class ContentDownloadService : IContentDownloadService
         item.BytesDownloaded = resumedBytes;
         item.SpeedBytesPerSecond = 0;
         item.EstimatedSecondsRemaining = null;
-        item.LocalEncryptedPath = encryptedPath;
+        item.LocalFilePath = finalPath;
         item.TempFilePath = plainTempPath;
         await startDb.SaveChangesAsync();
         DownloadsChanged?.Invoke(this, EventArgs.Empty);
@@ -748,7 +581,7 @@ public class ContentDownloadService : IContentDownloadService
             {
                 await MarkFailedAsync(downloadId, "Indirme tamamlanamadi (bos dosya).");
                 TryDeleteFile(plainTempPath);
-                TryDeleteFile(encryptedPath);
+                TryDeleteFile(finalPath);
                 return;
             }
 
@@ -780,10 +613,9 @@ public class ContentDownloadService : IContentDownloadService
                 }
             }
 
-            await EncryptFileWithRetryAsync(plainTempPath, encryptedPath, extension, localCts.Token);
-            TryDeleteFileWithRetry(plainTempPath);
+            File.Move(plainTempPath, finalPath, overwrite: true);
             _autoResumeAttempts.TryRemove(downloadId, out _);
-            await MarkCompletedAsync(downloadId, encryptedPath, downloaded, totalBytes, startedAt);
+            await MarkCompletedAsync(downloadId, finalPath, downloaded, totalBytes, startedAt);
         }
         catch (OperationCanceledException)
         {
@@ -939,7 +771,7 @@ public class ContentDownloadService : IContentDownloadService
         var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId, cancellationToken);
         if (item != null)
         {
-            TryDeleteFileWithRetry(item.LocalEncryptedPath);
+            TryDeleteFileWithRetry(item.LocalFilePath);
             TryDeleteFileWithRetry(item.TempFilePath);
             db.DownloadItems.Remove(item);
             await db.SaveChangesAsync(cancellationToken);
@@ -959,7 +791,7 @@ public class ContentDownloadService : IContentDownloadService
         var staleItems = await db.DownloadItems
             .Where(d => d.ProfileId == profileId &&
                         d.Status == DownloadStatus.Completed &&
-                        !string.IsNullOrWhiteSpace(d.LocalEncryptedPath))
+                        !string.IsNullOrWhiteSpace(d.LocalFilePath))
             .ToListAsync(cancellationToken);
 
         if (staleItems.Count == 0)
@@ -970,7 +802,7 @@ public class ContentDownloadService : IContentDownloadService
         var changed = false;
         foreach (var item in staleItems)
         {
-            if (!File.Exists(item.LocalEncryptedPath!))
+            if (!File.Exists(item.LocalFilePath!))
             {
                 await RestoreMappedEntitiesToSourceUrlAsync(db, item);
                 db.DownloadItems.Remove(item);
@@ -996,7 +828,7 @@ public class ContentDownloadService : IContentDownloadService
 
     private async Task MarkCompletedAsync(
         int downloadId,
-        string encryptedPath,
+        string filePath,
         long downloaded,
         long? total,
         DateTime startedAtUtc)
@@ -1011,7 +843,7 @@ public class ContentDownloadService : IContentDownloadService
         }
 
         item.Status = DownloadStatus.Completed;
-        item.LocalEncryptedPath = encryptedPath;
+        item.LocalFilePath = filePath;
         item.TempFilePath = null;
         item.BytesDownloaded = downloaded;
         item.BytesTotal = total ?? downloaded;
@@ -1023,7 +855,7 @@ public class ContentDownloadService : IContentDownloadService
         item.ErrorMessage = null;
         await db.SaveChangesAsync();
 
-        await UpdateMappedEntitiesToLocalPathAsync(db, item, encryptedPath);
+        await UpdateMappedEntitiesToLocalPathAsync(db, item, filePath);
         await db.SaveChangesAsync();
         DownloadsChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -1063,7 +895,7 @@ public class ContentDownloadService : IContentDownloadService
         DownloadsChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    private static async Task UpdateMappedEntitiesToLocalPathAsync(AppDbContext db, DownloadItem item, string encryptedPath)
+    private static async Task UpdateMappedEntitiesToLocalPathAsync(AppDbContext db, DownloadItem item, string localPath)
     {
         if (item.ChannelType == ChannelType.VOD)
         {
@@ -1072,7 +904,7 @@ public class ContentDownloadService : IContentDownloadService
                 var channel = await db.Channels.FirstOrDefaultAsync(c => c.Id == item.ChannelId.Value);
                 if (channel != null)
                 {
-                    channel.StreamUrl = encryptedPath;
+                    channel.StreamUrl = localPath;
                 }
             }
             else
@@ -1083,7 +915,7 @@ public class ContentDownloadService : IContentDownloadService
                     c.StreamUrl == item.SourceUrl);
                 if (channel != null)
                 {
-                    channel.StreamUrl = encryptedPath;
+                    channel.StreamUrl = localPath;
                 }
             }
 
@@ -1095,7 +927,7 @@ public class ContentDownloadService : IContentDownloadService
             var episode = await db.Episodes.FirstOrDefaultAsync(e => e.Id == item.EpisodeId.Value);
             if (episode != null)
             {
-                episode.StreamUrl = encryptedPath;
+                episode.StreamUrl = localPath;
             }
         }
         else
@@ -1103,7 +935,7 @@ public class ContentDownloadService : IContentDownloadService
             var episode = await db.Episodes.FirstOrDefaultAsync(e => e.StreamUrl == item.SourceUrl);
             if (episode != null)
             {
-                episode.StreamUrl = encryptedPath;
+                episode.StreamUrl = localPath;
             }
         }
 
@@ -1112,7 +944,7 @@ public class ContentDownloadService : IContentDownloadService
             .ToListAsync();
         foreach (var channel in seriesChannels)
         {
-            channel.StreamUrl = encryptedPath;
+            channel.StreamUrl = localPath;
         }
     }
 
@@ -1138,7 +970,7 @@ public class ContentDownloadService : IContentDownloadService
                 var channel = await db.Channels.FirstOrDefaultAsync(c =>
                     c.PlaylistId == item.PlaylistId &&
                     c.Type == ChannelType.VOD &&
-                    c.StreamUrl == item.LocalEncryptedPath);
+                    c.StreamUrl == item.LocalFilePath);
                 if (channel != null)
                 {
                     channel.StreamUrl = item.SourceUrl;
@@ -1158,7 +990,7 @@ public class ContentDownloadService : IContentDownloadService
         }
         else
         {
-            var episode = await db.Episodes.FirstOrDefaultAsync(e => e.StreamUrl == item.LocalEncryptedPath);
+            var episode = await db.Episodes.FirstOrDefaultAsync(e => e.StreamUrl == item.LocalFilePath);
             if (episode != null)
             {
                 episode.StreamUrl = item.SourceUrl;
@@ -1168,7 +1000,7 @@ public class ContentDownloadService : IContentDownloadService
         var linkedSeriesChannels = await db.Channels
             .Where(c => c.Type == ChannelType.Series &&
                         c.PlaylistId == item.PlaylistId &&
-                        c.StreamUrl == item.LocalEncryptedPath)
+                        c.StreamUrl == item.LocalFilePath)
             .ToListAsync();
         foreach (var channel in linkedSeriesChannels)
         {
@@ -1204,394 +1036,16 @@ public class ContentDownloadService : IContentDownloadService
         return JsonSerializer.Serialize(items, JsonOptions);
     }
 
-    private static (byte[] EncryptionKey, byte[] HmacKey) CreateCryptoKeys()
-    {
-        var baseValue = $"{Environment.MachineName}|{Environment.UserName}|NoctraDownloadKeyV2";
-        using var sha = SHA512.Create();
-        var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(baseValue));
-        var enc = hash.Take(32).ToArray();
-        var mac = hash.Skip(32).Take(32).ToArray();
-        return (enc, mac);
-    }
-
-    private async Task EncryptFileAsync(string sourcePath, string encryptedPath, string originalExtension)
-    {
-        var tempEncryptedPath = encryptedPath + ".tmp";
-        if (File.Exists(tempEncryptedPath))
-        {
-            TryDeleteFile(tempEncryptedPath);
-        }
-
-        try
-        {
-            await using (var input = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 64, true))
-            await using (var output = new FileStream(tempEncryptedPath, FileMode.Create, FileAccess.Write, FileShare.Read, 1024 * 64, true))
-            {
-                using var hmac = IncrementalHash.CreateHMAC(HashAlgorithmName.SHA256, _hmacKey);
-                await using (var hashingStream = new HashingStream(output, hmac))
-                {
-                    var header = $"NOCTRA|2|{originalExtension}|{input.Length}";
-                    var headerBytes = Encoding.UTF8.GetBytes(header);
-                    
-                    var headLenBytes = BitConverter.GetBytes(headerBytes.Length);
-                    await hashingStream.WriteAsync(headLenBytes);
-                    
-                    await hashingStream.WriteAsync(headerBytes);
-
-                    var iv = RandomNumberGenerator.GetBytes(16);
-                    await hashingStream.WriteAsync(iv);
-
-                    using var aes = Aes.Create();
-                    aes.Key = _encryptionKey;
-                    aes.IV = iv;
-                    aes.Mode = CipherMode.CBC;
-                    aes.Padding = PaddingMode.PKCS7;
-
-                    await using (var crypto = new CryptoStream(hashingStream, aes.CreateEncryptor(), CryptoStreamMode.Write, leaveOpen: true))
-                    {
-                        await input.CopyToAsync(crypto);
-                        await crypto.FlushAsync();
-                        crypto.FlushFinalBlock();
-                    }
-                    
-                    await hashingStream.FlushAsync();
-                }
-
-                var hash = hmac.GetHashAndReset();
-                await output.WriteAsync(hash);
-                await output.FlushAsync();
-            }
-
-            if (File.Exists(encryptedPath))
-            {
-                TryDeleteFileWithRetry(encryptedPath);
-            }
-            
-            File.Move(tempEncryptedPath, encryptedPath);
-        }
-        finally
-        {
-            TryDeleteFile(tempEncryptedPath);
-        }
-    }
-
-    private async Task EncryptFileWithRetryAsync(
-        string sourcePath,
-        string encryptedPath,
-        string originalExtension,
-        CancellationToken cancellationToken)
-    {
-        Exception? lastError = null;
-        for (var attempt = 1; attempt <= 4; attempt++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            try
-            {
-                if (attempt > 1 && File.Exists(encryptedPath))
-                {
-                    TryDeleteFile(encryptedPath);
-                }
-
-                await EncryptFileAsync(sourcePath, encryptedPath, originalExtension);
-                return;
-            }
-            catch (IOException ex)
-            {
-                lastError = ex;
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                lastError = ex;
-            }
-
-            await Task.Delay(250 * attempt, cancellationToken);
-        }
-
-        throw lastError ?? new IOException("Sifreleme adimi basarisiz.");
-    }
-
-    private async Task DecryptFileAsync(string encryptedPath, string plainPath, CancellationToken cancellationToken)
-    {
-        await using var input = new FileStream(encryptedPath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 64, true);
-        if (input.Length < 64)
-        {
-            throw new InvalidDataException("Bozuk indirme dosyasi.");
-        }
-
-        var totalLength = input.Length;
-        input.Position = totalLength - 32;
-        var expectedHmac = new byte[32];
-        await input.ReadExactlyAsync(expectedHmac, cancellationToken);
-
-        input.Position = 0;
-        using (var hmac = new HMACSHA256(_hmacKey))
-        {
-            var dataLength = totalLength - 32;
-            using var limited = new LimitedLengthReadStream(input, dataLength);
-            var computed = hmac.ComputeHash(limited);
-            if (!CryptographicOperations.FixedTimeEquals(expectedHmac, computed))
-            {
-                throw new InvalidDataException("Dosya dogrulamasi basarisiz.");
-            }
-        }
-
-        input.Position = 0;
-        var lenBuffer = new byte[4];
-        await input.ReadExactlyAsync(lenBuffer, cancellationToken);
-        var headerLength = BitConverter.ToInt32(lenBuffer, 0);
-        if (headerLength <= 0 || headerLength > 1024)
-        {
-            throw new InvalidDataException("Gecersiz dosya basligi.");
-        }
-
-        var headerBytes = new byte[headerLength];
-        await input.ReadExactlyAsync(headerBytes, cancellationToken);
-        var header = Encoding.UTF8.GetString(headerBytes);
-        if (!header.StartsWith("NOCTRA|2|", StringComparison.Ordinal))
-        {
-            throw new InvalidDataException("Desteklenmeyen dosya formati.");
-        }
-
-        var iv = new byte[16];
-        await input.ReadExactlyAsync(iv, cancellationToken);
-
-        var encryptedDataLength = totalLength - 32 - 4 - headerLength - 16;
-        if (encryptedDataLength <= 0)
-        {
-            throw new InvalidDataException("Sifreli veri yok.");
-        }
-
-        await using var output = new FileStream(plainPath, FileMode.Create, FileAccess.Write, FileShare.Read, 1024 * 64, true);
-        using var aes = Aes.Create();
-        aes.Key = _encryptionKey;
-        aes.IV = iv;
-        aes.Mode = CipherMode.CBC;
-        aes.Padding = PaddingMode.PKCS7;
-
-        await using var crypto = new CryptoStream(
-            new LimitedLengthReadStream(input, encryptedDataLength),
-            aes.CreateDecryptor(),
-            CryptoStreamMode.Read);
-        await crypto.CopyToAsync(output, cancellationToken);
-        await output.FlushAsync(cancellationToken);
-    }
-
-    private static string? TryGetStoredOriginalExtension(string encryptedPath)
-    {
-        try
-        {
-            using var input = new FileStream(encryptedPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            var lenBuffer = new byte[4];
-            if (input.Read(lenBuffer, 0, 4) != 4)
-            {
-                return null;
-            }
-
-            var headerLength = BitConverter.ToInt32(lenBuffer, 0);
-            if (headerLength <= 0 || headerLength > 1024)
-            {
-                return null;
-            }
-
-            var headerBytes = new byte[headerLength];
-            if (input.Read(headerBytes, 0, headerBytes.Length) != headerBytes.Length)
-            {
-                return null;
-            }
-
-            var header = Encoding.UTF8.GetString(headerBytes);
-            var parts = header.Split('|');
-            if (parts.Length < 4)
-            {
-                return null;
-            }
-
-            var ext = parts[2];
-            if (string.IsNullOrWhiteSpace(ext) || ext.Length > 12)
-            {
-                return null;
-            }
-
-            return ext.StartsWith('.') ? ext : "." + ext;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private bool TryCheckWifiPolicy(out string message)
-    {
-        message = string.Empty;
-        if (!_settingsService.Settings.DownloadWifiOnly)
-        {
-            return true;
-        }
-
-        try
-        {
-            var allInterfaces = NetworkInterface.GetAllNetworkInterfaces().ToList();
-            var activeInterfaces = allInterfaces.Where(n => n.OperationalStatus == OperationalStatus.Up).ToList();
-            if (activeInterfaces.Count == 0)
-            {
-                message = "Ag baglantisi bulunamadi.";
-                return false;
-            }
-
-            var hasWirelessAdapter = allInterfaces.Any(n => n.NetworkInterfaceType == NetworkInterfaceType.Wireless80211);
-            if (!hasWirelessAdapter)
-            {
-                return true;
-            }
-
-            var hasActiveWifi = activeInterfaces.Any(n => n.NetworkInterfaceType == NetworkInterfaceType.Wireless80211);
-            if (hasActiveWifi)
-            {
-                return true;
-            }
-
-            message = "Sadece Wi-Fi ile indirme acik.";
-            return false;
-        }
-        catch
-        {
-            return true;
-        }
-    }
-
-    private static string EnsureProfileDownloadDirectory(string? configuredPath, int profileId)
-    {
-        var rootFallback = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Noctra",
-            "Downloads");
-        var root = string.IsNullOrWhiteSpace(configuredPath)
-            ? rootFallback
-            : configuredPath.Trim().Trim('"');
-
-        if (!Path.IsPathFullyQualified(root))
-        {
-            root = rootFallback;
-        }
-
-        var profilePath = Path.Combine(root, $"profile_{profileId}");
-        Directory.CreateDirectory(profilePath);
-        return profilePath;
-    }
-
-    private static string EnsureItemDownloadDirectory(string profileRoot, DownloadItem item)
-    {
-        string directory;
-        if (item.ChannelType == ChannelType.Series)
-        {
-            ParseSeriesNaming(item.DisplayName, out var seriesTitle, out var seasonNumber, out _, out _);
-            directory = Path.Combine(
-                profileRoot,
-                "Diziler",
-                BuildSafeFileName(seriesTitle),
-                $"Sezon {Math.Max(1, seasonNumber):00}");
-        }
-        else if (item.ChannelType == ChannelType.VOD)
-        {
-            directory = Path.Combine(
-                profileRoot,
-                "Filmler",
-                BuildSafeFileName(item.DisplayName));
-        }
-        else
-        {
-            directory = Path.Combine(profileRoot, "Diger");
-        }
-
-        Directory.CreateDirectory(directory);
-        return directory;
-    }
-
-    private static string BuildItemFileStem(DownloadItem item)
-    {
-        if (item.ChannelType != ChannelType.Series)
-        {
-            return BuildSafeFileName(item.DisplayName);
-        }
-
-        ParseSeriesNaming(item.DisplayName, out _, out var seasonNumber, out var episodeNumber, out var episodeTitle);
-        if (episodeNumber > 0)
-        {
-            var safeEpisodeTitle = BuildSafeFileName(string.IsNullOrWhiteSpace(episodeTitle)
-                ? $"Bolum {episodeNumber:00}"
-                : episodeTitle);
-            return $"S{Math.Max(1, seasonNumber):00}E{episodeNumber:00} - {safeEpisodeTitle}";
-        }
-
-        return BuildSafeFileName(item.DisplayName);
-    }
-
-    private static void ParseSeriesNaming(
-        string? rawName,
-        out string seriesTitle,
-        out int seasonNumber,
-        out int episodeNumber,
-        out string episodeTitle)
-    {
-        var input = string.IsNullOrWhiteSpace(rawName) ? "Dizi" : rawName.Trim();
-        seriesTitle = input;
-        seasonNumber = 1;
-        episodeNumber = 0;
-        episodeTitle = string.Empty;
-
-        var match = SeriesEpisodeRegex.Match(input);
-        if (!match.Success)
-        {
-            return;
-        }
-
-        seasonNumber = ParseGroupNumber(match, "s", "s2", "s3");
-        if (seasonNumber <= 0)
-        {
-            seasonNumber = 1;
-        }
-
-        episodeNumber = ParseGroupNumber(match, "e", "e2", "e3", "e4");
-        var before = input[..match.Index].Trim(' ', '-', '_', '|', ':', '.');
-        var after = input[(match.Index + match.Length)..].Trim(' ', '-', '_', '|', ':', '.');
-
-        if (!string.IsNullOrWhiteSpace(before))
-        {
-            seriesTitle = before;
-        }
-
-        if (!string.IsNullOrWhiteSpace(after))
-        {
-            episodeTitle = after;
-        }
-    }
-
-    private static int ParseGroupNumber(Match match, params string[] groupNames)
-    {
-        foreach (var groupName in groupNames)
-        {
-            if (!match.Groups[groupName].Success)
-            {
-                continue;
-            }
-
-            if (int.TryParse(match.Groups[groupName].Value, out var value))
-            {
-                return value;
-            }
-        }
-
-        return 0;
-    }
-
-    private static bool IsEncryptedLocalPath(string value)
+    private static bool IsLocalFilePath(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
             return false;
         }
 
-        return value.EndsWith(EncryptedExtension, StringComparison.OrdinalIgnoreCase);
+        return value.StartsWith("file://", StringComparison.OrdinalIgnoreCase)
+               || Regex.IsMatch(value.Trim(), @"^[a-zA-Z]:[\\/]")
+               || value.StartsWith("/", StringComparison.Ordinal);
     }
 
     private static IReadOnlyList<string> BuildDownloadCandidates(string sourceUrl, DownloadQuality quality)
@@ -1710,11 +1164,82 @@ public class ContentDownloadService : IContentDownloadService
         return Path.Combine(directory, $"{fileNameWithoutExtension}_{DateTime.UtcNow:yyyyMMdd_HHmmss}{extension}");
     }
 
-    private static string ComputeSha1(string value)
+    private static string EnsureProfileDownloadDirectory(string? baseDownloadPath, int profileId)
     {
-        using var sha = SHA1.Create();
-        var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(value));
-        return Convert.ToHexString(hash).ToLowerInvariant();
+        var basePath = string.IsNullOrWhiteSpace(baseDownloadPath)
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Noctra", "Downloads")
+            : baseDownloadPath;
+
+        var profilePath = Path.Combine(basePath, $"Profile_{profileId}");
+        if (!Directory.Exists(profilePath))
+        {
+            Directory.CreateDirectory(profilePath);
+        }
+        return profilePath;
+    }
+
+    private static string EnsureItemDownloadDirectory(string profilePath, DownloadItem item)
+    {
+        var category = item.ChannelType == ChannelType.Series ? "Series" : "Movies";
+        var categoryPath = Path.Combine(profilePath, category);
+        if (!Directory.Exists(categoryPath))
+        {
+            Directory.CreateDirectory(categoryPath);
+        }
+
+        if (item.ChannelType == ChannelType.Series && !string.IsNullOrWhiteSpace(item.DisplayName))
+        {
+            var seriesName = BuildSafeFileName(ExtractSeriesName(item.DisplayName));
+            var seriesPath = Path.Combine(categoryPath, seriesName);
+            if (!Directory.Exists(seriesPath))
+            {
+                Directory.CreateDirectory(seriesPath);
+            }
+            return seriesPath;
+        }
+
+        return categoryPath;
+    }
+
+    private static string BuildItemFileStem(DownloadItem item)
+    {
+        return BuildSafeFileName(item.DisplayName ?? "download");
+    }
+
+    private static string ExtractSeriesName(string displayName)
+    {
+        var match = SeriesEpisodeRegex.Match(displayName);
+        if (match.Success)
+        {
+            return displayName[..match.Index].Trim();
+        }
+        return displayName;
+    }
+
+
+
+    private bool TryCheckWifiPolicy(out string? message)
+    {
+        message = null;
+        if (!_settingsService.Settings.DownloadWifiOnly)
+        {
+            return true;
+        }
+
+        var isWifiOrEthernet = NetworkInterface.GetAllNetworkInterfaces()
+            .Any(i => i.OperationalStatus == OperationalStatus.Up &&
+                      (i.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 ||
+                       i.NetworkInterfaceType == NetworkInterfaceType.Ethernet ||
+                       i.NetworkInterfaceType == NetworkInterfaceType.Wwanpp ||
+                       i.NetworkInterfaceType == NetworkInterfaceType.Wwanpp2));
+
+        if (!isWifiOrEthernet)
+        {
+            message = "Sadece Wi-Fi veya Ethernet uzerinden indirme yapilabilir (ayarlardan degistirilebilir).";
+            return false;
+        }
+
+        return true;
     }
 
     private static void TryDeleteFile(string? path)
@@ -1751,101 +1276,4 @@ public class ContentDownloadService : IContentDownloadService
         }
     }
 
-    private sealed class HashingStream : Stream
-    {
-        private readonly Stream _inner;
-        private readonly IncrementalHash _hmac;
-
-        public HashingStream(Stream inner, IncrementalHash hmac)
-        {
-            _inner = inner;
-            _hmac = hmac;
-        }
-
-        public override bool CanRead => false;
-        public override bool CanSeek => false;
-        public override bool CanWrite => true;
-        public override long Length => _inner.Length;
-        public override long Position
-        {
-            get => _inner.Position;
-            set => throw new NotSupportedException();
-        }
-
-        public override void Flush() => _inner.Flush();
-        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-        public override void SetLength(long value) => _inner.SetLength(value);
-
-        public override void Write(byte[] buffer, int offset, int count)
-        {
-            _inner.Write(buffer, offset, count);
-            _hmac.AppendData(buffer, offset, count);
-        }
-
-        public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-        {
-            await _inner.WriteAsync(buffer.AsMemory(offset, count), cancellationToken);
-            _hmac.AppendData(buffer, offset, count);
-        }
-
-        public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
-        {
-            await _inner.WriteAsync(buffer, cancellationToken);
-            _hmac.AppendData(buffer.Span);
-        }
-    }
-
-    private sealed class LimitedLengthReadStream : Stream
-    {
-        private readonly Stream _inner;
-        private long _remaining;
-
-        public LimitedLengthReadStream(Stream inner, long length)
-        {
-            _inner = inner;
-            _remaining = Math.Max(0, length);
-        }
-
-        public override bool CanRead => _inner.CanRead;
-        public override bool CanSeek => false;
-        public override bool CanWrite => false;
-        public override long Length => _remaining;
-        public override long Position
-        {
-            get => 0;
-            set => throw new NotSupportedException();
-        }
-
-        public override int Read(byte[] buffer, int offset, int count)
-        {
-            if (_remaining <= 0)
-            {
-                return 0;
-            }
-
-            var toRead = (int)Math.Min(count, _remaining);
-            var read = _inner.Read(buffer, offset, toRead);
-            _remaining -= read;
-            return read;
-        }
-
-        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
-        {
-            if (_remaining <= 0)
-            {
-                return 0;
-            }
-
-            var toRead = (int)Math.Min(buffer.Length, _remaining);
-            var read = await _inner.ReadAsync(buffer[..toRead], cancellationToken);
-            _remaining -= read;
-            return read;
-        }
-
-        public override void Flush() => throw new NotSupportedException();
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-        public override void SetLength(long value) => throw new NotSupportedException();
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-    }
 }

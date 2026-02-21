@@ -2382,19 +2382,19 @@ public partial class MainViewModel : ObservableObject
             .Where(d => d.ProfileId == CurrentProfileId.Value &&
                         d.ChannelType == ChannelType.VOD &&
                         d.Status == DownloadStatus.Completed &&
-                        !string.IsNullOrWhiteSpace(d.LocalEncryptedPath))
+                        !string.IsNullOrWhiteSpace(d.LocalFilePath))
             .OrderBy(d => d.CreatedAt)
             .ToListAsync();
 
         var fallbackVod = new List<Channel>();
         foreach (var item in completedVodDownloads)
         {
-            if (string.IsNullOrWhiteSpace(item.LocalEncryptedPath) || !File.Exists(item.LocalEncryptedPath))
+            if (string.IsNullOrWhiteSpace(item.LocalFilePath) || !File.Exists(item.LocalFilePath))
             {
                 continue;
             }
 
-            if (existingDownloadedVodUrls.Contains(item.LocalEncryptedPath))
+            if (existingDownloadedVodUrls.Contains(item.LocalFilePath))
             {
                 continue;
             }
@@ -2402,7 +2402,7 @@ public partial class MainViewModel : ObservableObject
             fallbackVod.Add(new Channel
             {
                 Name = string.IsNullOrWhiteSpace(item.DisplayName) ? "VOD" : item.DisplayName,
-                StreamUrl = item.LocalEncryptedPath,
+                StreamUrl = item.LocalFilePath,
                 LogoUrl = item.PosterUrl,
                 BackdropUrl = item.PosterUrl,
                 Type = ChannelType.VOD,
@@ -2444,19 +2444,19 @@ public partial class MainViewModel : ObservableObject
             .Where(d => d.ProfileId == CurrentProfileId.Value &&
                         d.ChannelType == ChannelType.Series &&
                         d.Status == DownloadStatus.Completed &&
-                        !string.IsNullOrWhiteSpace(d.LocalEncryptedPath))
+                        !string.IsNullOrWhiteSpace(d.LocalFilePath))
             .OrderBy(d => d.CreatedAt)
             .ToListAsync();
 
         var fallbackSeriesMap = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
         foreach (var item in completedSeriesDownloads)
         {
-            if (string.IsNullOrWhiteSpace(item.LocalEncryptedPath) || !File.Exists(item.LocalEncryptedPath))
+            if (string.IsNullOrWhiteSpace(item.LocalFilePath) || !File.Exists(item.LocalFilePath))
             {
                 continue;
             }
 
-            if (existingDownloadedEpisodeUrls.Contains(item.LocalEncryptedPath))
+            if (existingDownloadedEpisodeUrls.Contains(item.LocalFilePath))
             {
                 continue;
             }
@@ -2487,7 +2487,7 @@ public partial class MainViewModel : ObservableObject
                 series.Seasons.Add(season);
             }
 
-            if (season.Episodes.Any(e => string.Equals(e.StreamUrl, item.LocalEncryptedPath, StringComparison.OrdinalIgnoreCase)))
+            if (season.Episodes.Any(e => string.Equals(e.StreamUrl, item.LocalFilePath, StringComparison.OrdinalIgnoreCase)))
             {
                 continue;
             }
@@ -2497,7 +2497,7 @@ public partial class MainViewModel : ObservableObject
             {
                 EpisodeNumber = episodeNumber,
                 Name = item.DisplayName,
-                StreamUrl = item.LocalEncryptedPath,
+                StreamUrl = item.LocalFilePath,
                 CoverUrl = item.PosterUrl
             });
         }
@@ -2603,7 +2603,7 @@ public partial class MainViewModel : ObservableObject
                 root = rootFallback;
             }
 
-            var profilePath = Path.Combine(root, $"profile_{profileId}");
+            var profilePath = Path.Combine(root, $"Profile_{profileId}");
             Directory.CreateDirectory(profilePath);
 
             var driveRoot = Path.GetPathRoot(profilePath);
@@ -3815,7 +3815,7 @@ public partial class MainViewModel : ObservableObject
             var item = await db.DownloadItems
                 .AsNoTracking()
                 .Where(d => d.Status == DownloadStatus.Completed &&
-                            d.LocalEncryptedPath == streamUrl &&
+                            d.LocalFilePath == streamUrl &&
                             !string.IsNullOrWhiteSpace(d.SourceUrl))
                 .OrderByDescending(d => d.CompletedAt ?? d.UpdatedAt)
                 .FirstOrDefaultAsync();
