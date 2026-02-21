@@ -8,6 +8,7 @@ public sealed class StubEpgService : IEpgService
     public bool IsLoaded => false;
     public DateTime? LastUpdated => null;
     public string? LastError => null;
+    public int LastChannelMapCount => 0;
 
     public Task LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1)
         => Task.CompletedTask;
