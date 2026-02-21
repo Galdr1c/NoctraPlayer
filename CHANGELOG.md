@@ -223,7 +223,8 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - **Canlı Senkronizasyon**: Ayarlarda yapılan yenileme sıklığı (EPG/Kanal) değişikliklerinin arka plandaki zamanlayıcılara anında yansıması sağlandı (yeniden başlatma gerektirmez).
   - **Düzen ve Boşluk Düzeltmeleri**:
     - `Padding` yerine `Margin` sistemine geçilerek tüm temalarda kararlı alt boşluk sağlandı (60px-80px arası optimize edildi).
-    - `ProfilesWindow` (Profil Yönetimi) ekranına tam `ScrollViewer` desteği eklendi, butonların kesilmesi engellendi.
+  - **Async Void Güvenliği ve Hata Yönetimi**: Avalonia View ve Window sınıflarındaki (`LiveView`, `MoviesView`, `SeriesView`, `ProfilesWindow`, vb.) tüm `async void` olay işleyicileri `try-catch` bloklarına alınarak uygulama çökmesi (Crash) riski ortadan kaldırıldı. Hatalar artık `MainViewModel.StatusMessage` üzerinden kullanıcıya bildiriliyor.
+  - **Namespace ve Derleme Hataları Giderildi**: `AvaloniaDialogService` ve `SettingsWindow` içerisindeki eksik `using` ifadeleri ve yanlış metot referansları düzeltildi.
   - **Kritik Hata Düzeltmeleri**:
     - Kapat butonu görünürlüğü artırıldı (Material Icon entegrasyonu).
     - Türkçe karakter hataları, özellikle "Hakkında" bölümündeki metinlerde ("Tum Haklari" -> "Tüm Hakları") düzeltildi.

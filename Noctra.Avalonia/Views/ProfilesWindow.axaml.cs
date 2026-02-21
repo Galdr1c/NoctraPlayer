@@ -73,7 +73,14 @@ public partial class ProfilesWindow : Window
 
     private async void SettingsButton_Click(object? sender, RoutedEventArgs e)
     {
-        await _dialogService.ShowGlobalSettingsAsync();
+        try
+        {
+            await _dialogService.ShowGlobalSettingsAsync();
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ShowErrorAsync("Hata", "Ayarlar penceresi açılamadı.", ex);
+        }
     }
 
     private void SelectProfile_Click(object? sender, RoutedEventArgs e)
@@ -98,22 +105,29 @@ public partial class ProfilesWindow : Window
 
     private async void ProfilesWindow_Opened(object? sender, EventArgs e)
     {
-        await _viewModel.RefreshProfilesAsync();
-
-        if (DisableAutoSelect || !_settingsService.Settings.AutoSelectLastProfile || _autoSelectTriggered)
+        try
         {
-            return;
-        }
+            await _viewModel.RefreshProfilesAsync();
 
-        var lastProfile = _viewModel.Profiles.OrderByDescending(p => p.LastUsed).FirstOrDefault();
-        if (lastProfile == null)
+            if (DisableAutoSelect || !_settingsService.Settings.AutoSelectLastProfile || _autoSelectTriggered)
+            {
+                return;
+            }
+
+            var lastProfile = _viewModel.Profiles.OrderByDescending(p => p.LastUsed).FirstOrDefault();
+            if (lastProfile == null)
+            {
+                return;
+            }
+
+            _autoSelectTriggered = true;
+            await Task.Delay(50);
+            _viewModel.SelectProfileCommand.Execute(lastProfile);
+        }
+        catch (Exception ex)
         {
-            return;
+            _mainViewModel.StatusMessage = $"Profil yükleme hatası: {ex.Message}";
         }
-
-        _autoSelectTriggered = true;
-        await Task.Delay(50);
-        _viewModel.SelectProfileCommand.Execute(lastProfile);
     }
 
     private async void ViewModel_OnProfileSelected(Profile profile)

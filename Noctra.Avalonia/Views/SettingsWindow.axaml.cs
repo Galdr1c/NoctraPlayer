@@ -7,6 +7,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.ViewModels;
+using Noctra.Services.Interfaces;
 
 namespace Noctra.Avalonia.Views;
 
@@ -61,18 +62,29 @@ public partial class SettingsWindow : Window
 
     private async void ChangeDownloadPath_Click(object? sender, RoutedEventArgs e)
     {
-        var topLevel = GetTopLevel(this);
-        if (topLevel == null) return;
-
-        var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        try
         {
-            Title = "İndirme Klasörünü Seçin",
-            AllowMultiple = false
-        });
+            var topLevel = GetTopLevel(this);
+            if (topLevel == null) return;
 
-        if (folders.Count > 0)
+            var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "İndirme Klasörünü Seçin",
+                AllowMultiple = false
+            });
+
+            if (folders.Count > 0)
+            {
+                _viewModel.DownloadPath = folders[0].Path.LocalPath;
+            }
+        }
+        catch (Exception ex)
         {
-            _viewModel.DownloadPath = folders[0].Path.LocalPath;
+            var dialogService = ((App)Application.Current!).Services.GetService<IDialogService>();
+            if (dialogService != null)
+            {
+                await dialogService.ShowErrorAsync("Hata", "Klasör seçilirken bir hata oluştu.", ex);
+            }
         }
     }
 

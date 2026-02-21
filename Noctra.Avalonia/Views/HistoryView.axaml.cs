@@ -27,30 +27,58 @@ public partial class HistoryView : UserControl
     
     private async void Context_AddToMyList_Click(object? sender, RoutedEventArgs e)
     {
-        if (sender is not MenuItem menuItem) return;
-        var media = ResolveContextMedia(menuItem);
-        if (media != null && ViewModel != null) await ViewModel.AddToMyListCommand.ExecuteAsync(media);
+        try
+        {
+            if (sender is not MenuItem menuItem) return;
+            var media = ResolveContextMedia(menuItem);
+            if (media != null && ViewModel != null) await ViewModel.AddToMyListCommand.ExecuteAsync(media);
+        }
+        catch (Exception ex)
+        {
+            if (ViewModel != null) ViewModel.StatusMessage = $"Hata: {ex.Message}";
+        }
     }
 
     private async void Context_ToggleFavorite_Click(object? sender, RoutedEventArgs e)
     {
-        if (sender is not MenuItem menuItem) return;
-        var media = ResolveContextMedia(menuItem);
-        if (media != null && ViewModel != null) await ViewModel.ToggleFavoriteCommand.ExecuteAsync(media);
+        try
+        {
+            if (sender is not MenuItem menuItem) return;
+            var media = ResolveContextMedia(menuItem);
+            if (media != null && ViewModel != null) await ViewModel.ToggleFavoriteCommand.ExecuteAsync(media);
+        }
+        catch (Exception ex)
+        {
+            if (ViewModel != null) ViewModel.StatusMessage = $"Hata: {ex.Message}";
+        }
     }
 
     private async void Context_RemoveFromMyList_Click(object? sender, RoutedEventArgs e)
     {
-        if (sender is not MenuItem menuItem) return;
-        var media = ResolveContextMedia(menuItem);
-        if (media != null && ViewModel != null) await ViewModel.RemoveFromMyListCommand.ExecuteAsync(media);
+        try
+        {
+            if (sender is not MenuItem menuItem) return;
+            var media = ResolveContextMedia(menuItem);
+            if (media != null && ViewModel != null) await ViewModel.RemoveFromMyListCommand.ExecuteAsync(media);
+        }
+        catch (Exception ex)
+        {
+            if (ViewModel != null) ViewModel.StatusMessage = $"Hata: {ex.Message}";
+        }
     }
 
     private async void Context_RemoveFromFavorites_Click(object? sender, RoutedEventArgs e)
     {
-        if (sender is not MenuItem menuItem) return;
-        var media = ResolveContextMedia(menuItem);
-        if (media != null && ViewModel != null) await ViewModel.RemoveFromFavoritesCommand.ExecuteAsync(media);
+        try
+        {
+            if (sender is not MenuItem menuItem) return;
+            var media = ResolveContextMedia(menuItem);
+            if (media != null && ViewModel != null) await ViewModel.RemoveFromFavoritesCommand.ExecuteAsync(media);
+        }
+        catch (Exception ex)
+        {
+            if (ViewModel != null) ViewModel.StatusMessage = $"Hata: {ex.Message}";
+        }
     }
 
     private static object? ResolveContextMedia(MenuItem menuItem)
