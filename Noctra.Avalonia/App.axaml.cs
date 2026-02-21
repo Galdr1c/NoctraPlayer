@@ -206,6 +206,7 @@ public partial class App : Application
         services.AddSingleton<IThemeService, AvaloniaThemeService>();
         services.AddSingleton<AvaloniaImageCacheService>();
         services.AddSingleton<IVideoPlayerService, VideoPlayerService>();
+        services.AddSingleton<ISecurityService, SecurityService>();
         services.AddTransient<WatermarkViewModel>();
         
         services.AddSingleton<MainViewModel>();

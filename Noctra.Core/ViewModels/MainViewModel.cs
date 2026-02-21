@@ -41,6 +41,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IMetadataService _metadataService;
     private readonly IContentDownloadService _contentDownloadService;
     private readonly ILogger<MainViewModel>? _logger;
+    private readonly ISecurityService _securityService;
     private readonly IChannelService _channelService;
     private readonly IMediaService _mediaService;
     private readonly IEpgService _epgService;
@@ -181,6 +182,7 @@ public partial class MainViewModel : ObservableObject
         LanguageDetectionService languageDetectionService,
         EpgSourceResolver epgSourceResolver,
         IDbContextFactory<AppDbContext> contextFactory,
+        ISecurityService securityService,
         ILogger<MainViewModel>? logger = null)
     {
         _settingsService = settingsService;
@@ -199,6 +201,7 @@ public partial class MainViewModel : ObservableObject
         _languageDetectionService = languageDetectionService;
         _epgSourceResolver = epgSourceResolver;
         _contextFactory = contextFactory;
+        _securityService = securityService;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
         InitializeAsync();
         _contentDownloadService.DownloadsChanged += (_, _) =>
@@ -289,7 +292,7 @@ public partial class MainViewModel : ObservableObject
 
                         _ = CheckXtreamExpirationAsync(profile.ProviderAccount);
                         var username = profile.ProviderAccount.Username ?? string.Empty;
-                        var password = profile.ProviderAccount.Password ?? string.Empty;
+                        var password = _securityService.Decrypt(profile.ProviderAccount.Password) ?? string.Empty;
 
                         try
                         {
@@ -307,7 +310,8 @@ public partial class MainViewModel : ObservableObject
                         catch (Exception ex)
                         {
                             _logger?.LogDebug($"[MainViewModel] Xtream API fallback to M3U: {ex.Message}");
-                            var fallbackM3uUrl = $"{baseUrl}/get.php?username={Uri.EscapeDataString(username)}&password={Uri.EscapeDataString(password)}&type=m3u_plus&output=ts";
+                            var decryptedPassword = _securityService.Decrypt(profile.ProviderAccount.Password) ?? string.Empty;
+                            var fallbackM3uUrl = $"{baseUrl}/get.php?username={Uri.EscapeDataString(username)}&password={Uri.EscapeDataString(decryptedPassword)}&type=m3u_plus&output=ts";
                             StatusMessage = "Kanal listesi indiriliyor...";
                             await _playlistService.AddFromUrlAsync(profile.Name, fallbackM3uUrl, profile.Id);
                             await LoadPlaylistsAsync();
@@ -450,7 +454,8 @@ public partial class MainViewModel : ObservableObject
     {
         var baseUrl = account.Url.TrimEnd('/');
         if (!baseUrl.StartsWith("http")) baseUrl = "http://" + baseUrl;
-        await CheckExpirationInternalAsync(account.Id, baseUrl, account.Username, account.Password);
+        var decryptedPassword = _securityService.Decrypt(account.Password);
+        await CheckExpirationInternalAsync(account.Id, baseUrl, account.Username, decryptedPassword);
     }
 
     private async Task CheckExpirationInternalAsync(int accountId, string baseUrl, string? username, string? password)

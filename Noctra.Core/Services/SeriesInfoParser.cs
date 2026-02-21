@@ -58,7 +58,7 @@ public static partial class SeriesInfoParser
         if (string.IsNullOrWhiteSpace(value)) return string.Empty;
         
         var normalized = value.Trim().ToLowerInvariant();
-        normalized = CountryPrefixRegex().Replace(normalized, " ");
+        normalized = StripIptvPrefixes(normalized);
         normalized = EpisodeTokenRegex().Replace(normalized, " ");
         normalized = NoiseTokenRegex().Replace(normalized, " ");
         normalized = YearTokenRegex().Replace(normalized, " ");
@@ -92,13 +92,39 @@ public static partial class SeriesInfoParser
         }
 
         var cleaned = value.Trim();
-        cleaned = CountryPrefixRegex().Replace(cleaned, " ");
+        cleaned = StripIptvPrefixes(cleaned);
         cleaned = EpisodeTokenRegex().Replace(cleaned, " ");
         cleaned = NoiseTokenRegex().Replace(cleaned, " ");
         cleaned = YearTokenRegex().Replace(cleaned, " ");
         cleaned = cleaned.Replace('_', ' ').Replace('.', ' ');
         cleaned = MultiSpaceRegex().Replace(cleaned, " ").Trim(' ', '-', '|', ':', '.');
         return string.IsNullOrWhiteSpace(cleaned) ? "Bilinmeyen Dizi" : cleaned;
+    }
+
+    /// <summary>
+    /// Strips IPTV-style prefixes like "TR | Kanal D | " or "EN." safely.
+    /// CountryPrefixRegex handles short 2-3 letter codes with any delimiter.
+    /// PipeTagRegex handles longer tags but ONLY with pipe delimiter (safe, unambiguous).
+    /// </summary>
+    private static string StripIptvPrefixes(string text)
+    {
+        // Phase 1: Strip country codes (safe with any delimiter including dots)
+        text = CountryPrefixRegex().Replace(text, " ").Trim();
+
+        // Phase 2: Strip pipe-delimited tags only (e.g. "Kanal D | ")
+        if (text.Contains('|'))
+        {
+            bool changed;
+            do
+            {
+                changed = false;
+                var before = text;
+                text = PipeTagRegex().Replace(text, " ").Trim();
+                if (text != before) changed = true;
+            } while (changed && text.Contains('|'));
+        }
+
+        return text;
     }
 
     public static string GetSeriesInfoText(int season, int episode)
@@ -169,8 +195,11 @@ public static partial class SeriesInfoParser
     [GeneratedRegex(@"\b(?:4k|2160p|1080p|720p|x264|x265|h264|h265|webrip|webdl|web-dl|bluray|dub|dublaj|altyazi|subtitle)\b", RegexOptions.IgnoreCase)]
     private static partial Regex NoiseTokenRegex();
 
-    [GeneratedRegex(@"^\s*(?:[a-z]{2,3}\s*[|:-]\s*)+", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^\s*(?:[a-z]{2,3}\s*[|:\.\-]\s*)+", RegexOptions.IgnoreCase)]
     private static partial Regex CountryPrefixRegex();
+
+    [GeneratedRegex(@"^\s*(?:[^|]+?\s*\|\s*)", RegexOptions.IgnoreCase)]
+    private static partial Regex PipeTagRegex();
 
     [GeneratedRegex(@"\b(?:19\d{2}|20\d{2})\b", RegexOptions.IgnoreCase)]
     private static partial Regex YearTokenRegex();

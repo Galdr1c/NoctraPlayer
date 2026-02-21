@@ -23,6 +23,7 @@ public partial class AddProfileViewModel : ObservableObject
     private readonly IXtreamCodesService _xtreamCodesService;
     private readonly IStalkerPortalService _stalkerPortalService;
     private readonly IContentDownloadService _contentDownloadService;
+    private readonly ISecurityService _securityService;
 
     // Simplified Account Details
     [ObservableProperty]
@@ -542,7 +543,8 @@ public partial class AddProfileViewModel : ObservableObject
         IM3UParser m3uParser,
         IXtreamCodesService xtreamCodesService,
         IStalkerPortalService stalkerPortalService,
-        IContentDownloadService contentDownloadService)
+        IContentDownloadService contentDownloadService,
+        ISecurityService securityService)
     {
         _contextFactory = contextFactory;
         _dispatcherService = dispatcherService;
@@ -553,6 +555,7 @@ public partial class AddProfileViewModel : ObservableObject
         _xtreamCodesService = xtreamCodesService;
         _stalkerPortalService = stalkerPortalService;
         _contentDownloadService = contentDownloadService;
+        _securityService = securityService;
 
         // Initialize with default avatar
         var avatars = _avatarService.GetAvatarsByCategory().Values.FirstOrDefault();
@@ -579,7 +582,7 @@ public partial class AddProfileViewModel : ObservableObject
             // Set account details
             Url = profile.ProviderAccount.Url;
             Username = profile.ProviderAccount.Username ?? string.Empty;
-            Password = profile.ProviderAccount.Password ?? string.Empty;
+            Password = _securityService.Decrypt(profile.ProviderAccount.Password) ?? string.Empty;
             IsXtream = profile.ProviderAccount.Type == ProfileType.XtreamCodes;
             IsM3U = profile.ProviderAccount.Type == ProfileType.M3U;
             IsStalker = profile.ProviderAccount.Type == ProfileType.StalkerPortal;
@@ -1029,7 +1032,7 @@ public partial class AddProfileViewModel : ObservableObject
                  // Enable tracking/Update
                  selectedAccount.Url = Url;
                  selectedAccount.Username = Username;
-                 selectedAccount.Password = Password;
+                 selectedAccount.Password = _securityService.Encrypt(Password);
                  selectedAccount.Type = IsStalker
                      ? ProfileType.StalkerPortal
                      : IsXtream
@@ -1052,7 +1055,7 @@ public partial class AddProfileViewModel : ObservableObject
                             : ProfileType.M3U,
                     Url = Url,
                     Username = Username,
-                    Password = Password
+                    Password = _securityService.Encrypt(Password)
                 };
                 db.ProviderAccounts.Add(account);
             }
