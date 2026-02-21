@@ -91,6 +91,11 @@ public class AppSettings
     /// </summary>
     public string DownloadPath { get; set; } = string.Empty;
     
+    /// <summary>
+    /// Ufak kesintileri "tamamlanmış" sayma eşiği (varsayılan: %99.98)
+    /// </summary>
+    public double DownloadCompletionTolerance { get; set; } = 0.9998;
+    
     // ============ Görünüm Ayarları ============
     
     /// <summary>

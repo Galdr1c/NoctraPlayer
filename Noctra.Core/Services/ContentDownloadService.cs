@@ -757,9 +757,11 @@ public class ContentDownloadService : IContentDownloadService
                 var missingBytes = totalBytes.Value - downloaded;
                 var percent = (double)downloaded / totalBytes.Value;
 
-                // If we're extremely close (e.g. within 10KB or >99.98% for large files), treat as complete.
+                var tolerance = _settingsService.Settings.DownloadCompletionTolerance;
+
+                // If we're extremely close (e.g. within 10KB or > tolerance for large files), treat as complete.
                 // This handles servers that report slightly larger Content-Length than actual stream data.
-                if (missingBytes < 1024 * 10 || (downloaded > 1024 * 1024 * 5 && percent > 0.9998))
+                if (missingBytes < 1024 * 10 || (downloaded > 1024 * 1024 * 5 && percent > tolerance))
                 {
                     _logger?.LogInformation("Download {DownloadId} finished with minor delta ({Missing} bytes). Treating as completed.", downloadId, missingBytes);
                 }
