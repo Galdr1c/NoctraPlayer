@@ -209,6 +209,7 @@ public partial class App : Application
         services.AddSingleton<AvaloniaImageCacheService>();
         services.AddSingleton<IVideoPlayerService, VideoPlayerService>();
         services.AddSingleton<ISecurityService, SecurityService>();
+        services.AddSingleton<IProfileService, ProfileService>();
         services.AddTransient<WatermarkViewModel>();
         
         services.AddSingleton<MainViewModel>();

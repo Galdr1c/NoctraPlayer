@@ -3,18 +3,15 @@ using CommunityToolkit.Mvvm.Input;
 using Noctra.Models;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
-using Microsoft.EntityFrameworkCore;
-using Noctra.Data;
 
 namespace Noctra.ViewModels;
 
 public partial class AddProfileViewModel : ObservableObject
 {
     private const string StalkerMacPrefix = "00:1A:79:";
-    private const string ProfilesLimitKey = "profiles";
     [System.Text.RegularExpressions.GeneratedRegex("^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$")]
     private static partial System.Text.RegularExpressions.Regex StalkerMacRegex();
-    private readonly IDbContextFactory<AppDbContext> _contextFactory;
+    private readonly IProfileService _profileService;
     private readonly IDispatcherService _dispatcherService;
     private readonly IAvatarService _avatarService;
     private readonly IDialogService _dialogService;
@@ -22,7 +19,6 @@ public partial class AddProfileViewModel : ObservableObject
     private readonly IM3UParser _m3uParser;
     private readonly IXtreamCodesService _xtreamCodesService;
     private readonly IStalkerPortalService _stalkerPortalService;
-    private readonly IContentDownloadService _contentDownloadService;
     private readonly ISecurityService _securityService;
 
     // Simplified Account Details
@@ -535,7 +531,7 @@ public partial class AddProfileViewModel : ObservableObject
     public event EventHandler? RequestAvatarPicker;
 
     public AddProfileViewModel(
-        IDbContextFactory<AppDbContext> contextFactory, 
+        IProfileService profileService,
         IDispatcherService dispatcherService, 
         IAvatarService avatarService, 
         IDialogService dialogService,
@@ -543,10 +539,9 @@ public partial class AddProfileViewModel : ObservableObject
         IM3UParser m3uParser,
         IXtreamCodesService xtreamCodesService,
         IStalkerPortalService stalkerPortalService,
-        IContentDownloadService contentDownloadService,
         ISecurityService securityService)
     {
-        _contextFactory = contextFactory;
+        _profileService = profileService;
         _dispatcherService = dispatcherService;
         _avatarService = avatarService;
         _dialogService = dialogService;
@@ -554,7 +549,6 @@ public partial class AddProfileViewModel : ObservableObject
         _m3uParser = m3uParser;
         _xtreamCodesService = xtreamCodesService;
         _stalkerPortalService = stalkerPortalService;
-        _contentDownloadService = contentDownloadService;
         _securityService = securityService;
 
         // Initialize with default avatar
@@ -623,46 +617,10 @@ public partial class AddProfileViewModel : ObservableObject
             IsSaving = true;
             StatusMessage = "Profil siliniyor...";
 
-            using var db = await _contextFactory.CreateDbContextAsync();
-            var profileId = EditingProfile.Id;
-            var providerAccountId = await db.Profiles
-                .Where(p => p.Id == profileId)
-                .Select(p => p.ProviderAccountId)
-                .FirstOrDefaultAsync();
+            await _profileService.DeleteProfileAsync(
+                EditingProfile.Id,
+                EditingProfile.ProviderAccountId);
 
-            if (providerAccountId == 0) return;
-
-            var hasOtherProfiles = await db.Profiles
-                .AnyAsync(p => p.ProviderAccountId == providerAccountId && p.Id != profileId);
-
-            await _contentDownloadService.DeleteProfileDownloadsAsync(profileId);
-
-            await using var transaction = await db.Database.BeginTransactionAsync();
-
-            await db.WatchHistories
-                .Where(h => h.ProfileId == profileId)
-                .ExecuteDeleteAsync();
-
-            await db.SeriesEpisodeProgresses
-                .Where(p => p.ProfileId == profileId)
-                .ExecuteDeleteAsync();
-
-            await db.Playlists
-                .Where(p => p.ProfileId == profileId)
-                .ExecuteDeleteAsync();
-
-            await db.Profiles
-                .Where(p => p.Id == profileId)
-                .ExecuteDeleteAsync();
-
-            if (!hasOtherProfiles)
-            {
-                await db.ProviderAccounts
-                    .Where(a => a.Id == providerAccountId)
-                    .ExecuteDeleteAsync();
-            }
-
-            await transaction.CommitAsync();
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
@@ -931,14 +889,8 @@ public partial class AddProfileViewModel : ObservableObject
                     ? ProfileType.XtreamCodes
                     : ProfileType.M3U;
 
-            using var db = await _contextFactory.CreateDbContextAsync();
-            var existingAccountDuplicate = await db.ProviderAccounts
-                .AnyAsync(a =>
-                    a.Id != excludedProviderAccountId &&
-                    a.Type == selectedType &&
-                    a.Url == Url &&
-                    (a.Username ?? string.Empty) == Username &&
-                    (a.Password ?? string.Empty) == Password);
+            var existingAccountDuplicate = await _profileService.CheckDuplicateAccountAsync(
+                excludedProviderAccountId, selectedType, Url, Username, Password);
 
             IReadOnlyCollection<Channel> channels;
             if (IsStalker)
@@ -1006,109 +958,32 @@ public partial class AddProfileViewModel : ObservableObject
             StatusMessage = "Kaydediliyor...";
             IsSaving = true;
 
-            using var db = await _contextFactory.CreateDbContextAsync();
-            await using var transaction = await db.Database.BeginTransactionAsync();
-            ProviderAccount account;
-
-            if (EditingProfile?.ProviderAccount != null)
+            var request = new ProfileSaveRequest
             {
-                 var selectedAccount = EditingProfile.ProviderAccount;
-                 
-                 // Detach existing if needed
-                 var existing = db.ProviderAccounts.Local
-                     .FirstOrDefault(a => a.Id == selectedAccount.Id);
-                 
-                 if (existing != null && existing != selectedAccount)
-                 {
-                     db.Entry(existing).State = EntityState.Detached;
-                 }
-                 
-                 // If detached, attach it
-                 if (db.Entry(selectedAccount).State == EntityState.Detached)
-                 {
-                     db.ProviderAccounts.Attach(selectedAccount);
-                 }
-                 
-                 // Enable tracking/Update
-                 selectedAccount.Url = Url;
-                 selectedAccount.Username = Username;
-                 selectedAccount.Password = _securityService.Encrypt(Password);
-                 selectedAccount.Type = IsStalker
-                     ? ProfileType.StalkerPortal
-                     : IsXtream
+                ProfileName = ProfileName,
+                Avatar = SelectedAvatar,
+                IsChild = IsChild,
+                Url = Url,
+                Username = Username,
+                EncryptedPassword = _securityService.Encrypt(Password) ?? string.Empty,
+                AccountType = IsStalker
+                    ? ProfileType.StalkerPortal
+                    : IsXtream
                         ? ProfileType.XtreamCodes
-                        : ProfileType.M3U;
-                 selectedAccount.ExpirationDate = null; // Reset date on credential change
-                 
-                 db.Entry(selectedAccount).State = EntityState.Modified;
-                 account = selectedAccount;
-            }
-            else
+                        : ProfileType.M3U,
+                ExistingIds = EditingProfile != null
+                    ? new ExistingProfileIds(EditingProfile.Id, EditingProfile.ProviderAccountId)
+                    : null
+            };
+
+            var result = await _profileService.SaveProfileAsync(request);
+
+            if (result == null)
             {
-                account = new ProviderAccount
-                {
-                    Name = ProfileName + " Hesabı",
-                    Type = IsStalker
-                        ? ProfileType.StalkerPortal
-                        : IsXtream
-                            ? ProfileType.XtreamCodes
-                            : ProfileType.M3U,
-                    Url = Url,
-                    Username = Username,
-                    Password = _securityService.Encrypt(Password)
-                };
-                db.ProviderAccounts.Add(account);
+                // License limit exceeded
+                await _dialogService.ShowUpsellAsync();
+                return;
             }
-
-            if (EditingProfile != null)
-            {
-                // Update existing profile
-                // Keep cached playlists. Channel list should refresh only when user explicitly requests it.
-
-                // Check if profile is tracked
-                var trackedProfile = db.Profiles.Local.FirstOrDefault(p => p.Id == EditingProfile.Id);
-                if (trackedProfile != null && trackedProfile != EditingProfile)
-                {
-                     db.Entry(trackedProfile).State = EntityState.Detached;
-                }
-
-                // If detached, attach it
-                if (db.Entry(EditingProfile).State == EntityState.Detached)
-                {
-                    db.Profiles.Attach(EditingProfile);
-                }
-
-                EditingProfile.Name = ProfileName;
-                EditingProfile.Avatar = SelectedAvatar;
-                EditingProfile.IsChild = IsChild;
-                
-                db.Entry(EditingProfile).State = EntityState.Modified;
-            }
-            else
-            {
-                var profileCount = await db.Profiles.CountAsync();
-                if (!_licenseService.IsWithinLimit(ProfilesLimitKey, profileCount))
-                {
-                    await transaction.RollbackAsync();
-                    await _dialogService.ShowUpsellAsync();
-                    return;
-                }
-
-                // Create new profile
-                var profile = new Profile
-                {
-                    Name = ProfileName,
-                    ProviderAccount = account,
-                    Avatar = SelectedAvatar,
-                    IsChild = IsChild,
-                    LastUsed = DateTime.UtcNow
-                };
-                db.Profiles.Add(profile);
-            }
-
-
-            await db.SaveChangesAsync();
-            await transaction.CommitAsync();
 
             // Success feedback
             StatusMessage = "Profil kaydedildi";

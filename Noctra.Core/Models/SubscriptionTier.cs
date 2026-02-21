@@ -19,8 +19,8 @@ public static class TierLimits
     // ==========================================
     public static class Free
     {
-        public const int MaxProfiles = 1;
-        public const int MaxM3UAccounts = 1;
+        public const int MaxProfiles = 3;
+        public const int MaxM3UAccounts = 3;
         public const int MaxFavorites = 50; // Updated to 50
         public const int MaxFavoriteGroups = 2;
         public const int EpgHours = 24; // 24 saat EPG

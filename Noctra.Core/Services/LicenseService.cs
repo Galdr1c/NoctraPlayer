@@ -60,7 +60,7 @@ public class LicenseService : ObservableObject, ILicenseService
 
     public string GetPriceText()
     {
-        return "480 TL (Tek Sefer)"; 
+        return "499.95 TL (Tek Sefer)"; 
     }
 
     // ==========================================
