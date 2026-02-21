@@ -12,8 +12,11 @@ public class AvaloniaImageCacheService
     private static readonly HttpClient HttpClient = CreateOptimizedClient();
     // Use a smaller memory cache than WPF since Avalonia handles bitmaps differently
     private static readonly TimeSpan MemoryTtl = TimeSpan.FromMinutes(30);
+    private const int MaxMemoryEntries = 500;
 
     private readonly ConcurrentDictionary<string, MemoryCacheEntry> _memoryCache = new();
+    private readonly LinkedList<string> _lruList = new();
+    private readonly object _cacheLock = new();
     private readonly string _diskCachePath;
 
     public AvaloniaImageCacheService()
@@ -35,9 +38,16 @@ public class AvaloniaImageCacheService
 
         ClearExpiredMemoryEntries();
 
-        if (_memoryCache.TryGetValue(url, out var cached) && cached.ExpiresAt > DateTime.UtcNow)
+        lock (_cacheLock)
         {
-            return cached.Image;
+            if (_memoryCache.TryGetValue(url, out var cached) && cached.ExpiresAt > DateTime.UtcNow)
+            {
+                // Refresh LRU and TTL on hit
+                _lruList.Remove(url);
+                _lruList.AddLast(url);
+                _memoryCache[url] = cached with { ExpiresAt = DateTime.UtcNow.Add(MemoryTtl) };
+                return cached.Image;
+            }
         }
 
         var diskPath = GetDiskCachePath(url);
@@ -110,26 +120,49 @@ public class AvaloniaImageCacheService
 
     public void ClearExpiredMemoryEntries()
     {
-        var now = DateTime.UtcNow;
-        foreach (var entry in _memoryCache)
+        lock (_cacheLock)
         {
-            if (entry.Value.ExpiresAt <= now)
+            var now = DateTime.UtcNow;
+            var expiredKeys = _memoryCache
+                .Where(e => e.Value.ExpiresAt <= now)
+                .Select(e => e.Key)
+                .ToList();
+
+            foreach (var key in expiredKeys)
             {
-                _memoryCache.TryRemove(entry.Key, out _);
+                _memoryCache.TryRemove(key, out _);
+                _lruList.Remove(key);
             }
         }
     }
 
     private void SetMemoryCache(string url, Bitmap image)
     {
-        var newEntry = new MemoryCacheEntry(image, DateTime.UtcNow.Add(MemoryTtl));
-        _memoryCache.AddOrUpdate(
-            url,
-            _ => newEntry,
-            (url, existing) =>
+        lock (_cacheLock)
+        {
+            var newEntry = new MemoryCacheEntry(image, DateTime.UtcNow.Add(MemoryTtl));
+            
+            if (_memoryCache.ContainsKey(url))
             {
-                return newEntry;
-            });
+                _lruList.Remove(url);
+                _lruList.AddLast(url);
+                _memoryCache[url] = newEntry;
+                return;
+            }
+
+            // Evict if over limit
+            while (_memoryCache.Count >= MaxMemoryEntries && _lruList.First != null)
+            {
+                var oldest = _lruList.First.Value;
+                _lruList.RemoveFirst();
+                _memoryCache.TryRemove(oldest, out _);
+            }
+
+            if (_memoryCache.TryAdd(url, newEntry))
+            {
+                _lruList.AddLast(url);
+            }
+        }
     }
 
     private static async Task<byte[]?> DownloadImageBytesAsync(string url, CancellationToken cancellationToken)

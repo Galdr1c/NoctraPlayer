@@ -22,7 +22,8 @@ public class RemoteImage : Image
     private static readonly ConcurrentDictionary<string, Bitmap> Cache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, Task<Bitmap?>> InFlightLoads = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, byte> FailedUrlLog = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly ConcurrentQueue<string> CacheOrder = new();
+    private static readonly LinkedList<string> CacheLruList = new();
+    private static readonly object CacheLock = new();
     private static readonly Uri PlaceholderUri = new("avares://Noctra.Avalonia/Assets/Logo.png");
     private static readonly object PlaceholderLock = new();
     private static Bitmap? _placeholderBitmap;
@@ -130,10 +131,17 @@ public class RemoteImage : Image
             return;
         }
 
-        if (Cache.TryGetValue(normalizedUrl, out var cached))
+        lock (CacheLock)
         {
-            SetSourceOnUiThread(cached);
-            return;
+            if (Cache.TryGetValue(normalizedUrl, out var cached))
+            {
+                // LRU usage update
+                CacheLruList.Remove(normalizedUrl);
+                CacheLruList.AddLast(normalizedUrl);
+                
+                SetSourceOnUiThread(cached);
+                return;
+            }
         }
 
         SetSourceOnUiThread(null);
@@ -382,16 +390,27 @@ public class RemoteImage : Image
 
     private static void AddToCache(string url, Bitmap bitmap)
     {
-        if (!Cache.TryAdd(url, bitmap))
+        lock (CacheLock)
         {
-            return;
-        }
+            if (Cache.ContainsKey(url))
+            {
+                CacheLruList.Remove(url);
+                CacheLruList.AddLast(url);
+                return;
+            }
 
-        CacheOrder.Enqueue(url);
+            // Evict if limit reached
+            while (Cache.Count >= MaxCacheEntries && CacheLruList.First != null)
+            {
+                var oldest = CacheLruList.First.Value;
+                CacheLruList.RemoveFirst();
+                Cache.TryRemove(oldest, out _);
+            }
 
-        while (Cache.Count > MaxCacheEntries && CacheOrder.TryDequeue(out var oldestKey))
-        {
-            Cache.TryRemove(oldestKey, out _);
+            if (Cache.TryAdd(url, bitmap))
+            {
+                CacheLruList.AddLast(url);
+            }
         }
     }
 

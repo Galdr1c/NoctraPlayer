@@ -184,7 +184,7 @@ public partial class App : Application
         services.AddTransient<IM3UParser, M3UParser>();
         services.AddTransient<IEpgService, EpgService>();
         services.AddTransient<IMetadataService, MetadataService>();
-        services.AddTransient<IXtreamCodesService, XtreamCodesService>();
+        services.AddSingleton<IXtreamCodesService, XtreamCodesService>();
         services.AddTransient<IStalkerPortalService, StalkerPortalService>();
         services.AddTransient<ICacheService, CacheService>();
 
