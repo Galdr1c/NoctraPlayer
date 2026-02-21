@@ -1,4 +1,6 @@
 ﻿using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Noctra.Models;
@@ -101,11 +103,8 @@ public class XtreamCodesService : IXtreamCodesService
     {
         var cacheKey = BuildAuthCacheKey(normalizedBaseUrl, username, password);
         
-        // Periyodik temizlik yap (her 30 dakikada bir)
-        if (DateTimeOffset.UtcNow - _lastCleanup > TimeSpan.FromMinutes(30))
-        {
-            CleanupExpiredAuths();
-        }
+        // Periyodik temizlik yap (TOCTOU-safe: staleness check inside lock)
+        CleanupExpiredAuthsIfNeeded();
 
         var state = AuthCache.GetOrAdd(cacheKey, _ => new CachedAuthState());
 
@@ -136,12 +135,23 @@ public class XtreamCodesService : IXtreamCodesService
         }
     }
 
-    private static void CleanupExpiredAuths()
+    /// <summary>
+    /// TOCTOU-safe cleanup: staleness check AND timestamp update both happen inside the lock,
+    /// eliminating the race where multiple threads read the stale timestamp before any updates it.
+    /// </summary>
+    private static void CleanupExpiredAuthsIfNeeded()
     {
         if (!Monitor.TryEnter(CleanupLock)) return;
         try
         {
             var now = DateTimeOffset.UtcNow;
+
+            // Check staleness INSIDE the lock (fixes TOCTOU race)
+            if (now - _lastCleanup < TimeSpan.FromMinutes(30))
+            {
+                return;
+            }
+
             var expiredKeys = AuthCache
                 .Where(kvp => kvp.Value.IsAuthenticated.HasValue && kvp.Value.ExpiresAt < now)
                 .Select(kvp => kvp.Key)
@@ -149,11 +159,13 @@ public class XtreamCodesService : IXtreamCodesService
 
             foreach (var key in expiredKeys)
             {
-                if (AuthCache.TryRemove(key, out var state))
+                if (AuthCache.TryRemove(key, out var removed))
                 {
-                    state.Lock.Dispose();
+                    removed.Lock.Dispose();
                 }
             }
+
+            // Update timestamp INSIDE the lock (fixes TOCTOU)
             _lastCleanup = now;
         }
         finally
@@ -447,8 +459,17 @@ public class XtreamCodesService : IXtreamCodesService
         return normalized.TrimEnd('/');
     }
 
+    /// <summary>
+    /// Builds a cache key using SHA256 hash of the password instead of plaintext.
+    /// This prevents the password from sitting in memory as a dictionary key
+    /// where heap profilers or memory dumps could trivially extract it.
+    /// </summary>
     private static string BuildAuthCacheKey(string normalizedBaseUrl, string username, string password)
-        => $"{normalizedBaseUrl}|{username}|{password}";
+    {
+        var passwordHash = Convert.ToHexString(
+            SHA256.HashData(Encoding.UTF8.GetBytes(password ?? string.Empty)));
+        return $"{normalizedBaseUrl}|{username}|{passwordHash}";
+    }
 
     private static IReadOnlyDictionary<string, string> BuildCategoryMap(IEnumerable<XtreamCategoryDto>? categories)
     {
