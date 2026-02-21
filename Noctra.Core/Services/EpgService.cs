@@ -14,7 +14,7 @@ namespace Noctra.Services;
 /// </summary>
 public class EpgService : IEpgService
 {
-    private readonly AppDbContext _context;
+    private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly HttpClient _httpClient;
     private readonly ILogger<EpgService>? _logger;
     private readonly SemaphoreSlim _loadSemaphore = new(1, 1);
@@ -23,9 +23,9 @@ public class EpgService : IEpgService
     public DateTime? LastUpdated { get; private set; }
     public string? LastError { get; private set; }
 
-    public EpgService(AppDbContext context, HttpClient httpClient, ILogger<EpgService>? logger = null)
+    public EpgService(IDbContextFactory<AppDbContext> contextFactory, HttpClient httpClient, ILogger<EpgService>? logger = null)
     {
-        _context = context;
+        _contextFactory = contextFactory;
         _httpClient = httpClient;
         _logger = logger;
     }
@@ -38,7 +38,6 @@ public class EpgService : IEpgService
             return;
         }
 
-        _context.ChangeTracker.AutoDetectChangesEnabled = false;
         try
         {
             LastError = null; // Clear previous error
@@ -132,137 +131,146 @@ public class EpgService : IEpgService
             var windowStartUtc = DateTime.UtcNow.Date;
             var windowEndUtc = windowStartUtc.AddDays(Math.Max(1, daysAhead) + 1);
 
-            while (await reader.ReadAsync().ConfigureAwait(false))
+            using var context = await _contextFactory.CreateDbContextAsync();
+            context.ChangeTracker.AutoDetectChangesEnabled = false;
+            try
             {
-                 if (reader.NodeType == System.Xml.XmlNodeType.Element)
+                while (await reader.ReadAsync().ConfigureAwait(false))
                 {
-                    if (reader.Name == "channel") 
+                    if (reader.NodeType == System.Xml.XmlNodeType.Element)
                     {
-                        // Map XML channel ID to DB TvgId for secondary EPG
-                        if (!isPrimary && channelMap.Count > 0)
+                        if (reader.Name == "channel") 
                         {
-                            var xmlId = reader.GetAttribute("id");
-                            if (xmlId != null)
+                            // Map XML channel ID to DB TvgId for secondary EPG
+                            if (!isPrimary && channelMap.Count > 0)
                             {
-                                // Strongest mapping: XML channel id == playlist tvg-id
-                                if (tvgIdToInternalId.TryGetValue(xmlId, out var byTvgId))
+                                var xmlId = reader.GetAttribute("id");
+                                if (xmlId != null)
                                 {
-                                    xmlChannelIdToDbTvgId[xmlId] = byTvgId;
-                                    continue;
-                                }
-
-                                // Read display-name
-                                using var subReader = reader.ReadSubtree();
-                                while (await subReader.ReadAsync().ConfigureAwait(false))
-                                {
-                                    if (subReader.NodeType == System.Xml.XmlNodeType.Element && subReader.Name == "display-name")
+                                    // Strongest mapping: XML channel id == playlist tvg-id
+                                    if (tvgIdToInternalId.TryGetValue(xmlId, out var byTvgId))
                                     {
-                                        var displayName = await subReader.ReadElementContentAsStringAsync().ConfigureAwait(false);
-                                        string? dbTvgId = null;
-                                        foreach (var variant in GetNameVariants(displayName))
+                                        xmlChannelIdToDbTvgId[xmlId] = byTvgId;
+                                        continue;
+                                    }
+
+                                    // Read display-name
+                                    using var subReader = reader.ReadSubtree();
+                                    while (await subReader.ReadAsync().ConfigureAwait(false))
+                                    {
+                                        if (subReader.NodeType == System.Xml.XmlNodeType.Element && subReader.Name == "display-name")
                                         {
-                                            dbTvgId = ResolveMappedChannelId(variant, channelMap);
+                                            var displayName = await subReader.ReadElementContentAsStringAsync().ConfigureAwait(false);
+                                            string? dbTvgId = null;
+                                            foreach (var variant in GetNameVariants(displayName))
+                                            {
+                                                dbTvgId = ResolveMappedChannelId(variant, channelMap);
+                                                if (!string.IsNullOrEmpty(dbTvgId))
+                                                    break;
+                                            }
                                             if (!string.IsNullOrEmpty(dbTvgId))
-                                                break;
-                                        }
-                                        if (!string.IsNullOrEmpty(dbTvgId))
-                                        {
-                                            xmlChannelIdToDbTvgId[xmlId] = dbTvgId!;
-                                            break; // Found match
+                                            {
+                                                xmlChannelIdToDbTvgId[xmlId] = dbTvgId!;
+                                                break; // Found match
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
-                    else if (reader.Name == "programme")
-                    {
-                        var start = reader.GetAttribute("start");
-                        var stop = reader.GetAttribute("stop");
-                        var channel = reader.GetAttribute("channel");
-
-                        if (string.IsNullOrEmpty(channel)) continue;
-
-                        // Determine target ChannelId
-                        string targetChannelId = channel;
-                        if (isPrimary)
+                        else if (reader.Name == "programme")
                         {
-                            // Keep only channels present in current playlist.
-                            if (allowedPrimaryIds.Count > 0 && !allowedPrimaryIds.Contains(channel))
+                            var start = reader.GetAttribute("start");
+                            var stop = reader.GetAttribute("stop");
+                            var channel = reader.GetAttribute("channel");
+
+                            if (string.IsNullOrEmpty(channel)) continue;
+
+                            // Determine target ChannelId
+                            string targetChannelId = channel;
+                            if (isPrimary)
                             {
-                                continue;
-                            }
-                        }
-                        else
-                        {
-                            if (xmlChannelIdToDbTvgId.TryGetValue(channel, out var mappedId))
-                            {
-                                targetChannelId = mappedId;
+                                // Keep only channels present in current playlist.
+                                if (allowedPrimaryIds.Count > 0 && !allowedPrimaryIds.Contains(channel))
+                                {
+                                    continue;
+                                }
                             }
                             else
                             {
-                                // No match found for this channel in our DB, skip it to save space
-                                continue;
-                            }
-                        }
-
-                        var startTime = ParseXmlTvDate(start);
-                        var endTime = ParseXmlTvDate(stop);
-
-                        // Keep only the requested time window (today + N days)
-                        if (endTime <= windowStartUtc || startTime >= windowEndUtc)
-                            continue;
-
-                        var program = new EpgProgram
-                        {
-                            ChannelId = targetChannelId,
-                            StartTime = startTime,
-                            EndTime = endTime
-                        };
-
-                        // Read inner elements
-                        using var subReader = reader.ReadSubtree();
-                        while (await subReader.ReadAsync().ConfigureAwait(false))
-                        {
-                            if (subReader.NodeType == System.Xml.XmlNodeType.Element)
-                            {
-                                switch (subReader.Name)
+                                if (xmlChannelIdToDbTvgId.TryGetValue(channel, out var mappedId))
                                 {
-                                    case "title":
-                                        program.Title = await subReader.ReadElementContentAsStringAsync().ConfigureAwait(false);
-                                        break;
-                                    case "desc":
-                                        // Keep first non-empty description.
-                                        if (string.IsNullOrWhiteSpace(program.Description))
-                                        {
-                                            var desc = await subReader.ReadElementContentAsStringAsync().ConfigureAwait(false);
-                                            if (!string.IsNullOrWhiteSpace(desc))
-                                            {
-                                                program.Description = desc;
-                                            }
-                                        }
-                                        break;
+                                    targetChannelId = mappedId;
+                                }
+                                else
+                                {
+                                    // No match found for this channel in our DB, skip it to save space
+                                    continue;
                                 }
                             }
-                        }
 
-                        programs.Add(program);
+                            var startTime = ParseXmlTvDate(start);
+                            var endTime = ParseXmlTvDate(stop);
 
-                        if (programs.Count >= batchSize)
-                        {
-                            await _context.EpgPrograms.AddRangeAsync(programs).ConfigureAwait(false);
-                            await _context.SaveChangesAsync().ConfigureAwait(false);
-                            programs.Clear();
+                            // Keep only the requested time window (today + N days)
+                            if (endTime <= windowStartUtc || startTime >= windowEndUtc)
+                                continue;
+
+                            var program = new EpgProgram
+                            {
+                                ChannelId = targetChannelId,
+                                StartTime = startTime,
+                                EndTime = endTime
+                            };
+
+                            // Read inner elements
+                            using var subReader = reader.ReadSubtree();
+                            while (await subReader.ReadAsync().ConfigureAwait(false))
+                            {
+                                if (subReader.NodeType == System.Xml.XmlNodeType.Element)
+                                {
+                                    switch (subReader.Name)
+                                    {
+                                        case "title":
+                                            program.Title = await subReader.ReadElementContentAsStringAsync().ConfigureAwait(false);
+                                            break;
+                                        case "desc":
+                                            // Keep first non-empty description.
+                                            if (string.IsNullOrWhiteSpace(program.Description))
+                                            {
+                                                var desc = await subReader.ReadElementContentAsStringAsync().ConfigureAwait(false);
+                                                if (!string.IsNullOrWhiteSpace(desc))
+                                                {
+                                                    program.Description = desc;
+                                                }
+                                            }
+                                            break;
+                                    }
+                                }
+                            }
+
+                            programs.Add(program);
+
+                            if (programs.Count >= batchSize)
+                            {
+                                await context.EpgPrograms.AddRangeAsync(programs).ConfigureAwait(false);
+                                await context.SaveChangesAsync().ConfigureAwait(false);
+                                programs.Clear();
+                            }
                         }
                     }
                 }
-            }
 
-            // Final batch
-            if (programs.Any())
+                // Final batch
+                if (programs.Any())
+                {
+                    await context.EpgPrograms.AddRangeAsync(programs).ConfigureAwait(false);
+                    await context.SaveChangesAsync().ConfigureAwait(false);
+                }
+            }
+            finally
             {
-                await _context.EpgPrograms.AddRangeAsync(programs).ConfigureAwait(false);
-                await _context.SaveChangesAsync().ConfigureAwait(false);
+                context.ChangeTracker.AutoDetectChangesEnabled = true;
             }
 
             IsLoaded = true;
@@ -277,7 +285,6 @@ public class EpgService : IEpgService
         }
         finally
         {
-            _context.ChangeTracker.AutoDetectChangesEnabled = true;
             _loadSemaphore.Release();
         }
     }
@@ -445,11 +452,12 @@ public class EpgService : IEpgService
     public async Task<EpgProgram?> GetCurrentProgramAsync(Channel channel)
     {
         var now = DateTime.UtcNow;
+        using var context = await _contextFactory.CreateDbContextAsync();
         
         // Level 1: Try Primary TvgId
         if (!string.IsNullOrEmpty(channel.TvgId))
         {
-            var program = await _context.EpgPrograms
+            var program = await context.EpgPrograms
                 .AsNoTracking()
                 .Where(p => p.ChannelId == channel.TvgId && p.StartTime <= now && p.EndTime > now)
                 .FirstOrDefaultAsync();
@@ -459,7 +467,7 @@ public class EpgService : IEpgService
 
         // Level 2: Try Internal Id (Secondary EPG mapped by Name)
         var internalId = channel.Id.ToString();
-        var programByInternalId = await _context.EpgPrograms
+        var programByInternalId = await context.EpgPrograms
             .AsNoTracking()
             .Where(p => p.ChannelId == internalId && p.StartTime <= now && p.EndTime > now)
             .FirstOrDefaultAsync();
@@ -471,7 +479,8 @@ public class EpgService : IEpgService
 
     public async Task ClearEpgAsync()
     {
-        await _context.Database.ExecuteSqlRawAsync("DELETE FROM EpgPrograms");
+        using var context = await _contextFactory.CreateDbContextAsync();
+        await context.Database.ExecuteSqlRawAsync("DELETE FROM EpgPrograms");
     }
 
     public async Task<List<EpgProgram>> GetProgramsAsync(string channelId, DateTime from, DateTime to)
@@ -480,7 +489,8 @@ public class EpgService : IEpgService
         var fromUtc = from.ToUniversalTime();
         var toUtc = to.ToUniversalTime();
 
-        return await _context.EpgPrograms
+        using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.EpgPrograms
             .AsNoTracking()
             .Where(p => p.ChannelId == channelId && p.StartTime >= fromUtc && p.StartTime <= toUtc)
             .OrderBy(p => p.StartTime)
@@ -490,7 +500,8 @@ public class EpgService : IEpgService
     public async Task<List<EpgProgram>> GetUpcomingProgramsAsync(string channelId, int count = 5)
     {
         var now = DateTime.UtcNow;
-        return await _context.EpgPrograms
+        using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.EpgPrograms
             .AsNoTracking()
             .Where(p => p.ChannelId == channelId && p.StartTime > now)
             .OrderBy(p => p.StartTime)
@@ -502,7 +513,8 @@ public class EpgService : IEpgService
     {
         var todayStart = DateTime.UtcNow.Date;
         var todayEnd = todayStart.AddDays(1);
-        return await _context.EpgPrograms
+        using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.EpgPrograms
             .AsNoTracking()
             .Where(p => p.ChannelId == channelId && p.StartTime >= todayStart && p.StartTime < todayEnd)
             .OrderBy(p => p.StartTime)
@@ -511,12 +523,14 @@ public class EpgService : IEpgService
 
     public async Task<int> GetTotalProgramCountAsync()
     {
-        return await _context.EpgPrograms.CountAsync();
+        using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.EpgPrograms.CountAsync();
     }
 
     public async Task<int> GetDistinctChannelCountAsync()
     {
-        return await _context.EpgPrograms
+        using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.EpgPrograms
             .Select(p => p.ChannelId)
             .Distinct()
             .CountAsync();

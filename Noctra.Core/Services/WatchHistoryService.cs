@@ -11,11 +11,11 @@ namespace Noctra.Services;
 
 public class WatchHistoryService : IWatchHistoryService
 {
-    private readonly AppDbContext _context;
+    private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
-    public WatchHistoryService(AppDbContext context)
+    public WatchHistoryService(IDbContextFactory<AppDbContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
 
     public async Task TrackWatchAsync(int profileId, int? channelId, int? episodeId, TimeSpan position, bool completed = false, TimeSpan? duration = null, TimeSpan? incrementDelta = null)
@@ -27,7 +27,9 @@ public class WatchHistoryService : IWatchHistoryService
 
         var watchedAt = DateTime.UtcNow;
 
-        var history = await _context.WatchHistories
+        using var context = await _contextFactory.CreateDbContextAsync();
+
+        var history = await context.WatchHistories
             .FirstOrDefaultAsync(w => w.ProfileId == profileId && 
                                      (channelId.HasValue ? w.ChannelId == channelId : w.EpisodeId == episodeId));
 
@@ -40,7 +42,7 @@ public class WatchHistoryService : IWatchHistoryService
                 EpisodeId = episodeId,
                 WatchedAt = watchedAt
             };
-            _context.WatchHistories.Add(history);
+            context.WatchHistories.Add(history);
         }
 
         var isCompletedNow = history.Completed || completed;
@@ -53,7 +55,7 @@ public class WatchHistoryService : IWatchHistoryService
 
         if (episodeId.HasValue)
         {
-            var episode = await _context.Episodes
+            var episode = await context.Episodes
                 .Include(e => e.Season)
                 .ThenInclude(s => s!.Series)
                 .FirstOrDefaultAsync(e => e.Id == episodeId.Value);
@@ -67,6 +69,7 @@ public class WatchHistoryService : IWatchHistoryService
                 }
 
                 await UpsertSeriesProgressAsync(
+                    context,
                     profileId,
                     episode,
                     history.StoppedAt,
@@ -77,7 +80,7 @@ public class WatchHistoryService : IWatchHistoryService
         }
         else if (channelId.HasValue)
         {
-            var channel = await _context.Channels.FindAsync(channelId.Value);
+            var channel = await context.Channels.FindAsync(channelId.Value);
             if (channel != null)
             {
                 channel.LastWatched = history.WatchedAt;
@@ -89,10 +92,11 @@ public class WatchHistoryService : IWatchHistoryService
             }
         }
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
     }
 
     private async Task UpsertSeriesProgressAsync(
+        AppDbContext context,
         int profileId,
         Episode episode,
         TimeSpan stoppedAt,
@@ -113,7 +117,7 @@ public class WatchHistoryService : IWatchHistoryService
         }
 
         var (seasonNumber, episodeNumber) = SeriesProgressIdentity.ResolveSeasonEpisode(episode);
-        var existing = await _context.SeriesEpisodeProgresses
+        var existing = await context.SeriesEpisodeProgresses
             .FirstOrDefaultAsync(p =>
                 p.ProfileId == profileId &&
                 p.SeriesKey == seriesKey &&
@@ -127,7 +131,7 @@ public class WatchHistoryService : IWatchHistoryService
 
         if (existing == null)
         {
-            _context.SeriesEpisodeProgresses.Add(new SeriesEpisodeProgress
+            context.SeriesEpisodeProgresses.Add(new SeriesEpisodeProgress
             {
                 ProfileId = profileId,
                 SeriesKey = seriesKey,
@@ -157,7 +161,8 @@ public class WatchHistoryService : IWatchHistoryService
 
     public async Task<List<WatchHistory>> GetHistoryAsync(int profileId)
     {
-        return await _context.WatchHistories
+        using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.WatchHistories
             .Include(h => h.Channel)
             .Include(h => h.Episode)
             .Where(h => h.ProfileId == profileId)
@@ -167,14 +172,16 @@ public class WatchHistoryService : IWatchHistoryService
 
     public async Task ClearHistoryAsync(int profileId)
     {
-        await _context.WatchHistories
+        using var context = await _contextFactory.CreateDbContextAsync();
+        await context.WatchHistories
             .Where(h => h.ProfileId == profileId)
             .ExecuteDeleteAsync();
     }
 
     public async Task<WatchHistory?> GetLatestForMediaAsync(int profileId, int? channelId, int? episodeId)
     {
-        return await _context.WatchHistories
+        using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.WatchHistories
             .FirstOrDefaultAsync(w => w.ProfileId == profileId && 
                                      (channelId != null ? w.ChannelId == channelId : w.EpisodeId == episodeId));
     }
@@ -188,7 +195,8 @@ public class WatchHistoryService : IWatchHistoryService
 
         var cutoff = DateTime.UtcNow.AddDays(-days);
 
-        await _context.WatchHistories
+        using var context = await _contextFactory.CreateDbContextAsync();
+        await context.WatchHistories
             .Where(h => h.ProfileId == profileId && h.WatchedAt < cutoff)
             .ExecuteDeleteAsync();
     }

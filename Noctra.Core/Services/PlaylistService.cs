@@ -15,7 +15,7 @@ namespace Noctra.Services;
 public class PlaylistService : IPlaylistService
 {
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> AddPlaylistLocks = new(StringComparer.Ordinal);
-    private readonly AppDbContext _context;
+    private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly IM3UParser _parser;
     private readonly IMediaService _mediaService;
     private readonly IPlaylistOrganizerService _organizer;
@@ -26,7 +26,7 @@ public class PlaylistService : IPlaylistService
     private readonly HttpClient _httpClient;
 
     public PlaylistService(
-        AppDbContext context, 
+        IDbContextFactory<AppDbContext> contextFactory, 
         IM3UParser parser, 
         IMediaService mediaService, 
         IPlaylistOrganizerService organizer,
@@ -36,7 +36,7 @@ public class PlaylistService : IPlaylistService
         IServiceScopeFactory scopeFactory,
         HttpClient httpClient)
     {
-        _context = context;
+        _contextFactory = contextFactory;
         _parser = parser;
         _mediaService = mediaService;
         _organizer = organizer;
@@ -58,8 +58,9 @@ public class PlaylistService : IPlaylistService
         {
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] AddFromUrlAsync: {name} - {url}");
             
+            using var context = await _contextFactory.CreateDbContextAsync();
             // Check existing first to avoid potential parsing overhead
-            var existing = await _context.Playlists
+            var existing = await context.Playlists
                 .FirstOrDefaultAsync(p => p.Url == normalizedUrl && p.ProfileId == profileId && p.IsActive);
                 
             if (existing != null) 
@@ -92,7 +93,8 @@ public class PlaylistService : IPlaylistService
 
     public async Task<Playlist> AddFromChannelsAsync(string name, string sourceUrl, IReadOnlyCollection<Channel> channels, int? profileId = null, string? detectedEpgUrl = null)
     {
-        var existing = await _context.Playlists
+        using var context = await _contextFactory.CreateDbContextAsync();
+        var existing = await context.Playlists
             .FirstOrDefaultAsync(p => p.Url == sourceUrl && p.ProfileId == profileId && p.IsActive);
 
         if (existing != null)
@@ -112,12 +114,12 @@ public class PlaylistService : IPlaylistService
             EpgUrl = NormalizeEpgUrl(detectedEpgUrl)
         };
 
-        _context.ChangeTracker.AutoDetectChangesEnabled = false;
+        context.ChangeTracker.AutoDetectChangesEnabled = false;
 
         try
         {
-            _context.Playlists.Add(playlist);
-            await _context.SaveChangesAsync();
+            context.Playlists.Add(playlist);
+            await context.SaveChangesAsync();
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] Created playlist with ID: {playlist.Id}");
 
             const int batchSize = 1000;
@@ -130,8 +132,8 @@ public class PlaylistService : IPlaylistService
                     channel.PlaylistId = playlist.Id;
                 }
 
-                _context.Channels.AddRange(batch);
-                await _context.SaveChangesAsync();
+                context.Channels.AddRange(batch);
+                await context.SaveChangesAsync();
             }
 
             await _mediaService.AggregateContentAsync(playlist.Id);
@@ -250,12 +252,13 @@ public class PlaylistService : IPlaylistService
         }
         finally
         {
-            _context.ChangeTracker.AutoDetectChangesEnabled = true;
+            context.ChangeTracker.AutoDetectChangesEnabled = true;
         }
     }
 
     public async Task<Playlist> AddFromFileAsync(string name, string filePath, int? profileId = null)
     {
+        using var context = await _contextFactory.CreateDbContextAsync();
         try 
         {
             var rawChannels = await _parser.ParseFromFileAsync(filePath);
@@ -274,9 +277,9 @@ public class PlaylistService : IPlaylistService
                 EpgUrl = detectedEpgUrl
             };
 
-            _context.ChangeTracker.AutoDetectChangesEnabled = false;
-            _context.Playlists.Add(playlist);
-            await _context.SaveChangesAsync();
+            context.ChangeTracker.AutoDetectChangesEnabled = false;
+            context.Playlists.Add(playlist);
+            await context.SaveChangesAsync();
 
             const int batchSize = 500;
             for (int i = 0; i < channels.Count; i += batchSize)
@@ -286,8 +289,8 @@ public class PlaylistService : IPlaylistService
                 {
                     channel.PlaylistId = playlist.Id;
                 }
-                _context.Channels.AddRange(batch);
-                await _context.SaveChangesAsync();
+                context.Channels.AddRange(batch);
+                await context.SaveChangesAsync();
             }
 
             // Aggregation for Series/VOD
@@ -297,13 +300,14 @@ public class PlaylistService : IPlaylistService
         }
         finally
         {
-            _context.ChangeTracker.AutoDetectChangesEnabled = true;
+            context.ChangeTracker.AutoDetectChangesEnabled = true;
         }
     }
 
     public async Task<List<Playlist>> GetAllAsync(int? profileId = null)
     {
-        var query = _context.Playlists.Where(p => p.IsActive);
+        using var context = await _contextFactory.CreateDbContextAsync();
+        var query = context.Playlists.Where(p => p.IsActive);
         
         if (profileId.HasValue)
         {
@@ -318,7 +322,8 @@ public class PlaylistService : IPlaylistService
 
     public async Task<Playlist> RefreshAsync(int playlistId)
     {
-        var playlist = await _context.Playlists
+        using var context = await _contextFactory.CreateDbContextAsync();
+        var playlist = await context.Playlists
             .AsNoTracking()
             .Include(p => p.Channels)
             .FirstOrDefaultAsync(p => p.Id == playlistId);
@@ -334,7 +339,10 @@ public class PlaylistService : IPlaylistService
             {
                 playlist.LastUpdated = DateTime.UtcNow;
                 UpdatePlaylistSourceMetadata(playlist, latestRemoteMetadata);
-                await _context.SaveChangesAsync();
+                // Need to attach or update properly if we're using a single context approach for this method.
+                // It's usually better to just update the specific fields if NoTracking is used. Let's do a direct update.
+                context.Playlists.Update(playlist);
+                await context.SaveChangesAsync();
                 return playlist;
             }
         }
@@ -370,7 +378,8 @@ public class PlaylistService : IPlaylistService
             {
                 UpdatePlaylistSourceMetadata(playlist, latestRemoteMetadata);
             }
-            await _context.SaveChangesAsync();
+            context.Playlists.Update(playlist);
+            await context.SaveChangesAsync();
             return playlist;
         }
 
@@ -379,14 +388,15 @@ public class PlaylistService : IPlaylistService
             channel.PlaylistId = playlist.Id;
         }
 
-        _context.Channels.AddRange(channelsToAdd);
+        context.Channels.AddRange(channelsToAdd);
         playlist.ChannelCount = playlist.Channels.Count + channelsToAdd.Count;
         playlist.LastUpdated = DateTime.UtcNow;
         if (latestRemoteMetadata != null)
         {
             UpdatePlaylistSourceMetadata(playlist, latestRemoteMetadata);
         }
-        await _context.SaveChangesAsync();
+        context.Playlists.Update(playlist);
+        await context.SaveChangesAsync();
 
         // Re-aggregate only when there is a real delta.
         await _mediaService.AggregateContentAsync(playlist.Id);
@@ -396,19 +406,21 @@ public class PlaylistService : IPlaylistService
 
     public async Task DeleteAsync(int playlistId)
     {
-        var playlist = await _context.Playlists
+        using var context = await _contextFactory.CreateDbContextAsync();
+        var playlist = await context.Playlists
             .FirstOrDefaultAsync(p => p.Id == playlistId);
 
         if (playlist != null)
         {
             playlist.IsActive = false;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
     }
 
     public async Task<List<Channel>> GetChannelsAsync(int playlistId)
     {
-        return await _context.Channels
+        using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Channels
             .AsNoTracking()
             .Where(c => c.PlaylistId == playlistId)
             .OrderBy(c => c.GroupTitle)
@@ -421,7 +433,8 @@ public class PlaylistService : IPlaylistService
     /// </summary>
     public async Task<List<Channel>> GetChannelsFilteredAsync(int playlistId, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, int limit = 1000, ChannelSortOrder sortOrder = ChannelSortOrder.NewestFirst)
     {
-        var query = BuildFilteredChannelQuery(playlistId, searchText, group, type, onlyFavorites);
+        using var context = await _contextFactory.CreateDbContextAsync();
+        var query = BuildFilteredChannelQuery(context, playlistId, searchText, group, type, onlyFavorites);
         
         return await ApplySort(query, sortOrder)
             .Take(limit)
@@ -430,7 +443,8 @@ public class PlaylistService : IPlaylistService
 
     public async Task<List<Channel>> GetChannelsFilteredPageAsync(int playlistId, int skip, int take, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, ChannelSortOrder sortOrder = ChannelSortOrder.NewestFirst)
     {
-        var query = BuildFilteredChannelQuery(playlistId, searchText, group, type, onlyFavorites);
+        using var context = await _contextFactory.CreateDbContextAsync();
+        var query = BuildFilteredChannelQuery(context, playlistId, searchText, group, type, onlyFavorites);
 
         return await ApplySort(query, sortOrder)
             .Skip(Math.Max(0, skip))
@@ -440,7 +454,8 @@ public class PlaylistService : IPlaylistService
 
     public async Task<List<string>> GetGroupsAsync(int playlistId)
     {
-        return await _context.Channels
+        using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Channels
             .AsNoTracking()
             .Where(c => c.PlaylistId == playlistId && c.GroupTitle != null)
             .Select(c => c.GroupTitle!.Trim())
@@ -451,7 +466,8 @@ public class PlaylistService : IPlaylistService
 
     public async Task<List<string>> GetGroupsByTypeAsync(int playlistId, ChannelType type)
     {
-        return await _context.Channels
+        using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Channels
             .AsNoTracking()
             .Where(c => c.PlaylistId == playlistId && c.Type == type && c.GroupTitle != null)
             .Select(c => c.GroupTitle!.Trim())
@@ -465,7 +481,8 @@ public class PlaylistService : IPlaylistService
     /// </summary>
     public async Task<int> GetChannelCountAsync(int playlistId)
     {
-        return await _context.Channels
+        using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Channels
             .Where(c => c.PlaylistId == playlistId)
             .CountAsync();
     }
@@ -481,9 +498,9 @@ public class PlaylistService : IPlaylistService
         };
     }
 
-    private IQueryable<Channel> BuildFilteredChannelQuery(int playlistId, string? searchText, string? group, ChannelType? type, bool onlyFavorites)
+    private IQueryable<Channel> BuildFilteredChannelQuery(AppDbContext context, int playlistId, string? searchText, string? group, ChannelType? type, bool onlyFavorites)
     {
-        var query = _context.Channels.Where(c => c.PlaylistId == playlistId);
+        var query = context.Channels.Where(c => c.PlaylistId == playlistId);
 
         if (!string.IsNullOrWhiteSpace(searchText))
         {
@@ -514,11 +531,12 @@ public class PlaylistService : IPlaylistService
     }
     public async Task UpdateProviderExpirationAsync(int providerId, DateTime expirationDate)
     {
-        var account = await _context.ProviderAccounts.FindAsync(providerId);
+        using var context = await _contextFactory.CreateDbContextAsync();
+        var account = await context.ProviderAccounts.FindAsync(providerId);
         if (account != null)
         {
             account.ExpirationDate = expirationDate;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
     }
 
@@ -681,7 +699,8 @@ public class PlaylistService : IPlaylistService
 
     public async Task RefreshEpgAsync(int playlistId)
     {
-        var playlist = await _context.Playlists
+        using var context = await _contextFactory.CreateDbContextAsync();
+        var playlist = await context.Playlists
             .Include(p => p.Channels)
             .FirstOrDefaultAsync(p => p.Id == playlistId);
         
@@ -747,7 +766,7 @@ public class PlaylistService : IPlaylistService
                 playlist.EpgUrl = source.Url;
                 playlist.EpgLastUpdated = DateTime.UtcNow;
                 playlist.EpgLastError = null;
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
                 System.Diagnostics.Debug.WriteLine($"[PlaylistService] RefreshEpg success: {source.Type} (+{afterCount - beforeCount})");
                 return;
             }
@@ -761,7 +780,7 @@ public class PlaylistService : IPlaylistService
         playlist.EpgLastError = string.IsNullOrWhiteSpace(lastError)
             ? "EPG kaynaklarindan veri alinamadi."
             : lastError;
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
     }
 
     private static string? NormalizeEpgUrl(string? url)

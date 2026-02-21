@@ -1,7 +1,0 @@
-<Project>
-  <PropertyGroup>
-    <!-- CI/sandbox ortamlarda audit endpoint erisimi kesik olabildigi icin restore/build stabil kalsin. -->
-    <NuGetAudit>false</NuGetAudit>
-    <RestoreAuditMode>None</RestoreAuditMode>
-  </PropertyGroup>
-</Project>

@@ -171,9 +171,12 @@ public partial class App : Application
     private static void ConfigureServices(IServiceCollection services)
     {
         var dbPath = ResolveDatabasePath();
-        services.AddDbContext<AppDbContext>(options =>
-            options.UseSqlite($"Data Source={dbPath}"), ServiceLifetime.Scoped);
+        
+        // Register IDbContextFactory instead of a scoped DbContext
+        services.AddDbContextFactory<AppDbContext>(options =>
+            options.UseSqlite($"Data Source={dbPath}"));
 
+        // Add Transient/Singleton services that use the IDbContextFactory
         services.AddTransient(_ => CreateOptimizedHttpClient());
 
         services.AddTransient<IM3UParser, M3UParser>();
@@ -183,12 +186,13 @@ public partial class App : Application
         services.AddTransient<IStalkerPortalService, StalkerPortalService>();
         services.AddTransient<ICacheService, CacheService>();
 
-        services.AddScoped<IPlaylistService, PlaylistService>();
-
-        services.AddScoped<IPlaylistOrganizerService, PlaylistOrganizerService>();
-        services.AddScoped<IMediaService, MediaService>();
-        services.AddScoped<IChannelService, ChannelService>();
-        services.AddScoped<IWatchHistoryService, WatchHistoryService>();
+        // Domain services changed to Singleton/Transient because they manually manage DB Context lifetimes
+        services.AddSingleton<IPlaylistService, PlaylistService>();
+        services.AddSingleton<IPlaylistOrganizerService, PlaylistOrganizerService>();
+        services.AddSingleton<IMediaService, MediaService>();
+        services.AddSingleton<IChannelService, ChannelService>();
+        services.AddSingleton<IWatchHistoryService, WatchHistoryService>();
+        
         services.AddSingleton<IAvatarService, AvatarService>();
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IContentDownloadService, ContentDownloadService>();
@@ -203,8 +207,10 @@ public partial class App : Application
         services.AddSingleton<AvaloniaImageCacheService>();
         services.AddSingleton<IVideoPlayerService, VideoPlayerService>();
         services.AddTransient<WatermarkViewModel>();
+        
         services.AddSingleton<MainViewModel>();
         services.AddSingleton<PlayerViewModel>();
+        
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<ProfilesViewModel>();
         services.AddTransient<AddProfileViewModel>();

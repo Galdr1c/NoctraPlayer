@@ -8,22 +8,23 @@ namespace Noctra.Services;
 
 public partial class MediaService : IMediaService
 {
-    private readonly AppDbContext _context;
+    private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
-    public MediaService(AppDbContext context)
+    public MediaService(IDbContextFactory<AppDbContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
 
     public async Task AggregateContentAsync(int playlistId, CancellationToken cancellationToken = default)
     {
-        var channels = await _context.Channels
+        using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        var channels = await context.Channels
             .Where(c => c.PlaylistId == playlistId && c.Type == ChannelType.Series)
             .ToListAsync(cancellationToken);
 
         if (!channels.Any()) return;
 
-        var existingSeries = await _context.Series
+        var existingSeries = await context.Series
             .Include(s => s.Seasons)
             .ThenInclude(se => se.Episodes)
             .Where(s => s.PlaylistId == playlistId)
@@ -58,7 +59,7 @@ public partial class MediaService : IMediaService
                     IsFavorite = false
                 };
                 seriesGroups[seriesKey] = series;
-                _context.Series.Add(series);
+                context.Series.Add(series);
             }
             else
             {
@@ -107,7 +108,7 @@ public partial class MediaService : IMediaService
             season.Episodes.Add(episode);
         }
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     private static Episode? FindExistingEpisode(Season season, int episodeNumber, string? episodeName, string? streamUrl)
@@ -194,7 +195,8 @@ public partial class MediaService : IMediaService
 
     public async Task<List<Series>> GetSeriesAsync(int playlistId, CancellationToken cancellationToken = default)
     {
-        var allSeries = await _context.Series
+        using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        var allSeries = await context.Series
             .Include(s => s.Seasons)
             .ThenInclude(sn => sn.Episodes)
             .AsNoTracking()
@@ -231,7 +233,8 @@ public partial class MediaService : IMediaService
             return;
         }
 
-        var candidates = await _context.Series
+        using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        var candidates = await context.Series
             .Where(s => s.PlaylistId == series.PlaylistId)
             .ToListAsync(cancellationToken);
 
@@ -241,7 +244,7 @@ public partial class MediaService : IMediaService
 
         if (toUpdate.Count == 0 && series.Id > 0)
         {
-            var byId = await _context.Series.FindAsync(new object[] { series.Id }, cancellationToken);
+            var byId = await context.Series.FindAsync(new object[] { series.Id }, cancellationToken);
             if (byId != null)
             {
                 toUpdate.Add(byId);
@@ -259,7 +262,7 @@ public partial class MediaService : IMediaService
             item.IsFavorite = series.IsFavorite;
         }
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     private static string BuildSeriesGroupingKey(string? seriesName)

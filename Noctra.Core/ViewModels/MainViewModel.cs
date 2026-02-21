@@ -43,6 +43,14 @@ public partial class MainViewModel : ObservableObject
     private readonly IMetadataService _metadataService;
     private readonly IContentDownloadService _contentDownloadService;
     private readonly ILogger<MainViewModel>? _logger;
+    private readonly IChannelService _channelService;
+    private readonly IMediaService _mediaService;
+    private readonly IEpgService _epgService;
+    private readonly IPlaylistService _playlistService;
+    private readonly IWatchHistoryService _watchHistoryService;
+    private readonly IXtreamCodesService _xtreamCodesService;
+    private readonly IStalkerPortalService _stalkerPortalService;
+    private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly DateTime _downloadCenterSessionStartUtc = DateTime.UtcNow;
 
     [ObservableProperty]
@@ -159,22 +167,37 @@ public partial class MainViewModel : ObservableObject
 
     public MainViewModel(
         IServiceProvider serviceProvider,
-        Microsoft.Extensions.DependencyInjection.IServiceScopeFactory scopeFactory,
         ISettingsService settingsService,
         IContentDownloadService contentDownloadService,
         IMetadataService metadataService,
         IDispatcherService dispatcherService,
         WatermarkViewModel watermarkViewModel,
+        IChannelService channelService,
+        IMediaService mediaService,
+        IEpgService epgService,
+        IPlaylistService playlistService,
+        IWatchHistoryService watchHistoryService,
+        IXtreamCodesService xtreamCodesService,
+        IStalkerPortalService stalkerPortalService,
+        IDbContextFactory<AppDbContext> contextFactory,
         ILogger<MainViewModel>? logger = null)
     {
         _serviceProvider = serviceProvider;
-        _scopeFactory = scopeFactory;
+        _scopeFactory = serviceProvider.GetRequiredService<Microsoft.Extensions.DependencyInjection.IServiceScopeFactory>();
         _settingsService = settingsService;
         _contentDownloadService = contentDownloadService;
         _metadataService = metadataService;
         _dispatcherService = dispatcherService;
         _logger = logger;
         WatermarkViewModel = watermarkViewModel;
+        _channelService = channelService;
+        _mediaService = mediaService;
+        _epgService = epgService;
+        _playlistService = playlistService;
+        _watchHistoryService = watchHistoryService;
+        _xtreamCodesService = xtreamCodesService;
+        _stalkerPortalService = stalkerPortalService;
+        _contextFactory = contextFactory;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
         InitializeAsync();
         _contentDownloadService.DownloadsChanged += (_, _) =>
@@ -222,9 +245,6 @@ public partial class MainViewModel : ObservableObject
         CurrentProfileId = profile.Id;
         CurrentProfile = profile;
         
-        using var scope = _scopeFactory.CreateScope();
-        var playlistService = scope.ServiceProvider.GetRequiredService<IPlaylistService>();
-        
         try
         {
             // Ensure provider account is loaded
@@ -235,7 +255,7 @@ public partial class MainViewModel : ObservableObject
             }
 
             // Check if playlist already exists (cache-first approach)
-            var existingPlaylists = await playlistService.GetAllAsync(profile.Id);
+            var existingPlaylists = await _playlistService.GetAllAsync(profile.Id);
             
             if (existingPlaylists.Count > 0)
             {
@@ -256,7 +276,7 @@ public partial class MainViewModel : ObservableObject
                         var m3uUrl = profile.ProviderAccount.Url;
                         _ = CheckM3UExpirationAsync(profile.ProviderAccount);
                         StatusMessage = "Kanal listesi indiriliyor...";
-                        await playlistService.AddFromUrlAsync(profile.Name, m3uUrl, profile.Id);
+                        await _playlistService.AddFromUrlAsync(profile.Name, m3uUrl, profile.Id);
                         await LoadPlaylistsAsync();
                         break;
                     }
@@ -269,19 +289,18 @@ public partial class MainViewModel : ObservableObject
                         _ = CheckXtreamExpirationAsync(profile.ProviderAccount);
                         var username = profile.ProviderAccount.Username ?? string.Empty;
                         var password = profile.ProviderAccount.Password ?? string.Empty;
-                        var xtreamService = scope.ServiceProvider.GetRequiredService<IXtreamCodesService>();
 
                         try
                         {
                             StatusMessage = "Xtream API'den kanallar alınıyor...";
-                            var xtreamChannels = await xtreamService.GetChannelsAsync(
+                            var xtreamChannels = await _xtreamCodesService.GetChannelsAsync(
                                 baseUrl,
                                 username,
                                 password,
                                 includeSeriesEpisodes: true);
 
                             var sourceUrl = $"{baseUrl}/get.php?username={Uri.EscapeDataString(username)}&password={Uri.EscapeDataString(password)}&type=m3u_plus&output=ts";
-                            await playlistService.AddFromChannelsAsync(profile.Name, sourceUrl, xtreamChannels, profile.Id);
+                            await _playlistService.AddFromChannelsAsync(profile.Name, sourceUrl, xtreamChannels, profile.Id);
                             await LoadPlaylistsAsync();
                         }
                         catch (Exception ex)
@@ -289,7 +308,7 @@ public partial class MainViewModel : ObservableObject
                             _logger?.LogDebug($"[MainViewModel] Xtream API fallback to M3U: {ex.Message}");
                             var fallbackM3uUrl = $"{baseUrl}/get.php?username={Uri.EscapeDataString(username)}&password={Uri.EscapeDataString(password)}&type=m3u_plus&output=ts";
                             StatusMessage = "Kanal listesi indiriliyor...";
-                            await playlistService.AddFromUrlAsync(profile.Name, fallbackM3uUrl, profile.Id);
+                            await _playlistService.AddFromUrlAsync(profile.Name, fallbackM3uUrl, profile.Id);
                             await LoadPlaylistsAsync();
                         }
 
@@ -298,17 +317,16 @@ public partial class MainViewModel : ObservableObject
                     case ProfileType.StalkerPortal:
                     {
                         StatusMessage = "Stalker Portal bağlantısı kuruluyor...";
-                        var stalkerService = scope.ServiceProvider.GetRequiredService<IStalkerPortalService>();
                         var portalUrl = profile.ProviderAccount.Url;
                         var macAddress = profile.ProviderAccount.Username ?? string.Empty;
 
-                        var stalkerChannels = await stalkerService.GetChannelsAsync(
+                        var stalkerChannels = await _stalkerPortalService.GetChannelsAsync(
                             portalUrl,
                             macAddress,
                             includeVod: true);
 
                         var sourceUrl = $"{portalUrl.TrimEnd('/')}/stalker_portal#{macAddress}";
-                        await playlistService.AddFromChannelsAsync(profile.Name, sourceUrl, stalkerChannels, profile.Id);
+                        await _playlistService.AddFromChannelsAsync(profile.Name, sourceUrl, stalkerChannels, profile.Id);
                         await LoadPlaylistsAsync();
                         break;
                     }
@@ -388,9 +406,7 @@ public partial class MainViewModel : ObservableObject
 
     private async Task UpdateProviderExpirationAsync(int accountId, DateTime expirationDate)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var playlistService = scope.ServiceProvider.GetRequiredService<IPlaylistService>();
-        await playlistService.UpdateProviderExpirationAsync(accountId, expirationDate);
+        await _playlistService.UpdateProviderExpirationAsync(accountId, expirationDate);
 
         _dispatcherService.BeginInvoke(() =>
         {
@@ -506,13 +522,10 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task LoadPlaylistsAsync()
     {
-        using var scope = _scopeFactory.CreateScope();
-        var playlistService = scope.ServiceProvider.GetRequiredService<IPlaylistService>();
-        
         try
         {
             IsLoading = true;
-            Playlists = await playlistService.GetAllAsync(CurrentProfileId);
+            Playlists = await _playlistService.GetAllAsync(CurrentProfileId);
             
             if (Playlists.Count > 0 && SelectedPlaylist == null)
             {
