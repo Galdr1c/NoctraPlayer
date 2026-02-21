@@ -71,6 +71,38 @@ http://server.com/series/user/pass/303.mp4";
             Assert.Contains("Friends", channel3.Name);
             Assert.Equal(ChannelType.Series, channel3.Type);
         }
+
+        [Fact]
+        public async Task ParseAsync_ShouldHandleMalformedLinesGracefully()
+        {
+            var m3u = @"#EXTM3U
+#EXTINF:-1,Valid Channel
+http://valid.com/1.ts
+NOT_A_TAG: Something
+#EXTINF:-1,Next Valid
+http://valid.com/2.ts
+Garbage line here";
+
+            var channels = await _parser.ParseAsync(m3u);
+
+            Assert.Equal(2, channels.Count);
+            Assert.Equal("Valid Channel", channels[0].Name);
+            Assert.Equal("Next Valid", channels[1].Name);
+        }
+
+        [Fact]
+        public async Task ParseAsync_ShouldExtractTvgLogoAndId()
+        {
+            var m3u = @"#EXTM3U
+#EXTINF:-1 tvg-id=""CNN"" tvg-logo=""http://cnn.com/logo.png"" group-title=""News"",CNN International
+http://cnn.com/live.m3u8";
+
+            var channels = await _parser.ParseAsync(m3u);
+
+            Assert.Single(channels);
+            Assert.Equal("http://cnn.com/logo.png", channels[0].LogoUrl);
+            Assert.Equal("CNN International", channels[0].Name);
+        }
     }
 }
 
