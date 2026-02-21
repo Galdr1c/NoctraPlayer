@@ -4,7 +4,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -1622,22 +1621,22 @@ public class ContentDownloadService : IContentDownloadService
             return null;
         }
 
-        var query = QueryHelpers.ParseQuery(uri.Query);
-        if (!query.TryGetValue("output", out var output))
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var currentOutput = query["output"];
+        if (currentOutput == null)
         {
             return null;
         }
 
-        var currentOutput = output.ToString();
         if (string.IsNullOrWhiteSpace(currentOutput) ||
             string.Equals(currentOutput, "m3u8", StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }
 
-        var queryMap = query.ToDictionary(kvp => kvp.Key, kvp => (string?)kvp.Value.ToString(), StringComparer.OrdinalIgnoreCase);
-        queryMap["output"] = "m3u8";
-        return QueryHelpers.AddQueryString(uri.GetLeftPart(UriPartial.Path), queryMap);
+        query.Set("output", "m3u8");
+        var builder = new UriBuilder(uri) { Query = query.ToString() };
+        return builder.Uri.ToString();
     }
 
     private static string ResolveExtensionFromSource(string sourceUrl)

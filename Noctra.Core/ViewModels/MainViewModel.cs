@@ -5,7 +5,6 @@ using System.Net.Http;
 using System.Text.Json;
 using Noctra.Services.Interfaces;
 using Noctra.Services;
-using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
@@ -370,7 +369,7 @@ public partial class MainViewModel : ObservableObject
         {
             // Try to find username and password in URL
             var uri = new Uri(account.Url);
-            var query = QueryHelpers.ParseQuery(uri.Query);
+            var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
 
             // Some providers append expiry directly in M3U URL query.
             var queryExpiration = TryParseExpirationFromQuery(query);
@@ -379,11 +378,8 @@ public partial class MainViewModel : ObservableObject
                 await UpdateProviderExpirationAsync(account.Id, queryExpiration.Value);
             }
             
-            string? username = null;
-            string? password = null;
-
-            if (query.TryGetValue("username", out var u)) username = u.ToString();
-            if (query.TryGetValue("password", out var p)) password = p.ToString();
+            string? username = query["username"];
+            string? password = query["password"];
 
             if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
             {
@@ -419,17 +415,12 @@ public partial class MainViewModel : ObservableObject
         });
     }
 
-    private static DateTime? TryParseExpirationFromQuery(Dictionary<string, Microsoft.Extensions.Primitives.StringValues> query)
+    private static DateTime? TryParseExpirationFromQuery(System.Collections.Specialized.NameValueCollection query)
     {
         var candidateKeys = new[] { "exp", "expires", "expiry", "expiration", "expire", "exp_date" };
         foreach (var key in candidateKeys)
         {
-            if (!query.TryGetValue(key, out var value))
-            {
-                continue;
-            }
-
-            var raw = value.ToString();
+            var raw = query[key];
             if (string.IsNullOrWhiteSpace(raw))
             {
                 continue;

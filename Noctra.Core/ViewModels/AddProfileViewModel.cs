@@ -93,29 +93,22 @@ public partial class AddProfileViewModel : ObservableObject
             if (!url.Contains("?")) return;
 
             var uri = new Uri(url);
-            // Use Microsoft.AspNetCore.WebUtilities.QueryHelpers for parsing
-            var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+            var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
 
-            if (query.TryGetValue("username", out var usernameValues))
+            var username = query["username"];
+            if (!string.IsNullOrWhiteSpace(username))
             {
-                var username = usernameValues.ToString();
-                if (!string.IsNullOrWhiteSpace(username))
-                {
-                    _isUpdatingUrl = true;
-                    Username = username;
-                    _isUpdatingUrl = false;
-                }
+                _isUpdatingUrl = true;
+                Username = username;
+                _isUpdatingUrl = false;
             }
 
-            if (query.TryGetValue("password", out var passwordValues))
+            var password = query["password"];
+            if (!string.IsNullOrWhiteSpace(password))
             {
-                var password = passwordValues.ToString();
-                if (!string.IsNullOrWhiteSpace(password))
-                {
-                    _isUpdatingUrl = true;
-                    Password = password;
-                    _isUpdatingUrl = false;
-                }
+                _isUpdatingUrl = true;
+                Password = password;
+                _isUpdatingUrl = false;
             }
         }
         catch (Exception ex)
