@@ -176,8 +176,10 @@ public partial class App : Application
         services.AddDbContextFactory<AppDbContext>(options =>
             options.UseSqlite($"Data Source={dbPath}"));
 
-        // Add Transient/Singleton services that use the IDbContextFactory
-        services.AddTransient(_ => CreateOptimizedHttpClient());
+        // HttpClient as Singleton: SocketsHttpHandler already manages connection pooling.
+        // Transient would create new handler per resolution, defeating pooling and causing socket exhaustion.
+        // PooledConnectionLifetime (5min) handles DNS rotation for long-lived instances.
+        services.AddSingleton(_ => CreateOptimizedHttpClient());
 
         services.AddTransient<IM3UParser, M3UParser>();
         services.AddTransient<IEpgService, EpgService>();
