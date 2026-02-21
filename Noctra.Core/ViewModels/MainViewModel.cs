@@ -4176,29 +4176,39 @@ public partial class MainViewModel : ObservableObject
             existingKeys.Select(k => SeriesProgressIdentity.BuildEpisodeKey(k.SeasonNumber, k.EpisodeNumber)),
             StringComparer.OrdinalIgnoreCase);
 
-        foreach (var parsed in parsedEntries)
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        try
         {
-            var key = SeriesProgressIdentity.BuildEpisodeKey(parsed.SeasonNumber, parsed.EpisodeNumber);
-            if (!existingKeySet.Add(key))
+            foreach (var parsed in parsedEntries)
             {
-                continue;
+                var key = SeriesProgressIdentity.BuildEpisodeKey(parsed.SeasonNumber, parsed.EpisodeNumber);
+                if (!existingKeySet.Add(key))
+                {
+                    continue;
+                }
+
+                db.SeriesEpisodeProgresses.Add(new SeriesEpisodeProgress
+                {
+                    ProfileId = profileId,
+                    SeriesKey = seriesKey,
+                    SeriesTitle = seriesTitle,
+                    SeasonNumber = parsed.SeasonNumber,
+                    EpisodeNumber = parsed.EpisodeNumber,
+                    LastWatchedAt = parsed.Snapshot.LastWatchedAt,
+                    StoppedAt = parsed.Snapshot.StoppedAt,
+                    Duration = parsed.Snapshot.Duration,
+                    Completed = parsed.Snapshot.Completed
+                });
             }
 
-            db.SeriesEpisodeProgresses.Add(new SeriesEpisodeProgress
-            {
-                ProfileId = profileId,
-                SeriesKey = seriesKey,
-                SeriesTitle = seriesTitle,
-                SeasonNumber = parsed.SeasonNumber,
-                EpisodeNumber = parsed.EpisodeNumber,
-                LastWatchedAt = parsed.Snapshot.LastWatchedAt,
-                StoppedAt = parsed.Snapshot.StoppedAt,
-                Duration = parsed.Snapshot.Duration,
-                Completed = parsed.Snapshot.Completed
-            });
+            await db.SaveChangesAsync();
+            await transaction.CommitAsync();
         }
-
-        await db.SaveChangesAsync();
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            _logger?.LogError(ex, "Failed to migrate legacy series progress for series key '{SeriesKey}'. The operation was safely rolled back.", seriesKey);
+        }
     }
 
     private sealed record SeriesProgressSnapshot(
