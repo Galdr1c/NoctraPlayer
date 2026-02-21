@@ -195,18 +195,6 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (e.PropertyName == nameof(MainViewModel.CurrentProfile))
         {
-            // If the profile object itself changed
-            if (_mainViewModel.CurrentProfile != null)
-            {
-                _mainViewModel.CurrentProfile.PropertyChanged -= CurrentProfile_PropertyChanged;
-                _mainViewModel.CurrentProfile.PropertyChanged += CurrentProfile_PropertyChanged;
-                
-                if (_mainViewModel.CurrentProfile.ProviderAccount != null)
-                {
-                   _mainViewModel.CurrentProfile.ProviderAccount.PropertyChanged -= ProviderAccount_PropertyChanged;
-                   _mainViewModel.CurrentProfile.ProviderAccount.PropertyChanged += ProviderAccount_PropertyChanged;
-                }
-            }
             LoadProfileInfo();
             _ = ScanChannelListStatsCoreAsync(updateStatusMessage: false);
             _ = ScanEpgStatsCoreAsync(updateStatusMessage: false);
@@ -218,24 +206,6 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
-    private void CurrentProfile_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(Profile.ProviderAccount))
-        {
-             if (_mainViewModel.CurrentProfile?.ProviderAccount != null)
-             {
-                 _mainViewModel.CurrentProfile.ProviderAccount.PropertyChanged -= ProviderAccount_PropertyChanged;
-                 _mainViewModel.CurrentProfile.ProviderAccount.PropertyChanged += ProviderAccount_PropertyChanged;
-             }
-             LoadProfileInfo();
-        }
-    }
-
-    private void ProviderAccount_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        LoadProfileInfo();
-    }
-    
     private void LoadProfileInfo()
     {
         if (_mainViewModel.CurrentProfile != null)

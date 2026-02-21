@@ -21,6 +21,16 @@ public interface IProfileService
     /// </summary>
     Task<bool> CheckDuplicateAccountAsync(
         int excludeAccountId, ProfileType type, string url, string username, string password);
+
+    /// <summary>
+    /// Gets all profiles ordered by last used (descending), including their provider accounts.
+    /// </summary>
+    Task<List<Profile>> GetProfilesAsync();
+
+    /// <summary>
+    /// Updates the LastUsed timestamp of a profile.
+    /// </summary>
+    Task UpdateLastUsedAsync(int profileId);
 }
 
 /// <summary>

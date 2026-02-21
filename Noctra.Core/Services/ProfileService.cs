@@ -155,4 +155,24 @@ public class ProfileService : IProfileService
                 (a.Username ?? string.Empty) == username &&
                 (a.Password ?? string.Empty) == password);
     }
+
+    public async Task<List<Profile>> GetProfilesAsync()
+    {
+        await using var db = await _contextFactory.CreateDbContextAsync();
+        return await db.Profiles
+            .Include(p => p.ProviderAccount)
+            .OrderByDescending(p => p.LastUsed)
+            .ToListAsync();
+    }
+
+    public async Task UpdateLastUsedAsync(int profileId)
+    {
+        await using var db = await _contextFactory.CreateDbContextAsync();
+        var profile = await db.Profiles.FindAsync(profileId);
+        if (profile != null)
+        {
+            profile.LastUsed = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        }
+    }
 }

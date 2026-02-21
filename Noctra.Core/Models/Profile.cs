@@ -11,7 +11,7 @@ public enum ProfileType
     StalkerPortal
 }
 
-public partial class Profile : ObservableObject
+public class Profile
 {
     [Key]
     public int Id { get; set; }
@@ -20,13 +20,7 @@ public partial class Profile : ObservableObject
     public string Name { get; set; } = string.Empty;
 
     public int ProviderAccountId { get; set; }
-    
-    private ProviderAccount? _providerAccount;
-    public ProviderAccount? ProviderAccount 
-    {
-        get => _providerAccount;
-        set => SetProperty(ref _providerAccount, value);
-    }
+    public ProviderAccount? ProviderAccount { get; set; }
 
     // Visuals
     public string Avatar { get; set; } = "default"; // Asset name or path

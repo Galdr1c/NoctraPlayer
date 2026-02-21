@@ -27,56 +27,29 @@ public enum ChannelSortOrder
 /// <summary>
 /// Noctra channel entity.
 /// </summary>
-public partial class Channel : ObservableObject
+public class Channel
 {
     public int Id { get; set; }
-    
-    [ObservableProperty]
-    private string _name = string.Empty;
-    
-    [ObservableProperty]
-    private string _streamUrl = string.Empty;
-    
-    [ObservableProperty]
-    private string? _logoUrl;
-    
-    [ObservableProperty]
-    private string? _groupTitle;
-    
+    public string Name { get; set; } = string.Empty;
+    public string StreamUrl { get; set; } = string.Empty;
+    public string? LogoUrl { get; set; }
+    public string? GroupTitle { get; set; }
     public string? TvgId { get; set; }
     public string? TvgName { get; set; }
     public string? Language { get; set; }
-    
-    [ObservableProperty]
-    private ChannelType _type = ChannelType.Live;
-    
-    [ObservableProperty]
-    private bool _isFavorite;
-    
-    [ObservableProperty]
-    private bool _isInMyList;
-    
+    public ChannelType Type { get; set; } = ChannelType.Live;
+    public bool IsFavorite { get; set; }
+    public bool IsInMyList { get; set; }
     public DateTime? LastWatched { get; set; }
     public int PlaylistId { get; set; }
     
     // Metadata for VOD/Movies
-    [ObservableProperty]
-    private string? _plot;
-    
-    [ObservableProperty]
-    private int? _releaseYear;
-    
-    [ObservableProperty]
-    private double? _rating;
-    
-    [ObservableProperty]
-    private string? _backdropUrl;
-    
-    [ObservableProperty]
-    private string? _director;
-    
-    [ObservableProperty]
-    private string? _cast;
+    public string? Plot { get; set; }
+    public int? ReleaseYear { get; set; }
+    public double? Rating { get; set; }
+    public string? BackdropUrl { get; set; }
+    public string? Director { get; set; }
+    public string? Cast { get; set; }
     
     public TimeSpan? Duration { get; set; }
     public TimeSpan? WatchedPosition { get; set; }
@@ -102,15 +75,6 @@ public partial class Channel : ObservableObject
     
     [NotMapped]
     public string? Description => Plot;
-
-    partial void OnLogoUrlChanged(string? value)
-        => OnPropertyChanged(nameof(CoverUrl));
-
-    partial void OnBackdropUrlChanged(string? value)
-        => OnPropertyChanged(nameof(CoverUrl));
-
-    partial void OnPlotChanged(string? value)
-        => OnPropertyChanged(nameof(Description));
 }
 
 

@@ -4,53 +4,23 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Noctra.Models;
 
-public partial class ProviderAccount : ObservableObject
+public class ProviderAccount
 {
     [Key]
     public int Id { get; set; }
 
-    private string _name = string.Empty;
     [Required]
-    public string Name 
-    {
-        get => _name;
-        set => SetProperty(ref _name, value);
-    }
+    public string Name { get; set; } = string.Empty;
 
-    private ProfileType _type;
-    public ProfileType Type 
-    {
-        get => _type;
-        set => SetProperty(ref _type, value);
-    }
+    public ProfileType Type { get; set; }
 
-    private string _url = string.Empty;
-    public string Url 
-    {
-        get => _url;
-        set => SetProperty(ref _url, value);
-    }
+    public string Url { get; set; } = string.Empty;
 
-    private string? _username;
-    public string? Username 
-    {
-        get => _username;
-        set => SetProperty(ref _username, value);
-    }
+    public string? Username { get; set; }
 
-    private string? _password;
-    public string? Password 
-    {
-        get => _password;
-        set => SetProperty(ref _password, value);
-    }
+    public string? Password { get; set; }
     
-    private DateTime? _expirationDate;
-    public DateTime? ExpirationDate 
-    {
-        get => _expirationDate;
-        set => SetProperty(ref _expirationDate, value);
-    }
+    public DateTime? ExpirationDate { get; set; }
 
     public ICollection<Profile> Profiles { get; set; } = new List<Profile>();
 }
