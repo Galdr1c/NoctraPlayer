@@ -165,28 +165,41 @@ public class VideoPlayerService : IVideoPlayerService
 
     private async Task PlayWithRetryAsync(string url, CancellationToken cancellationToken, long generation)
     {
-        if (_mediaPlayer == null)
-        {
-            _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, "Media player hazır değil."));
-            return;
-        }
-
-        if (cancellationToken.IsCancellationRequested || generation != Interlocked.Read(ref _playGeneration))
-        {
-            return;
-        }
-
         try
         {
             if (_libVLC == null) return;
-            var media = new Media(_libVLC, url, FromType.FromLocation);
             
-            // Stream ayarları
-            media.AddOption($":network-caching={NetworkCachingMs}");
-            media.AddOption($":live-caching={LiveCachingMs}");
-            media.AddOption(":http-user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-            media.AddOption(":http-reconnect=true");
+            Media media;
             
+            // Gelen URL'nin bir internet yayını mı yoksa yerel dosya mı olduğunu anla
+            bool isNetworkStream = url.StartsWith("http", StringComparison.OrdinalIgnoreCase) || 
+                                url.StartsWith("rtmp", StringComparison.OrdinalIgnoreCase) || 
+                                url.StartsWith("rtsp", StringComparison.OrdinalIgnoreCase);
+
+            if (isNetworkStream)
+            {
+                // 🌐 İNTERNET YAYINI (IPTV / VOD) - Agresif ayarlar
+                media = new Media(_libVLC, url, FromType.FromLocation);
+                
+                media.AddOption(":http-user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+                media.AddOption(":http-reconnect=true");
+            }
+            else
+            {
+                // 💾 YEREL DOSYA (İndirilen İçerik) - Standart ayarlar
+                string localPath = url;
+                
+                // Eğer URL "file:///" formatındaysa bunu düz Windows yolu ("C:\...") formatına çevir
+                if (Uri.TryCreate(url, UriKind.Absolute, out var fileUri) && fileUri.IsFile)
+                {
+                    localPath = fileUri.LocalPath;
+                }
+                
+                // Yerel dosyalar için FromLocation yerine FromPath kullanmak çok önemlidir
+                media = new Media(_libVLC, localPath, FromType.FromPath);
+                media.AddOption(":file-caching=1500"); // Yerel dosya için ufak bir disk önbelleği
+            }
+
             _mediaPlayer.Media = media;
             
             // Hata event'ini dinle
