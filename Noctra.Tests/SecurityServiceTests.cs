@@ -38,7 +38,7 @@ namespace Noctra.Tests
         }
 
         [Fact]
-        public void Encrypt_ShouldReturnPlainText_OnNonWindows()
+        public void Encrypt_Decrypt_ShouldWork_OnNonWindows()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -50,9 +50,11 @@ namespace Noctra.Tests
 
             // Act
             string? encrypted = _securityService.Encrypt(original);
+            string? decrypted = _securityService.Decrypt(encrypted);
 
             // Assert
-            Assert.Equal(original, encrypted);
+            Assert.NotEqual(original, encrypted);
+            Assert.Equal(original, decrypted);
         }
 
         [Fact]
