@@ -12,7 +12,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - **Doğrudan Kayıt**: İndirilen dosyalar artık ara şifreli formatlar (`.nctra`) yerine doğrudan son hedef formatında kaydediliyor.
   - **Veritabanı Şeması Otomatik Geçişi**: `DownloadItems` tablosundaki `LocalEncryptedPath` kolonu otomatik olarak `LocalFilePath` olarak yeniden adlandırıldı.
   - **Eski Format Temizliği**: Eski `.nctra` dosyaları artık desteklenmiyor; uygulama başlangıcında bu dosyalar "eski format" olarak işaretlenir ve `TempPlayback` dizini tamamen temizlenir.
-  - **Ethernet Üzerinden İndirme Desteği**: 'Yalnızca Wi-Fi' ayarı açık olsa bile Ethernet bağlantısı üzerinden indirme yapılmasına izin verildi.
+  - **İndirme Politikası Düzeltmeleri**: 'Yalnızca Wi-Fi' ayarı açıkken mobil verinin (Cellular) indirmeye izin vermesi hatası giderildi; artık sadece Wi-Fi ve Ethernet bağlantılarına izin veriliyor.
   - **Dizin Adlandırma Düzeltmesi**: `Profile_` dizin yapısındaki büyük/küçük harf uyumsuzluğu giderilerek İndirme Merkezi ve disk alanı gösterimi düzeltildi.
   - **Gelişmiş Yerel Yol Tespiti**: `PlayerViewModel` artık yerel dosyaları dosya uzantısından bağımsız olarak, mutlak yol doğrulamasıyla tespit edebiliyor.
 - **Kapsamlı Servis Refaktörü ve Service Locator Arındırma** (2026-02-21 12:36):

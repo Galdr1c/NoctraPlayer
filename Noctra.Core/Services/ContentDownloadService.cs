@@ -1226,14 +1226,12 @@ public class ContentDownloadService : IContentDownloadService
             return true;
         }
 
-        var isWifiOrEthernet = NetworkInterface.GetAllNetworkInterfaces()
+        var isUnmetered = NetworkInterface.GetAllNetworkInterfaces()
             .Any(i => i.OperationalStatus == OperationalStatus.Up &&
                       (i.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 ||
-                       i.NetworkInterfaceType == NetworkInterfaceType.Ethernet ||
-                       i.NetworkInterfaceType == NetworkInterfaceType.Wwanpp ||
-                       i.NetworkInterfaceType == NetworkInterfaceType.Wwanpp2));
+                       i.NetworkInterfaceType == NetworkInterfaceType.Ethernet));
 
-        if (!isWifiOrEthernet)
+        if (!isUnmetered)
         {
             message = "Sadece Wi-Fi veya Ethernet uzerinden indirme yapilabilir (ayarlardan degistirilebilir).";
             return false;
