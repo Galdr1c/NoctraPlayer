@@ -244,6 +244,9 @@ public partial class MainViewModel : ObservableObject
     {
         if (profile == null) return;
 
+        // Clear UI state from previous profile
+        ClearProfileState();
+
         IsLoading = true;
         StatusMessage = $"{profile.Name} yükleniyor...";
         CurrentProfileId = profile.Id;
@@ -255,6 +258,7 @@ public partial class MainViewModel : ObservableObject
             if (profile.ProviderAccount == null)
             {
                 StatusMessage = "Hesap bilgileri yüklenemedi";
+                IsLoading = false;
                 return;
             }
 
@@ -349,6 +353,71 @@ public partial class MainViewModel : ObservableObject
         {
             IsLoading = false;
         }
+    }
+
+    private void ClearProfileState()
+    {
+        // Reset selections and filters
+        SelectedPlaylist = null;
+        SelectedChannel = null;
+        SelectedSeries = null;
+        SelectedGroup = null;
+        FeaturedChannel = null;
+        IsSeriesDetailVisible = false;
+        SearchText = string.Empty;
+        SearchQuery = string.Empty;
+        SelectedSortOrder = ChannelSortOrder.NewestFirst;
+
+        // Reset pagination and internal caches
+        _currentPage = 0;
+        _hasMoreChannels = false;
+        _isLoadingMoreChannels = false;
+        _currentSeriesPage = 0;
+        _hasMoreSeriesItems = false;
+        _isLoadingMoreSeriesItems = false;
+        _seriesFilteredSource.Clear();
+        _allGroupsCache.Clear();
+        _liveGroupsCache.Clear();
+        _vodGroupsCache.Clear();
+        _seriesGroupsCache.Clear();
+
+        // Clear collections
+        SetItems(Playlists, Enumerable.Empty<Playlist>());
+        SetItems(Channels, Enumerable.Empty<Channel>());
+        SetItems(FilteredChannels, Enumerable.Empty<Channel>());
+        SetItems(TrendingChannels, Enumerable.Empty<Channel>());
+        SetItems(ContinueWatching, Enumerable.Empty<Channel>());
+        SetItems(LatestMovies, Enumerable.Empty<Channel>());
+        SetItems(LatestSeries, Enumerable.Empty<Series>());
+        SetItems(SeriesViewItems, Enumerable.Empty<Series>());
+        SetItems(SearchResults, Enumerable.Empty<object>());
+        SetItems(Groups, Enumerable.Empty<string>());
+        
+        // My List, Favorites, History
+        SetItems(MyList, Enumerable.Empty<object>());
+        SetItems(FavoriteChannels, Enumerable.Empty<object>());
+        SetItems(HistoryChannels, Enumerable.Empty<Channel>());
+        SetItems(HistoryLiveChannels, Enumerable.Empty<Channel>());
+        SetItems(HistorySeriesChannels, Enumerable.Empty<Channel>());
+        SetItems(HistoryVodChannels, Enumerable.Empty<Channel>());
+
+        // Downloads
+        SetItems(ActiveDownloadItems, Enumerable.Empty<DownloadItem>());
+        SetItems(ActiveDownloadingItems, Enumerable.Empty<DownloadItem>());
+        SetItems(QueuedDownloadItems, Enumerable.Empty<DownloadItem>());
+        SetItems(CompletedDownloadItems, Enumerable.Empty<DownloadItem>());
+        SetItems(DownloadedSeriesItems, Enumerable.Empty<Series>());
+        SetItems(DownloadedVodChannels, Enumerable.Empty<Channel>());
+
+        // Search Results
+        SetItems(SearchLiveChannels, Enumerable.Empty<Channel>());
+        SetItems(SearchSeriesChannels, Enumerable.Empty<Series>());
+        SetItems(SearchVodChannels, Enumerable.Empty<Channel>());
+        SetItems(SearchSimilarLiveChannels, Enumerable.Empty<Channel>());
+        SetItems(SearchSimilarSeriesChannels, Enumerable.Empty<Series>());
+        SetItems(SearchSimilarVodChannels, Enumerable.Empty<Channel>());
+
+        StatusMessage = string.Empty;
     }
 
     public Task RefreshCurrentProfileExpirationAsync()
