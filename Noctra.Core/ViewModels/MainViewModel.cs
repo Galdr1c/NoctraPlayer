@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Noctra.Data;
 using System.Text.RegularExpressions;
 using System.Net.NetworkInformation;
+using System.Collections.ObjectModel;
 
 namespace Noctra.ViewModels;
 
@@ -57,34 +58,34 @@ public partial class MainViewModel : ObservableObject
     private AppView _activeView = AppView.Home;
 
     [ObservableProperty]
-    private List<Channel> _trendingChannels = new();
+    private ObservableCollection<Channel> _trendingChannels = new();
 
     [ObservableProperty]
-    private List<Channel> _continueWatching = new();
+    private ObservableCollection<Channel> _continueWatching = new();
 
     [ObservableProperty]
-    private List<Channel> _latestMovies = new();
+    private ObservableCollection<Channel> _latestMovies = new();
 
     [ObservableProperty]
-    private List<Series> _latestSeries = new();
+    private ObservableCollection<Series> _latestSeries = new();
 
     [ObservableProperty]
-    private List<Series> _seriesViewItems = new();
+    private ObservableCollection<Series> _seriesViewItems = new();
 
     [ObservableProperty]
     private Channel? _featuredChannel;
 
     [ObservableProperty]
-    private List<Playlist> _playlists = new();
+    private ObservableCollection<Playlist> _playlists = new();
 
     [ObservableProperty]
-    private List<Channel> _channels = new();
+    private ObservableCollection<Channel> _channels = new();
 
     [ObservableProperty]
-    private List<Channel> _filteredChannels = new();
+    private ObservableCollection<Channel> _filteredChannels = new();
 
     [ObservableProperty]
-    private List<string> _groups = new();
+    private ObservableCollection<string> _groups = new();
 
     [ObservableProperty]
     private Playlist? _selectedPlaylist;
@@ -136,7 +137,7 @@ public partial class MainViewModel : ObservableObject
     private string _searchQuery = string.Empty;
 
     [ObservableProperty]
-    private List<object> _searchResults = new();
+    private ObservableCollection<object> _searchResults = new();
 
     [ObservableProperty]
     private bool _isLoading;
@@ -526,7 +527,7 @@ public partial class MainViewModel : ObservableObject
         try
         {
             IsLoading = true;
-            Playlists = await _playlistService.GetAllAsync(CurrentProfileId);
+            SetItems(Playlists, await _playlistService.GetAllAsync(CurrentProfileId));
             
             if (Playlists.Count > 0 && SelectedPlaylist == null)
             {
@@ -534,8 +535,8 @@ public partial class MainViewModel : ObservableObject
             }
             else if (Playlists.Count == 0)
             {
-                Channels = new List<Channel>();
-                FilteredChannels = new List<Channel>();
+                Channels.Clear();
+                FilteredChannels.Clear();
             }
         }
         finally
@@ -642,29 +643,26 @@ public partial class MainViewModel : ObservableObject
     private async Task LoadHomeContentAsync()
     {
         // Rail içeriklerini yükle
-        TrendingChannels = Channels
+        SetItems(TrendingChannels, Channels
             .Where(c => c.Type == ChannelType.Live)
             .OrderByDescending(HasDisplayImage)
             .ThenBy(c => c.Name)
-            .Take(10)
-            .ToList();
+            .Take(10));
 
-        LatestMovies = Channels
+        SetItems(LatestMovies, Channels
             .Where(c => c.Type == ChannelType.VOD)
             .OrderByDescending(HasDisplayImage)
             .ThenByDescending(c => c.Id)
-            .Take(10)
-            .ToList();
+            .Take(10));
 
         var playlistId = SelectedPlaylist?.Id ?? 0;
-        LatestSeries = await _mediaService.GetSeriesAsync(playlistId);
+        SetItems(LatestSeries, await _mediaService.GetSeriesAsync(playlistId));
         UpdateSeriesViewItems();
 
-        ContinueWatching = Channels
+        SetItems(ContinueWatching, Channels
             .Where(c => c.LastWatched.HasValue)
             .OrderByDescending(c => c.LastWatched)
-            .Take(10)
-            .ToList();
+            .Take(10));
 
         // Hero içeriği
         FeaturedChannel = TrendingChannels.FirstOrDefault() ?? LatestMovies.FirstOrDefault();
@@ -856,8 +854,8 @@ public partial class MainViewModel : ObservableObject
         _currentPage = 0;
         _hasMoreChannels = true;
         _isLoadingMoreChannels = false;
-        Channels = new List<Channel>();
-        FilteredChannels = new List<Channel>();
+        Channels.Clear();
+        FilteredChannels.Clear();
     }
 
     private void ResetSeriesIncrementalState()
@@ -866,7 +864,7 @@ public partial class MainViewModel : ObservableObject
         _hasMoreSeriesItems = true;
         _isLoadingMoreSeriesItems = false;
         _seriesFilteredSource = new List<Series>();
-        SeriesViewItems = new List<Series>();
+        SeriesViewItems.Clear();
     }
 
     public async Task LoadMoreChannelsAsync(CancellationToken cancellationToken = default)
@@ -946,12 +944,14 @@ public partial class MainViewModel : ObservableObject
             _currentPage++;
             _hasMoreChannels = page.Count == IncrementalPageSize;
 
-            var merged = new List<Channel>(FilteredChannels.Count + page.Count);
-            merged.AddRange(FilteredChannels);
-            merged.AddRange(page);
-
-            Channels = merged;
-            FilteredChannels = merged;
+            foreach (var item in page)
+            {
+                FilteredChannels.Add(item);
+                if (!ReferenceEquals(Channels, FilteredChannels))
+                {
+                    Channels.Add(item);
+                }
+            }
 
             var isPersonalView = ActiveView == AppView.MyList || ActiveView == AppView.Favorites;
             if (!isPersonalView)
@@ -1021,10 +1021,10 @@ public partial class MainViewModel : ObservableObject
             _currentSeriesPage++;
             _hasMoreSeriesItems = page.Count == IncrementalPageSize;
 
-            var merged = new List<Series>(SeriesViewItems.Count + page.Count);
-            merged.AddRange(SeriesViewItems);
-            merged.AddRange(page);
-            SeriesViewItems = merged;
+            foreach (var item in page)
+            {
+                SeriesViewItems.Add(item);
+            }
         }
         finally
         {
@@ -1142,7 +1142,7 @@ public partial class MainViewModel : ObservableObject
             _ => _allGroupsCache
         };
 
-        Groups = nextGroups.ToList();
+        SetItems(Groups, nextGroups);
 
         if (!string.IsNullOrWhiteSpace(SelectedGroup) && !Groups.Contains(SelectedGroup))
         {
@@ -1669,19 +1669,18 @@ public partial class MainViewModel : ObservableObject
 
             using var db = await _contextFactory.CreateDbContextAsync();
 
-            // Use full playlist channels for EPG mapping (not only currently paged UI channels)
-            var channelsForMapping = Channels;
+            IEnumerable<Channel> channelsForMapping = Channels;
             if (SelectedPlaylist != null)
             {
                 channelsForMapping = await _playlistService.GetChannelsAsync(SelectedPlaylist.Id);
             }
 
             // EPG is relevant for live channels only.
-            channelsForMapping = channelsForMapping
+            var liveChannels = channelsForMapping
                 .Where(c => c.Type == ChannelType.Live)
                 .ToList();
 
-            if (channelsForMapping.Count == 0)
+            if (liveChannels.Count == 0)
             {
                 if (!isBackgroundSync)
                 {
@@ -1693,7 +1692,7 @@ public partial class MainViewModel : ObservableObject
             // Initial EPG visibility check: ensure we have programs in DB if not refreshing
         if (!forceRefresh && SelectedPlaylist != null)
         {
-            var hasCachedPrograms = await HasEpgForChannelsAsync(db, channelsForMapping);
+            var hasCachedPrograms = await HasEpgForChannelsAsync(db, liveChannels);
             if (hasCachedPrograms && isBackgroundSync)
             {
                 // In background sync, if we have programs, we still continue to download based on timer
@@ -1766,7 +1765,7 @@ public partial class MainViewModel : ObservableObject
                     }
 
                     var beforeCount = await _epgService.GetTotalProgramCountAsync();
-                    await _epgService.LoadEpgAsync(source.Url, source.IsPrimary, channelsForMapping, daysAhead: 1);
+                    await _epgService.LoadEpgAsync(source.Url, source.IsPrimary, channelsForMapping.ToList(), daysAhead: 1);
                     var afterCount = await _epgService.GetTotalProgramCountAsync();
                     var loadedPrograms = afterCount - beforeCount;
 
@@ -1987,40 +1986,40 @@ public partial class MainViewModel : ObservableObject
     }
 
     [ObservableProperty]
-    private List<object> _myList = new();
+    private ObservableCollection<object> _myList = new();
 
     [ObservableProperty]
-    private List<object> _favoriteChannels = new();
+    private ObservableCollection<object> _favoriteChannels = new();
 
     [ObservableProperty]
-    private List<Channel> _historyChannels = new();
+    private ObservableCollection<Channel> _historyChannels = new();
 
     [ObservableProperty]
-    private List<Channel> _historyLiveChannels = new();
+    private ObservableCollection<Channel> _historyLiveChannels = new();
 
     [ObservableProperty]
-    private List<Channel> _historySeriesChannels = new();
+    private ObservableCollection<Channel> _historySeriesChannels = new();
 
     [ObservableProperty]
-    private List<Channel> _historyVodChannels = new();
+    private ObservableCollection<Channel> _historyVodChannels = new();
 
     [ObservableProperty]
-    private List<Series> _downloadedSeriesItems = new();
+    private ObservableCollection<Series> _downloadedSeriesItems = new();
 
     [ObservableProperty]
-    private List<Channel> _downloadedVodChannels = new();
+    private ObservableCollection<Channel> _downloadedVodChannels = new();
 
     [ObservableProperty]
-    private List<DownloadItem> _activeDownloadItems = new();
+    private ObservableCollection<DownloadItem> _activeDownloadItems = new();
 
     [ObservableProperty]
-    private List<DownloadItem> _activeDownloadingItems = new();
+    private ObservableCollection<DownloadItem> _activeDownloadingItems = new();
 
     [ObservableProperty]
-    private List<DownloadItem> _queuedDownloadItems = new();
+    private ObservableCollection<DownloadItem> _queuedDownloadItems = new();
 
     [ObservableProperty]
-    private List<DownloadItem> _completedDownloadItems = new();
+    private ObservableCollection<DownloadItem> _completedDownloadItems = new();
 
     [ObservableProperty]
     private int _activeDownloadCount;
@@ -2032,26 +2031,26 @@ public partial class MainViewModel : ObservableObject
     private string _downloadFreeDiskSpaceText = "-";
 
     [ObservableProperty]
-    private List<Channel> _searchLiveChannels = new();
+    private ObservableCollection<Channel> _searchLiveChannels = new();
 
     [ObservableProperty]
-    private List<Series> _searchSeriesChannels = new();
+    private ObservableCollection<Series> _searchSeriesChannels = new();
 
 
     [ObservableProperty]
-    private List<Channel> _searchVodChannels = new();
+    private ObservableCollection<Channel> _searchVodChannels = new();
 
     [ObservableProperty]
     private string _searchSuggestion = string.Empty;
 
     [ObservableProperty]
-    private List<Channel> _searchSimilarLiveChannels = new();
+    private ObservableCollection<Channel> _searchSimilarLiveChannels = new();
 
     [ObservableProperty]
-    private List<Series> _searchSimilarSeriesChannels = new();
+    private ObservableCollection<Series> _searchSimilarSeriesChannels = new();
 
     [ObservableProperty]
-    private List<Channel> _searchSimilarVodChannels = new();
+    private ObservableCollection<Channel> _searchSimilarVodChannels = new();
 
     [ObservableProperty]
     private bool _showSearchSimilarSection;
@@ -2081,7 +2080,7 @@ public partial class MainViewModel : ObservableObject
     {
         IsSearchOverlayVisible = false;
         SearchQuery = string.Empty;
-        SearchResults = new List<object>();
+        SearchResults.Clear();
 
         if (view != AppView.Search && !string.IsNullOrWhiteSpace(SearchText))
         {
@@ -2109,7 +2108,7 @@ public partial class MainViewModel : ObservableObject
             catch (Exception ex)
             {
                 _logger?.LogDebug($"Navigate->UpdateMyList failed: {ex}");
-                MyList = new List<object>();
+                MyList.Clear();
                 ShowMyListEmptyState = true;
             }
             _ = RefreshPersonalListsFromDatabaseAsync();
@@ -2126,7 +2125,7 @@ public partial class MainViewModel : ObservableObject
             catch (Exception ex)
             {
                 _logger?.LogDebug($"Navigate->UpdateFavoriteChannels failed: {ex}");
-                FavoriteChannels = new List<object>();
+                FavoriteChannels.Clear();
                 ShowFavoritesEmptyState = true;
             }
             _ = RefreshPersonalListsFromDatabaseAsync();
@@ -2182,15 +2181,14 @@ public partial class MainViewModel : ObservableObject
             }
 
             list.AddRange(seriesMap.Values.Where(s => s.IsInMyList).Cast<object>());
-            MyList = list
-                .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty)
-                .ToList();
+            SetItems(MyList, list
+                .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty));
             ShowMyListEmptyState = MyList.Count == 0;
         }
         catch (Exception ex)
         {
             _logger?.LogDebug($"UpdateMyList failed: {ex}");
-            MyList = new List<object>();
+            MyList.Clear();
             ShowMyListEmptyState = true;
         }
     }
@@ -2224,25 +2222,23 @@ public partial class MainViewModel : ObservableObject
             }
 
             list.AddRange(seriesMap.Values.Where(s => s.IsFavorite).Cast<object>());
-            FavoriteChannels = list
-                .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty)
-                .ToList();
+            SetItems(FavoriteChannels, list
+                .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty));
             ShowFavoritesEmptyState = FavoriteChannels.Count == 0;
         }
         catch (Exception ex)
         {
             _logger?.LogDebug($"UpdateFavoriteChannels failed: {ex}");
-            FavoriteChannels = new List<object>();
+            FavoriteChannels.Clear();
             ShowFavoritesEmptyState = true;
         }
     }
 
     private void UpdateHistoryChannels()
     {
-        HistoryChannels = Channels
+        SetItems(HistoryChannels, Channels
             .Where(c => c.LastWatched.HasValue)
-            .OrderByDescending(c => c.LastWatched)
-            .ToList();
+            .OrderByDescending(c => c.LastWatched));
         UpdateHistoryBuckets();
 
         _ = RefreshHistoryChannelsOnlyAsync();
@@ -2250,9 +2246,9 @@ public partial class MainViewModel : ObservableObject
 
     private void UpdateHistoryBuckets()
     {
-        HistoryLiveChannels = HistoryChannels.Where(c => c.Type == ChannelType.Live).ToList();
-        HistorySeriesChannels = HistoryChannels.Where(c => c.Type == ChannelType.Series).ToList();
-        HistoryVodChannels = HistoryChannels.Where(c => c.Type == ChannelType.VOD).ToList();
+        SetItems(HistoryLiveChannels, HistoryChannels.Where(c => c.Type == ChannelType.Live));
+        SetItems(HistorySeriesChannels, HistoryChannels.Where(c => c.Type == ChannelType.Series));
+        SetItems(HistoryVodChannels, HistoryChannels.Where(c => c.Type == ChannelType.VOD));
         ShowHistoryEmptyState = HistoryChannels.Count == 0;
     }
 
@@ -2264,10 +2260,9 @@ public partial class MainViewModel : ObservableObject
             var latestSeriesSnapshot = LatestSeries?.ToList() ?? new List<Series>();
             var seriesViewSnapshot = SeriesViewItems?.ToList() ?? new List<Series>();
 
-            DownloadedVodChannels = channelsSnapshot
+            SetItems(DownloadedVodChannels, channelsSnapshot
                 .Where(c => c.Type == ChannelType.VOD && IsDownloadedStreamUrl(c.StreamUrl))
-                .OrderBy(c => c.Name)
-                .ToList();
+                .OrderBy(c => c.Name));
 
             var seriesMap = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
             foreach (var series in latestSeriesSnapshot.Concat(seriesViewSnapshot))
@@ -2284,11 +2279,10 @@ public partial class MainViewModel : ObservableObject
                 }
             }
 
-            DownloadedSeriesItems = seriesMap.Values
+            SetItems(DownloadedSeriesItems, seriesMap.Values
                 .Where(SeriesHasDownloadedEpisode)
                 .Select(BuildDownloadedOnlySeries)
-                .OrderBy(s => s.Name)
-                .ToList();
+                .OrderBy(s => s.Name));
 
             ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
                                       DownloadedSeriesItems.Count == 0;
@@ -2296,9 +2290,9 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger?.LogDebug($"UpdateDownloadedItems failed: {ex}");
-            DownloadedVodChannels = new List<Channel>();
-            DownloadedSeriesItems = new List<Series>();
-            ActiveDownloadItems = new List<DownloadItem>();
+            DownloadedVodChannels.Clear();
+            DownloadedSeriesItems.Clear();
+            ActiveDownloadItems.Clear();
             ShowDownloadsEmptyState = true;
         }
     }
@@ -2307,11 +2301,11 @@ public partial class MainViewModel : ObservableObject
     {
         if (!CurrentProfileId.HasValue)
         {
-            DownloadedVodChannels = new List<Channel>();
-            DownloadedSeriesItems = new List<Series>();
-            ActiveDownloadItems = new List<DownloadItem>();
-            ActiveDownloadingItems = new List<DownloadItem>();
-            QueuedDownloadItems = new List<DownloadItem>();
+            SetItems(DownloadedVodChannels, Enumerable.Empty<Channel>());
+            SetItems(DownloadedSeriesItems, Enumerable.Empty<Series>());
+            SetItems(ActiveDownloadItems, Enumerable.Empty<DownloadItem>());
+            SetItems(ActiveDownloadingItems, Enumerable.Empty<DownloadItem>());
+            SetItems(QueuedDownloadItems, Enumerable.Empty<DownloadItem>());
             SetDownloadCenterSummaryEmpty();
             ShowDownloadsEmptyState = true;
             return;
@@ -2322,8 +2316,8 @@ public partial class MainViewModel : ObservableObject
 
         if (profilePlaylistIds.Count == 0)
         {
-            DownloadedVodChannels = new List<Channel>();
-            DownloadedSeriesItems = new List<Series>();
+            SetItems(DownloadedVodChannels, Enumerable.Empty<Channel>());
+            SetItems(DownloadedSeriesItems, Enumerable.Empty<Series>());
             await RefreshDownloadsFromServiceAsync(CurrentProfileId.Value);
             ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
                                      DownloadedSeriesItems.Count == 0;
@@ -2336,9 +2330,8 @@ public partial class MainViewModel : ObservableObject
             .OrderBy(c => c.Name)
             .ToListAsync();
 
-        DownloadedVodChannels = vodChannels
-            .Where(c => IsDownloadedStreamUrl(c.StreamUrl))
-            .ToList();
+        SetItems(DownloadedVodChannels, vodChannels
+            .Where(c => IsDownloadedStreamUrl(c.StreamUrl)));
 
         var existingDownloadedVodUrls = new HashSet<string>(
             DownloadedVodChannels
@@ -2381,12 +2374,11 @@ public partial class MainViewModel : ObservableObject
 
         if (fallbackVod.Count > 0)
         {
-            DownloadedVodChannels = DownloadedVodChannels
+            SetItems(DownloadedVodChannels, DownloadedVodChannels
                 .Concat(fallbackVod)
                 .GroupBy(c => c.StreamUrl ?? string.Empty, StringComparer.OrdinalIgnoreCase)
                 .Select(g => g.First())
-                .OrderBy(c => c.Name)
-                .ToList();
+                .OrderBy(c => c.Name));
         }
 
         var seriesCandidates = await db.Series
@@ -2397,10 +2389,9 @@ public partial class MainViewModel : ObservableObject
             .OrderBy(s => s.Name)
             .ToListAsync();
 
-        DownloadedSeriesItems = seriesCandidates
+        SetItems(DownloadedSeriesItems, seriesCandidates
             .Where(SeriesHasDownloadedEpisode)
-            .Select(BuildDownloadedOnlySeries)
-            .ToList();
+            .Select(BuildDownloadedOnlySeries));
 
         var existingDownloadedEpisodeUrls = new HashSet<string>(
             DownloadedSeriesItems
@@ -2475,22 +2466,9 @@ public partial class MainViewModel : ObservableObject
 
         if (fallbackSeriesMap.Count > 0)
         {
-            foreach (var series in fallbackSeriesMap.Values)
-            {
-                series.Seasons = series.Seasons
-                    .OrderBy(s => s.SeasonNumber)
-                    .Select(s =>
-                    {
-                        s.Episodes = s.Episodes.OrderBy(e => e.EpisodeNumber).ToList();
-                        return s;
-                    })
-                    .ToList();
-            }
-
-            DownloadedSeriesItems = DownloadedSeriesItems
+            SetItems(DownloadedSeriesItems, DownloadedSeriesItems
                 .Concat(fallbackSeriesMap.Values)
-                .OrderBy(s => s.Name)
-                .ToList();
+                .OrderBy(s => s.Name));
         }
 
         await RefreshDownloadsFromServiceAsync(CurrentProfileId.Value);
@@ -2508,26 +2486,23 @@ public partial class MainViewModel : ObservableObject
                 .OrderByDescending(d => d.CreatedAt)
                 .ToList();
 
-            ActiveDownloadItems = allActive
+            SetItems(ActiveDownloadItems, allActive
                 .Select((d, index) =>
                 {
                     d.QueueOrder = index + 1;
                     return d;
-                })
-                .ToList();
+                }));
 
-            ActiveDownloadingItems = allActive
+            SetItems(ActiveDownloadingItems, allActive
                 .Where(d => d.Status == DownloadStatus.Downloading || d.Status == DownloadStatus.Paused)
                 .OrderBy(d => d.Status == DownloadStatus.Paused ? 1 : 0)
-                .ThenBy(d => d.CreatedAt)
-                .ToList();
+                .ThenBy(d => d.CreatedAt));
 
-            QueuedDownloadItems = allActive
+            SetItems(QueuedDownloadItems, allActive
                 .Where(d => d.Status == DownloadStatus.Queued)
-                .OrderBy(d => d.CreatedAt)
-                .ToList();
+                .OrderBy(d => d.CreatedAt));
 
-            CompletedDownloadItems = downloads
+            SetItems(CompletedDownloadItems, downloads
                 .Where(d => d.Status == DownloadStatus.Completed)
                 .Where(d =>
                 {
@@ -2535,17 +2510,16 @@ public partial class MainViewModel : ObservableObject
                     return ts >= _downloadCenterSessionStartUtc;
                 })
                 .OrderByDescending(d => d.CompletedAt ?? d.UpdatedAt)
-                .Take(100)
-                .ToList();
+                .Take(100));
             UpdateDownloadCenterSummary(profileId);
         }
         catch (Exception ex)
         {
             _logger?.LogDebug($"RefreshDownloadsFromServiceAsync failed: {ex.Message}");
-            ActiveDownloadItems = new List<DownloadItem>();
-            ActiveDownloadingItems = new List<DownloadItem>();
-            QueuedDownloadItems = new List<DownloadItem>();
-            CompletedDownloadItems = new List<DownloadItem>();
+            SetItems(ActiveDownloadItems, Enumerable.Empty<DownloadItem>());
+            SetItems(ActiveDownloadingItems, Enumerable.Empty<DownloadItem>());
+            SetItems(QueuedDownloadItems, Enumerable.Empty<DownloadItem>());
+            SetItems(CompletedDownloadItems, Enumerable.Empty<DownloadItem>());
             SetDownloadCenterSummaryEmpty();
         }
 
@@ -2558,9 +2532,9 @@ public partial class MainViewModel : ObservableObject
         ActiveDownloadCount = 0;
         ActiveDownloadsTotalSpeedText = "0 B/sn";
         DownloadFreeDiskSpaceText = "-";
-        ActiveDownloadingItems = new List<DownloadItem>();
-        QueuedDownloadItems = new List<DownloadItem>();
-        CompletedDownloadItems = new List<DownloadItem>();
+        ActiveDownloadingItems.Clear();
+        QueuedDownloadItems.Clear();
+        CompletedDownloadItems.Clear();
     }
 
     private void UpdateDownloadCenterSummary(int profileId)
@@ -2726,21 +2700,21 @@ public partial class MainViewModel : ObservableObject
     {
         if (!CurrentProfileId.HasValue)
         {
-            MyList = new List<object>();
-            FavoriteChannels = new List<object>();
-            HistoryChannels = new List<Channel>();
-            HistoryLiveChannels = new List<Channel>();
-            HistorySeriesChannels = new List<Channel>();
-            HistoryVodChannels = new List<Channel>();
-            DownloadedSeriesItems = new List<Series>();
-            DownloadedVodChannels = new List<Channel>();
+            MyList.Clear();
+            FavoriteChannels.Clear();
+            HistoryChannels.Clear();
+            HistoryLiveChannels.Clear();
+            HistorySeriesChannels.Clear();
+            HistoryVodChannels.Clear();
+            DownloadedSeriesItems.Clear();
+            DownloadedVodChannels.Clear();
             if (CurrentProfileId.HasValue)
             {
                 await RefreshDownloadsFromServiceAsync(CurrentProfileId.Value);
             }
             else
             {
-                ActiveDownloadItems = new List<DownloadItem>();
+                ActiveDownloadItems.Clear();
                 SetDownloadCenterSummaryEmpty();
             }
             ShowMyListEmptyState = true;
@@ -2757,14 +2731,14 @@ public partial class MainViewModel : ObservableObject
 
         if (profilePlaylistIds.Count == 0)
         {
-            MyList = new List<object>();
-            FavoriteChannels = new List<object>();
-            HistoryChannels = new List<Channel>();
-            HistoryLiveChannels = new List<Channel>();
-            HistorySeriesChannels = new List<Channel>();
-            HistoryVodChannels = new List<Channel>();
-            DownloadedSeriesItems = new List<Series>();
-            DownloadedVodChannels = new List<Channel>();
+            MyList.Clear();
+            FavoriteChannels.Clear();
+            HistoryChannels.Clear();
+            HistoryLiveChannels.Clear();
+            HistorySeriesChannels.Clear();
+            HistoryVodChannels.Clear();
+            DownloadedSeriesItems.Clear();
+            DownloadedVodChannels.Clear();
             await RefreshDownloadsFromServiceAsync(CurrentProfileId.Value);
             ShowMyListEmptyState = true;
             ShowFavoritesEmptyState = true;
@@ -2786,11 +2760,10 @@ public partial class MainViewModel : ObservableObject
             .OrderBy(s => s.Name)
             .ToListAsync();
 
-        MyList = myListChannels
+        SetItems(MyList, myListChannels
             .Cast<object>()
             .Concat(myListSeries.Cast<object>())
-            .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty)
-            .ToList();
+            .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty));
 
         var favoriteChannels = await db.Channels
             .AsNoTracking()
@@ -2804,13 +2777,12 @@ public partial class MainViewModel : ObservableObject
             .OrderBy(s => s.Name)
             .ToListAsync();
 
-        FavoriteChannels = favoriteChannels
+        SetItems(FavoriteChannels, favoriteChannels
             .Cast<object>()
             .Concat(favoriteSeries.Cast<object>())
-            .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty)
-            .ToList();
+            .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty));
 
-        HistoryChannels = await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds);
+        SetItems(HistoryChannels, await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds));
         UpdateHistoryBuckets();
 
         ShowMyListEmptyState = MyList.Count == 0;
@@ -2834,15 +2806,15 @@ public partial class MainViewModel : ObservableObject
 
         if (profilePlaylistIds.Count == 0)
         {
-            HistoryChannels = new List<Channel>();
-            HistoryLiveChannels = new List<Channel>();
-            HistorySeriesChannels = new List<Channel>();
-            HistoryVodChannels = new List<Channel>();
+            HistoryChannels.Clear();
+            HistoryLiveChannels.Clear();
+            HistorySeriesChannels.Clear();
+            HistoryVodChannels.Clear();
             ShowHistoryEmptyState = true;
             return;
         }
 
-        HistoryChannels = await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds);
+        SetItems(HistoryChannels, await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds));
         UpdateHistoryBuckets();
     }
 
@@ -2968,13 +2940,13 @@ public partial class MainViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(SearchText))
         {
-            SearchLiveChannels = new List<Channel>();
-            SearchSeriesChannels = new List<Series>();
-            SearchVodChannels = new List<Channel>();
+            SearchLiveChannels.Clear();
+            SearchSeriesChannels.Clear();
+            SearchVodChannels.Clear();
             SearchSuggestion = string.Empty;
-            SearchSimilarLiveChannels = new List<Channel>();
-            SearchSimilarSeriesChannels = new List<Series>();
-            SearchSimilarVodChannels = new List<Channel>();
+            SearchSimilarLiveChannels.Clear();
+            SearchSimilarSeriesChannels.Clear();
+            SearchSimilarVodChannels.Clear();
             ShowSearchSimilarSection = false;
             ShowSearchEmptyState = false;
             return;
@@ -2983,25 +2955,22 @@ public partial class MainViewModel : ObservableObject
         var rawQuery = SearchText.Trim();
         var normalizedSeriesQuery = NormalizeSeriesQuery(rawQuery);
 
-        SearchLiveChannels = FilteredChannels
+        SetItems(SearchLiveChannels, FilteredChannels
             .Where(c => c.Type == ChannelType.Live)
             .OrderByDescending(HasDisplayImage)
-            .ThenBy(c => c.Name)
-            .ToList();
+            .ThenBy(c => c.Name));
 
         var seriesSnapshot = LatestSeries.ToList();
 
-        SearchSeriesChannels = seriesSnapshot
+        SetItems(SearchSeriesChannels, seriesSnapshot
             .Where(series => SeriesMatchesSearch(series, rawQuery, normalizedSeriesQuery))
             .OrderByDescending(HasDisplayImage)
-            .ThenBy(series => series.Name)
-            .ToList();
+            .ThenBy(series => series.Name));
 
-        SearchVodChannels = FilteredChannels
+        SetItems(SearchVodChannels, FilteredChannels
             .Where(c => c.Type == ChannelType.VOD)
             .OrderByDescending(HasDisplayImage)
-            .ThenBy(c => c.Name)
-            .ToList();
+            .ThenBy(c => c.Name));
 
         var hasAnyExact = SearchLiveChannels.Count > 0
             || SearchSeriesChannels.Count > 0
@@ -3018,9 +2987,9 @@ public partial class MainViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(normalizedQuery))
         {
             SearchSuggestion = string.Empty;
-            SearchSimilarLiveChannels = new List<Channel>();
-            SearchSimilarSeriesChannels = new List<Series>();
-            SearchSimilarVodChannels = new List<Channel>();
+            SearchSimilarLiveChannels.Clear();
+            SearchSimilarSeriesChannels.Clear();
+            SearchSimilarVodChannels.Clear();
             ShowSearchSimilarSection = false;
             return;
         }
@@ -3067,9 +3036,9 @@ public partial class MainViewModel : ObservableObject
             .Take(12)
             .ToList();
 
-        SearchSimilarLiveChannels = similarLive;
-        SearchSimilarSeriesChannels = similarSeries;
-        SearchSimilarVodChannels = similarVod;
+        SetItems(SearchSimilarLiveChannels, similarLive);
+        SetItems(SearchSimilarSeriesChannels, similarSeries);
+        SetItems(SearchSimilarVodChannels, similarVod);
         ShowSearchSimilarSection = similarLive.Count > 0 || similarSeries.Count > 0 || similarVod.Count > 0;
     }
 
@@ -3200,7 +3169,7 @@ public partial class MainViewModel : ObservableObject
 
     private void UpdateSeriesViewItems()
     {
-        var source = LatestSeries ?? new List<Series>();
+        var source = LatestSeries;
         if (source.Count == 0)
         {
             ResetSeriesIncrementalState();
@@ -3245,7 +3214,7 @@ public partial class MainViewModel : ObservableObject
         _seriesFilteredSource = filtered.ToList();
         _currentSeriesPage = 0;
         _hasMoreSeriesItems = true;
-        SeriesViewItems = new List<Series>();
+        SeriesViewItems.Clear();
         _ = LoadMoreSeriesAsync();
     }
 
@@ -3297,7 +3266,7 @@ public partial class MainViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(value))
         {
-            SearchResults = new List<object>();
+            SearchResults.Clear();
             return;
         }
 
@@ -3344,7 +3313,7 @@ public partial class MainViewModel : ObservableObject
             {
                 if (!token.IsCancellationRequested)
                 {
-                    SearchResults = results;
+                    SetItems(SearchResults, results);
                 }
             });
         }
@@ -4474,6 +4443,15 @@ public partial class MainViewModel : ObservableObject
         }
 
         return null;
+    }
+
+    private void SetItems<T>(ObservableCollection<T> collection, IEnumerable<T> items)
+    {
+        collection.Clear();
+        foreach (var item in items)
+        {
+            collection.Add(item);
+        }
     }
 }
 

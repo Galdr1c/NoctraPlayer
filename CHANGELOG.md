@@ -8,7 +8,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### Added
-- **Kapsamlı Servis Refaktörü ve Service Locator Arındırma** (2026-02-21 12:15):
+- **Kapsamlı Servis Refaktörü ve Service Locator Arındırma** (2026-02-21 12:36):
+  - **ObservableCollection Performans İyileştirmesi**: `MainViewModel` içerisindeki UI'a bağlı tüm listeler `ObservableCollection<T>` tipine dönüştürüldü ve `SetItems` yardımcı metodu ile sadece içerikleri güncellenerek sayfa geçişlerindeki arayüz titremeleri (UI flicker) engellendi.
+  - **VideoPlayer Null Koruması**: `VideoPlayerService` içerisinde `CS8602` uyarısına neden olan olası boş referans hataları (null reference) yerel değişken kopyalamaları ve `null` kontrolleri ile kalıcı olarak giderildi.
   - **IServiceScopeFactory Tamamen Kaldırıldı**: `MainViewModel`, `ProfilesViewModel`, `AddProfileViewModel`, `SettingsViewModel`, `ContentDownloadService` ve `PlaylistService` içerisindeki tüm `IServiceScopeFactory` (Service Locator) kullanımı temizlendi.
   - **IDbContextFactory ve IDialogService Geçişi**: Manuel scope yönetimi yerine `IDbContextFactory<AppDbContext>` ve genişletilmiş `IDialogService` mimarisine geçildi. Bu sayede iş mantığı (business logic) katmanı DI prensiplerine tam uyumlu hale getirildi ve test edilebilirlik artırıldı.
   - **Window Ömür Döngüsü Yönetimi**: Pencere açma ve ViewModel eşleştirme mantığı `AvaloniaDialogService` içerisinde merkezileştirilerek kod-arkası (code-behind) dosyalarındaki Service Locator bağımlılıkları yok edildi.

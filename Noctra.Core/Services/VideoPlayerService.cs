@@ -200,6 +200,7 @@ public class VideoPlayerService : IVideoPlayerService
                 media.AddOption(":file-caching=1500"); // Yerel dosya için ufak bir disk önbelleği
             }
 
+            if (_mediaPlayer == null) return;
             _mediaPlayer.Media = media;
             
             // Hata event'ini dinle
@@ -364,6 +365,7 @@ public class VideoPlayerService : IVideoPlayerService
             
             var tracks = new List<(int, string?)>();
             var description = _mediaPlayer.AudioTrackDescription;
+            if (description == null) return tracks;
             
             foreach (var track in description)
             {
@@ -382,6 +384,7 @@ public class VideoPlayerService : IVideoPlayerService
             
             var tracks = new List<(int, string?)>();
             var description = _mediaPlayer.SpuDescription;
+            if (description == null) return tracks;
             
             foreach (var track in description)
             {
@@ -411,6 +414,8 @@ public class VideoPlayerService : IVideoPlayerService
             return;
         }
 
+        if (_mediaPlayer == null) return;
+        
         // Disable subtitle for streams that require explicit OFF track ids.
         // Try common LibVLC OFF id first, then fallback to 0 when needed.
         _mediaPlayer.SetSpu(-1);
@@ -487,12 +492,18 @@ public class VideoPlayerService : IVideoPlayerService
             if (generation != Interlocked.Read(ref _playGeneration)) return;
 
             // Parse the media to get track info
-            await _mediaPlayer.Media.Parse(MediaParseOptions.ParseNetwork, timeout: 5000);
+            var media = _mediaPlayer.Media;
+            if (media == null) return;
+            
+            await media.Parse(MediaParseOptions.ParseNetwork, timeout: 5000);
             if (generation != Interlocked.Read(ref _playGeneration)) return;
 
             var measured = new StreamQualityInfo();
 
-            foreach (var track in _mediaPlayer.Media.Tracks)
+            var tracks = media.Tracks;
+            if (tracks == null) return;
+
+            foreach (var track in tracks)
             {
                 if (track.TrackType == TrackType.Video)
                 {
