@@ -1310,14 +1310,8 @@ public partial class MainViewModel : ObservableObject
                 }
                 else
                 {
-                    var groupChannels = Channels.Where(c => c.GroupTitle == channel.GroupTitle && c.Type == ChannelType.Live);
-                    _livePlaybackContext = SelectedSortOrder switch
-                    {
-                        ChannelSortOrder.NameAsc => groupChannels.OrderBy(c => c.Name).ToList(),
-                        ChannelSortOrder.NameDesc => groupChannels.OrderByDescending(c => c.Name).ToList(),
-                        ChannelSortOrder.OldestFirst => groupChannels.OrderBy(c => c.Id).ToList(),
-                        _ => groupChannels.OrderByDescending(c => c.Id).ToList() // ChannelSortOrder.NewestFirst
-                    };
+                    // Fire and forget deep DB fallback
+                    _ = RefreshLivePlaybackContextAsync(channel);
                 }
             }
             else
@@ -1336,6 +1330,54 @@ public partial class MainViewModel : ObservableObject
 
         // Notify UI to play
         OnMediaSelected?.Invoke(channel);
+    }
+
+    private async Task RefreshLivePlaybackContextAsync(Channel targetChannel)
+    {
+        try
+        {
+            var profileId = CurrentProfileId;
+            if (profileId == null) return;
+
+            using var db = await _contextFactory.CreateDbContextAsync();
+            
+            // Validate playlist is still active
+            var playlistExists = await db.Playlists
+                .AsNoTracking()
+                .AnyAsync(p => p.Id == targetChannel.PlaylistId && p.ProfileId == profileId && p.IsActive);
+                
+            if (!playlistExists)
+            {
+                _livePlaybackContext = null;
+                return;
+            }
+
+            var groupChannels = await db.Channels
+                .AsNoTracking()
+                .Where(c => c.PlaylistId == targetChannel.PlaylistId 
+                         && c.GroupTitle == targetChannel.GroupTitle 
+                         && c.Type == ChannelType.Live)
+                .ToListAsync();
+
+            if (groupChannels.Count == 0)
+            {
+                 _livePlaybackContext = null;
+                 return;
+            }
+
+            _livePlaybackContext = SelectedSortOrder switch
+            {
+                ChannelSortOrder.NameAsc => groupChannels.OrderBy(c => c.Name).ToList(),
+                ChannelSortOrder.NameDesc => groupChannels.OrderByDescending(c => c.Name).ToList(),
+                ChannelSortOrder.OldestFirst => groupChannels.OrderBy(c => c.Id).ToList(),
+                _ => groupChannels.OrderByDescending(c => c.Id).ToList()
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug($"RefreshLivePlaybackContextAsync failed: {ex.Message}");
+            _livePlaybackContext = null;
+        }
     }
 
     [RelayCommand]
