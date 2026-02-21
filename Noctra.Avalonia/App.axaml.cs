@@ -77,6 +77,7 @@ public partial class App : Application
                 // Fire and forget warmup
                 _ = Task.Run(async () =>
                 {
+                    var startupStopwatch = System.Diagnostics.Stopwatch.StartNew();
                     try
                     {
                         StartupDiagnostics.Log("Background warmup started.");
@@ -94,9 +95,7 @@ public partial class App : Application
                             StartupDiagnostics.Log("EF Core warmed up.");
                         }
 
-                        // 3. Resolve MainWindow/ProfilesWindow early (Builds UI tree in background if possible, or sets up DI graph)
-                        // Note: Avalonia UI controls MUST be created on the UI thread. 
-                        // We will use Dispatcher.UIThread.InvokeAsync to create the window.
+                        // 3. Resolve MainWindow/ProfilesWindow early
                         var profilesWindow = await Dispatcher.UIThread.InvokeAsync(() => 
                         {
                             var win = Services.GetRequiredService<ProfilesWindow>();
@@ -105,6 +104,13 @@ public partial class App : Application
                         });
                         
                         StartupDiagnostics.Log("ProfilesWindow resolved.");
+
+                        // Ensure a minimum splash duration (e.g., 3.5 seconds) for premium feel
+                        var elapsed = startupStopwatch.ElapsedMilliseconds;
+                        if (elapsed < 3500)
+                        {
+                            await Task.Delay(3500 - (int)elapsed);
+                        }
 
                         // Transition to Main Window
                         await Dispatcher.UIThread.InvokeAsync(() =>
@@ -221,6 +227,7 @@ public partial class App : Application
         services.AddTransient<AvatarPickerViewModel>();
         services.AddTransient<GlobalSettingsViewModel>();
         services.AddTransient<EditChannelViewModel>();
+        services.AddTransient<ProfileLoadingViewModel>();
 
         services.AddSingleton<MainWindow>();
         services.AddTransient<ProfilesWindow>();
@@ -230,6 +237,7 @@ public partial class App : Application
         services.AddTransient<EditChannelWindow>();
         services.AddTransient<AvatarPickerWindow>();
         services.AddTransient<UpsellWindow>();
+        services.AddTransient<ProfileLoadingWindow>();
     }
 
     private static string ResolveDatabasePath()

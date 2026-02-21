@@ -248,7 +248,7 @@ public partial class MainViewModel : ObservableObject
         ClearProfileState();
 
         IsLoading = true;
-        StatusMessage = $"{profile.Name} yükleniyor...";
+        StatusMessage = "Kanal ve içerik listeleriniz hazırlanıyor...";
         CurrentProfileId = profile.Id;
         CurrentProfile = profile;
         
@@ -269,7 +269,7 @@ public partial class MainViewModel : ObservableObject
             {
                 // Use cached playlist - much faster!
                 _logger?.LogDebug($"[MainViewModel] Using cached playlist for profile {profile.Id}");
-                StatusMessage = "Önbellekten yükleniyor...";
+                StatusMessage = "İçerikleriniz hızla yükleniyor...";
                 await LoadPlaylistsAsync();
             }
             else
@@ -283,30 +283,30 @@ public partial class MainViewModel : ObservableObject
                     {
                         var m3uUrl = profile.ProviderAccount.Url;
                         _ = CheckM3UExpirationAsync(profile.ProviderAccount);
-                        StatusMessage = "Kanal listesi indiriliyor...";
+                        StatusMessage = "Kanal listeniz güncelleniyor...";
                         await _playlistService.AddFromUrlAsync(profile.Name, m3uUrl, profile.Id);
                         await LoadPlaylistsAsync();
                         break;
                     }
                     case ProfileType.XtreamCodes:
                     {
-                        StatusMessage = "Xtream bağlantısı kuruluyor...";
+                        StatusMessage = "Sunucuyla bağlantı kuruluyor...";
                         var baseUrl = profile.ProviderAccount.Url.TrimEnd('/');
                         if (!baseUrl.StartsWith("http")) baseUrl = "http://" + baseUrl;
-
+ 
                         _ = CheckXtreamExpirationAsync(profile.ProviderAccount);
                         var username = profile.ProviderAccount.Username ?? string.Empty;
                         var password = _securityService.Decrypt(profile.ProviderAccount.Password) ?? string.Empty;
-
+ 
                         try
                         {
-                            StatusMessage = "Xtream API'den kanallar alınıyor...";
+                            StatusMessage = "Kategoriler ve kanallar düzenleniyor...";
                             var xtreamChannels = await _xtreamCodesService.GetChannelsAsync(
                                 baseUrl,
                                 username,
                                 password,
                                 includeSeriesEpisodes: true);
-
+ 
                             var sourceUrl = $"{baseUrl}/get.php?username={Uri.EscapeDataString(username)}&password={Uri.EscapeDataString(password)}&type=m3u_plus&output=ts";
                             await _playlistService.AddFromChannelsAsync(profile.Name, sourceUrl, xtreamChannels, profile.Id);
                             await LoadPlaylistsAsync();
@@ -316,11 +316,11 @@ public partial class MainViewModel : ObservableObject
                             _logger?.LogDebug($"[MainViewModel] Xtream API fallback to M3U: {ex.Message}");
                             var decryptedPassword = _securityService.Decrypt(profile.ProviderAccount.Password) ?? string.Empty;
                             var fallbackM3uUrl = $"{baseUrl}/get.php?username={Uri.EscapeDataString(username)}&password={Uri.EscapeDataString(decryptedPassword)}&type=m3u_plus&output=ts";
-                            StatusMessage = "Kanal listesi indiriliyor...";
+                            StatusMessage = "Kanal listeniz güncelleniyor (Yedek yöntem)...";
                             await _playlistService.AddFromUrlAsync(profile.Name, fallbackM3uUrl, profile.Id);
                             await LoadPlaylistsAsync();
                         }
-
+ 
                         break;
                     }
                     case ProfileType.StalkerPortal:
@@ -623,9 +623,9 @@ public partial class MainViewModel : ObservableObject
         try
         {
             IsLoading = true;
-            StatusMessage = "Kanallar yükleniyor...";
+            StatusMessage = "Kanal ve kategori düzeni optimize ediliyor...";
             
-            // Same DbContext cannot execute multiple operations in parallel.
+            // Aynı DbContext paralel işlemleri desteklemez.
             var allGroups = await _playlistService.GetGroupsAsync(playlistId);
             var liveGroups = await _playlistService.GetGroupsByTypeAsync(playlistId, ChannelType.Live);
             var vodGroups = await _playlistService.GetGroupsByTypeAsync(playlistId, ChannelType.VOD);
@@ -638,8 +638,8 @@ public partial class MainViewModel : ObservableObject
             UpdateGroupsForSelectedType();
             ResetIncrementalState();
             await LoadMoreChannelsAsync();
-
-            StatusMessage = $"{channelCount} kanal hazır";
+ 
+            StatusMessage = $"{channelCount:N0} içerik keyfinize hazır";
 
             // Fire-and-forget tasks are wrapped to avoid unobserved failures and task races.
             StartPostChannelLoadBackgroundTasks();

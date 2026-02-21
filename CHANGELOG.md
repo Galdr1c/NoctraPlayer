@@ -5,8 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
+- **Görsel Marka Kimliği ve Yükleme Deneyimi Modernizasyonu** (2026-02-21 16:00):
+  - **Kurumsal Kimlik Birliği**: `SplashWindow`, `ProfilesWindow` ve `ProfileLoadingWindow` ekranları ortak bir tasarım diline, arka plan gradyanlarına ve pencere ayarlarına kavuşturuldu.
+  - **Kritik Hata Düzeltmesi**: `PremiumSpinner` kontrolündeki dairesel bağımlılık (circular dependency) nedeniyle oluşan uygulama başlatma hatası giderildi. Kontrol, `TemplatedControl` mimarisine taşınarak stabil hale getirildi.
+  - **Stabil Temalı Yükleme Animasyonu**: Karmaşık animasyon hatalarını önlemek için yüksek performanslı, tek ark (single-arc) tasarımına sahip "Standart Temalı Spinner" geliştirildi. Uygulama genelindeki tüm yükleme süreçlerinde BU tasarım standart hale getirildi.
+  - **Gelişmiş Hata Geri Bildirimi**: Profil yükleme aşamasında oluşan hatalar, kullanıcıyı bilgilendirmek için kırmızı renkli ve anlaşılır hata mesajlarıyla görselleştirildi.
+  - **Kaliteli Geçiş Deneyimi**:
+    - **Açılış Ekranı (Splash)**: Başlangıç ısıtma (warmup) işlemlerinin tamamlanması ve premium bir his için açılış ekranı süresi minimum **3.5 saniyeye** çıkarıldı.
+    - **Profil Yükleme**: Profil verilerinin arka planda tam olarak hazırlanması ve arayüz titremelerinin önlenmesi için yükleme ekranı süresi minimum **4.5 saniyeye** çıkarıldı.
 - **İndirme Şifreleme Sisteminin Kaldırılması ve Kuyruk İyileştirmeleri** (2026-02-21 14:07):
   - **SSD Ömür Koruması ve Performans**: İstemci tarafı indirme şifreleme/şifre çözme sistemi tamamen kaldırıldı. Bu sayede gereksiz G/Ç (I/O) yükü ve SSD aşınması engellendi, yerel içeriklerin oynatım hızı artırıldı.
   - **Doğrudan Kayıt**: İndirilen dosyalar artık ara şifreli formatlar (`.nctra`) yerine doğrudan son hedef formatında kaydediliyor.
@@ -29,7 +35,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - **Güvenlik ve Thread-Safety İyileştirmeleri**: `SettingsService` içerisindeki manuel çift-kontrol kilitleme (double-checked locking) yapısı, thread-safe olduğu garanti edilen `Lazy<AppSettings>` desenine geçirildi. Bu sayede ayarların ilk yüklenme anındaki yarış durumları (race conditions) kalıcı olarak önlendi.
   - **Güvenlik ve Cross-Platform Uyumluluğu**: `SecurityService` içerisinde Windows'a özgü `ProtectedData` (DPAPI) kullanımı için runtime OS kontrolü eklendi. Uygulamanın Linux ve macOS sistemlerde `PlatformNotSupportedException` ile çökmesi engellenerek taşınabilirlik (portability) sağlandı.
   - **SeriesInfoParser Güçlendirilmesi**: IPTV isimlerindeki etiket temizleme mantığı güvenli iki fazlı bir yaklaşımla yeniden yazıldı: (1) `CountryPrefixRegex` ile 2-3 harfli ülke kodları (TR, EN, DE) güvenle temizlenir, (2) `PipeTagRegex` ile sadece pipe (`|`) ile ayrılmış etiketler (Kanal D, HBO vb.) temizlenir. Bu sayede tire veya nokta içeren meşru dizi adlarının kesilmesi önlendi.
-  - **Genel Sistem Sağlığı ve Uyumluluk**: Tüm altyapı (Database, Auth, Downloads) gözden geçirildi. Bazı IPTV sağlayıcılarının ".NET" User-Agent'ını engellemesi nedeniyle, tüm ağ isteklerine standart bir browser User-Agent'ı eklenerek uyumluluk artırıldı. Ayrıca profil geçişlerinde eski verilerin ekranda kalması (ghosting) sorunu, `ClearProfileState` mekanizmasıyla kökten çözüldü.
+  - **Genel Sistem Sağlığı ve Uyumluluk**: Tüm altyapı (Database, Auth, Downloads) gözden geçirildi. Bazı IPTV sağlayıcılarının ".NET" User-Agent'ını engellemesi nedeniyle, tüm ağ isteklerine standart bir browser User-Agent'ı eklenerek uyumluluk artırıldı. Ayrıca profil geçişlerinde eski verilerin ekranda kalması (ghosting) sorunu çözüldü ve Steam tarzı animasyonlu bir profil yükleme ekranı (`ProfileLoadingWindow`) eklendi.
   - **Genişletilmiş Unit Test Paketi**: Test paketi **72 teste** çıkarıldı. `SeriesInfoParser` (55 test), `M3UParser` (4 test), `SecurityService` (4 test), `SettingsService` (2 test) ve `LicenseService` (5 test - tier ve limit doğrulamaları) ile uygulamanın tüm kritik backend mantığı otomatik test kapsamına alındı.
   - **Güvenlik: AuthCache Şifre Hash'leme**: `XtreamCodesService.BuildAuthCacheKey` içerisinde şifreler artık düz metin yerine **SHA256 hash** olarak saklanıyor. Bu sayede static `ConcurrentDictionary<string, CachedAuthState>` anahtarlarından bellek dump'ı veya heap profiler ile şifre çıkarılması önlendi.
   - **TOCTOU Race Condition Düzeltmesi**: `XtreamCodesService.CleanupExpiredAuthsIfNeeded` içerisindeki `_lastCleanup` zamanlama kontrolü ve güncellemesi artık `Monitor.TryEnter` kilidi **içerisinde** yapılıyor. Eski kodda okuma kilidin dışında, yazma içeride olduğu için birden fazla thread aynı anda temizlik tetikleyebiliyordu (TOCTOU race).

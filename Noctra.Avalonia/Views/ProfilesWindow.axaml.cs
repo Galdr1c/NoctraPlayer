@@ -132,6 +132,7 @@ public partial class ProfilesWindow : Window
 
     private async void ViewModel_OnProfileSelected(Profile profile)
     {
+        ProfileLoadingWindow? loadingWindow = null;
         try
         {
             using var db = await _contextFactory.CreateDbContextAsync();
@@ -145,8 +146,42 @@ public partial class ProfilesWindow : Window
                 return;
             }
 
+            // Create and show loading window
+            var loadingVm = ((App)Application.Current!).Services.GetRequiredService<ProfileLoadingViewModel>();
+            loadingVm.SetProfile(reloadedProfile);
+            loadingVm.StatusMessage = "Profil verileri hazırlanıyor...";
+            
+            loadingWindow = new ProfileLoadingWindow(loadingVm);
+            loadingWindow.Show();
+            
+            // Give UI thread a tiny breather to show and render the window
+            await Task.Delay(100);
+            
+            // Start listening to StatusMessage from MainViewModel
+            void OnStatusChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+            {
+                if (e.PropertyName == nameof(MainViewModel.StatusMessage))
+                {
+                    loadingVm.StatusMessage = _mainViewModel.StatusMessage;
+                }
+            }
+            _mainViewModel.PropertyChanged += OnStatusChanged;
+
+            // Wait for profile to load in background with a minimum duration
             _mainWindow.DataContext = _mainViewModel;
-            await _mainViewModel.LoadProfileAsync(reloadedProfile);
+            
+            var minDelayTask = Task.Delay(4500); // 4.5 seconds minimum for premium feel
+            var loadTask = _mainViewModel.LoadProfileAsync(reloadedProfile);
+            
+            await Task.WhenAll(minDelayTask, loadTask);
+            
+            // Re-check for internal errors from MainViewModel (StatusMessage might contain error)
+            // If LoadProfileAsync caught an error, MainViewModel.IsLoading might be false but wait...
+            // MainViewModel doesn't have IsError property, but StatusMessage is updated.
+            
+            // Clean up status listener
+            _mainViewModel.PropertyChanged -= OnStatusChanged;
+
             _mainWindow.WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
             if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
@@ -155,13 +190,22 @@ public partial class ProfilesWindow : Window
             }
 
             _mainWindow.Show();
+            loadingWindow.Close();
             Close(true);
         }
         catch (Exception ex)
         {
-            await ((App)Application.Current!).Services
-                .GetRequiredService<IDialogService>()
-                .ShowErrorAsync("Hata", "Profil secilirken hata olustu.", ex);
+            if (loadingWindow != null && loadingWindow.DataContext is ProfileLoadingViewModel loadingVm)
+            {
+                loadingVm.IsError = true;
+                loadingVm.StatusMessage = $"Hata: {ex.Message}";
+                
+                // Show the error in red for a bit before returning
+                await Task.Delay(3000);
+            }
+            
+            loadingWindow?.Close();
+            // We don't close the current ProfilesWindow so the user can try again or pick another profile.
         }
     }
 

@@ -2,31 +2,62 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="300"
+        xmlns:controls="using:Noctra.Avalonia.Controls"
+        mc:Ignorable="d" d:DesignWidth="450" d:DesignHeight="300"
         x:Class="Noctra.Avalonia.Views.SplashWindow"
         Title="Noctra IPTV"
-        Width="400" Height="300"
+        Width="450" Height="300"
         WindowStartupLocation="CenterScreen"
         SystemDecorations="None"
-        Topmost="True"
-        Background="{DynamicResource SurfaceBrush}">
+        CanResize="False"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        Topmost="True">
 
-    <Grid RowDefinitions="*,Auto,*">
-        <!-- Logo -->
-        <Image Grid.Row="1"
-               Source="avares://Noctra.Avalonia/Assets/Logo.png"
-               Width="120" Height="120"
-               HorizontalAlignment="Center"
-               VerticalAlignment="Center"
-               Margin="0,0,0,20"/>
-        
-        <!-- Loading Text -->
-        <TextBlock Grid.Row="2"
-                   Text="Başlatılıyor..."
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Top"
-                   Margin="0,40,0,0"
-                   Foreground="{DynamicResource TextMutedBrush}"
-                   FontSize="16"/>
-    </Grid>
+    <Panel>
+        <!-- Consistent Background Gradient -->
+        <Border CornerRadius="12" Background="{DynamicResource BackgroundGradientBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+            <Border.BoxShadow>
+                <BoxShadows>0 10 30 5 #80000000</BoxShadows>
+            </Border.BoxShadow>
+            
+            <Grid RowDefinitions="*,Auto,Auto">
+                <!-- Top Section: Standard Themed Spinner -->
+                <Panel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <controls:PremiumSpinner>
+                        <!-- App Logo Centered Small -->
+                        <Path Data="M 30,60 L 45,45 C 50,40 60,40 65,45 L 90,70 C 95,75 95,85 90,90 L 65,115 C 60,120 50,120 45,115 L 30,100 Z" 
+                              Stroke="{DynamicResource AccentBrush}" StrokeThickness="3"
+                              Width="40" Height="40"
+                              Stretch="Uniform"
+                              VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </controls:PremiumSpinner>
+                </Panel>
+
+                <!-- Middle Section: Welcome -->
+                <StackPanel Grid.Row="1" Margin="0,0,0,40" VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="Noctra IPTV" 
+                               FontSize="22" 
+                               FontWeight="Bold" 
+                               Foreground="{DynamicResource TextPrimaryBrush}" 
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,8"/>
+                    <TextBlock Text="Başlatılıyor..." 
+                               FontSize="14" 
+                               Foreground="{DynamicResource TextSecondaryBrush}" 
+                               HorizontalAlignment="Center"
+                               Opacity="0.8"/>
+                </StackPanel>
+
+                <!-- Bottom Section: Branding -->
+                <Border Grid.Row="2" Background="{DynamicResource Bg1Brush}" CornerRadius="0,0,12,12" Padding="15">
+                    <TextBlock Text="Geleceğin Televizyon Deneyimi" 
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource TextMutedBrush}" 
+                               FontSize="13" 
+                               FontWeight="Medium"/>
+                </Border>
+            </Grid>
+        </Border>
+    </Panel>
 </Window>
