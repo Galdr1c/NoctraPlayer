@@ -10,20 +10,20 @@ namespace Noctra.Avalonia.Views;
 
 public partial class AddProfileWindow : Window
 {
-    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IDialogService _dialogService;
     private AddProfileViewModel? _viewModel;
 
     public AddProfileWindow()
         : this(
             ((App)Application.Current!).Services.GetRequiredService<AddProfileViewModel>(),
-            ((App)Application.Current!).Services.GetRequiredService<IServiceScopeFactory>())
+            ((App)Application.Current!).Services.GetRequiredService<IDialogService>())
     {
     }
 
-    public AddProfileWindow(AddProfileViewModel viewModel, IServiceScopeFactory scopeFactory)
+    public AddProfileWindow(AddProfileViewModel viewModel, IDialogService dialogService)
     {
         InitializeComponent();
-        _scopeFactory = scopeFactory;
+        _dialogService = dialogService;
         DataContext = viewModel;
         BindViewModel(viewModel);
     }
@@ -89,18 +89,7 @@ public partial class AddProfileWindow : Window
 
         try
         {
-            using var scope = _scopeFactory.CreateScope();
-            var pickerWindow = scope.ServiceProvider.GetRequiredService<AvatarPickerWindow>();
-            var pickerVm = pickerWindow.DataContext as AvatarPickerViewModel
-                ?? scope.ServiceProvider.GetRequiredService<AvatarPickerViewModel>();
-
-            if (!ReferenceEquals(pickerWindow.DataContext, pickerVm))
-            {
-                pickerWindow.DataContext = pickerVm;
-            }
-
-            pickerVm.SelectedAvatar = _viewModel.SelectedAvatar;
-            var selectedAvatar = await pickerWindow.ShowDialog<string?>(this);
+            var selectedAvatar = await _dialogService.ShowAvatarPickerAsync(_viewModel.SelectedAvatar);
             if (!string.IsNullOrWhiteSpace(selectedAvatar))
             {
                 _viewModel.SetAvatar(selectedAvatar);

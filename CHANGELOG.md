@@ -8,10 +8,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### Added
-- **MainViewModel ve Servis Mimarisi Optimizasyonu (God Object & Captive Dependency Refactoring)** (2026-02-21):
-  - **IDbContextFactory Geçişi**: `ChannelService`, `MediaService`, `WatchHistoryService`, `PlaylistService` ve `EpgService` sınıflarındaki doğrudan `AppDbContext` (Scoped) bağımlılığı kaldırılarak `IDbContextFactory<AppDbContext>` kullanımına geçildi. Bu sayede servisler eşzamanlı (concurrent) veritabanı işlemlerini arka planda çakışma olmadan (thread-safe) yürütebilir hale geldi.
+- **Kapsamlı Servis Refaktörü ve Service Locator Arındırma** (2026-02-21 12:15):
+  - **IServiceScopeFactory Tamamen Kaldırıldı**: `MainViewModel`, `ProfilesViewModel`, `AddProfileViewModel`, `SettingsViewModel`, `ContentDownloadService` ve `PlaylistService` içerisindeki tüm `IServiceScopeFactory` (Service Locator) kullanımı temizlendi.
+  - **IDbContextFactory ve IDialogService Geçişi**: Manuel scope yönetimi yerine `IDbContextFactory<AppDbContext>` ve genişletilmiş `IDialogService` mimarisine geçildi. Bu sayede iş mantığı (business logic) katmanı DI prensiplerine tam uyumlu hale getirildi ve test edilebilirlik artırıldı.
+  - **Window Ömür Döngüsü Yönetimi**: Pencere açma ve ViewModel eşleştirme mantığı `AvaloniaDialogService` içerisinde merkezileştirilerek kod-arkası (code-behind) dosyalarındaki Service Locator bağımlılıkları yok edildi.
   - **Captive Dependency Çözümü**: `App.axaml.cs` içerisindeki bağımlılık enjeksiyonu (DI) güncellendi. Kendi veritabanı bağlamlarını güvenle yöneten servisler `Singleton` olarak kaydedilerek ömür döngüsü (lifetime) hataları kalıcı olarak çözüldü.
-  - **MainViewModel Temizliği**: `MainViewModel` içerisindeki Service Locator Anti-Pattern (`IServiceProvider`) kullanımı azaltıldı. Veritabanı ile doğrudan kurulan sıkı bağ (God Object) kırılarak işlemlerin ilgili domain servislere (`IPlaylistService` vb.) devredilmesi sağlandı.
 - **Canlı TV Kanal Navigasyonu**: Canlı TV yayınları için oynatıcı arayüzüne (overlay ve PiP) özel "Önceki Kanal" ve "Sonraki Kanal" butonları eklendi. (VOD ve Dizilerdeki 10 saniye atlama butonlarının yerini alır.)
   - **Dinamik Bağlam Çözümlemesi**: İzlenen kanal Geçmiş veya Arama ekranından başlatılmış olsa bile, sıradaki kanalın sıfırdan veritabanı (`AppDbContext`) üzerinden sorgulanıp oynatım listesine dahil edilmesini sağlayan veritabanı fallback sistemi eklendi. Gruptaki kanallar her koşulda sıralı şekilde atlatılabilir.
   - **PiP Etkileşimi**: Saydam köşe sorunlarını aşmak ve Avalonia'nın tıklama yutma hatalarını engellemek için PiP ekranındaki kanal geçiş butonları native `Click` event'leri ile C# arka planına bağlandı.

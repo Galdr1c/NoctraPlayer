@@ -6,6 +6,7 @@ using Noctra.Avalonia.Views;
 using Noctra.Models;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
+using Noctra.ViewModels;
 
 namespace Noctra.Avalonia.Services;
 
@@ -74,6 +75,33 @@ public sealed class AvaloniaDialogService : IDialogService
 
         var result = await window.ShowDialog<bool?>(owner);
         return result == true;
+    }
+
+    public async Task ShowGlobalSettingsAsync()
+    {
+        var owner = GetMainWindow();
+        using var scope = _services.CreateScope();
+        var vm = scope.ServiceProvider.GetRequiredService<GlobalSettingsViewModel>();
+        var window = scope.ServiceProvider.GetRequiredService<GlobalSettingsWindow>();
+        window.DataContext = vm;
+        await window.ShowDialog(owner);
+    }
+
+    public async Task<string?> ShowAvatarPickerAsync(string? currentAvatar)
+    {
+        var owner = GetMainWindow();
+        using var scope = _services.CreateScope();
+        var window = scope.ServiceProvider.GetRequiredService<AvatarPickerWindow>();
+        var vm = window.DataContext as AvatarPickerViewModel
+            ?? scope.ServiceProvider.GetRequiredService<AvatarPickerViewModel>();
+
+        if (!ReferenceEquals(window.DataContext, vm))
+        {
+            window.DataContext = vm;
+        }
+
+        vm.SelectedAvatar = currentAvatar;
+        return await window.ShowDialog<string?>(owner);
     }
 
     private static Window GetMainWindow()

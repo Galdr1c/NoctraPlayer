@@ -22,7 +22,6 @@ public class PlaylistService : IPlaylistService
     private readonly LanguageDetectionService _languageDetection;
     private readonly EpgSourceResolver _epgSourceResolver;
     private readonly IEpgService _epgService;
-    private readonly IServiceScopeFactory _scopeFactory;
     private readonly HttpClient _httpClient;
 
     public PlaylistService(
@@ -33,7 +32,6 @@ public class PlaylistService : IPlaylistService
         LanguageDetectionService languageDetection,
         EpgSourceResolver epgSourceResolver,
         IEpgService epgService,
-        IServiceScopeFactory scopeFactory,
         HttpClient httpClient)
     {
         _contextFactory = contextFactory;
@@ -43,7 +41,6 @@ public class PlaylistService : IPlaylistService
         _languageDetection = languageDetection;
         _epgSourceResolver = epgSourceResolver;
         _epgService = epgService;
-        _scopeFactory = scopeFactory;
         _httpClient = httpClient;
     }
 
@@ -145,10 +142,6 @@ public class PlaylistService : IPlaylistService
             {
                 try
                 {
-                    using var scope = _scopeFactory.CreateScope();
-                    var scopedEpgService = scope.ServiceProvider.GetRequiredService<IEpgService>();
-                    var scopedDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
                     var channelNames = channelSnapshot.Select(c => c.Name ?? "").ToList();
                     var countryCandidates = _languageDetection.DetectCountries(channelNames)
                         .Where(c => c.Percentage > 20 || c.ChannelCount > 20)
@@ -181,13 +174,13 @@ public class PlaylistService : IPlaylistService
                         {
                             if (source.ClearBeforeLoad)
                             {
-                                await scopedEpgService.ClearEpgAsync();
+                                await _epgService.ClearEpgAsync();
                             }
 
                             System.Diagnostics.Debug.WriteLine($"[AutoEPG] Loading from {source.Url}");
-                            var beforeCount = await scopedEpgService.GetTotalProgramCountAsync();
-                            await scopedEpgService.LoadEpgAsync(source.Url, source.IsPrimary, channelSnapshot);
-                            var afterCount = await scopedEpgService.GetTotalProgramCountAsync();
+                            var beforeCount = await _epgService.GetTotalProgramCountAsync();
+                            await _epgService.LoadEpgAsync(source.Url, source.IsPrimary, channelSnapshot);
+                            var afterCount = await _epgService.GetTotalProgramCountAsync();
                             if (afterCount > beforeCount)
                             {
                                 usedEpgUrl = source.Url;
@@ -211,7 +204,8 @@ public class PlaylistService : IPlaylistService
                         autoEpgError = "Otomatik EPG kaynagindan veri alinamadi.";
                     }
 
-                    var playlistToUpdate = await scopedDb.Playlists.FirstOrDefaultAsync(p => p.Id == playlistId);
+                    using var db = await _contextFactory.CreateDbContextAsync();
+                    var playlistToUpdate = await db.Playlists.FirstOrDefaultAsync(p => p.Id == playlistId);
                     if (playlistToUpdate != null)
                     {
                         playlistToUpdate.DetectedCountry = detectedCountry;
@@ -224,7 +218,7 @@ public class PlaylistService : IPlaylistService
                             playlistToUpdate.EpgLastError = null;
                         }
 
-                        await scopedDb.SaveChangesAsync();
+                        await db.SaveChangesAsync();
                     }
                 }
                 catch (Exception ex)
@@ -233,13 +227,12 @@ public class PlaylistService : IPlaylistService
 
                     try
                     {
-                        using var fallbackScope = _scopeFactory.CreateScope();
-                        var fallbackDb = fallbackScope.ServiceProvider.GetRequiredService<AppDbContext>();
-                        var playlistToUpdate = await fallbackDb.Playlists.FirstOrDefaultAsync(p => p.Id == playlistId);
+                        using var db = await _contextFactory.CreateDbContextAsync();
+                        var playlistToUpdate = await db.Playlists.FirstOrDefaultAsync(p => p.Id == playlistId);
                         if (playlistToUpdate != null)
                         {
                             playlistToUpdate.EpgLastError = $"AutoEPG: {ex.Message}";
-                            await fallbackDb.SaveChangesAsync();
+                            await db.SaveChangesAsync();
                         }
                     }
                     catch

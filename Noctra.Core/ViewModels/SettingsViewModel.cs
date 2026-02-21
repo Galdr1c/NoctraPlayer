@@ -17,7 +17,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly ISettingsService _settingsService;
     private readonly IEpgService _epgService;
     private readonly IThemeService _themeService;
-    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private CancellationTokenSource? _epgRefreshWatchCts;
     private int _isRefreshOperationRunning;
 
@@ -168,13 +168,13 @@ public partial class SettingsViewModel : ObservableObject
         IEpgService epgService, 
         IThemeService themeService,
         MainViewModel mainViewModel,
-        IServiceScopeFactory scopeFactory)
+        IDbContextFactory<AppDbContext> contextFactory)
     {
         _settingsService = settingsService;
         _epgService = epgService;
         _themeService = themeService;
         _mainViewModel = mainViewModel;
-        _scopeFactory = scopeFactory;
+        _contextFactory = contextFactory;
         
         _mainViewModel.PropertyChanged += MainViewModel_PropertyChanged;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
@@ -427,8 +427,7 @@ public partial class SettingsViewModel : ObservableObject
                 StatusMessage = "[Istatistik] EPG verileri okunuyor...";
             }
 
-            await using var scope = _scopeFactory.CreateAsyncScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            using var db = await _contextFactory.CreateDbContextAsync();
 
             TotalEpgPrograms = await db.EpgPrograms.CountAsync();
             TotalEpgChannels = await db.EpgPrograms
@@ -496,8 +495,7 @@ public partial class SettingsViewModel : ObservableObject
                 StatusMessage = "[Istatistik] Kanal listesi verileri okunuyor...";
             }
 
-            await using var scope = _scopeFactory.CreateAsyncScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            using var db = await _contextFactory.CreateDbContextAsync();
 
             if (_mainViewModel.SelectedPlaylist != null)
             {

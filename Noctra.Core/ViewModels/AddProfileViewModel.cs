@@ -14,7 +14,7 @@ public partial class AddProfileViewModel : ObservableObject
     private const string ProfilesLimitKey = "profiles";
     [System.Text.RegularExpressions.GeneratedRegex("^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$")]
     private static partial System.Text.RegularExpressions.Regex StalkerMacRegex();
-    private readonly AppDbContext _context;
+    private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly IDispatcherService _dispatcherService;
     private readonly IAvatarService _avatarService;
     private readonly IDialogService _dialogService;
@@ -541,7 +541,7 @@ public partial class AddProfileViewModel : ObservableObject
     public event EventHandler? RequestAvatarPicker;
 
     public AddProfileViewModel(
-        AppDbContext context, 
+        IDbContextFactory<AppDbContext> contextFactory, 
         IDispatcherService dispatcherService, 
         IAvatarService avatarService, 
         IDialogService dialogService,
@@ -551,7 +551,7 @@ public partial class AddProfileViewModel : ObservableObject
         IStalkerPortalService stalkerPortalService,
         IContentDownloadService contentDownloadService)
     {
-        _context = context;
+        _contextFactory = contextFactory;
         _dispatcherService = dispatcherService;
         _avatarService = avatarService;
         _dialogService = dialogService;
@@ -627,40 +627,41 @@ public partial class AddProfileViewModel : ObservableObject
             IsSaving = true;
             StatusMessage = "Profil siliniyor...";
 
+            using var db = await _contextFactory.CreateDbContextAsync();
             var profileId = EditingProfile.Id;
-            var providerAccountId = await _context.Profiles
+            var providerAccountId = await db.Profiles
                 .Where(p => p.Id == profileId)
                 .Select(p => p.ProviderAccountId)
                 .FirstOrDefaultAsync();
 
             if (providerAccountId == 0) return;
 
-            var hasOtherProfiles = await _context.Profiles
+            var hasOtherProfiles = await db.Profiles
                 .AnyAsync(p => p.ProviderAccountId == providerAccountId && p.Id != profileId);
 
             await _contentDownloadService.DeleteProfileDownloadsAsync(profileId);
 
-            await using var transaction = await _context.Database.BeginTransactionAsync();
+            await using var transaction = await db.Database.BeginTransactionAsync();
 
-            await _context.WatchHistories
+            await db.WatchHistories
                 .Where(h => h.ProfileId == profileId)
                 .ExecuteDeleteAsync();
 
-            await _context.SeriesEpisodeProgresses
+            await db.SeriesEpisodeProgresses
                 .Where(p => p.ProfileId == profileId)
                 .ExecuteDeleteAsync();
 
-            await _context.Playlists
+            await db.Playlists
                 .Where(p => p.ProfileId == profileId)
                 .ExecuteDeleteAsync();
 
-            await _context.Profiles
+            await db.Profiles
                 .Where(p => p.Id == profileId)
                 .ExecuteDeleteAsync();
 
             if (!hasOtherProfiles)
             {
-                await _context.ProviderAccounts
+                await db.ProviderAccounts
                     .Where(a => a.Id == providerAccountId)
                     .ExecuteDeleteAsync();
             }
@@ -934,7 +935,8 @@ public partial class AddProfileViewModel : ObservableObject
                     ? ProfileType.XtreamCodes
                     : ProfileType.M3U;
 
-            var existingAccountDuplicate = await _context.ProviderAccounts
+            using var db = await _contextFactory.CreateDbContextAsync();
+            var existingAccountDuplicate = await db.ProviderAccounts
                 .AnyAsync(a =>
                     a.Id != excludedProviderAccountId &&
                     a.Type == selectedType &&
@@ -1008,7 +1010,8 @@ public partial class AddProfileViewModel : ObservableObject
             StatusMessage = "Kaydediliyor...";
             IsSaving = true;
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            using var db = await _contextFactory.CreateDbContextAsync();
+            await using var transaction = await db.Database.BeginTransactionAsync();
             ProviderAccount account;
 
             if (EditingProfile?.ProviderAccount != null)
@@ -1016,12 +1019,18 @@ public partial class AddProfileViewModel : ObservableObject
                  var selectedAccount = EditingProfile.ProviderAccount;
                  
                  // Detach existing if needed
-                 var existing = _context.ProviderAccounts.Local
+                 var existing = db.ProviderAccounts.Local
                      .FirstOrDefault(a => a.Id == selectedAccount.Id);
                  
                  if (existing != null && existing != selectedAccount)
                  {
-                     _context.Entry(existing).State = EntityState.Detached;
+                     db.Entry(existing).State = EntityState.Detached;
+                 }
+                 
+                 // If detached, attach it
+                 if (db.Entry(selectedAccount).State == EntityState.Detached)
+                 {
+                     db.ProviderAccounts.Attach(selectedAccount);
                  }
                  
                  // Enable tracking/Update
@@ -1035,7 +1044,7 @@ public partial class AddProfileViewModel : ObservableObject
                         : ProfileType.M3U;
                  selectedAccount.ExpirationDate = null; // Reset date on credential change
                  
-                 _context.Entry(selectedAccount).State = EntityState.Modified;
+                 db.Entry(selectedAccount).State = EntityState.Modified;
                  account = selectedAccount;
             }
             else
@@ -1052,7 +1061,7 @@ public partial class AddProfileViewModel : ObservableObject
                     Username = Username,
                     Password = Password
                 };
-                _context.ProviderAccounts.Add(account);
+                db.ProviderAccounts.Add(account);
             }
 
             if (EditingProfile != null)
@@ -1061,21 +1070,27 @@ public partial class AddProfileViewModel : ObservableObject
                 // Keep cached playlists. Channel list should refresh only when user explicitly requests it.
 
                 // Check if profile is tracked
-                var trackedProfile = _context.Profiles.Local.FirstOrDefault(p => p.Id == EditingProfile.Id);
+                var trackedProfile = db.Profiles.Local.FirstOrDefault(p => p.Id == EditingProfile.Id);
                 if (trackedProfile != null && trackedProfile != EditingProfile)
                 {
-                     _context.Entry(trackedProfile).State = EntityState.Detached;
+                     db.Entry(trackedProfile).State = EntityState.Detached;
+                }
+
+                // If detached, attach it
+                if (db.Entry(EditingProfile).State == EntityState.Detached)
+                {
+                    db.Profiles.Attach(EditingProfile);
                 }
 
                 EditingProfile.Name = ProfileName;
                 EditingProfile.Avatar = SelectedAvatar;
                 EditingProfile.IsChild = IsChild;
                 
-                _context.Entry(EditingProfile).State = EntityState.Modified;
+                db.Entry(EditingProfile).State = EntityState.Modified;
             }
             else
             {
-                var profileCount = await _context.Profiles.CountAsync();
+                var profileCount = await db.Profiles.CountAsync();
                 if (!_licenseService.IsWithinLimit(ProfilesLimitKey, profileCount))
                 {
                     await transaction.RollbackAsync();
@@ -1092,11 +1107,11 @@ public partial class AddProfileViewModel : ObservableObject
                     IsChild = IsChild,
                     LastUsed = DateTime.UtcNow
                 };
-                _context.Profiles.Add(profile);
+                db.Profiles.Add(profile);
             }
 
 
-            await _context.SaveChangesAsync();
+            await db.SaveChangesAsync();
             await transaction.CommitAsync();
 
             // Success feedback

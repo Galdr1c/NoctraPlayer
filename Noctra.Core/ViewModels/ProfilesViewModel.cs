@@ -13,7 +13,7 @@ public partial class ProfilesViewModel : ObservableObject
 {
     private const string ProfilesLimitKey = "profiles";
     private readonly IDialogService _dialogService;
-    private readonly AppDbContext _context;
+    private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly IDispatcherService _dispatcherService;
     private readonly ILicenseService _licenseService;
     private readonly IContentDownloadService _contentDownloadService;
@@ -30,13 +30,13 @@ public partial class ProfilesViewModel : ObservableObject
     public event Action? RequestClose;
 
     public ProfilesViewModel(
-        AppDbContext context,
+        IDbContextFactory<AppDbContext> contextFactory,
         IDialogService dialogService,
         IDispatcherService dispatcherService,
         ILicenseService licenseService,
         IContentDownloadService contentDownloadService)
     {
-        _context = context;
+        _contextFactory = contextFactory;
         _dialogService = dialogService;
         _dispatcherService = dispatcherService;
         _licenseService = licenseService;
@@ -58,7 +58,8 @@ public partial class ProfilesViewModel : ObservableObject
     {
         try 
         {
-            var items = await _context.Profiles
+            using var db = await _contextFactory.CreateDbContextAsync();
+            var items = await db.Profiles
                 .Include(p => p.ProviderAccount) // Load account info
                 .OrderByDescending(p => p.LastUsed)
                 .ToListAsync();
@@ -83,7 +84,8 @@ public partial class ProfilesViewModel : ObservableObject
     [RelayCommand]
     private async Task AddProfile()
     {
-        var profileCount = await _context.Profiles.CountAsync();
+        using var db = await _contextFactory.CreateDbContextAsync();
+        var profileCount = await db.Profiles.CountAsync();
         if (!_licenseService.IsWithinLimit(ProfilesLimitKey, profileCount))
         {
             await _dialogService.ShowUpsellAsync();
@@ -106,11 +108,12 @@ public partial class ProfilesViewModel : ObservableObject
         }
 
         // Normal mode
-        var dbProfile = await _context.Profiles.FindAsync(profile.Id);
+        using var db = await _contextFactory.CreateDbContextAsync();
+        var dbProfile = await db.Profiles.FindAsync(profile.Id);
         if (dbProfile != null)
         {
             dbProfile.LastUsed = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
+            await db.SaveChangesAsync();
         }
 
         OnProfileSelected?.Invoke(profile);
@@ -130,40 +133,41 @@ public partial class ProfilesViewModel : ObservableObject
 
         try
         {
+            using var db = await _contextFactory.CreateDbContextAsync();
             var profileId = profile.Id;
-            var providerAccountId = await _context.Profiles
+            var providerAccountId = await db.Profiles
                 .Where(p => p.Id == profileId)
                 .Select(p => p.ProviderAccountId)
                 .FirstOrDefaultAsync();
 
             if (providerAccountId != 0)
             {
-                var hasOtherProfiles = await _context.Profiles
+                var hasOtherProfiles = await db.Profiles
                     .AnyAsync(p => p.ProviderAccountId == providerAccountId && p.Id != profileId);
 
                 await _contentDownloadService.DeleteProfileDownloadsAsync(profileId);
 
-                await using var transaction = await _context.Database.BeginTransactionAsync();
+                await using var transaction = await db.Database.BeginTransactionAsync();
 
-                await _context.WatchHistories
+                await db.WatchHistories
                     .Where(h => h.ProfileId == profileId)
                     .ExecuteDeleteAsync();
 
-                await _context.SeriesEpisodeProgresses
+                await db.SeriesEpisodeProgresses
                     .Where(p => p.ProfileId == profileId)
                     .ExecuteDeleteAsync();
 
-                await _context.Playlists
+                await db.Playlists
                     .Where(p => p.ProfileId == profileId)
                     .ExecuteDeleteAsync();
 
-                await _context.Profiles
+                await db.Profiles
                     .Where(p => p.Id == profileId)
                     .ExecuteDeleteAsync();
 
                 if (!hasOtherProfiles)
                 {
-                    await _context.ProviderAccounts
+                    await db.ProviderAccounts
                         .Where(a => a.Id == providerAccountId)
                         .ExecuteDeleteAsync();
                 }

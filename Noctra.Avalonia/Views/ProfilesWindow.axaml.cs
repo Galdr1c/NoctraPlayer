@@ -15,7 +15,8 @@ namespace Noctra.Avalonia.Views;
 public partial class ProfilesWindow : Window
 {
     private readonly ProfilesViewModel _viewModel;
-    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IDbContextFactory<AppDbContext> _contextFactory;
+    private readonly IDialogService _dialogService;
     private readonly ISettingsService _settingsService;
     private readonly MainWindow _mainWindow;
     private readonly MainViewModel _mainViewModel;
@@ -27,7 +28,8 @@ public partial class ProfilesWindow : Window
     public ProfilesWindow()
         : this(
             ((App)Application.Current!).Services.GetRequiredService<ProfilesViewModel>(),
-            ((App)Application.Current!).Services.GetRequiredService<IServiceScopeFactory>(),
+            ((App)Application.Current!).Services.GetRequiredService<IDbContextFactory<AppDbContext>>(),
+            ((App)Application.Current!).Services.GetRequiredService<IDialogService>(),
             ((App)Application.Current!).Services.GetRequiredService<ISettingsService>(),
             ((App)Application.Current!).Services.GetRequiredService<MainWindow>(),
             ((App)Application.Current!).Services.GetRequiredService<MainViewModel>())
@@ -36,14 +38,16 @@ public partial class ProfilesWindow : Window
 
     public ProfilesWindow(
         ProfilesViewModel viewModel,
-        IServiceScopeFactory scopeFactory,
+        IDbContextFactory<AppDbContext> contextFactory,
+        IDialogService dialogService,
         ISettingsService settingsService,
         MainWindow mainWindow,
         MainViewModel mainViewModel)
     {
         InitializeComponent();
         _viewModel = viewModel;
-        _scopeFactory = scopeFactory;
+        _contextFactory = contextFactory;
+        _dialogService = dialogService;
         _settingsService = settingsService;
         _mainWindow = mainWindow;
         _mainViewModel = mainViewModel;
@@ -69,11 +73,7 @@ public partial class ProfilesWindow : Window
 
     private async void SettingsButton_Click(object? sender, RoutedEventArgs e)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var viewModel = scope.ServiceProvider.GetRequiredService<GlobalSettingsViewModel>();
-        var window = scope.ServiceProvider.GetRequiredService<GlobalSettingsWindow>();
-        window.DataContext = viewModel;
-        await window.ShowDialog(this);
+        await _dialogService.ShowGlobalSettingsAsync();
     }
 
     private void SelectProfile_Click(object? sender, RoutedEventArgs e)
@@ -120,9 +120,8 @@ public partial class ProfilesWindow : Window
     {
         try
         {
-            using var scope = _scopeFactory.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var reloadedProfile = await context.Profiles
+            using var db = await _contextFactory.CreateDbContextAsync();
+            var reloadedProfile = await db.Profiles
                 .Include(p => p.ProviderAccount)
                 .FirstOrDefaultAsync(p => p.Id == profile.Id);
 
@@ -172,18 +171,17 @@ public partial class ProfilesWindow : Window
         _isAddProfileWindowOpen = true;
         try
         {
-            using var scope = _scopeFactory.CreateScope();
-            var addProfileVm = scope.ServiceProvider.GetRequiredService<AddProfileViewModel>();
-
+            bool success;
             if (profileToEdit != null)
             {
-                addProfileVm.InitializeForEdit(profileToEdit);
+                success = await _dialogService.ShowEditProfileAsync(profileToEdit);
+            }
+            else
+            {
+                success = await _dialogService.ShowAddProfileAsync();
             }
 
-            var addProfileWindow = scope.ServiceProvider.GetRequiredService<AddProfileWindow>();
-            addProfileWindow.DataContext = addProfileVm;
-            var result = await addProfileWindow.ShowDialog<bool?>(this);
-            if (result == true)
+            if (success)
             {
                 await _viewModel.RefreshProfilesAsync();
             }

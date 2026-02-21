@@ -37,8 +37,6 @@ public partial class MainViewModel : ObservableObject
     private const double LoadMoreThreshold = 0.8;
 
     private readonly IDispatcherService _dispatcherService;
-    private readonly IServiceProvider _serviceProvider;
-    private readonly Microsoft.Extensions.DependencyInjection.IServiceScopeFactory _scopeFactory;
     private readonly ISettingsService _settingsService;
     private readonly IMetadataService _metadataService;
     private readonly IContentDownloadService _contentDownloadService;
@@ -50,6 +48,8 @@ public partial class MainViewModel : ObservableObject
     private readonly IWatchHistoryService _watchHistoryService;
     private readonly IXtreamCodesService _xtreamCodesService;
     private readonly IStalkerPortalService _stalkerPortalService;
+    private readonly LanguageDetectionService _languageDetectionService;
+    private readonly EpgSourceResolver _epgSourceResolver;
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly DateTime _downloadCenterSessionStartUtc = DateTime.UtcNow;
 
@@ -166,7 +166,6 @@ public partial class MainViewModel : ObservableObject
     };
 
     public MainViewModel(
-        IServiceProvider serviceProvider,
         ISettingsService settingsService,
         IContentDownloadService contentDownloadService,
         IMetadataService metadataService,
@@ -179,11 +178,11 @@ public partial class MainViewModel : ObservableObject
         IWatchHistoryService watchHistoryService,
         IXtreamCodesService xtreamCodesService,
         IStalkerPortalService stalkerPortalService,
+        LanguageDetectionService languageDetectionService,
+        EpgSourceResolver epgSourceResolver,
         IDbContextFactory<AppDbContext> contextFactory,
         ILogger<MainViewModel>? logger = null)
     {
-        _serviceProvider = serviceProvider;
-        _scopeFactory = serviceProvider.GetRequiredService<Microsoft.Extensions.DependencyInjection.IServiceScopeFactory>();
         _settingsService = settingsService;
         _contentDownloadService = contentDownloadService;
         _metadataService = metadataService;
@@ -197,6 +196,8 @@ public partial class MainViewModel : ObservableObject
         _watchHistoryService = watchHistoryService;
         _xtreamCodesService = xtreamCodesService;
         _stalkerPortalService = stalkerPortalService;
+        _languageDetectionService = languageDetectionService;
+        _epgSourceResolver = epgSourceResolver;
         _contextFactory = contextFactory;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
         InitializeAsync();
@@ -553,20 +554,17 @@ public partial class MainViewModel : ObservableObject
 
     private async Task LoadChannelsAsync(int playlistId)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var playlistService = scope.ServiceProvider.GetRequiredService<IPlaylistService>();
-        
         try
         {
             IsLoading = true;
             StatusMessage = "Kanallar yükleniyor...";
             
             // Same DbContext cannot execute multiple operations in parallel.
-            var allGroups = await playlistService.GetGroupsAsync(playlistId);
-            var liveGroups = await playlistService.GetGroupsByTypeAsync(playlistId, ChannelType.Live);
-            var vodGroups = await playlistService.GetGroupsByTypeAsync(playlistId, ChannelType.VOD);
-            var seriesGroups = await playlistService.GetGroupsByTypeAsync(playlistId, ChannelType.Series);
-            var channelCount = await playlistService.GetChannelCountAsync(playlistId);
+            var allGroups = await _playlistService.GetGroupsAsync(playlistId);
+            var liveGroups = await _playlistService.GetGroupsByTypeAsync(playlistId, ChannelType.Live);
+            var vodGroups = await _playlistService.GetGroupsByTypeAsync(playlistId, ChannelType.VOD);
+            var seriesGroups = await _playlistService.GetGroupsByTypeAsync(playlistId, ChannelType.Series);
+            var channelCount = await _playlistService.GetChannelCountAsync(playlistId);
             _allGroupsCache = OrderGroupsByLanguagePreference(allGroups);
             _liveGroupsCache = OrderGroupsByLanguagePreference(liveGroups);
             _vodGroupsCache = OrderGroupsByLanguagePreference(vodGroups);
@@ -643,9 +641,6 @@ public partial class MainViewModel : ObservableObject
 
     private async Task LoadHomeContentAsync()
     {
-        using var scope = _scopeFactory.CreateScope();
-        var mediaService = scope.ServiceProvider.GetRequiredService<IMediaService>();
-        
         // Rail içeriklerini yükle
         TrendingChannels = Channels
             .Where(c => c.Type == ChannelType.Live)
@@ -662,7 +657,7 @@ public partial class MainViewModel : ObservableObject
             .ToList();
 
         var playlistId = SelectedPlaylist?.Id ?? 0;
-        LatestSeries = await mediaService.GetSeriesAsync(playlistId);
+        LatestSeries = await _mediaService.GetSeriesAsync(playlistId);
         UpdateSeriesViewItems();
 
         ContinueWatching = Channels
@@ -890,13 +885,11 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            using var scope = _scopeFactory.CreateScope();
-            var playlistService = scope.ServiceProvider.GetRequiredService<IPlaylistService>();
             var hasSearch = !string.IsNullOrWhiteSpace(SearchText);
             var effectiveGroup = hasSearch ? null : SelectedGroup;
             var effectiveType = hasSearch ? null : SelectedChannelType;
 
-            var page = await playlistService.GetChannelsFilteredPageAsync(
+            var page = await _playlistService.GetChannelsFilteredPageAsync(
                 SelectedPlaylist.Id,
                 skip: _currentPage * IncrementalPageSize,
                 take: IncrementalPageSize,
@@ -912,7 +905,7 @@ public partial class MainViewModel : ObservableObject
                 !hasSearch &&
                 !string.IsNullOrWhiteSpace(effectiveGroup))
             {
-                var fallbackPage = await playlistService.GetChannelsFilteredPageAsync(
+                var fallbackPage = await _playlistService.GetChannelsFilteredPageAsync(
                     SelectedPlaylist.Id,
                     skip: 0,
                     take: IncrementalPageSize,
@@ -1307,9 +1300,6 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void SelectChannel(Channel channel)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var channelService = scope.ServiceProvider.GetRequiredService<IChannelService>();
-
         if (channel.Type == ChannelType.Series)
         {
             TryPrepareEpisodePlaybackContext(channel);
@@ -1350,7 +1340,7 @@ public partial class MainViewModel : ObservableObject
         
         // Update last watched
         channel.LastWatched = DateTime.UtcNow;
-        _ = channelService.UpdateChannelAsync(channel);
+        _ = _channelService.UpdateChannelAsync(channel);
         UpdateHistoryChannels();
 
         // Notify UI to play
@@ -1366,9 +1356,7 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        using var scope = _scopeFactory.CreateScope();
-        var channelService = scope.ServiceProvider.GetRequiredService<IChannelService>();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var db = await _contextFactory.CreateDbContextAsync();
 
         if (media is Channel channel)
         {
@@ -1383,7 +1371,7 @@ public partial class MainViewModel : ObservableObject
             }
 
             channel.IsFavorite = !channel.IsFavorite;
-            await channelService.UpdateChannelAsync(channel);
+            await _channelService.UpdateChannelAsync(channel);
             StatusMessage = channel.IsFavorite ? "Favorilere eklendi" : "Favorilerden çıkarıldı";
         }
         else if (media is Series series)
@@ -1465,13 +1453,10 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            using var scope = _scopeFactory.CreateScope();
-            var playlistService = scope.ServiceProvider.GetRequiredService<IPlaylistService>();
-            
             IsLoading = true;
             StatusMessage = "Playlist ekleniyor...";
             
-            var playlist = await playlistService.AddFromUrlAsync(NewPlaylistName, NewPlaylistUrl, CurrentProfileId);
+            var playlist = await _playlistService.AddFromUrlAsync(NewPlaylistName, NewPlaylistUrl, CurrentProfileId);
             await LoadPlaylistsAsync();
             SelectedPlaylist = playlist;
             
@@ -1530,18 +1515,15 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            using var scope = _scopeFactory.CreateScope();
-            var playlistService = scope.ServiceProvider.GetRequiredService<IPlaylistService>();
-
             if (!isBackground)
             {
                 IsLoading = true;
                 StatusMessage = "Kanal listesi güncelleniyor...";
             }
 
-            var beforeCount = await playlistService.GetChannelCountAsync(SelectedPlaylist.Id);
-            await playlistService.RefreshAsync(SelectedPlaylist.Id);
-            var afterCount = await playlistService.GetChannelCountAsync(SelectedPlaylist.Id);
+            var beforeCount = await _playlistService.GetChannelCountAsync(SelectedPlaylist.Id);
+            await _playlistService.RefreshAsync(SelectedPlaylist.Id);
+            var afterCount = await _playlistService.GetChannelCountAsync(SelectedPlaylist.Id);
             var addedCount = Math.Max(0, afterCount - beforeCount);
 
             if (addedCount > 0)
@@ -1588,8 +1570,7 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
-            using var scope = _scopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            using var db = await _contextFactory.CreateDbContextAsync();
             var playlist = await db.Playlists.FirstOrDefaultAsync(p => p.Id == playlistId);
             if (playlist == null)
             {
@@ -1686,18 +1667,13 @@ public partial class MainViewModel : ObservableObject
                 StatusMessage = "EPG güncelleniyor...";
             }
 
-            using var scope = _scopeFactory.CreateScope();
-            var epgService = scope.ServiceProvider.GetRequiredService<IEpgService>();
-            var languageDetection = scope.ServiceProvider.GetRequiredService<Services.LanguageDetectionService>();
-            var epgSourceResolver = scope.ServiceProvider.GetRequiredService<Services.EpgSourceResolver>();
-            var playlistService = scope.ServiceProvider.GetRequiredService<IPlaylistService>();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            using var db = await _contextFactory.CreateDbContextAsync();
 
             // Use full playlist channels for EPG mapping (not only currently paged UI channels)
             var channelsForMapping = Channels;
             if (SelectedPlaylist != null)
             {
-                channelsForMapping = await playlistService.GetChannelsAsync(SelectedPlaylist.Id);
+                channelsForMapping = await _playlistService.GetChannelsAsync(SelectedPlaylist.Id);
             }
 
             // EPG is relevant for live channels only.
@@ -1738,7 +1714,7 @@ public partial class MainViewModel : ObservableObject
             // 2. Çoklu ülke tespiti (Loop through top countries)
             var channelNames = channelsForMapping.Select(c => c.Name ?? "").ToList();
             // Detect top countries (limit to top 3 to avoid excessive downloads)
-            var detectedCountries = languageDetection.DetectCountries(channelNames)
+            var detectedCountries = _languageDetectionService.DetectCountries(channelNames)
                 .Where(c => c.Percentage > 20 || c.ChannelCount > 20) // Min threshold — prevents downloading huge EPG files for marginal matches
                 .Take(3)
                 .ToList();
@@ -1755,7 +1731,7 @@ public partial class MainViewModel : ObservableObject
             
             var hasUsableTvgIds = channelsForMapping.Any(c => !string.IsNullOrWhiteSpace(c.TvgId));
             
-            var epgSources = epgSourceResolver.ResolveEpgSources(
+            var epgSources = _epgSourceResolver.ResolveEpgSources(
                 countryCodes, 
                 providerEpgUrl, 
                 playlistEpgUrl, 
@@ -1786,12 +1762,12 @@ public partial class MainViewModel : ObservableObject
                     if (source.ClearBeforeLoad)
                     {
                         _logger?.LogDebug("[MainViewModel] Clearing existing EPG data...");
-                        await epgService.ClearEpgAsync();
+                        await _epgService.ClearEpgAsync();
                     }
 
-                    var beforeCount = await epgService.GetTotalProgramCountAsync();
-                    await epgService.LoadEpgAsync(source.Url, source.IsPrimary, channelsForMapping, daysAhead: 1);
-                    var afterCount = await epgService.GetTotalProgramCountAsync();
+                    var beforeCount = await _epgService.GetTotalProgramCountAsync();
+                    await _epgService.LoadEpgAsync(source.Url, source.IsPrimary, channelsForMapping, daysAhead: 1);
+                    var afterCount = await _epgService.GetTotalProgramCountAsync();
                     var loadedPrograms = afterCount - beforeCount;
 
                     if (loadedPrograms > 0)
@@ -1896,8 +1872,7 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            using var scope = _scopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            using var db = await _contextFactory.CreateDbContextAsync();
             var playlist = await db.Playlists.FirstOrDefaultAsync(p => p.Id == SelectedPlaylist.Id);
             if (playlist == null)
             {
@@ -2342,8 +2317,7 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var db = await _contextFactory.CreateDbContextAsync();
         var profilePlaylistIds = await GetProfilePlaylistIdsAsync(db, CurrentProfileId.Value);
 
         if (profilePlaylistIds.Count == 0)
@@ -2777,10 +2751,8 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var watchHistoryService = scope.ServiceProvider.GetRequiredService<IWatchHistoryService>();
-        await watchHistoryService.CleanupOlderThanDaysAsync(CurrentProfileId.Value, 7);
+        using var db = await _contextFactory.CreateDbContextAsync();
+        await _watchHistoryService.CleanupOlderThanDaysAsync(CurrentProfileId.Value, 7);
         var profilePlaylistIds = await GetProfilePlaylistIdsAsync(db, CurrentProfileId.Value);
 
         if (profilePlaylistIds.Count == 0)
@@ -2856,10 +2828,8 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var watchHistoryService = scope.ServiceProvider.GetRequiredService<IWatchHistoryService>();
-        await watchHistoryService.CleanupOlderThanDaysAsync(CurrentProfileId.Value, 7);
+        using var db = await _contextFactory.CreateDbContextAsync();
+        await _watchHistoryService.CleanupOlderThanDaysAsync(CurrentProfileId.Value, 7);
         var profilePlaylistIds = await GetProfilePlaylistIdsAsync(db, CurrentProfileId.Value);
 
         if (profilePlaylistIds.Count == 0)
@@ -3397,10 +3367,7 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        using var scope = _scopeFactory.CreateScope();
-        var channelService = scope.ServiceProvider.GetRequiredService<IChannelService>();
-        var mediaService = scope.ServiceProvider.GetRequiredService<IMediaService>();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var db = await _contextFactory.CreateDbContextAsync();
         
         if (media is Channel channel)
         {
@@ -3421,13 +3388,13 @@ public partial class MainViewModel : ObservableObject
             }
 
             channel.IsInMyList = !channel.IsInMyList;
-            await channelService.UpdateChannelAsync(channel);
+            await _channelService.UpdateChannelAsync(channel);
             StatusMessage = channel.IsInMyList ? "Listene eklendi" : "Listenden çıkarıldı";
         }
         else if (media is Series series)
         {
             series.IsInMyList = !series.IsInMyList;
-            await mediaService.UpdateSeriesAsync(series);
+            await _mediaService.UpdateSeriesAsync(series);
             var seriesFromDb = await db.Series
                 .Include(s => s.Seasons)
                 .ThenInclude(sn => sn.Episodes)
@@ -3475,10 +3442,7 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        using var scope = _scopeFactory.CreateScope();
-        var channelService = scope.ServiceProvider.GetRequiredService<IChannelService>();
-        var mediaService = scope.ServiceProvider.GetRequiredService<IMediaService>();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var db = await _contextFactory.CreateDbContextAsync();
 
         if (media is Channel channel)
         {
@@ -3495,13 +3459,13 @@ public partial class MainViewModel : ObservableObject
             if (channel.IsInMyList)
             {
                 channel.IsInMyList = false;
-                await channelService.UpdateChannelAsync(channel);
+                await _channelService.UpdateChannelAsync(channel);
             }
         }
         else if (media is Series series && series.IsInMyList)
         {
             series.IsInMyList = false;
-            await mediaService.UpdateSeriesAsync(series);
+            await _mediaService.UpdateSeriesAsync(series);
 
             var seriesFromDb = await db.Series
                 .Include(s => s.Seasons)
@@ -3545,10 +3509,7 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        using var scope = _scopeFactory.CreateScope();
-        var channelService = scope.ServiceProvider.GetRequiredService<IChannelService>();
-        var mediaService = scope.ServiceProvider.GetRequiredService<IMediaService>();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var db = await _contextFactory.CreateDbContextAsync();
 
         if (media is Channel channel)
         {
@@ -3565,7 +3526,7 @@ public partial class MainViewModel : ObservableObject
             if (channel.IsFavorite)
             {
                 channel.IsFavorite = false;
-                await channelService.UpdateChannelAsync(channel);
+                await _channelService.UpdateChannelAsync(channel);
             }
         }
         else if (media is Series series)
@@ -3581,7 +3542,7 @@ public partial class MainViewModel : ObservableObject
             }
 
             series.IsFavorite = false;
-            await mediaService.UpdateSeriesAsync(series);
+            await _mediaService.UpdateSeriesAsync(series);
 
             var seriesFromDb = await db.Series
                 .Include(s => s.Seasons)
@@ -3758,8 +3719,7 @@ public partial class MainViewModel : ObservableObject
                         
                         if (groupChannels.Count == 0 && channel.PlaylistId > 0)
                         {
-                            using var scope = _scopeFactory.CreateScope();
-                            var db = scope.ServiceProvider.GetRequiredService<Data.AppDbContext>();
+                            using var db = await _contextFactory.CreateDbContextAsync();
                             groupChannels = await db.Channels
                                 .Where(c => c.PlaylistId == channel.PlaylistId && c.Type == ChannelType.Live && c.GroupTitle == channel.GroupTitle)
                                 .ToListAsync();
@@ -3844,8 +3804,7 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            using var scope = _scopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            using var db = await _contextFactory.CreateDbContextAsync();
             var item = await db.DownloadItems
                 .AsNoTracking()
                 .Where(d => d.Status == DownloadStatus.Completed &&
@@ -4005,8 +3964,7 @@ public partial class MainViewModel : ObservableObject
             return series;
         }
 
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var db = await _contextFactory.CreateDbContextAsync();
 
         var dbSeries = await db.Series
             .Include(s => s.Seasons)

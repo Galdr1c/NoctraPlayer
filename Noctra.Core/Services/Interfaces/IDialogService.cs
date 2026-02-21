@@ -41,5 +41,17 @@ public interface IDialogService
     /// <param name="profile">Profile to edit</param>
     /// <returns>True if the profile was updated</returns>
     Task<bool> ShowEditProfileAsync(Profile profile);
+
+    /// <summary>
+    /// Shows the global settings window
+    /// </summary>
+    Task ShowGlobalSettingsAsync();
+
+    /// <summary>
+    /// Shows the avatar picker window
+    /// </summary>
+    /// <param name="currentAvatar">Currently selected avatar</param>
+    /// <returns>The path/URL of the selected avatar, or null if cancelled</returns>
+    Task<string?> ShowAvatarPickerAsync(string? currentAvatar);
 }
 

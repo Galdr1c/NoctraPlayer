@@ -28,7 +28,7 @@ public class ContentDownloadService : IContentDownloadService
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = false };
 
     private readonly ISettingsService _settingsService;
-    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly HttpClient _httpClient;
     private readonly ILogger<ContentDownloadService>? _logger;
     private readonly SemaphoreSlim _queueSignal = new(0);
@@ -48,12 +48,12 @@ public class ContentDownloadService : IContentDownloadService
 
     public ContentDownloadService(
         ISettingsService settingsService,
-        IServiceScopeFactory scopeFactory,
+        IDbContextFactory<AppDbContext> contextFactory,
         HttpClient httpClient,
         ILogger<ContentDownloadService>? logger = null)
     {
         _settingsService = settingsService;
-        _scopeFactory = scopeFactory;
+        _contextFactory = contextFactory;
         _httpClient = httpClient;
         _logger = logger;
         (_encryptionKey, _hmacKey) = CreateCryptoKeys();
@@ -82,8 +82,7 @@ public class ContentDownloadService : IContentDownloadService
             return new DownloadContentResult(true, true, "Icerik zaten yerel indirildi.");
         }
 
-        await using var scope = _scopeFactory.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
 
         var duplicate = await db.DownloadItems
             .AsNoTracking()
@@ -206,8 +205,7 @@ public class ContentDownloadService : IContentDownloadService
         try
         {
             var normalizedEncryptedPath = NormalizePath(encryptedPath);
-            await using var scope = _scopeFactory.CreateAsyncScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
             var candidates = await db.DownloadItems
                 .Where(d => d.LocalEncryptedPath != null)
                 .ToListAsync(cancellationToken);
@@ -304,8 +302,7 @@ public class ContentDownloadService : IContentDownloadService
         string missingEncryptedPath,
         CancellationToken cancellationToken)
     {
-        await using var scope = _scopeFactory.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var item = await db.DownloadItems
             .FirstOrDefaultAsync(d => d.LocalEncryptedPath == missingEncryptedPath, cancellationToken);
         if (item == null)
@@ -367,8 +364,7 @@ public class ContentDownloadService : IContentDownloadService
             return [];
         }
 
-        await using var scope = _scopeFactory.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
         if (!_lastCleanupUtcByProfile.TryGetValue(profileId, out var lastCleanupUtc) ||
             (DateTime.UtcNow - lastCleanupUtc).TotalSeconds >= 20)
         {
@@ -392,8 +388,7 @@ public class ContentDownloadService : IContentDownloadService
             return;
         }
 
-        await using var scope = _scopeFactory.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var items = await db.DownloadItems
             .Where(d => d.ProfileId == profileId)
             .ToListAsync(cancellationToken);
@@ -450,8 +445,7 @@ public class ContentDownloadService : IContentDownloadService
             return;
         }
 
-        await using var scope = _scopeFactory.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId, cancellationToken);
         if (item == null)
         {
@@ -478,8 +472,7 @@ public class ContentDownloadService : IContentDownloadService
 
         _pauseRequestedIds.TryRemove(downloadId, out _);
 
-        await using var scope = _scopeFactory.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId, cancellationToken);
         if (item == null)
         {
@@ -544,8 +537,7 @@ public class ContentDownloadService : IContentDownloadService
     {
         try
         {
-            await using var scope = _scopeFactory.CreateAsyncScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            using var db = await _contextFactory.CreateDbContextAsync();
             var pendingItems = await db.DownloadItems
                 .Where(d => d.Status == DownloadStatus.Queued ||
                             d.Status == DownloadStatus.Downloading ||
@@ -605,8 +597,7 @@ public class ContentDownloadService : IContentDownloadService
     {
         var localCts = new CancellationTokenSource();
         _activeDownloadCts[downloadId] = localCts;
-        await using var startScope = _scopeFactory.CreateAsyncScope();
-        var startDb = startScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var startDb = await _contextFactory.CreateDbContextAsync();
         var item = await startDb.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId);
         if (item == null || item.Status == DownloadStatus.Completed || item.Status == DownloadStatus.Canceled)
         {
@@ -943,8 +934,7 @@ public class ContentDownloadService : IContentDownloadService
         _queuedIds.TryRemove(downloadId, out _);
         _autoResumeAttempts.TryRemove(downloadId, out _);
 
-        await using var scope = _scopeFactory.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId, cancellationToken);
         if (item != null)
         {
@@ -1012,8 +1002,7 @@ public class ContentDownloadService : IContentDownloadService
     {
         _autoResumeAttempts.TryRemove(downloadId, out _);
 
-        await using var scope = _scopeFactory.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var db = await _contextFactory.CreateDbContextAsync();
         var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId);
         if (item == null)
         {
@@ -1040,8 +1029,7 @@ public class ContentDownloadService : IContentDownloadService
 
     private async Task MarkPausedAsync(int downloadId)
     {
-        await using var scope = _scopeFactory.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var db = await _contextFactory.CreateDbContextAsync();
         var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId);
         if (item == null)
         {
@@ -1058,8 +1046,7 @@ public class ContentDownloadService : IContentDownloadService
 
     private async Task MarkInterruptedAsPausedAsync(int downloadId, string message)
     {
-        await using var scope = _scopeFactory.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var db = await _contextFactory.CreateDbContextAsync();
         var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId);
         if (item == null)
         {
@@ -1190,8 +1177,7 @@ public class ContentDownloadService : IContentDownloadService
 
     private async Task MarkFailedAsync(int downloadId, string message)
     {
-        await using var scope = _scopeFactory.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        using var db = await _contextFactory.CreateDbContextAsync();
         var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId);
         if (item == null)
         {
