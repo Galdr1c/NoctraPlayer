@@ -137,6 +137,12 @@ public class VideoPlayerService : IVideoPlayerService
         CurrentUrl = url;
         System.Diagnostics.Debug.WriteLine($"[VideoPlayerService] PlayAsync called with URL: {url}");
         
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, "Oynatılacak geçerli bir adres (URL) bulunamadı."));
+            return;
+        }
+
         if (!_isInitialized)
         {
             await InitializeAsync();
