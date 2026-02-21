@@ -7,6 +7,18 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 - **Görsel Marka Kimliği ve Yükleme Deneyimi Modernizasyonu** (2026-02-21 16:00):
   - **Kurumsal Kimlik Birliği**: `SplashWindow`, `ProfilesWindow` ve `ProfileLoadingWindow` ekranları ortak bir tasarım diline, arka plan gradyanlarına ve pencere ayarlarına kavuşturuldu.
+### Fixed
+- Fatal crash (`InvalidOperationException`) when selecting profiles in edit mode.
+- Startup crash due to circular dependency in `PremiumSpinner` XAML.
+- Startup crash due to invalid Easing attribute in Avalonia animations.
+- Profile loading UI freezing during initial connection.
+
+### Improved
+- Standardized loading experience with a smooth, themed single-arc spinner.
+- Extended Splash screen display to 3.5 seconds for a more premium feel.
+- Extended Profile Loading duration to 4.5 seconds for visual stability.
+- Simplified `PremiumSpinner` for better performance and resource usage.
+- Refactored `M3UParser` for thread-safe network operations.
   - **Kritik Hata Düzeltmesi**: `PremiumSpinner` kontrolündeki dairesel bağımlılık (circular dependency) nedeniyle oluşan uygulama başlatma hatası giderildi. Kontrol, `TemplatedControl` mimarisine taşınarak stabil hale getirildi.
   - **Stabil Temalı Yükleme Animasyonu**: Karmaşık animasyon hatalarını önlemek için yüksek performanslı, tek ark (single-arc) tasarımına sahip "Standart Temalı Spinner" geliştirildi. Uygulama genelindeki tüm yükleme süreçlerinde BU tasarım standart hale getirildi.
   - **Gelişmiş Hata Geri Bildirimi**: Profil yükleme aşamasında oluşan hatalar, kullanıcıyı bilgilendirmek için kırmızı renkli ve anlaşılır hata mesajlarıyla görselleştirildi.

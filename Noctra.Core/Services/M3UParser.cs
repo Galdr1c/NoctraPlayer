@@ -17,14 +17,6 @@ public partial class M3UParser : IM3UParser
     public M3UParser(HttpClient httpClient)
     {
         _httpClient = httpClient;
-        
-        // Safely set User-Agent to avoid issues with shared HttpClient instances
-        if (!_httpClient.DefaultRequestHeaders.Contains("User-Agent"))
-        {
-            _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-        }
-        
-        _httpClient.Timeout = TimeSpan.FromSeconds(30); // Global timeout
     }
 
     public Task<List<Channel>> ParseAsync(string content)
