@@ -353,41 +353,118 @@ public class EpgService : IEpgService
         return true;
     }
 
-        private static string NormalizeName(string name)
+    internal static string NormalizeName(string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return "";
 
-        var s = name.ToLowerInvariant()
-            .Replace('ı', 'i')
-            .Replace('İ', 'i')
-            .Replace('ş', 's')
-            .Replace('Ş', 's')
-            .Replace('ğ', 'g')
-            .Replace('Ğ', 'g')
-            .Replace('ü', 'u')
-            .Replace('Ü', 'u')
-            .Replace('ö', 'o')
-            .Replace('Ö', 'o')
-            .Replace('ç', 'c')
-            .Replace('Ç', 'c');
+        var sb = new System.Text.StringBuilder(name.Length);
+        var wordBuffer = new System.Text.StringBuilder(16);
 
-        var chars = new List<char>(s.Length);
-        foreach (var ch in s)
+        for (int i = 0; i < name.Length; i++)
         {
-            chars.Add(char.IsLetterOrDigit(ch) ? ch : ' ');
+            var c = name[i];
+
+            // Map character
+            char mapped;
+            if (c >= 'A' && c <= 'Z') mapped = (char)(c + 32);
+            else if (c == 'ı') mapped = 'i';
+            else if (c == 'İ') mapped = 'i';
+            else if (c == 'ş' || c == 'Ş') mapped = 's';
+            else if (c == 'ğ' || c == 'Ğ') mapped = 'g';
+            else if (c == 'ü' || c == 'Ü') mapped = 'u';
+            else if (c == 'ö' || c == 'Ö') mapped = 'o';
+            else if (c == 'ç' || c == 'Ç') mapped = 'c';
+            else mapped = char.ToLowerInvariant(c);
+
+            if (char.IsLetterOrDigit(mapped))
+            {
+                wordBuffer.Append(mapped);
+            }
+            else
+            {
+                if (wordBuffer.Length > 0)
+                {
+                    FlushWord(sb, wordBuffer);
+                }
+            }
         }
 
-        var noise = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        if (wordBuffer.Length > 0)
         {
-            "hd", "fhd", "uhd", "sd", "hevc", "h265", "h264", "4k",
-            "1080p", "720p", "480p", "2160p", "live", "vip"
-        };
+            FlushWord(sb, wordBuffer);
+        }
 
-        var tokens = new string(chars.ToArray())
-            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            .Where(t => !noise.Contains(t));
+        return sb.ToString();
+    }
 
-        return string.Concat(tokens);
+    private static void FlushWord(System.Text.StringBuilder sb, System.Text.StringBuilder wordBuffer)
+    {
+        if (!IsNoise(wordBuffer))
+        {
+            // Copy from buffer to main sb
+            for (int i = 0; i < wordBuffer.Length; i++)
+            {
+                sb.Append(wordBuffer[i]);
+            }
+        }
+        wordBuffer.Clear();
+    }
+
+    private static bool IsNoise(System.Text.StringBuilder sb)
+    {
+        int len = sb.Length;
+        if (len < 2 || len > 5) return false;
+
+        if (len == 2)
+        {
+            // hd, sd, 4k
+            char c0 = sb[0];
+            char c1 = sb[1];
+            if (c0 == 'h' && c1 == 'd') return true;
+            if (c0 == 's' && c1 == 'd') return true;
+            if (c0 == '4' && c1 == 'k') return true;
+            return false;
+        }
+        if (len == 3)
+        {
+            // fhd, uhd, vip
+            char c0 = sb[0];
+            char c1 = sb[1];
+            char c2 = sb[2];
+            if (c0 == 'f' && c1 == 'h' && c2 == 'd') return true;
+            if (c0 == 'u' && c1 == 'h' && c2 == 'd') return true;
+            if (c0 == 'v' && c1 == 'i' && c2 == 'p') return true;
+            return false;
+        }
+        if (len == 4)
+        {
+            // hevc, h265, h264, 720p, 480p, live
+            if (BufferEquals(sb, "hevc")) return true;
+            if (BufferEquals(sb, "h265")) return true;
+            if (BufferEquals(sb, "h264")) return true;
+            if (BufferEquals(sb, "720p")) return true;
+            if (BufferEquals(sb, "480p")) return true;
+            if (BufferEquals(sb, "live")) return true;
+            return false;
+        }
+        if (len == 5)
+        {
+            // 1080p, 2160p
+            if (BufferEquals(sb, "1080p")) return true;
+            if (BufferEquals(sb, "2160p")) return true;
+            return false;
+        }
+        return false;
+    }
+
+    private static bool BufferEquals(System.Text.StringBuilder sb, string s)
+    {
+        if (sb.Length != s.Length) return false;
+        for (int i = 0; i < s.Length; i++)
+        {
+            if (sb[i] != s[i]) return false;
+        }
+        return true;
     }
     private static string? ResolveMappedChannelId(string normalizedDisplayName, Dictionary<string, string> channelMap)
     {
