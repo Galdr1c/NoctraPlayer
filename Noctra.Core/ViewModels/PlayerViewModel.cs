@@ -35,6 +35,13 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     }
     public event EventHandler? PiPRequested;
 
+    private enum PlaybackRecoveryState
+    {
+        None = 0,
+        LiveAutoRecovering = 1,
+        EndedSeekRecovering = 2
+    }
+
     private readonly IVideoPlayerService _videoPlayerService;
     private readonly IEpgService _epgService;
     private readonly IMetadataService _metadataService;
@@ -217,7 +224,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private double _skipAggregationSeconds;
     private DateTime _skipAggregationLastUpdatedUtc = DateTime.MinValue;
     private bool _isPlaybackEnded;
-    private int _isEndedSeekRecoverInProgress;
+    private int _recoveryState; // PlaybackRecoveryState
     private double _lastPausedPosition;
     private long _lastPausedTimeMs;
     private double _pendingResumeSeekPosition;
@@ -227,7 +234,6 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private double _lastLiveObservedPosition = -1;
     private DateTime _lastLiveProgressAtUtc = DateTime.MinValue;
     private DateTime _lastLivePositionEventAtUtc = DateTime.MinValue;
-    private int _isLiveAutoRecoverInProgress;
     private DateTime _lastLiveAutoRecoverAttemptAtUtc = DateTime.MinValue;
     private DateTime _liveRecoveryWindowStartUtc = DateTime.MinValue;
     private int _liveRecoveryAttemptsInWindow;
@@ -790,7 +796,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             return;
         }
 
-        if (Interlocked.Exchange(ref _isLiveAutoRecoverInProgress, 1) == 1)
+        if (Interlocked.CompareExchange(ref _recoveryState, (int)PlaybackRecoveryState.LiveAutoRecovering, (int)PlaybackRecoveryState.None) != (int)PlaybackRecoveryState.None)
         {
             return;
         }
@@ -830,7 +836,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         }
         finally
         {
-            Interlocked.Exchange(ref _isLiveAutoRecoverInProgress, 0);
+            Interlocked.Exchange(ref _recoveryState, (int)PlaybackRecoveryState.None);
         }
     }
 
@@ -1449,6 +1455,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void StartSeeking()
     {
+        if (Interlocked.CompareExchange(ref _recoveryState, 0, 0) != (int)PlaybackRecoveryState.None)
+            return;
+
         _isUserSeeking = true;
     }
 
@@ -1456,6 +1465,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private void Seek(double position)
     {
         _isUserSeeking = false;
+
+        if (Interlocked.CompareExchange(ref _recoveryState, 0, 0) != (int)PlaybackRecoveryState.None)
+            return;
+
         if (IsLiveContent) return;
         EnableSeekBufferShieldSuppression();
         var clamped = ClampSeekPosition(position);
@@ -1823,7 +1836,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             return;
         }
 
-        if (Interlocked.Exchange(ref _isEndedSeekRecoverInProgress, 1) == 1)
+        if (Interlocked.CompareExchange(ref _recoveryState, (int)PlaybackRecoveryState.EndedSeekRecovering, (int)PlaybackRecoveryState.None) != (int)PlaybackRecoveryState.None)
         {
             return;
         }
@@ -1868,7 +1881,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         }
         finally
         {
-            Interlocked.Exchange(ref _isEndedSeekRecoverInProgress, 0);
+            Interlocked.Exchange(ref _recoveryState, (int)PlaybackRecoveryState.None);
         }
     }
 
