@@ -468,6 +468,15 @@ public class ContentDownloadService : IContentDownloadService
             resumedBytes = 0;
         }
 
+        // If the local file is smaller than what we thought we had (or missing),
+        // we must reset the progress in DB to match reality before resuming.
+        if (item.BytesDownloaded > resumedBytes)
+        {
+            item.BytesDownloaded = resumedBytes;
+            await startDb.SaveChangesAsync();
+            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+        }
+
         if (File.Exists(finalPath) && new FileInfo(finalPath).Length > 0)
         {
             await MarkCompletedAsync(downloadId, finalPath, resumedBytes, item.BytesTotal ?? resumedBytes, DateTime.UtcNow);

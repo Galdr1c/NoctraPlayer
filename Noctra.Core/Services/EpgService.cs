@@ -44,8 +44,18 @@ public class EpgService : IEpgService
             if (string.IsNullOrEmpty(epgUrl)) return;
 
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, epgUrl);
+            request.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/xml"));
+            request.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("text/xml"));
+            // Some providers block requests without a standard User-Agent
+            if (!request.Headers.UserAgent.Any())
+            {
+                request.Headers.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+            }
+
             using var response = await NetworkRetry.ExecuteAsync(
-                () => _httpClient.GetAsync(epgUrl, HttpCompletionOption.ResponseHeadersRead, cts.Token),
+                () => _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token),
                 cancellationToken: cts.Token).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 

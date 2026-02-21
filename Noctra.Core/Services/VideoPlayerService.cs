@@ -1,6 +1,7 @@
 ﻿using LibVLCSharp.Shared;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
+using System.Runtime.InteropServices;
 
 namespace Noctra.Services;
 
@@ -25,6 +26,7 @@ public class VideoPlayerService : IVideoPlayerService
     private long _playGeneration;
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private bool _isInitialized;
+    private string? _initializationError;
 
     public event EventHandler<MediaPlayer?>? MediaPlayerReady;
     public event EventHandler<bool>? PlayingChanged;
@@ -56,10 +58,8 @@ public class VideoPlayerService : IVideoPlayerService
             {
                 LibVLCSharp.Shared.Core.Initialize();
                 
-                var options = new string[]
+                var options = new List<string>
                 {
-                    "--avcodec-hw=dxva2",
-                    "--vout=direct3d11",
                     $"--network-caching={NetworkCachingMs}",
                     $"--live-caching={LiveCachingMs}",
                     "--file-caching=1000",
@@ -69,18 +69,26 @@ public class VideoPlayerService : IVideoPlayerService
                     "--verbose=0",
                     "--quiet"
                 };
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    options.Add("--avcodec-hw=dxva2");
+                    options.Add("--vout=direct3d11");
+                }
                 
-                _libVLC = new LibVLC(options);
+                _libVLC = new LibVLC(options.ToArray());
                 _mediaPlayer = new MediaPlayer(_libVLC);
             });
 
             SetupEventHandlers();
             _isInitialized = true;
+            _initializationError = null;
             
             _dispatcherService.BeginInvoke(() => MediaPlayerReady?.Invoke(this, _mediaPlayer));
         }
         catch (Exception ex)
         {
+            _initializationError = $"VLC başlatılamadı: {ex.Message}";
             System.Diagnostics.Debug.WriteLine($"[VideoPlayerService] VLC Init failed: {ex.Message}");
         }
         finally
@@ -144,6 +152,8 @@ public class VideoPlayerService : IVideoPlayerService
 
         if (_mediaPlayer == null)
         {
+            var msg = _initializationError ?? "Video oynatıcı başlatılamadı.";
+            _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, msg));
             System.Diagnostics.Debug.WriteLine("[VideoPlayerService] ERROR: _mediaPlayer is null!");
             return;
         }
