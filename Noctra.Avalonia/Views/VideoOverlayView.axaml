@@ -849,7 +849,7 @@
                     </Ellipse.Styles>
                 </Ellipse>
             </StackPanel>
-            <TextBlock Text="Y&#252;kleniyor..." Foreground="White" HorizontalAlignment="Center" Margin="0,14,0,0"/>
+            <TextBlock Text="{Binding ConnectionStatus, FallbackValue='Yükleniyor...'}" Foreground="White" HorizontalAlignment="Center" Margin="0,14,0,0" TextWrapping="Wrap" MaxWidth="400" TextAlignment="Center"/>
         </StackPanel>
     </Grid>
 </UserControl>

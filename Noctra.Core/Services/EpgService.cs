@@ -44,10 +44,29 @@ public class EpgService : IEpgService
             if (string.IsNullOrEmpty(epgUrl)) return;
 
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+
             using var response = await NetworkRetry.ExecuteAsync(
-                () => _httpClient.GetAsync(epgUrl, HttpCompletionOption.ResponseHeadersRead, cts.Token),
+                () =>
+                {
+                    // Create request with specific headers for each retry attempt
+                    var request = new HttpRequestMessage(HttpMethod.Get, epgUrl);
+                    request.Headers.Accept.ParseAdd("application/xml, text/xml, application/gzip, */*");
+                    request.Headers.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+                    return _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+                },
                 cancellationToken: cts.Token).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync(cts.Token);
+                // Try to detect HTML error page
+                if (content.Contains("<!DOCTYPE html", StringComparison.OrdinalIgnoreCase) ||
+                    content.Contains("<html", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new HttpRequestException($"Sunucu XML yerine HTML döndürdü ({response.StatusCode}). URL'yi kontrol edin (örn: /guides değil /files/epg-tr.xml olmalı).");
+                }
+                response.EnsureSuccessStatusCode();
+            }
 
             using var stream = await response.Content.ReadAsStreamAsync(cts.Token).ConfigureAwait(false);
 

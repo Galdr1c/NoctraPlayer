@@ -531,7 +531,7 @@ public class StringToVisibilityConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        var isVisible = !string.IsNullOrEmpty(value as string);
+        var isVisible = !string.IsNullOrWhiteSpace(value as string);
         if (string.Equals(parameter?.ToString(), "invert", StringComparison.OrdinalIgnoreCase))
         {
             isVisible = !isVisible;

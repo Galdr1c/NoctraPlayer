@@ -145,6 +145,7 @@ public class VideoPlayerService : IVideoPlayerService
         if (_mediaPlayer == null)
         {
             System.Diagnostics.Debug.WriteLine("[VideoPlayerService] ERROR: _mediaPlayer is null!");
+            _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, "Video oynatıcı başlatılamadı. Lütfen uygulamayı yeniden başlatın."));
             return;
         }
 
