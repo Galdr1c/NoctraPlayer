@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using Noctra.Services.Interfaces;
@@ -13,6 +14,13 @@ public class SecurityService : ISecurityService
     {
         if (string.IsNullOrEmpty(plainText))
             return null;
+
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            // DPAPI only works on Windows. For other platforms, we return plain text for now.
+            // In the future, specialized implementations for KeyChain (macOS) or KWallet (Linux) can be added here.
+            return plainText;
+        }
 
         try
         {
@@ -33,6 +41,11 @@ public class SecurityService : ISecurityService
     {
         if (string.IsNullOrEmpty(cipherText))
             return null;
+
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            return cipherText;
+        }
 
         try
         {

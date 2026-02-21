@@ -11,28 +11,9 @@ public class SettingsService : ISettingsService
 {
     private readonly ILogger<SettingsService>? _logger;
     private readonly string _settingsPath;
-    private AppSettings? _settings;
-    private bool _isLoaded;
-    private readonly object _lock = new();
+    private Lazy<AppSettings> _settings;
 
-    public AppSettings Settings
-    {
-        get
-        {
-            if (!_isLoaded)
-            {
-                lock (_lock)
-                {
-                    if (!_isLoaded)
-                    {
-                        LoadSync();
-                        _isLoaded = true;
-                    }
-                }
-            }
-            return _settings!;
-        }
-    }
+    public AppSettings Settings => _settings.Value;
 
     public event Action? SettingsChanged;
     
@@ -53,12 +34,8 @@ public class SettingsService : ISettingsService
         
         Directory.CreateDirectory(appDataPath);
         _settingsPath = Path.Combine(appDataPath, "settings.json");
-        
-        // Varsayılan değerlerle başlat
-        _settings = new AppSettings
-        {
-            DownloadPath = Path.Combine(appDataPath, "Downloads")
-        };
+
+        _settings = new Lazy<AppSettings>(LoadInternalSync);
     }
     
     public async Task LoadAsync()
@@ -68,7 +45,7 @@ public class SettingsService : ISettingsService
             if (!File.Exists(_settingsPath))
             {
                 _logger?.LogInformation("Settings file not found, using defaults");
-                _isLoaded = true;
+                _settings = new Lazy<AppSettings>(CreateDefaultSettings);
                 return;
             }
             
@@ -77,9 +54,8 @@ public class SettingsService : ISettingsService
             
             if (loaded != null)
             {
-                _settings = loaded;
-                _isLoaded = true;
-                System.Diagnostics.Debug.WriteLine($"[SettingsService] Settings loaded: IsDarkTheme={_settings.IsDarkTheme}");
+                _settings = new Lazy<AppSettings>(() => loaded);
+                System.Diagnostics.Debug.WriteLine($"[SettingsService] Settings loaded: IsDarkTheme={Settings.IsDarkTheme}");
                 _logger?.LogInformation("Settings loaded from {Path}", _settingsPath);
             }
         }
@@ -89,36 +65,49 @@ public class SettingsService : ISettingsService
         }
     }
     
-    private void LoadSync()
+    public void LoadSync()
+    {
+        _ = _settings.Value;
+    }
+
+    private AppSettings LoadInternalSync()
     {
         try
         {
             if (!File.Exists(_settingsPath))
             {
-                _isLoaded = true;
-                return;
+                return CreateDefaultSettings();
             }
-            
+
             var json = File.ReadAllText(_settingsPath);
             var loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
-            
+
             if (loaded != null)
             {
-                _settings = loaded;
-                _isLoaded = true;
+                return loaded;
             }
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to load settings synchronously");
         }
+
+        return CreateDefaultSettings();
+    }
+
+    private AppSettings CreateDefaultSettings()
+    {
+        return new AppSettings
+        {
+            DownloadPath = Path.Combine(Path.GetDirectoryName(_settingsPath)!, "Downloads")
+        };
     }
     
     public async Task SaveAsync()
     {
         try
         {
-            var json = JsonSerializer.Serialize(_settings, JsonOptions);
+            var json = JsonSerializer.Serialize(Settings, JsonOptions);
             await File.WriteAllTextAsync(_settingsPath, json);
             
             _logger?.LogInformation("Settings saved to {Path}", _settingsPath);
@@ -133,11 +122,14 @@ public class SettingsService : ISettingsService
     public void ResetToDefaults()
     {
         var defaultDownloadPath = Settings.DownloadPath; // Keep download path
-        _settings = new AppSettings
+        var newSettings = new AppSettings
         {
             DownloadPath = defaultDownloadPath
         };
-        
+
+        // Replace lazy instance with a pre-initialized one
+        _settings = new Lazy<AppSettings>(() => newSettings);
+
         _ = SaveAsync();
     }
 }
