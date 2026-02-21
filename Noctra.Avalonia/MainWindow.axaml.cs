@@ -113,8 +113,16 @@ public partial class MainWindow : Window
     // === Settings ===
     private async void SettingsButton_Click(object? sender, RoutedEventArgs e)
     {
-        var settingsWindow = ((App)Application.Current!).Services.GetRequiredService<Views.SettingsWindow>();
-        await settingsWindow.ShowDialog(this);
+        try
+        {
+            var settingsWindow = ((App)Application.Current!).Services.GetRequiredService<Views.SettingsWindow>();
+            await settingsWindow.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            _mainViewModel.StatusMessage = $"Ayarlar açılamadı: {ex.Message}";
+            StartupDiagnostics.LogException("Failed to open SettingsWindow.", ex);
+        }
     }
 
 
