@@ -317,6 +317,20 @@ public class ContentDownloadService : IContentDownloadService
             return;
         }
 
+        // Legacy format guard: If file path points to old encrypted format, fail explicitly.
+        if (item.LocalFilePath?.EndsWith(".nctra", StringComparison.OrdinalIgnoreCase) == true ||
+            item.TempFilePath?.EndsWith(".nctra.part", StringComparison.OrdinalIgnoreCase) == true ||
+            item.TempFilePath?.EndsWith(".nctra", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            item.Status = DownloadStatus.Failed;
+            item.ErrorMessage = "Eski şifreli format. Lütfen tekrar indirin.";
+            item.LocalFilePath = null;
+            item.TempFilePath = null;
+            await db.SaveChangesAsync(cancellationToken);
+            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
         item.Status = DownloadStatus.Queued;
         item.ErrorMessage = null;
         item.UpdatedAt = DateTime.UtcNow;

@@ -147,8 +147,9 @@ public class EpgService : IEpgService
 
             var programs = new List<EpgProgram>();
             var batchSize = 2000;
-            var windowStartUtc = DateTime.UtcNow.Date;
-            var windowEndUtc = windowStartUtc.AddDays(Math.Max(1, daysAhead) + 1);
+            // Look back 2 days to catch ongoing programs or slightly outdated guides
+            var windowStartUtc = DateTime.UtcNow.Date.AddDays(-2);
+            var windowEndUtc = DateTime.UtcNow.Date.AddDays(Math.Max(1, daysAhead) + 1);
 
             using var context = await _contextFactory.CreateDbContextAsync();
             context.ChangeTracker.AutoDetectChangesEnabled = false;
@@ -207,15 +208,27 @@ public class EpgService : IEpgService
 
                             // Determine target ChannelId
                             string targetChannelId = channel;
-                            if (isPrimary)
+                            if (isPrimary && allowedPrimaryIds.Count > 0)
                             {
                                 // Keep only channels present in current playlist.
-                                if (allowedPrimaryIds.Count > 0 && !allowedPrimaryIds.Contains(channel))
+                                if (!allowedPrimaryIds.Contains(channel))
                                 {
-                                    continue;
+                                    // Fuzzy match: try stripping suffix (e.g. ShowTV.tr -> ShowTV)
+                                    var stripped = channel.Contains('.')
+                                        ? channel[..channel.LastIndexOf('.')]
+                                        : channel;
+
+                                    bool fuzzyMatch = allowedPrimaryIds.Any(id =>
+                                        string.Equals(id, stripped, StringComparison.OrdinalIgnoreCase) ||
+                                        string.Equals(id, channel, StringComparison.OrdinalIgnoreCase));
+
+                                    if (!fuzzyMatch)
+                                    {
+                                        continue;
+                                    }
                                 }
                             }
-                            else
+                            else if (!isPrimary)
                             {
                                 if (xmlChannelIdToDbTvgId.TryGetValue(channel, out var mappedId))
                                 {
