@@ -166,6 +166,12 @@ public static class UserFriendlyErrorMessage
             return "Ag hatasi olustu. Baglantinizi kontrol edip tekrar deneyin.";
         }
 
+        // Allow specific EPG/HTML errors to pass through
+        if (ContainsAny(normalized, "epg", "html", "cloudflare"))
+        {
+            return rawMessage ?? defaultMessage;
+        }
+
         return defaultMessage;
     }
 
