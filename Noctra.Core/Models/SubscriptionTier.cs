@@ -36,11 +36,11 @@ public static class TierLimits
     }
 
     // ==========================================
-    // PREMIUM TIER (Lifetime / 480 TL)
+    // PREMIUM TIER (Lifetime / 499.50 TL)
     // ==========================================
     public static class Premium
     {
-        public const int MaxProfiles = int.MaxValue; // Sınırsız
+        public const int MaxProfiles = 5; // Netflix standard: max 5 profiles
         public const int MaxM3UAccounts = int.MaxValue; // Sınırsız
         public const int MaxFavorites = int.MaxValue; // Sınırsız
         public const int MaxFavoriteGroups = int.MaxValue; // Sınırsız

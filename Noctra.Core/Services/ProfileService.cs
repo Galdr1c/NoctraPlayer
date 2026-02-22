@@ -28,6 +28,7 @@ public class ProfileService : IProfileService
         await using var transaction = await db.Database.BeginTransactionAsync();
 
         ProviderAccount account;
+        bool credentialsChanged = false;
 
         if (request.ExistingIds != null)
         {
@@ -38,6 +39,15 @@ public class ProfileService : IProfileService
             if (existingAccount == null)
             {
                 throw new InvalidOperationException("ProviderAccount bulunamadı.");
+            }
+
+            // Detect credential change BEFORE applying them
+            if (existingAccount.Url != request.Url || 
+                existingAccount.Username != request.Username || 
+                existingAccount.Password != request.EncryptedPassword ||
+                existingAccount.Type != request.AccountType)
+            {
+                credentialsChanged = true;
             }
 
             existingAccount.Url = request.Url;
@@ -102,6 +112,15 @@ public class ProfileService : IProfileService
         }
 
         await db.SaveChangesAsync();
+
+        if (credentialsChanged)
+        {
+            // If credentials changed, delete associated playlists to force a complete re-sync
+            // but keep SeriesEpisodeProgresses (they are profile-wide)
+            await db.Playlists
+                .Where(pl => pl.ProfileId == profile.Id)
+                .ExecuteDeleteAsync();
+        }
         await transaction.CommitAsync();
         return profile;
     }

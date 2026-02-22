@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Profil Seçme Ekranı Modernizasyonu ve Limitler** (2026-02-22 16:35):
+  - Profil seçme ekranı Netflix tarzı daha sıkı ve modern bir grid yapısına kavuşturuldu.
+  - Premium kullanıcılar için profil limiti **5** olarak güncellendi.
+  - **Upsell Erişimi**: "Profil Ekle" butonu limit dolsa dahi görünür kalmaya devam eder, tıklandığında Premium pakete yönlendirme (upsell) penceresi açılır. Boton sadece "Düzenle/Yönet" modunda gizlenir.
+- **Profil Düzenleme Sonrası Otomatik Veri Yenileme** (2026-02-22 16:35):
+  - Profil düzenleme ekranında URL, Kullanıcı Adı veya Şifre değiştirildiğinde, sistem bunu algılar ve eski kanal/içerik listesini silecek şekilde güncellendi.
+  - Bu sayede profil kaydedilip tekrar giriş yapıldığında yeni sağlayıcı verileri ("Kanal listeniz güncelleniyor...") mesajıyla sıfırdan çekilir.
+  - **Kritik**: Dizi ilerlemeleri (`series progress`) ve izleme geçmişi profil bazlı olduğu için bu işlemden etkilenmez, korunur.
 - **Profil Ekleme/Düzenleme M3U Arayüz Sadeleştirmesi** (2026-02-22 16:20):
   - M3U Playlist seçiliyken yalnızca **M3U Link** textbox'ı görünür. Kullanıcı adı/şifre alanları ve "Bağlantıyı Analiz Et" butonu gizlenir.
   - Xtream Codes veya Stalker Portal'a geçildiğinde tüm alanlar otomatik geri gelir; doğrulama mantığı etkilenmez.

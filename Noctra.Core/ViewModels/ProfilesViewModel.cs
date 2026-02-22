@@ -23,6 +23,12 @@ public partial class ProfilesViewModel : ObservableObject
     [ObservableProperty]
     private bool _isManageMode;
 
+    [ObservableProperty]
+    private bool _canAddProfile = true;
+
+    [ObservableProperty]
+    private bool _showAddButton = true;
+
     public event Action<Profile>? OnProfileSelected;
     public event Action<Profile>? OnProfileAddRequested;
     public event Action<Profile>? OnProfileEditRequested;
@@ -58,6 +64,9 @@ public partial class ProfilesViewModel : ObservableObject
             var items = await _profileService.GetProfilesAsync();
             Profiles = new ObservableCollection<Profile>(items);
             if (!items.Any()) IsManageMode = false;
+            
+            CanAddProfile = _licenseService.IsWithinLimit(ProfilesLimitKey, items.Count);
+            UpdateShowAddButton();
         }
         catch (Exception ex)
         {
@@ -71,6 +80,14 @@ public partial class ProfilesViewModel : ObservableObject
     private void ToggleManageMode()
     {
         IsManageMode = !IsManageMode;
+        UpdateShowAddButton();
+    }
+
+    private void UpdateShowAddButton()
+    {
+        // Keep the button visible even if limit is reached (to show upsell),
+        // but hide it when in Manage Mode.
+        ShowAddButton = !IsManageMode;
     }
 
     [RelayCommand]

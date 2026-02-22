@@ -318,14 +318,14 @@
                             <ItemsControl ItemsSource="{Binding Profiles}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
-                                        <WrapPanel ItemWidth="192" ItemHeight="200"/>
+                                        <WrapPanel ItemWidth="170" ItemHeight="210"/>
                                     </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Button Classes="ProfileCardStyle"
                                                 Click="SelectProfile_Click"
-                                                Margin="16,16,16,24"/>
+                                                Margin="10,0"/>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -333,8 +333,8 @@
                             <!-- Add Profile Button -->
                             <Button Classes="AddProfileButtonStyle"
                                     Command="{Binding AddProfileCommand}"
-                                    Margin="16,16,16,24"
-                                    IsVisible="{Binding IsManageMode, Converter={StaticResource InverseBoolConverter}}"/>
+                                    Margin="10,0"
+                                    IsVisible="{Binding ShowAddButton}"/>
                         </WrapPanel>
                     </StackPanel>
 
