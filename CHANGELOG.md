@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Video Overlay Pencere Odak/Aktivasyon Düzeltmesi** (2026-02-22 14:05):
+  - **Kritik Hata Düzeltmesi**: Video oynatıcı overlay penceresi (kontroller, seek bar vb.) başka bir uygulama penceresine tıklandığında arkaya gitmiyordu — yalnızca diğer pencerenin başlık çubuğuna tıklanınca gizleniyordu. Artık herhangi bir yerine tıklansa bile overlay düzgün şekilde gizleniyor.
+  - **Kök Neden Çözümü**: Avalonia'nın `Activated`/`Deactivated` olaylarındaki 150ms gecikmeli yarış koşulları (race conditions) kaldırıldı. Yerine Win32 `GetForegroundWindow` API'si ile 200ms aralıklarla foreground pencere PID kontrolü yapan güvenilir bir polling mekanizması eklendi.
+  - **Dinamik Topmost Yönetimi**: Overlay penceresi artık `Topmost = false` ile başlatılıyor; yalnızca uygulamamızın process'i aktifken `Topmost = true` yapılıyor, başka process aktif olduğunda anında `false` yapılıp gizleniyor.
+  - **Dosya**: `MemoryVideoView.cs` — `FocusCheckTimer_Tick`, `CreateOverlayWindow`, `UpdateOverlayPosition` metotları güncellendi.
 - **Görsel Marka Kimliği ve Yükleme Deneyimi Modernizasyonu** (2026-02-21 16:00):
   - **Kurumsal Kimlik Birliği**: `SplashWindow`, `ProfilesWindow` ve `ProfileLoadingWindow` ekranları ortak bir tasarım diline, arka plan gradyanlarına ve pencere ayarlarına kavuşturuldu.
 ### Fixed
