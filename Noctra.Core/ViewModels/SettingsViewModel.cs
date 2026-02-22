@@ -109,6 +109,16 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _customEpgUrl = string.Empty;
 
+    partial void OnDefaultVolumeChanged(int value)
+    {
+        if (_settingsService?.Settings != null && _settingsService.Settings.DefaultVolume != value)
+        {
+            _settingsService.Settings.DefaultVolume = value;
+            // We can save immediately for volume to ensure the player hears it via SettingsChanged
+            _ = _settingsService.SaveAsync();
+        }
+    }
+
     partial void OnIsDarkThemeChanged(bool value)
     {
         _themeService.SetTheme(value);

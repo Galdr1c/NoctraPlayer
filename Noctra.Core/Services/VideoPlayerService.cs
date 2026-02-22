@@ -15,7 +15,9 @@ public class VideoPlayerService : IVideoPlayerService
     private LibVLC? _libVLC;
     private MediaPlayer? _mediaPlayer;
     private readonly IDispatcherService _dispatcherService;
+    private readonly ISettingsService _settingsService;
     private bool _disposed;
+    private int _currentVolume = 100;
     
     private int _retryCount = 0;
     private const int MaxRetries = 3;
@@ -33,16 +35,35 @@ public class VideoPlayerService : IVideoPlayerService
     public event EventHandler? PlaybackEnded;
     public event EventHandler<string>? ErrorOccurred;
     public event EventHandler<StreamQualityInfo>? QualityDetected;
+    public event EventHandler<int>? VolumeChanged;
 
     public string? CurrentUrl { get; private set; }
     public StreamQualityInfo? StreamQuality { get; private set; }
 
-    public VideoPlayerService(IDispatcherService dispatcherService)
+    public VideoPlayerService(IDispatcherService dispatcherService, ISettingsService settingsService)
     {
         _dispatcherService = dispatcherService;
+        _settingsService = settingsService;
         
+        // Initialize volume from settings
+        _currentVolume = _settingsService.Settings.DefaultVolume;
+
+        // Listen for settings changes to update default volume
+        _settingsService.SettingsChanged += OnSettingsChanged;
+
         // Start initialization in the background so we don't block the UI thread
         _ = InitializeAsync();
+    }
+
+    private void OnSettingsChanged()
+    {
+        // When settings change (e.g. from Settings UI), sync current volume
+        // But only if we are not in the middle of a video and user wants immediate sync?
+        // User asked for "sync" between setting slider and video overlay.
+        if (_currentVolume != _settingsService.Settings.DefaultVolume)
+        {
+            Volume = _settingsService.Settings.DefaultVolume;
+        }
     }
 
     private async Task InitializeAsync()
@@ -97,8 +118,27 @@ public class VideoPlayerService : IVideoPlayerService
     {
         if (_mediaPlayer == null) return;
 
+        _mediaPlayer.Opening += (s, e) =>
+        {
+            // Set volume as early as possible
+            if (_mediaPlayer != null) _mediaPlayer.Volume = _currentVolume;
+        };
+
         _mediaPlayer.Playing += (s, e) =>
         {
+            // Aggressive Volume Enforcement Pattern:
+            // We set the volume at intervals to counteract VLC/Driver resets during startup
+            var refreshDelays = new[] { 50, 200, 500, 1000, 2000 };
+            foreach (var delay in refreshDelays)
+            {
+                Task.Delay(delay).ContinueWith(_ => _dispatcherService.BeginInvoke(() => {
+                    if (_mediaPlayer != null && _mediaPlayer.IsPlaying)
+                    {
+                        _mediaPlayer.Volume = _currentVolume;
+                    }
+                }));
+            }
+            
             _dispatcherService.BeginInvoke(() => PlayingChanged?.Invoke(this, true));
             StartQualityMonitoring();
         };
@@ -141,6 +181,9 @@ public class VideoPlayerService : IVideoPlayerService
         CurrentUrl = url;
         System.Diagnostics.Debug.WriteLine($"[VideoPlayerService] PlayAsync called with URL: {url}");
         
+        // Reset volume to default on every new play
+        Volume = _settingsService.Settings.DefaultVolume;
+
         if (!_isInitialized)
         {
             await InitializeAsync();
@@ -312,11 +355,22 @@ public class VideoPlayerService : IVideoPlayerService
 
     public int Volume
     {
-        get => _mediaPlayer?.Volume ?? 0;
+        get => _currentVolume;
         set
         {
+            var oldVolume = _currentVolume;
+            _currentVolume = Math.Clamp(value, 0, 100);
+            
             if (_mediaPlayer != null)
-                _mediaPlayer.Volume = Math.Clamp(value, 0, 100);
+                _mediaPlayer.Volume = _currentVolume;
+
+            if (oldVolume != _currentVolume)
+            {
+                VolumeChanged?.Invoke(this, _currentVolume);
+                
+                // DO NOT Persist to settings here as per user request.
+                // The DefaultVolume in settings should stay fixed.
+            }
         }
     }
 

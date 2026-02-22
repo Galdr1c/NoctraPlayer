@@ -34,6 +34,11 @@ public interface IVideoPlayerService : IDisposable
     void Stop();
     
     /// <summary>
+    /// Ses seviyesi değiştiğinde (0-100)
+    /// </summary>
+    event EventHandler<int>? VolumeChanged;
+
+    /// <summary>
     /// Ses seviyesini ayarlar (0-100)
     /// </summary>
     int Volume { get; set; }

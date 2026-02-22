@@ -341,12 +341,12 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 break;
             case Key.Up:
-                _playerViewModel.Volume = Math.Min(100, _playerViewModel.Volume + 5);
+                _playerViewModel.Volume = Math.Min(100, _playerViewModel.Volume + 2);
                 _playerViewModel.UserInteractionCommand.Execute(null);
                 e.Handled = true;
                 break;
             case Key.Down:
-                _playerViewModel.Volume = Math.Max(0, _playerViewModel.Volume - 5);
+                _playerViewModel.Volume = Math.Max(0, _playerViewModel.Volume - 2);
                 _playerViewModel.UserInteractionCommand.Execute(null);
                 e.Handled = true;
                 break;

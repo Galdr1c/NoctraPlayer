@@ -248,6 +248,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private int _seekShieldSuppressionToken;
     private Series? _currentSeriesContext;
     private bool _isContentTransitioning;
+    private bool _isUpdatingFromService;
     private int _isDownloadActionRunning;
     private readonly IDispatcherService _dispatcherService;
     private readonly IWatchHistoryService? _watchHistoryService;
@@ -430,6 +431,23 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                     var remaining = Math.Max(0, Duration - pos);
                     RemainingTime = "-" + TimeSpan.FromSeconds(remaining).ToString(@"hh\:mm\:ss");
                     CheckIntroCreditsPosition(pos);
+                }
+            });
+        };
+
+        // Initialize volume from service
+        _volume = _videoPlayerService.Volume;
+        _volumeBeforeMute = _volume > 0 ? _volume : 50;
+
+        _videoPlayerService.VolumeChanged += (s, vol) =>
+        {
+            _dispatcherService.Invoke(() =>
+            {
+                if (_volume != vol)
+                {
+                    _isUpdatingFromService = true;
+                    Volume = vol;
+                    _isUpdatingFromService = false;
                 }
             });
         };
@@ -1418,10 +1436,13 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     partial void OnVolumeChanged(int value)
     {
-        _videoPlayerService.Volume = value;
-        if (value > 0)
+        if (!_isUpdatingFromService)
         {
-            _volumeBeforeMute = value;
+            _videoPlayerService.Volume = value;
+            if (value > 0)
+            {
+                _volumeBeforeMute = value;
+            }
         }
 
         if (value > 0 && IsMuted)
