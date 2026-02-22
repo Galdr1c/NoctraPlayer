@@ -61,7 +61,6 @@ public static partial class SeriesInfoParser
         normalized = StripIptvPrefixes(normalized);
         normalized = EpisodeTokenRegex().Replace(normalized, " ");
         normalized = NoiseTokenRegex().Replace(normalized, " ");
-        normalized = YearTokenRegex().Replace(normalized, " ");
 
         var buffer = new StringBuilder(normalized.Length);
         var previousSpace = false;
@@ -95,7 +94,6 @@ public static partial class SeriesInfoParser
         cleaned = StripIptvPrefixes(cleaned);
         cleaned = EpisodeTokenRegex().Replace(cleaned, " ");
         cleaned = NoiseTokenRegex().Replace(cleaned, " ");
-        cleaned = YearTokenRegex().Replace(cleaned, " ");
         cleaned = cleaned.Replace('_', ' ').Replace('.', ' ');
         cleaned = MultiSpaceRegex().Replace(cleaned, " ").Trim(' ', '-', '|', ':', '.');
         return string.IsNullOrWhiteSpace(cleaned) ? "Bilinmeyen Dizi" : cleaned;
@@ -152,6 +150,8 @@ public static partial class SeriesInfoParser
         yield return XRegex();
         yield return SeriesPatternHyphen();
         yield return TurkishRegex();
+        yield return TurkishAltRegex();
+        yield return TurkishEpisodeOnlyRegex();
         yield return EnglishRegex();
         yield return SpanishRegex();
         yield return PortugueseRegex();
@@ -159,17 +159,24 @@ public static partial class SeriesInfoParser
         yield return GermanRegex();
     }
 
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss](?<season>\d{1,2})\s*[Ee](?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
+    // Trailing \s*.*?bölüm vs.. is to consume garbage like " - 1. Bölüm" correctly.
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss](?<season>\d{1,2})\s*[-._ ]*\s*[Ee](?<episode>\d{1,3})(?:\s*[-._ ]*\s*\d{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m)?\b", RegexOptions.IgnoreCase)]
     private static partial Regex SxeRegex();
 
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?<season>\d{1,2})\s*[Xx]\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?<season>\d{1,2})\s*[Xx]\s*(?<episode>\d{1,3})(?:\s*[-._ ]*\s*\d{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m)?\b", RegexOptions.IgnoreCase)]
     private static partial Regex XRegex();
 
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss](?<season>\d{1,2})\s*-\s*[Ee](?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss](?<season>\d{1,2})\s*-\s*[Ee](?<episode>\d{1,3})(?:\s*[-._ ]*\s*\d{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m)?\b", RegexOptions.IgnoreCase)]
     private static partial Regex SeriesPatternHyphen();
 
     [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss]ezon\s*(?<season>\d{1,2}).*?[Bb](?:o|ö)l(?:u|ü)m\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
     private static partial Regex TurkishRegex();
+
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?<season>\d{1,2})\.?\s*[Ss]ezon.*?(?<episode>\d{1,3})\.?\s*[Bb](?:o|ö)l(?:u|ü)m\b", RegexOptions.IgnoreCase)]
+    private static partial Regex TurkishAltRegex();
+
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?<episode>\d{1,3})\.?\s*[Bb](?:o|ö)l(?:u|ü)m\b", RegexOptions.IgnoreCase)]
+    private static partial Regex TurkishEpisodeOnlyRegex();
 
     [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss]eason\s*(?<season>\d{1,2}).*?[Ee]pisode\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
     private static partial Regex EnglishRegex();
@@ -189,7 +196,7 @@ public static partial class SeriesInfoParser
     [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?:[Ss]eason|[Ss]ezon|[Tt]emporada|[Ss]aison|[Ss]taffel)\s*(?<season>\d{1,2})\b", RegexOptions.IgnoreCase)]
     private static partial Regex SeasonOnlyRegex();
 
-    [GeneratedRegex(@"\b(?:[Ss]\d{1,2}\s*[Ee]\d{1,3}|\d{1,2}\s*[Xx]\s*\d{1,3}|[Ss]ezon\s*\d{1,2}\s*[Bb](?:o|ö)l(?:u|ü)m\s*\d{1,3}|[Ss]eason\s*\d{1,2}\s*[Ee]pisode\s*\d{1,3}|[Tt]emporada\s*\d{1,2}\s*(?:[Ee]pisodio|epis(?:o|ó)dio|cap(?:i|í)tulo)\s*\d{1,3}|[Ss]aison\s*\d{1,2}\s*(?:[Ee]pisode|épisode)\s*\d{1,3}|[Ss]taffel\s*\d{1,2}\s*[Ff]olge\s*\d{1,3}|[Ee]p(?:isode)?\s*\d{1,3}|[Bb](?:o|ö)l(?:u|ü)m\s*\d{1,3}|[Ff]olge\s*\d{1,3}|[Cc]ap(?:i|í)tulo\s*\d{1,3})\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(?:[Ss]\d{1,2}\s*[Ee]\d{1,3}|\d{1,2}\s*[Xx]\s*\d{1,3}|\d{1,2}\.?\s*[Ss]ezon.*?[\d]{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m|[Ss]ezon\s*\d{1,2}\s*[Bb](?:o|ö)l(?:u|ü)m\s*\d{1,3}|[Ss]eason\s*\d{1,2}\s*[Ee]pisode\s*\d{1,3}|[Tt]emporada\s*\d{1,2}\s*(?:[Ee]pisodio|epis(?:o|ó)dio|cap(?:i|í)tulo)\s*\d{1,3}|[Ss]aison\s*\d{1,2}\s*(?:[Ee]pisode|épisode)\s*\d{1,3}|[Ss]taffel\s*\d{1,2}\s*[Ff]olge\s*\d{1,3}|[Ee]p(?:isode)?\s*\d{1,3}|\d{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m|[Bb](?:o|ö)l(?:u|ü)m\s*\d{1,3}|[Ff]olge\s*\d{1,3}|[Cc]ap(?:i|í)tulo\s*\d{1,3})\b", RegexOptions.IgnoreCase)]
     private static partial Regex EpisodeTokenRegex();
 
     [GeneratedRegex(@"\b(?:4k|2160p|1080p|720p|x264|x265|h264|h265|webrip|webdl|web-dl|bluray|dub|dublaj|altyazi|subtitle)\b", RegexOptions.IgnoreCase)]

@@ -137,7 +137,8 @@ public partial class M3UParser : IM3UParser
             channel.GroupTitle = groupMatch.Groups[1].Value;
 
         // Kanal adını çıkar (son virgülden sonrası)
-        var nameMatch = ChannelNameRegex().Match(line);
+        var lineWithoutAttrs = AttributesRegex().Replace(line, "");
+        var nameMatch = ChannelNameRegex().Match(lineWithoutAttrs);
         if (nameMatch.Success)
             channel.Name = nameMatch.Groups[1].Value.Trim();
         else
@@ -245,6 +246,9 @@ public partial class M3UParser : IM3UParser
 
     [GeneratedRegex(@"group-title=""([^""]*)""", RegexOptions.IgnoreCase)]
     private static partial Regex GroupTitleRegex();
+
+    [GeneratedRegex(@"[a-zA-Z0-9_-]+=""[^""]*""", RegexOptions.IgnoreCase)]
+    private static partial Regex AttributesRegex();
 
     [GeneratedRegex(@",\s*(.+)$")]
     private static partial Regex ChannelNameRegex();

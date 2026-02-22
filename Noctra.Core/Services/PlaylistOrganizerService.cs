@@ -120,7 +120,7 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
 
         foreach (var channel in channels)
         {
-            var key = GenerateSimilarityKey(channel.Name);
+            var key = GenerateSimilarityKey(channel);
 
             if (string.IsNullOrEmpty(key))
             {
@@ -230,9 +230,15 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
     /// Kanal adından benzerlik anahtarı üretir
     /// "TRT 1 HD FHD 1080p" → "trt1"
     /// </summary>
-    private static string GenerateSimilarityKey(string name)
+    private static string GenerateSimilarityKey(Channel channel)
     {
-        return SeriesInfoParser.NormalizeKey(name);
+        var key = SeriesInfoParser.NormalizeKey(channel.Name);
+        if (channel.Type == ChannelType.Series)
+        {
+            var parsed = SeriesInfoParser.Parse(channel.Name);
+            key += $" s{parsed.Season:00}e{parsed.Episode:00}";
+        }
+        return key;
     }
 
     /// <summary>

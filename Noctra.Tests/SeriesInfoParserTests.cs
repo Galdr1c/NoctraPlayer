@@ -10,7 +10,9 @@ public class SeriesInfoParserTests
     [InlineData("Dark S03 - E08", "Dark", 3, 8)]
     [InlineData("Kurtlar Vadisi Sezon 1 Bölüm 45", "Kurtlar Vadisi", 1, 45)]
     [InlineData("Game of Thrones Season 8 Episode 6", "Game of Thrones", 8, 6)]
-    [InlineData("La Casa de Papel Temporada 2 Episodio 4", "La Casa de Papel", 2, 4)]
+    [InlineData("Alice in Borderland (2020) - S01E02 - 2. Bölüm", "Alice in Borderland (2020)", 1, 2)]
+    [InlineData("Alice in Borderland (2020) S01E01 - 1. Bölüm", "Alice in Borderland (2020)", 1, 1)]
+    [InlineData("TR | La Casa de Papel S02E05", "La Casa de Papel", 2, 5)]
     [InlineData("Lupin Saison 1 Episode 3", "Lupin", 1, 3)]
     [InlineData("Tatort Staffel 3 Folge 115", "Tatort", 3, 115)]
     public void Parse_StandardPatterns_ReturnsCorrectInfo(string title, string expectedName, int expectedSeason, int expectedEpisode)
@@ -76,7 +78,7 @@ public class SeriesInfoParserTests
     [Theory]
     [InlineData("Breaking Bad", "breaking bad")]
     [InlineData("The Witcher S01E01", "the witcher")]
-    [InlineData("TR | Kanal D | Arka Sokaklar (2020)", "arka sokaklar")]
+    [InlineData("TR | Kanal D | Arka Sokaklar (2020)", "arka sokaklar 2020")]
     public void NormalizeKey_InternalConsistency(string title, string expectedKey)
     {
         var result = SeriesInfoParser.NormalizeKey(title);
@@ -110,5 +112,23 @@ public class SeriesInfoParserTests
         Assert.Equal(string.Empty, SeriesInfoParser.NormalizeKey(null));
         Assert.Equal(string.Empty, SeriesInfoParser.NormalizeKey(""));
         Assert.Equal(string.Empty, SeriesInfoParser.NormalizeKey("   "));
+    }
+
+    [Fact]
+    public void TestBase64CommaInNameRegex()
+    {
+        var line = "#EXTINF:-1 tvg-logo=\"data:image/jpeg;base64,/9j/4AAQSk...\",Alice in Borderland S01E01";
+        var regex = new System.Text.RegularExpressions.Regex(@",\s*(.+)$");
+        var match = regex.Match(line);
+        var expectedFaultyName = "image/jpeg;base64,/9j/4AAQSk...\",Alice in Borderland S01E01";
+
+        var attributesRegex = new System.Text.RegularExpressions.Regex(@"[a-zA-Z0-9_-]+=""[^""]*""");
+        var lineWithoutAttrs = attributesRegex.Replace(line, "");
+        var match2 = regex.Match(lineWithoutAttrs);
+        
+        System.Diagnostics.Debug.WriteLine("\n[FAULTY REGEX] " + match.Groups[1].Value);
+        System.Diagnostics.Debug.WriteLine("\n[FIXED REGEX WITH ATTRS REMOVED] " + match2.Groups[1].Value);
+        
+        Assert.Fail($"Old: {match.Groups[1].Value} | New: {match2.Groups[1].Value}");
     }
 }
