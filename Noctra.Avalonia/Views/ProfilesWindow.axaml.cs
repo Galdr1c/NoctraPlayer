@@ -174,7 +174,7 @@ public partial class ProfilesWindow : Window
             // Wait for profile to load in background with a minimum duration
             _mainWindow.DataContext = _mainViewModel;
             
-            var minDelayTask = Task.Delay(4500); // 4.5 seconds minimum for premium feel
+            var minDelayTask = Task.Delay(8000); // 4.5 seconds minimum for premium feel
             var loadTask = _mainViewModel.LoadProfileAsync(reloadedProfile);
             
             await Task.WhenAll(minDelayTask, loadTask);
@@ -205,7 +205,7 @@ public partial class ProfilesWindow : Window
                 loadingVm.StatusMessage = $"Hata: {ex.Message}";
                 
                 // Show the error in red for a bit before returning
-                await Task.Delay(3000);
+                await Task.Delay(8000);
             }
             
             loadingWindow?.Close();

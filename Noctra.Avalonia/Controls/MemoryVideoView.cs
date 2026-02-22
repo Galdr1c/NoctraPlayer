@@ -248,22 +248,33 @@ public class MemoryVideoView : NativeControlHost
         _isRootActive = true;
         if (_debounceTimer == null || !_debounceTimer.IsEnabled)
         {
-             if (_overlayWindow != null && this.IsEffectivelyVisible)
-             {
-                 _overlayWindow.Topmost = true;
-                 _overlayWindow.Show();
-             }
+            if (_overlayWindow != null && this.IsEffectivelyVisible)
+            {
+                _overlayWindow.Topmost = true;
+                _overlayWindow.Show();
+            }
         }
     }
 
     private void Root_Deactivated(object? sender, EventArgs e)
     {
         _isRootActive = false;
-        if (_overlayWindow != null)
+
+        // Biraz bekle: belki focus overlay'e geçiyordur
+        DispatcherTimer.RunOnce(() =>
         {
-            _overlayWindow.Topmost = false; 
-        }
+            // Root veya overlay aktifse gizleme
+            if (_isRootActive || _overlayWindow?.IsActive == true)
+                return;
+
+            if (_overlayWindow != null)
+            {
+                _overlayWindow.Topmost = false;
+                _overlayWindow.Hide();
+            }
+        }, TimeSpan.FromMilliseconds(150));
     }
+
 
     private void Root_PositionChanged(object? sender, PixelPointEventArgs e)
     {
@@ -298,7 +309,8 @@ public class MemoryVideoView : NativeControlHost
 
     private void UpdateOverlayState(bool visible)
     {
-        if (visible)
+        var shouldShow = visible && _isRootActive; 
+        if (shouldShow)
         {
             if (_overlayWindow == null)
             {
@@ -333,6 +345,24 @@ public class MemoryVideoView : NativeControlHost
             Topmost = true, 
             Focusable = false, 
             Content = OverlayContent
+        };
+
+        // ↓ EKLE — overlay aktif olduğunda root'u da aktif say
+        _overlayWindow.Activated += (_, _) =>
+        {
+            _isRootActive = true;
+        };
+
+        // ↓ EKLE — overlay focus kaybedince ve root da aktif değilse gizle
+        _overlayWindow.Deactivated += (_, _) =>
+        {
+            DispatcherTimer.RunOnce(() =>
+            {
+                if (!_isRootActive && _overlayWindow?.IsActive != true)
+                {
+                    _overlayWindow?.Hide();
+                }
+            }, TimeSpan.FromMilliseconds(150));
         };
 
         _overlayWindow.Show(_rootWindow);

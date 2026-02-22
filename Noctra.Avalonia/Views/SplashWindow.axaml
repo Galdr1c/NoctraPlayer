@@ -49,14 +49,6 @@
                                Opacity="0.8"/>
                 </StackPanel>
 
-                <!-- Bottom Section: Branding -->
-                <Border Grid.Row="2" Background="{DynamicResource Bg1Brush}" CornerRadius="0,0,12,12" Padding="15">
-                    <TextBlock Text="Geleceğin Televizyon Deneyimi" 
-                               HorizontalAlignment="Center"
-                               Foreground="{DynamicResource TextMutedBrush}" 
-                               FontSize="13" 
-                               FontWeight="Medium"/>
-                </Border>
             </Grid>
         </Border>
     </Panel>
