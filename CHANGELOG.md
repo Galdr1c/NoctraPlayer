@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Profil Ekleme/Düzenleme M3U Arayüz Sadeleştirmesi** (2026-02-22 16:20):
+  - M3U Playlist seçiliyken yalnızca **M3U Link** textbox'ı görünür. Kullanıcı adı/şifre alanları ve "Bağlantıyı Analiz Et" butonu gizlenir.
+  - Xtream Codes veya Stalker Portal'a geçildiğinde tüm alanlar otomatik geri gelir; doğrulama mantığı etkilenmez.
+  - **Dosya**: `AddProfileWindow.axaml`
 - **EPG Veri Kaybı ve Yenileme Düzeltmeleri** (2026-02-22 16:10):
   - **KRİTİK: EPG Veri Silme Hatası Giderildi**: `LoadEpgAsync` içinde her `isPrimary=true` kaynak için tüm EPG verisini silen gereksiz `ClearEpgAsync()` çağrısı kaldırıldı. Bu bug nedeniyle sırayla yüklenen EPG kaynakları (Provider → iptv-epg.org) birbirinin verilerini siliyordu ve kanallarda "Program bilgisi yok" gösteriliyordu. Temizleme artık sadece `MainViewModel.ClearBeforeLoad` flag'iyle ilk kaynak için bir kez yapılıyor.
   - **EPG Ghost Error Düzeltmesi**: Settings penceresi üzerinden EPG yenilenirken, arka plandaki polling loop'u eski hata bilgisini DB'den okuyarak sahte hata mesajı gösteriyordu. `RefreshEpgNowAsync` artık DB'deki `EpgLastError` alanlarını yenileme başlamadan **önce** temizliyor.
