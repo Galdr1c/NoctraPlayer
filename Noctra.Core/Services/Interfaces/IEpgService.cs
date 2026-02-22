@@ -13,7 +13,8 @@ public interface IEpgService
     /// <param name="epgUrl">EPG XML URL</param>
     /// <param name="isPrimary">Ana EPG mi? (Evet ise veritabanını temizler)</param>
     /// <param name="channelsForMapping">Yedek EPG için isim eşleşmesi yapılacak kanallar</param>
-    Task LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1);
+    /// <returns>Yüklenen ve eslesen program sayisi</returns>
+    Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1);
 
     /// <summary>
     /// EPG veritabanını temizler
@@ -58,6 +59,11 @@ public interface IEpgService
     /// Son hata mesajı
     /// </summary>
     string? LastError { get; }
+
+    /// <summary>
+    /// Kaydedilmiş son EPG hatasını temizler
+    /// </summary>
+    void ClearLastError();
 
     /// <summary>
     /// Toplam EPG program sayısını getirir (İstatistik için)

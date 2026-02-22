@@ -166,6 +166,11 @@ public static class UserFriendlyErrorMessage
             return "Ag hatasi olustu. Baglantinizi kontrol edip tekrar deneyin.";
         }
 
+        if (ContainsAny(normalized, "0 program", "0 programs", "program bulunamadi"))
+        {
+            return "EPG kaynaginda kanallarinizla eslesen program bulunamadi.";
+        }
+
         return defaultMessage;
     }
 

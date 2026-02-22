@@ -30,18 +30,24 @@ public class EpgService : IEpgService
         _logger = logger;
     }
 
-    public async Task LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1)
+    public void ClearLastError()
+    {
+        LastError = null;
+    }
+
+    public async Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1)
     {
         if (!await _loadSemaphore.WaitAsync(0).ConfigureAwait(false))
         {
             _logger?.LogWarning("Another EPG load is in progress, skipping new request.");
-            return;
+            return 0;
         }
 
+        int totalLoaded = 0;
         try
         {
             LastError = null; // Clear previous error
-            if (string.IsNullOrEmpty(epgUrl)) return;
+            if (string.IsNullOrEmpty(epgUrl)) return 0;
 
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
             using var response = await NetworkRetry.ExecuteAsync(
@@ -66,65 +72,48 @@ public class EpgService : IEpgService
             };
             using var reader = System.Xml.XmlReader.Create(dataStream, settings);
 
-            if (isPrimary)
-            {
-                // Clear existing programs only if primary
-                await ClearEpgAsync().ConfigureAwait(false);
-            }
+            // NOTE: Clearing is handled by MainViewModel via ClearBeforeLoad flag.
+            // Do NOT clear here — multiple sources may be loaded sequentially,
+            // and clearing on every isPrimary source would wipe previously loaded data.
 
-            // Build mapping dictionary for secondary EPG (Name -> TvggId)
+            // Build mapping dictionary for EPG (Name -> channel Id)
             var channelMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var xmlChannelIdToDbTvgId = new Dictionary<string, string>();
             var tvgIdToInternalId = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var allowedPrimaryIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            if (isPrimary && channelsForMapping != null)
+            if (channelsForMapping != null)
             {
                 foreach (var channel in channelsForMapping)
                 {
                     if (!string.IsNullOrWhiteSpace(channel.TvgId))
                     {
                         allowedPrimaryIds.Add(channel.TvgId!);
+                        if (!tvgIdToInternalId.ContainsKey(channel.TvgId!))
+                            tvgIdToInternalId[channel.TvgId!] = channel.Id.ToString();
                     }
 
                     // Some providers use internal numeric IDs; keep this fallback.
                     allowedPrimaryIds.Add(channel.Id.ToString());
-                }
-            }
 
-            if (!isPrimary && channelsForMapping != null)
-            {
-                foreach (var channel in channelsForMapping)
-                {
-                    if (!string.IsNullOrWhiteSpace(channel.TvgId) && !tvgIdToInternalId.ContainsKey(channel.TvgId!))
+                    // Build name map for fuzzy matching (used by both primary and secondary)
+                    foreach (var variant in GetNameVariants(channel.Name))
                     {
-                        tvgIdToInternalId[channel.TvgId!] = channel.Id.ToString();
+                        if (!string.IsNullOrEmpty(variant) && !channelMap.ContainsKey(variant))
+                            channelMap[variant] = channel.Id.ToString();
                     }
-
-                    if (!string.IsNullOrEmpty(channel.Name))
-                    {
-                        foreach (var variant in GetNameVariants(channel.Name))
-                        {
-                            if (!string.IsNullOrEmpty(variant) && !channelMap.ContainsKey(variant))
-                            {
-                                channelMap[variant] = channel.Id.ToString();
-                            }
-                        }
-                    }
-
-                    // Also index tvg-name when available (often closer to XMLTV display-name)
                     if (!string.IsNullOrEmpty(channel.TvgName))
                     {
                         foreach (var variant in GetNameVariants(channel.TvgName))
                         {
                             if (!string.IsNullOrEmpty(variant) && !channelMap.ContainsKey(variant))
-                            {
                                 channelMap[variant] = channel.Id.ToString();
-                            }
                         }
                     }
                 }
             }
+
+            // (Name map built above for both primary and secondary)
 
             var programs = new List<EpgProgram>();
             var batchSize = 2000;
@@ -141,8 +130,8 @@ public class EpgService : IEpgService
                     {
                         if (reader.Name == "channel") 
                         {
-                            // Map XML channel ID to DB TvgId for secondary EPG
-                            if (!isPrimary && channelMap.Count > 0)
+                            // Map XML channel ID to DB channel for BOTH primary and secondary EPG
+                            if (channelMap.Count > 0)
                             {
                                 var xmlId = reader.GetAttribute("id");
                                 if (xmlId != null)
@@ -151,26 +140,33 @@ public class EpgService : IEpgService
                                     if (tvgIdToInternalId.TryGetValue(xmlId, out var byTvgId))
                                     {
                                         xmlChannelIdToDbTvgId[xmlId] = byTvgId;
+                                        // For primary EPG, also mark the xmlId as allowed
+                                        if (isPrimary) allowedPrimaryIds.Add(xmlId);
                                         continue;
                                     }
 
-                                    // Read display-name
+                                    // If xmlId is already in allowedPrimaryIds (exact match), skip fuzzy
+                                    if (isPrimary && allowedPrimaryIds.Contains(xmlId))
+                                        continue;
+
+                                    // Fuzzy: Read display-name and match against channel names
                                     using var subReader = reader.ReadSubtree();
                                     while (await subReader.ReadAsync().ConfigureAwait(false))
                                     {
                                         if (subReader.NodeType == System.Xml.XmlNodeType.Element && subReader.Name == "display-name")
                                         {
                                             var displayName = await subReader.ReadElementContentAsStringAsync().ConfigureAwait(false);
-                                            string? dbTvgId = null;
+                                            string? dbChannelId = null;
                                             foreach (var variant in GetNameVariants(displayName))
                                             {
-                                                dbTvgId = ResolveMappedChannelId(variant, channelMap);
-                                                if (!string.IsNullOrEmpty(dbTvgId))
+                                                dbChannelId = ResolveMappedChannelId(variant, channelMap);
+                                                if (!string.IsNullOrEmpty(dbChannelId))
                                                     break;
                                             }
-                                            if (!string.IsNullOrEmpty(dbTvgId))
+                                            if (!string.IsNullOrEmpty(dbChannelId))
                                             {
-                                                xmlChannelIdToDbTvgId[xmlId] = dbTvgId!;
+                                                xmlChannelIdToDbTvgId[xmlId] = dbChannelId!;
+                                                if (isPrimary) allowedPrimaryIds.Add(xmlId);
                                                 break; // Found match
                                             }
                                         }
@@ -188,7 +184,12 @@ public class EpgService : IEpgService
 
                             // Determine target ChannelId
                             string targetChannelId = channel;
-                            if (isPrimary)
+                            if (xmlChannelIdToDbTvgId.TryGetValue(channel, out var mappedId))
+                            {
+                                // Use the mapped internal channel ID (works for both primary and secondary)
+                                targetChannelId = mappedId;
+                            }
+                            else if (isPrimary)
                             {
                                 // Keep only channels present in current playlist.
                                 if (allowedPrimaryIds.Count > 0 && !allowedPrimaryIds.Contains(channel))
@@ -198,15 +199,8 @@ public class EpgService : IEpgService
                             }
                             else
                             {
-                                if (xmlChannelIdToDbTvgId.TryGetValue(channel, out var mappedId))
-                                {
-                                    targetChannelId = mappedId;
-                                }
-                                else
-                                {
-                                    // No match found for this channel in our DB, skip it to save space
-                                    continue;
-                                }
+                                // Secondary: No match found for this channel in our DB, skip
+                                continue;
                             }
 
                             var startTime = ParseXmlTvDate(start);
@@ -250,6 +244,7 @@ public class EpgService : IEpgService
                             }
 
                             programs.Add(program);
+                            totalLoaded++;
 
                             if (programs.Count >= batchSize)
                             {
@@ -275,13 +270,15 @@ public class EpgService : IEpgService
 
             IsLoaded = true;
             LastUpdated = DateTime.UtcNow;
+            return totalLoaded;
         }
         catch (Exception ex)
         {
-            LastError = ex.Message; // Capture error
+            LastError = UserFriendlyErrorMessage.FromException(ex);
             _logger?.LogError(ex, "EPG load failed for URL {EpgUrl}", epgUrl);
             // Don't throw if secondary
             if (isPrimary) throw;
+            return 0;
         }
         finally
         {
@@ -294,17 +291,72 @@ public class EpgService : IEpgService
         if (string.IsNullOrWhiteSpace(name))
             yield break;
 
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // 1. Full normalized name
         var normalizedFull = NormalizeName(name);
-        if (normalizedFull.Length >= 4)
+        if (normalizedFull.Length >= 3 && seen.Add(normalizedFull))
             yield return normalizedFull;
 
-        // Common country prefixes to strip (ISO codes 2-3 chars + separator)
-        // e.g., "TR - Show TV", "DE: RTL", "UK| BBC", "TR Show TV"
+        // 2. Strip leading country code prefix: "TR - Show TV" → "Show TV"
         if (TryStripLeadingCountryCode(name, out var stripped))
         {
-            var normalizedStripped = NormalizeName(stripped);
-            if (normalizedStripped.Length >= 4)
-                yield return normalizedStripped;
+            var v = NormalizeName(stripped);
+            if (v.Length >= 3 && seen.Add(v))
+                yield return v;
+        }
+
+        // 3. Strip parenthesized suffix: "Star TV (TR)" → "Star TV"
+        var noParens = System.Text.RegularExpressions.Regex.Replace(name, @"\s*\([^)]*\)\s*$", "").Trim();
+        if (noParens != name)
+        {
+            var v = NormalizeName(noParens);
+            if (v.Length >= 3 && seen.Add(v))
+                yield return v;
+        }
+
+        // 4. Strip pipe/slash separators: "TR | Kanal D" → "Kanal D"
+        var separators = new[] { '|', '/', '\\' };
+        foreach (var sep in separators)
+        {
+            var idx = name.IndexOf(sep);
+            if (idx > 0 && idx < name.Length - 1)
+            {
+                var after = name[(idx + 1)..].Trim();
+                if (!string.IsNullOrWhiteSpace(after))
+                {
+                    var v = NormalizeName(after);
+                    if (v.Length >= 3 && seen.Add(v))
+                        yield return v;
+                }
+            }
+        }
+
+        // 5. Strip trailing dot-suffix: "KanalD.tr" → "KanalD"
+        var dotIdx = name.LastIndexOf('.');
+        if (dotIdx > 0)
+        {
+            var suffix = name[(dotIdx + 1)..];
+            if (suffix.Length <= 3 && suffix.All(char.IsLetter))
+            {
+                var v = NormalizeName(name[..dotIdx]);
+                if (v.Length >= 3 && seen.Add(v))
+                    yield return v;
+            }
+        }
+
+        // 6. Strip trailing country names
+        var trailingCountries = new[] { "turkey", "turkiye", "türkiye", "tr", "de", "uk", "us", "fr", "it", "es", "nl", "ru" };
+        var lowerName = name.Trim().ToLowerInvariant();
+        foreach (var country in trailingCountries)
+        {
+            if (lowerName.EndsWith(" " + country, StringComparison.Ordinal))
+            {
+                var trimmed = name.Trim()[..^(country.Length + 1)].Trim();
+                var v = NormalizeName(trimmed);
+                if (v.Length >= 3 && seen.Add(v))
+                    yield return v;
+            }
         }
     }
 
@@ -370,7 +422,9 @@ public class EpgService : IEpgService
         var noise = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "hd", "fhd", "uhd", "sd", "hevc", "h265", "h264", "4k",
-            "1080p", "720p", "480p", "2160p", "live", "vip"
+            "1080p", "720p", "480p", "2160p", "live", "vip",
+            "backup", "bkp", "multi", "sub", "ace", "plus",
+            "turkey", "turkiye", "tr", "s"
         };
 
         var tokens = new string(chars.ToArray())
@@ -381,7 +435,7 @@ public class EpgService : IEpgService
     }
     private static string? ResolveMappedChannelId(string normalizedDisplayName, Dictionary<string, string> channelMap)
     {
-        if (string.IsNullOrWhiteSpace(normalizedDisplayName) || normalizedDisplayName.Length < 4)
+        if (string.IsNullOrWhiteSpace(normalizedDisplayName) || normalizedDisplayName.Length < 3)
             return null;
 
         if (channelMap.TryGetValue(normalizedDisplayName, out var exact))
@@ -389,13 +443,16 @@ public class EpgService : IEpgService
             return exact;
         }
 
-        const double threshold = 0.78;
+        // Dynamic threshold: shorter names need less strict matching
+        var maxLen = Math.Max(normalizedDisplayName.Length, 3);
+        var threshold = maxLen <= 6 ? 0.65 : maxLen <= 10 ? 0.72 : 0.78;
+
         string? bestId = null;
         double bestScore = 0;
 
         foreach (var kvp in channelMap)
         {
-            if (kvp.Key.Length < 4)
+            if (kvp.Key.Length < 3)
                 continue;
             var score = Similarity(normalizedDisplayName, kvp.Key);
             if (score > bestScore)

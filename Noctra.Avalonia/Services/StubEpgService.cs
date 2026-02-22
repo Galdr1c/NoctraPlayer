@@ -9,10 +9,11 @@ public sealed class StubEpgService : IEpgService
     public DateTime? LastUpdated => null;
     public string? LastError => null;
 
-    public Task LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1)
-        => Task.CompletedTask;
+    public Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1)
+        => Task.FromResult(0);
 
     public Task ClearEpgAsync() => Task.CompletedTask;
+    public void ClearLastError() { }
 
     public Task<EpgProgram?> GetCurrentProgramAsync(Channel channel)
         => Task.FromResult<EpgProgram?>(null);

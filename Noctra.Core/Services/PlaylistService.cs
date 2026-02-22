@@ -178,14 +178,12 @@ public class PlaylistService : IPlaylistService
                             }
 
                             System.Diagnostics.Debug.WriteLine($"[AutoEPG] Loading from {source.Url}");
-                            var beforeCount = await _epgService.GetTotalProgramCountAsync();
-                            await _epgService.LoadEpgAsync(source.Url, source.IsPrimary, channelSnapshot);
-                            var afterCount = await _epgService.GetTotalProgramCountAsync();
-                            if (afterCount > beforeCount)
+                            var loadedPrograms = await _epgService.LoadEpgAsync(source.Url, source.IsPrimary, channelSnapshot);
+                            if (loadedPrograms > 0)
                             {
                                 usedEpgUrl = source.Url;
                                 autoEpgError = null;
-                                System.Diagnostics.Debug.WriteLine($"[PlaylistService] EPG loaded from {source.Type} (+{afterCount - beforeCount})");
+                                System.Diagnostics.Debug.WriteLine($"[PlaylistService] EPG loaded from {source.Type} (+{loadedPrograms})");
                                 break;
                             }
 
@@ -231,7 +229,7 @@ public class PlaylistService : IPlaylistService
                         var playlistToUpdate = await db.Playlists.FirstOrDefaultAsync(p => p.Id == playlistId);
                         if (playlistToUpdate != null)
                         {
-                            playlistToUpdate.EpgLastError = $"AutoEPG: {ex.Message}";
+                            playlistToUpdate.EpgLastError = UserFriendlyErrorMessage.FromException(ex);
                             await db.SaveChangesAsync();
                         }
                     }

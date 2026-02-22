@@ -1900,6 +1900,7 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
+            _epgService.ClearLastError();
             if (!isBackgroundSync && setBusyState)
             {
                 IsLoading = true;
@@ -1907,6 +1908,18 @@ public partial class MainViewModel : ObservableObject
             }
 
             using var db = await _contextFactory.CreateDbContextAsync();
+
+            // Clear old errors from the database before starting the long-running download
+            if (SelectedPlaylist != null)
+            {
+                var playlistToUpdate = await db.Playlists.FirstOrDefaultAsync(p => p.Id == SelectedPlaylist.Id);
+                if (playlistToUpdate != null && !string.IsNullOrWhiteSpace(playlistToUpdate.EpgLastError))
+                {
+                    playlistToUpdate.EpgLastError = null;
+                    await db.SaveChangesAsync();
+                    SelectedPlaylist.EpgLastError = null;
+                }
+            }
 
             IEnumerable<Channel> channelsForMapping = Channels;
             if (SelectedPlaylist != null)
@@ -1946,7 +1959,8 @@ public partial class MainViewModel : ObservableObject
             {
                 var baseUrl = CurrentProfile.ProviderAccount.Url.TrimEnd('/');
                 if (!baseUrl.StartsWith("http")) baseUrl = "http://" + baseUrl;
-                providerEpgUrl = $"{baseUrl}/xmltv.php?username={Uri.EscapeDataString(CurrentProfile.ProviderAccount.Username ?? "")}&password={Uri.EscapeDataString(CurrentProfile.ProviderAccount.Password ?? "")}";
+                var decryptedPassword = _securityService.Decrypt(CurrentProfile.ProviderAccount.Password) ?? "";
+                providerEpgUrl = $"{baseUrl}/xmltv.php?username={Uri.EscapeDataString(CurrentProfile.ProviderAccount.Username ?? "")}&password={Uri.EscapeDataString(decryptedPassword)}";
             }
 
             // 2. Çoklu ülke tespiti (Loop through top countries)
@@ -2003,10 +2017,7 @@ public partial class MainViewModel : ObservableObject
                         await _epgService.ClearEpgAsync();
                     }
 
-                    var beforeCount = await _epgService.GetTotalProgramCountAsync();
-                    await _epgService.LoadEpgAsync(source.Url, source.IsPrimary, channelsForMapping.ToList(), daysAhead: 1);
-                    var afterCount = await _epgService.GetTotalProgramCountAsync();
-                    var loadedPrograms = afterCount - beforeCount;
+                    var loadedPrograms = await _epgService.LoadEpgAsync(source.Url, source.IsPrimary, channelsForMapping.ToList(), daysAhead: 1);
 
                     if (loadedPrograms > 0)
                     {

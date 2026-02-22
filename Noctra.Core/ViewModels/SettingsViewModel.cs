@@ -558,11 +558,11 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private Task RefreshEpgNowAsync()
+    private async Task RefreshEpgNowAsync()
     {
         if (!TryBeginRefreshOperation("EPG yenileme baslatiliyor"))
         {
-            return Task.CompletedTask;
+            return;
         }
 
         SetProgressStatus("EPG", 8, "EPG yenileme arka planda baslatildi...");
@@ -571,14 +571,28 @@ public partial class SettingsViewModel : ObservableObject
         {
             SetProgressStatus("EPG", 8, "Baska bir yenileme islemi zaten devam ediyor...");
             EndRefreshOperation();
-            return Task.CompletedTask;
+            return;
         }
+
+        EpgLastError = null;
+        try
+        {
+            using var db = await _contextFactory.CreateDbContextAsync();
+            var pId = _mainViewModel.CurrentProfile?.Id;
+            var activePlaylists = await db.Playlists.Where(p => p.IsActive && p.ProfileId == pId).ToListAsync();
+            foreach (var p in activePlaylists)
+            {
+                p.EpgLastError = null;
+            }
+            await db.SaveChangesAsync();
+        }
+        catch { }
 
         _epgRefreshWatchCts?.Cancel();
         _epgRefreshWatchCts?.Dispose();
         _epgRefreshWatchCts = new CancellationTokenSource();
+
         _ = WatchEpgRefreshOutcomeAsync(_epgRefreshWatchCts.Token);
-        return Task.CompletedTask;
     }
 
     private async Task WatchEpgRefreshOutcomeAsync(CancellationToken cancellationToken)
@@ -603,10 +617,12 @@ public partial class SettingsViewModel : ObservableObject
 
                     if (!string.IsNullOrWhiteSpace(EpgLastError))
                     {
+                        // EpgLastError zaten ScanEpgStatsCoreAsync tarafından
+                        // UserFriendlyErrorMessage.FromText ile dönüştürülmüş durumda
                         SetProgressStatus(
                             "EPG",
                             RefreshProgressPercent,
-                            $"EPG yenileme hatasi: {UserFriendlyErrorMessage.FromText(EpgLastError)}");
+                            $"EPG yenileme hatasi: {EpgLastError}");
                         return;
                     }
 
@@ -658,6 +674,12 @@ public partial class SettingsViewModel : ObservableObject
         var normalized = Math.Clamp(percent, 0, 100);
         RefreshProgressPercent = normalized;
         StatusMessage = $"[{scope}] {message} (%{normalized})";
+        
+        // Settings penceresi kapatılsa bile ana pencerenin sol altındaki bar güncellenmeye devam etsin
+        if (scope == "EPG" || scope == "Kanal")
+        {
+            _mainViewModel.StatusMessage = StatusMessage;
+        }
     }
 
     private static string NormalizeDownloadPath(string? rawPath)

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **EPG Veri Kaybı ve Yenileme Düzeltmeleri** (2026-02-22 16:10):
+  - **KRİTİK: EPG Veri Silme Hatası Giderildi**: `LoadEpgAsync` içinde her `isPrimary=true` kaynak için tüm EPG verisini silen gereksiz `ClearEpgAsync()` çağrısı kaldırıldı. Bu bug nedeniyle sırayla yüklenen EPG kaynakları (Provider → iptv-epg.org) birbirinin verilerini siliyordu ve kanallarda "Program bilgisi yok" gösteriliyordu. Temizleme artık sadece `MainViewModel.ClearBeforeLoad` flag'iyle ilk kaynak için bir kez yapılıyor.
+  - **EPG Ghost Error Düzeltmesi**: Settings penceresi üzerinden EPG yenilenirken, arka plandaki polling loop'u eski hata bilgisini DB'den okuyarak sahte hata mesajı gösteriyordu. `RefreshEpgNowAsync` artık DB'deki `EpgLastError` alanlarını yenileme başlamadan **önce** temizliyor.
+  - **Settings → MainWindow İlerleme Köprüsü**: Settings penceresi kapatıldıktan sonra ana pencerenin sol alt durum çubuğu EPG yenileme yüzdesini göstermiyordu. `SetProgressStatus` artık `MainViewModel.StatusMessage`'ı da güncelliyor — ayarlar kapatılsa bile ilerleme görünür.
+  - **`EpgService.ClearLastError()` Eklendi**: Singleton `LastError` property'sini temizlemek için yeni metot, eski ghost error'ların UI'da takılmasını önlüyor.
+  - **Dosyalar**: `EpgService.cs`, `IEpgService.cs`, `MainViewModel.cs`, `SettingsViewModel.cs`, `StubEpgService.cs`
+- **EPG Eşleştirme Sistemi Kapsamlı İyileştirmesi** (2026-02-22 14:45):
+  - **Genişletilmiş İsim Varyantları**: `GetNameVariants` artık her kanal adından 6+ farklı eşleştirme varyantı üretiyor: parantez temizleme (`Star TV (TR)` → `Star TV`), pipe/slash ayırıcı (`TR | Kanal D` → `Kanal D`), dot-suffix (`KanalD.tr` → `KanalD`), trailing ülke adı (`beIN Sports 1 Turkey` → `beIN Sports 1`).
+  - **Primary EPG İçin Fuzzy Fallback**: Daha önce sadece secondary EPG'de yapılan display-name bazlı bulanık eşleştirme artık primary EPG'de de aktif. TvgId eşleşmeyen kanallara display-name ile eşleşme şansı tanınıyor.
+  - **Genişletilmiş Gürültü Filtresi**: Normalizasyon sırasında `backup`, `bkp`, `multi`, `sub`, `ace`, `plus`, `turkey`, `turkiye` gibi ekstra gürültü kelimeleri de temizleniyor.
+  - **Dinamik Benzerlik Eşiği**: Kısa kanal adları (≤6 karakter) için threshold 0.65'e, orta uzunluk (≤10 karakter) için 0.72'ye, uzun isimler için 0.78'e ayarlandı. Bu sayede `TRT1` / `TRT 1` gibi kısa isimler de doğru eşleşiyor.
+  - **Dosya**: `EpgService.cs`
 - **Hata Mesajı Standardizasyonu ve Merkezi Kanal Listesi Hata Takibi** (2026-02-22 14:43):
   - **Merkezi Hata Takibi**: Kanal listesi yenileme hataları artık `MainViewModel.ChannelListLastError` property'si üzerinden merkezi olarak takip ediliyor. Ayarlar penceresindeki kırmızı hata kutusu, yenilemenin nereden tetiklendiğinden bağımsız olarak (Ana pencere, sidebar, arka plan yenileme) her zaman doğru çalışıyor.
   - **Tutarlı Hata Mesajları**: Profil ekleme ekranındaki bağlantı testi ve kanal listesi yenileme hataları artık aynı `UserFriendlyErrorMessage` sistemini kullanıyor.
