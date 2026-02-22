@@ -47,6 +47,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private readonly IMetadataService _metadataService;
     private readonly IContentDownloadService _contentDownloadService;
     private readonly INetworkService _networkService;
+    private readonly ISettingsService _settingsService;
     private int _playRequestVersion;
 
     [ObservableProperty]
@@ -265,6 +266,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         IContentDownloadService contentDownloadService,
         INetworkService networkService,
         IDispatcherService dispatcherService,
+        ISettingsService settingsService,
         IWatchHistoryService? watchHistoryService = null)
     {
         _videoPlayerService = videoPlayerService;
@@ -273,11 +275,15 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _contentDownloadService = contentDownloadService;
         _networkService = networkService;
         _dispatcherService = dispatcherService;
+        _settingsService = settingsService;
         _watchHistoryService = watchHistoryService;
 
         // Initialize Network Status
+
         UpdateNetworkStatus(_networkService.CurrentNetworkStatus);
         _networkService.NetworkStatusChanged += OnNetworkStatusChanged;
+
+        _settingsService.SettingsChanged += OnSettingsChanged;
 
         // Auto-hide timer
         _autoHideTimer = new System.Timers.Timer(OverlayAutoHideDelayMs);
@@ -329,7 +335,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                     }
                     UpdateMediaInfo();
                     _ = RefreshTracksWithRetryAsync();
-                    RestartAutoHideTimer(); // Ensure controls stay visible for a few seconds after playback starts
+                    RestartAutoHideTimer();
                 }
             });
         };
@@ -536,6 +542,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         // Force previous media to stop so stale position events do not leak into the next item.
         _videoPlayerService.Stop();
+
+        // Reset volume to global default for the new playback session
+        Volume = _settingsService.Settings.DefaultVolume;
 
         CurrentChannel = channel;
         CurrentProgram = GetFallbackProgram();
@@ -993,21 +1002,24 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         UpdateDurationFromService(force: true);
         TryApplyPendingResumeSeek();
 
-        AudioTracks = _videoPlayerService.AudioTracks
+        var audioTracks = _videoPlayerService.AudioTracks
             .Where(t => t.Id >= 0 && !IsDisabledTrackLabel(t.Name))
             .Select(t => new TrackOption(t.Id, NormalizeTrackName(t.Name, $"Ses {t.Id}")))
             .ToList();
 
-        SubtitleTracks = _videoPlayerService.SubtitleTracks
+        var subtitleTracks = _videoPlayerService.SubtitleTracks
             .Select(t => IsDisabledTrackLabel(t.Name)
                 ? new TrackOption(t.Id, "Kapalı")
                 : new TrackOption(t.Id, NormalizeTrackName(t.Name, $"Altyazı {t.Id}")))
             .ToList();
 
-        if (!SubtitleTracks.Any(t => string.Equals(t.Name, "Kapalı", StringComparison.OrdinalIgnoreCase)))
+        if (!subtitleTracks.Any(t => string.Equals(t.Name, "Kapalı", StringComparison.OrdinalIgnoreCase)))
         {
-            SubtitleTracks.Add(new TrackOption(-1, "Kapalı"));
+            subtitleTracks.Add(new TrackOption(-1, "Kapalı"));
         }
+
+        AudioTracks = audioTracks;
+        SubtitleTracks = subtitleTracks;
     }
 
     private void UpdateDurationFromService(bool force = false)
@@ -1067,6 +1079,13 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         name = Regex.Replace(
             name,
             @"(#\w+|\[NCTRA\]|\[.*?SEED\]|\[.*?RIP\]|\[.*?WEB\]|\[.*?HD\]|\[.*?TV\])",
+            string.Empty,
+            RegexOptions.IgnoreCase);
+
+        // Remove URLs and domain names (e.g. Filmbol.org, example.com)
+        name = Regex.Replace(
+            name,
+            @"https?://\S+|www\.\S+|\b[\w-]+\.(org|com|net|info|tv|io|cc|me|co|xyz)\b",
             string.Empty,
             RegexOptions.IgnoreCase);
 
@@ -1132,7 +1151,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private async Task RefreshTracksWithRetryAsync()
     {
         // Some streams expose track metadata shortly after playback starts.
-        var delays = new[] { 250, 800, 1600 };
+        var delays = new[] { 250, 800, 1600, 3000 };
         foreach (var delay in delays)
         {
             await Task.Delay(delay);
@@ -1143,7 +1162,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
             _dispatcherService.Invoke(UpdateMediaInfo);
 
-            if (AudioTracks.Count > 0 || SubtitleTracks.Count > 0)
+            // Wait until BOTH audio and at least one real subtitle track are found
+            // Or if we already hit the 1600ms delay, we proceed anyway
+            if (AudioTracks.Any(t => t.Id >= 0) && (SubtitleTracks.Any(t => t.Id >= 0) || delay >= 1600))
             {
                 return;
             }
@@ -2491,11 +2512,21 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         };
     }
 
+
+    private void OnSettingsChanged()
+    {
+        // Settings synced directly via VideoPlayerService or components now
+    }
+
     public void Dispose()
     {
         _autoHideTimer?.Dispose();
         _clockTimer?.Dispose();
         _watchHistoryTimer?.Dispose();
+        if (_settingsService != null)
+        {
+            _settingsService.SettingsChanged -= OnSettingsChanged;
+        }
         if (_networkService != null)
         {
             _networkService.NetworkStatusChanged -= OnNetworkStatusChanged;

@@ -57,23 +57,6 @@ public class AppSettings
     /// </summary>
     public bool AutoSelectLastProfile { get; set; } = true;
     
-    // ============ Altyazı Ayarları ============
-    
-    /// <summary>
-    /// Varsayılan altyazı dili (tr, en, none)
-    /// </summary>
-    public string SubtitleLanguage { get; set; } = "tr";
-    
-    /// <summary>
-    /// Altyazı yazı boyutu (12-32)
-    /// </summary>
-    public int SubtitleFontSize { get; set; } = 20;
-    
-    /// <summary>
-    /// Altyazı arka plan opaklığı (0-100)
-    /// </summary>
-    public int SubtitleBackgroundOpacity { get; set; } = 50;
-    
     // ============ İndirme Ayarları ============
     
     /// <summary>

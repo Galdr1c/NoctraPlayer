@@ -38,17 +38,6 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private bool _rememberLastChannel;
     
-    // ============ Altyazı Ayarları ============
-    
-    [ObservableProperty]
-    private int _selectedSubtitleLanguage;
-    
-    [ObservableProperty]
-    private int _subtitleFontSize;
-    
-    [ObservableProperty]
-    private int _subtitleBackgroundOpacity;
-    
     // ============ İndirme Ayarları ============
     
     [ObservableProperty]
@@ -114,7 +103,6 @@ public partial class SettingsViewModel : ObservableObject
         if (_settingsService?.Settings != null && _settingsService.Settings.DefaultVolume != value)
         {
             _settingsService.Settings.DefaultVolume = value;
-            // We can save immediately for volume to ensure the player hears it via SettingsChanged
             _ = _settingsService.SaveAsync();
         }
     }
@@ -296,16 +284,6 @@ public partial class SettingsViewModel : ObservableObject
         DefaultVolume = s.DefaultVolume;
         RememberLastChannel = s.RememberLastChannel;
         
-        // Subtitles
-        SelectedSubtitleLanguage = s.SubtitleLanguage switch
-        {
-            "tr" => 0,
-            "en" => 1,
-            _ => 2  // none
-        };
-        SubtitleFontSize = s.SubtitleFontSize;
-        SubtitleBackgroundOpacity = s.SubtitleBackgroundOpacity;
-        
         // Downloads
         SelectedDownloadQuality = (int)s.DownloadQuality;
         DownloadWifiOnly = s.DownloadWifiOnly;
@@ -354,16 +332,6 @@ public partial class SettingsViewModel : ObservableObject
         s.DataUsage = (DataUsageLevel)SelectedDataUsage;
         s.DefaultVolume = DefaultVolume;
         s.RememberLastChannel = RememberLastChannel;
-        
-        // Subtitles
-        s.SubtitleLanguage = SelectedSubtitleLanguage switch
-        {
-            0 => "tr",
-            1 => "en",
-            _ => "none"
-        };
-        s.SubtitleFontSize = SubtitleFontSize;
-        s.SubtitleBackgroundOpacity = SubtitleBackgroundOpacity;
         
         // Downloads
         s.DownloadQuality = (DownloadQuality)SelectedDownloadQuality;

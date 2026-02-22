@@ -392,6 +392,7 @@
 
             <!-- 5. Side Sheets (Audio/Subtitles) -->
             <Grid x:Name="AudioSettingsPanel"
+                  ZIndex="10"
                   Width="360" HorizontalAlignment="Right" VerticalAlignment="Stretch"
                   Background="{DynamicResource SurfaceBrush}"
                   IsVisible="{Binding IsAudioSettingsOpen}">
@@ -426,7 +427,7 @@
                     </Button>
                 </Grid>
 
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="32,0,32,48">
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Visible" Padding="32,0,32,48">
                     <StackPanel>
                         <!-- Audio Tracks -->
                         <TextBlock Text="SES" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,16"/>
@@ -443,7 +444,7 @@
 
                         <!-- Subtitle Tracks -->
                         <TextBlock Text="ALTYAZI" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,24,0,16"/>
-                        <ItemsControl ItemsSource="{Binding SubtitleTracks}">
+                        <ItemsControl ItemsSource="{Binding SubtitleTracks}" Margin="0,0,0,32">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Button Tag="{Binding Id}" Click="SubtitleTrack_Click"

@@ -40,6 +40,7 @@ public class VideoPlayerService : IVideoPlayerService
     public string? CurrentUrl { get; private set; }
     public StreamQualityInfo? StreamQuality { get; private set; }
 
+
     public VideoPlayerService(IDispatcherService dispatcherService, ISettingsService settingsService)
     {
         _dispatcherService = dispatcherService;
@@ -57,13 +58,11 @@ public class VideoPlayerService : IVideoPlayerService
 
     private void OnSettingsChanged()
     {
-        // When settings change (e.g. from Settings UI), sync current volume
-        // But only if we are not in the middle of a video and user wants immediate sync?
-        // User asked for "sync" between setting slider and video overlay.
-        if (_currentVolume != _settingsService.Settings.DefaultVolume)
-        {
-            Volume = _settingsService.Settings.DefaultVolume;
-        }
+        // INTENTIONAL FIX: We do NOT sync the live volume here.
+        // If we do, then any setting save (e.g. changing Subtitle FontSize) 
+        // will trigger this event and instantly reset the active playback volume 
+        // to DefaultVolume (often 100%).
+        // DefaultVolume is only applied at the beginning of playback.
     }
 
     private async Task InitializeAsync()
@@ -127,7 +126,6 @@ public class VideoPlayerService : IVideoPlayerService
         _mediaPlayer.Playing += (s, e) =>
         {
             // Aggressive Volume Enforcement Pattern:
-            // We set the volume at intervals to counteract VLC/Driver resets during startup
             var refreshDelays = new[] { 50, 200, 500, 1000, 2000 };
             foreach (var delay in refreshDelays)
             {
@@ -181,7 +179,7 @@ public class VideoPlayerService : IVideoPlayerService
         CurrentUrl = url;
         System.Diagnostics.Debug.WriteLine($"[VideoPlayerService] PlayAsync called with URL: {url}");
         
-        // Reset volume to default on every new play
+        // Reset volume to defaults on every new play
         Volume = _settingsService.Settings.DefaultVolume;
 
         if (!_isInitialized)

@@ -298,28 +298,7 @@
                                 </StackPanel>
                             </Border>
                         
-                            <Border Classes="SettingsCard">
-                                <StackPanel>
-                                    <TextBlock Text="Altyazı" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
-                                    <TextBlock Text="Varsayılan altyazı dili" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
-                                    <ComboBox Theme="{StaticResource ModernComboBox}" SelectedIndex="{Binding SelectedSubtitleLanguage}" Width="250" HorizontalAlignment="Left" Margin="0,0,0,20">
-                                        <ComboBoxItem Content="Türkçe"/>
-                                        <ComboBoxItem Content="İngilizce"/>
-                                        <ComboBoxItem Content="Yok"/>
-                                    </ComboBox>
-                                    <Grid Margin="0,0,0,12">
-                                        <TextBlock Text="Yazı Boyutu" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                        <TextBlock HorizontalAlignment="Right" Text="{Binding SubtitleFontSize, StringFormat='{}{0}px'}" Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold"/>
-                                    </Grid>
-                                    <Slider Minimum="12" Maximum="32" Value="{Binding SubtitleFontSize}" Margin="0,0,0,18"/>
-                                    <Grid Margin="0,0,0,12">
-                                        <TextBlock Text="Arka Plan Opaklığı" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                        <TextBlock HorizontalAlignment="Right" Text="{Binding SubtitleBackgroundOpacity, StringFormat='{}{0}%'}" Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold"/>
-                                    </Grid>
-                                    <Slider Minimum="0" Maximum="100" Value="{Binding SubtitleBackgroundOpacity}"/>
-                                </StackPanel>
-                            </Border>
-
+                            <!-- Subtitle Section Removed -->
                             <Border Classes="SettingsCard">
                                 <StackPanel>
                                     <TextBlock Text="İndirme" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>

@@ -62,7 +62,7 @@ public interface IVideoPlayerService : IDisposable
     /// Oynatma hızı (0.5 - 2.0)
     /// </summary>
     float PlaybackRate { get; set; }
-    
+
     /// <summary>
     /// VOD için toplam süre (saniye)
     /// </summary>

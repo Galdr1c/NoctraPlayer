@@ -5,12 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Altyazı Ayarları Komple Kaldırıldı** (2026-02-22 20:00):
+  - **Sorun:** LibVLC'nin altyazı motoru (Freetype) ayarları (font boyutu, renk vb.) çalışma zamanında (runtime) güvenilir şekilde değiştirmeyi desteklemediği ve tutarsız davranışlar sergilediği için altyazı ayarları UI ve arka plandan silindi.
+  - **Temizlik:** `SettingsWindow.axaml` içindeki tüm altyazı ayar kontrolleri, `SettingsViewModel.cs` içindeki değişkenler, `AppSettings.cs` modelleri ve `PercentToOpacityConverter` gibi artık kullanılmayan dönüştürücüler projeden tamamen temizlendi.
+  - Artık VLC, altyazıları varsayılan boyutu ve konumuyla problemsiz bir şekilde gösterecek.
+
+
 - **Gelişmiş Ses Denetimi ve Agresif Senkronizasyon** (2026-02-22 17:00):
   - **Agresif Ses Zorlama (Aggressive Force)**: Videonun ilk açılışındaki ses uyumsuzluğunu (UI'da %100 görünüp sesin az gelmesi) gidermek için; ses seviyesi video açılırken ve oynatılmaya başladıktan sonraki ilk 2 saniye boyunca kademeli aralıklarla (50ms'den 2s'ye kadar) tekrar tekrar doğrulanarak VLC/donanım kısıtlamaları aşıldı.
   - **Sabit Ayar Mantığı**: Ayarlardaki "Varsayılan Ses Seviyesi" artık oyuncu içindeki geçici değişikliklerden etkilenmez, kullanıcı değiştirene kadar sabit kalır.
   - **Otomatik Reset**: Her yeni video açılışında ses seviyesi otomatik olarak ayarlardaki varsayılan değere döner.
   - **Anlık UI Senkronizasyonu**: Ayarlar ekranındaki slider ile aktif video oynatıcı arasındaki gecikme giderildi, anlık senkronizasyon sağlandı.
   - **Hassasiyet**: Ses değişim adımları tüm arayüzde %2 olarak standartlaştırıldı.
+
 - **Profil Seçme Ekranı Modernizasyonu ve Limitler** (2026-02-22 16:35):
   - Profil seçme ekranı Netflix tarzı daha sıkı ve modern bir grid yapısına kavuşturuldu.
   - Premium kullanıcılar için profil limiti **5** olarak güncellendi.
