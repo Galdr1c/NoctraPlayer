@@ -317,6 +317,9 @@ public class ContentDownloadService : IContentDownloadService
             return;
         }
 
+        // Manuel resume — otomatik yeniden deneme sayacını sıfırla
+        _autoResumeAttempts.TryRemove(downloadId, out _);
+
         item.Status = DownloadStatus.Queued;
         item.ErrorMessage = null;
         item.UpdatedAt = DateTime.UtcNow;

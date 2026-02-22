@@ -717,6 +717,21 @@ public partial class AddProfileViewModel : ObservableObject
             
             urlToCheck = $"{baseUrl}/player_api.php?username={Uri.EscapeDataString(Username)}&password={Uri.EscapeDataString(Password)}";
         }
+        else if (IsM3U && !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Password))
+        {
+            // ↓ YENİ BLOK — get.php yerine player_api.php ile kontrol et
+            // Çoğu sağlayıcı aynı sunucuda hem get.php hem player_api.php çalıştırır
+            var uri = new Uri(urlToCheck);
+            var baseUrl = $"{uri.Scheme}://{uri.Host}";
+            if (!uri.IsDefaultPort) baseUrl += $":{uri.Port}";
+            urlToCheck = $"{baseUrl}/player_api.php?username={Uri.EscapeDataString(Username)}&password={Uri.EscapeDataString(Password)}";
+        }
+        else if (IsM3U)
+        {
+            // Username/password yok, sadece base sunucuyu kontrol et
+            var uri = new Uri(urlToCheck);
+            urlToCheck = $"{uri.Scheme}://{uri.Host}:{uri.Port}";
+        }
         else if (IsStalker)
         {
             // For Stalker, we try to hit the portal initialization endpoint
@@ -806,10 +821,9 @@ public partial class AddProfileViewModel : ObservableObject
             403 => "Yasaklı (Erişim Reddedildi)",
             404 => "Bulunamadı (URL Hatalı)",
             500 => "Sunucu Hatası",
-            502 => "Geçersiz Ağ Geçidi",
-            503 => "Hizmet Kullanılamıyor",
-            504 => "Zaman Aşımı",
-            _ => "Sunucu Yanıtı"
+            502 or 503 or 504 => "Ağ Geçidi Hatası (Sunucu erişilebilir fakat endpoint yanıt vermiyor — bağlantı çalışıyor olabilir)",
+            >= 500 => "Sunucu Hatası (Sağlayıcı kaynaklı geçici sorun olabilir)",
+            _ => $"HTTP Hatası {statusCode}"
         };
     }
 

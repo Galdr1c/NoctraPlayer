@@ -1,4 +1,4 @@
-﻿using LibVLCSharp.Shared;
+using LibVLCSharp.Shared;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
 
@@ -77,7 +77,11 @@ public class VideoPlayerService : IVideoPlayerService
             SetupEventHandlers();
             _isInitialized = true;
             
-            _dispatcherService.BeginInvoke(() => MediaPlayerReady?.Invoke(this, _mediaPlayer));
+            await _dispatcherService.InvokeAsync(() =>
+            {
+                MediaPlayerReady?.Invoke(this, _mediaPlayer);
+                return Task.CompletedTask;
+            });
         }
         catch (Exception ex)
         {

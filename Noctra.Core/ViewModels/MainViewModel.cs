@@ -52,7 +52,9 @@ public partial class MainViewModel : ObservableObject
     private readonly LanguageDetectionService _languageDetectionService;
     private readonly EpgSourceResolver _epgSourceResolver;
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
+    private readonly HttpClient _httpClient;
     private readonly DateTime _downloadCenterSessionStartUtc = DateTime.UtcNow;
+    private CancellationTokenSource? _slowLoadingWarnCts;
 
     [ObservableProperty]
     private AppView _activeView = AppView.Home;
@@ -149,6 +151,9 @@ public partial class MainViewModel : ObservableObject
     private string _statusMessage = "Hazır";
 
     [ObservableProperty]
+    private string _loadingWarningMessage = string.Empty;
+
+    [ObservableProperty]
     private string _newPlaylistName = string.Empty;
 
     [ObservableProperty]
@@ -183,6 +188,7 @@ public partial class MainViewModel : ObservableObject
         EpgSourceResolver epgSourceResolver,
         IDbContextFactory<AppDbContext> contextFactory,
         ISecurityService securityService,
+        HttpClient httpClient,
         ILogger<MainViewModel>? logger = null)
     {
         _settingsService = settingsService;
@@ -202,6 +208,7 @@ public partial class MainViewModel : ObservableObject
         _epgSourceResolver = epgSourceResolver;
         _contextFactory = contextFactory;
         _securityService = securityService;
+        _httpClient = httpClient;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
         InitializeAsync();
         _contentDownloadService.DownloadsChanged += (_, _) =>
@@ -232,6 +239,77 @@ public partial class MainViewModel : ObservableObject
     private void OnSettingsService_Changed()
     {
         ApplyRefreshSchedulesFromSettings();
+    }
+
+    private async Task StartSlowLoadingWarningAsync(CancellationToken ct)
+    {
+        try
+        {
+            await Task.Delay(8_000, ct);
+            if (ct.IsCancellationRequested) return;
+
+            LoadingWarningMessage = "⚠️ Bağlantı normalden uzun sürüyor...";
+
+            await Task.Delay(12_000, ct);
+            if (ct.IsCancellationRequested) return;
+
+            LoadingWarningMessage = "⚠️ Sunucuya erişilemiyor olabilir. Playlist adresinizi kontrol edin.";
+        }
+        catch (TaskCanceledException)
+        {
+            /* normal */
+        }
+    }
+
+    private async Task CheckPlaylistUrlHealthAsync(string url)
+    {
+        try
+        {
+            if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            using var request = new HttpRequestMessage(HttpMethod.Head, url);
+            request.Headers.TryAddWithoutValidation("User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+
+            using var response = await _httpClient.SendAsync(
+                request, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _dispatcherService.BeginInvoke(() =>
+                {
+                    StatusMessage = $"⚠️ Playlist kaynağına erişilemiyor (HTTP {(int)response.StatusCode}). " +
+                                    "URL değişmiş olabilir, profil ayarlarını kontrol edin.";
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug("[HealthCheck] Playlist URL erişim hatası: {Msg}", ex.Message);
+            _dispatcherService.BeginInvoke(() =>
+            {
+                StatusMessage = "⚠️ Playlist kaynağına ulaşılamıyor. İnternet bağlantınızı veya URL'yi kontrol edin.";
+            });
+        }
+    }
+
+    private int _activeLoadingOperations;
+
+    private void BeginLoading()
+    {
+        if (Interlocked.Increment(ref _activeLoadingOperations) == 1)
+            IsLoading = true;
+    }
+
+    private void EndLoading()
+    {
+        if (Interlocked.Decrement(ref _activeLoadingOperations) <= 0)
+        {
+            Interlocked.Exchange(ref _activeLoadingOperations, 0);
+            IsLoading = false;
+        }
     }
 
     [ObservableProperty]
@@ -271,6 +349,13 @@ public partial class MainViewModel : ObservableObject
                 _logger?.LogDebug($"[MainViewModel] Using cached playlist for profile {profile.Id}");
                 StatusMessage = "İçerikleriniz hızla yükleniyor...";
                 await LoadPlaylistsAsync();
+
+                // Arka planda URL sağlık kontrolü yap (cache varken bile)
+                var playlistUrl = existingPlaylists[0].Url;
+                if (!string.IsNullOrWhiteSpace(playlistUrl))
+                {
+                    _ = CheckPlaylistUrlHealthAsync(playlistUrl);
+                }
             }
             else
             {
@@ -591,7 +676,7 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
-            IsLoading = true;
+            BeginLoading();
             SetItems(Playlists, await _playlistService.GetAllAsync(CurrentProfileId));
             
             if (Playlists.Count > 0 && SelectedPlaylist == null)
@@ -606,7 +691,7 @@ public partial class MainViewModel : ObservableObject
         }
         finally
         {
-            IsLoading = false;
+            EndLoading();
         }
     }
 
@@ -622,7 +707,7 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
-            IsLoading = true;
+            BeginLoading();
             StatusMessage = "Kanal ve kategori düzeni optimize ediliyor...";
             
             // Aynı DbContext paralel işlemleri desteklemez.
@@ -652,7 +737,7 @@ public partial class MainViewModel : ObservableObject
         }
         finally
         {
-            IsLoading = false;
+            EndLoading();
         }
     }
 
@@ -1125,6 +1210,24 @@ public partial class MainViewModel : ObservableObject
         ScheduleImmediateFilter();
     }
 
+    partial void OnIsLoadingChanged(bool value)
+    {
+        if (value)
+        {
+            _slowLoadingWarnCts?.Cancel();
+            _slowLoadingWarnCts?.Dispose();
+            _slowLoadingWarnCts = new CancellationTokenSource();
+            _ = StartSlowLoadingWarningAsync(_slowLoadingWarnCts.Token);
+        }
+        else
+        {
+            _slowLoadingWarnCts?.Cancel();
+            _slowLoadingWarnCts?.Dispose();
+            _slowLoadingWarnCts = null;
+            LoadingWarningMessage = string.Empty;
+        }
+    }
+
     partial void OnShowOnlyFavoritesChanged(bool value)
     {
         ScheduleImmediateFilter();
@@ -1246,6 +1349,8 @@ public partial class MainViewModel : ObservableObject
         var normalized = group.Trim();
         return normalized.StartsWith(countryCode + "/", StringComparison.OrdinalIgnoreCase)
             || normalized.StartsWith(countryCode + " |", StringComparison.OrdinalIgnoreCase)
+            || normalized.StartsWith(countryCode + ":", StringComparison.OrdinalIgnoreCase)
+            || normalized.StartsWith(countryCode + " ", StringComparison.OrdinalIgnoreCase)
             || normalized.Equals(countryCode, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -1300,7 +1405,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (SelectedPlaylist == null || token.IsCancellationRequested) return;
 
-        IsLoading = true;
+        BeginLoading();
 
         try
         {
@@ -1320,7 +1425,7 @@ public partial class MainViewModel : ObservableObject
         }
         finally
         {
-            IsLoading = false;
+            EndLoading();
         }
     }
 
@@ -1624,7 +1729,7 @@ public partial class MainViewModel : ObservableObject
         {
             if (!isBackground)
             {
-                IsLoading = true;
+                BeginLoading();
                 StatusMessage = "Kanal listesi güncelleniyor...";
             }
 
@@ -3426,7 +3531,10 @@ public partial class MainViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            // Expected while typing quickly.
+            // 3sn'de timeout → sunucu yanıt vermiyor
+            _dispatcherService.BeginInvoke(() =>
+                StatusMessage = "⚠️ Playlist sunucusu yanıt vermiyor. URL'yi kontrol edin.");
+
         }
         catch (ObjectDisposedException)
         {
@@ -3676,8 +3784,9 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "PlayEpisode failed.");
-            StatusMessage = UserFriendlyErrorMessage.WithPrefix("Bolum oynatilamadi", ex);
+            _logger?.LogDebug("[HealthCheck] {Msg}", ex.Message);
+            _dispatcherService.BeginInvoke(() =>
+                StatusMessage = "⚠️ Playlist kaynağına ulaşılamıyor.");
         }
     }
 

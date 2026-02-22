@@ -67,6 +67,21 @@
                             <Binding Path="IsError"/>
                         </TextBlock.Tag>
                     </TextBlock>
+                    <Border Background="#1AFFA500" 
+                            BorderBrush="#80FFA500" 
+                            BorderThickness="1" 
+                            CornerRadius="8" 
+                            Padding="12,8"
+                            Margin="0,12,0,0"
+                            IsVisible="{Binding LoadingWarningMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+                        <TextBlock Text="{Binding LoadingWarningMessage}"
+                                   Foreground="#FFA500"
+                                   FontSize="13"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   MaxWidth="360"
+                                   HorizontalAlignment="Center"/>
+                    </Border>
                 </StackPanel>
 
                 <!-- Bottom Section: Profile Badge -->

@@ -98,6 +98,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private bool _isLive;
 
     [ObservableProperty]
+    private string _playerLoadingWarningMessage = string.Empty;
+
+    private CancellationTokenSource? _playerLoadingWarnCts;
+
+    [ObservableProperty]
     private bool _isAudioSettingsOpen;
 
     [ObservableProperty]
@@ -365,6 +370,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 // Buffering bittiğinde kontrol katmanını mutlaka geri getir.
                 if (!IsBuffering)
                 {
+                    _playerLoadingWarnCts?.Cancel();
+                    _playerLoadingWarnCts?.Dispose();
+                    _playerLoadingWarnCts = null;
+                    PlayerLoadingWarningMessage = string.Empty;
+
                     IsVisible = true;
                     RestartAutoHideTimer();
                 }
@@ -375,6 +385,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         {
             _dispatcherService.Invoke(() =>
             {
+                _playerLoadingWarnCts?.Cancel();
+                _playerLoadingWarnCts?.Dispose();
+                _playerLoadingWarnCts = null;
+                PlayerLoadingWarningMessage = string.Empty;
+
                 ConnectionStatus = errorMessage;
                 // Broken/unreachable streams should stay in loading state until user changes content.
                 IsBuffering = true;
@@ -2039,7 +2054,31 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         RemainingTime = IsLiveContent ? "00:00:00" : "-00:00:00";
         IsBuffering = true;
         BufferingProgress = 0;
+        
+        _playerLoadingWarnCts?.Cancel();
+        _playerLoadingWarnCts?.Dispose();
+        _playerLoadingWarnCts = new CancellationTokenSource();
+        PlayerLoadingWarningMessage = string.Empty;
+        _ = StartPlayerLoadingWarningAsync(_playerLoadingWarnCts.Token);
+
         OnPropertyChanged(nameof(IsBufferShieldVisible));
+    }
+
+    private async Task StartPlayerLoadingWarningAsync(CancellationToken ct)
+    {
+        try
+        {
+            await Task.Delay(8_000, ct);
+            if (ct.IsCancellationRequested) return;
+            _dispatcherService.BeginInvoke(() =>
+                PlayerLoadingWarningMessage = "Bağlantı normalden uzun sürüyor...");
+
+            await Task.Delay(7_000, ct); // toplam 15sn
+            if (ct.IsCancellationRequested) return;
+            _dispatcherService.BeginInvoke(() =>
+                PlayerLoadingWarningMessage = "Yayına erişilemiyor olabilir. Başka bir kanal deneyin.");
+        }
+        catch (TaskCanceledException) { }
     }
 
     private void RefreshEpisodeBrowserContext(Series? series)

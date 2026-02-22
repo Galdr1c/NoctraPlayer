@@ -157,12 +157,16 @@ public partial class ProfilesWindow : Window
             // Give UI thread a tiny breather to show and render the window
             await Task.Delay(100);
             
-            // Start listening to StatusMessage from MainViewModel
+            // Start listening to StatusMessage and LoadingWarningMessage from MainViewModel
             void OnStatusChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
             {
                 if (e.PropertyName == nameof(MainViewModel.StatusMessage))
                 {
                     loadingVm.StatusMessage = _mainViewModel.StatusMessage;
+                }
+                else if (e.PropertyName == nameof(MainViewModel.LoadingWarningMessage))
+                {
+                    loadingVm.LoadingWarningMessage = _mainViewModel.LoadingWarningMessage;
                 }
             }
             _mainViewModel.PropertyChanged += OnStatusChanged;

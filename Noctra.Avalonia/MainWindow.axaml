@@ -203,6 +203,20 @@
                          Foreground="{DynamicResource TextSecondaryBrush}" 
                          FontSize="16" FontWeight="SemiBold"
                          HorizontalAlignment="Center"/>
+              <Border Background="#1AFFA500" 
+                      BorderBrush="#80FFA500" 
+                      BorderThickness="1" 
+                      CornerRadius="8" 
+                      Padding="16,10"
+                      IsVisible="{Binding LoadingWarningMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+                <TextBlock Text="{Binding LoadingWarningMessage}"
+                           Foreground="#FFA500"
+                           FontSize="13"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxWidth="400"
+                           HorizontalAlignment="Center"/>
+              </Border>
             </StackPanel>
           </Panel>
         </Grid>

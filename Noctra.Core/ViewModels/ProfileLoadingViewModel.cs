@@ -12,6 +12,9 @@ public partial class ProfileLoadingViewModel : ObservableObject
     private string _statusMessage = "Lütfen bekleyin...";
 
     [ObservableProperty]
+    private string _loadingWarningMessage = string.Empty;
+
+    [ObservableProperty]
     private bool _isError;
 
     [ObservableProperty]

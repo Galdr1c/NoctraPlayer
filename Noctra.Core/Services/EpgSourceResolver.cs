@@ -1,4 +1,4 @@
-﻿namespace Noctra.Services;
+namespace Noctra.Services;
 
 /// <summary>
 /// Ülke koduna göre en uygun EPG kaynaklarını belirler
@@ -83,7 +83,7 @@ public class EpgSourceResolver
                 Url = customEpgUrl,
                 Priority = 0,
                 Type = EpgSourceType.CustomUrl,
-                IsPrimary = hasUsableTvgIds
+                IsPrimary = true // Kullanıcı kendi URL'ini girdi, güvenilir kaynak
             });
         }
 
@@ -130,7 +130,7 @@ public class EpgSourceResolver
                     Url = countryUrl,
                     Priority = 3,
                     Type = EpgSourceType.IptvEpgOrg,
-                    IsPrimary = false 
+                    IsPrimary = true
                 });
             }
         }
@@ -147,7 +147,7 @@ public class EpgSourceResolver
                     Url = GlobalFallbackUrl,
                     Priority = 4,
                     Type = EpgSourceType.GlobalFallback,
-                    IsPrimary = false
+                    IsPrimary = true
                 });
             }
         }

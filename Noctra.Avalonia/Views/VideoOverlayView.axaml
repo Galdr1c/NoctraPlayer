@@ -850,6 +850,15 @@
                 </Ellipse>
             </StackPanel>
             <TextBlock Text="Y&#252;kleniyor..." Foreground="White" HorizontalAlignment="Center" Margin="0,14,0,0"/>
+            <TextBlock Text="{Binding PlayerLoadingWarningMessage}"
+                       Foreground="#FFA500"
+                       FontSize="13"
+                       HorizontalAlignment="Center"
+                       TextWrapping="Wrap"
+                       MaxWidth="380"
+                       Margin="0,12,0,0"
+                       IsVisible="{Binding PlayerLoadingWarningMessage, 
+                                    Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
         </StackPanel>
     </Grid>
 </UserControl>
