@@ -533,6 +533,17 @@ public class PlaylistService : IPlaylistService
         }
     }
 
+    public async Task ClearProviderExpirationAsync(int providerId)
+    {
+        using var context = await _contextFactory.CreateDbContextAsync();
+        var account = await context.ProviderAccounts.FindAsync(providerId);
+        if (account != null)
+        {
+            account.ExpirationDate = null;
+            await context.SaveChangesAsync();
+        }
+    }
+
     private static string BuildChannelFingerprint(Channel channel)
     {
         var typeKey = ((int)channel.Type).ToString();

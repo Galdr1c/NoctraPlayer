@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Hata Mesajı Standardizasyonu ve Merkezi Kanal Listesi Hata Takibi** (2026-02-22 14:43):
+  - **Merkezi Hata Takibi**: Kanal listesi yenileme hataları artık `MainViewModel.ChannelListLastError` property'si üzerinden merkezi olarak takip ediliyor. Ayarlar penceresindeki kırmızı hata kutusu, yenilemenin nereden tetiklendiğinden bağımsız olarak (Ana pencere, sidebar, arka plan yenileme) her zaman doğru çalışıyor.
+  - **Tutarlı Hata Mesajları**: Profil ekleme ekranındaki bağlantı testi ve kanal listesi yenileme hataları artık aynı `UserFriendlyErrorMessage` sistemini kullanıyor.
+  - **Doğru Zaman Aşımı Mesajı**: Timeout hatası mesajı "Ağ zaman aşımına uğradı" yerine "Sunucu zaman aşımına uğradı veya yanıt vermiyor. Bağlantı adresini kontrol edin." olarak güncellendi — sorunun kullanıcının ağından değil sunucudan kaynaklandığı doğru şekilde ifade ediliyor.
+  - **Kod Sadeleştirmesi**: `SettingsViewModel.RefreshChannelListNowAsync` içindeki kırılgan string-matching hata algılama kodu kaldırılıp, `MainViewModel`'deki temiz property binding'e geçildi.
+  - **Dosyalar**: `MainViewModel.cs`, `SettingsViewModel.cs`, `AddProfileViewModel.cs`, `UserFriendlyErrorMessage.cs`
+- **Profil Bitiş Süresi Göstergesi Düzeltmesi** (2026-02-22 14:10):
+  - **Stale Veri Temizliği**: Bozuk URL veya çalışmayan Xtream hesaplarında eski (stale) bitiş tarihi gösterilmeye devam ediyordu. Artık API erişim hatası, geçersiz URL veya sunucudan `exp_date` alınamadığı durumlarda eski tarih temizleniyor ve "Bilinmiyor" gösteriliyor.
+  - **Kanal Listesi Yenilemesinde Güncelleme**: Kullanıcı kanal listesini yenilediğinde (`RefreshChannelListNowAsync`) bitiş süresi göstergesi de otomatik olarak güncelleniyor.
+  - **Kanal Listesi Hata Göstergesi**: Kanal listesi yenileme başarısız olduğunda, EPG sekmesindeki gibi kalıcı kırmızı hata mesajı gösteriliyor (`ChannelListLastError`). Başarılı yenilemede hata temizleniyor.
+  - **HttpClient Timeout**: Bitiş tarihi kontrolündeki HTTP isteğine 10 saniye timeout eklendi (önceden sonsuz bekliyordu).
+  - **Dosyalar**: `MainViewModel.cs`, `SettingsViewModel.cs`, `PlaylistService.cs`, `IPlaylistService.cs`, `SettingsWindow.axaml`
 - **Video Overlay Pencere Odak/Aktivasyon Düzeltmesi** (2026-02-22 14:05):
   - **Kritik Hata Düzeltmesi**: Video oynatıcı overlay penceresi (kontroller, seek bar vb.) başka bir uygulama penceresine tıklandığında arkaya gitmiyordu — yalnızca diğer pencerenin başlık çubuğuna tıklanınca gizleniyordu. Artık herhangi bir yerine tıklansa bile overlay düzgün şekilde gizleniyor.
   - **Kök Neden Çözümü**: Avalonia'nın `Activated`/`Deactivated` olaylarındaki 150ms gecikmeli yarış koşulları (race conditions) kaldırıldı. Yerine Win32 `GetForegroundWindow` API'si ile 200ms aralıklarla foreground pencere PID kontrolü yapan güvenilir bir polling mekanizması eklendi.

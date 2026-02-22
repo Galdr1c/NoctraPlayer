@@ -70,6 +70,12 @@ public interface IPlaylistService
     Task UpdateProviderExpirationAsync(int providerId, DateTime expirationDate);
 
     /// <summary>
+    /// Sağlayıcı hesabının bitiş tarihini temizler (null yapar).
+    /// API erişim hatası veya geçersiz URL durumlarında kullanılır.
+    /// </summary>
+    Task ClearProviderExpirationAsync(int providerId);
+
+    /// <summary>
     /// Playlist'in EPG verisini yeniler
     /// </summary>
     Task RefreshEpgAsync(int playlistId);

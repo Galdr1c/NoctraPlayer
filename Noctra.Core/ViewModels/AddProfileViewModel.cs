@@ -875,17 +875,9 @@ public partial class AddProfileViewModel : ObservableObject
                 return (ConnectionHealth.Critical, code, latency, error);
             }
         }
-        catch (TaskCanceledException)
-        {
-            return (ConnectionHealth.Critical, null, null, "Zaman Aşımı (Sunucu yanıt vermiyor)");
-        }
-        catch (System.Net.Http.HttpRequestException ex)
-        {
-            return (ConnectionHealth.Critical, null, null, $"Ağ Hatası: {ex.Message}");
-        }
         catch (Exception ex)
         {
-            return (ConnectionHealth.Critical, null, null, $"Hata: {ex.Message}");
+            return (ConnectionHealth.Critical, null, null, UserFriendlyErrorMessage.FromException(ex));
         }
     }
 

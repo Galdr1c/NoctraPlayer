@@ -37,7 +37,7 @@ public static class UserFriendlyErrorMessage
 
         if (baseException is TimeoutException or TaskCanceledException)
         {
-            return "Ag zaman asimina ugradi. Baglantinizi kontrol edip tekrar deneyin.";
+            return "Sunucu zaman aşımına uğradı veya yanıt vermiyor. Bağlantı adresini kontrol edin.";
         }
 
         if (baseException is HttpRequestException http)

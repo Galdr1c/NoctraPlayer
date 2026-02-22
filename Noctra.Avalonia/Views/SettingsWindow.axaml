@@ -385,6 +385,20 @@
                                                    FontWeight="SemiBold"/>
                                     </Grid>
 
+                                    <!-- Hata göstergesi (EPG ile aynı tasarım) -->
+                                    <Border Background="{DynamicResource Surface1Brush}"
+                                            BorderBrush="{DynamicResource ErrorBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Padding="10"
+                                            Margin="0,0,0,16"
+                                            IsVisible="{Binding ChannelListLastError, Converter={StaticResource StringToVisibilityConverter}}">
+                                        <TextBlock Text="{Binding ChannelListLastError}"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource ErrorBrush}"
+                                                   FontWeight="SemiBold"/>
+                                    </Border>
+
                                     <TextBlock Text="Yenileme Sıklığı" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                     <ComboBox Theme="{StaticResource ModernComboBox}"
                                               SelectedIndex="{Binding ChannelListRefreshFrequencyIndex, Mode=TwoWay}"

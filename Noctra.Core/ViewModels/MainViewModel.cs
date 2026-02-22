@@ -151,6 +151,9 @@ public partial class MainViewModel : ObservableObject
     private string _statusMessage = "Hazır";
 
     [ObservableProperty]
+    private string? _channelListLastError;
+
+    [ObservableProperty]
     private string _loadingWarningMessage = string.Empty;
 
     [ObservableProperty]
@@ -547,17 +550,17 @@ public partial class MainViewModel : ObservableObject
                 
                 await CheckExpirationInternalAsync(account.Id, baseUrl, username, password);
                 
-                // Update local model with found credentials if missing? 
-                // Maybe not strictly necessary to overwrite, but good for display
                 if (string.IsNullOrEmpty(account.Username))
                 {
                      account.Username = username;
-                     // We don't save this change to DB here to avoid changing user input, 
-                     // but we could if we wanted to convert it to a proper Xtream account in the future.
                 }
             }
         }
-        catch { /* Parsing failed, not an Xtream URL */ }
+        catch
+        {
+            // URL geçersiz — eski (stale) bitiş tarihini temizle
+            await ClearProviderExpirationAsync(account.Id);
+        }
     }
 
     private async Task UpdateProviderExpirationAsync(int accountId, DateTime expirationDate)
@@ -569,6 +572,19 @@ public partial class MainViewModel : ObservableObject
             if (CurrentProfile?.ProviderAccount?.Id == accountId)
             {
                 CurrentProfile.ProviderAccount.ExpirationDate = expirationDate;
+            }
+        });
+    }
+
+    private async Task ClearProviderExpirationAsync(int accountId)
+    {
+        await _playlistService.ClearProviderExpirationAsync(accountId);
+
+        _dispatcherService.BeginInvoke(() =>
+        {
+            if (CurrentProfile?.ProviderAccount?.Id == accountId)
+            {
+                CurrentProfile.ProviderAccount.ExpirationDate = null;
             }
         });
     }
@@ -619,14 +635,15 @@ public partial class MainViewModel : ObservableObject
             var apiUrl = $"{baseUrl}/player_api.php?username={Uri.EscapeDataString(username ?? "")}&password={Uri.EscapeDataString(password ?? "")}";
             _logger?.LogDebug($"[CheckExpiration] Checking: {apiUrl}");
 
-            using var client = new HttpClient();
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
             client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
             
             var response = await client.GetAsync(apiUrl);
             
             if (!response.IsSuccessStatusCode)
             {
-                _logger?.LogDebug($"[CheckExpiration] Failed with status: {response.StatusCode}");
+                _logger?.LogDebug($"[CheckExpiration] Failed with status: {response.StatusCode}. Clearing stale expiration.");
+                await ClearProviderExpirationAsync(accountId);
                 return;
             }
 
@@ -661,13 +678,20 @@ public partial class MainViewModel : ObservableObject
                         var expirationDate = DateTimeOffset.FromUnixTimeSeconds(expTimestamp.Value).DateTime;
                         
                         await UpdateProviderExpirationAsync(accountId, expirationDate);
+                        return;
                     }
                 }
             }
+
+            // API yanıtı geldi ama exp_date bulunamadı — bilinmiyor olarak işaretle
+            _logger?.LogDebug("[CheckExpiration] API responded but no exp_date found. Clearing.");
+            await ClearProviderExpirationAsync(accountId);
         }
         catch (Exception ex)
         {
-            _logger?.LogDebug($"CheckExpiration Error: {ex}");
+            _logger?.LogDebug($"[CheckExpiration] Error: {ex.Message}. Clearing stale expiration.");
+            // URL geçersiz veya sunucuya erişilemiyor — eski (stale) tarihi temizle
+            await ClearProviderExpirationAsync(accountId);
         }
     }
 
@@ -1748,6 +1772,8 @@ public partial class MainViewModel : ObservableObject
                 StatusMessage = addedCount == 0
                     ? "Kanal listesi zaten guncel"
                     : $"Kanal listesi guncellendi ({addedCount} yeni kanal eklendi)";
+                    
+                ChannelListLastError = null;
 
                 if (addedCount == 0)
                 {
@@ -1764,6 +1790,7 @@ public partial class MainViewModel : ObservableObject
             if (!isBackground)
             {
                 StatusMessage = UserFriendlyErrorMessage.WithPrefix("Kanal listesi guncelleme hatasi", ex);
+                ChannelListLastError = UserFriendlyErrorMessage.FromException(ex);
             }
         }
         finally

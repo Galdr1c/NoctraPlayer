@@ -179,6 +179,8 @@ public partial class SettingsViewModel : ObservableObject
         _mainViewModel.PropertyChanged += MainViewModel_PropertyChanged;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
         
+        ChannelListLastError = _mainViewModel.ChannelListLastError;
+        
         LoadSettings();
         LoadProfileInfo();
         _ = ScanChannelListStatsCoreAsync(updateStatusMessage: false);
@@ -203,6 +205,10 @@ public partial class SettingsViewModel : ObservableObject
         else if (e.PropertyName == nameof(MainViewModel.SelectedPlaylist))
         {
             _ = ScanChannelListStatsCoreAsync(updateStatusMessage: false);
+        }
+        else if (e.PropertyName == nameof(MainViewModel.ChannelListLastError))
+        {
+            ChannelListLastError = _mainViewModel.ChannelListLastError;
         }
     }
 
@@ -379,6 +385,9 @@ public partial class SettingsViewModel : ObservableObject
     private DateTime? _channelListLastUpdated;
 
     [ObservableProperty]
+    private string? _channelListLastError;
+
+    [ObservableProperty]
     private DateTime? _lastEpgUpdate;
 
     [ObservableProperty]
@@ -519,18 +528,27 @@ public partial class SettingsViewModel : ObservableObject
         {
             SetProgressStatus("Kanal", 12, "Kanal listesi yenileniyor...");
             await _mainViewModel.RefreshSelectedPlaylistAsync();
-            SetProgressStatus("Kanal", 72, "Kanal listesi verileri guncelleniyor...");
-            await ScanChannelListStatsCoreAsync(updateStatusMessage: false);
-            var resultMessage = _mainViewModel.StatusMessage;
-            if (string.IsNullOrWhiteSpace(resultMessage))
-            {
-                resultMessage = "Kanal listesi yenileme tamamlandi";
-            }
 
-            SetProgressStatus("Kanal", 100, resultMessage);
+            SetProgressStatus("Kanal", 60, "Kanal listesi verileri guncelleniyor...");
+            await ScanChannelListStatsCoreAsync(updateStatusMessage: false);
+
+            // Kanal listesi yenilenirken bitiş süresini de güncelle
+            SetProgressStatus("Kanal", 80, "Hesap bilgileri kontrol ediliyor...");
+            await _mainViewModel.RefreshCurrentProfileExpirationAsync();
+            LoadProfileInfo();
+
+            if (!string.IsNullOrWhiteSpace(ChannelListLastError))
+            {
+                SetProgressStatus("Kanal", 100, ChannelListLastError);
+            }
+            else
+            {
+                SetProgressStatus("Kanal", 100, "Kanal listesi yenileme tamamlandi");
+            }
         }
         catch (Exception ex)
         {
+            ChannelListLastError = UserFriendlyErrorMessage.FromException(ex);
             SetProgressStatus("Kanal", RefreshProgressPercent, UserFriendlyErrorMessage.WithPrefix("Kanal listesi yenileme hatasi", ex));
         }
         finally
