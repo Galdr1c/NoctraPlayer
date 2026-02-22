@@ -128,6 +128,7 @@ public partial class VideoOverlayView : UserControl
         _playerViewModel = DataContext as PlayerViewModel;
         if (_playerViewModel != null)
         {
+            _isInitialVolumeSet = false;
             _playerViewModel.PropertyChanged += PlayerViewModel_PropertyChanged;
             _playerViewModel.SkipOverlayRequested += PlayerViewModel_SkipOverlayRequested;
             UpdateOverlayCursor(_playerViewModel.IsVisible);
@@ -234,11 +235,17 @@ public partial class VideoOverlayView : UserControl
                 break;
         }
     }
+    private bool _isInitialVolumeSet;
 
     private void PlayerViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(PlayerViewModel.Volume) or nameof(PlayerViewModel.IsMuted))
         {
+            if (!_isInitialVolumeSet)
+            {
+                _isInitialVolumeSet = true;
+                return;
+            }
             ShowVolumeToast();
         }
 
