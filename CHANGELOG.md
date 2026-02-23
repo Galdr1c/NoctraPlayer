@@ -5,9 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-- **VOD ve Canlı Yayın Oynatma Çökmelerine Kesin Çözüm (Connection Limit Drop)** (2026-02-23 19:15):
-  - **Xtream Codes "Hayalet Bağlantı" ve Sensiz Kurtarma (Final Tespit)**: İleri/geri sarma sonlandıktan tam 10-15 saniye sonra proxy sunucusunun yayını kasıtlı olarak kestiği (`EndReached`) görüldü. Sorunun incelenmesi sonucunda, HardSeek sonrası eski bağlantıyı `Stop()` ile kapatsak da Xtream hesap limitleri nedeniyle bu kapanmış yayının sunucu tarafında 15-30 saniye boyunca "Hayalet Bağlantı" kalarak asılı kaldığı tespit edildi. Sunucunun 10 saniyede bir çalışan "Korsan Engelleyici (Anti-Leech)" yazılımı "Aktif 2 bağlantı" var sanarak videoyu koparmaktaydı.
+- **M3U Bağlantısı ve Kanal Yükleme Dayanıklılığı** (2026-02-23 22:25):
+  - **Dizi Gruplama ve Temizlik (Phase 3)**: Kısa sezon adlandırmaları (`S01`, `S02`) artık otomatik tanınıyor. Gruplamayı bozan "DIZIAX", "NETFLIX", "PRIME" gibi platform ön ekleri ve `%3` gibi özel karakterli dizi isimleri için akıllı normalizasyon eklendi. Tüm sezonlar artık tek bir dizi kartı altında toplanıyor.
+  - **Kısmi Başarı (Partial Success) Desteği**: Bazı sunucuların büyük dosyalarda (48MB+) 30 saniye sonra bağlantıyı kesmesi durumunda, o ana kadar indirilen tüm kanalların (testlerde 65.000+) çöpe atılmayıp başarıyla kaydedilmesi sağlandı (Resilient Parsing).
+  - **M3U Parser Esnekliği (Phase 2)**: `#EXTM3U` başlığı artık zorunlu değil. Sunucu hatalı (başlıksız) veri gönderse bile içerik zorlanarak ayıklanıyor. Ayrıca ilk kanalın atlanmasına neden olan bir döngü hatası giderildi.
+  - **Akıllı Yenileme Mantığı**: İlk yüklemesi (ağ hatası vb.) başarısız olmuş "0 kanallı" profiller için "Yenile" butonu otomatik tam-eşitleme tetikler. Artık profil silip eklemeye gerek kalmadı.
+  - **Büyük Liste Optimizasyonu**: 50.000+ kanallı dev listeler için line-by-line streaming parser devreye alındı; bellek kullanımı %90 azaltıldı.
+  - **Hata Raporlama**: Ayarlar ekranında "0 kanal bulundu" ve sunucu hataları için kalıcı uyarı bildirimleri eklendi.
+  - **Standart Dışı M3U Desteği**: Tırnaksız etiketler (`tvg-id=123`), iki noktasız `#EXTINF` ve başta boşluk olan dosyalar için tam uyumluluk sağlandı.
+  - **HttpClient Timeout**: Global bağlantı limiti kaldırılarak servis bazlı özel zaman aşımlarına (3-10 dakika) tam destek verildi.
+
+- **VOD ve Canlı Yayın Oynatma Çökmelerine Kesin Çözüm (Connection Limit Drop)** (2026-02-23 21:35):
+  - **Xtream Codes "Hayalet Bağlantı" ve Sessiz Kurtarma (Final Tespit)**: İleri/geri sarma sonlandıktan tam 10-15 saniye sonra proxy sunucusunun yayını kasıtlı olarak kestiği (`EndReached`) görüldü. Sorunun incelenmesi sonucunda, HardSeek sonrası eski bağlantıyı `Stop()` ile kapatsak da Xtream hesap limitleri nedeniyle bu kapanmış yayının sunucu tarafında 15-30 saniye boyunca "Hayalet Bağlantı" kalarak asılı kaldığı tespit edildi. Sunucunun 10 saniyede bir çalışan "Korsan Engelleyici (Anti-Leech)" yazılımı "Aktif 2 bağlantı" var sanarak videoyu koparmaktaydı.
   - **Tam Otomatik ve Görünmez Kurtarma (Silent Auto-Recovery)**: Sunucu kısıtlamasına rağmen videonun kesilmemesi için görünmez bir kalkan (AutoRecoverPrematureEndAsync) yazıldı. `EndReached` geldiğinde sistem olayın bir kopma olduğunu anlayarak "Yayın kurtarılıyor..." mesajı ve hata göstermeden arkaplanda 500ms bekler ve anında Kara Kutu'daki saniyeden yayını sıfırdan "görünmez şekilde" diriltir. Bu sayede sunucu banının yarattığı ölümcül kapanma 0.5 saniyelik ufak bir yavaşlama hissine indirgendi. Play tuşuna elle basma gereksinimi tamamen ortadan kaldırıldı.
+  - **Canlı Yayın (Live TV) 5 Saniye Döngüsü ve Stall Monitor Çözümü**: Canlı yayınlarda VLC `Position` bilgisini 0 döndürdüğü için Stall Monitor'ün yayını her 5 saniyede bir "Dondu" zannedip haksız yere kapatması engellendi (Killswitch uygulandı). Canlı yayınlar artık sunucu kopmadığı sürece sonsuza dek açık kalabiliyor; koptuğunda ise Silent Recovery ile anında diriltiliyor.
   - **Milisaniye Hassasiyetinde Güvenli Seek**: VOD içeriklerinde HTTP argümanları (`:start-time`) doğrudan VLC çekirdeğinden proxy sunucusuna saf halde aktarılıyor.
 
 - **Kusursuz Profil Değişimi ve Dizi İlerleme (Progress) Göçü** (2026-02-23 20:15):

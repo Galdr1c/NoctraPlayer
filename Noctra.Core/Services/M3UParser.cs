@@ -19,51 +19,11 @@ public partial class M3UParser : IM3UParser
         _httpClient = httpClient;
     }
 
-    public Task<List<Channel>> ParseAsync(string content)
+    public async Task<List<Channel>> ParseAsync(string content)
     {
-        var channels = new List<Channel>();
-        var lines = content.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-        LastDetectedEpgUrl = null;
-
-        if (lines.Length == 0) return Task.FromResult(channels);
-
-        // M3U header kontrolü
-        var firstLine = lines[0].Trim();
-        if (!firstLine.StartsWith("#EXTM3U", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new FormatException("Geçersiz M3U formatı: #EXTM3U header bulunamadı");
-        }
-
-        var xTvgUrlMatch = XTvgUrlRegex().Match(firstLine);
-        if (xTvgUrlMatch.Success)
-        {
-            LastDetectedEpgUrl = ExtractFirstEpgUrl(xTvgUrlMatch.Groups[1].Value);
-        }
-
-        Channel? currentChannel = null;
-
-        for (int i = 1; i < lines.Length; i++)
-        {
-            var line = lines[i].Trim();
-
-            if (string.IsNullOrEmpty(line)) continue;
-
-            // #EXTINF satırı - kanal bilgileri
-            if (line.StartsWith("#EXTINF:", StringComparison.OrdinalIgnoreCase))
-            {
-                currentChannel = ParseExtInf(line);
-            }
-            // URL satırı
-            else if (!line.StartsWith("#") && currentChannel != null)
-            {
-                currentChannel.StreamUrl = line;
-                currentChannel.Type = DetectChannelType(line, currentChannel.Name, currentChannel.GroupTitle);
-                channels.Add(currentChannel);
-                currentChannel = null;
-            }
-        }
-
-        return Task.FromResult(channels);
+        if (string.IsNullOrWhiteSpace(content)) return new List<Channel>();
+        using var reader = new StringReader(content);
+        return await ParseFromReaderAsync(reader);
     }
 
     public async Task<List<Channel>> ParseFromFileAsync(string filePath)
@@ -73,8 +33,9 @@ public partial class M3UParser : IM3UParser
             throw new FileNotFoundException("M3U dosyası bulunamadı", filePath);
         }
 
-        var content = await File.ReadAllTextAsync(filePath);
-        return await ParseAsync(content);
+        using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous);
+        using var reader = new StreamReader(stream);
+        return await ParseFromReaderAsync(reader);
     }
 
     public async Task<List<Channel>> ParseFromUrlAsync(string url)
@@ -82,14 +43,28 @@ public partial class M3UParser : IM3UParser
         try
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(3));
-            var content = await NetworkRetry.ExecuteAsync(
-                () => _httpClient.GetStringAsync(url, cts.Token),
-                cancellationToken: cts.Token);
-            
-            if (string.IsNullOrWhiteSpace(content))
-                throw new InvalidOperationException("M3U dosyası boş.");
-            
-            return await ParseAsync(content);
+            return await NetworkRetry.ExecuteAsync(async () =>
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token);
+                response.EnsureSuccessStatusCode();
+
+                await using var stream = await response.Content.ReadAsStreamAsync(cts.Token);
+                using var reader = new StreamReader(stream);
+                
+                try
+                {
+                    return await ParseFromReaderAsync(reader);
+                }
+                catch (Exception ex) when (IsNetworkIncompletionException(ex))
+                {
+                    // If stream ends prematurely, return what we got so far instead of failing
+                    System.Diagnostics.Debug.WriteLine($"[M3UParser] Warning: Stream ended prematurely for {url}. Returning partial results. Error: {ex.Message}");
+                    // IMPORTANT: We need a way to get the partially built channels list.
+                    // Let's modify ParseFromReaderAsync to fill a list passed as argument.
+                    return _lastPartialChannels ?? new List<Channel>();
+                }
+            }, cancellationToken: cts.Token);
         }
         catch (TaskCanceledException)
         {
@@ -107,6 +82,74 @@ public partial class M3UParser : IM3UParser
                 $"Geçersiz M3U formatı: {url}\n" +
                 $"Dosya içeriği M3U standardına uygun değil.", ex);
         }
+    }
+
+    private async Task<List<Channel>> ParseFromReaderAsync(TextReader reader)
+    {
+        var channels = new List<Channel>();
+        LastDetectedEpgUrl = null;
+
+        string? firstLine = null;
+        while ((firstLine = await reader.ReadLineAsync()) != null)
+        {
+            if (!string.IsNullOrWhiteSpace(firstLine))
+                break;
+        }
+
+        if (string.IsNullOrWhiteSpace(firstLine))
+        {
+            return channels;
+        }
+
+        // Header check should be lenient. Some providers might skip it or have garbage before it.
+        bool hasHeader = firstLine.Trim().StartsWith("#EXTM3U", StringComparison.OrdinalIgnoreCase);
+        if (hasHeader)
+        {
+            var xTvgUrlMatch = XTvgUrlRegex().Match(firstLine);
+            if (xTvgUrlMatch.Success)
+            {
+                LastDetectedEpgUrl = ExtractFirstEpgUrl(xTvgUrlMatch.Groups[1].Value);
+            }
+        }
+        else if (!firstLine.Trim().StartsWith("#EXTINF", StringComparison.OrdinalIgnoreCase))
+        {
+            System.Diagnostics.Debug.WriteLine($"[M3UParser] Warning: Unexpected first line (no #EXTM3U and no #EXTINF): {firstLine}");
+        }
+
+        Channel? currentChannel = null;
+        _lastPartialChannels = channels;
+        string? line = hasHeader ? await reader.ReadLineAsync() : firstLine;
+        
+        while (line != null)
+        {
+            line = line.Trim();
+
+            if (!string.IsNullOrEmpty(line))
+            {
+                if (line.StartsWith("#EXTINF", StringComparison.OrdinalIgnoreCase))
+                {
+                    currentChannel = ParseExtInf(line);
+                }
+                else if (line.StartsWith("#EXTGRP", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (currentChannel != null)
+                    {
+                        currentChannel.GroupTitle = line.Substring(8).Trim();
+                    }
+                }
+                else if (!line.StartsWith("#") && currentChannel != null)
+                {
+                    currentChannel.StreamUrl = line;
+                    currentChannel.Type = DetectChannelType(line, currentChannel.Name, currentChannel.GroupTitle);
+                    channels.Add(currentChannel);
+                    currentChannel = null;
+                }
+            }
+
+            line = await reader.ReadLineAsync();
+        }
+
+        return channels;
     }
 
     /// <summary>
@@ -136,13 +179,22 @@ public partial class M3UParser : IM3UParser
         if (groupMatch.Success)
             channel.GroupTitle = groupMatch.Groups[1].Value;
 
-        // Kanal adını çıkar (son virgülden sonrası)
-        var lineWithoutAttrs = AttributesRegex().Replace(line, "");
-        var nameMatch = ChannelNameRegex().Match(lineWithoutAttrs);
-        if (nameMatch.Success)
-            channel.Name = nameMatch.Groups[1].Value.Trim();
+        // Kanal adını çıkar
+        var lastCommaIndex = line.LastIndexOf(',');
+        if (lastCommaIndex >= 0)
+        {
+            channel.Name = line.Substring(lastCommaIndex + 1).Trim();
+        }
         else
-            channel.Name = channel.TvgName ?? "Bilinmeyen Kanal";
+        {
+            // Virgül yoksa (standart dışı), öznitelikleri temizleyip kalanı almayı dene
+            var lineWithoutAttrs = AttributesRegex().Replace(line, "");
+            var nameMatch = ChannelNameRegex().Match(lineWithoutAttrs);
+            if (nameMatch.Success)
+                channel.Name = nameMatch.Groups[1].Value.Trim();
+            else
+                channel.Name = channel.TvgName ?? "Bilinmeyen Kanal";
+        }
 
         return channel;
     }
@@ -234,23 +286,23 @@ public partial class M3UParser : IM3UParser
     [GeneratedRegex(@"\((19|20)\d{2}\)", RegexOptions.IgnoreCase)]
     private static partial Regex VodPatternYear(); // (1990) - (2099) arası yıllar
 
-    // Regex pattern'ları
-    [GeneratedRegex(@"tvg-id=""([^""]*)""", RegexOptions.IgnoreCase)]
+    // Regex pattern'ları (Lenient versions)
+    [GeneratedRegex(@"tvg-id\s*=\s*""?([^""\s,]*)""?", RegexOptions.IgnoreCase)]
     private static partial Regex TvgIdRegex();
 
-    [GeneratedRegex(@"tvg-name=""([^""]*)""", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"tvg-name\s*=\s*""?([^""\s,]*)""?", RegexOptions.IgnoreCase)]
     private static partial Regex TvgNameRegex();
 
-    [GeneratedRegex(@"tvg-logo=""([^""]*)""", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"tvg-logo\s*=\s*""?([^""\s,]*)""?", RegexOptions.IgnoreCase)]
     private static partial Regex TvgLogoRegex();
 
-    [GeneratedRegex(@"group-title=""([^""]*)""", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"group-title\s*=\s*""?([^""]*)""?", RegexOptions.IgnoreCase)]
     private static partial Regex GroupTitleRegex();
 
-    [GeneratedRegex(@"[a-zA-Z0-9_-]+=""[^""]*""", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"[a-zA-Z0-9_-]+\s*=\s*""[^""]*""|[a-zA-Z0-9_-]+\s*=\s*[^""\s,]+", RegexOptions.IgnoreCase)]
     private static partial Regex AttributesRegex();
 
-    [GeneratedRegex(@",\s*(.+)$")]
+    [GeneratedRegex(@"(?:,|\s)\s*([^,].*)$")]
     private static partial Regex ChannelNameRegex();
 
     [GeneratedRegex(@"x-tvg-url=""([^""]*)""", RegexOptions.IgnoreCase)]
@@ -277,6 +329,19 @@ public partial class M3UParser : IM3UParser
 
         return null;
     }
+
+    private bool IsNetworkIncompletionException(Exception ex)
+    {
+        // Check for specific exceptions that indicate premature end of stream
+        var msg = ex.Message.ToLowerInvariant();
+        return ex is HttpRequestException || 
+               ex is IOException || 
+               msg.Contains("prematurely") || 
+               msg.Contains("ended") || 
+               msg.Contains("closed");
+    }
+
+    private List<Channel>? _lastPartialChannels;
 }
 
 

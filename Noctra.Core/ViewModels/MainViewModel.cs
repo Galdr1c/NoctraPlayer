@@ -1719,7 +1719,15 @@ public partial class MainViewModel : ObservableObject
 
     public async Task RefreshSelectedPlaylistAsync(bool isBackground = false)
     {
-        if (SelectedPlaylist == null) return;
+        if (SelectedPlaylist == null)
+        {
+            if (CurrentProfile != null && !isBackground)
+            {
+                // If profile has no playlist record, try to load/create it
+                await LoadProfileAsync(CurrentProfile);
+            }
+            return;
+        }
 
         if (!isBackground &&
             _playlistNoChangeUntilUtc.TryGetValue(SelectedPlaylist.Id, out var noChangeUntil) &&

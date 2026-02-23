@@ -62,8 +62,16 @@ public class PlaylistService : IPlaylistService
                 
             if (existing != null) 
             {
-                System.Diagnostics.Debug.WriteLine($"[PlaylistService] Found existing playlist: {existing.Id} with {existing.ChannelCount} channels");
-                return existing;
+                if (existing.ChannelCount > 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PlaylistService] Found existing playlist: {existing.Id} with {existing.ChannelCount} channels");
+                    return existing;
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"[PlaylistService] Found existing playlist {existing.Id} but it is EMPTY (0 channels). Forcing full refresh/re-add.");
+                // Deactivate the empty one so we create a fresh one
+                existing.IsActive = false;
+                await context.SaveChangesAsync();
             }
 
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] Downloading and parsing M3U from: {normalizedUrl}");

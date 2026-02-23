@@ -14,9 +14,11 @@ namespace Noctra.ViewModels;
 /// </summary>
 public partial class SettingsViewModel : ObservableObject
 {
+    private readonly IPlaylistService _playlistService;
     private readonly ISettingsService _settingsService;
     private readonly IEpgService _epgService;
     private readonly IThemeService _themeService;
+    private readonly MainViewModel _mainViewModel;
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private CancellationTokenSource? _epgRefreshWatchCts;
     private int _isRefreshOperationRunning;
@@ -132,7 +134,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _tmdbApiKey = string.Empty;
 
-    private readonly MainViewModel _mainViewModel;
+
 
     [ObservableProperty]
     private string _currentProfileName = string.Empty;
@@ -166,12 +168,14 @@ public partial class SettingsViewModel : ObservableObject
         IEpgService epgService, 
         IThemeService themeService,
         MainViewModel mainViewModel,
+        IPlaylistService playlistService,
         IDbContextFactory<AppDbContext> contextFactory)
     {
         _settingsService = settingsService;
         _epgService = epgService;
         _themeService = themeService;
         _mainViewModel = mainViewModel;
+        _playlistService = playlistService;
         _contextFactory = contextFactory;
         
         _mainViewModel.PropertyChanged += MainViewModel_PropertyChanged;
@@ -521,7 +525,16 @@ public partial class SettingsViewModel : ObservableObject
             }
             else
             {
-                SetProgressStatus("Kanal", 100, "Kanal listesi yenileme tamamlandi");
+                // Ekstra kontrol: Eğer error yok ama kanal sayısı hala 0 ise uyar
+                var afterCount = await _playlistService.GetChannelCountAsync(_mainViewModel.SelectedPlaylist?.Id ?? 0);
+                if (afterCount == 0)
+                {
+                    SetProgressStatus("Kanal", 100, "Uyarı: Liste indirildi ancak içerik bulunamadı (0 kanal)");
+                }
+                else
+                {
+                    SetProgressStatus("Kanal", 100, "Kanal listesi yenileme tamamlandi");
+                }
             }
         }
         catch (Exception ex)

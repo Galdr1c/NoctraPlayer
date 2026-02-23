@@ -361,20 +361,21 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             {
                 _isPlaybackEnded = true;
 
-                // Erken bitiş tespiti (Premature End Analysis)
+                // Erken bitiş tespiti (Premature End Analysis) & Canlı Yayın Kopması
                 var duration = _videoPlayerService.Duration;
                 var currentPos = Position;
-                if (!IsLiveContent && duration > 0)
+                
+                // Canlı yayın `EndReached` atıyorsa bu direkt bağlantı kopmasıdır, hemen kurtar.
+                // VOD ise ve bitime 10 saniyeden fazla varsa bu erken bitiştir (kopmadır), kurtar.
+                bool isPrematureEnd = (IsLiveContent) || (!IsLiveContent && duration > 0 && (duration - currentPos) > 10);
+
+                if (isPrematureEnd)
                 {
-                    var remaining = duration - currentPos;
-                    if (remaining > 10) // 10 saniyeden fazla varken bittiyse
-                    {
-                        var lastValid = _lastKnownValidPosition > 1 ? _lastKnownValidPosition : currentPos;
-                        LogDebug($"VM: PREMATURE END DETECTED at {currentPos}/{duration}s (Valid: {lastValid}). Suspected server truncation.");
-                        
-                        _ = AutoRecoverPrematureEndAsync(lastValid);
-                        return; // Auto-recovering, do not show next episode prompt
-                    }
+                    var lastValid = _lastKnownValidPosition > 1 ? _lastKnownValidPosition : currentPos;
+                    LogDebug($"VM: PREMATURE END DETECTED. Live: {IsLiveContent}, Pos/Dur: {currentPos}/{duration}s (Valid: {lastValid}). Suspected server truncation.");
+                    
+                    _ = AutoRecoverPrematureEndAsync(lastValid);
+                    return; // Auto-recovering, do not show next episode prompt
                 }
                 
                 TryShowNextEpisodePromptAtEnd();
@@ -825,6 +826,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     private async Task MonitorLivePlaybackHealthAsync()
     {
+        // INTENTIONAL KILLSWITCH: VLC does not reliable fire PositionChanged for live streams,
+        // causing this monitor to falsely detect a stall and restart exactly every 5 seconds.
+        // We now rely on EndReached/EncounteredError combined with AutoRecoverPrematureEndAsync.
+        return;
+
         var channel = CurrentChannel;
         if (channel == null)
         {

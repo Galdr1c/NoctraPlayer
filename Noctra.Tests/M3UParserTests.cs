@@ -28,12 +28,15 @@ namespace Noctra.Tests
         [InlineData("#EXTINF:-1,Game of Thrones S01E01\nhttp://example.com/got.mp4", ChannelType.Series)]
         [InlineData("#EXTINF:-1,Breaking Bad 1x01\nhttp://example.com/bb.mp4", ChannelType.Series)]
         [InlineData("#EXTINF:-1,Avatar (2009) 1080p\nhttp://example.com/avatar.mp4", ChannelType.VOD)]
-        [InlineData("#EXTINF:-1 group-title=\"Belgesel\",Planet Earth\nhttp://example.com/doc.ts", ChannelType.Live)] // Belgesel -> Live rules
-        [InlineData("#EXTINF:-1 group-title=\"Belgesel Serisi\",Cosmos S01E01\nhttp://example.com/cosmos.mp4", ChannelType.Series)] // Belgesel Serisi -> Series rules
+        [InlineData("#EXTINF:-1 group-title=\"Belgesel\",Planet Earth\nhttp://example.com/doc.ts", ChannelType.Live)]
+        [InlineData("#EXTINF:-1 group-title=\"Belgesel Serisi\",Cosmos S01E01\nhttp://example.com/cosmos.mp4", ChannelType.Series)]
+        [InlineData("#EXTINF-1 group-title=Live,No Colon Channel\nhttp://test.com/1.ts", ChannelType.Live)]
+        [InlineData("#EXTINF:-1 tvg-id=123 tvg-logo=http://logo.com/1.png,No Quotes\nhttp://test.com/2.ts", ChannelType.Live)]
+        [InlineData(" #EXTM3U\n#EXTINF:-1,Leading Space\nhttp://test.com/3.ts", ChannelType.Live)]
         public async Task ParseAsync_ShouldDetectCorrectType(string m3uEntry, ChannelType expectedType)
         {
             // Arrange
-            var content = "#EXTM3U\n" + m3uEntry;
+            var content = m3uEntry.Contains("#EXTM3U") ? m3uEntry : "#EXTM3U\n" + m3uEntry;
 
             // Act
             var channels = await _parser.ParseAsync(content);
