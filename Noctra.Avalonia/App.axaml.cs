@@ -372,6 +372,16 @@ CREATE TABLE IF NOT EXISTS SeriesEpisodeProgresses (
             await context.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX IF NOT EXISTS IX_SeriesEpisodeProgresses_UniqueEpisode ON SeriesEpisodeProgresses(ProfileId, SeriesKey, SeasonNumber, EpisodeNumber);");
         }
         catch { }
+
+        // Enable Foreign Keys for SQLite to ensure Cascade Deletes work properly
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON;");
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.LogException("Failed to enable SQLite foreign keys", ex);
+        }
     }
 
     private static void ApplyApplicationLanguage(string? languageCode)

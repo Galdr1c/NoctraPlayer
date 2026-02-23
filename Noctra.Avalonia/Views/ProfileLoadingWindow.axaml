@@ -15,7 +15,7 @@
         Background="Transparent"
         TransparencyLevelHint="Transparent"
         ShowInTaskbar="False"
-        Topmost="True">
+        Topmost="False">
 
     <Panel>
         <!-- Consistent Background Gradient -->

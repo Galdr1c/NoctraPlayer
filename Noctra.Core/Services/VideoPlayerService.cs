@@ -27,6 +27,17 @@ public class VideoPlayerService : IVideoPlayerService
     private long _playGeneration;
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private bool _isInitialized;
+    private int _lastLogProgress = -1;
+
+    private void LogDebug(string msg)
+    {
+        try
+        {
+            System.IO.File.AppendAllText(@"d:\IPTVPlayer\vlc_debug_log.txt", $"[{DateTime.Now:HH:mm:ss.fff}] [VPS] {msg}\n");
+        }
+        catch { }
+    }
+
 
     public event EventHandler<MediaPlayer?>? MediaPlayerReady;
     public event EventHandler<bool>? PlayingChanged;
@@ -119,12 +130,14 @@ public class VideoPlayerService : IVideoPlayerService
 
         _mediaPlayer.Opening += (s, e) =>
         {
+            LogDebug("Event: Opening");
             // Set volume as early as possible
             if (_mediaPlayer != null) _mediaPlayer.Volume = _currentVolume;
         };
 
         _mediaPlayer.Playing += (s, e) =>
         {
+            LogDebug("Event: Playing");
             // Aggressive Volume Enforcement Pattern:
             var refreshDelays = new[] { 50, 200, 500, 1000, 2000 };
             foreach (var delay in refreshDelays)
@@ -142,16 +155,19 @@ public class VideoPlayerService : IVideoPlayerService
         };
         _mediaPlayer.Paused += (s, e) =>
         {
+            LogDebug("Event: Paused");
             StopQualityMonitoring();
             _dispatcherService.BeginInvoke(() => PlayingChanged?.Invoke(this, false));
         };
         _mediaPlayer.Stopped += (s, e) =>
         {
+            LogDebug("Event: Stopped");
             StopQualityMonitoring();
             _dispatcherService.BeginInvoke(() => PlayingChanged?.Invoke(this, false));
         };
         _mediaPlayer.EndReached += (s, e) =>
         {
+            LogDebug("Event: EndReached");
             StopQualityMonitoring();
             _dispatcherService.BeginInvoke(() =>
             {
@@ -164,10 +180,21 @@ public class VideoPlayerService : IVideoPlayerService
             _dispatcherService.BeginInvoke(() => PositionChanged?.Invoke(this, e.Position * Duration));
         
         _mediaPlayer.EncounteredError += (s, e) => 
+        {
+            LogDebug("Event: EncounteredError");
             _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, "Video oynatma hatası oluştu"));
+        };
             
         _mediaPlayer.Buffering += (s, e) =>
+        {
+            var progress = (int)e.Cache;
+            if (progress % 10 == 0 && progress != _lastLogProgress)
+            {
+                _lastLogProgress = progress;
+                LogDebug($"Event: Buffering {progress}%");
+            }
             _dispatcherService.BeginInvoke(() => BufferingChanged?.Invoke(this, e.Cache));
+        };
     }
 
     public event EventHandler<float>? BufferingChanged;

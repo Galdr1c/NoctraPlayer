@@ -46,6 +46,7 @@ public record ProfileSaveRequest
     public required string Username { get; init; }
     public required string EncryptedPassword { get; init; }
     public required ProfileType AccountType { get; init; }
+    public bool CredentialsChanged { get; init; }
 
     /// <summary>
     /// When editing an existing profile, provides the IDs needed for update.

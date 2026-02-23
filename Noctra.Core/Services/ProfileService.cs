@@ -41,11 +41,8 @@ public class ProfileService : IProfileService
                 throw new InvalidOperationException("ProviderAccount bulunamadı.");
             }
 
-            // Detect credential change BEFORE applying them
-            if (existingAccount.Url != request.Url || 
-                existingAccount.Username != request.Username || 
-                existingAccount.Password != request.EncryptedPassword ||
-                existingAccount.Type != request.AccountType)
+            // CredentialsChanged is now calculated reliably in AddProfileViewModel
+            if (request.CredentialsChanged)
             {
                 credentialsChanged = true;
             }

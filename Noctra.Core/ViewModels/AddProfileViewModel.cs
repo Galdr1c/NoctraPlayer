@@ -964,6 +964,26 @@ public partial class AddProfileViewModel : ObservableObject
             StatusMessage = "Kaydediliyor...";
             IsSaving = true;
 
+            var newAccountType = IsStalker
+                ? ProfileType.StalkerPortal
+                : IsXtream
+                    ? ProfileType.XtreamCodes
+                    : ProfileType.M3U;
+
+            bool credentialsChanged = false;
+            if (EditingProfile?.ProviderAccount != null)
+            {
+                var originalUrl = EditingProfile.ProviderAccount.Url;
+                var originalUsername = EditingProfile.ProviderAccount.Username ?? string.Empty;
+                var originalPassword = _securityService.Decrypt(EditingProfile.ProviderAccount.Password) ?? string.Empty;
+                var originalType = EditingProfile.ProviderAccount.Type;
+
+                credentialsChanged = originalUrl != Url || 
+                                     originalUsername != Username || 
+                                     originalPassword != Password || 
+                                     originalType != newAccountType;
+            }
+
             var request = new ProfileSaveRequest
             {
                 ProfileName = ProfileName,
@@ -972,11 +992,8 @@ public partial class AddProfileViewModel : ObservableObject
                 Url = Url,
                 Username = Username,
                 EncryptedPassword = _securityService.Encrypt(Password) ?? string.Empty,
-                AccountType = IsStalker
-                    ? ProfileType.StalkerPortal
-                    : IsXtream
-                        ? ProfileType.XtreamCodes
-                        : ProfileType.M3U,
+                AccountType = newAccountType,
+                CredentialsChanged = credentialsChanged,
                 ExistingIds = EditingProfile != null
                     ? new ExistingProfileIds(EditingProfile.Id, EditingProfile.ProviderAccountId)
                     : null

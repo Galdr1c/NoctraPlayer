@@ -12,7 +12,7 @@
         CanResize="False"
         Background="Transparent"
         TransparencyLevelHint="Transparent"
-        Topmost="True">
+        Topmost="False">
 
     <Panel>
         <!-- Consistent Background Gradient -->

@@ -76,7 +76,7 @@ public partial class VideoOverlayView : UserControl
         if (slider != null)
         {
             // Capture the start of interaction eagerly (Tunnel) or even if handled (Bubble)
-            slider.AddHandler(PointerPressedEvent, TimelineSlider_PointerPressed, RoutingStrategies.Tunnel | RoutingStrategies.Bubble, handledEventsToo: true);
+            slider.AddHandler(PointerPressedEvent, TimelineSlider_PointerPressed, RoutingStrategies.Bubble, handledEventsToo: true);
             slider.AddHandler(PointerReleasedEvent, TimelineSlider_PointerReleased, RoutingStrategies.Bubble, handledEventsToo: true);
             slider.AddHandler(PointerCaptureLostEvent, TimelineSlider_PointerCaptureLost, RoutingStrategies.Bubble, handledEventsToo: true);
         }
@@ -84,6 +84,7 @@ public partial class VideoOverlayView : UserControl
 
     private void TimelineSlider_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
+        _playerViewModel?.LogDebug("UI Action: TimelineSlider PointerPressed");
         _isTimelinePointerDown = true;
         _playerViewModel?.StartSeekingCommand.Execute(null);
     }
@@ -107,6 +108,7 @@ public partial class VideoOverlayView : UserControl
 
         if (_isCommittingSeek) return; // double-fire koruması
 
+        _playerViewModel?.LogDebug("UI Action: CommitSeek triggered");
         _isTimelinePointerDown = false;
         _isCommittingSeek = true;
 
@@ -268,6 +270,7 @@ public partial class VideoOverlayView : UserControl
 
     private void ShowVolumeToast()
     {
+        _playerViewModel?.LogDebug("UI State: Volume Toast visible");
         IsVolumeToastVisible = true;
         _volumeToastTimer.Stop();
         _volumeToastTimer.Start();
@@ -284,6 +287,7 @@ public partial class VideoOverlayView : UserControl
 
     private void ShowSeekToast()
     {
+        _playerViewModel?.LogDebug($"UI State: Seek Toast visible ({SeekToastText})");
         IsSeekToastVisible = true;
         _seekToastTimer.Stop();
         _seekToastTimer.Start();

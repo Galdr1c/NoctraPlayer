@@ -253,6 +253,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private bool _isContentTransitioning;
     private bool _isUpdatingFromService;
     private int _isDownloadActionRunning;
+
+    // Stall Detection fields
+    private long _lastStallCheckTimeMs;
+    private int _stallCounter;
+    private const int StallThreshold = 25; // x120ms = ~3sn
     private readonly IDispatcherService _dispatcherService;
     private DateTime _lastWatchHistoryUpdateUtc = DateTime.MinValue;
     private readonly IWatchHistoryService? _watchHistoryService;
@@ -260,7 +265,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private readonly System.Timers.Timer _clockTimer;
     private readonly System.Timers.Timer _watchHistoryTimer;
 
-    private void LogDebug(string msg) {
+    internal void LogDebug(string msg) {
         try {
             File.AppendAllText(@"d:\IPTVPlayer\vlc_debug_log.txt", $"[{DateTime.Now:HH:mm:ss.fff}] [PVM] {msg}\n");
         } catch { }
@@ -354,6 +359,19 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             _dispatcherService.Invoke(() =>
             {
                 _isPlaybackEnded = true;
+
+                // Erken bitiş tespiti (Premature End Analysis)
+                var duration = _videoPlayerService.Duration;
+                var currentPos = Position;
+                if (!IsLiveContent && duration > 0)
+                {
+                    var remaining = duration - currentPos;
+                    if (remaining > 10) // 10 saniyeden fazla varken bittiyse
+                    {
+                        LogDebug($"VM: PREMATURE END DETECTED at {currentPos}/{duration}s. Suspected server truncation.");
+                    }
+                }
+                
                 TryShowNextEpisodePromptAtEnd();
             });
         };
@@ -430,7 +448,34 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 {
                     Position = pos;
                     PositionText = TimeSpan.FromSeconds(pos).ToString(@"hh\:mm\:ss");
+                    
+                    if (!IsLiveContent && Duration > 0)
+                    {
+                        RemainingTime = "-" + TimeSpan.FromSeconds(Math.Max(0, Duration - pos)).ToString(@"hh\:mm\:ss");
+                    }
+                    
                     TryApplyPendingResumeSeek();
+                }
+
+                // Heartbeat / Stall Monitor: Oynuyor görünürken ilerlemiyorsa logla
+                if (IsPlaying && !IsBuffering && !_isUserSeeking && !_isContentTransitioning)
+                {
+                    var mediaPlayer = _videoPlayerService.GetMediaPlayer();
+                    var currentTimeMs = mediaPlayer?.Time ?? 0;
+                    
+                    if (currentTimeMs > 0 && currentTimeMs == _lastStallCheckTimeMs)
+                    {
+                        _stallCounter++;
+                        if (_stallCounter == StallThreshold)
+                        {
+                            LogDebug($"STALL DETECTED: Heartbeat stopped at {pos}s (TimeMs: {currentTimeMs})");
+                        }
+                    }
+                    else
+                    {
+                        _stallCounter = 0;
+                    }
+                    _lastStallCheckTimeMs = currentTimeMs;
                 }
 
                 ReleaseSkipSeekCarryIfSettled(nowUtc, pos);
@@ -950,6 +995,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void OpenAudioSettings()
     {
+        LogDebug("UI Action: OpenAudioSettings clicked");
         IsAudioSettingsOpen = !IsAudioSettingsOpen;
         if (IsAudioSettingsOpen)
         {
@@ -965,6 +1011,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void OpenQualitySettings()
     {
+        LogDebug("UI Action: OpenQualitySettings clicked");
         IsQualitySettingsOpen = !IsQualitySettingsOpen;
         if (IsQualitySettingsOpen)
         {
@@ -978,6 +1025,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void OpenInfoPanel()
     {
+        LogDebug("UI Action: OpenInfoPanel clicked");
         if (IsDownloadedPlayback)
         {
             return;
@@ -1181,6 +1229,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private async Task PlayPause()
     {
+        LogDebug($"UI Action: PlayPause clicked (Current IsPlaying={IsPlaying})");
         if (Interlocked.Exchange(ref _isPlayPauseInProgress, 1) == 1)
         {
             return;
@@ -1492,6 +1541,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private async Task Stop()
     {
+        LogDebug("UI Action: Stop clicked");
         _isContentTransitioning = false;
         _isPlaybackEnded = false;
         ResetSeekInteractionState();
@@ -1541,6 +1591,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ToggleMute()
     {
+        LogDebug($"UI Action: ToggleMute clicked (Current IsMuted={IsMuted})");
         if (!IsMuted)
         {
             if (Volume > 0)
@@ -2292,32 +2343,38 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private void SetPlaybackPosition(double position)
     {
         var clamped = ClampSeekPosition(position);
-        var duration = _videoPlayerService.Duration;
-        if (duration <= 0) return;
+        
+        // Aynı pozisyona çift seek gönderme koruması
+        var targetTimeMs = (long)Math.Max(0, clamped * 1000);
+        if (targetTimeMs == _lastSeekTargetMs) return;
+        _lastSeekTargetMs = targetTimeMs;
+
+        LogDebug($"SetPlaybackPosition: position={position}, clamped={clamped}");
+
+        // 1. Internet yayını ise (Hard Seek)
+        if (!IsDownloadedPlayback && _videoPlayerService.CurrentUrl?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            LogDebug($"SetPlaybackPosition: HTTP stream detected, executing HardSeekAsync to {clamped}s");
+            _ = _videoPlayerService.HardSeekAsync(clamped);
+            return;
+        }
+
+        // 2. Yerel dosya veya indirilmiş içerik (Native Seek)
+        // Service duration 0 ise ViewModel'in kendi Duration property'sini kullan (fallback)
+        var duration = _videoPlayerService.Duration > 0 ? _videoPlayerService.Duration : this.Duration;
+        if (duration <= 0) 
+        {
+            LogDebug("SetPlaybackPosition: Duration 0, seek aborted for local file.");
+            return;
+        }
 
         var targetFraction = (float)(clamped / duration);
         if (targetFraction < 0f) targetFraction = 0f;
         if (targetFraction > 1f) targetFraction = 1f;
 
-        // Aynı pozisyona çift seek gönderme
-        var targetTimeMs = (long)Math.Max(0, clamped * 1000);
-        if (targetTimeMs == _lastSeekTargetMs) return;
-        _lastSeekTargetMs = targetTimeMs;
-
-        LogDebug($"SetPlaybackPosition: position={position}, clamped={clamped}, duration={duration}, fraction={targetFraction}");
-
         var mediaPlayer = _videoPlayerService.GetMediaPlayer();
         if (mediaPlayer != null)
         {
-            // Eğer internetten izleniyorsa VLC'nin internal seek'i donuyor, Restart-Seek kullan:
-            if (!IsDownloadedPlayback && _videoPlayerService.CurrentUrl?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
-            {
-                LogDebug($"SetPlaybackPosition: HTTP stream detected, executing HardSeekAsync to {clamped}s");
-                _ = _videoPlayerService.HardSeekAsync(clamped);
-                return;
-            }
-
-            // Local file - Position (0.0-1.0 float) kullan
             LogDebug($"SetPlaybackPosition: Local file detected, executing internal Position seek to {targetFraction}");
             mediaPlayer.Position = targetFraction;
             _ = VerifySeekAsync(targetFraction, targetTimeMs);
@@ -2475,6 +2532,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void OpenEpisodes()
     {
+        LogDebug("UI Action: OpenEpisodes clicked");
         if (!IsSeriesContent)
         {
             return;
@@ -2541,6 +2599,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ToggleFullScreen()
     {
+        LogDebug($"UI Action: ToggleFullScreen clicked (Target={!IsFullScreen})");
         IsFullScreen = !IsFullScreen;
         RestartAutoHideTimer();
     }
@@ -2548,6 +2607,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void SetAudioTrack(int id)
     {
+        LogDebug($"UI Action: SetAudioTrack clicked (Id={id})");
         _videoPlayerService.SetAudioTrack(id);
         SelectedAudioTrack = id;
         RestartAutoHideTimer();
@@ -2556,6 +2616,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void SetSubtitleTrack(int id)
     {
+        LogDebug($"UI Action: SetSubtitleTrack clicked (Id={id})");
         _videoPlayerService.SetSubtitleTrack(id);
         SelectedSubtitleTrack = id;
         RestartAutoHideTimer();
@@ -2582,12 +2643,14 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void PlayNextLiveChannel()
     {
+        LogDebug("UI Action: PlayNextLiveChannel clicked");
         NextLiveChannelRequested?.Invoke(this, EventArgs.Empty);
     }
 
     [RelayCommand]
     private void PlayPreviousLiveChannel()
     {
+        LogDebug("UI Action: PlayPreviousLiveChannel clicked");
         PreviousLiveChannelRequested?.Invoke(this, EventArgs.Empty);
     }
 
