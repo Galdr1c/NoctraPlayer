@@ -19,7 +19,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private const double SkipAggregationWindowMs = 1200;
     private const double SkipSeekCarryWindowMs = 1400;
     private const double SkipSeekCarryToleranceSeconds = 2.0;
-    private const double SeekBufferShieldSuppressionMs = 5000;
+    private const double SeekBufferShieldSuppressionMs = 8000;
     private const double EpisodeCompletedPercentThreshold = 90.0;
     private static readonly double EpisodeCompletedTailSeconds = TimeSpan.FromMinutes(3).TotalSeconds;
 
@@ -101,7 +101,6 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string _playerLoadingWarningMessage = string.Empty;
 
-    private CancellationTokenSource? _playerLoadingWarnCts;
 
     [ObservableProperty]
     private bool _isAudioSettingsOpen;
@@ -247,6 +246,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private int _volumeBeforeMute = 100;
     private bool _suppressBufferShieldForSeek;
     private int _seekShieldSuppressionToken;
+    private int _seekVerifyToken;
     private Series? _currentSeriesContext;
     private bool _isContentTransitioning;
     private bool _isUpdatingFromService;
@@ -377,9 +377,6 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 // Buffering bittiğinde kontrol katmanını mutlaka geri getir.
                 if (!IsBuffering)
                 {
-                    _playerLoadingWarnCts?.Cancel();
-                    _playerLoadingWarnCts?.Dispose();
-                    _playerLoadingWarnCts = null;
                     PlayerLoadingWarningMessage = string.Empty;
 
                     IsVisible = true;
@@ -392,9 +389,6 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         {
             _dispatcherService.Invoke(() =>
             {
-                _playerLoadingWarnCts?.Cancel();
-                _playerLoadingWarnCts?.Dispose();
-                _playerLoadingWarnCts = null;
                 PlayerLoadingWarningMessage = string.Empty;
 
                 ConnectionStatus = errorMessage;
@@ -599,6 +593,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         {
             _ = EnrichCurrentChannelMetadataAsync(channel, requestVersion);
         }
+
+        // Oynatma sağlık kontrolü: 5sn içinde başlamadıysa otomatik yeniden dene.
+        _ = EnsurePlaybackHealthAsync(channel, requestVersion);
     }
 
     private async Task EnrichCurrentChannelMetadataAsync(Channel channel, int requestVersion)
@@ -2097,31 +2094,12 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         IsBuffering = true;
         BufferingProgress = 0;
         
-        _playerLoadingWarnCts?.Cancel();
-        _playerLoadingWarnCts?.Dispose();
-        _playerLoadingWarnCts = new CancellationTokenSource();
         PlayerLoadingWarningMessage = string.Empty;
-        _ = StartPlayerLoadingWarningAsync(_playerLoadingWarnCts.Token);
 
         OnPropertyChanged(nameof(IsBufferShieldVisible));
     }
 
-    private async Task StartPlayerLoadingWarningAsync(CancellationToken ct)
-    {
-        try
-        {
-            await Task.Delay(8_000, ct);
-            if (ct.IsCancellationRequested) return;
-            _dispatcherService.BeginInvoke(() =>
-                PlayerLoadingWarningMessage = "Bağlantı normalden uzun sürüyor...");
 
-            await Task.Delay(7_000, ct); // toplam 15sn
-            if (ct.IsCancellationRequested) return;
-            _dispatcherService.BeginInvoke(() =>
-                PlayerLoadingWarningMessage = "Yayına erişilemiyor olabilir. Başka bir kanal deneyin.");
-        }
-        catch (TaskCanceledException) { }
-    }
 
     private void RefreshEpisodeBrowserContext(Series? series)
     {
@@ -2257,10 +2235,123 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         {
             var targetTimeMs = (long)Math.Max(0, clamped * 1000);
             mediaPlayer.Time = targetTimeMs;
+            // Post-seek doğrulama: VLC keyframe kaymasını düzelt
+            _ = VerifySeekAsync(targetTimeMs);
             return;
         }
 
         _videoPlayerService.Position = clamped;
+    }
+
+    /// <summary>
+    /// Seek sonrası VLC'nin hedef pozisyona ulaştığını doğrular.
+    /// VLC keyframe-based seek yaptığı için hedeften sapabilir; bu döngü düzeltir.
+    /// </summary>
+    private async Task VerifySeekAsync(long targetTimeMs)
+    {
+        var token = Interlocked.Increment(ref _seekVerifyToken);
+        for (int i = 0; i < 5; i++)
+        {
+            await Task.Delay(150);
+            if (token != _seekVerifyToken) return; // Yeni seek geldi, bu doğrulamayı bırak
+            if (_isUserSeeking) return; // Kullanıcı hâlâ seek yapıyor
+
+            var mp = _videoPlayerService.GetMediaPlayer();
+            if (mp == null) return;
+
+            var drift = Math.Abs(mp.Time - targetTimeMs);
+            if (drift <= 2000) return; // Kabul edilebilir sapma (2sn)
+
+            mp.Time = targetTimeMs; // Tekrar dene
+        }
+    }
+
+    /// <summary>
+    /// PlayChannelAsync sonrası sağlık kontrolü: oynatma başlamadıysa geri sayım ile otomatik yeniden dener.
+    /// </summary>
+    private async Task EnsurePlaybackHealthAsync(Channel channel, int requestVersion)
+    {
+        const int retryCountdownSeconds = 5;
+        const int maxAttempts = 4;
+
+        for (int attempt = 0; attempt < maxAttempts; attempt++)
+        {
+            // Geri sayım göster
+            for (int remaining = retryCountdownSeconds; remaining > 0; remaining--)
+            {
+                await Task.Delay(1000);
+
+                if (requestVersion != _playRequestVersion || CurrentChannel?.Id != channel.Id)
+                    return;
+                if (IsPlaying)
+                {
+                    _dispatcherService.Invoke(() => PlayerLoadingWarningMessage = string.Empty);
+                    return;
+                }
+                if (_livePauseRequiresHardRestart)
+                    return;
+
+                var msg = $"{remaining} saniye içinde yeniden denenecek...";
+                _dispatcherService.Invoke(() => PlayerLoadingWarningMessage = msg);
+            }
+
+            // Kanal değiştiyse veya çoktan oynuyorsa devam etme
+            if (requestVersion != _playRequestVersion || CurrentChannel?.Id != channel.Id)
+                return;
+            if (IsPlaying)
+            {
+                _dispatcherService.Invoke(() => PlayerLoadingWarningMessage = string.Empty);
+                return;
+            }
+            if (_livePauseRequiresHardRestart)
+                return;
+
+            // Yeniden deneniyor
+            _dispatcherService.Invoke(() =>
+            {
+                PlayerLoadingWarningMessage = $"Yeniden bağlanılıyor... ({attempt + 1}/{maxAttempts})";
+                ConnectionStatus = "Tekrar bağlanılıyor...";
+                IsBuffering = true;
+                BufferingProgress = 0;
+            });
+
+            _videoPlayerService.Stop();
+            await Task.Delay(200);
+
+            if (requestVersion != _playRequestVersion || CurrentChannel?.Id != channel.Id)
+                return;
+
+            try
+            {
+                var resolvedUrl = await _contentDownloadService.ResolvePlayableUrlAsync(channel.StreamUrl);
+                await _videoPlayerService.PlayAsync(resolvedUrl);
+
+                _dispatcherService.Invoke(() => PlayerLoadingWarningMessage = string.Empty);
+            }
+            catch
+            {
+                // Bir sonraki denemeye geç
+            }
+        }
+
+        // Tüm denemeler başarısız olduysa uyarı mesajlarını göster
+        if (requestVersion != _playRequestVersion || CurrentChannel?.Id != channel.Id)
+            return;
+        if (IsPlaying)
+            return;
+
+        _dispatcherService.Invoke(() =>
+            PlayerLoadingWarningMessage = "Bağlantı normalden uzun sürüyor...");
+
+        await Task.Delay(7_000);
+
+        if (requestVersion != _playRequestVersion || CurrentChannel?.Id != channel.Id)
+            return;
+        if (IsPlaying)
+            return;
+
+        _dispatcherService.Invoke(() =>
+            PlayerLoadingWarningMessage = "Yayına erişilemiyor olabilir. Başka bir kanal deneyin.");
     }
 
     private double ClampSeekPosition(double position)

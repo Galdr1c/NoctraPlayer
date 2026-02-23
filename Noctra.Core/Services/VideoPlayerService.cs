@@ -389,7 +389,7 @@ public class VideoPlayerService : IVideoPlayerService
         get => (_mediaPlayer?.Position ?? 0) * Duration;
         set
         {
-            if (_mediaPlayer != null && Duration > 0)
+            if (_mediaPlayer != null && Duration > 0 && !double.IsNaN(value) && !double.IsInfinity(value))
                 _mediaPlayer.Position = (float)(value / Duration);
         }
     }

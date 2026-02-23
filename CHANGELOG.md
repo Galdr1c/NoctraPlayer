@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Seek Güvenilirliği ve Otomatik Yeniden Bağlanma** (2026-02-23 11:55):
+  - **Post-Seek Doğrulama Döngüsü**: VLC keyframe-based seek yaptığında hedeften sapma (drift) problemi çözüldü. Seek sonrasında `VerifySeekAsync` ile 5 kez kontrol yapılıyor; >2s sapma varsa otomatik düzeltiliyor.
+  - **Otomatik Yeniden Bağlanma (Auto-Retry)**: VOD/dizi yayını ilk seferde açılmazsa artık geri çıkıp girmeye gerek yok. Sistem 5 saniye geri sayım göstererek ("5 saniye içinde yeniden denenecek...") otomatik olarak yeniden deniyor. En fazla 4 deneme yapılıyor; tümü başarısız olursa "Yayına erişilemiyor olabilir. Başka bir kanal deneyin." uyarısı gösteriliyor.
+  - **Buffer Shield Timeout**: Seek sonrası buffer koruma süresi 5s → 8s'ye uzatılarak, seek sonrasında oluşan siyah ekran sıkışmaları azaltıldı.
+  - **Position Guard**: VLC'ye `NaN`/`Infinity` gibi geçersiz seek değerlerinin gönderilmesi engellendi.
+  - **Mesaj Sistemi Birleştirildi**: Eski `StartPlayerLoadingWarningAsync` kaldırıldı; yükleme uyarı mesajları artık tek bir yerden (`EnsurePlaybackHealthAsync`) yönetiliyor, üst üste binme sorunu giderildi.
+  - **Dosyalar**: `PlayerViewModel.cs`, `VideoPlayerService.cs`
+
 - **Altyazı Ayarları Komple Kaldırıldı** (2026-02-22 20:00):
   - **Sorun:** LibVLC'nin altyazı motoru (Freetype) ayarları (font boyutu, renk vb.) çalışma zamanında (runtime) güvenilir şekilde değiştirmeyi desteklemediği ve tutarsız davranışlar sergilediği için altyazı ayarları UI ve arka plandan silindi.
   - **Temizlik:** `SettingsWindow.axaml` içindeki tüm altyazı ayar kontrolleri, `SettingsViewModel.cs` içindeki değişkenler, `AppSettings.cs` modelleri ve `PercentToOpacityConverter` gibi artık kullanılmayan dönüştürücüler projeden tamamen temizlendi.
