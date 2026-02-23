@@ -79,7 +79,22 @@ public partial class VideoOverlayView : UserControl
             slider.AddHandler(PointerPressedEvent, TimelineSlider_PointerPressed, RoutingStrategies.Bubble, handledEventsToo: true);
             slider.AddHandler(PointerReleasedEvent, TimelineSlider_PointerReleased, RoutingStrategies.Bubble, handledEventsToo: true);
             slider.AddHandler(PointerCaptureLostEvent, TimelineSlider_PointerCaptureLost, RoutingStrategies.Bubble, handledEventsToo: true);
+            
+            // Block scrolling from timeline to prevent unintended rapid seeking
+            slider.AddHandler(InputElement.PointerWheelChangedEvent, Slider_PointerWheelChanged_Tunnel, RoutingStrategies.Tunnel);
         }
+
+        var volumeSlider = this.FindControl<Slider>("VolumeSlider");
+        if (volumeSlider != null)
+        {
+            // Block scrolling from volume slider to prevent volume toast spam
+            volumeSlider.AddHandler(InputElement.PointerWheelChangedEvent, Slider_PointerWheelChanged_Tunnel, RoutingStrategies.Tunnel);
+        }
+    }
+
+    private void Slider_PointerWheelChanged_Tunnel(object? sender, PointerWheelEventArgs e)
+    {
+        e.Handled = true;
     }
 
     private void TimelineSlider_PointerPressed(object? sender, PointerPressedEventArgs e)
@@ -178,6 +193,14 @@ public partial class VideoOverlayView : UserControl
         }
 
         _playerViewModel.UserInteractionCommand.Execute(null);
+    }
+
+    private void OverlayRoot_PointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        // Block mouse/trackpad scrolling from reaching the Volume slider natively.
+        // The default Slider control captures scroll events and changes volume rapidly,
+        // causing severe toast notification spam (e.g. 50 times a second).
+        e.Handled = true;
     }
 
     private void OverlayRoot_KeyDown(object? sender, KeyEventArgs e)

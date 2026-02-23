@@ -235,6 +235,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private long _lastPausedTimeMs;
     private double _pendingResumeSeekPosition;
     private int _pendingResumeSeekAttempts;
+    private double _lastKnownValidPosition;
     private int _isPlayPauseInProgress;
     private bool _livePauseRequiresHardRestart;
     private double _lastLiveObservedPosition = -1;
@@ -368,7 +369,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                     var remaining = duration - currentPos;
                     if (remaining > 10) // 10 saniyeden fazla varken bittiyse
                     {
-                        LogDebug($"VM: PREMATURE END DETECTED at {currentPos}/{duration}s. Suspected server truncation.");
+                        var lastValid = _lastKnownValidPosition > 1 ? _lastKnownValidPosition : currentPos;
+                        LogDebug($"VM: PREMATURE END DETECTED at {currentPos}/{duration}s (Valid: {lastValid}). Suspected server truncation.");
+                        
+                        _ = AutoRecoverPrematureEndAsync(lastValid);
+                        return; // Auto-recovering, do not show next episode prompt
                     }
                 }
                 
@@ -448,6 +453,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 {
                     Position = pos;
                     PositionText = TimeSpan.FromSeconds(pos).ToString(@"hh\:mm\:ss");
+                    
+                    if (pos > 1 && !IsBuffering && !_isContentTransitioning)
+                    {
+                        _lastKnownValidPosition = pos;
+                    }
                     
                     if (!IsLiveContent && Duration > 0)
                     {
@@ -582,6 +592,21 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(DownloadButtonText));
         OnPropertyChanged(nameof(CanDownloadCurrentContent));
         DownloadCurrentContentCommand.NotifyCanExecuteChanged();
+    }
+
+    private async Task AutoRecoverPrematureEndAsync(double lastPos)
+    {
+        LogDebug($"AutoRecoverPrematureEnd: Reconnecting silently to let proxy clear...");
+        IsBuffering = true;
+        await Task.Delay(500);
+        
+        // If user hasn't clicked Stop or changed channel
+        if (CurrentChannel == null || _isContentTransitioning) return;
+        
+        LogDebug($"AutoRecoverPrematureEnd: Executing ResumePlaybackAsync from {lastPos}s");
+        _lastPausedPosition = lastPos;
+        _isPlaybackEnded = false;
+        await ResumePlaybackAsync(CurrentChannel.StreamUrl, false);
     }
 
     public async Task PlayChannelAsync(Channel channel)
@@ -1261,8 +1286,23 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         else if (CurrentChannel != null)
         {
             var mediaPlayer = _videoPlayerService.GetMediaPlayer();
-            var hasLoadedMedia = mediaPlayer?.Media != null;
-            await ResumePlaybackAsync(CurrentChannel.StreamUrl, hasLoadedMedia);
+            var state = mediaPlayer?.State ?? LibVLCSharp.Shared.VLCState.NothingSpecial;
+            var isStreamDead = state == LibVLCSharp.Shared.VLCState.Stopped || 
+                               state == LibVLCSharp.Shared.VLCState.Ended || 
+                               state == LibVLCSharp.Shared.VLCState.Error || 
+                               state == LibVLCSharp.Shared.VLCState.NothingSpecial;
+            
+            if (isStreamDead) 
+            {
+                LogDebug($"PlayPause: Stream is dead (State: {state}), initiating fresh play. _lastKnownValidPosition: {_lastKnownValidPosition}");
+                if (_lastPausedPosition <= 1 && _lastKnownValidPosition > 1)
+                {
+                    _lastPausedPosition = _lastKnownValidPosition;
+                }
+            }
+
+            var isResumable = mediaPlayer?.Media != null && !isStreamDead;
+            await ResumePlaybackAsync(CurrentChannel.StreamUrl, isResumable);
         }
         
         RestartAutoHideTimer();
@@ -1316,6 +1356,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             }
             else
             {
+                _pendingResumeSeekPosition = 0;
+                _pendingResumeSeekAttempts = 0;
                 await _videoPlayerService.PlayAsync(streamUrl);
             }
 
@@ -1566,6 +1608,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     {
         if (!_isUpdatingFromService)
         {
+            LogDebug($"OnVolumeChanged: volume set to {value}");
             _videoPlayerService.Volume = value;
             if (value > 0)
             {
@@ -2352,64 +2395,44 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         LogDebug($"SetPlaybackPosition: position={position}, clamped={clamped}");
 
         // 1. Internet yayını ise (Hard Seek)
+        // XTream Codes vb. sunucularda HTTP üzerinden Range request (Native Seek) atıldığında
+        // sunucu bağlantıyı koparabiliyor (EndReached) veya 20 saniye dondurabiliyor.
+        // Bu yüzden ağ yayınlarında bağlantıyı kapatıp açan HardSeekAsync kullanıyoruz.
         if (!IsDownloadedPlayback && _videoPlayerService.CurrentUrl?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
         {
             LogDebug($"SetPlaybackPosition: HTTP stream detected, executing HardSeekAsync to {clamped}s");
             _ = _videoPlayerService.HardSeekAsync(clamped);
+            // Volume is reset by VideoPlayerService, which triggers Toast
+            // We suppress volume toasts globally by ensuring UI ignores slider focus
             return;
         }
 
-        // 2. Yerel dosya veya indirilmiş içerik (Native Seek)
-        // Service duration 0 ise ViewModel'in kendi Duration property'sini kullan (fallback)
+        // 2. Local/Downloaded playback
         var duration = _videoPlayerService.Duration > 0 ? _videoPlayerService.Duration : this.Duration;
-        if (duration <= 0) 
-        {
-            LogDebug("SetPlaybackPosition: Duration 0, seek aborted for local file.");
-            return;
-        }
 
-        var targetFraction = (float)(clamped / duration);
+        var targetFraction = duration > 0 ? (float)(clamped / duration) : 0f;
         if (targetFraction < 0f) targetFraction = 0f;
         if (targetFraction > 1f) targetFraction = 1f;
 
         var mediaPlayer = _videoPlayerService.GetMediaPlayer();
         if (mediaPlayer != null)
         {
-            LogDebug($"SetPlaybackPosition: Local file detected, executing internal Position seek to {targetFraction}");
-            mediaPlayer.Position = targetFraction;
-            _ = VerifySeekAsync(targetFraction, targetTimeMs);
+            if (duration > 0)
+            {
+                LogDebug($"SetPlaybackPosition: Executing internal Position seek to {targetFraction} (Time: {targetTimeMs}ms)");
+                mediaPlayer.Position = targetFraction;
+            }
+            else
+            {
+                LogDebug($"SetPlaybackPosition: Fallback executing internal Time seek to {targetTimeMs}ms");
+                mediaPlayer.Time = targetTimeMs;
+            }
             return;
         }
 
         _videoPlayerService.Position = clamped;
     }
 
-    /// <summary>
-    /// Seek sonrası VLC'nin hedef pozisyona ulaştığını doğrular.
-    /// Buffer süresinde ek seek atmaz; VLC oynamaya başlamadan drift ölçmez.
-    /// </summary>
-    private async Task VerifySeekAsync(float targetFraction, long targetTimeMs)
-    {
-        var token = Interlocked.Increment(ref _seekVerifyToken);
-
-        for (int i = 0; i < 5; i++)
-        {
-            await Task.Delay(300);
-            if (token != _seekVerifyToken) return; // Yeni seek geldi
-            if (_isUserSeeking) return;
-            if (IsBuffering) continue; // Buffer bitmeden drift ölçme!
-
-            var mp = _videoPlayerService.GetMediaPlayer();
-            if (mp == null) return;
-            if (mp.Time <= 0) continue; // VLC henüz oynamaya başlamadı
-
-            var drift = Math.Abs(mp.Time - targetTimeMs);
-            if (drift <= 3000) return; // 3s tolerans
-
-            LogDebug($"VerifySeekAsync: drift={drift}ms, re-seeking to fraction={targetFraction}");
-            mp.Position = targetFraction;
-        }
-    }
 
     /// <summary>
     /// PlayChannelAsync sonrası sağlık kontrolü: oynatma başlamadıysa geri sayım ile otomatik yeniden dener.

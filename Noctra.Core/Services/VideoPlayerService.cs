@@ -97,6 +97,9 @@ public class VideoPlayerService : IVideoPlayerService
                     "--rtsp-tcp",
                     "--drop-late-frames",
                     "--skip-frames",
+                    "--ts-seek-percent",
+                    "--http-reconnect",
+                    "--http-user-agent=IPTVSmartersPro",
                     "--verbose=0",
                     "--quiet"
                 };
@@ -220,6 +223,15 @@ public class VideoPlayerService : IVideoPlayerService
             return;
         }
         
+        // Explicitly terminate the connection and wait before reopening.
+        // Xtream Codes servers will ban or drop streams if 2 connections overlap.
+        if (_mediaPlayer.State == VLCState.Playing || _mediaPlayer.State == VLCState.Buffering || _mediaPlayer.State == VLCState.Opening || _mediaPlayer.State == VLCState.Paused)
+        {
+            System.Diagnostics.Debug.WriteLine("[VideoPlayerService] Stopping active player stream...");
+            _mediaPlayer.Stop();
+            await Task.Delay(1200); // Allow TCP FIN to reach server
+        }
+        
         _retryCount = 0;
         var generation = Interlocked.Increment(ref _playGeneration);
         _playCts?.Cancel();
@@ -243,6 +255,15 @@ public class VideoPlayerService : IVideoPlayerService
 
         if (!_isInitialized) await InitializeAsync();
         if (_mediaPlayer == null) return;
+
+        // Explicitly terminate the connection and wait before reopening.
+        // Extremely important for HardSeek because we inject a new Media into the running player.
+        if (_mediaPlayer.State == VLCState.Playing || _mediaPlayer.State == VLCState.Buffering || _mediaPlayer.State == VLCState.Opening || _mediaPlayer.State == VLCState.Paused)
+        {
+            System.Diagnostics.Debug.WriteLine("[VideoPlayerService] Stopping active player stream for HardSeek...");
+            _mediaPlayer.Stop();
+            await Task.Delay(1200); // Allow TCP FIN to reach server and connection registry to clear
+        }
 
         _retryCount = 0; // İstenirse retry devrede kalabilir
         var generation = Interlocked.Increment(ref _playGeneration);
@@ -298,7 +319,7 @@ public class VideoPlayerService : IVideoPlayerService
 
             if (startSeconds > 0)
             {
-                media.AddOption($":start-time={startSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture)}");
+                media.AddOption($":start-time={Math.Floor(startSeconds).ToString(System.Globalization.CultureInfo.InvariantCulture)}");
             }
 
             if (_mediaPlayer == null) return;
