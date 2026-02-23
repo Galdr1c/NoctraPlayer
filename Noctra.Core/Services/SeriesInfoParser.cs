@@ -60,7 +60,14 @@ public static partial class SeriesInfoParser
         var normalized = value.Trim().ToLowerInvariant();
         normalized = StripIptvPrefixes(normalized);
         normalized = EpisodeTokenRegex().Replace(normalized, " ");
+        
+        // Strip years, languages, and quality tags for a pure series key
+        normalized = YearTokenRegex().Replace(normalized, " ");
+        normalized = LanguageTokenRegex().Replace(normalized, " ");
         normalized = NoiseTokenRegex().Replace(normalized, " ");
+        
+        // Remove any brackets/parens/symbols left over
+        normalized = SymbolsRegex().Replace(normalized, " ");
 
         var buffer = new StringBuilder(normalized.Length);
         var previousSpace = false;
@@ -196,11 +203,17 @@ public static partial class SeriesInfoParser
     [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?:[Ss]eason|[Ss]ezon|[Tt]emporada|[Ss]aison|[Ss]taffel)\s*(?<season>\d{1,2})\b", RegexOptions.IgnoreCase)]
     private static partial Regex SeasonOnlyRegex();
 
-    [GeneratedRegex(@"\b(?:[Ss]\d{1,2}\s*[Ee]\d{1,3}|\d{1,2}\s*[Xx]\s*\d{1,3}|\d{1,2}\.?\s*[Ss]ezon.*?[\d]{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m|[Ss]ezon\s*\d{1,2}\s*[Bb](?:o|ö)l(?:u|ü)m\s*\d{1,3}|[Ss]eason\s*\d{1,2}\s*[Ee]pisode\s*\d{1,3}|[Tt]emporada\s*\d{1,2}\s*(?:[Ee]pisodio|epis(?:o|ó)dio|cap(?:i|í)tulo)\s*\d{1,3}|[Ss]aison\s*\d{1,2}\s*(?:[Ee]pisode|épisode)\s*\d{1,3}|[Ss]taffel\s*\d{1,2}\s*[Ff]olge\s*\d{1,3}|[Ee]p(?:isode)?\s*\d{1,3}|\d{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m|[Bb](?:o|ö)l(?:u|ü)m\s*\d{1,3}|[Ff]olge\s*\d{1,3}|[Cc]ap(?:i|í)tulo\s*\d{1,3})\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(?:[Ss]\d{1,2}\s*[Ee]\d{1,3}|\d{1,2}\s*[Xx]\s*\d{1,3}|\d{1,2}\.?\s*[Ss]ezon.*?[\d]{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m|[Ss]ezon\s*\d{1,2}\s*[Bb](?:o|ö)l(?:u|ü)m\s*\d{1,3}|[Ss]eason\s*\d{1,2}\s*[Ee]pisode\s*\d{1,3}|[Tt]emporada\s*\d{1,2}\s*(?:[Ee]pisodio|epis(?:o|ó)dio|cap(?:i|í)tulo)\s*\d{1,3}|[Ss]aison\s*\d{1,2}\s*(?:[Ee]pisode|épisode)\s*\d{1,3}|[Ss]taffel\s*\d{1,2}\s*[Ff]olge\s*\d{1,3}|[Ee]p(?:isode)?\s*\d{1,3}|\d{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m|[Bb](?:o|ö)l(?:u|ü)m\s*\d{1,3}|[Ff]olge\s*\d{1,3}|[Cc]ap(?:i|í)tulo\s*\d{1,3}|[Ss]eason\s*\d{1,2}|[Ss]ezon\s*\d{1,2}|[Tt]emporada\s*\d{1,2}|[Ss]aison\s*\d{1,2}|[Ss]taffel\s*\d{1,2})\b", RegexOptions.IgnoreCase)]
     private static partial Regex EpisodeTokenRegex();
 
-    [GeneratedRegex(@"\b(?:4k|2160p|1080p|720p|x264|x265|h264|h265|webrip|webdl|web-dl|bluray|dub|dublaj|altyazi|subtitle)\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(?:4k|2160p|1080p|720p|480p|x264|x265|h264|h265|hevc|webrip|webdl|web-dl|bluray|brrip|bdrip|hdrip|camrip|hdcam|telesync|ts|remux|vip|vod|fhd|uhd|hd|sd|8k)\b", RegexOptions.IgnoreCase)]
     private static partial Regex NoiseTokenRegex();
+
+    [GeneratedRegex(@"\b(?:tr|en|fr|de|ru|ar)\s+(?:dual|multi|altyaz(?:ı|i)l(?:ı|i)|altyaz(?:ı|i)|dublaj|sub|subbed|dubbed|dub)\b|\b(?:dual|multi|altyaz(?:ı|i)l(?:ı|i)|altyaz(?:ı|i)|dublaj|sub|subbed|dubbed|dub|tr-en)\b|\[(?:tr|en|fr|de|ru|ar)\]|\((?:tr|en|fr|de|ru|ar)\)", RegexOptions.IgnoreCase)]
+    private static partial Regex LanguageTokenRegex();
+
+    [GeneratedRegex(@"[\[\]\(\)\{\}\-_\.\:]")]
+    private static partial Regex SymbolsRegex();
 
     [GeneratedRegex(@"^\s*(?:[a-z]{2,3}\s*[|:\.\-]\s*)+", RegexOptions.IgnoreCase)]
     private static partial Regex CountryPrefixRegex();

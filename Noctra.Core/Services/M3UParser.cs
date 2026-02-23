@@ -81,7 +81,7 @@ public partial class M3UParser : IM3UParser
     {
         try
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(3));
             var content = await NetworkRetry.ExecuteAsync(
                 () => _httpClient.GetStringAsync(url, cts.Token),
                 cancellationToken: cts.Token);
