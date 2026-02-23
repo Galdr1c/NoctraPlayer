@@ -174,10 +174,10 @@ public class VideoPlayerService : IVideoPlayerService
 
     public MediaPlayer? GetMediaPlayer() => _mediaPlayer;
 
-    public async Task PlayAsync(string url)
+    public async Task PlayAsync(string url, double startTimeSeconds = 0)
     {
+        System.Diagnostics.Debug.WriteLine($"PlayAsync Called -> URL: {url}, StartTime: {startTimeSeconds}s");
         CurrentUrl = url;
-        System.Diagnostics.Debug.WriteLine($"[VideoPlayerService] PlayAsync called with URL: {url}");
         
         // Reset volume to defaults on every new play
         Volume = _settingsService.Settings.DefaultVolume;
@@ -192,7 +192,6 @@ public class VideoPlayerService : IVideoPlayerService
             System.Diagnostics.Debug.WriteLine("[VideoPlayerService] ERROR: _mediaPlayer is null!");
             return;
         }
-
         
         _retryCount = 0;
         var generation = Interlocked.Increment(ref _playGeneration);
@@ -205,10 +204,35 @@ public class VideoPlayerService : IVideoPlayerService
         {
             StreamQuality = null;
         }
-        await PlayWithRetryAsync(url, playToken, generation);
+        await PlayWithRetryAsync(url, playToken, generation, startTimeSeconds);
     }
 
-    private async Task PlayWithRetryAsync(string url, CancellationToken cancellationToken, long generation)
+    public async Task HardSeekAsync(double seconds)
+    {
+        var url = CurrentUrl;
+        if (string.IsNullOrEmpty(url)) return;
+
+        System.Diagnostics.Debug.WriteLine($"HardSeekAsync Called -> URL: {url}, StartTime: {seconds}s");
+
+        if (!_isInitialized) await InitializeAsync();
+        if (_mediaPlayer == null) return;
+
+        _retryCount = 0; // İstenirse retry devrede kalabilir
+        var generation = Interlocked.Increment(ref _playGeneration);
+        _playCts?.Cancel();
+        _playCts?.Dispose();
+        _playCts = new CancellationTokenSource();
+        var playToken = _playCts.Token;
+        
+        StopQualityMonitoring();
+        lock (_qualitySync)
+        {
+            StreamQuality = null;
+        }
+        await PlayWithRetryAsync(url, playToken, generation, seconds);
+    }
+
+    private async Task PlayWithRetryAsync(string url, CancellationToken cancellationToken, long generation, double startSeconds)
     {
         try
         {
@@ -243,6 +267,11 @@ public class VideoPlayerService : IVideoPlayerService
                 // Yerel dosyalar için FromLocation yerine FromPath kullanmak çok önemlidir
                 media = new Media(_libVLC, localPath, FromType.FromPath);
                 media.AddOption(":file-caching=1500"); // Yerel dosya için ufak bir disk önbelleği
+            }
+
+            if (startSeconds > 0)
+            {
+                media.AddOption($":start-time={startSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture)}");
             }
 
             if (_mediaPlayer == null) return;
@@ -297,7 +326,7 @@ public class VideoPlayerService : IVideoPlayerService
                     return;
                 }
 
-                await PlayWithRetryAsync(url, cancellationToken, generation);
+                await PlayWithRetryAsync(url, cancellationToken, generation, startSeconds);
             }
             else if (errorOccurred)
             {

@@ -4,6 +4,7 @@ using Noctra.Models;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
 using System.Text.RegularExpressions;
+using System.IO;
 
 namespace Noctra.ViewModels;
 
@@ -247,16 +248,24 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private bool _suppressBufferShieldForSeek;
     private int _seekShieldSuppressionToken;
     private int _seekVerifyToken;
+    private long _lastSeekTargetMs = -1;
     private Series? _currentSeriesContext;
     private bool _isContentTransitioning;
     private bool _isUpdatingFromService;
     private int _isDownloadActionRunning;
     private readonly IDispatcherService _dispatcherService;
+    private DateTime _lastWatchHistoryUpdateUtc = DateTime.MinValue;
     private readonly IWatchHistoryService? _watchHistoryService;
     private readonly System.Timers.Timer _autoHideTimer;
     private readonly System.Timers.Timer _clockTimer;
     private readonly System.Timers.Timer _watchHistoryTimer;
-    private DateTime _lastWatchHistoryUpdateUtc = DateTime.MinValue;
+
+    private void LogDebug(string msg) {
+        try {
+            File.AppendAllText(@"d:\IPTVPlayer\vlc_debug_log.txt", $"[{DateTime.Now:HH:mm:ss.fff}] [PVM] {msg}\n");
+        } catch { }
+    }
+
     public int? CurrentProfileId { get; set; }
 
     public PlayerViewModel(
@@ -532,6 +541,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     public async Task PlayChannelAsync(Channel channel)
     {
+        LogDebug($"PlayChannelAsync: Id={channel.Id}, Name={channel.Name}, Type={channel.Type}, StreamUrl={channel.StreamUrl}");
         var requestVersion = Interlocked.Increment(ref _playRequestVersion);
 
         // Force previous media to stop so stale position events do not leak into the next item.
@@ -1266,10 +1276,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         var targetPosition = _lastPausedPosition;
         // Slight forward compensation to offset keyframe-based resume landing behind target.
         var targetTimeMs = (_lastPausedTimeMs > 0 ? _lastPausedTimeMs : (long)(targetPosition * 1000)) + 350;
-        _pendingResumeSeekPosition = targetPosition;
-        _pendingResumeSeekAttempts = 0;
-
-        // Prefer native resume for smoothness. Only force seek when drift is significant.
+        
+        // Prefer native resume for smoothness if media is loaded
         if (hasLoadedMedia)
         {
             _videoPlayerService.Resume();
@@ -1295,12 +1303,46 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 await EnsurePlaybackStartedAsync(streamUrl);
                 return;
             }
+
+            // VLC's internal seek freezes on HTTP VOD streams, so use HardSeek
+            if (!IsDownloadedPlayback && streamUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                LogDebug($"ResumePlaybackAsync: Significant drift detected, using HardSeekAsync for HTTP stream to {targetPosition}s");
+                _pendingResumeSeekPosition = 0;
+                _pendingResumeSeekAttempts = 0;
+                await _videoPlayerService.HardSeekAsync(targetPosition);
+                await EnsurePlaybackStartedAsync(streamUrl);
+                return;
+            }
+            else
+            {
+                // Local files can use the standard pending seek loop
+                _pendingResumeSeekPosition = targetPosition;
+                _pendingResumeSeekAttempts = 0;
+            }
         }
         else
         {
-            await _videoPlayerService.PlayAsync(streamUrl);
+            // Oynatıcı henüz yüklenmediyse
+            if (!IsDownloadedPlayback && streamUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                LogDebug($"ResumePlaybackAsync: Fresh play for HTTP stream, passing startTime={targetPosition}s to PlayAsync");
+                _pendingResumeSeekPosition = 0;
+                _pendingResumeSeekAttempts = 0;
+                await _videoPlayerService.PlayAsync(streamUrl, targetPosition);
+                await EnsurePlaybackStartedAsync(streamUrl);
+                return;
+            }
+            else
+            {
+                // Local files will seek manually via TryApplyPendingResumeSeek
+                _pendingResumeSeekPosition = targetPosition;
+                _pendingResumeSeekAttempts = 0;
+                await _videoPlayerService.PlayAsync(streamUrl);
+            }
         }
 
+        // Only local files reach this 12-attempt loop (HTTP streams return early above)
         for (var attempt = 0; attempt < 12; attempt++)
         {
             await Task.Delay(220 + (attempt * 60));
@@ -1382,10 +1424,13 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         var mediaPlayer = _videoPlayerService.GetMediaPlayer();
         var pendingTimeMs = _lastPausedTimeMs > 0 ? _lastPausedTimeMs : (long)(_pendingResumeSeekPosition * 1000);
+        LogDebug($"TryApplyPendingResumeSeek: Current Position={Position}, PendingResumeSeekPosition={_pendingResumeSeekPosition}, PendingTimeMs={pendingTimeMs}");
+
         if (mediaPlayer != null && pendingTimeMs > 0)
         {
             if (mediaPlayer.Time + 1000 >= pendingTimeMs)
             {
+                LogDebug($"TryApplyPendingResumeSeek: mediaPlayer.Time ({mediaPlayer.Time}) is close enough to pendingTimeMs ({pendingTimeMs}). Resetting pending seek.");
                 _pendingResumeSeekPosition = 0;
                 _pendingResumeSeekAttempts = 0;
                 return;
@@ -1394,6 +1439,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         if (Position + 1 >= _pendingResumeSeekPosition)
         {
+            LogDebug($"TryApplyPendingResumeSeek: Position ({Position}) is close enough to PendingResumeSeekPosition ({_pendingResumeSeekPosition}). Resetting pending seek.");
             _pendingResumeSeekPosition = 0;
             _pendingResumeSeekAttempts = 0;
             return;
@@ -1401,6 +1447,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         if (_pendingResumeSeekAttempts >= 20)
         {
+            LogDebug($"TryApplyPendingResumeSeek: Max attempts reached ({_pendingResumeSeekAttempts}). Resetting pending seek.");
             _pendingResumeSeekPosition = 0;
             _pendingResumeSeekAttempts = 0;
             return;
@@ -1413,6 +1460,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             var driftMs = pendingTimeMs - mediaPlayer.Time;
             if (driftMs <= 1000)
             {
+                LogDebug($"TryApplyPendingResumeSeek: Drift ({driftMs}ms) is within tolerance. Resetting pending seek.");
                 _pendingResumeSeekPosition = 0;
                 _pendingResumeSeekAttempts = 0;
                 return;
@@ -1421,10 +1469,22 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         if (mediaPlayer != null && pendingTimeMs > 0)
         {
-            mediaPlayer.Time = pendingTimeMs;
+            var duration = _videoPlayerService.Duration;
+            if (duration > 0)
+            {
+                var fraction = (float)(_pendingResumeSeekPosition / duration);
+                LogDebug($"TryApplyPendingResumeSeek: Setting mediaPlayer.Position fraction={fraction} for {pendingTimeMs}ms");
+                mediaPlayer.Position = Math.Clamp(fraction, 0f, 1f);
+            }
+            else
+            {
+                LogDebug($"TryApplyPendingResumeSeek: Duration is 0, falling back to Time={pendingTimeMs}");
+                mediaPlayer.Time = pendingTimeMs;
+            }
         }
         else
         {
+            LogDebug($"TryApplyPendingResumeSeek: Setting Position setter to {_pendingResumeSeekPosition}");
             _videoPlayerService.Position = _pendingResumeSeekPosition;
         }
     }
@@ -1509,6 +1569,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void StartSeeking()
     {
+        LogDebug("StartSeeking invoked.");
         if (Interlocked.CompareExchange(ref _recoveryState, 0, 0) != (int)PlaybackRecoveryState.None)
             return;
 
@@ -1518,6 +1579,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void Seek(double position)
     {
+        LogDebug($"Seek invoked with value: {position}");
         _isUserSeeking = false;
 
         if (Interlocked.CompareExchange(ref _recoveryState, 0, 0) != (int)PlaybackRecoveryState.None)
@@ -2230,13 +2292,35 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private void SetPlaybackPosition(double position)
     {
         var clamped = ClampSeekPosition(position);
+        var duration = _videoPlayerService.Duration;
+        if (duration <= 0) return;
+
+        var targetFraction = (float)(clamped / duration);
+        if (targetFraction < 0f) targetFraction = 0f;
+        if (targetFraction > 1f) targetFraction = 1f;
+
+        // Aynı pozisyona çift seek gönderme
+        var targetTimeMs = (long)Math.Max(0, clamped * 1000);
+        if (targetTimeMs == _lastSeekTargetMs) return;
+        _lastSeekTargetMs = targetTimeMs;
+
+        LogDebug($"SetPlaybackPosition: position={position}, clamped={clamped}, duration={duration}, fraction={targetFraction}");
+
         var mediaPlayer = _videoPlayerService.GetMediaPlayer();
         if (mediaPlayer != null)
         {
-            var targetTimeMs = (long)Math.Max(0, clamped * 1000);
-            mediaPlayer.Time = targetTimeMs;
-            // Post-seek doğrulama: VLC keyframe kaymasını düzelt
-            _ = VerifySeekAsync(targetTimeMs);
+            // Eğer internetten izleniyorsa VLC'nin internal seek'i donuyor, Restart-Seek kullan:
+            if (!IsDownloadedPlayback && _videoPlayerService.CurrentUrl?.StartsWith("http", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                LogDebug($"SetPlaybackPosition: HTTP stream detected, executing HardSeekAsync to {clamped}s");
+                _ = _videoPlayerService.HardSeekAsync(clamped);
+                return;
+            }
+
+            // Local file - Position (0.0-1.0 float) kullan
+            LogDebug($"SetPlaybackPosition: Local file detected, executing internal Position seek to {targetFraction}");
+            mediaPlayer.Position = targetFraction;
+            _ = VerifySeekAsync(targetFraction, targetTimeMs);
             return;
         }
 
@@ -2245,24 +2329,28 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Seek sonrası VLC'nin hedef pozisyona ulaştığını doğrular.
-    /// VLC keyframe-based seek yaptığı için hedeften sapabilir; bu döngü düzeltir.
+    /// Buffer süresinde ek seek atmaz; VLC oynamaya başlamadan drift ölçmez.
     /// </summary>
-    private async Task VerifySeekAsync(long targetTimeMs)
+    private async Task VerifySeekAsync(float targetFraction, long targetTimeMs)
     {
         var token = Interlocked.Increment(ref _seekVerifyToken);
+
         for (int i = 0; i < 5; i++)
         {
-            await Task.Delay(150);
-            if (token != _seekVerifyToken) return; // Yeni seek geldi, bu doğrulamayı bırak
-            if (_isUserSeeking) return; // Kullanıcı hâlâ seek yapıyor
+            await Task.Delay(300);
+            if (token != _seekVerifyToken) return; // Yeni seek geldi
+            if (_isUserSeeking) return;
+            if (IsBuffering) continue; // Buffer bitmeden drift ölçme!
 
             var mp = _videoPlayerService.GetMediaPlayer();
             if (mp == null) return;
+            if (mp.Time <= 0) continue; // VLC henüz oynamaya başlamadı
 
             var drift = Math.Abs(mp.Time - targetTimeMs);
-            if (drift <= 2000) return; // Kabul edilebilir sapma (2sn)
+            if (drift <= 3000) return; // 3s tolerans
 
-            mp.Time = targetTimeMs; // Tekrar dene
+            LogDebug($"VerifySeekAsync: drift={drift}ms, re-seeking to fraction={targetFraction}");
+            mp.Position = targetFraction;
         }
     }
 
@@ -2291,6 +2379,13 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 if (_livePauseRequiresHardRestart)
                     return;
 
+                // Seek buffer shield aktifse restart yapma - normal buffer bekle
+                if (_suppressBufferShieldForSeek)
+                {
+                    _dispatcherService.Invoke(() => PlayerLoadingWarningMessage = string.Empty);
+                    return;
+                }
+
                 var msg = $"{remaining} saniye içinde yeniden denenecek...";
                 _dispatcherService.Invoke(() => PlayerLoadingWarningMessage = msg);
             }
@@ -2304,6 +2399,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 return;
             }
             if (_livePauseRequiresHardRestart)
+                return;
+            // Seek sonrası buffer bekliyorsa restart yapma
+            if (_suppressBufferShieldForSeek)
                 return;
 
             // Yeniden deneniyor

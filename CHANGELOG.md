@@ -5,8 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **VOD Filmlerde ve Dizilerde Kesintisiz İleri/Geri Sarma (Hard Seek)** (2026-02-23 13:50):
+  - **VLC Seek Donma Düzeltmesi**: VLC'nin internetten izlenen HTTP tabanlı VOD (MKV/TS) içeriklerde, zaman damgasını bayt konumuna çeviremediğinde seek (ileri/geri sarma) komutlarını (hem `Time` hem de `Position` bazlı) tamamen yok sayarak sessizce kilitlenme sorunu çözüldü.
+  - **HardSeekAsync Yaklaşımı (Kesin Çözüm)**: İndirilmemiş tüm HTTP VOD içeriklerinde içsel VLC araması iptal edildi. Bunun yerine, VLC'ye ait `:start-time={saniye}` argümanı kullanılarak "Durdur - Yeniden Başlat - İstenilen Saniyeye Git" formülü entegre edildi. Artık ileri sardırıldığında sunucuyla hedeflenen bayt konumundan yepyeni bir HTTP bağlantısı kuruluyor ve donma/kilitlenme/başa zıplama sorunu ortadan kalkıyor.
+  - **Çift Ateşleme (Double Fire) Koruması**: Arayüzdeki tıklama olaylarının (`PointerReleased` ve `PointerCaptureLost`) aynı anda 2 kez seek komutu göndermesini engellemek için ViewModel tarafına `_lastSeekTargetMs`, Arayüz tarafına da `_isCommittingSeek` bariyerleri eklendi.
+  - **Akıllı Kaldığın Yerden Devam Etme (Resume)**: `TryApplyPendingResumeSeek` ve `ResumePlaybackAsync` metotları yeni Hard Seek altyapısına uyumlu hale getirildi. Artık yarım kalan bir VOD içeriği açıldığında hedeflenen saniyeden sorunsuz başlıyor.
+  - **Sıfırdan Başlatma Koruması (Buffer Shield)**: Doğal bir seek yüklendiğinde (buffering), sistemin bunu "Yayın koptu" sanarak filmi gereksiz yere baştan başlatma (`EnsurePlaybackHealthAsync`) hatası engellendi (`_suppressBufferShieldForSeek` kontrolü eklendi).
+
 - **Seek Güvenilirliği ve Otomatik Yeniden Bağlanma** (2026-02-23 11:55):
-  - **Post-Seek Doğrulama Döngüsü**: VLC keyframe-based seek yaptığında hedeften sapma (drift) problemi çözüldü. Seek sonrasında `VerifySeekAsync` ile 5 kez kontrol yapılıyor; >2s sapma varsa otomatik düzeltiliyor.
+  - **TS/M3U8 Donanım Seek Düzeltmesi**: LibVLC başlatma ayarlarına `--ts-seek-percent`, `--clock-jitter=0` ve `--clock-synchro=0` komutları eklendi. Bu sayede IPTV'deki bozuk zaman damgalarına sahip (PCR) film ve dizilerde ileri sardırıldığında doğrudan byte bazlı donanımsal atlama yapılması sağlandı ve başa zıplama sorunu çözüldü.
+  - **Sonsuz Yükleme Sarmalı (Anti-Pattern) Kaldırıldı**: VLC'nin IPTV kırık zaman damgasını gerçek sanmasıyla çakışan ve 150ms arayla yeniden seek atarak oynatıcıyı sonsuz donmaya/bufferinge hapseden `VerifySeekAsync` metodu tamamen temizlendi.
   - **Otomatik Yeniden Bağlanma (Auto-Retry)**: VOD/dizi yayını ilk seferde açılmazsa artık geri çıkıp girmeye gerek yok. Sistem 5 saniye geri sayım göstererek ("5 saniye içinde yeniden denenecek...") otomatik olarak yeniden deniyor. En fazla 4 deneme yapılıyor; tümü başarısız olursa "Yayına erişilemiyor olabilir. Başka bir kanal deneyin." uyarısı gösteriliyor.
   - **Buffer Shield Timeout**: Seek sonrası buffer koruma süresi 5s → 8s'ye uzatılarak, seek sonrasında oluşan siyah ekran sıkışmaları azaltıldı.
   - **Position Guard**: VLC'ye `NaN`/`Infinity` gibi geçersiz seek değerlerinin gönderilmesi engellendi.

@@ -16,7 +16,13 @@ public interface IVideoPlayerService : IDisposable
     /// Stream oynatmayı başlatır
     /// </summary>
     /// <param name="url">Stream URL</param>
-    Task PlayAsync(string url);
+    /// <param name="startTimeSeconds">Başlangıç süresi (saniye)</param>
+    Task PlayAsync(string url, double startTimeSeconds = 0);
+    
+    /// <summary>
+    /// VOD/HTTP stream'ler için Hard Seek (Stop-Play-Seek) yapar
+    /// </summary>
+    Task HardSeekAsync(double seconds);
     
     /// <summary>
     /// Oynatmayı duraklatır

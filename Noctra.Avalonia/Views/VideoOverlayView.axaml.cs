@@ -23,6 +23,7 @@ public partial class VideoOverlayView : UserControl
     private readonly DispatcherTimer _seekToastTimer;
     private PlayerViewModel? _playerViewModel;
     private bool _isTimelinePointerDown;
+    private bool _isCommittingSeek;
 
     public bool IsVolumeToastVisible
     {
@@ -104,15 +105,25 @@ public partial class VideoOverlayView : UserControl
             return;
         }
 
+        if (_isCommittingSeek) return; // double-fire koruması
+
         _isTimelinePointerDown = false;
+        _isCommittingSeek = true;
 
-        if (_playerViewModel.IsLiveContent || sender is not Slider slider)
+        try
         {
-            return;
-        }
+            if (_playerViewModel.IsLiveContent || sender is not Slider slider)
+            {
+                return;
+            }
 
-        _playerViewModel.SeekCommand.Execute(slider.Value);
-        _playerViewModel.UserInteractionCommand.Execute(null);
+            _playerViewModel.SeekCommand.Execute(slider.Value);
+            _playerViewModel.UserInteractionCommand.Execute(null);
+        }
+        finally
+        {
+            _isCommittingSeek = false;
+        }
     }
 
     protected override void OnDataContextChanged(EventArgs e)
