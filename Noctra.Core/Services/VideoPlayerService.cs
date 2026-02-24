@@ -28,14 +28,17 @@ public class VideoPlayerService : IVideoPlayerService
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private bool _isInitialized;
     private int _lastLogProgress = -1;
+    private CancellationTokenSource? _volumeSaveCts;
 
     private void LogDebug(string msg)
     {
-        try
-        {
-            System.IO.File.AppendAllText(@"d:\IPTVPlayer\vlc_debug_log.txt", $"[{DateTime.Now:HH:mm:ss.fff}] [VPS] {msg}\n");
-        }
-        catch { }
+        Task.Run(() => {
+            try
+            {
+                System.IO.File.AppendAllText(@"d:\IPTVPlayer\vlc_debug_log.txt", $"[{DateTime.Now:HH:mm:ss.fff}] [VPS] {msg}\n");
+            }
+            catch { }
+        });
     }
 
 
@@ -209,8 +212,6 @@ public class VideoPlayerService : IVideoPlayerService
         System.Diagnostics.Debug.WriteLine($"PlayAsync Called -> URL: {url}, StartTime: {startTimeSeconds}s");
         CurrentUrl = url;
         
-        // Reset volume to defaults on every new play
-        Volume = _settingsService.Settings.DefaultVolume;
 
         if (!_isInitialized)
         {
@@ -443,8 +444,25 @@ public class VideoPlayerService : IVideoPlayerService
             {
                 VolumeChanged?.Invoke(this, _currentVolume);
                 
-                // DO NOT Persist to settings here as per user request.
-                // The DefaultVolume in settings should stay fixed.
+                // Debounced Persistence: Update settings immediately but delay disk I/O
+                if (_settingsService != null)
+                {
+                    _settingsService.Settings.DefaultVolume = _currentVolume;
+                    _volumeSaveCts?.Cancel();
+                    _volumeSaveCts?.Dispose();
+                    _volumeSaveCts = new CancellationTokenSource();
+                    
+                    var token = _volumeSaveCts.Token;
+                    _ = Task.Delay(1000, token).ContinueWith(async t => 
+                    {
+                        if (!t.IsCanceled)
+                        {
+                            await _settingsService.SaveAsync();
+                            // Log only once when saved to verify
+                            // System.Diagnostics.Debug.WriteLine($"Volume persisted: {_currentVolume}");
+                        }
+                    }, TaskScheduler.Default);
+                }
             }
         }
     }

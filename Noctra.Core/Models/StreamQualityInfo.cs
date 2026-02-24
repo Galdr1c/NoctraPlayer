@@ -31,7 +31,7 @@ public class StreamQualityInfo
 
             var label = Height switch
             {
-                >= 2160 => "4K",
+                >= 2160 => "2160p",
                 >= 1440 => "1440p",
                 >= 1080 => "1080p",
                 >= 720 => "720p",
@@ -56,7 +56,7 @@ public class StreamQualityInfo
 
             return Height switch
             {
-                >= 2160 => "4K",
+                >= 2160 => "2160p",
                 >= 1440 => "1440p",
                 >= 1080 => "1080p",
                 >= 720 => "720p",

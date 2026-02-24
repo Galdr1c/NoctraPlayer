@@ -267,9 +267,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private readonly System.Timers.Timer _watchHistoryTimer;
 
     internal void LogDebug(string msg) {
-        try {
-            File.AppendAllText(@"d:\IPTVPlayer\vlc_debug_log.txt", $"[{DateTime.Now:HH:mm:ss.fff}] [PVM] {msg}\n");
-        } catch { }
+        Task.Run(() => {
+            try {
+                File.AppendAllText(@"d:\IPTVPlayer\vlc_debug_log.txt", $"[{DateTime.Now:HH:mm:ss.fff}] [PVM] {msg}\n");
+            } catch { }
+        });
     }
 
     public int? CurrentProfileId { get; set; }
@@ -617,9 +619,6 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         // Force previous media to stop so stale position events do not leak into the next item.
         _videoPlayerService.Stop();
-
-        // Reset volume to global default for the new playback session
-        Volume = _settingsService.Settings.DefaultVolume;
 
         CurrentChannel = channel;
         CurrentProgram = GetFallbackProgram();
@@ -986,9 +985,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var resolution = StreamQuality.ResolutionLabel;
-        var fps = StreamQuality.Fps > 0 ? $" | {StreamQuality.Fps} fps" : string.Empty;
-        StreamInfo = $"{resolution}{fps}";
+        StreamInfo = StreamQuality.ResolutionLabel;
     }
 
     private void RestartAutoHideTimer()
@@ -1614,7 +1611,6 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     {
         if (!_isUpdatingFromService)
         {
-            LogDebug($"OnVolumeChanged: volume set to {value}");
             _videoPlayerService.Volume = value;
             if (value > 0)
             {

@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Kalite Etiketleri ve Ses Kalıcılığı Optimizasyonu (Phase 16-17)** (2026-02-24 19:45):
+  - **Kalite Etiketi Standardizasyonu (Phase 16)**:
+    - **4K -> 2160p**: Teknik tutarlılık için "4K" etiketi "2160p" olarak güncellendi.
+    - **Temiz Kalite Etiketleri**: FPS bilgisi sadelik için eski formatta (örn: "1080p60") sunulmaya devam edildi.
+  - **Ses Kalıcılığı ve UI Temizliği (Phase 17)**:
+    - **Kalıcı Ses Kontrolü**: Video oynatıcıda ayarlanan son ses seviyesi artık otomatik olarak kaydediliyor ve uygulama yeniden açıldığında korunuyor.
+    - **Gereksiz Ayarların Kaldırılması**: Ayarlar ekranındaki "Varsayılan Ses Seviyesi" (Default Volume) kaydırıcısı, artık ses seviyesi dinamik olarak hatırlandığı için kaldırıldı.
+    - **Oynatma Başlatma Mantığı**: Her yeni kanalda ses seviyesinin varsayılana sıfırlanması sorunu giderildi; kullanıcı tercihi korunarak oynatma başlıyor.
+    - **Ses Slider Gecikmesi Tamamen Giderildi**: Ses seviyesi artık anlık olarak işleniyor; hem ayar kaydetme hem de hata ayıklama günlükleri (LogDebug) tamamen asenkron hale getirilerek UI thread üzerindeki tüm bloklayıcı işlemler temizlendi. Slider artık pürüzsüz ("butter-smooth") bir deneyim sunuyor.
+
 - **Görsel Tema Senkronizasyonu ve Kararlılık (Phase 14-15)** (2026-02-24 18:45):
   - **Derin Tema Revizyonu (Phase 14)**:
     - **Kontrol Normalizasyonu**: `CheckBox`, `ScrollBar`, `ComboBox`, `Slider` ve `ProgressBar` bileşenleri `Styles.axaml` üzerinde merkezi olarak standartlaştırıldı; ana renkler ve hover efektleri tema kaynaklarına bağlandı.

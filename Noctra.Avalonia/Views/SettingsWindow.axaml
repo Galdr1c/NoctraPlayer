@@ -287,16 +287,6 @@
                                 </StackPanel>
                             </Border>
 
-                            <Border Classes="SettingsCard">
-                                <StackPanel>
-                                    <Grid Margin="0,0,0,16">
-                                        <TextBlock Text="Varsayılan Ses Seviyesi" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                        <TextBlock HorizontalAlignment="Right" Text="{Binding DefaultVolume, StringFormat='{}{0}%'}" 
-                                                   Foreground="{DynamicResource AccentBrush}" FontSize="16" FontWeight="Bold"/>
-                                    </Grid>
-                                    <Slider Minimum="0" Maximum="100" Value="{Binding DefaultVolume}"/>
-                                </StackPanel>
-                            </Border>
                         
                             <!-- Subtitle Section Removed -->
                             <Border Classes="SettingsCard">

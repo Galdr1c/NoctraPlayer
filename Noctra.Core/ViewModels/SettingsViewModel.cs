@@ -35,9 +35,6 @@ public partial class SettingsViewModel : ObservableObject
     private int _selectedDataUsage;
     
     [ObservableProperty]
-    private int _defaultVolume;
-    
-    [ObservableProperty]
     private bool _rememberLastChannel;
     
     // ============ İndirme Ayarları ============
@@ -100,14 +97,6 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _customEpgUrl = string.Empty;
 
-    partial void OnDefaultVolumeChanged(int value)
-    {
-        if (_settingsService?.Settings != null && _settingsService.Settings.DefaultVolume != value)
-        {
-            _settingsService.Settings.DefaultVolume = value;
-            _ = _settingsService.SaveAsync();
-        }
-    }
 
     partial void OnIsDarkThemeChanged(bool value)
     {
@@ -285,7 +274,6 @@ public partial class SettingsViewModel : ObservableObject
         AutoPlayNext = s.AutoPlayNext;
         AutoSkipCredits = s.AutoSkipCredits;
         SelectedDataUsage = (int)s.DataUsage;
-        DefaultVolume = s.DefaultVolume;
         RememberLastChannel = s.RememberLastChannel;
         
         // Downloads
@@ -334,7 +322,6 @@ public partial class SettingsViewModel : ObservableObject
         s.AutoPlayNext = AutoPlayNext;
         s.AutoSkipCredits = AutoSkipCredits;
         s.DataUsage = (DataUsageLevel)SelectedDataUsage;
-        s.DefaultVolume = DefaultVolume;
         s.RememberLastChannel = RememberLastChannel;
         
         // Downloads
