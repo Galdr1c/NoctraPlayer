@@ -151,6 +151,21 @@ public partial class MetadataService : IMetadataService
                     metadata.Cast = string.Join(", ", castList);
             }
 
+            // Extract Content Rating (Sertifika)
+            if (mediaType == "movie" && details?.ReleaseDates?.Results != null)
+            {
+                // Öncelik: US veya TR sertifikası
+                var usRating = details.ReleaseDates.Results.FirstOrDefault(r => r.IsoCode == "US")?.ReleaseDates.FirstOrDefault(rd => !string.IsNullOrEmpty(rd.Certification))?.Certification;
+                var trRating = details.ReleaseDates.Results.FirstOrDefault(r => r.IsoCode == "TR")?.ReleaseDates.FirstOrDefault(rd => !string.IsNullOrEmpty(rd.Certification))?.Certification;
+                metadata.ContentRating = trRating ?? usRating;
+            }
+            else if (mediaType == "tv" && details?.ContentRatings?.Results != null)
+            {
+                var usRating = details.ContentRatings.Results.FirstOrDefault(r => r.IsoCode == "US")?.Rating;
+                var trRating = details.ContentRatings.Results.FirstOrDefault(r => r.IsoCode == "TR")?.Rating;
+                metadata.ContentRating = trRating ?? usRating;
+            }
+
             return metadata;
         }
         catch (Exception ex)
@@ -165,7 +180,8 @@ public partial class MetadataService : IMetadataService
         try
         {
             var endpoint = mediaType == "movie" ? "movie" : "tv";
-            var url = $"{TMDB_BASE_URL}/{endpoint}/{id}?api_key={_apiKey}&append_to_response=credits&language=tr-TR";
+            var append = mediaType == "movie" ? "credits,release_dates" : "credits,content_ratings";
+            var url = $"{TMDB_BASE_URL}/{endpoint}/{id}?api_key={_apiKey}&append_to_response={append}&language=tr-TR";
             
             return await _httpClient.GetFromJsonAsync<TmdbDetail>(url, cancellationToken);
         }
@@ -194,6 +210,7 @@ public partial class MetadataService : IMetadataService
         channel.BackdropUrl = metadata.BackdropUrl;
         channel.Director = metadata.Director;
         channel.Cast = metadata.Cast;
+        channel.ContentRating = metadata.ContentRating;
         
         // Use poster as logo if no logo exists OR if default logo is generic
         if (string.IsNullOrEmpty(channel.LogoUrl) && !string.IsNullOrEmpty(metadata.PosterUrl))

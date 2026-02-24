@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using Noctra.Models;
@@ -45,25 +46,16 @@ public partial class M3UParser : IM3UParser
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(3));
             return await NetworkRetry.ExecuteAsync(async () =>
             {
-                using var request = new HttpRequestMessage(HttpMethod.Get, url);
-                using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token);
-                response.EnsureSuccessStatusCode();
-
-                await using var stream = await response.Content.ReadAsStreamAsync(cts.Token);
-                using var reader = new StreamReader(stream);
+                var channelsResult = await DownloadAndParseInternalAsync(url, null, cts.Token);
                 
-                try
+                // If 0 channels and it's a 404 or just suspicious empty, try fallback UA
+                if (channelsResult.Count == 0 && !string.IsNullOrEmpty(url))
                 {
-                    return await ParseFromReaderAsync(reader);
+                    System.Diagnostics.Debug.WriteLine($"[M3UParser] 0 channels or error for {url}. Retrying with VLC User-Agent...");
+                    channelsResult = await DownloadAndParseInternalAsync(url, "VLC/3.0.18", cts.Token);
                 }
-                catch (Exception ex) when (IsNetworkIncompletionException(ex))
-                {
-                    // If stream ends prematurely, return what we got so far instead of failing
-                    System.Diagnostics.Debug.WriteLine($"[M3UParser] Warning: Stream ended prematurely for {url}. Returning partial results. Error: {ex.Message}");
-                    // IMPORTANT: We need a way to get the partially built channels list.
-                    // Let's modify ParseFromReaderAsync to fill a list passed as argument.
-                    return _lastPartialChannels ?? new List<Channel>();
-                }
+
+                return channelsResult;
             }, cancellationToken: cts.Token);
         }
         catch (TaskCanceledException)
@@ -81,6 +73,49 @@ public partial class M3UParser : IM3UParser
             throw new InvalidOperationException(
                 $"Geçersiz M3U formatı: {url}\n" +
                 $"Dosya içeriği M3U standardına uygun değil.", ex);
+        }
+    }
+
+    private async Task<List<Channel>> DownloadAndParseInternalAsync(string url, string? overrideUserAgent, CancellationToken ct)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            if (!string.IsNullOrEmpty(overrideUserAgent))
+            {
+                request.Headers.UserAgent.Clear();
+                request.Headers.UserAgent.ParseAdd(overrideUserAgent);
+            }
+
+            using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+            
+            // If we got 404, we don't throw yet if we have no override agent, so the retry logic can catch it.
+            // But if we have an override agent, or it's another error, we throw.
+            if (!response.IsSuccessStatusCode && string.IsNullOrEmpty(overrideUserAgent) && response.StatusCode == HttpStatusCode.NotFound)
+            {
+                return new List<Channel>(); // Triggers the retry in ParseFromUrlAsync
+            }
+
+            response.EnsureSuccessStatusCode();
+
+            await using var stream = await response.Content.ReadAsStreamAsync(ct);
+            using var reader = new StreamReader(stream);
+            
+            try
+            {
+                return await ParseFromReaderAsync(reader);
+            }
+            catch (Exception ex) when (IsNetworkIncompletionException(ex))
+            {
+                System.Diagnostics.Debug.WriteLine($"[M3UParser] Warning: Stream ended prematurely for {url}. Returning partial results. Error: {ex.Message}");
+                return _lastPartialChannels ?? new List<Channel>();
+            }
+        }
+        catch (HttpRequestException ex) when (string.IsNullOrEmpty(overrideUserAgent) && 
+                                              (ex.StatusCode == HttpStatusCode.NotFound || ex.StatusCode == HttpStatusCode.BadGateway))
+        {
+            // Trigger retry for 404 and 502
+            return new List<Channel>();
         }
     }
 

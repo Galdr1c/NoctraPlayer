@@ -18,6 +18,7 @@ public class Series
     public string? Genre { get; set; }
     public int? ReleaseYear { get; set; }
     public double? Rating { get; set; }
+    public string? ContentRating { get; set; }
     public int PlaylistId { get; set; }
     public bool IsInMyList { get; set; }
     public bool IsFavorite { get; set; }

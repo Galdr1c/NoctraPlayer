@@ -49,7 +49,7 @@ public static class UserFriendlyErrorMessage
 
             if (http.StatusCode == HttpStatusCode.NotFound)
             {
-                return "Icerik bulunamadi. Kaynak guncel olmayabilir.";
+                return "Icerik bulunamadi. Kaynak guncel olmayabilir. (404)";
             }
 
             if (http.StatusCode is HttpStatusCode.BadGateway
@@ -57,7 +57,7 @@ public static class UserFriendlyErrorMessage
                 or HttpStatusCode.GatewayTimeout
                 or HttpStatusCode.InternalServerError)
             {
-                return "Sunucuya su anda ulasilamiyor. Biraz sonra tekrar deneyin.";
+                return $"Sunucuya su anda ulasilamiyor. Biraz sonra tekrar deneyin. ({(int)http.StatusCode})";
             }
 
             return "Ag hatasi olustu. Baglantinizi kontrol edip tekrar deneyin.";
@@ -126,7 +126,7 @@ public static class UserFriendlyErrorMessage
 
         if (ContainsAny(normalized, "404", "not found", "bulunamadi"))
         {
-            return "Icerik bulunamadi. Kaynak guncel olmayabilir.";
+            return "Icerik bulunamadi. Kaynak guncel olmayabilir. (404)";
         }
 
         if (ContainsAny(normalized, "500", "502", "503", "504", "server error", "sunucu"))

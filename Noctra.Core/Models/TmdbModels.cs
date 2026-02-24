@@ -104,6 +104,12 @@ public class TmdbDetail : TmdbResult
 {
     [JsonPropertyName("credits")]
     public TmdbCredits? Credits { get; set; }
+
+    [JsonPropertyName("release_dates")]
+    public TmdbReleaseDatesResponse? ReleaseDates { get; set; }
+
+    [JsonPropertyName("content_ratings")]
+    public TmdbContentRatingsResponse? ContentRatings { get; set; }
 }
 
 /// <summary>
@@ -143,6 +149,7 @@ public class ChannelMetadata
     public int? TmdbId { get; set; }
     public string? Director { get; set; }
     public string? Cast { get; set; }
+    public string? ContentRating { get; set; }
 }
 
 public class TmdbCredits
@@ -173,5 +180,41 @@ public class TmdbCrew
     
     [JsonPropertyName("job")]
     public string? Job { get; set; } // Director, Producer, etc.
+}
+
+public class TmdbReleaseDatesResponse
+{
+    [JsonPropertyName("results")]
+    public List<TmdbCountryReleaseDate> Results { get; set; } = new();
+}
+
+public class TmdbCountryReleaseDate
+{
+    [JsonPropertyName("iso_3166_1")]
+    public string IsoCode { get; set; } = string.Empty;
+
+    [JsonPropertyName("release_dates")]
+    public List<TmdbCertificationResult> ReleaseDates { get; set; } = new();
+}
+
+public class TmdbCertificationResult
+{
+    [JsonPropertyName("certification")]
+    public string Certification { get; set; } = string.Empty;
+}
+
+public class TmdbContentRatingsResponse
+{
+    [JsonPropertyName("results")]
+    public List<TmdbCountryContentRating> Results { get; set; } = new();
+}
+
+public class TmdbCountryContentRating
+{
+    [JsonPropertyName("iso_3166_1")]
+    public string IsoCode { get; set; } = string.Empty;
+
+    [JsonPropertyName("rating")]
+    public string Rating { get; set; } = string.Empty;
 }
 

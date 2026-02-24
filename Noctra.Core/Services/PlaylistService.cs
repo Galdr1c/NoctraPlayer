@@ -776,6 +776,18 @@ public partial class PlaylistService : IPlaylistService
             if (IsOldContent(title) || IsOldContent(category))
                 return false;
 
+            // 1.6. SERTİFİKA BAZLI FİLTRELEME (Yaş Sınırı - TMDB)
+            // Eğer metadata'dan gelen bir sertifika varsa, kelime bazlı tahminden daha güvenilirdir.
+            if (!string.IsNullOrEmpty(c.ContentRating))
+            {
+                if (!IsSafeRating(c.ContentRating))
+                    return false;
+                
+                // Eğer sertifika kesin güvenliyse (G, TV-Y vb.) ve ana kara listeye girmiyorsa izin ver.
+                if (IsSafeRating(c.ContentRating))
+                    return true;
+            }
+
             // 2. KATEGORİ SINIFLANDIRMASI
             bool isExplicitlySafe = ContainsAny(category, safeCategories);
             bool isExplicitlyDangerous = ContainsAny(category, dangerousCategories);
@@ -834,6 +846,12 @@ public partial class PlaylistService : IPlaylistService
 
             if (IsOldContent(title) || IsOldContent(category)) return true;
 
+            // 1.6. SERTİFİKA BAZLI FİLTRELEME
+            if (!string.IsNullOrEmpty(s.ContentRating))
+            {
+                if (!IsSafeRating(s.ContentRating)) return true; // Tehlikeli -> Sil
+            }
+
             bool isExplicitlySafe = ContainsAny(category, safeCategories);
             bool isSuspectCategory = ContainsAny(category, new[] { "sinema", "cinema", "dizi", "series", "vod", "film", "favori", "izle", "aksiyon", "action", "macera", "adventure", "drama", "netflix", "prime", "disney+", "hbo" });
 
@@ -865,6 +883,32 @@ public partial class PlaylistService : IPlaylistService
         // AppDbContext'te OnDelete(DeleteBehavior.Cascade) olduğu için Series silinince Season ve Episode'lar da silinecektir.
     }
 
+    /// <summary>
+    /// Sertifikaların (Yaş Sınırı) çocuk profiline uygun olup olmadığını kontrol eder.
+    /// G, PG, TV-Y, TV-Y7, TV-G, TV-PG gibi değerler GÜVENLİ kabul edilir.
+    /// R, NC-17, TV-MA, 18, 15 gibi değerler TEHLİKELİ kabul edilir.
+    /// </summary>
+    private static bool IsSafeRating(string? rating)
+    {
+        if (string.IsNullOrWhiteSpace(rating)) return true; 
+
+        // Not: PG-13 "Şiddetle Tavsiye Edilen Aile Denetimi" olduğu için çocuk profilinde belirsizdir. 
+        // Kullanıcı G ve PG'yi özellikle istediği için daha üstünü riskli sayıyoruz.
+        var safeRatings = new[] { "G", "PG", "TV-Y", "TV-Y7", "TV-G", "TV-PG", "U", "7", "6", "0", "A", "GENEL" };
+        var dangerousRatings = new[] { "R", "NC-17", "TV-MA", "18", "16", "15", "X", "YETİŞKİN", "ADULT" };
+
+        var upperRating = rating.ToUpperInvariant();
+
+        // Önce tehlikelilere bak
+        if (dangerousRatings.Any(dr => upperRating.Contains(dr))) return false;
+        
+        // Sonra güvenlilere bak
+        if (safeRatings.Any(sr => upperRating.Contains(sr))) return true;
+
+        // Belirsiz ise (örn: PG-13) Çocuk profili için reddet (Güvenli tarafta kal)
+        return false;
+    }
+
     private static string[] GetSafeCategories() => new[] { 
         "çocuk", "cocuk", "çizgi", "cizgi", "bebek", "baby", "minika", "trt çocuk", "trt cocuk", 
         "kids", "kid", "kinder", "enfant", "niños", "infantil", "bebe", "bambini", "cartoon", "cbeebies", "moonbug", "pbs kids", "dreamworks", "pixar", 
@@ -874,12 +918,14 @@ public partial class PlaylistService : IPlaylistService
 
     private static string[] GetDangerousCategories() => new[] {
         "18+", "+18", "adult", "xxx", "porn", "mature", "erotik", "sex", "yetişkin", "poker", "casino", "haber", "news", "politika", "haberler", "belgesel", "documentary", 
-        "attack", "marvel", "dc", "america", "amerika", "horror", "korku", "thriller", "gerilim", "crime", "suç", "violence", "şiddet", "blood", "kan"
+        "attack", "america", "amerika", "horror", "korku", "thriller", "gerilim", "crime", "suç", "violence"
     };
 
     private static string[] GetCriticalBlacklist() => new[] {
         "xxx", "porn", "erotic", "sex", "porno", "gay", "lesbian", "hardcore", "cinsel", "mature", "18+", "+18", "yeşilçam", "yesilcam", "erotizm", "romantizm", "nostalji", "nostalgia",
         "9-1-1", "alien", "castlevania", "south park", "family guy", "rick and morty", "the boys", "deadpool", "lucifer", "dexter", "sayko", "sycophant", "syco", "mcgregor"
+        "blood", "kan", "şiddet", "düşman", "düşmanlar", "enemies", "enemy", "crossing", "pazar", "marvel", "marvels", "dc", "man", ".kill", "kill", "anemone", "amar", "avangers", "korku", "korkunç", 
+        "korku kapanı", "maymunlar cehennemi", "megalodon", "person", "rising", "risk", "embarass", "embarassing"
     };
 
     [GeneratedRegex(@"\b(19\d{2}|2000)\b")]

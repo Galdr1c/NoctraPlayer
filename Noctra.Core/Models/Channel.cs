@@ -50,6 +50,7 @@ public class Channel
     public string? BackdropUrl { get; set; }
     public string? Director { get; set; }
     public string? Cast { get; set; }
+    public string? ContentRating { get; set; }
     
     public TimeSpan? Duration { get; set; }
     public TimeSpan? WatchedPosition { get; set; }
