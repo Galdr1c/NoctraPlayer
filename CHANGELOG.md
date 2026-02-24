@@ -13,7 +13,29 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - **Kalıcı Ses Kontrolü**: Video oynatıcıda ayarlanan son ses seviyesi artık otomatik olarak kaydediliyor ve uygulama yeniden açıldığında korunuyor.
     - **Gereksiz Ayarların Kaldırılması**: Ayarlar ekranındaki "Varsayılan Ses Seviyesi" (Default Volume) kaydırıcısı, artık ses seviyesi dinamik olarak hatırlandığı için kaldırıldı.
     - **Oynatma Başlatma Mantığı**: Her yeni kanalda ses seviyesinin varsayılana sıfırlanması sorunu giderildi; kullanıcı tercihi korunarak oynatma başlıyor.
-    - **Ses Slider Gecikmesi Tamamen Giderildi**: Ses seviyesi artık anlık olarak işleniyor; hem ayar kaydetme hem de hata ayıklama günlükleri (LogDebug) tamamen asenkron hale getirilerek UI thread üzerindeki tüm bloklayıcı işlemler temizlendi. Slider artık pürüzsüz ("butter-smooth") bir deneyim sunuyor.
+- **Kapsayıcı Seri Filtreleme (Phase 21)** (2026-02-24 22:35):
+    - **Kategori Öncelikli Listeleme**: "Series" kategorisindeki tüm içeriklerin (regex eşleşmesi olmasa bile) listelenmesi sağlandı.
+    - **Akıllı Fallback**: Ayrıştırılamayan dizi isimleri için otomatik olarak "Sezon 1 / Bölüm 1" atanarak içerik kaybı önlendi.
+    - **Esnek Live Seri Ayrımı**: Canlı yayınlanan dizi kanalları üzerindeki filtreler esnetilerek tüm içeriğin görünürlüğü sağlandı.
+
+- **Gelişmiş Dizi İsmi ve İçerik Kurtarma (Phase 20)** (2026-02-24 22:15):
+    - **URL Decoding**: `%3` gibi karakterlerin düzgün görünmemesi sorunu giderildi (# karakterine dönüştürüldü).
+    - **Parantez Koruma**: Kullanıcı talebi üzerine parantez içi bilgiler (yıl, kalite vb.) temizleme dışı bırakıldı.
+    - **Doğal Sıralama**: Alfabetik sıralama artık en baştaki sembolleri (#, (, ! vb.) yok sayarak gerçek harfe göre yapılıyor.
+    - **Agresif Filtre Düzeltmesi**: "4400" gibi kısa ve sayısal isimli serilerin Live TV olarak işaretlenip kaybolması engellendi.
+
+- **Canlı TV ve Seri Gruplama Filtreleme (Phase 19)** (2026-02-24 21:05):
+    - **Hatalı Numaralandırma Düzeltmesi**: Canlı kanalların "1. Bölüm" slotunu işgal ederek gerçek bölümleri kaydırması sorunu giderildi.
+    - **Yıl ve Sembol Temizliği**: Episode isimlerindeki gereksiz yıl (2016), parantez ve sembol tekrarları tamamen temizlendi.
+    - **Gelişmiş Filtreleme Güvenliği**: "4400" gibi kısa isimli gerçek dizilerin yanlışlıkla Live TV olarak filtrelenmesi engellendi.
+
+- **Dizi ve Bölüm İsimleri Normalizasyonu (Phase 18)** (2026-02-24 20:35):
+    - **Akıllı Tekilleştirme**: Hem dizi hem de bölüm isimlerindeki tekrarlar (örn: "4400 S01 4400" -> "4400") otomatik olarak temizleniyor.
+    - **Yapılandırılmış Bölüm Başlıkları**: Bölüm isimleri artık `{Dizi Adı} - {Bölüm No}. {Bölüm/Episode/Episodio} - {Bölüm Başlığı}` formatında gösteriliyor.
+    - **Akıllı Dil Algılama**: Sistem orijinal başlıktaki dili algılayıp "Bölüm", "Episode", "Episodio" gibi ifadeleri otomatik olarak seçiyor.
+    - **Gelişmiş Etiket Temizliği**: "S01", "Sezon 1" gibi etiketlerin genel dizi başlığına sızması engellendi.
+
+- **Ses Slider Gecikmesi Tamamen Giderildi (Phase 17)** (2026-02-24 20:05):
 
 - **Görsel Tema Senkronizasyonu ve Kararlılık (Phase 14-15)** (2026-02-24 18:45):
   - **Derin Tema Revizyonu (Phase 14)**:

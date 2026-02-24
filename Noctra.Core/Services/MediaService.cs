@@ -45,6 +45,14 @@ public partial class MediaService : IMediaService
             var seriesName = parsed.SeriesName;
             var seasonNum = parsed.Season;
             var episodeNum = parsed.Episode;
+
+            if (seasonNum == 0 || episodeNum == 0)
+            {
+                // Fallback for unparseable or live-targeted series channels
+                seasonNum = Math.Max(1, seasonNum);
+                episodeNum = Math.Max(1, episodeNum);
+            }
+
             var seriesKey = BuildSeriesGroupingKey(seriesName);
 
             if (!seriesGroups.TryGetValue(seriesKey, out var series))
@@ -99,7 +107,7 @@ public partial class MediaService : IMediaService
 
             var episode = new Episode
             {
-                Name = channel.Name,
+                Name = SeriesInfoParser.CleanEpisodeTitle(channel.Name, seriesName, episodeNum),
                 EpisodeNumber = episodeNum,
                 StreamUrl = channel.StreamUrl,
                 CoverUrl = channel.LogoUrl,
@@ -222,8 +230,24 @@ public partial class MediaService : IMediaService
         }
 
         return mergedByKey.Values
-            .OrderBy(s => s.Name, StringComparer.CurrentCultureIgnoreCase)
+            .OrderBy(s => GetSortKey(s.Name), StringComparer.CurrentCultureIgnoreCase)
             .ToList();
+    }
+
+    private static string GetSortKey(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "zzz";
+        
+        // Skip leading symbols/numbers to sort naturally by letters if possible
+        var cleaned = name.Trim().ToLowerInvariant();
+        var index = 0;
+        while (index < cleaned.Length && !char.IsLetterOrDigit(cleaned[index]))
+        {
+            index++;
+        }
+
+        if (index >= cleaned.Length) return cleaned; // It's all symbols
+        return cleaned.Substring(index);
     }
     public async Task UpdateSeriesAsync(Series series, CancellationToken cancellationToken = default)
     {

@@ -39,18 +39,56 @@ public static partial class SeriesInfoParser
         }
 
         var fallbackName = CleanSeriesName(EpisodeTokenRegex().Replace(trimmedTitle, " "));
+        
+        // If it's a live series channel, we don't want to assign it a fake episode number
+        if (IsLiveSeries(trimmedTitle))
+        {
+            return new SeriesInfo(fallbackName, 0, 0); // Special case for live channels
+        }
+
         return new SeriesInfo(fallbackName, 1, 1);
     }
 
     public static bool IsSeries(string? title)
     {
         if (string.IsNullOrWhiteSpace(title)) return false;
+
+        // If it looks like a 24/7 or Live channel, it's not a standard episodic series
+        if (IsLiveSeries(title)) return false;
+
         return SxeRegex().IsMatch(title) || 
                XRegex().IsMatch(title) || 
                TurkishRegex().IsMatch(title) || 
+               TurkishAltRegex().IsMatch(title) ||
+               TurkishEpisodeOnlyRegex().IsMatch(title) ||
                EnglishRegex().IsMatch(title) ||
                SeriesPatternHyphen().IsMatch(title) ||
-               SeasonOnlyRegex().IsMatch(title);
+               SeasonOnlyRegex().IsMatch(title) ||
+               title.Contains("Saison", StringComparison.OrdinalIgnoreCase) ||
+               title.Contains("Staffel", StringComparison.OrdinalIgnoreCase) ||
+               title.Contains("Temporada", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static bool IsLiveSeries(string? title)
+    {
+        if (string.IsNullOrWhiteSpace(title)) return false;
+
+        // Heavily restricted LiveSeries detection to prevent content loss.
+        // Only 24/7 or CANLI/LIVE keywords without any episode indicators are safe.
+        if (title.Contains("7/24", StringComparison.OrdinalIgnoreCase) || 
+            title.Contains("24/7", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if ((title.Contains("CANLI", StringComparison.OrdinalIgnoreCase) || 
+             title.Contains("LIVE", StringComparison.OrdinalIgnoreCase)) &&
+            !EpisodeTokenRegex().IsMatch(title))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     public static string NormalizeKey(string? value)
@@ -97,13 +135,140 @@ public static partial class SeriesInfoParser
             return "Bilinmeyen Dizi";
         }
 
-        var cleaned = value.Trim();
+        // Decode URL encoded characters (e.g. %3 -> #)
+        var cleaned = System.Net.WebUtility.UrlDecode(value).Trim();
+        
         cleaned = StripIptvPrefixes(cleaned);
         cleaned = EpisodeTokenRegex().Replace(cleaned, " ");
+        
+        // We no longer strip years or general noise aggressively here because user wants to keep parentheses content
+        // But we still want to clean up excessive symbols and underscores
+        cleaned = cleaned.Replace('_', ' ');
+        
+        // Remove known noise but WITHOUT word boundaries if they are next to symbols we want to keep
+        // Actually, let's keep it simple: keep the noise cleaning but ensure it doesn't break the structure
+        cleaned = NoiseTokenRegex().Replace(cleaned, " ");
+        
+        cleaned = MultiSpaceRegex().Replace(cleaned, " ").Trim(' ', '-', '|', ':', '.');
+
+        if (string.IsNullOrWhiteSpace(cleaned)) return "Bilinmeyen Dizi";
+
+        return Deduplicate(cleaned);
+    }
+
+    public static string CleanEpisodeTitle(string? title, string? seriesName, int episodeNumber)
+    {
+        var label = GetEpisodeLabel(title);
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            var baseName = !string.IsNullOrWhiteSpace(seriesName) ? seriesName : "Bilinmeyen Dizi";
+            return $"{baseName} - {episodeNumber}. {label}";
+        }
+
+        var subtitle = ExtractEpisodeSubtitle(title, seriesName, episodeNumber);
+        var seriesPrefix = !string.IsNullOrWhiteSpace(seriesName) ? seriesName : "Bilinmeyen Dizi";
+
+        if (string.IsNullOrWhiteSpace(subtitle))
+        {
+            return $"{seriesPrefix} - {episodeNumber}. {label}";
+        }
+
+        return $"{seriesPrefix} - {episodeNumber}. {label} - {subtitle}";
+    }
+
+    private static string GetEpisodeLabel(string? title)
+    {
+        if (string.IsNullOrWhiteSpace(title)) return "Bölüm";
+
+        if (title.Contains("Episodio", StringComparison.OrdinalIgnoreCase)) return "Episodio";
+        if (title.Contains("Episode", StringComparison.OrdinalIgnoreCase)) return "Episode";
+        if (title.Contains("Capitulo", StringComparison.OrdinalIgnoreCase) || title.Contains("Capítulo", StringComparison.OrdinalIgnoreCase)) return "Capitulo";
+        if (title.Contains("Folge", StringComparison.OrdinalIgnoreCase)) return "Folge";
+        if (title.Contains("Bölüm", StringComparison.OrdinalIgnoreCase) || title.Contains("Bolum", StringComparison.OrdinalIgnoreCase)) return "Bölüm";
+        
+        // Default to Bölüm for Turkish UI consistency, but can be smarter
+        return "Bölüm";
+    }
+
+    private static string ExtractEpisodeSubtitle(string title, string? seriesName, int episodeNumber)
+    {
+        var cleaned = title.Trim();
+        cleaned = StripIptvPrefixes(cleaned);
+
+        // Remove series name if it appears in the episode title
+        if (!string.IsNullOrWhiteSpace(seriesName))
+        {
+            // Try removing the exact series name with various separators
+            var escapedSeries = Regex.Escape(seriesName);
+            
+            // 1. Remove at start/end (more aggressive, no word boundaries needed for start/end)
+            cleaned = Regex.Replace(cleaned, $@"^\s*{escapedSeries}\s*[:\-._ ]*", " ", RegexOptions.IgnoreCase);
+            cleaned = Regex.Replace(cleaned, $@"[:\-._ ]*\s*{escapedSeries}\s*$", " ", RegexOptions.IgnoreCase);
+            
+            // 2. Remove in middle (use non-word-boundary approach since name can end in symbols like ')')
+            cleaned = Regex.Replace(cleaned, $@"(?:^|[\s\-\|\.\:\(\)\[\]]){escapedSeries}(?:[\s\-\|\.\:\(\)\[\]]|$)", " ", RegexOptions.IgnoreCase);
+            
+            // 3. Fallback: If series name had a year that we stripped, try matching the year-stripped version too
+            var yearStripped = YearTokenRegex().Replace(seriesName, "").Trim();
+            if (yearStripped != seriesName && !string.IsNullOrWhiteSpace(yearStripped))
+            {
+                var escapedYearStripped = Regex.Escape(yearStripped);
+                cleaned = Regex.Replace(cleaned, $@"^\s*{escapedYearStripped}\s*[:\-._ ]*", " ", RegexOptions.IgnoreCase);
+                cleaned = Regex.Replace(cleaned, $@"(?:^|[\s\-\|\.\:\(\)\[\]]){escapedYearStripped}(?:[\s\-\|\.\:\(\)\[\]]|$)", " ", RegexOptions.IgnoreCase);
+            }
+        }
+
+        cleaned = EpisodeTokenRegex().Replace(cleaned, " ");
+
+        // Remove specific "X. Bölüm" or "Bölüm X" if it matches episodeNumber
+        var epPattern = $@"\b{episodeNumber}\.?\s*[Bb](?:o|ö)l(?:u|ü)m\b|\b[Bb](?:o|ö)l(?:u|ü)m\s*{episodeNumber}\b";
+        cleaned = Regex.Replace(cleaned, epPattern, " ", RegexOptions.IgnoreCase);
+
+        cleaned = YearTokenRegex().Replace(cleaned, " ");
+        cleaned = LanguageTokenRegex().Replace(cleaned, " ");
         cleaned = NoiseTokenRegex().Replace(cleaned, " ");
         cleaned = cleaned.Replace('_', ' ').Replace('.', ' ');
         cleaned = MultiSpaceRegex().Replace(cleaned, " ").Trim(' ', '-', '|', ':', '.');
-        return string.IsNullOrWhiteSpace(cleaned) ? "Bilinmeyen Dizi" : cleaned;
+
+        if (string.IsNullOrWhiteSpace(cleaned)) return string.Empty;
+
+        return Deduplicate(cleaned);
+    }
+
+    private static string Deduplicate(string text)
+    {
+        var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length <= 1) return text;
+
+        var uniqueWords = new List<string>();
+        foreach (var word in words)
+        {
+            if (uniqueWords.Count == 0 || !string.Equals(uniqueWords[^1], word, StringComparison.OrdinalIgnoreCase))
+            {
+                uniqueWords.Add(word);
+            }
+        }
+
+        // Check for larger patterns like "A B A B"
+        if (uniqueWords.Count % 2 == 0)
+        {
+            int half = uniqueWords.Count / 2;
+            bool isRepeat = true;
+            for (int i = 0; i < half; i++)
+            {
+                if (!string.Equals(uniqueWords[i], uniqueWords[i + half], StringComparison.OrdinalIgnoreCase))
+                {
+                    isRepeat = false;
+                    break;
+                }
+            }
+            if (isRepeat)
+            {
+                uniqueWords = uniqueWords.Take(half).ToList();
+            }
+        }
+
+        return string.Join(" ", uniqueWords);
     }
 
     /// <summary>
@@ -206,7 +371,7 @@ public static partial class SeriesInfoParser
     [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?:[Ss]eason|[Ss]ezon|[Tt]emporada|[Ss]aison|[Ss]taffel|[Ss])\s*(?<season>\d{1,2})\b", RegexOptions.IgnoreCase)]
     private static partial Regex SeasonOnlyRegex();
 
-    [GeneratedRegex(@"\b(?:[Ss]\d{1,2}\s*[Ee]\d{1,3}|\d{1,2}\s*[Xx]\s*\d{1,3}|\d{1,2}\.?\s*[Ss]ezon.*?[\d]{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m|[Ss]ezon\s*\d{1,2}\s*[Bb](?:o|ö)l(?:u|ü)m\s*\d{1,3}|[Ss]eason\s*\d{1,2}\s*[Ee]pisode\s*\d{1,3}|[Tt]emporada\s*\d{1,2}\s*(?:[Ee]pisodio|epis(?:o|ó)dio|cap(?:i|í)tulo)\s*\d{1,3}|[Ss]aison\s*\d{1,2}\s*(?:[Ee]pisode|épisode)\s*\d{1,3}|[Ss]taffel\s*\d{1,2}\s*[Ff]olge\s*\d{1,3}|[Ee]p(?:isode)?\s*\d{1,3}|\d{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m|[Bb](?:o|ö)l(?:u|ü)m\s*\d{1,3}|[Ff]olge\s*\d{1,3}|[Cc]ap(?:i|í)tulo\s*\d{1,3}|[Ss]eason\s*\d{1,2}|[Ss]ezon\s*\d{1,2}|[Tt]emporada\s*\d{1,2}|[Ss]aison\s*\d{1,2}|[Ss]taffel\s*\d{1,2}|[Ss]\s*\d{1,2})\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(?:[Ss]\d{1,2}\s*[Ee]\d{1,3}|\d{1,2}\s*[Xx]\s*\d{1,3}|\d{1,2}\.?\s*[Ss]ezon.*?[\d]{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m|[Ss]ezon\s*\d{1,2}\s*[Bb](?:o|ö)l(?:u|ü)m\s*\d{1,3}|[Ss]eason\s*\d{1,2}\s*[Ee]pisode\s*\d{1,3}|[Tt]emporada\s*\d{1,2}\s*(?:[Ee]pisodio|epis(?:o|ó)dio|cap(?:i|í)tulo)\s*\d{1,3}|[Ss]aison\s*\d{1,2}\s*(?:[Ee]pisode|épisode)\s*\d{1,3}|[Ss]taffel\s*\d{1,2}\s*[Ff]olge\s*\d{1,3}|[Ee]p(?:isode)?\s*\d{1,3}|\d{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m|[Bb](?:o|ö)l(?:u|ü)m\s*\d{1,3}|[Ff]olge\s*\d{1,3}|[Cc]ap(?:i|í)tulo\s*\d{1,3}|[Ss]eason\s*\d{1,2}|[Ss]ezon\s*\d{1,2}|[Tt]emporada\s*\d{1,2}|[Ss]aison\s*\d{1,2}|[Ss]taffel\s*\d{1,2}|[Ss]\s*\d{1,2}|[Ss]\d{1,2})\b", RegexOptions.IgnoreCase)]
     private static partial Regex EpisodeTokenRegex();
 
     [GeneratedRegex(@"\b(?:4k|2160p|1080p|720p|480p|x264|x265|h264|h265|hevc|webrip|webdl|web-dl|bluray|brrip|bdrip|hdrip|camrip|hdcam|telesync|ts|remux|vip|vod|fhd|uhd|hd|sd|8k)\b", RegexOptions.IgnoreCase)]
@@ -224,7 +389,7 @@ public static partial class SeriesInfoParser
     [GeneratedRegex(@"^\s*(?:[^|]+?\s*\|\s*)", RegexOptions.IgnoreCase)]
     private static partial Regex PipeTagRegex();
 
-    [GeneratedRegex(@"\b(DIZIAX|NETFLIX|AMAZON|PRIME|DISNEY|APPLE|EXXEN|GAIN|BLUTV|TOD|VOD|PREMIUM|VIP|HD|FHD|UHD|4K|Bölüm)\s*", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(DIZIAX|NETFLIX|AMAZON|PRIME|DISNEY|APPLE|EXXEN|GAIN|BLUTV|TOD|VOD|PREMIUM|VIP|HD|FHD|UHD|4K)\s*", RegexOptions.IgnoreCase)]
     private static partial Regex ProviderPrefixRegex();
 
     [GeneratedRegex(@"\b(?:19\d{2}|20\d{2})\b", RegexOptions.IgnoreCase)]
