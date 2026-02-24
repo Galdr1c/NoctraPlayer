@@ -27,18 +27,18 @@
                   <Border.Background>
                     <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
                       <GradientStop Color="Transparent" Offset="0.0"/>
-                      <GradientStop Color="#AA0B0614" Offset="0.5"/>
-                      <GradientStop Color="#0B0614" Offset="1.0"/>
+                      <GradientStop Color="#9908080A" Offset="0.6"/>
+                      <GradientStop Color="#08080A" Offset="1.0"/>
                     </LinearGradientBrush>
                   </Border.Background>
                 </Border>
                 <StackPanel VerticalAlignment="Bottom" Margin="60,0,60,60">
                   <TextBlock Text="{Binding FeaturedChannel.Name}" FontSize="56" FontWeight="Bold" Foreground="White" TextWrapping="Wrap" MaxWidth="600" HorizontalAlignment="Left"/>
                   <StackPanel Orientation="Horizontal" Margin="0,16,0,24">
-                    <Border Background="#7C3AED" CornerRadius="4" Padding="8,4" Margin="0,0,12,0">
+                    <Border Background="{DynamicResource AccentBrush}" CornerRadius="4" Padding="8,4" Margin="0,0,12,0">
                       <TextBlock Text="LIVE" FontSize="12" FontWeight="Bold" Foreground="White"/>
                     </Border>
-                    <TextBlock Text="{Binding FeaturedChannel.GroupTitle}" FontSize="16" Foreground="#C4B5FD" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding FeaturedChannel.GroupTitle}" FontSize="16" Foreground="{DynamicResource Accent300Brush}" VerticalAlignment="Center"/>
                     <TextBlock Text=" &#8226; " FontSize="16" Foreground="#666" Margin="8,0"/>
                     <TextBlock Text="HD" FontSize="16" Foreground="#22C55E" VerticalAlignment="Center"/>
                   </StackPanel>

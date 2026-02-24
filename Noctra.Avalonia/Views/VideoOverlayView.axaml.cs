@@ -129,7 +129,8 @@ public partial class VideoOverlayView : UserControl
 
         try
         {
-            if (_playerViewModel.IsLiveContent || sender is not Slider slider)
+            // Robust check: ensure ViewModel is not null before accessing its commands
+            if (_playerViewModel == null || _playerViewModel.IsLiveContent || sender is not Slider slider)
             {
                 return;
             }

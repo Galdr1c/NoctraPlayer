@@ -127,7 +127,7 @@
                                         </Border>
 
                                         <!-- Manage Mode Overlay -->
-                                        <Border Background="#99000000" CornerRadius="14"
+                                        <Border Background="#CC000000" CornerRadius="14"
                                                 IsVisible="{Binding DataContext.IsManageMode, RelativeSource={RelativeSource AncestorType=Window}}">
                                             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                                                 <!-- Pencil Icon in Circle -->
@@ -181,7 +181,7 @@
         <Style Selector="Button.ProfileCardStyle:focus /template/ Border#AvatarBorder">
             <Setter Property="BorderBrush" Value="{DynamicResource AccentLightBrush}"/>
             <!-- BoxShadow for Glow Effect -->
-            <Setter Property="BoxShadow" Value="0 0 20 0 #996366F1"/> 
+            <Setter Property="BoxShadow" Value="{DynamicResource FocusGlow}"/> 
         </Style>
         <Style Selector="Button.ProfileCardStyle:focus /template/ TextBlock#ProfileName">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>

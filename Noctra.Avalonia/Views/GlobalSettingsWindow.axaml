@@ -71,7 +71,7 @@
             </Setter>
         </Style>
         <Style Selector="Button.ClearCacheButtonStyle:pointerover /template/ Border#CacheBorder">
-            <Setter Property="Background" Value="#1A0D0D0D"/>
+            <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}"/>
         </Style>
 
@@ -99,7 +99,7 @@
         </Style>
     </Window.Styles>
 
-    <Border Background="{DynamicResource Bg0Brush}" 
+    <Border Background="{DynamicResource BackgroundGradientBrush}" 
             CornerRadius="{DynamicResource RadiusMedium}" 
             ClipToBounds="True"
             BorderBrush="{DynamicResource BorderBrush}" 

@@ -10,7 +10,7 @@
   <Color x:Key="Accent500Color">#8B5CF6</Color>
   <Color x:Key="Accent600Color">#7C3AED</Color>
   <Color x:Key="Accent700Color">#6D28D9</Color>
-  <Color x:Key="GlowColor">#C4B5FD</Color>
+  <Color x:Key="GlowColor">#A78BFA</Color>
 
   <Color x:Key="TextPrimaryColor">#1A1A1A</Color>
   <Color x:Key="TextSecondaryColor">#4A4A4A</Color>
@@ -51,20 +51,26 @@
   <SolidColorBrush x:Key="CardBackgroundBrush" Color="{StaticResource Surface0Color}" />
   <SolidColorBrush x:Key="InputBackgroundBrush" Color="{StaticResource Surface1Color}" />
   <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource BorderColor}" />
+  <SolidColorBrush x:Key="InteractiveHoverBrush" Color="#EDF2F7" />
+  <SolidColorBrush x:Key="InteractivePressedBrush" Color="#E2E8F0" />
+  <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#CBD5E0" Opacity="0.6" />
+  <SolidColorBrush x:Key="ScrollBarHoverBrush" Color="{StaticResource AccentBrush}" />
 
   <LinearGradientBrush x:Key="PrimaryGradientBrush" StartPoint="0,0" EndPoint="1,1">
-    <GradientStop Color="#A78BFA" Offset="0.0" />
-    <GradientStop Color="#8B5CF6" Offset="1.0" />
+    <GradientStop Color="#8B5CF6" Offset="0.0" />
+    <GradientStop Color="#7C3AED" Offset="1.0" />
   </LinearGradientBrush>
 
-  <LinearGradientBrush x:Key="BackgroundGradientBrush" StartPoint="0,0" EndPoint="1,1">
-    <GradientStop Color="{StaticResource Bg0Color}" Offset="0.0" />
-    <GradientStop Color="#EDF2F7" Offset="1.0" />
+  <LinearGradientBrush x:Key="BackgroundGradientBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+    <GradientStop Color="#FFFFFF" Offset="0.0" />
+    <GradientStop Color="#F7F6FF" Offset="0.4" />
+    <GradientStop Color="#F0EBFF" Offset="0.7" />
+    <GradientStop Color="#F1F5F9" Offset="1.0" />
   </LinearGradientBrush>
 
   <LinearGradientBrush x:Key="HeaderGradientBrush" StartPoint="0,0" EndPoint="1,0">
-    <GradientStop Color="{StaticResource Surface0Color}" Offset="0.0" />
-    <GradientStop Color="{StaticResource Bg1Color}" Offset="1.0" />
+    <GradientStop Color="#F8F9FF" Offset="0.0" />
+    <GradientStop Color="#F0EBFF" Offset="1.0" />
   </LinearGradientBrush>
 
   <LinearGradientBrush x:Key="GlowGradientBrush" StartPoint="0,0" EndPoint="1,0">
@@ -94,11 +100,11 @@
   </LinearGradientBrush>
   <SolidColorBrush x:Key="PremiumCardForegroundBrush" Color="{StaticResource Accent700Color}" />
 
-  <x:String x:Key="DefaultShadow">shadow-token-default</x:String>
-  <x:String x:Key="CardShadow">shadow-token-card</x:String>
-  <x:String x:Key="HeroShadow">shadow-token-hero</x:String>
-  <x:String x:Key="AccentGlow">shadow-token-accent</x:String>
-  <x:String x:Key="FocusGlow">shadow-token-focus</x:String>
+  <BoxShadows x:Key="DefaultShadow">0 2 10 0 #15000000</BoxShadows>
+  <BoxShadows x:Key="CardShadow">0 4 15 0 #1A000000</BoxShadows>
+  <BoxShadows x:Key="HeroShadow">0 8 24 0 #20000000</BoxShadows>
+  <BoxShadows x:Key="AccentGlow">0 0 10 0 #258B5CF6</BoxShadows>
+  <BoxShadows x:Key="FocusGlow">0 0 6 0 #208B5CF6</BoxShadows>
 
   <FontFamily x:Key="DefaultFontFamily">Inter</FontFamily>
 

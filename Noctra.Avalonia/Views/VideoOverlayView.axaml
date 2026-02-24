@@ -103,13 +103,13 @@
                     <TextBlock Text="{Binding CurrentChannel.Name}" FontSize="24" FontWeight="Bold" Foreground="White"/>
                     <WrapPanel Margin="0,8,0,0"
                                IsVisible="{Binding HasTopQualityBadgesReady}">
-                        <Border Background="#5B0B9E" CornerRadius="5" Padding="8,3" Margin="0,0,8,0" Opacity="0.75">
+                        <Border Background="{DynamicResource AccentBrush}" CornerRadius="5" Padding="8,3" Margin="0,0,8,0" Opacity="0.8">
                             <TextBlock Text="{Binding StreamQuality.ResolutionOnlyLabel}" FontSize="11" FontWeight="SemiBold" Foreground="White"/>
                         </Border>
-                        <Border Background="#5B0B9E" CornerRadius="5" Padding="8,3" Margin="0,0,8,0" Opacity="0.75">
+                        <Border Background="{DynamicResource AccentBrush}" CornerRadius="5" Padding="8,3" Margin="0,0,8,0" Opacity="0.8">
                             <TextBlock Text="{Binding StreamQuality.Fps, StringFormat='{}{0} FPS'}" FontSize="11" FontWeight="SemiBold" Foreground="White"/>
                         </Border>
-                        <Border Background="#5B0B9E" CornerRadius="5" Padding="8,3" Opacity="0.75">
+                        <Border Background="{DynamicResource AccentBrush}" CornerRadius="5" Padding="8,3" Opacity="0.8">
                             <TextBlock Text="{Binding StreamQuality.VideoCodecDisplay}" FontSize="11" FontWeight="SemiBold" Foreground="White"/>
                         </Border>
                     </WrapPanel>
@@ -155,7 +155,7 @@
                                 IsVisible="{Binding IsLiveContent}">
 
                         <StackPanel Orientation="Horizontal">
-                            <Border Background="#8d09e5" CornerRadius="4" Padding="8,4" Margin="0,0,12,0">
+                            <Border Background="{DynamicResource AccentBrush}" CornerRadius="4" Padding="8,4" Margin="0,0,12,0">
                                 <StackPanel Orientation="Horizontal">
                                     <Ellipse Width="8" Height="8" Fill="White" Margin="0,0,6,0">
                                         <Ellipse.Styles>
@@ -635,7 +635,7 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                                     <TextBlock Text="{Binding StreamQuality.ResolutionLabel, FallbackValue='Tespit ediliyor...'}"
                                                FontSize="28" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                    <Border Background="#8d09e5" CornerRadius="4" Padding="8,2" Margin="12,4,0,0" VerticalAlignment="Top"
+                                    <Border Background="{DynamicResource AccentBrush}" CornerRadius="4" Padding="8,2" Margin="12,4,0,0" VerticalAlignment="Top"
                                             IsVisible="{Binding StreamQuality.QualityTier, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
                                         <TextBlock Text="{Binding StreamQuality.QualityTier}" FontSize="11" FontWeight="Bold" Foreground="White"/>
                                     </Border>
@@ -786,7 +786,7 @@
                     ZIndex="950"
                     IsVisible="{Binding IsBuffering}">
             <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
-                <Ellipse Width="12" Height="12" Fill="#8D09E5" Opacity="0.35">
+                <Ellipse Width="12" Height="12" Fill="{DynamicResource AccentBrush}" Opacity="0.35">
                     <Ellipse.Styles>
                         <Style Selector="Ellipse">
                             <Style.Animations>
@@ -808,7 +808,7 @@
                         </Style>
                     </Ellipse.Styles>
                 </Ellipse>
-                <Ellipse Width="12" Height="12" Fill="#8D09E5" Opacity="0.35">
+                <Ellipse Width="12" Height="12" Fill="{DynamicResource AccentBrush}" Opacity="0.35">
                     <Ellipse.Styles>
                         <Style Selector="Ellipse">
                             <Style.Animations>
@@ -830,7 +830,7 @@
                         </Style>
                     </Ellipse.Styles>
                 </Ellipse>
-                <Ellipse Width="12" Height="12" Fill="#8D09E5" Opacity="0.35">
+                <Ellipse Width="12" Height="12" Fill="{DynamicResource AccentBrush}" Opacity="0.35">
                     <Ellipse.Styles>
                         <Style Selector="Ellipse">
                             <Style.Animations>

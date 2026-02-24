@@ -45,7 +45,7 @@
         </Style>
     </Window.Styles>
 
-    <Border Background="{DynamicResource BackgroundBrush}"
+    <Border Background="{DynamicResource BackgroundGradientBrush}"
             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
             CornerRadius="{DynamicResource RadiusMedium}" ClipToBounds="True"
             BoxShadow="0 0 20 0 #80000000">

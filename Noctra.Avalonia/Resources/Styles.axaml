@@ -40,7 +40,7 @@
 
         <Style Selector="^:pointerover /template/ Border#PART_Border">
             <Setter Property="Opacity" Value="0.9"/>
-            <Setter Property="BoxShadow" Value="0 3 15 0 #4D6200EA"/>
+            <Setter Property="BoxShadow" Value="0 4 20 0 #40000000"/>
         </Style>
         <Style Selector="^:pressed /template/ Border#PART_Border">
             <Setter Property="Opacity" Value="0.8"/>
@@ -82,7 +82,7 @@
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
         </Style>
         <Style Selector="^:pressed /template/ Border#PART_Border">
-            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}"/>
         </Style>
     </ControlTheme>
 
@@ -445,18 +445,19 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <Border x:Name="Box" Width="40" Height="40"
+                    <Border x:Name="Box" Width="24" Height="24"
                             BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="2"
-                            Background="Transparent"
+                            BorderThickness="1.5"
+                            Background="{DynamicResource Surface1Brush}"
+                            CornerRadius="6"
                             VerticalAlignment="Center">
                         <materialIcons:MaterialIcon x:Name="CheckMark" Kind="Check"
                                                     Foreground="{DynamicResource TextPrimaryBrush}"
-                                                    Width="22" Height="22"
+                                                    Width="18" Height="18"
                                                     HorizontalAlignment="Center" VerticalAlignment="Center"
                                                     IsVisible="False"/>
                     </Border>
-                    <ContentPresenter Grid.Column="1" VerticalAlignment="Center" Margin="15,0,0,0"
+                    <ContentPresenter Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0"
                                       Content="{TemplateBinding Content}"
                                       ContentTemplate="{TemplateBinding ContentTemplate}"/>
                 </Grid>
@@ -467,10 +468,12 @@
             <Setter Property="IsVisible" Value="True"/>
         </Style>
         <Style Selector="^:checked /template/ Border#Box">
-            <Setter Property="BorderBrush" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
         </Style>
         <Style Selector="^:pointerover /template/ Border#Box">
-            <Setter Property="BorderBrush" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}"/>
         </Style>
     </ControlTheme>
 
@@ -630,8 +633,13 @@
             </ControlTemplate>
         </Setter>
 
-        <Style Selector="^:pointerover /template/ Border#PART_Border">
-            <Setter Property="BorderBrush" Value="{DynamicResource TextDisabledBrush}"/>
+        <Style Selector="^:hover /template/ Border#PART_Border">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}"/>
+        </Style>
+        <Style Selector="^:focus /template/ Border#PART_Border">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="BorderThickness" Value="2"/>
         </Style>
     </ControlTheme>
 
@@ -732,7 +740,7 @@
 
     <!-- Circular Progress Style -->
     <ControlTheme x:Key="CircularProgressStyle" TargetType="ProgressBar">
-        <Setter Property="Foreground" Value="#8D09E5"/>
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
         <Setter Property="Template">
             <ControlTemplate TargetType="ProgressBar">
                 <Grid>
@@ -769,7 +777,7 @@
 
     <!-- Media Slider Style -->
     <ControlTheme x:Key="MediaSliderStyle" TargetType="Slider">
-        <Setter Property="Foreground" Value="#8D09E5"/>
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
         <Setter Property="Template">
             <ControlTemplate TargetType="Slider">
                 <Border Background="Transparent" Height="30">
@@ -788,7 +796,7 @@
                                 <RepeatButton>
                                     <RepeatButton.Template>
                                         <ControlTemplate>
-                                            <Border Background="#8D09E5" CornerRadius="2" Height="4"/>
+                                            <Border Background="{DynamicResource AccentBrush}" CornerRadius="2" Height="4"/>
                                         </ControlTemplate>
                                     </RepeatButton.Template>
                                 </RepeatButton>
@@ -805,7 +813,7 @@
                             <Thumb x:Name="thumb" Width="16" Height="16">
                                 <Thumb.Template>
                                     <ControlTemplate>
-                                        <Ellipse Fill="#8D09E5" Stroke="White" StrokeThickness="0"/>
+                                        <Ellipse Fill="{DynamicResource AccentBrush}" Stroke="White" StrokeThickness="0"/>
                                     </ControlTemplate>
                                 </Thumb.Template>
                             </Thumb>
@@ -935,7 +943,9 @@
             <ControlTemplate TargetType="ToggleButton">
                 <Grid>
                     <Border x:Name="Track"
-                            Background="#333333"
+                            Background="{DynamicResource Surface1Brush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
                             CornerRadius="16"
                             Width="52" Height="32"/>
                     <Ellipse x:Name="Thumb"
@@ -989,14 +999,14 @@
         <Setter Property="Template">
             <ControlTemplate TargetType="Thumb">
                 <Border x:Name="PART_Border"
-                        Background="{DynamicResource TextSecondaryBrush}"
+                        Background="{DynamicResource ScrollBarThumbBrush}"
                         CornerRadius="6"
                         BorderThickness="0"/>
             </ControlTemplate>
         </Setter>
 
         <Style Selector="^:pointerover /template/ Border#PART_Border">
-            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="{DynamicResource ScrollBarHoverBrush}"/>
         </Style>
         <Style Selector="^:pressed /template/ Border#PART_Border">
             <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>

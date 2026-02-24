@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Görsel Tema Senkronizasyonu ve Kararlılık (Phase 14-15)** (2026-02-24 18:45):
+  - **Derin Tema Revizyonu (Phase 14)**:
+    - **Kontrol Normalizasyonu**: `CheckBox`, `ScrollBar`, `ComboBox`, `Slider` ve `ProgressBar` bileşenleri `Styles.axaml` üzerinde merkezi olarak standartlaştırıldı; ana renkler ve hover efektleri tema kaynaklarına bağlandı.
+    - **Hex Kod Temizliği**: Tüm `.axaml` dosyalarındaki (Profiles, Settings, Home, VideoOverlay) hardcoded mor ve gri hex kodları temizlenerek dinamik tema fırçalarına (`AccentBrush`, `InteractiveHoverBrush` vb.) dönüştürüldü.
+    - **Shadow & Glow Senkronizasyonu**: `DefaultShadow`, `CardShadow`, `HeroShadow` ve `AccentGlow` efektleri her iki tema (Dark/Light) için optimize edilerek görsel derinlik standartlaştırıldı.
+  - **Kritik Çökme ve Stabilite Düzeltmeleri (Phase 15)**:
+    - **InvalidCastException Çözümü**: Tema kaynaklarındaki `BoxShadow` değerlerinin `x:String` olarak tanımlanmasından kaynaklanan ve uygulamanın belirli alanlarda çökmesine yol açan tip dönüşüm hatası, kaynaklar `BoxShadows` tipine taşınarak giderildi.
+    - **Video Oynatıcı Null Koruması**: `VideoOverlayView.axaml.cs` içerisindeki timeline kaydırma (seek) mantığına `_playerViewModel` için robust null kontrolleri eklendi; oynatıcı geçişlerindeki olası `NullReferenceException` hataları önlendi.
+    - **Build Doğrulaması**: Yapılan tüm değişiklikler `dotnet build` ile doğrulanarak 0 uyarı ve 0 hata ile stabilite sağlandı.
+
 - **Çocuk Güvenliği Görselleştirme ve Filtre Sertleştirme (Phase 11)** (2026-02-24 17:15):
   - **Premium Çocuk Profili Çerçevesi**: Çocuk profilleri için avatar etrafına 3-renkli neon gradyanlı (`#6366F1`, `#A855F7`, `#EC4899`) ve dış parlamalı (glow) şık bir çerçeve eklendi.
   - **Clipping-Free Tasarım**: Profil kartı butonları 150px genişliğe çıkarılarak ve `ClipToBounds` kısıtlamaları kaldırılarak çerçevenin tüm ihtişamıyla kesilmeden görünmesi sağlandı.

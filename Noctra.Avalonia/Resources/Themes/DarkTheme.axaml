@@ -6,11 +6,11 @@
   <Color x:Key="Surface1Color">#333333</Color>
   <Color x:Key="BorderColor">#404040</Color>
 
-  <Color x:Key="Accent300Color">#C4B5FD</Color>
-  <Color x:Key="Accent500Color">#A78BFA</Color>
-  <Color x:Key="Accent600Color">#8B5CF6</Color>
-  <Color x:Key="Accent700Color">#7C3AED</Color>
-  <Color x:Key="GlowColor">#C4B5FD</Color>
+  <Color x:Key="Accent300Color">#B7A6F6</Color>
+  <Color x:Key="Accent500Color">#8B5CF6</Color>
+  <Color x:Key="Accent600Color">#7C3AED</Color>
+  <Color x:Key="Accent700Color">#6D28D9</Color>
+  <Color x:Key="GlowColor">#8B5CF6</Color>
 
   <Color x:Key="TextPrimaryColor">#FFFFFF</Color>
   <Color x:Key="TextSecondaryColor">#E5E5E5</Color>
@@ -51,20 +51,26 @@
   <SolidColorBrush x:Key="CardBackgroundBrush" Color="{StaticResource Surface0Color}" />
   <SolidColorBrush x:Key="InputBackgroundBrush" Color="{StaticResource Surface1Color}" />
   <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource BorderColor}" />
+  <SolidColorBrush x:Key="InteractiveHoverBrush" Color="#3D3D3D" />
+  <SolidColorBrush x:Key="InteractivePressedBrush" Color="#4D4D4D" />
+  <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#4A4A4A" Opacity="0.6" />
+  <SolidColorBrush x:Key="ScrollBarHoverBrush" Color="{StaticResource Accent300Color}" />
 
   <LinearGradientBrush x:Key="PrimaryGradientBrush" StartPoint="0,0" EndPoint="1,1">
     <GradientStop Color="#8B5CF6" Offset="0.0" />
-    <GradientStop Color="#7C3AED" Offset="1.0" />
+    <GradientStop Color="#6D28D9" Offset="1.0" />
   </LinearGradientBrush>
 
-  <LinearGradientBrush x:Key="BackgroundGradientBrush" StartPoint="0,0" EndPoint="1,1">
-    <GradientStop Color="{StaticResource Bg0Color}" Offset="0.0" />
-    <GradientStop Color="#1a0a2e" Offset="1.0" />
+  <LinearGradientBrush x:Key="BackgroundGradientBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+    <GradientStop Color="#1A1B26" Offset="0.0" />
+    <GradientStop Color="#1E1B33" Offset="0.4" />
+    <GradientStop Color="#141221" Offset="0.7" />
+    <GradientStop Color="#08080A" Offset="1.0" />
   </LinearGradientBrush>
 
   <LinearGradientBrush x:Key="HeaderGradientBrush" StartPoint="0,0" EndPoint="1,0">
-    <GradientStop Color="{StaticResource Bg1Color}" Offset="0.0" />
-    <GradientStop Color="#2D1B4E" Offset="1.0" />
+    <GradientStop Color="#1A1B26" Offset="0.0" />
+    <GradientStop Color="#1E1B33" Offset="1.0" />
   </LinearGradientBrush>
 
   <LinearGradientBrush x:Key="GlowGradientBrush" StartPoint="0,0" EndPoint="1,0">
@@ -74,8 +80,8 @@
 
   <LinearGradientBrush x:Key="HeroOverlayBrush" StartPoint="0,0" EndPoint="0,1">
     <GradientStop Color="Transparent" Offset="0.0" />
-    <GradientStop Color="#99141414" Offset="0.5" />
-    <GradientStop Color="#141414" Offset="1.0" />
+    <GradientStop Color="#991A1B26" Offset="0.5" />
+    <GradientStop Color="#1A1B26" Offset="1.0" />
   </LinearGradientBrush>
 
   <LinearGradientBrush x:Key="IconGradientBrush" StartPoint="0,0" EndPoint="1,1">
@@ -95,11 +101,11 @@
   <SolidColorBrush x:Key="PremiumCardForegroundBrush" Color="White" />
 
   <!-- Effect anahtarlarini koru; ilerleyen fazlarda BoxShadow/VisualEffect'e tasinacak -->
-  <x:String x:Key="DefaultShadow">shadow-token-default</x:String>
-  <x:String x:Key="CardShadow">shadow-token-card</x:String>
-  <x:String x:Key="HeroShadow">shadow-token-hero</x:String>
-  <x:String x:Key="AccentGlow">shadow-token-accent</x:String>
-  <x:String x:Key="FocusGlow">shadow-token-focus</x:String>
+  <BoxShadows x:Key="DefaultShadow">0 2 10 0 #30000000</BoxShadows>
+  <BoxShadows x:Key="CardShadow">0 4 20 0 #40000000</BoxShadows>
+  <BoxShadows x:Key="HeroShadow">0 10 40 0 #60000000</BoxShadows>
+  <BoxShadows x:Key="AccentGlow">0 0 12 0 #408B5CF6</BoxShadows>
+  <BoxShadows x:Key="FocusGlow">0 0 8 0 #308B5CF6</BoxShadows>
 
   <FontFamily x:Key="DefaultFontFamily">Inter</FontFamily>
 

@@ -122,7 +122,7 @@
         </Style>
         <Style Selector="Button.CloseBtn:pointerover">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="Background" Value="#22FFFFFF"/>
+            <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}"/>
         </Style>
     </Window.Styles>
 

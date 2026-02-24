@@ -105,7 +105,7 @@
         </Style>
     </Window.Styles>
 
-    <Border Background="{DynamicResource Bg0Brush}" 
+    <Border Background="{DynamicResource BackgroundGradientBrush}" 
             CornerRadius="{DynamicResource RadiusLarge}" 
             ClipToBounds="True"
             Margin="1"
