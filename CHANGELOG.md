@@ -5,7 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-- **M3U Bağlantısı ve Kanal Yükleme Dayanıklılığı** (2026-02-23 22:25):
+- **Çocuk Profili Hardcore Filtre ve Evrensel Güvenlik (Phase 6-8)** (2026-02-24 12:45):
+  - **Kategori-Merkezli Akıllı Filtreleme**: Filtreler artık sadece anahtar kelimeye değil, kategorinin güvenilirliğine bakıyor. "Sinema/Dizi" gibi genel kategoriler varsayılan olarak engellenip sadece adı güvenli olanlar (`Nemo`, `Frozen` vb.) kurtarılırken, "Çizgi Film/Kids" kategorileri (kara liste hariç) korunuyor.
+  - **Evrensel Dil Desteği**: Filtreleme motoru artık İngilizce, Almanca, Fransızca, İspanyolca ve İtalyanca kategorileri (`Kinder`, `Niños`, `Enfant`, `Cartoon` vb.) tanıyor. 
+  - **Gelişmiş Tarih Bazlı Engelleme**: 2000 yılı ve öncesine ait tüm içerikler (Yeşilçam, nostalji vb.) başlık veya kategori fark etmeksizin otomatik olarak engelleniyor. Regex motoru artık parantezsiz yılları da (`1998-14 FILME`) yakalayabiliyor.
+  - **Resilient Cleanup (Dayanıklı Temizlik)**: Sunucu hatalarında veya zaman aşımı (Timeout) durumlarında dahi, çocuk profili için veri tabanı temizliği zorla çalıştırılıyor. Child safety artık internet hızına bağlı değil.
+  - **Genişletilmiş Çocuk Kütüphanesi (Rescue List)**: Yüzlerce küresel marka (Disney, Pixar, Cartoon Network, Marvel, Pokemon vb.) ve yerel çocuk içerikleri (TRT Çocuk, Niloya, Rafadan Tayfa vb.) "kurtarma listesine" eklenerek şüpheli kategoriler arasından güvenle çekiliyor.
+  - **Kritik Kara Liste Genişletmesi**: Kullanıcı talebiyle "Yeşilçam", "Nostalji", "Erotizm", "McGregor" gibi kritik kelimeler ve şiddet içerikli kategoriler engelleme listesine eklendi.
   - **Dizi Gruplama ve Temizlik (Phase 3)**: Kısa sezon adlandırmaları (`S01`, `S02`) artık otomatik tanınıyor. Gruplamayı bozan "DIZIAX", "NETFLIX", "PRIME" gibi platform ön ekleri ve `%3` gibi özel karakterli dizi isimleri için akıllı normalizasyon eklendi. Tüm sezonlar artık tek bir dizi kartı altında toplanıyor.
   - **Kısmi Başarı (Partial Success) Desteği**: Bazı sunucuların büyük dosyalarda (48MB+) 30 saniye sonra bağlantıyı kesmesi durumunda, o ana kadar indirilen tüm kanalların (testlerde 65.000+) çöpe atılmayıp başarıyla kaydedilmesi sağlandı (Resilient Parsing).
   - **M3U Parser Esnekliği (Phase 2)**: `#EXTM3U` başlığı artık zorunlu değil. Sunucu hatalı (başlıksız) veri gönderse bile içerik zorlanarak ayıklanıyor. Ayrıca ilk kanalın atlanmasına neden olan bir döngü hatası giderildi.

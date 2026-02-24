@@ -83,7 +83,8 @@ public class ProfileService : IProfileService
 
             existingProfile.Name = request.ProfileName;
             existingProfile.Avatar = request.Avatar;
-            existingProfile.IsChild = request.IsChild;
+            // existingProfile.IsChild is intentionally NOT updated here. 
+            // A child profile cannot be unchecked, and a regular profile cannot be made a child profile later.
             profile = existingProfile;
         }
         else

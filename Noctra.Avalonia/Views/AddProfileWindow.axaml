@@ -214,6 +214,8 @@
 
                             <CheckBox Content="Çocuk Profili" 
                                       IsChecked="{Binding IsChild}"
+                                      IsEnabled="{Binding CanEditIsChild}"
+                                      IsVisible="{Binding IsChildVisible}"
                                       Margin="4,16,0,0"/>
                             
                             <Rectangle Height="1" Fill="{DynamicResource BorderBrush}" Margin="0,32"/>

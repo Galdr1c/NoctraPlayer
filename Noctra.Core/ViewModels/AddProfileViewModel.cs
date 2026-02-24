@@ -496,6 +496,12 @@ public partial class AddProfileViewModel : ObservableObject
     [ObservableProperty]
     private bool _isChild;
 
+    [ObservableProperty]
+    private bool _canEditIsChild = true;
+
+    [ObservableProperty]
+    private bool _isChildVisible = true;
+
     // Validations
     [ObservableProperty]
     private string _statusMessage = string.Empty;
@@ -562,6 +568,8 @@ public partial class AddProfileViewModel : ObservableObject
         ProfileName = profile.Name;
         SelectedAvatar = profile.Avatar ?? "default";
         IsChild = profile.IsChild;
+        CanEditIsChild = false;
+        IsChildVisible = profile.IsChild; // Only show if it's already a child profile when editing
         
         // Set account
         InitializeEdit(profile);
