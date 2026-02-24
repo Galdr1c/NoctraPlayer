@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Çocuk Güvenliği Görselleştirme ve Filtre Sertleştirme (Phase 11)** (2026-02-24 17:15):
+  - **Premium Çocuk Profili Çerçevesi**: Çocuk profilleri için avatar etrafına 3-renkli neon gradyanlı (`#6366F1`, `#A855F7`, `#EC4899`) ve dış parlamalı (glow) şık bir çerçeve eklendi.
+  - **Clipping-Free Tasarım**: Profil kartı butonları 150px genişliğe çıkarılarak ve `ClipToBounds` kısıtlamaları kaldırılarak çerçevenin tüm ihtişamıyla kesilmeden görünmesi sağlandı.
+  - **Hassas Filtreleme (Normalization)**: İçerik tarama motoruna Türkçe karakter normalizasyonu (`ş`->`s`, `ç`->`c` vb.) eklendi. Artık "cocuk" yazan filtreler "çocuk" başlıklı kanalları da hatasız yakalıyor.
+  - **Kesin Kelime Eşleşmesi**: Filtreleme motoru Regex Word Boundary (`\b`) sistemine geçirilerek "Adam/Madam" gibi hatalı eşleşmeler (false positive) engellendi.
+  - **Güvenlik Bilgilendirmesi (Tooltip)**: Profil ekleme/düzenleme ekranındaki "Çocuk Profili" kutucuğuna, ebeveynleri filtreleme kapsamı hakkında bilgilendiren bir açıklama (Tooltip) eklendi.
+  - **Statik Badge Temizliği**: Avatar üzerindeki karmaşıklığı azaltmak için eski "KIDS" ve "BADGE" etiketleri kaldırıldı, odak tamamen yeni neon çerçeveye verildi.
+
 - **Çocuk Profili Hardcore Filtre ve Evrensel Güvenlik (Phase 6-8)** (2026-02-24 12:45):
   - **Kategori-Merkezli Akıllı Filtreleme**: Filtreler artık sadece anahtar kelimeye değil, kategorinin güvenilirliğine bakıyor. "Sinema/Dizi" gibi genel kategoriler varsayılan olarak engellenip sadece adı güvenli olanlar (`Nemo`, `Frozen` vb.) kurtarılırken, "Çizgi Film/Kids" kategorileri (kara liste hariç) korunuyor.
   - **Evrensel Dil Desteği**: Filtreleme motoru artık İngilizce, Almanca, Fransızca, İspanyolca ve İtalyanca kategorileri (`Kinder`, `Niños`, `Enfant`, `Cartoon` vb.) tanıyor. 

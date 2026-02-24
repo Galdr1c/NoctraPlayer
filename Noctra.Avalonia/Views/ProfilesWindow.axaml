@@ -32,12 +32,12 @@
                 <ControlTemplate>
                     <Border x:Name="SettingsBg" Background="{TemplateBinding Background}" CornerRadius="24">
                         <materialIcons:MaterialIcon x:Name="SettingsIcon"
-                                                    Kind="CogOutline"
-                                                    Foreground="{DynamicResource TextMutedBrush}"
-                                                    Width="22" Height="22"
-                                                    HorizontalAlignment="Center"
-                                                    VerticalAlignment="Center"
-                                                    RenderTransformOrigin="50%,50%">
+                                                     Kind="CogOutline"
+                                                     Foreground="{DynamicResource TextMutedBrush}"
+                                                     Width="22" Height="22"
+                                                     HorizontalAlignment="Center"
+                                                     VerticalAlignment="Center"
+                                                     RenderTransformOrigin="50%,50%">
                             <materialIcons:MaterialIcon.Transitions>
                                 <Transitions>
                                     <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.3" Easing="CubicEaseOut"/>
@@ -66,8 +66,8 @@
                 <ControlTemplate>
                     <Border x:Name="CloseBg" Background="{TemplateBinding Background}" CornerRadius="24">
                         <materialIcons:MaterialIcon x:Name="CloseIcon" Kind="Close" Width="24" Height="24"
-                                                    Foreground="{DynamicResource TextMutedBrush}"
-                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                     Foreground="{DynamicResource TextMutedBrush}"
+                                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                 </ControlTemplate>
             </Setter>
@@ -82,21 +82,41 @@
         <!-- Profile Card Button Style -->
         <Style Selector="Button.ProfileCardStyle">
             <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="ClipToBounds" Value="False"/>
             <Setter Property="RenderTransform" Value="scale(1)"/>
             <Setter Property="Template">
                 <ControlTemplate>
-                    <Grid Width="{StaticResource RatioSquareSize}" Background="Transparent">
+                    <Grid Width="150" Background="Transparent" ClipToBounds="False">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <!-- Avatar -->
-                        <Grid Grid.Row="0" Margin="0,0,0,12">
-                            <Grid x:Name="AvatarRoot" Width="{StaticResource RatioSquareSize}" Height="{StaticResource RatioSquareSize}">
-                                <!-- 1. Background & Content (Clipped) -->
-                                <Border CornerRadius="14" ClipToBounds="True"
-                                        Background="{DynamicResource IconGradientBrush}">
+                        <!-- Avatar Area (Increased height to prevent clipping) -->
+                        <Grid Grid.Row="0" Height="140" Margin="0,0,0,12" ClipToBounds="False">
+                            <Grid x:Name="AvatarRoot" Width="140" Height="140" HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="False">
+                                <!-- 1. Kid Frame (Background glow and frame) -->
+                                <Border x:Name="KidFrame" 
+                                        Width="134" Height="134"
+                                        CornerRadius="21" 
+                                        BorderThickness="3.5"
+                                        IsVisible="{Binding IsChild}"
+                                        IsHitTestVisible="False"
+                                        BoxShadow="0 0 16 0 #706366F1">
+                                    <Border.BorderBrush>
+                                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                            <GradientStop Color="#FF6366F1" Offset="0"/>
+                                            <GradientStop Color="#FFA855F7" Offset="0.5"/>
+                                            <GradientStop Color="#FFEC4899" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.BorderBrush>
+                                </Border>
+
+                                <!-- 2. Avatar Content (120x120) -->
+                                <Border Width="{StaticResource RatioSquareSize}" Height="{StaticResource RatioSquareSize}" 
+                                        CornerRadius="14" ClipToBounds="True"
+                                        Background="{DynamicResource IconGradientBrush}"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Grid>
                                         <!-- Actual Avatar -->
                                         <Border CornerRadius="14" RenderOptions.BitmapInterpolationMode="HighQuality">
@@ -117,9 +137,9 @@
                                                         BorderBrush="White"
                                                         BorderThickness="2">
                                                     <materialIcons:MaterialIcon Kind="Pencil" Width="20" Height="20"
-                                                                                Foreground="White"
-                                                                                HorizontalAlignment="Center"
-                                                                                VerticalAlignment="Center"/>
+                                                                                 Foreground="White"
+                                                                                 HorizontalAlignment="Center"
+                                                                                 VerticalAlignment="Center"/>
                                                 </Border>
                                                 <TextBlock Text="Düzenle"
                                                            FontSize="14"
@@ -131,10 +151,12 @@
                                     </Grid>
                                 </Border>
 
-                                <!-- 2. Selection/Focus Frame (On Top) -->
-                                <Border x:Name="AvatarBorder" CornerRadius="14"
+                                <!-- 3. Selection/Focus Frame (On Top) -->
+                                <Border x:Name="AvatarBorder" Width="{StaticResource RatioSquareSize}" Height="{StaticResource RatioSquareSize}"
+                                        CornerRadius="14"
                                         BorderThickness="3" BorderBrush="Transparent"
-                                        Background="Transparent" IsHitTestVisible="False"/>
+                                        Background="Transparent" IsHitTestVisible="False"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Grid>
                         </Grid>
 

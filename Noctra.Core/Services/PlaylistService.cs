@@ -749,10 +749,42 @@ public partial class PlaylistService : IPlaylistService
             .Split(' ', StringSplitOptions.RemoveEmptyEntries));
     }
 
+    private static string NormalizeForFilter(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+
+        return text.ToLowerInvariant()
+            .Replace("ş", "s")
+            .Replace("ç", "c")
+            .Replace("ğ", "g")
+            .Replace("ü", "u")
+            .Replace("ö", "o")
+            .Replace("ı", "i")
+            .Replace("i̇", "i"); // Handle potential combined characters
+    }
+
     private static bool ContainsAny(string? text, string[] words)
     {
-        if (string.IsNullOrWhiteSpace(text)) return false;
-        return words.Any(w => text.Contains(w, StringComparison.InvariantCultureIgnoreCase));
+        if (string.IsNullOrWhiteSpace(text) || words == null || words.Length == 0) return false;
+
+        var normalizedText = NormalizeForFilter(text);
+        
+        // Use Regex with word boundaries for more accurate matching (prevents false positives like 'adam' in 'madam')
+        // We compile the regex list or cache it if performance becomes an issue, but for now, simple loop or combined regex.
+        foreach (var word in words)
+        {
+            var normalizedWord = NormalizeForFilter(word);
+            if (string.IsNullOrWhiteSpace(normalizedWord)) continue;
+
+            // Use \b for word boundaries. Note: \b might not handle non-ascii perfectly, 
+            // but after normalization to latin chars, it works well.
+            if (Regex.IsMatch(normalizedText, $@"\b{Regex.Escape(normalizedWord)}\b", RegexOptions.IgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static IReadOnlyCollection<Channel> ApplyChildFilter(IReadOnlyCollection<Channel> channels)
@@ -923,9 +955,10 @@ public partial class PlaylistService : IPlaylistService
 
     private static string[] GetCriticalBlacklist() => new[] {
         "xxx", "porn", "erotic", "sex", "porno", "gay", "lesbian", "hardcore", "cinsel", "mature", "18+", "+18", "yeşilçam", "yesilcam", "erotizm", "romantizm", "nostalji", "nostalgia",
-        "9-1-1", "alien", "castlevania", "south park", "family guy", "rick and morty", "the boys", "deadpool", "lucifer", "dexter", "sayko", "sycophant", "syco", "mcgregor",
+        "9-1-1", "alien", "castlevania", "south park", "family guy", "rick and morty", "the boys", "deadpool", "lucifer", "dexter", "sayko", "sycophant", "syco", "mcgregor", "yerli", "burn",
         "blood", "kan", "şiddet", "düşman", "düşmanlar", "enemies", "enemy", "crossing", "pazar", "marvel", "marvels", "dc", "man", ".kill", "kill", "anemone", "amar", "avangers", "korku", "korkunç", 
-        "korku kapanı", "maymunlar cehennemi", "megalodon", "person", "rising", "risk", "embarass", "embarassing"
+        "korku kapanı", "maymunlar cehennemi", "megalodon", "person", "rising", "risk", "embarass", "embarassing", "kadın", "woman"," yaşamaya", "sağ", "batman", "ghost", "lara", "lara croft", "Kabus",
+        "nightmare", "dublaj"
     };
 
     [GeneratedRegex(@"\b(19\d{2}|2000)\b")]
