@@ -923,7 +923,7 @@ public partial class PlaylistService : IPlaylistService
 
     private static string[] GetCriticalBlacklist() => new[] {
         "xxx", "porn", "erotic", "sex", "porno", "gay", "lesbian", "hardcore", "cinsel", "mature", "18+", "+18", "yeşilçam", "yesilcam", "erotizm", "romantizm", "nostalji", "nostalgia",
-        "9-1-1", "alien", "castlevania", "south park", "family guy", "rick and morty", "the boys", "deadpool", "lucifer", "dexter", "sayko", "sycophant", "syco", "mcgregor"
+        "9-1-1", "alien", "castlevania", "south park", "family guy", "rick and morty", "the boys", "deadpool", "lucifer", "dexter", "sayko", "sycophant", "syco", "mcgregor",
         "blood", "kan", "şiddet", "düşman", "düşmanlar", "enemies", "enemy", "crossing", "pazar", "marvel", "marvels", "dc", "man", ".kill", "kill", "anemone", "amar", "avangers", "korku", "korkunç", 
         "korku kapanı", "maymunlar cehennemi", "megalodon", "person", "rising", "risk", "embarass", "embarassing"
     };
