@@ -379,21 +379,16 @@ public class StalkerPortalService : IStalkerPortalService
 
         if (totalPages <= 1) return firstPage.Items;
 
-        // FAST LOAD: Initial sync should be limited to avoid hanging on massive portals.
-        // Capping to 50 pages provides ~700-1000 items per category, ample for a fast start.
-        const int maxInitialPages = 50;
-        if (totalPages > maxInitialPages)
-        {
-            DiagnosticLog($"WARNING: [{listType}] has {totalPages} pages. Capping to {maxInitialPages} for Fast Load.");
-            totalPages = maxInitialPages;
-        }
+        // FULL SYNC: Removed the page cap to fetch all content as requested.
+        // For massive portals (e.g. 100k+ items), this will take time but provide complete data.
+        DiagnosticLog($"[{listType}] Total pages to fetch: {totalPages}");
 
         // 2. Diğer tüm sayfaları paralel çek (Semaphore ile limitli)
         var allPages = new List<StalkerListItem>[totalPages];
         allPages[0] = firstPage.Items;
 
         int completedPages = 1;
-        var semaphore = new SemaphoreSlim(12); // Slightly higher concurrency
+        var semaphore = new SemaphoreSlim(15); // Higher concurrency for full sync
         var tasks = Enumerable.Range(2, totalPages - 1).Select(async p =>
         {
             await semaphore.WaitAsync(cancellationToken);

@@ -13,11 +13,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - **Gelişmiş Codec Ayarları**: Verim artışı için `avcodec-fast` ve CPU-GPU kopyalama yükünü sıfıra indiren direct rendering (`avcodec-dr`) özellikleri aktif edildi.
     - **Hata Toleransı**: HTTP Range Request desteklemeyen IPTV sunucularında MKV dosyalarının açılmama sorunu için yönlendirme çerezleri (`http-forward-cookies`) ve özel ağ önbellekleme mantığı iyileştirildi.
     
-- **Stalker Kategori Eşleme ve Hızlı Yükleme (Fast Load) Optimizasyonu** (2026-02-25 18:40):
-    - **Akıllı Kategori Eşleme**: Stalker portallarındaki kategori sorunları (boş kategoriler, 'Live' fallback'leri) giderildi. Hem ID (`genre_id`, `category_id`) hem de doğrudan isim (`genre_name`, `category_name`) tabanlı hibrit eşleme ile M3U/Xtream standartlarında kategori desteği sağlandı.
-    - **Fast Load (Hızlı Başlatma)**: 230.000+ içerikli devasa portallarda uygulamanın donmasını engellemek için akıllı sayfa sınırlaması (50 sayfa/kategori) eklendi. Başlangıç süresi saniyeler seviyesine indirildi.
-    - **Tam Seri (Series) Desteği**: Stalker üzerindeki "Series" tipi içeriklerin çekilmesi, kategorize edilmesi ve VOD içeriklerinden ayrı gösterilmesi sağlandı.
-    - **Hata Toleranslı ID Çözümleme**: Farklı portal yazılımları arasındaki `tv_genre_id`, `category_id` gibi alan farklılıkları için çoklu kontrol mekanizması eklendi.
+- **Stalker Kategori Eşleme ve Sınırsız Senkronizasyon (Full Sync)** (2026-02-25 19:30):
+    - **Sınırsız İndirme**: Stalker portalları için uygulanan sayfa sınırlamaları tamamen kaldırıldı. Artık içerik sayısı ne olursa olsun (örn. 250.000+), tüm kanallar, filmler ve diziler eksiksiz bir şekilde çekiliyor.
+    - **Hibrit Kategori Eşleme**: Stalker portallarındaki kategori sorunları giderildi. Hem ID hem de isim tabanlı hibrit eşleme ile kategorilerin M3U/Xtream standartlarında gelmesi sağlandı.
+    - **Yüksek Performanslı Paralel Senkronizasyon**: Çok sayıda içeriği hızlıca çekebilmek için paralel işlem (semaphore) kapasitesi 15 concurrent request'e çıkarıldı.
 
 - **Stalker Portal Desteği ve V2 Performans Güncellemesi** (2026-02-25 16:15):
     - **Stalker V2 Mimarisi**: Sıralı (sequential) bağlantı mantığı tamamen paralel bir mimari ile değiştirildi.
