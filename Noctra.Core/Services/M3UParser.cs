@@ -84,7 +84,7 @@ public partial class M3UParser : IM3UParser
             if (!string.IsNullOrEmpty(overrideUserAgent))
             {
                 request.Headers.UserAgent.Clear();
-                request.Headers.UserAgent.ParseAdd(overrideUserAgent);
+                request.Headers.TryAddWithoutValidation("User-Agent", overrideUserAgent);
             }
 
             using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);

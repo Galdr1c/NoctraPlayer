@@ -12,6 +12,7 @@
         CanResize="False"
         Background="Transparent"
         TransparencyLevelHint="Transparent"
+        ShowInTaskbar="True"
         Topmost="False">
 
     <Panel>

@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Stalker Portal Desteği ve İyileştirmeler** (2026-02-25 14:35):
+    - **İlk Uygulama (Core)**: Stalker Portal API istemcisi sıfırdan yazıldı. Handshake ve token tabanlı kimlik doğrulama, canlı yayın (Live TV) ve VOD içeriklerinin sayfalı (pagination) yüklenmesi sağlandı.
+    - **User-Agent Düzeltmesi**: Bazı IPTV sağlayıcılarında "Veri okunamadı" hatasına yol açan `FormatException` hatası, User-Agent header ekleme mantığı (`TryAddWithoutValidation`) iyileştirilerek giderildi.
+    - **Performans Optimizasyonu (Paralel Yükleme)**: Kanal listesi çekme süreci paralel hale getirildi. 180+ sayfalık kanal listeleri artık sırayla değil, eşzamanlı (8 kanal/sn) çekilerek profil yükleme süresi dakikalardan saniyelere (örn: 3dk -> 20sn) düşürüldü.
+    - **Akıllı Endpoint Çözümleme**: `/c/` gibi genel URL'lerle biten Stalker Portallarında API endpoint'inin (load.php) yanlış tespit edilmesi sorunu, daha kapsamlı bir otomatik tarama (probing) sistemiyle çözüldü.
+    - **Cloudflare ve Güvenlik Uyumluluğu**: Kimlik doğrulama akışı, el sıkışma (handshake) token'larını yeniden kullanacak şekilde optimize edildi. Bu sayede Cloudflare 520 hataları ve gereksiz bot koruma tetiklemeleri önlendi.
+    - **Header Standardizasyonu**: MAG cihaz simülasyonu için gerekli olan header'lar (X-User-Agent, Accept, MAC Cookies) optimize edilerek portal uyumluluğu artırıldı.
+    - **UI İyileştirmesi**: Splash, Profil Yükleme Windows görev çubuğunda görünmemesi sorunu, `ShowInTaskbar` özelliği aktif edilerek düzeltildi.
+
 - **Otomatik Güncelleme Sistemi ve Dizi Normalizasyonu** (2026-02-25 14:05):
     - **Otomatik Güncelleme**: Uygulamaya GitHub manifest tabanlı otomatik güncelleme sistemi eklendi (`UpdateService`). Uygulama açılışında arka plan kontrolü ve "Ayarlar > Hakkında" sekmesinde manuel güncelleme butonu aktif edildi.
     - **Yıl Korumalı Dizi Anahtarları**: Dizilerin sağlayıcılar arası progress senkronizasyonunu iyileştirmek için `NormalizeKey` metodunun yılları temizlemesi durduruldu (örn: `Breaking Bad 2008` artık korunuyor).
