@@ -231,6 +231,27 @@ public partial class MainViewModel : ObservableObject
                 }
             });
         };
+
+        // When background aggregation completes, reload series data
+        _mediaService.OnAggregationCompleted += (playlistId) =>
+        {
+            _dispatcherService.BeginInvoke(async () =>
+            {
+                if (SelectedPlaylist?.Id == playlistId)
+                {
+                    try
+                    {
+                        SetItems(LatestSeries, await _mediaService.GetSeriesAsync(playlistId));
+                        UpdateSeriesViewItems();
+                        System.Diagnostics.Debug.WriteLine($"[MainViewModel] Series refreshed after background aggregation for playlist {playlistId}");
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[MainViewModel] Series refresh after aggregation failed: {ex.Message}");
+                    }
+                }
+            });
+        };
     }
 
     public Task InitializeAsync()
@@ -734,21 +755,19 @@ public partial class MainViewModel : ObservableObject
             BeginLoading();
             StatusMessage = "Kanal ve kategori düzeni optimize ediliyor...";
             
-            // Aynı DbContext paralel işlemleri desteklemez.
-            var allGroups = await _playlistService.GetGroupsAsync(playlistId);
-            var liveGroups = await _playlistService.GetGroupsByTypeAsync(playlistId, ChannelType.Live);
-            var vodGroups = await _playlistService.GetGroupsByTypeAsync(playlistId, ChannelType.VOD);
-            var seriesGroups = await _playlistService.GetGroupsByTypeAsync(playlistId, ChannelType.Series);
-            var channelCount = await _playlistService.GetChannelCountAsync(playlistId);
-            _allGroupsCache = OrderGroupsByLanguagePreference(allGroups);
-            _liveGroupsCache = OrderGroupsByLanguagePreference(liveGroups);
-            _vodGroupsCache = OrderGroupsByLanguagePreference(vodGroups);
-            _seriesGroupsCache = OrderGroupsByLanguagePreference(seriesGroups);
+            // Single-pass query: Fetch all groups and total count at once (Significantly faster)
+            var meta = await _playlistService.GetChannelGroupMetadataAsync(playlistId);
+            
+            _allGroupsCache = OrderGroupsByLanguagePreference(meta.AllGroups);
+            _liveGroupsCache = OrderGroupsByLanguagePreference(meta.LiveGroups);
+            _vodGroupsCache = OrderGroupsByLanguagePreference(meta.VodGroups);
+            _seriesGroupsCache = OrderGroupsByLanguagePreference(meta.SeriesGroups);
+            
             UpdateGroupsForSelectedType();
             ResetIncrementalState();
             await LoadMoreChannelsAsync();
  
-            StatusMessage = $"{channelCount:N0} içerik keyfinize hazır";
+            StatusMessage = $"{meta.TotalCount:N0} içerik keyfinize hazır";
 
             // Fire-and-forget tasks are wrapped to avoid unobserved failures and task races.
             StartPostChannelLoadBackgroundTasks();

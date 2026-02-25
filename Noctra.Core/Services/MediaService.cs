@@ -10,6 +10,13 @@ public partial class MediaService : IMediaService
 {
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
+    public event Action<int>? OnAggregationCompleted;
+
+    public void RaiseAggregationCompleted(int playlistId)
+    {
+        OnAggregationCompleted?.Invoke(playlistId);
+    }
+
     public MediaService(IDbContextFactory<AppDbContext> contextFactory)
     {
         _contextFactory = contextFactory;
@@ -18,105 +25,174 @@ public partial class MediaService : IMediaService
     public async Task AggregateContentAsync(int playlistId, CancellationToken cancellationToken = default)
     {
         using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
-        var channels = await context.Channels
-            .Where(c => c.PlaylistId == playlistId && c.Type == ChannelType.Series)
-            .ToListAsync(cancellationToken);
-
-        if (!channels.Any()) return;
-
-        var existingSeries = await context.Series
-            .Include(s => s.Seasons)
-            .ThenInclude(se => se.Episodes)
-            .Where(s => s.PlaylistId == playlistId)
-            .ToListAsync(cancellationToken);
-        var seriesGroups = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
-        foreach (var existing in existingSeries.OrderBy(s => s.Id))
+        
+        // Disable change tracker for bulk operations — massive speedup on SaveChangesAsync
+        context.ChangeTracker.AutoDetectChangesEnabled = false;
+        
+        try
         {
-            var key = BuildSeriesGroupingKey(existing.Name);
-            if (!seriesGroups.ContainsKey(key))
+            var channels = await context.Channels
+                .Where(c => c.PlaylistId == playlistId && c.Type == ChannelType.Series)
+                .ToListAsync(cancellationToken);
+
+            if (!channels.Any()) return;
+
+            // Load existing series graph — needed for accurate change tracking of existing entities
+            var existingSeries = await context.Series
+                .Include(s => s.Seasons)
+                .ThenInclude(se => se.Episodes)
+                .Where(s => s.PlaylistId == playlistId)
+                .ToListAsync(cancellationToken);
+
+            // O(1) series lookup by grouping key
+            var seriesGroups = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
+            foreach (var existing in existingSeries.OrderBy(s => s.Id))
             {
-                seriesGroups[key] = existing;
-            }
-        }
-
-        foreach (var channel in channels)
-        {
-            var parsed = ParseSeriesEpisodeInfo(channel.Name);
-            var seriesName = parsed.SeriesName;
-            var seasonNum = parsed.Season;
-            var episodeNum = parsed.Episode;
-
-            if (seasonNum == 0 || episodeNum == 0)
-            {
-                // Fallback for unparseable or live-targeted series channels
-                seasonNum = Math.Max(1, seasonNum);
-                episodeNum = Math.Max(1, episodeNum);
-            }
-
-            var seriesKey = BuildSeriesGroupingKey(seriesName);
-
-            if (!seriesGroups.TryGetValue(seriesKey, out var series))
-            {
-                series = new Series
+                var key = BuildSeriesGroupingKey(existing.Name);
+                if (!seriesGroups.ContainsKey(key))
                 {
-                    Name = seriesName,
-                    PlaylistId = playlistId,
+                    seriesGroups[key] = existing;
+                }
+            }
+
+            // O(1) season lookup: (seriesKey, seasonNum) -> Season
+            var seasonLookup = new Dictionary<(string seriesKey, int seasonNum), Season>();
+            foreach (var kvp in seriesGroups)
+            {
+                foreach (var sn in kvp.Value.Seasons)
+                {
+                    seasonLookup[(kvp.Key, sn.SeasonNumber)] = sn;
+                }
+            }
+
+            // O(1) episode lookup: (seasonId, streamIdentity) -> Episode — prevents duplicate insertion
+            var episodeLookup = new Dictionary<(int seasonId, string streamIdentity), Episode>();
+            var episodeByNumber = new Dictionary<(int seasonId, int episodeNum), Episode>();
+            foreach (var kvp in seriesGroups)
+            {
+                foreach (var sn in kvp.Value.Seasons)
+                {
+                    foreach (var ep in sn.Episodes)
+                    {
+                        var streamId = NormalizeStreamIdentity(ep.StreamUrl);
+                        if (!string.IsNullOrWhiteSpace(streamId) && sn.Id > 0)
+                        {
+                            episodeLookup[(sn.Id, streamId)] = ep;
+                        }
+                        if (sn.Id > 0)
+                        {
+                            episodeByNumber.TryAdd((sn.Id, ep.EpisodeNumber), ep);
+                        }
+                    }
+                }
+            }
+
+            foreach (var channel in channels)
+            {
+                var parsed = ParseSeriesEpisodeInfo(channel.Name);
+                var seriesName = parsed.SeriesName;
+                var seasonNum = parsed.Season;
+                var episodeNum = parsed.Episode;
+
+                if (seasonNum == 0 || episodeNum == 0)
+                {
+                    seasonNum = Math.Max(1, seasonNum);
+                    episodeNum = Math.Max(1, episodeNum);
+                }
+
+                var seriesKey = BuildSeriesGroupingKey(seriesName);
+
+                if (!seriesGroups.TryGetValue(seriesKey, out var series))
+                {
+                    series = new Series
+                    {
+                        Name = seriesName,
+                        PlaylistId = playlistId,
+                        CoverUrl = channel.LogoUrl,
+                        Genre = channel.GroupTitle,
+                        IsInMyList = false,
+                        IsFavorite = false
+                    };
+                    seriesGroups[seriesKey] = series;
+                    context.Series.Add(series);
+                }
+                else
+                {
+                    if (string.IsNullOrWhiteSpace(series.CoverUrl) && !string.IsNullOrWhiteSpace(channel.LogoUrl))
+                    {
+                        series.CoverUrl = channel.LogoUrl;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(series.Genre) && !string.IsNullOrWhiteSpace(channel.GroupTitle))
+                    {
+                        series.Genre = channel.GroupTitle;
+                    }
+                }
+
+                // O(1) season lookup instead of FirstOrDefault
+                if (!seasonLookup.TryGetValue((seriesKey, seasonNum), out var season))
+                {
+                    season = new Season { SeasonNumber = seasonNum, Series = series };
+                    series.Seasons.Add(season);
+                    seasonLookup[(seriesKey, seasonNum)] = season;
+                }
+
+                // O(1) episode existence check
+                var channelStreamId = NormalizeStreamIdentity(channel.StreamUrl);
+                Episode? existingEpisode = null;
+                
+                if (!string.IsNullOrWhiteSpace(channelStreamId) && season.Id > 0)
+                {
+                    episodeLookup.TryGetValue((season.Id, channelStreamId), out existingEpisode);
+                }
+                if (existingEpisode == null && season.Id > 0)
+                {
+                    episodeByNumber.TryGetValue((season.Id, episodeNum), out existingEpisode);
+                }
+                // Fallback for new seasons (Id == 0) — linear scan on small in-memory list
+                if (existingEpisode == null && season.Id == 0)
+                {
+                    existingEpisode = FindExistingEpisode(season, episodeNum, channel.Name, channel.StreamUrl);
+                }
+
+                if (existingEpisode != null)
+                {
+                    if (string.IsNullOrWhiteSpace(existingEpisode.CoverUrl) && !string.IsNullOrWhiteSpace(channel.LogoUrl))
+                    {
+                        existingEpisode.CoverUrl = channel.LogoUrl;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(existingEpisode.Plot) && !string.IsNullOrWhiteSpace(channel.Plot))
+                    {
+                        existingEpisode.Plot = channel.Plot;
+                    }
+                    continue;
+                }
+
+                var episode = new Episode
+                {
+                    Name = SeriesInfoParser.CleanEpisodeTitle(channel.Name, seriesName, episodeNum),
+                    EpisodeNumber = episodeNum,
+                    StreamUrl = channel.StreamUrl,
                     CoverUrl = channel.LogoUrl,
-                    Genre = channel.GroupTitle,
-                    IsInMyList = false,
-                    IsFavorite = false
+                    Season = season
                 };
-                seriesGroups[seriesKey] = series;
-                context.Series.Add(series);
-            }
-            else
-            {
-                if (string.IsNullOrWhiteSpace(series.CoverUrl) && !string.IsNullOrWhiteSpace(channel.LogoUrl))
+                season.Episodes.Add(episode);
+                
+                // Register in lookup for future iterations
+                if (!string.IsNullOrWhiteSpace(channelStreamId) && season.Id > 0)
                 {
-                    series.CoverUrl = channel.LogoUrl;
-                }
-
-                if (string.IsNullOrWhiteSpace(series.Genre) && !string.IsNullOrWhiteSpace(channel.GroupTitle))
-                {
-                    series.Genre = channel.GroupTitle;
+                    episodeLookup[(season.Id, channelStreamId)] = episode;
                 }
             }
 
-            var season = series.Seasons.FirstOrDefault(s => s.SeasonNumber == seasonNum);
-            if (season == null)
-            {
-                season = new Season { SeasonNumber = seasonNum, Series = series };
-                series.Seasons.Add(season);
-            }
-
-            var existingEpisode = FindExistingEpisode(season, episodeNum, channel.Name, channel.StreamUrl);
-            if (existingEpisode != null)
-            {
-                // Preserve watch/progress fields; only fill missing metadata.
-                if (string.IsNullOrWhiteSpace(existingEpisode.CoverUrl) && !string.IsNullOrWhiteSpace(channel.LogoUrl))
-                {
-                    existingEpisode.CoverUrl = channel.LogoUrl;
-                }
-
-                if (string.IsNullOrWhiteSpace(existingEpisode.Plot) && !string.IsNullOrWhiteSpace(channel.Plot))
-                {
-                    existingEpisode.Plot = channel.Plot;
-                }
-                continue;
-            }
-
-            var episode = new Episode
-            {
-                Name = SeriesInfoParser.CleanEpisodeTitle(channel.Name, seriesName, episodeNum),
-                EpisodeNumber = episodeNum,
-                StreamUrl = channel.StreamUrl,
-                CoverUrl = channel.LogoUrl,
-                Season = season
-            };
-            season.Episodes.Add(episode);
+            context.ChangeTracker.DetectChanges();
+            await context.SaveChangesAsync(cancellationToken);
         }
-
-        await context.SaveChangesAsync(cancellationToken);
+        finally
+        {
+            context.ChangeTracker.AutoDetectChangesEnabled = true;
+        }
     }
 
     private static Episode? FindExistingEpisode(Season season, int episodeNumber, string? episodeName, string? streamUrl)

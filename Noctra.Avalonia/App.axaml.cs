@@ -382,6 +382,22 @@ CREATE TABLE IF NOT EXISTS SeriesEpisodeProgresses (
         {
             StartupDiagnostics.LogException("Failed to enable SQLite foreign keys", ex);
         }
+
+        // SQLite WAL mode + performance PRAGMAs
+        // WAL enables concurrent reads during writes — UI stays responsive while importing
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
+            await context.Database.ExecuteSqlRawAsync("PRAGMA synchronous=NORMAL;");
+            await context.Database.ExecuteSqlRawAsync("PRAGMA cache_size=-64000;"); // 64MB cache
+            await context.Database.ExecuteSqlRawAsync("PRAGMA temp_store=MEMORY;");
+            await context.Database.ExecuteSqlRawAsync("PRAGMA mmap_size=268435456;"); // 256MB mmap
+            StartupDiagnostics.Log("SQLite WAL mode and performance PRAGMAs enabled.");
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.LogException("Failed to enable SQLite WAL mode", ex);
+        }
     }
 
     private static void ApplyApplicationLanguage(string? languageCode)

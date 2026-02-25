@@ -63,6 +63,11 @@ public interface IPlaylistService
     Task<List<string>> GetGroupsByTypeAsync(int playlistId, ChannelType type);
 
     /// <summary>
+    /// Tüm grup ve kanal sayısı verilerini tek seferde (single-pass) getirir
+    /// </summary>
+    Task<(int TotalCount, List<string> AllGroups, List<string> LiveGroups, List<string> VodGroups, List<string> SeriesGroups)> GetChannelGroupMetadataAsync(int playlistId);
+
+    /// <summary>
     /// Kanal sayısını getirir (tümünü yüklemeden)
     /// </summary>
     Task<int> GetChannelCountAsync(int playlistId);

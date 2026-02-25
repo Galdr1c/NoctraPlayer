@@ -8,6 +8,16 @@ namespace Noctra.Services.Interfaces;
 public interface IMediaService
 {
     /// <summary>
+    /// Fired when background aggregation for a playlist completes successfully
+    /// </summary>
+    event Action<int>? OnAggregationCompleted;
+
+    /// <summary>
+    /// Raises the OnAggregationCompleted event (for cross-service invocation)
+    /// </summary>
+    void RaiseAggregationCompleted(int playlistId);
+
+    /// <summary>
     /// Aggregates flat channel list into a structured series/season/episode hierarchy
     /// </summary>
     /// <param name="playlistId">ID of the playlist to aggregate</param>

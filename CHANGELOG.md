@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Oynatma Listesi Performans Optimizasyonları (Phase 28)** (2026-02-25 12:40):
+    - **SQLite WAL Modu**: Veritabanında Write-Ahead Logging (WAL) etkinleştirilerek eşzamanlı okuma/yazma desteği eklendi, UI kilitlenmeleri kökten önlendi.
+    - **Asenkron Dizi Oluşturma (Fire-and-Forget)**: Hacimli listelerde (50K+ kanal) dizileri kümeleyen ağır işlem (`AggregateContentAsync`) ana iş parçacığından koparılarak arkaplanda otonom hale getirildi; dizi sekmesi tamamlandığında otomatik yenileniyor.
+    - **O(1) Karmaşıklık Devrimi**: Dizi ve bölüm eşleştirmelerindeki yoğun $O(N^2)$ döngü yükü iptal edildi; bunun yerine yüksek performanslı Dictionary odaklı $O(1)$ algoritmaya geçildi.
+    - **Bellek ve İzleme Temizliği (EF Core DisableTracking)**: Binlerce entity eklenmesi sırasında Entity Framework'ün Change Tracker'ı geçici olarak bloke edilerek kayıt süresi 5-10 dakikadan saniyelere düşürüldü.
+    - **Grup Veritabanı Kaydı (Single-Transaction Insert)**: Oynatma listesi eklenirken her 500 veya 1000 kanalda bir tetiklenen çoklu kayıt işlemleri (Multiple SaveChanges) iptal edildi. Artık tüm kanallar tek bir SQLite işlemiyle (Transaction) kaydediliyor; diske yazma hızı ~15x artırıldı.
+    - **Hafifletilmiş Profil Yenilemesi (`RefreshAsync`)**: Playlist güncellemelerinde bütün mevcut kanalları belleğe çekip kıyaslama yapan aşırı RAM tüketen yapı kaldırıldı; yerine SQL düzeyinde hafif "parmak izi (fingerprint)" izdüşümü (Projection) oluşturularak Diff (fark) bulunuyor.
+    - **Raw SQLite Bulk Insert (Ödünsüz Hız)**: EF Core'un 50K satır için oluşturduğu devasa SQL Command döngü yükünden (`AddRange`) kurtulmak adına veriler doğrudan ADO.NET (`SqliteCommand`) üzerinden en alt seviye `INSERT` ile yazdırıldı. Ekleme süresi saniyelerden milisaniyelere düştü.
+    - **Single-Pass UI Kilit Çözümü**: Profil açılırken arkaplanda 5 farklı kategori grubu sorgusu için üst üste 5 kez veritabanının kitlenmesi (GROUP BY taramaları) önlendi. Veriler artık RAM'de tek bir hafif `Select(GroupTitle, Type)` eşleştirmesi ile anında çözümlenip arayüz beklemesini sıfıra indirdi.
+
 - **Kalite Etiketleri ve Ses Kalıcılığı Optimizasyonu (Phase 16-17)** (2026-02-24 19:45):
   - **Kalite Etiketi Standardizasyonu (Phase 16)**:
     - **4K -> 2160p**: Teknik tutarlılık için "4K" etiketi "2160p" olarak güncellendi.

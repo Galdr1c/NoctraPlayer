@@ -179,21 +179,28 @@ public partial class PlaylistService : IPlaylistService
             await context.SaveChangesAsync();
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] Created playlist with ID: {playlist.Id}");
 
-            const int batchSize = 1000;
+            // Single-transaction bulk insert using Raw ADO.NET (extreme performance)
             var channelList = channels.ToList();
-            for (int i = 0; i < channelList.Count; i += batchSize)
+            foreach (var channel in channelList)
             {
-                var batch = channelList.Skip(i).Take(batchSize).ToList();
-                foreach (var channel in batch)
-                {
-                    channel.PlaylistId = playlist.Id;
-                }
-
-                context.Channels.AddRange(batch);
-                await context.SaveChangesAsync();
+                channel.PlaylistId = playlist.Id;
             }
+            await FastSqliteBulkInsertAsync(context, channelList);
 
-            await _mediaService.AggregateContentAsync(playlist.Id);
+            // Fire-and-forget: aggregation runs in background, UI unblocked
+            var aggregationPlaylistId = playlist.Id;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _mediaService.AggregateContentAsync(aggregationPlaylistId);
+                    _mediaService.RaiseAggregationCompleted(aggregationPlaylistId);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PlaylistService] Background aggregation failed: {ex.Message}");
+                }
+            });
 
             // AUTO EPG in isolated scope to avoid DbContext cross-thread usage.
             var playlistId = playlist.Id;
@@ -378,20 +385,27 @@ public partial class PlaylistService : IPlaylistService
             context.Playlists.Add(playlist);
             await context.SaveChangesAsync();
 
-            const int batchSize = 500;
-            for (int i = 0; i < channels.Count; i += batchSize)
+            // Single-transaction bulk insert using Raw ADO.NET (extreme performance)
+            foreach (var channel in channels)
             {
-                var batch = channels.Skip(i).Take(batchSize).ToList();
-                foreach (var channel in batch)
-                {
-                    channel.PlaylistId = playlist.Id;
-                }
-                context.Channels.AddRange(batch);
-                await context.SaveChangesAsync();
+                channel.PlaylistId = playlist.Id;
             }
+            await FastSqliteBulkInsertAsync(context, channels);
 
-            // Aggregation for Series/VOD
-            await _mediaService.AggregateContentAsync(playlist.Id);
+            // Fire-and-forget: aggregation runs in background, UI unblocked
+            var fileAggregationPlaylistId = playlist.Id;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _mediaService.AggregateContentAsync(fileAggregationPlaylistId);
+                    _mediaService.RaiseAggregationCompleted(fileAggregationPlaylistId);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PlaylistService] Background aggregation (file) failed: {ex.Message}");
+                }
+            });
 
             return playlist;
         }
@@ -420,10 +434,8 @@ public partial class PlaylistService : IPlaylistService
     public async Task<Playlist> RefreshAsync(int playlistId)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
-        // Remove AsNoTracking here because we update the playlist later, 
-        // and deep cleanup loads tracked entities which would cause a conflict.
+        // Load playlist with Profile only — channels loaded via lightweight query below
         var playlist = await context.Playlists
-            .Include(p => p.Channels)
             .Include(p => p.Profile)
             .FirstOrDefaultAsync(p => p.Id == playlistId);
 
@@ -443,10 +455,10 @@ public partial class PlaylistService : IPlaylistService
                     context.Playlists.Update(playlist);
                     await context.SaveChangesAsync();
 
-                    // YENİ: Liste değişmese bile kurallar değişmiş olabilir veya 
-                    // geçmişten gelen uygunsuz verileri her yenilemede tekrar tara (derin temizlik garantisi)
                     if (playlist.Profile?.IsChild == true)
                     {
+                        // Load channels only for child cleanup
+                        await context.Entry(playlist).Collection(p => p.Channels).LoadAsync();
                         await EnsureChildProfileCleanedAsync(context, playlist);
                     }
 
@@ -455,13 +467,13 @@ public partial class PlaylistService : IPlaylistService
             }
             catch (Exception ex)
             {
-                // Fetch hatası (Zaman aşımı vb.) durumunda bile eğer çocuk profiliyse temizliği yap
                 if (playlist.Profile?.IsChild == true)
                 {
+                    await context.Entry(playlist).Collection(p => p.Channels).LoadAsync();
                     await EnsureChildProfileCleanedAsync(context, playlist);
                 }
                 
-                throw; // Hatayı yukarı fırlat ki UI'da "Bağlantı hatası" görünsün
+                throw;
             }
         }
 
@@ -486,13 +498,24 @@ public partial class PlaylistService : IPlaylistService
         if (playlist.Profile?.IsChild == true)
         {
             organizedChannels = ApplyChildFilter(organizedChannels).ToList();
+            // Load channels for child cleanup
+            await context.Entry(playlist).Collection(p => p.Channels).LoadAsync();
             await EnsureChildProfileCleanedAsync(context, playlist);
         }
 
+        // Lightweight fingerprint query — only fetch needed columns instead of 50K full entities
+        var existingChannelData = await context.Channels
+            .Where(c => c.PlaylistId == playlistId)
+            .Select(c => new { c.Name, c.StreamUrl, c.GroupTitle, c.TvgId, c.TvgName, c.Type })
+            .ToListAsync();
+
         var existingFingerprints = new HashSet<string>(
-            playlist.Channels
-                .Where(c => ApplyChildFilter(new[] { c }).Any()) // Only build fingerprints for compliant channels
-                .Select(BuildChannelFingerprint),
+            existingChannelData
+                .Select(c => {
+                    var ch = new Channel { Name = c.Name, StreamUrl = c.StreamUrl, GroupTitle = c.GroupTitle, TvgId = c.TvgId, TvgName = c.TvgName, Type = c.Type };
+                    return ApplyChildFilter(new[] { ch }).Any() ? BuildChannelFingerprint(ch) : null;
+                })
+                .Where(f => f != null)!,
             StringComparer.OrdinalIgnoreCase);
         
         var channelsToAdd = organizedChannels
@@ -526,8 +549,8 @@ public partial class PlaylistService : IPlaylistService
             channel.PlaylistId = playlist.Id;
         }
 
-        context.Channels.AddRange(channelsToAdd);
-        var finalCount = await context.Channels.CountAsync(c => c.PlaylistId == playlist.Id) + channelsToAdd.Count;
+        await FastSqliteBulkInsertAsync(context, channelsToAdd);
+        var finalCount = await context.Channels.CountAsync(c => c.PlaylistId == playlist.Id);
         playlist.ChannelCount = finalCount;
         playlist.LastUpdated = DateTime.UtcNow;
         if (latestRemoteMetadata != null)
@@ -537,16 +560,21 @@ public partial class PlaylistService : IPlaylistService
         context.Playlists.Update(playlist);
         await context.SaveChangesAsync();
 
-        // Re-aggregate only when there is a real delta.
-        try 
+        // Fire-and-forget: re-aggregate in background only when there is a real delta.
+        var refreshAggregationPlaylistId = playlist.Id;
+        _ = Task.Run(async () =>
         {
-            await _mediaService.AggregateContentAsync(playlist.Id);
-        }
-        catch (Exception ex)
-        {
-            await LogDetailedErrorAsync("RefreshAsync_Aggregation", ex);
-            throw;
-        }
+            try
+            {
+                await _mediaService.AggregateContentAsync(refreshAggregationPlaylistId);
+                _mediaService.RaiseAggregationCompleted(refreshAggregationPlaylistId);
+            }
+            catch (Exception ex)
+            {
+                await LogDetailedErrorAsync("RefreshAsync_Aggregation", ex);
+                System.Diagnostics.Debug.WriteLine($"[PlaylistService] Background aggregation (refresh) failed: {ex.Message}");
+            }
+        });
 
         return playlist;
     }
@@ -626,12 +654,60 @@ public partial class PlaylistService : IPlaylistService
     {
         using var context = await _contextFactory.CreateDbContextAsync();
         return await context.Channels
-            .AsNoTracking()
-            .Where(c => c.PlaylistId == playlistId && c.Type == type && c.GroupTitle != null)
-            .Select(c => c.GroupTitle!.Trim())
+            .Where(c => c.PlaylistId == playlistId && c.Type == type && !string.IsNullOrEmpty(c.GroupTitle))
+            .Select(c => c.GroupTitle!)
             .Distinct()
             .OrderBy(g => g)
             .ToListAsync();
+    }
+
+    public async Task<(int TotalCount, List<string> AllGroups, List<string> LiveGroups, List<string> VodGroups, List<string> SeriesGroups)> GetChannelGroupMetadataAsync(int playlistId)
+    {
+        using var context = await _contextFactory.CreateDbContextAsync();
+        
+        // Tek query ile sadece gerekli iki kolonu alıyoruz (GroupTitle ve Type)
+        // SQL tarafındaki yükü minimize edip, gruplandırmayı RAM'de HashSet ile saliselik yapıyoruz.
+        var data = await context.Channels
+            .AsNoTracking()
+            .Where(c => c.PlaylistId == playlistId)
+            .Select(c => new { c.GroupTitle, c.Type })
+            .ToListAsync();
+
+        var totalCount = data.Count;
+        
+        var allGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var liveGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var vodGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seriesGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in data)
+        {
+            if (string.IsNullOrWhiteSpace(item.GroupTitle)) continue;
+            
+            var group = item.GroupTitle.Trim();
+            allGroups.Add(group);
+            
+            switch (item.Type)
+            {
+                case ChannelType.Live:
+                    liveGroups.Add(group);
+                    break;
+                case ChannelType.VOD:
+                    vodGroups.Add(group);
+                    break;
+                case ChannelType.Series:
+                    seriesGroups.Add(group);
+                    break;
+            }
+        }
+
+        return (
+            totalCount,
+            allGroups.OrderBy(g => g).ToList(),
+            liveGroups.OrderBy(g => g).ToList(),
+            vodGroups.OrderBy(g => g).ToList(),
+            seriesGroups.OrderBy(g => g).ToList()
+        );
     }
 
     /// <summary>
@@ -1227,8 +1303,51 @@ public partial class PlaylistService : IPlaylistService
 
         return null;
     }
-}
+    private async Task FastSqliteBulkInsertAsync(AppDbContext context, IReadOnlyCollection<Channel> channels)
+    {
+        if (channels.Count == 0) return;
+        
+        var connection = context.Database.GetDbConnection();
+        var wasClosed = connection.State == System.Data.ConnectionState.Closed;
+        
+        if (wasClosed) await connection.OpenAsync();
 
+        using var transaction = await connection.BeginTransactionAsync();
+        using var command = connection.CreateCommand();
+        
+        command.Transaction = transaction;
+        command.CommandText = 
+            @"INSERT INTO Channels (Name, StreamUrl, LogoUrl, GroupTitle, TvgId, TvgName, Type, PlaylistId, IsFavorite, IsInMyList) 
+              VALUES ($name, $streamUrl, $logoUrl, $groupTitle, $tvgId, $tvgName, $type, $playlistId, 0, 0);";
+
+        var pName = command.CreateParameter(); pName.ParameterName = "$name"; command.Parameters.Add(pName);
+        var pStream = command.CreateParameter(); pStream.ParameterName = "$streamUrl"; command.Parameters.Add(pStream);
+        var pLogo = command.CreateParameter(); pLogo.ParameterName = "$logoUrl"; command.Parameters.Add(pLogo);
+        var pGroup = command.CreateParameter(); pGroup.ParameterName = "$groupTitle"; command.Parameters.Add(pGroup);
+        var pTvgId = command.CreateParameter(); pTvgId.ParameterName = "$tvgId"; command.Parameters.Add(pTvgId);
+        var pTvgName = command.CreateParameter(); pTvgName.ParameterName = "$tvgName"; command.Parameters.Add(pTvgName);
+        var pType = command.CreateParameter(); pType.ParameterName = "$type"; command.Parameters.Add(pType);
+        var pPlaylistId = command.CreateParameter(); pPlaylistId.ParameterName = "$playlistId"; command.Parameters.Add(pPlaylistId);
+
+        foreach (var channel in channels)
+        {
+            pName.Value = channel.Name ?? "Bilinmeyen Kanal";
+            pStream.Value = channel.StreamUrl ?? "";
+            pLogo.Value = channel.LogoUrl ?? (object)DBNull.Value;
+            pGroup.Value = channel.GroupTitle ?? (object)DBNull.Value;
+            pTvgId.Value = channel.TvgId ?? (object)DBNull.Value;
+            pTvgName.Value = channel.TvgName ?? (object)DBNull.Value;
+            pType.Value = (int)channel.Type;
+            pPlaylistId.Value = channel.PlaylistId;
+
+            await command.ExecuteNonQueryAsync();
+        }
+
+        await transaction.CommitAsync();
+
+        if (wasClosed) await connection.CloseAsync();
+    }
+}
 
 
 
