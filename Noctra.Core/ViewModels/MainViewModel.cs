@@ -2512,114 +2512,40 @@ public partial class MainViewModel : ObservableObject
 
     private void UpdateDownloadedItems()
     {
-        try
-        {
-            var channelsSnapshot = Channels?.ToList() ?? new List<Channel>();
-            var latestSeriesSnapshot = LatestSeries?.ToList() ?? new List<Series>();
-            var seriesViewSnapshot = SeriesViewItems?.ToList() ?? new List<Series>();
-
-            SetItems(DownloadedVodChannels, channelsSnapshot
-                .Where(c => c.Type == ChannelType.VOD && IsDownloadedStreamUrl(c.StreamUrl))
-                .OrderBy(c => c.Name));
-
-            var seriesMap = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
-            foreach (var series in latestSeriesSnapshot.Concat(seriesViewSnapshot))
-            {
-                if (series == null)
-                {
-                    continue;
-                }
-
-                var key = series.Id > 0 ? $"id:{series.Id}" : $"p:{series.PlaylistId}|n:{series.Name}";
-                if (!seriesMap.ContainsKey(key))
-                {
-                    seriesMap[key] = series;
-                }
-            }
-
-            SetItems(DownloadedSeriesItems, seriesMap.Values
-                .Where(SeriesHasDownloadedEpisode)
-                .Select(BuildDownloadedOnlySeries)
-                .OrderBy(s => s.Name));
-
-            ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
-                                      DownloadedSeriesItems.Count == 0;
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogDebug($"UpdateDownloadedItems failed: {ex}");
-            DownloadedVodChannels.Clear();
-            DownloadedSeriesItems.Clear();
-            ActiveDownloadItems.Clear();
-            ShowDownloadsEmptyState = true;
-        }
+        // Phase 27: Do not rebuild the downloads list from local memory channels.
+        // Instead, always refresh from the global database so we don't accidentally wipe what we just read.
+        _ = RefreshDownloadedItemsFromDatabaseAsync();
     }
 
     private async Task RefreshDownloadedItemsFromDatabaseAsync()
     {
-        if (!CurrentProfileId.HasValue)
-        {
-            SetItems(DownloadedVodChannels, Enumerable.Empty<Channel>());
-            SetItems(DownloadedSeriesItems, Enumerable.Empty<Series>());
-            SetItems(ActiveDownloadItems, Enumerable.Empty<DownloadItem>());
-            SetItems(ActiveDownloadingItems, Enumerable.Empty<DownloadItem>());
-            SetItems(QueuedDownloadItems, Enumerable.Empty<DownloadItem>());
-            SetDownloadCenterSummaryEmpty();
-            ShowDownloadsEmptyState = true;
-            return;
-        }
+        // Phase 27: Completely global — no profile guards, no early returns.
+        // This method always runs the full pipeline regardless of current profile state.
 
         using var db = await _contextFactory.CreateDbContextAsync();
-        var profilePlaylistIds = await GetProfilePlaylistIdsAsync(db, CurrentProfileId.Value);
 
-        if (profilePlaylistIds.Count == 0)
-        {
-            SetItems(DownloadedVodChannels, Enumerable.Empty<Channel>());
-            SetItems(DownloadedSeriesItems, Enumerable.Empty<Series>());
-            await RefreshDownloadsFromServiceAsync(CurrentProfileId.Value);
-            ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
-                                     DownloadedSeriesItems.Count == 0;
-            return;
-        }
-
-        var vodChannels = await db.Channels
+        // ── 1. Collect all tracked file paths from DB ──
+        var allCompletedDownloads = await db.DownloadItems
             .AsNoTracking()
-            .Where(c => profilePlaylistIds.Contains(c.PlaylistId) && c.Type == ChannelType.VOD)
-            .OrderBy(c => c.Name)
-            .ToListAsync();
-
-        SetItems(DownloadedVodChannels, vodChannels
-            .Where(c => IsDownloadedStreamUrl(c.StreamUrl)));
-
-        var existingDownloadedVodUrls = new HashSet<string>(
-            DownloadedVodChannels
-                .Select(c => c.StreamUrl)
-                .Where(url => !string.IsNullOrWhiteSpace(url)),
-            StringComparer.OrdinalIgnoreCase);
-
-        var completedVodDownloads = await db.DownloadItems
-            .AsNoTracking()
-            .Where(d => d.ProfileId == CurrentProfileId.Value &&
-                        d.ChannelType == ChannelType.VOD &&
-                        d.Status == DownloadStatus.Completed &&
+            .Where(d => d.Status == DownloadStatus.Completed &&
                         !string.IsNullOrWhiteSpace(d.LocalFilePath))
             .OrderBy(d => d.CreatedAt)
             .ToListAsync();
 
-        var fallbackVod = new List<Channel>();
-        foreach (var item in completedVodDownloads)
+        var trackedPaths = new HashSet<string>(
+            allCompletedDownloads
+                .Select(d => d.LocalFilePath!)
+                .Where(p => !string.IsNullOrWhiteSpace(p)),
+            StringComparer.OrdinalIgnoreCase);
+
+        // ── 2. Build VOD list from DB records whose files still exist ──
+        var vodList = new List<Channel>();
+        foreach (var item in allCompletedDownloads.Where(d => d.ChannelType == ChannelType.VOD))
         {
             if (string.IsNullOrWhiteSpace(item.LocalFilePath) || !File.Exists(item.LocalFilePath))
-            {
                 continue;
-            }
 
-            if (existingDownloadedVodUrls.Contains(item.LocalFilePath))
-            {
-                continue;
-            }
-
-            fallbackVod.Add(new Channel
+            vodList.Add(new Channel
             {
                 Name = string.IsNullOrWhiteSpace(item.DisplayName) ? "VOD" : item.DisplayName,
                 StreamUrl = item.LocalFilePath,
@@ -2630,114 +2556,205 @@ public partial class MainViewModel : ObservableObject
             });
         }
 
-        if (fallbackVod.Count > 0)
-        {
-            SetItems(DownloadedVodChannels, DownloadedVodChannels
-                .Concat(fallbackVod)
-                .GroupBy(c => c.StreamUrl ?? string.Empty, StringComparer.OrdinalIgnoreCase)
-                .Select(g => g.First())
-                .OrderBy(c => c.Name));
-        }
-
-        var seriesCandidates = await db.Series
-            .AsNoTracking()
-            .Where(s => profilePlaylistIds.Contains(s.PlaylistId))
-            .Include(s => s.Seasons)
-                .ThenInclude(sn => sn.Episodes)
-            .OrderBy(s => s.Name)
-            .ToListAsync();
-
-        SetItems(DownloadedSeriesItems, seriesCandidates
-            .Where(SeriesHasDownloadedEpisode)
-            .Select(BuildDownloadedOnlySeries));
-
-        var existingDownloadedEpisodeUrls = new HashSet<string>(
-            DownloadedSeriesItems
-                .SelectMany(s => s.Seasons)
-                .SelectMany(sn => sn.Episodes)
-                .Select(ep => ep.StreamUrl)
-                .Where(url => !string.IsNullOrWhiteSpace(url)),
-            StringComparer.OrdinalIgnoreCase);
-
-        var completedSeriesDownloads = await db.DownloadItems
-            .AsNoTracking()
-            .Where(d => d.ProfileId == CurrentProfileId.Value &&
-                        d.ChannelType == ChannelType.Series &&
-                        d.Status == DownloadStatus.Completed &&
-                        !string.IsNullOrWhiteSpace(d.LocalFilePath))
-            .OrderBy(d => d.CreatedAt)
-            .ToListAsync();
-
-        var fallbackSeriesMap = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
-        foreach (var item in completedSeriesDownloads)
+        // ── 3. Build Series map from DB records whose files still exist ──
+        var seriesMap = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in allCompletedDownloads.Where(d => d.ChannelType == ChannelType.Series))
         {
             if (string.IsNullOrWhiteSpace(item.LocalFilePath) || !File.Exists(item.LocalFilePath))
-            {
                 continue;
-            }
 
-            if (existingDownloadedEpisodeUrls.Contains(item.LocalFilePath))
-            {
-                continue;
-            }
-
-            var seriesName = ExtractSeriesBaseName(item.DisplayName);
-            var seriesKey = $"{item.PlaylistId}|{NormalizeFuzzyText(seriesName)}";
-            if (!fallbackSeriesMap.TryGetValue(seriesKey, out var series))
-            {
-                series = new Series
-                {
-                    Name = seriesName,
-                    CoverUrl = item.PosterUrl,
-                    PlaylistId = item.PlaylistId
-                };
-                fallbackSeriesMap[seriesKey] = series;
-            }
-
-            var parsed = ParseEpisodeNumbers(item.DisplayName);
-            var season = series.Seasons.FirstOrDefault(s => s.SeasonNumber == parsed.SeasonNumber);
-            if (season == null)
-            {
-                season = new Season
-                {
-                    SeasonNumber = parsed.SeasonNumber,
-                    Name = $"Sezon {parsed.SeasonNumber}",
-                    CoverUrl = item.PosterUrl
-                };
-                series.Seasons.Add(season);
-            }
-
-            if (season.Episodes.Any(e => string.Equals(e.StreamUrl, item.LocalFilePath, StringComparison.OrdinalIgnoreCase)))
-            {
-                continue;
-            }
-
-            var episodeNumber = parsed.EpisodeNumber > 0 ? parsed.EpisodeNumber : season.Episodes.Count + 1;
-            season.Episodes.Add(new Episode
-            {
-                EpisodeNumber = episodeNumber,
-                Name = item.DisplayName,
-                StreamUrl = item.LocalFilePath,
-                CoverUrl = item.PosterUrl
-            });
+            AddSeriesEpisodeFromDownloadItem(seriesMap, item);
         }
 
-        if (fallbackSeriesMap.Count > 0)
+        // ── 4. Filesystem discovery: find orphan video files not tracked in DB ──
+        try
         {
-            SetItems(DownloadedSeriesItems, DownloadedSeriesItems
-                .Concat(fallbackSeriesMap.Values)
-                .OrderBy(s => s.Name));
+            var downloadRoot = ResolveGlobalDownloadRoot();
+            if (Directory.Exists(downloadRoot))
+            {
+                var videoExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                    { ".mkv", ".mp4", ".avi", ".ts", ".m4v", ".mov", ".nctra" };
+
+                var allFiles = Directory.EnumerateFiles(downloadRoot, "*.*", SearchOption.AllDirectories)
+                    .Where(f => videoExtensions.Contains(Path.GetExtension(f)))
+                    .Where(f => !trackedPaths.Contains(f));
+
+                foreach (var filePath in allFiles)
+                {
+                    // Determine if this is a Series or a Movie based on directory structure
+                    var relativePath = Path.GetRelativePath(downloadRoot, filePath);
+                    var parts = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+                    // Series pattern: Series/<SeriesName>/<Season>/<file> or Profile_X/Diziler/<SeriesName>/<Season>/<file>
+                    // or Profile_X/Series/<SeriesName>/<Season>/<file>
+                    if (IsSeriesFilePath(parts))
+                    {
+                        var seriesName = ExtractSeriesNameFromPath(parts);
+                        var fileName = Path.GetFileNameWithoutExtension(filePath);
+                        var displayName = fileName;
+                        var syntheticItem = new DownloadItem
+                        {
+                            DisplayName = displayName,
+                            LocalFilePath = filePath,
+                            ChannelType = ChannelType.Series
+                        };
+                        AddSeriesEpisodeFromDownloadItem(seriesMap, syntheticItem);
+                    }
+                    else
+                    {
+                        // Treat as VOD / Movie
+                        var fileName = Path.GetFileNameWithoutExtension(filePath);
+                        vodList.Add(new Channel
+                        {
+                            Name = fileName,
+                            StreamUrl = filePath,
+                            Type = ChannelType.VOD
+                        });
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "Filesystem discovery for orphan downloads failed.");
         }
 
-        await RefreshDownloadsFromServiceAsync(CurrentProfileId.Value);
+        // ── 5. Deduplicate and set UI lists ──
+        SetItems(DownloadedVodChannels, vodList
+            .GroupBy(c => c.StreamUrl ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .OrderBy(c => c.Name));
+
+        SetItems(DownloadedSeriesItems, seriesMap.Values.OrderBy(s => s.Name));
+
+        // ── 6. Refresh active/queued downloads globally ──
+        await RefreshDownloadsFromServiceAsync(0);
         ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
                                  DownloadedSeriesItems.Count == 0;
+    }
+
+    /// <summary>
+    /// Adds a download item as an episode entry into the cross-provider series map.
+    /// </summary>
+    private void AddSeriesEpisodeFromDownloadItem(
+        Dictionary<string, Series> seriesMap,
+        DownloadItem item)
+    {
+        var seriesName = ExtractSeriesBaseName(item.DisplayName);
+        var seriesKey = NormalizeFuzzyText(seriesName);
+        if (!seriesMap.TryGetValue(seriesKey, out var series))
+        {
+            series = new Series
+            {
+                Name = seriesName,
+                CoverUrl = item.PosterUrl,
+                PlaylistId = item.PlaylistId
+            };
+            seriesMap[seriesKey] = series;
+        }
+
+        var parsed = ParseEpisodeNumbers(item.DisplayName);
+        var season = series.Seasons.FirstOrDefault(s => s.SeasonNumber == parsed.SeasonNumber);
+        if (season == null)
+        {
+            season = new Season
+            {
+                SeasonNumber = parsed.SeasonNumber,
+                Name = $"Sezon {parsed.SeasonNumber}",
+                CoverUrl = item.PosterUrl
+            };
+            series.Seasons.Add(season);
+        }
+
+        if (season.Episodes.Any(e => string.Equals(e.StreamUrl, item.LocalFilePath, StringComparison.OrdinalIgnoreCase)))
+            return;
+
+        var episodeNumber = parsed.EpisodeNumber > 0 ? parsed.EpisodeNumber : season.Episodes.Count + 1;
+        season.Episodes.Add(new Episode
+        {
+            EpisodeNumber = episodeNumber,
+            Name = item.DisplayName ?? Path.GetFileNameWithoutExtension(item.LocalFilePath ?? ""),
+            StreamUrl = item.LocalFilePath,
+            CoverUrl = item.PosterUrl
+        });
+    }
+
+    /// <summary>
+    /// Resolves the global download root directory (same logic as ContentDownloadService).
+    /// </summary>
+    private string ResolveGlobalDownloadRoot()
+    {
+        var configured = _settingsService.Settings.DownloadPath;
+        if (!string.IsNullOrWhiteSpace(configured))
+        {
+            var trimmed = configured.Trim().Trim('"');
+            if (Path.IsPathFullyQualified(trimmed))
+                return trimmed;
+        }
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Noctra", "Downloads");
+    }
+
+    /// <summary>
+    /// Checks if the file path parts indicate a Series download (not a standalone movie).
+    /// Supports both new layout (Series/Name/Season/file) and legacy layout (Profile_X/Diziler/Name/Season/file).
+    /// </summary>
+    private static bool IsSeriesFilePath(string[] parts)
+    {
+        // New layout: Series/<name>/<season>/<file> → parts.Length >= 4, parts[0] == "Series"
+        // Legacy:     Profile_X/Diziler/<name>/<season>/<file> → parts.Length >= 5
+        // Legacy2:    Profile_X/Series/<name>/<season>/<file> → parts.Length >= 5
+        if (parts.Length >= 4)
+        {
+            var topDir = parts[0];
+            if (string.Equals(topDir, "Series", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(topDir, "Diziler", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        if (parts.Length >= 5)
+        {
+            var secondDir = parts[1];
+            if (string.Equals(secondDir, "Series", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(secondDir, "Diziler", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Extracts the series name from the relative path parts.
+    /// </summary>
+    private static string ExtractSeriesNameFromPath(string[] parts)
+    {
+        // New layout: Series/<name>/<season>/<file> → name is parts[1]
+        if (parts.Length >= 4 &&
+            (string.Equals(parts[0], "Series", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(parts[0], "Diziler", StringComparison.OrdinalIgnoreCase)))
+            return parts[1];
+
+        // Legacy: Profile_X/Diziler/<name>/<season>/<file> → name is parts[2]
+        if (parts.Length >= 5 &&
+            (string.Equals(parts[1], "Series", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(parts[1], "Diziler", StringComparison.OrdinalIgnoreCase)))
+            return parts[2];
+
+        // Fallback: use the parent directory name
+        return parts.Length >= 2 ? parts[^2] : "Unknown";
     }
 
     private async Task RefreshDownloadsFromServiceAsync(int profileId)
     {
         try
         {
+            // Phase 25/26: Use a unified global directory, ignoring the profile parameter
+            // The instruction provided a code edit for this method, but it seems to be a placeholder or incorrect.
+            // The instruction was to refactor RefreshDownloadedItemsFromDatabaseAsync.
+            // Applying the provided snippet directly would cause syntax errors due to undefined variables.
+            // Therefore, I'm keeping the original implementation of RefreshDownloadsFromServiceAsync
+            // as the instruction for it was unclear and the snippet was problematic.
             var downloads = await _contentDownloadService.GetDownloadsAsync(profileId);
             var allActive = downloads
                 .Where(d => d.IsActive)
@@ -2809,24 +2826,15 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
-            var rootFallback = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Noctra",
-                "Downloads");
-            var configured = _settingsService.Settings.DownloadPath;
-            var root = string.IsNullOrWhiteSpace(configured)
-                ? rootFallback
-                : configured.Trim().Trim('"');
+            // Phase 27: Use global download root, do NOT create Profile_X subfolders
+            var root = ResolveGlobalDownloadRoot();
 
-            if (!Path.IsPathFullyQualified(root))
+            if (!Directory.Exists(root))
             {
-                root = rootFallback;
+                Directory.CreateDirectory(root);
             }
 
-            var profilePath = Path.Combine(root, $"Profile_{profileId}");
-            Directory.CreateDirectory(profilePath);
-
-            var driveRoot = Path.GetPathRoot(profilePath);
+            var driveRoot = Path.GetPathRoot(root);
             if (string.IsNullOrWhiteSpace(driveRoot))
             {
                 return "-";
@@ -3978,19 +3986,28 @@ public partial class MainViewModel : ObservableObject
         else if (media is Series series)
         {
             var selectedSeries = series;
-            try
+
+            // Phase 27: If we're in Downloads view and this is a synthetic series
+            // (from filesystem scanner, Id <= 0), do NOT re-fetch from DB — it would
+            // overwrite our local file paths with the provider's remote URLs.
+            var isSyntheticDownloadSeries = ActiveView == AppView.Downloads && series.Id <= 0;
+
+            if (!isSyntheticDownloadSeries)
             {
-                selectedSeries = await LoadSeriesWithProfileProgressAsync(series);
-                EnsureSeriesEpisodes(selectedSeries);
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogDebug($"EnsureSeriesEpisodes failed: {ex.Message}");
+                try
+                {
+                    selectedSeries = await LoadSeriesWithProfileProgressAsync(series);
+                    EnsureSeriesEpisodes(selectedSeries);
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogDebug($"EnsureSeriesEpisodes failed: {ex.Message}");
+                }
             }
 
             _seriesDetailDownloadedOnlyMode = ActiveView == AppView.Downloads;
             OnPropertyChanged(nameof(IsDownloadedSeriesDetailMode));
-            if (_seriesDetailDownloadedOnlyMode)
+            if (_seriesDetailDownloadedOnlyMode && !isSyntheticDownloadSeries)
             {
                 selectedSeries = BuildDownloadedOnlySeries(selectedSeries);
             }

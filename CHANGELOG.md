@@ -13,6 +13,25 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - **Kalıcı Ses Kontrolü**: Video oynatıcıda ayarlanan son ses seviyesi artık otomatik olarak kaydediliyor ve uygulama yeniden açıldığında korunuyor.
     - **Gereksiz Ayarların Kaldırılması**: Ayarlar ekranındaki "Varsayılan Ses Seviyesi" (Default Volume) kaydırıcısı, artık ses seviyesi dinamik olarak hatırlandığı için kaldırıldı.
     - **Oynatma Başlatma Mantığı**: Her yeni kanalda ses seviyesinin varsayılana sıfırlanması sorunu giderildi; kullanıcı tercihi korunarak oynatma başlıyor.
+- **Arayüz Katmanında İndirme Evrenselliği (Phase 26)** (2026-02-25 11:30):
+    - **Bağımsız UI Sergilemesi**: İndirilenler sayfası (`MainViewModel`), kullanıcının o an hangi profilde olduğuna bakılmaksızın tüm yerel içerikleri gösterecek şekilde yeniden kodlandı.
+    - **Görünmezlik Sorunu Çözüldü**: Başka bir profildeyken indirilen ancak aktif profilde listelenmeyen VOD ve dizi dosyalarının görünmeme hatası giderildi.
+
+- **Kusursuz Serileme, Dosya Keşfi ve Akıllı Klasörleme (Phase 27)** (2026-02-25 12:20):
+    - **Dosya Sistemi Tarayıcısı**: İndirilenler sayfası artık veritabanı kayıtlarının yanı sıra `Downloads/` klasörünü fiziksel olarak tarayarak, veritabanında kaydı olmayan sahipsiz video dosyalarını (`.mkv`, `.mp4`, `.avi`, `.ts` vb.) keşfedip otomatik olarak UI'a ekliyor.
+    - **Profil Bağımsız Seri Gruplama**: Dizi kapak oluşturma sürecinden `PlaylistId` çıkartılarak, farklı sağlayıcılardan indirilen aynı isimli bölümler tek bir dizi kapağı altında birleştirildi.
+    - **UI Hafıza Kaybı Giderildi**: `UpdateDownloadedItems` metodunun her sekme değişiminde indirme listesini eski profil verileriyle ezmesi engellendi; liste artık kalıcı olarak SQLite veritabanından besleniyor.
+    - **Profile_X Klasör Oluşturma Durduruldu**: `ResolveDownloadFreeSpaceText` metodundaki profil-bazlı alt klasör oluşturma kaldırıldı. Artık boş `Profile_0`, `Profile_5` gibi gereksiz klasörler oluşmuyor.
+    - **Akıllı Klasör Eşleştirme**: Yeni bir dizi bölümü indirilirken mevcut `Series/` klasörleri fuzzy isim karşılaştırmasıyla taranıyor. "4400" ile "The 4400" gibi farklı sağlayıcı isimlendirmeleri aynı klasöre yönlendiriliyor (`FindMatchingSeriesFolder`).
+    - **Sentetik Dizi Detay Düzeltmesi**: İndirilenler sayfasından tıklanan dosya-sistemi-kaynaklı dizi kartları artık veritabanından yeniden çekilmiyor; yerel dosya yolları korunarak bölümler doğru şekilde listeleniyor.
+    - **Çift İsim Sorunu Giderildi**: Overlay'da "4400 4400 - 1. Bölüm" şeklinde tekrarlanan dizi adı düzeltildi; dosya adı zaten dizi adını içerdiği için ek birleştirme kaldırıldı.
+    - **Temiz Veritabanı**: İptal edilen veya hataya düşen indirmeler `DownloadItems` tablosundan fiziksel olarak siliniyor (Hard Delete), veritabanında gereksiz kayıt bırakılmıyor.
+
+- **İndirilen İçeriklerin Evrenselleşmesi (Global Downloads) (Phase 25)** (2026-02-25 11:15):
+    - **Sınırsız Erişim**: İndirilen tüm dizi ve filmler, cihaza kaydedildiği için artık indirildiği profile bağlı kalmaksızın tüm profillerin "İndirilenler" sekmesinde görünebilir ve oynatılabilir duruma getirildi.
+    - **Ortak İndirme Havuzu**: İçerikler artık `Profile_5` gibi izole alt klasörler yerine doğrudan Noctra cihaz ortak indirme havuzuna (`Downloads/`) aktarılmaya başlandı.
+    - **Veri Koruma**: Profil silme veya güncelleme işlemleri esnasında cihazda yer alan indirilen dosyaların otomatik silinmesi engellendi.
+
 - **Merkezi Parser ve Sezon Klasörü Doğruluğu (Phase 24)** (2026-02-25 11:00):
     - **Akıllı Önceliklendirme**: İndirme servisi artık merkezi parser'ı kullanarak "1. Bölüm - S16" gibi başlıklarda gerçek sezon bilgisini (S16) doğru tespit ediyor.
     - **Merkezi Mantık Konsolidasyonu**: İndirme servisindeki basit regex'ler kaldırılarak, tüm uygulama genelinde tutarlı bir isimlendirme ve klasörleme yapısı sağlandı.
@@ -306,6 +325,8 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - **Akıcı Boyutlandırma (Jitter-Free)**: Boyutlandırma mantığı piksel bazlı yuvarlama (pixel snap) ile optimize edilerek, büyütme/küçültme sırasındaki titremeler tamamen giderildi.
     - **Gelişmiş Kırpma (Clipping)**: Videonun köşeleri, PiP çerçevesinin kavislerine uyacak şekilde `PiPContainer` üzerinden dinamik olarak kırpıldı.
     - **Çift Tıklama Kararlılığı (Double-Click Fix)**: PiP modunda çift tıklama yapıldığında pencerenin bug'a girmesi engellendi. Artık çift tıklama, pencereyi güvenli bir şekilde tam ekran moduna döndürüyor.
+    - **Phase 26 (Evrensel UI İndirme Filtresi Kaldırıldı):** `MainViewModel.cs` içindeki `ProfileId` filtreleri iptal edilerek tüm tamamlanmış indirmelerin ekranda listelenmesi sağlandı. Kullanıcının mevcut veya boş playlist'i olması fark etmeksizin global dosyalar arayüze yansıtıldı.
+    - **Phase 27 (Kusursuz Serileme ve Bellek Çakışması Engellendi):** `MainViewModel.cs` içindeki `UpdateDownloadedItems` UI ezme problemi giderilerek arayüz tamamen SQLite tabanına bağlandı. Dizi kapak oluşturma sürecinden `PlaylistId` çıkartılarak, farklı sağlayıcılardan indirilen aynı isimli bölümler tek bir dizi kapağı altında kusursuzca birleştirildi. İptal edilen/hata veren indirmelerin gereksiz veritabanı kayıtları `ContentDownloadService` üzerinden tamamen temizlenmesi sağlandı.
     - **Olay Yönetimi (Event Handling)**: Fare tıklama olayları (`Handled = true`) izole edilerek, işletim sistemi seviyesindeki istenmeyen pencere komutlarının arayüzü bozması önlendi.
     - **Arayüz Restorasyonu (Layout Fix)**: PiP'den ana pencereye dönüşte `Dispatcher` üzerindeki `Background` önceliği kullanılarak, pencere boyutları ve içerik görünürlüğü "Atomic Restore" yöntemiyle senkronize edildi.
     - **Premium Estetik**: `Border.BoxShadow` ve transparan yüzen kontrol barı ile modern, native hissettiren bir görünüm sağlandı.

@@ -186,52 +186,33 @@ public class ContentDownloadService : IContentDownloadService
     }
 
     public async Task<List<DownloadItem>> GetDownloadsAsync(
-        int profileId,
+        int _, // Parameter kept for interface compatibility but ignored
         CancellationToken cancellationToken = default)
     {
-        if (profileId <= 0)
-        {
-            return [];
-        }
-
         using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
-        if (!_lastCleanupUtcByProfile.TryGetValue(profileId, out var lastCleanupUtc) ||
+        
+        // Use a single global key (0) for cleanup throttling
+        if (!_lastCleanupUtcByProfile.TryGetValue(0, out var lastCleanupUtc) ||
             (DateTime.UtcNow - lastCleanupUtc).TotalSeconds >= 20)
         {
-            await CleanupMissingCompletedDownloadsAsync(db, profileId, cancellationToken);
-            _lastCleanupUtcByProfile[profileId] = DateTime.UtcNow;
+            await CleanupMissingCompletedDownloadsAsync(db, cancellationToken);
+            _lastCleanupUtcByProfile[0] = DateTime.UtcNow;
         }
 
+        // Phase 25: Return all downloads globally, not filtered by profile
         return await db.DownloadItems
             .AsNoTracking()
-            .Where(d => d.ProfileId == profileId)
             .OrderByDescending(d => d.CreatedAt)
             .ToListAsync(cancellationToken);
     }
 
-    public async Task DeleteProfileDownloadsAsync(
+    public Task DeleteProfileDownloadsAsync(
         int profileId,
         CancellationToken cancellationToken = default)
     {
-        if (profileId <= 0)
-        {
-            return;
-        }
-
-        using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
-        var items = await db.DownloadItems
-            .Where(d => d.ProfileId == profileId)
-            .ToListAsync(cancellationToken);
-
-        foreach (var item in items)
-        {
-            TryDeleteFile(item.LocalFilePath);
-            TryDeleteFile(item.TempFilePath);
-        }
-
-        db.DownloadItems.RemoveRange(items);
-        await db.SaveChangesAsync(cancellationToken);
-        DownloadsChanged?.Invoke(this, EventArgs.Empty);
+        // Phase 25: Do not delete downloaded contents when a profile is deleted.
+        // The files are global to the device. We simply return.
+        return Task.CompletedTask;
     }
 
     public async Task CancelDownloadAsync(
@@ -450,7 +431,8 @@ public class ContentDownloadService : IContentDownloadService
         }
 
         var settings = _settingsService.Settings;
-        var profileDownloadDirectory = EnsureProfileDownloadDirectory(settings.DownloadPath, item.ProfileId);
+        // Phase 25: Use a unified global directory, ignoring the profile parameter
+        var profileDownloadDirectory = EnsureGlobalDownloadDirectory(settings.DownloadPath);
         var downloadDirectory = EnsureItemDownloadDirectory(profileDownloadDirectory, item);
         var extension = ResolveExtensionFromSource(item.SourceUrl);
         var safeName = BuildItemFileStem(item);
@@ -771,13 +753,15 @@ public class ContentDownloadService : IContentDownloadService
         var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId, cancellationToken);
         if (item != null)
         {
+            await RestoreMappedEntitiesToSourceUrlAsync(db, item);
             TryDeleteFileWithRetry(item.LocalFilePath);
             TryDeleteFileWithRetry(item.TempFilePath);
+            // Phase 27: Explicitly removing the row from DB on Cancel
             db.DownloadItems.Remove(item);
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        if (_activeTempFiles.TryGetValue(downloadId, out var tempPath))
+        if (_activeTempFiles.TryRemove(downloadId, out var tempPath))
         {
             TryDeleteFileWithRetry(tempPath);
         }
@@ -785,13 +769,11 @@ public class ContentDownloadService : IContentDownloadService
 
     private async Task CleanupMissingCompletedDownloadsAsync(
         AppDbContext db,
-        int profileId,
         CancellationToken cancellationToken)
     {
         var staleItems = await db.DownloadItems
-            .Where(d => d.ProfileId == profileId &&
-                        d.Status == DownloadStatus.Completed &&
-                        !string.IsNullOrWhiteSpace(d.LocalFilePath))
+            .Where(d => d.Status == DownloadStatus.Completed &&
+                        string.IsNullOrWhiteSpace(d.LocalFilePath) == false)
             .ToListAsync(cancellationToken);
 
         if (staleItems.Count == 0)
@@ -1017,11 +999,8 @@ public class ContentDownloadService : IContentDownloadService
             return;
         }
 
-        item.Status = DownloadStatus.Failed;
-        item.ErrorMessage = message;
-        item.SpeedBytesPerSecond = 0;
-        item.EstimatedSecondsRemaining = null;
-        item.UpdatedAt = DateTime.UtcNow;
+        // Phase 27: User requested cancelled/failed downloads to be completely removed from DB
+        db.DownloadItems.Remove(item);
         await db.SaveChangesAsync();
         DownloadsChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -1164,18 +1143,18 @@ public class ContentDownloadService : IContentDownloadService
         return Path.Combine(directory, $"{fileNameWithoutExtension}_{DateTime.UtcNow:yyyyMMdd_HHmmss}{extension}");
     }
 
-    private static string EnsureProfileDownloadDirectory(string? baseDownloadPath, int profileId)
+    private static string EnsureGlobalDownloadDirectory(string? baseDownloadPath)
     {
         var basePath = string.IsNullOrWhiteSpace(baseDownloadPath)
             ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Noctra", "Downloads")
             : baseDownloadPath;
 
-        var profilePath = Path.Combine(basePath, $"Profile_{profileId}");
-        if (!Directory.Exists(profilePath))
+        // Phase 25: No longer append "Profile_X", use the basePath directly as the global root
+        if (!Directory.Exists(basePath))
         {
-            Directory.CreateDirectory(profilePath);
+            Directory.CreateDirectory(basePath);
         }
-        return profilePath;
+        return basePath;
     }
 
     private static string EnsureItemDownloadDirectory(string profilePath, DownloadItem item)
@@ -1191,7 +1170,12 @@ public class ContentDownloadService : IContentDownloadService
         {
             var parsed = SeriesInfoParser.Parse(item.DisplayName);
             var seriesName = BuildSafeFileName(parsed.SeriesName);
-            var seriesPath = Path.Combine(categoryPath, seriesName);
+
+            // Phase 27: Smart folder matching — scan existing series folders for a fuzzy match
+            // so that "4400" from Provider A and "The 4400" from Provider B share the same folder.
+            var seriesPath = FindMatchingSeriesFolder(categoryPath, seriesName)
+                            ?? Path.Combine(categoryPath, seriesName);
+
             if (!Directory.Exists(seriesPath))
             {
                 Directory.CreateDirectory(seriesPath);
@@ -1208,6 +1192,58 @@ public class ContentDownloadService : IContentDownloadService
         }
 
         return categoryPath;
+    }
+
+    /// <summary>
+    /// Scans existing series folders under the category path and returns the first
+    /// folder whose normalized name fuzzy-matches the given series name.
+    /// Returns null if no match is found.
+    /// </summary>
+    private static string? FindMatchingSeriesFolder(string categoryPath, string newSeriesName)
+    {
+        if (!Directory.Exists(categoryPath))
+            return null;
+
+        var normalizedNew = NormalizeFolderName(newSeriesName);
+        if (string.IsNullOrWhiteSpace(normalizedNew))
+            return null;
+
+        try
+        {
+            foreach (var dir in Directory.EnumerateDirectories(categoryPath))
+            {
+                var existingName = Path.GetFileName(dir);
+                var normalizedExisting = NormalizeFolderName(existingName);
+                if (string.Equals(normalizedNew, normalizedExisting, StringComparison.OrdinalIgnoreCase))
+                {
+                    return dir; // Exact fuzzy match found — reuse this folder
+                }
+            }
+        }
+        catch
+        {
+            // IO errors are not critical; fall back to default behavior
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Normalizes a folder/series name for fuzzy comparison by stripping non-alphanumeric chars,
+    /// collapsing whitespace, and lowercasing.
+    /// </summary>
+    private static string NormalizeFolderName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return string.Empty;
+
+        var sb = new System.Text.StringBuilder(name.Length);
+        foreach (var ch in name)
+        {
+            if (char.IsLetterOrDigit(ch))
+                sb.Append(char.ToLowerInvariant(ch));
+        }
+        return sb.ToString();
     }
 
     private static string BuildItemFileStem(DownloadItem item)
