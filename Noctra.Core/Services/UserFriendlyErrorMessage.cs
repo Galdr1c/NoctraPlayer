@@ -73,8 +73,13 @@ public static class UserFriendlyErrorMessage
             return "Dosya dogrulamasi basarisiz. Icerigi yeniden indirip tekrar deneyin.";
         }
 
-        if (baseException is InvalidOperationException)
+        if (baseException is InvalidOperationException invalidOpEx)
         {
+            if (!string.IsNullOrWhiteSpace(invalidOpEx.Message) && 
+                !invalidOpEx.Message.StartsWith("Exception of type", StringComparison.OrdinalIgnoreCase))
+            {
+                return invalidOpEx.Message;
+            }
             return "İşlem beklendiği gibi tamamlanamadı. Kaynak veri eksik veya hatalı olabilir.";
         }
 

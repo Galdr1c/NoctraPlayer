@@ -18,6 +18,27 @@ public interface IPlaylistService
     Task<Playlist> AddFromChannelsAsync(string name, string sourceUrl, IReadOnlyCollection<Channel> channels, int? profileId = null, string? detectedEpgUrl = null);
     
     /// <summary>
+    /// Stalker aşamalı yükleme için boş playlist oluşturur.
+    /// </summary>
+    Task<Playlist> CreateEmptyPlaylistAsync(string name, string sourceUrl, int? profileId = null);
+
+    /// <summary>
+    /// Var olan playlist'e kanallar ekler (aşamalı yükleme için).
+    /// </summary>
+    Task AppendChannelsAsync(int playlistId, IReadOnlyCollection<Channel> channels);
+
+    /// <summary>
+    /// Geçici (Dummy) kanalları siler ve yerine gerçek kanalları ekler.
+    /// Lazy loading mekanizmasında anlık kategori gösterimi için kullanılır.
+    /// </summary>
+    Task ReplaceDummyWithRealChannelsAsync(int playlistId, string groupTitle, IReadOnlyCollection<Channel> realChannels);
+
+    /// <summary>
+    /// Stalker aşamalı yüklemesinde henüz indirilmemiş (geçici kanalı bulunan) kategorileri döndürür.
+    /// </summary>
+    Task<List<string>> GetPendingDummyGroupsAsync(int playlistId);
+
+    /// <summary>
     /// Dosyadan playlist ekler
     /// </summary>
     Task<Playlist> AddFromFileAsync(string name, string filePath, int? profileId = null);

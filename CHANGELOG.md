@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Akıllı Devam Etme (Smart Resume) ve Sıfır Kopya Garantisi** (2026-02-25 22:30):
+    - **Kaldığı Yerden Devam (Resume)**: Uygulama kapatılıp açıldığında Stalker portallarının baştan inmesi veya yarım kalması engellendi. Uygulama açılışta `GetPendingDummyGroupsAsync` veritabanı yordamıyla henüz inmemiş kategorileri tespit eder ve arka planda sadece eksik kısımları indirmeye devam eder.
+    - **Idempotent Kanal Ekleme**: İndirme işlemi sırasında internetin kopması veya arayüzün yenilenmesi durumunda kanalların "çift" (duplicate) kaydedilmesi riski %100 oranında çözüldü. Her kategori için veritabanına veri yazılmadan önce o gruba ait tüm kalıntılar tek bir işlem bloğunda silinip yerine yepyeni ve taze veri basılıyor (`ReplaceDummyWithRealChannelsAsync`).
+    - **Anlık Dizi Gruplaması (Incremental Aggregation)**: Dizi kategorileri inmeye başladığı andan itibaren beklemeden anında işlenerek `Series` tablosuna aktarılır. Bu sayede indirme bitmeden dizi sekmesine giren kullanıcılar anlık olarak dizileri görebilir (Daha önce tüm listenin inmesi bekleniyordu).
+    - **Stalker Dizileri Çekmeme Sorunu Çözüldü**: Stalker API'si diziler için doğrudan bir oynatma linki (`cmd`) döndürmez. Eski sistem, `cmd` parametresi boş gelen bu dizileri "hatalı" sanıp siliyordu. Artık diziler özel bir sanal kimlikle (`stalker-series://`) sisteme kaydediliyor ve kayıpsız olarak Dizi sekmesine aktarılıyor.
+
+- **Stalker Portal Tembel Yükleme (Lazy Loading) ve Anlık Arayüz (Instant UI)** (2026-02-25 21:45):
+    - **Anında Arayüz (Instant UI)**: Stalker portallarının yüzbinlerce kanalı tek tek çekip kullanıcıyı bekletmesi sorunu kökten çözüldü. Sistem açılışında yarım saniye içinde yalnızca kategoriler çekilir ve kullanıcıya anında (dummy kanallar ile) tüm menüler gösterilir.
+    - **Tembel Yükleme (Lazy Loading)**: Yalnızca kullanıcının tıkladığı veya girdiği kategorinin içerikleri anlık olarak indirilir ve "Yükleniyor..." ibaresi silinip gerçek kanallarla yer değiştirir. Kalan kategoriler arka planda sessizce inmeye devam eder.
+    - **Akıllı Önceliklendirme (Priority Queue)**: Kullanıcı henüz inmemiş bir kategoriye tıkladığında, arka plandaki yükleme kuyruğuna müdahale edilerek o kategori 1. sıraya alınır ve ilk boş işçi (worker) tarafından saniyeler içinde indirilir.
+    - **Endpoint Çözümleme Düzeltmesi**: `/c/` gibi HTML sarmalayıcı URL'lerin yanlışlıkla API zannedilip format hatası (FormatException/InvalidOperationException) vermesi kökten çözüldü. Sistem URL'i analiz ederek `/server/load.php` gibi gerçek API uçlarını (endpoint) bulur.
+    - **Gelişmiş Hata Raporlama**: Stalker hataları "İşlem beklendiği gibi tamamlanamadı" şeklindeki genel hatalar arkasına saklanmayıp, "MAC adresi hatalı", "URL geçersiz" gibi net şekilde UI'a yansıtılır hale getirildi.
+
+
 - **VLC Oynatıcı ve MKV/Canlı TV Performans Optimizasyonu** (2026-02-25 15:55):
     - **Modern Donanım Hızlandırma**: Windows 11 ve modern GPU'lar için `dxva2` yerine `d3d11va` (Direct3D11 Video Acceleration) API'sine geçildi. H.265/HEVC ve VP9 içeriklerdeki (MKV) takılmalar ve "artifact" sorunları giderildi.
     - **Akıllı Stream Profilleri**: Yayın URL'sine göre otomatik değişen (MKV VOD, Live TS, HLS, MP4) özel buffer/caching profilleri eklendi.

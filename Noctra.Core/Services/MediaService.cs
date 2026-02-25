@@ -9,6 +9,7 @@ namespace Noctra.Services;
 public partial class MediaService : IMediaService
 {
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
+    private static readonly SemaphoreSlim _aggregateLock = new(1, 1);
 
     public event Action<int>? OnAggregationCompleted;
 
@@ -24,11 +25,13 @@ public partial class MediaService : IMediaService
 
     public async Task AggregateContentAsync(int playlistId, CancellationToken cancellationToken = default)
     {
-        using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
-        
-        // Disable change tracker for bulk operations — massive speedup on SaveChangesAsync
-        context.ChangeTracker.AutoDetectChangesEnabled = false;
-        
+        await _aggregateLock.WaitAsync(cancellationToken);
+        try
+        {
+            using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+            // Disable change tracker for bulk operations — massive speedup on SaveChangesAsync
+            context.ChangeTracker.AutoDetectChangesEnabled = false;        
         try
         {
             var channels = await context.Channels
@@ -192,6 +195,11 @@ public partial class MediaService : IMediaService
         finally
         {
             context.ChangeTracker.AutoDetectChangesEnabled = true;
+        }
+        }
+        finally
+        {
+            _aggregateLock.Release();
         }
     }
 

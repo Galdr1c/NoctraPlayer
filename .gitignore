@@ -73,6 +73,7 @@ build_output.txt
 errors.txt
 debug.txt
 final_errors.txt
+gemini.md
 
 # Publish Web Output
 *.[Pp]ublish.xml

@@ -364,24 +364,28 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
 
-            // Check if playlist already exists (cache-first approach)
-            var existingPlaylists = await _playlistService.GetAllAsync(profile.Id);
+                        // Check if playlist already exists (cache-first approach)
+                        var existingPlaylists = await _playlistService.GetAllAsync(profile.Id);
             
-            if (existingPlaylists.Count > 0)
-            {
-                // Use cached playlist - much faster!
-                _logger?.LogDebug($"[MainViewModel] Using cached playlist for profile {profile.Id}");
-                StatusMessage = "İçerikleriniz hızla yükleniyor...";
-                await LoadPlaylistsAsync();
-
-                // Arka planda URL sağlık kontrolü yap (cache varken bile)
-                var playlistUrl = existingPlaylists[0].Url;
-                if (!string.IsNullOrWhiteSpace(playlistUrl))
-                {
-                    _ = CheckPlaylistUrlHealthAsync(playlistUrl);
-                }
-            }
-            else
+                        if (existingPlaylists.Count > 0)
+                        {
+                            // Use cached playlist - much faster!
+                            _logger?.LogDebug($"[MainViewModel] Using cached playlist for profile {profile.Id}");
+                            StatusMessage = "İçerikleriniz hızla yükleniyor...";
+                            await LoadPlaylistsAsync();
+            
+                            // Arka planda URL sağlık kontrolü yap (cache varken bile)
+                            var playlistUrl = existingPlaylists[0].Url;
+                            if (!string.IsNullOrWhiteSpace(playlistUrl))
+                            {
+                                _ = CheckPlaylistUrlHealthAsync(playlistUrl);
+                            }
+            
+                            if (profile.ProviderAccount.Type == ProfileType.StalkerPortal)
+                            {
+                                _ = ResumeStalkerProgressiveLoadingAsync(profile, existingPlaylists[0]);
+                            }
+                        }            else
             {
                 // No cache - download and parse M3U
                 _logger?.LogDebug($"[MainViewModel] No cache found, downloading playlist for profile {profile.Id}");
@@ -434,18 +438,130 @@ public partial class MainViewModel : ObservableObject
                     }
                     case ProfileType.StalkerPortal:
                     {
-                        StatusMessage = "Stalker Portal bağlantısı kuruluyor...";
-                        var portalUrl = profile.ProviderAccount.Url;
+                        StatusMessage = "Stalker Portal kategorileri yükleniyor...";
+                        var portalUrl  = profile.ProviderAccount.Url;
                         var macAddress = profile.ProviderAccount.Username ?? string.Empty;
+                        var sourceUrl  = $"{portalUrl.TrimEnd('/')}/stalker_portal#{macAddress}";
 
-                        var stalkerChannels = await _stalkerPortalService.GetChannelsAsync(
-                            portalUrl,
-                            macAddress,
-                            includeVod: true);
-
-                        var sourceUrl = $"{portalUrl.TrimEnd('/')}/stalker_portal#{macAddress}";
-                        await _playlistService.AddFromChannelsAsync(profile.Name, sourceUrl, stalkerChannels, profile.Id);
+                        // ── Adım 1: Boş playlist oluştur — UI hemen açılabilir ──────────
+                        // Kanallar geldikçe buraya eklenecek
+                        var playlist = await _playlistService.CreateEmptyPlaylistAsync(
+                            profile.Name, sourceUrl, profile.Id);
                         await LoadPlaylistsAsync();
+
+                        StatusMessage = "İçerikler yükleniyor, bu biraz sürebilir...";
+
+                        // ── Adım 2: Aşamalı yükleme — fire-and-forget ──────────────────
+                        // Kullanıcı uygulamayı hemen kullanabilir, içerikler arka planda gelir
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                var progress = new Progress<StalkerLoadProgress>(p =>
+                                {
+                                    _dispatcherService.BeginInvoke(() =>
+                                    {
+                                        StatusMessage = p.Message;
+                                    });
+                                });
+
+                                await _stalkerPortalService.GetChannelsProgressiveAsync(
+                                    portalUrl,
+                                    macAddress,
+                                    includeVod: true,
+                                    onCategoriesDiscovered: async (categories, prioritizeAction) =>
+                                    {
+                                        _prioritizeStalkerCategoryAction = prioritizeAction;
+
+                                        // Arayüzün anında dolması için kategori isimleriyle "sahte" kanallar ekle
+                                        var dummyChannels = categories.Select(c => new Channel
+                                        {
+                                            Name = "İçerik yükleniyor...",
+                                            StreamUrl = $"stalker-dummy://{c.Id}",
+                                            GroupTitle = c.Name,
+                                            Type = c.Type == "itv" ? ChannelType.Live : (c.Type == "series" ? ChannelType.Series : ChannelType.VOD)
+                                        }).ToList();
+
+                                        await _playlistService.AppendChannelsAsync(playlist.Id, dummyChannels);
+
+                                        // UI'yi hemen güncelle — gruplar (sol menü) anında dolacak
+                                        _dispatcherService.BeginInvoke(() =>
+                                        {
+                                            if (SelectedPlaylist?.Id == playlist.Id)
+                                            {
+                                                _ = LoadChannelsAsync(playlist.Id);
+                                            }
+                                        });
+                                        
+                                        return categories;
+                                    },
+                                    onCategoryLoaded: async (channels, category) =>
+                                    {
+                                        // Kategori dolduğunda sahte kanalı silip gerçekleriyle değiştir
+                                        await _playlistService.ReplaceDummyWithRealChannelsAsync(playlist.Id, category.Name, channels);
+
+                                        // Eğer bu bir dizi kategorisi ise, hemen arkasından dizileri grupla (Aggregate)
+                                        if (category.Type == "series")
+                                        {
+                                            _ = Task.Run(async () =>
+                                            {
+                                                try
+                                                {
+                                                    await _mediaService.AggregateContentAsync(playlist.Id);
+                                                    _mediaService.RaiseAggregationCompleted(playlist.Id);
+                                                }
+                                                catch (Exception ex)
+                                                {
+                                                    System.Diagnostics.Debug.WriteLine($"[Stalker] Incremental AggregateContent failed: {ex.Message}");
+                                                }
+                                            });
+                                        }
+
+                                        // Eğer ekranda bu kategori açıksa anlık göster, değilse sol menü zaten yüklü
+                                        _dispatcherService.BeginInvoke(() =>
+                                        {
+                                            if (SelectedPlaylist?.Id == playlist.Id && SelectedGroup == category.Name)
+                                            {
+                                                _ = LoadChannelsAsync(playlist.Id);
+                                            }
+                                        });
+                                    },
+                                    progress: progress,
+                                    cancellationToken: CancellationToken.None);
+
+                                // Tüm içerik yüklendi
+                                _dispatcherService.BeginInvoke(() =>
+                                {
+                                    StatusMessage = $"Tüm içerikler hazır ✓";
+
+                                    // Dizi yapısını arka planda oluştur
+                                    _ = Task.Run(async () =>
+                                    {
+                                        try
+                                        {
+                                            await _mediaService.AggregateContentAsync(playlist.Id);
+                                            _mediaService.RaiseAggregationCompleted(playlist.Id);
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            System.Diagnostics.Debug.WriteLine(
+                                                $"[Stalker] AggregateContent failed: {ex.Message}");
+                                        }
+                                    });
+                                });
+                            }
+                            catch (Exception ex)
+                            {
+                                _dispatcherService.BeginInvoke(() =>
+                                {
+                                    StatusMessage = UserFriendlyErrorMessage.WithPrefix(
+                                        "İçerik yükleme hatası", ex);
+                                });
+                            }
+                        });
+
+                        // ── Bu satıra kadar geçen süre: ~3-5 saniye ─────────────────────
+                        // Kullanıcı artık uygulamayı kullanabilir
                         break;
                     }
                     default:
@@ -543,6 +659,87 @@ public partial class MainViewModel : ObservableObject
             ProfileType.XtreamCodes => CheckXtreamExpirationAsync(account),
             _ => Task.CompletedTask
         };
+    }
+
+    private async Task ResumeStalkerProgressiveLoadingAsync(Profile profile, Playlist playlist)
+    {
+        if (profile.ProviderAccount == null) return;
+
+        try
+        {
+            var pendingGroups = await _playlistService.GetPendingDummyGroupsAsync(playlist.Id);
+            if (pendingGroups.Count == 0)
+            {
+                return; // Everything is loaded!
+            }
+
+            _logger?.LogDebug($"[Stalker] Resuming background load for {pendingGroups.Count} pending categories.");
+            var portalUrl = profile.ProviderAccount.Url;
+            var macAddress = profile.ProviderAccount.Username ?? string.Empty;
+
+            var progress = new Progress<StalkerLoadProgress>(p =>
+            {
+                _dispatcherService.BeginInvoke(() =>
+                {
+                    StatusMessage = p.Message;
+                });
+            });
+
+            await _stalkerPortalService.GetChannelsProgressiveAsync(
+                portalUrl,
+                macAddress,
+                includeVod: true,
+                onCategoriesDiscovered: (categories, prioritizeAction) =>
+                {
+                    _prioritizeStalkerCategoryAction = prioritizeAction;
+
+                    // Yalnızca pendingCategories içinde olanları indirilecek listeye filtrele
+                    var categoriesToDownload = categories
+                        .Where(c => pendingGroups.Contains(c.Name, StringComparer.OrdinalIgnoreCase))
+                        .ToList();
+
+                    return Task.FromResult(categoriesToDownload);
+                },
+                onCategoryLoaded: async (channels, category) =>
+                {
+                    await _playlistService.ReplaceDummyWithRealChannelsAsync(playlist.Id, category.Name, channels);
+
+                    if (category.Type == "series")
+                    {
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await _mediaService.AggregateContentAsync(playlist.Id);
+                                _mediaService.RaiseAggregationCompleted(playlist.Id);
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[Stalker] Incremental AggregateContent failed: {ex.Message}");
+                            }
+                        });
+                    }
+
+                    _dispatcherService.BeginInvoke(() =>
+                    {
+                        if (SelectedPlaylist?.Id == playlist.Id && SelectedGroup == category.Name)
+                        {
+                            _ = LoadChannelsAsync(playlist.Id);
+                        }
+                    });
+                },
+                progress: progress,
+                cancellationToken: CancellationToken.None);
+
+            _dispatcherService.BeginInvoke(() =>
+            {
+                StatusMessage = $"Tüm içerikler tamamlandı ✓";
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug($"[Stalker] Failed to resume load: {ex}");
+        }
     }
 
     private async Task CheckM3UExpirationAsync(ProviderAccount account)
@@ -1038,6 +1235,7 @@ public partial class MainViewModel : ObservableObject
     private int _isManualRefreshRunning;
     private readonly Dictionary<int, DateTime> _playlistNoChangeUntilUtc = new();
     private bool _suppressFilterRefresh;
+    private Action<string>? _prioritizeStalkerCategoryAction;
     private bool _seriesDetailDownloadedOnlyMode;
 
     public bool IsDownloadedSeriesDetailMode => _seriesDetailDownloadedOnlyMode;
@@ -1242,6 +1440,11 @@ public partial class MainViewModel : ObservableObject
         if (_suppressFilterRefresh)
         {
             return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            _prioritizeStalkerCategoryAction?.Invoke(value);
         }
 
         ScheduleImmediateFilter();

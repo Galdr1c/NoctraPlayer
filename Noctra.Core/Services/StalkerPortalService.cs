@@ -9,41 +9,32 @@ using Noctra.Services.Interfaces;
 namespace Noctra.Services;
 
 /// <summary>
-/// Stalker Middleware Portal API servisi V2 (Yüksek Performans).
-/// Bu sürüm tüm ağ gecikmelerini minimize etmek için paralel işleme ve erken token yakalama kullanır.
+/// Stalker Middleware Portal API servisi — Kategori-önce aşamalı yükleme.
+///
+/// PERFORMANS STRATEJİSİ:
+///   Eski: Tüm 230k kanalı çek → 10-15 dakika
+///   Yeni: Kategori listesi (~500ms) → Her kategorinin kanallarını paralel çek
+///         → Her kategori bitince DB'ye yaz → UI anlık güncellenir
+///         → Kullanıcı ~3-5 saniyede uygulamayı kullanmaya başlayabilir
 /// </summary>
 public class StalkerPortalService : IStalkerPortalService
 {
     private readonly HttpClient _httpClient;
 
-    // Diagnostic logging helper
-    private static void DiagnosticLog(string message)
-    {
-        try
-        {
-            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var logPath = Path.Combine(localAppData, "Noctra", "logs", "startup.log");
-            var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [StalkerService] {message}{Environment.NewLine}";
-            File.AppendAllText(logPath, line, System.Text.Encoding.UTF8);
-        }
-        catch { /* Diagnostic logging must not fail */ }
-    }
+    private static readonly ConcurrentDictionary<string, CachedTokenState>    TokenCache  = new(StringComparer.Ordinal);
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim>       TokenLocks  = new(StringComparer.Ordinal);
+    private static readonly ConcurrentDictionary<string, CachedEndpointState> EndpointCache = new(StringComparer.Ordinal);
+    private static readonly TimeSpan TokenTtl    = TimeSpan.FromMinutes(15);
+    private static readonly TimeSpan EndpointTtl = TimeSpan.FromHours(24);
+    private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(4);
 
-    // Token cache — portal URL + MAC kombinasyonuna göre
-    private static readonly ConcurrentDictionary<string, CachedTokenState> TokenCache = new(StringComparer.Ordinal);
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> TokenLocks = new(StringComparer.Ordinal);
-    private static readonly TimeSpan TokenTtl = TimeSpan.FromMinutes(10);
-
-    // Stalker sunucularının olası endpoint path'leri (en yaygından başlayarak)
     private static readonly string[] KnownPortalPaths =
     [
         "/stalker_portal/server/load.php",
         "/server/load.php",
+        "/stalker_portal/c/",
         "/c/",
         "/portal.php",
-        "/stalker_portal/c/",
-        "/stalker_portal/server/",
-        "/server/"
     ];
 
     public StalkerPortalService(HttpClient httpClient)
@@ -51,187 +42,421 @@ public class StalkerPortalService : IStalkerPortalService
         _httpClient = httpClient;
     }
 
-    // ─────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════
     //  PUBLIC API
-    // ─────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════
 
     public async Task<bool> AuthenticateAsync(
-        string portalUrl,
-        string macAddress,
-        CancellationToken cancellationToken = default)
+        string portalUrl, string macAddress, CancellationToken cancellationToken = default)
     {
-        var result = await ResolveEndpointOptimizedAsync(portalUrl, macAddress, cancellationToken);
-        if (result.Endpoint == null) return false;
-
-        var token = await GetOrCreateTokenAsync(result.NormalizedUrl, result.Endpoint, macAddress, result.InitialToken, cancellationToken);
+        var (normalizedUrl, endpoint, initialToken) =
+            await ResolveEndpointParallelAsync(portalUrl, macAddress, cancellationToken);
+        if (endpoint == null) return false;
+        var token = await GetOrCreateTokenAsync(
+            normalizedUrl, endpoint, macAddress, initialToken, cancellationToken);
         return !string.IsNullOrWhiteSpace(token);
     }
 
+    /// <summary>
+    /// Geriye dönük uyum — yeni kodlar GetChannelsProgressiveAsync kullanmalı.
+    /// </summary>
     public async Task<List<Channel>> GetChannelsAsync(
-        string portalUrl,
-        string macAddress,
-        bool includeVod = true,
+        string portalUrl, string macAddress, bool includeVod = true,
         CancellationToken cancellationToken = default)
     {
-        DiagnosticLog($"GetChannelsAsync started for: {portalUrl} (MAC: {macAddress})");
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-
-        // 1. Endpoint'i ve Token'ı paralel keşfet (Handshake probe içinde yapılır)
-        DiagnosticLog("Step 1: Resolving endpoint and checking for early token...");
-        var result = await ResolveEndpointOptimizedAsync(portalUrl, macAddress, cancellationToken);
-        DiagnosticLog($"Step 1 Completed in {sw.ElapsedMilliseconds}ms. Winner: {result.Endpoint ?? "NONE"}");
-
-        if (result.Endpoint == null)
-        {
-            DiagnosticLog("CRITICAL: Stalker Portal endpoint not found after probing all candidates.");
-            throw new InvalidOperationException("Stalker Portal endpoint bulunamadı.");
-        }
-
-        // 2. Token al (Probe'dan gelen token varsa onu kullanır, yoksa handshake yapar)
-        DiagnosticLog("Step 2: Getting or creating token...");
-        var token = await GetOrCreateTokenAsync(result.NormalizedUrl, result.Endpoint, macAddress, result.InitialToken, cancellationToken);
-        DiagnosticLog($"Step 2 Completed in {sw.ElapsedMilliseconds}ms. Token obtained: {!string.IsNullOrEmpty(token)}");
-
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            DiagnosticLog("CRITICAL: Stalker Portal authentication failed (No token).");
-            throw new InvalidOperationException("Kimlik doğrulama başarısız.");
-        }
-
-        // 3. Kanalları yükle (Genre, Live ve VOD hepsi paralel)
-        try
-        {
-            DiagnosticLog("Step 3: Loading channels (Parallel V2)...");
-            var channels = await LoadChannelsWithTokenV2Async(result.Endpoint, token, macAddress, includeVod, cancellationToken);
-            DiagnosticLog($"Step 3 Completed in {sw.ElapsedMilliseconds}ms. Total channels: {channels.Count}");
-            return channels;
-        }
-        catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
-        {
-            DiagnosticLog("WARNING: Token expired during load. Retrying once with refreshed token...");
-            // Token süresi dolmuşsa yenile (bir kez)
-            InvalidateToken(result.NormalizedUrl, macAddress);
-            var refreshedToken = await GetOrCreateTokenAsync(result.NormalizedUrl, result.Endpoint, macAddress, null, cancellationToken);
-            if (string.IsNullOrWhiteSpace(refreshedToken))
-            {
-                DiagnosticLog("CRITICAL: Token refresh failed.");
-                throw new InvalidOperationException("Token yenilenemedi.");
-            }
-
-            var channels = await LoadChannelsWithTokenV2Async(result.Endpoint, refreshedToken, macAddress, includeVod, cancellationToken);
-            DiagnosticLog($"Retry Completed in {sw.ElapsedMilliseconds}ms. Total channels: {channels.Count}");
-            return channels;
-        }
-        catch (Exception ex)
-        {
-            DiagnosticLog($"CRITICAL ERROR in Step 3: {ex.Message}");
-            throw;
-        }
-        finally
-        {
-            DiagnosticLog($"GetChannelsAsync Total Time: {sw.ElapsedMilliseconds}ms");
-        }
+        var all = new List<Channel>();
+        await GetChannelsProgressiveAsync(
+            portalUrl, macAddress, includeVod,
+            onCategoriesDiscovered: (cats, _) => Task.FromResult(cats),
+            onCategoryLoaded: (channels, _) => { all.AddRange(channels); return Task.CompletedTask; },
+            progress: null,
+            cancellationToken: cancellationToken);
+        return all;
     }
 
     // ─────────────────────────────────────────────────────────────
-    //  ENDPOINT KEŞFİ (OPTIMIZED PARALLEL)
+    //  YENİ: Kategori listesi — hızlı (~500ms)
     // ─────────────────────────────────────────────────────────────
 
-    private async Task<(string NormalizedUrl, string? Endpoint, string? InitialToken)> ResolveEndpointOptimizedAsync(
+    public async Task<List<StalkerCategory>> GetCategoriesAsync(
+        string portalUrl, string macAddress, CancellationToken cancellationToken = default)
+    {
+        var (normalizedUrl, endpoint, initialToken) =
+            await ResolveEndpointParallelAsync(portalUrl, macAddress, cancellationToken);
+        if (endpoint == null) return [];
+
+        var token = await GetOrCreateTokenAsync(
+            normalizedUrl, endpoint, macAddress, initialToken, cancellationToken);
+        if (string.IsNullOrWhiteSpace(token)) return [];
+
+        // 3 kategori tipini paralel çek
+        var tasks = new[]
+        {
+            FetchCategoriesAsync(endpoint, token, macAddress, "itv",    cancellationToken),
+            FetchCategoriesAsync(endpoint, token, macAddress, "vod",    cancellationToken),
+            FetchCategoriesAsync(endpoint, token, macAddress, "series", cancellationToken),
+        };
+        await Task.WhenAll(tasks);
+
+        var result = new List<StalkerCategory>();
+        foreach (var t in tasks)
+            result.AddRange(t.Result);
+
+        Log($"GetCategoriesAsync: {result.Count} categories found in total");
+        return result;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  YENİ: Tek kategori kanalları — lazy loading için
+    // ─────────────────────────────────────────────────────────────
+
+    public async Task<List<Channel>> GetChannelsByCategoryAsync(
+        string portalUrl, string macAddress,
+        string categoryId, string categoryType,
+        CancellationToken cancellationToken = default)
+    {
+        var (normalizedUrl, endpoint, initialToken) =
+            await ResolveEndpointParallelAsync(portalUrl, macAddress, cancellationToken);
+        if (endpoint == null) return [];
+
+        var token = await GetOrCreateTokenAsync(
+            normalizedUrl, endpoint, macAddress, initialToken, cancellationToken);
+        if (string.IsNullOrWhiteSpace(token)) return [];
+
+        var genreMap = await FetchCategoriesAsync(
+            endpoint, token, macAddress, categoryType, cancellationToken)
+            .ContinueWith(t => (IReadOnlyDictionary<string, string>)
+                t.Result.ToDictionary(c => c.Id, c => c.Name));
+
+        var items = await GetAllPagesForCategoryAsync(
+            endpoint, token, macAddress, categoryType, categoryId, cancellationToken);
+
+        var baseUrl  = ExtractBaseUrl(endpoint);
+        var chanType = categoryType == "itv" ? ChannelType.Live
+                     : categoryType == "series" ? ChannelType.Series
+                     : ChannelType.VOD;
+
+        return BuildChannels(items, baseUrl, chanType, genreMap);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  YENİ: Aşamalı yükleme — 230k hesabın çözümü
+    // ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Kategori-önce yükleme stratejisi:
+    /// 1. Tüm kategori listelerini paralel çek (~500ms)
+    /// 2. Her kategorinin kanallarını paralel çek (MAX_CAT_PARALLEL kategorisi eş zamanlı)
+    /// 3. Her kategori bittiğinde onCategoryLoaded çağrılır
+    ///    → Çağıran kod DB'ye yazabilir, UI güncellenebilir
+    ///
+    /// Sonuç: Kullanıcı ~3-5 saniyede ilk içerikleri görür,
+    ///        tüm içerik arka planda yüklenmeye devam eder.
+    /// </summary>
+    public async Task GetChannelsProgressiveAsync(
         string portalUrl,
         string macAddress,
-        CancellationToken cancellationToken)
+        bool includeVod,
+        Func<List<StalkerCategory>, Action<string>, Task<List<StalkerCategory>>> onCategoriesDiscovered,
+        Func<List<Channel>, StalkerCategory, Task> onCategoryLoaded,
+        IProgress<StalkerLoadProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+
+        var normalizedPortalUrl = NormalizePortalUrl(portalUrl);
+        if (string.IsNullOrWhiteSpace(normalizedPortalUrl))
+            throw new InvalidOperationException("Geçersiz veya boş bir Stalker Portal adresi girdiniz.");
+
+        if (string.IsNullOrWhiteSpace(macAddress))
+            throw new InvalidOperationException("MAC adresi boş olamaz.");
+
+        var (normalizedUrl, endpoint, initialToken) =
+            await ResolveEndpointParallelAsync(normalizedPortalUrl, macAddress, cancellationToken);
+        if (endpoint == null)
+            throw new InvalidOperationException("Stalker Portal endpoint bulunamadı. URL veya MAC adresini kontrol edin.");
+
+        var token = await GetOrCreateTokenAsync(
+            normalizedUrl, endpoint, macAddress, initialToken, cancellationToken);
+        if (string.IsNullOrWhiteSpace(token))
+            throw new InvalidOperationException("Stalker Portal handshake başarısız. MAC adresini kontrol edin.");
+
+        Log($"Auth ready in {sw.ElapsedMilliseconds}ms");
+
+        // ── Adım 1: Tüm kategorileri hızlıca çek ──────────────────
+        var typesToFetch = includeVod
+            ? new[] { "itv", "vod", "series" }
+            : new[] { "itv" };
+
+        var categoryTasks = typesToFetch.Select(t =>
+            FetchCategoriesAsync(endpoint, token, macAddress, t, cancellationToken)).ToArray();
+        await Task.WhenAll(categoryTasks);
+
+        // Önce Live TV, sonra VOD, sonra Series — en çok kullanılan önce
+        var allCategories = new List<StalkerCategory>();
+        foreach (var t in categoryTasks)
+            allCategories.AddRange(t.Result);
+
+        var totalCategories   = allCategories.Count;
+        var loadedCategories  = 0;
+        var totalChannelCount = 0;
+
+        Log($"Categories fetched: {totalCategories} in {sw.ElapsedMilliseconds}ms");
+
+        // Görev kuyruğu ve önceliklendirme mekanizması (Lazy Loading anında tıklananı öne almak için)
+        var pendingCategories = new List<StalkerCategory>(allCategories);
+        var queueLock = new object();
+
+        Action<string> prioritizeAction = (categoryName) =>
+        {
+            lock (queueLock)
+            {
+                var idx = pendingCategories.FindIndex(c => c.Name == categoryName);
+                if (idx > 0)
+                {
+                    var cat = pendingCategories[idx];
+                    pendingCategories.RemoveAt(idx);
+                    pendingCategories.Insert(0, cat); // En öne al
+                    Log($"[Prioritized] Kategori öne alındı: {categoryName}");
+                }
+            }
+        };
+
+        // --- Yeni Özellik: Arayüzün anında dolması için keşfedilen kategorileri bildir ---
+        if (totalCategories > 0)
+        {
+            var filteredCategories = await onCategoriesDiscovered(allCategories, prioritizeAction);
+            pendingCategories = new List<StalkerCategory>(filteredCategories);
+        }
+
+        if (totalCategories == 0)
+        {
+            Log("No categories found — falling back to genre=* fetch");
+            // Fallback: eski yöntem
+            var fallback = await LoadAllWithGenreStarAsync(
+                endpoint, token, macAddress, includeVod, cancellationToken);
+            var fakeCategory = new StalkerCategory
+                { Id = "*", Name = "Tüm İçerikler", Type = "itv" };
+            var filteredFallback = await onCategoriesDiscovered(new List<StalkerCategory> { fakeCategory }, prioritizeAction);
+            if (filteredFallback.Count > 0)
+            {
+                await onCategoryLoaded(fallback, fakeCategory);
+            }
+            return;
+        }
+
+        // ── Adım 2: Her kategoriyi paralel çek (Kuyruktan tüketerek) ────────────────────
+        // Stalker sunucuları 5-8 eş zamanlı isteği genellikle kaldırır
+        const int MaxCategoryParallel = 5;
+        var baseUrl = ExtractBaseUrl(endpoint);
+
+        // Kategori türüne göre ChannelType belirle
+        ChannelType GetChanType(string t) => t switch
+        {
+            "itv"    => ChannelType.Live,
+            "series" => ChannelType.Series,
+            _        => ChannelType.VOD
+        };
+
+        var workerTasks = Enumerable.Range(0, MaxCategoryParallel).Select(async workerId =>
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                StalkerCategory? category = null;
+
+                lock (queueLock)
+                {
+                    if (pendingCategories.Count > 0)
+                    {
+                        category = pendingCategories[0];
+                        pendingCategories.RemoveAt(0);
+                    }
+                }
+
+                // Kuyruk bittiyse worker sonlanır
+                if (category == null) break;
+
+                try
+                {
+                    var items = await GetAllPagesForCategoryAsync(
+                        endpoint, token, macAddress,
+                        category.Type, category.Id, cancellationToken);
+
+                    if (items.Count > 0)
+                    {
+                        var channels = BuildChannels(
+                            items, baseUrl, GetChanType(category.Type),
+                            new Dictionary<string, string> { [category.Id] = category.Name });
+
+                        var loaded = Interlocked.Increment(ref loadedCategories);
+                        var total  = Interlocked.Add(ref totalChannelCount, channels.Count);
+
+                        progress?.Report(new StalkerLoadProgress
+                        {
+                            LoadedChannels   = total,
+                            LoadedCategories = loaded,
+                            TotalCategories  = totalCategories,
+                            CurrentCategory  = category.Name
+                        });
+
+                        Log($"[{category.Type}] '{category.Name}': {channels.Count} channels " +
+                            $"({loaded}/{totalCategories} cats, {total} total, {sw.ElapsedMilliseconds}ms)");
+
+                        await onCategoryLoaded(channels, category);
+                    }
+                    else
+                    {
+                        // Boş kategori olsa bile ilerlemeyi artır
+                        Interlocked.Increment(ref loadedCategories);
+                    }
+                }
+                catch (OperationCanceledException) { /* kullanıcı iptal */ }
+                catch (Exception ex)
+                {
+                    Log($"Category '{category.Name}' failed: {ex.Message}");
+                }
+            }
+        });
+
+        await Task.WhenAll(workerTasks);
+
+        Log($"GetChannelsProgressiveAsync DONE: {totalChannelCount} channels, " +
+            $"{totalCategories} categories, {sw.ElapsedMilliseconds}ms total");
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  ENDPOINT KEŞFİ — PARALEL
+    // ═══════════════════════════════════════════════════════════
+
+    private async Task<(string NormalizedUrl, string? Endpoint, string? InitialToken)>
+        ResolveEndpointParallelAsync(
+            string portalUrl, string macAddress, CancellationToken cancellationToken)
     {
         var normalizedUrl = NormalizePortalUrl(portalUrl);
-        var candidates = KnownPortalPaths.Select(p => $"{normalizedUrl}{p}").ToList();
-        
-        if (!candidates.Contains(normalizedUrl)) candidates.Add(normalizedUrl);
-        if (!candidates.Contains($"{normalizedUrl}/")) candidates.Add($"{normalizedUrl}/");
+        var cacheKey      = $"{normalizedUrl}|{macAddress.Trim().ToUpperInvariant()}";
 
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        cts.CancelAfter(TimeSpan.FromSeconds(8));
-
-        DiagnosticLog($"ResolveEndpointOptimizedAsync: Probing {candidates.Count} candidates...");
-        var tasks = candidates.Select(url => ProbeEndpointAsync(url, macAddress, cts));
-        var results = await Task.WhenAll(tasks);
-        var winner = results.FirstOrDefault(r => r != null);
-
-        return (normalizedUrl, winner?.Url, winner?.Token);
-    }
-
-    private async Task<(string Url, string? Token)?> ProbeEndpointAsync(
-        string url, 
-        string macAddress, 
-        CancellationTokenSource cts)
-    {
-        try
+        // Endpoint cache — 24 saat geçerli
+        if (EndpointCache.TryGetValue(cacheKey, out var cached) &&
+            cached.ExpiresAt > DateTimeOffset.UtcNow)
         {
-            var query = BuildQueryString(new Dictionary<string, string>
+            Log($"Endpoint from cache: {cached.Endpoint}");
+            return (normalizedUrl, cached.Endpoint, null);
+        }
+
+        // Eğer kullanıcı URL'nin sonuna /c/ vb. eklediyse, temizleyip ana domain'i (base URL) bul
+        var baseUrl = normalizedUrl;
+        foreach (var knownPath in KnownPortalPaths)
+        {
+            var p = knownPath.TrimEnd('/');
+            if (!string.IsNullOrEmpty(p) && baseUrl.EndsWith(p, StringComparison.OrdinalIgnoreCase))
             {
-                ["action"] = "handshake",
-                ["type"] = "stb",
-                ["mac"] = macAddress
-            });
-
-            using var request = BuildGetRequest(url, query, macAddress, null);
-            using var individualCts = new CancellationTokenSource(TimeSpan.FromSeconds(4));
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, individualCts.Token);
-
-            using var response = await _httpClient.SendAsync(request, linkedCts.Token);
-            if (!response.IsSuccessStatusCode) return null;
-
-            var json = await response.Content.ReadAsStringAsync(linkedCts.Token);
-            if (!json.Trim().StartsWith('{')) return null;
-
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-            if (root.TryGetProperty("js", out var jsEl) || root.TryGetProperty("result", out _))
-            {
-                var token = GetString(jsEl.ValueKind != JsonValueKind.Undefined ? jsEl : root, "token");
-                cts.Cancel(); // İlk bulan diğerlerini durdurur
-                return (Url: url, Token: token);
+                baseUrl = baseUrl.Substring(0, baseUrl.Length - p.Length).TrimEnd('/');
+                break;
             }
         }
-        catch { }
-        return null;
+
+        var handshakeQuery = BuildQueryString(new Dictionary<string, string>
+        {
+            ["action"] = "handshake",
+            ["type"]   = "stb",
+            ["token"]  = "",
+            ["mac"]    = macAddress
+        });
+
+        using var probeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        probeCts.CancelAfter(ProbeTimeout);
+
+        var candidates = KnownPortalPaths.Select(p => $"{baseUrl}{p}").ToList();
+        if (!candidates.Contains(baseUrl)) candidates.Add(baseUrl);
+
+        var results = new ConcurrentBag<(string Endpoint, string? Token, int Priority)>();
+
+        var tasks = candidates.Select((c, idx) => Task.Run(async () =>
+        {
+            try
+            {
+                using var req  = BuildGetRequest(c, handshakeQuery, macAddress, null);
+                using var resp = await _httpClient.SendAsync(
+                    req, HttpCompletionOption.ResponseContentRead, probeCts.Token);
+                if (!resp.IsSuccessStatusCode) return;
+
+                var json    = await resp.Content.ReadAsStringAsync(probeCts.Token);
+                var trimmed = json.Trim();
+                if (!trimmed.StartsWith('{') && !trimmed.StartsWith('[')) return;
+
+                if (!json.Contains("\"js\"",     StringComparison.OrdinalIgnoreCase) &&
+                    !json.Contains("\"result\"", StringComparison.OrdinalIgnoreCase) &&
+                    !json.Contains("\"token\"",  StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                string? token = null;
+                try
+                {
+                    using var doc = JsonDocument.Parse(json);
+                    var root = doc.RootElement;
+                    token = root.TryGetProperty("js", out var jsEl)
+                        ? GetString(jsEl, "token")
+                        : GetString(root, "token");
+                }
+                catch { /* token parse hatası — endpoint yine de geçerli */ }
+
+                results.Add((c, token, idx));
+                Log($"Probe OK: {c}");
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { Log($"Probe failed: {c} — {ex.Message}"); }
+        }, probeCts.Token));
+
+        await Task.WhenAll(tasks);
+
+        if (results.IsEmpty)
+        {
+            Log($"No endpoint found for: {normalizedUrl}");
+            return (normalizedUrl, null, null);
+        }
+
+        var best = results.OrderBy(r => r.Priority).First();
+        EndpointCache[cacheKey] = new CachedEndpointState(best.Endpoint,
+            DateTimeOffset.UtcNow.Add(EndpointTtl));
+        return (normalizedUrl, best.Endpoint, best.Token);
     }
 
-    // ─────────────────────────────────────────────────────────────
-    //  TOKEN VE PROFIL YÖNETİMİ
-    // ─────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════
+    //  TOKEN YÖNETİMİ
+    // ═══════════════════════════════════════════════════════════
 
     private async Task<string> GetOrCreateTokenAsync(
-        string normalizedPortalUrl,
-        string endpoint,
-        string macAddress,
-        string? initialToken,
-        CancellationToken cancellationToken)
+        string normalizedPortalUrl, string endpoint, string macAddress,
+        string? initialToken, CancellationToken cancellationToken)
     {
-        var key = BuildTokenCacheKey(normalizedPortalUrl, macAddress);
+        var key = $"{normalizedPortalUrl}|{macAddress.Trim().ToUpperInvariant()}";
 
-        if (TokenCache.TryGetValue(key, out var cached) && cached.ExpiresAt > DateTimeOffset.UtcNow)
-        {
+        if (TokenCache.TryGetValue(key, out var cached) &&
+            cached.ExpiresAt > DateTimeOffset.UtcNow &&
+            !string.IsNullOrWhiteSpace(cached.Token))
             return cached.Token;
-        }
 
         var tokenLock = TokenLocks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
         await tokenLock.WaitAsync(cancellationToken);
         try
         {
-            if (TokenCache.TryGetValue(key, out cached) && cached.ExpiresAt > DateTimeOffset.UtcNow)
+            if (TokenCache.TryGetValue(key, out cached) &&
+                cached.ExpiresAt > DateTimeOffset.UtcNow &&
+                !string.IsNullOrWhiteSpace(cached.Token))
                 return cached.Token;
 
             var token = initialToken;
             if (string.IsNullOrWhiteSpace(token))
-            {
                 token = await HandshakeAsync(endpoint, macAddress, cancellationToken);
-            }
 
             if (!string.IsNullOrWhiteSpace(token))
             {
-                // get_profile FIRE-AND-FORGET: Kanal listesi ile paralel gitmesi için beklemiyoruz
-                _ = Task.Run(() => GetProfileAsync(endpoint, token, macAddress, CancellationToken.None));
-                
+                _ = GetProfileAsync(endpoint, token, macAddress, cancellationToken)
+                    .ContinueWith(t =>
+                    {
+                        if (t.IsFaulted) Log($"get_profile failed (non-fatal): {t.Exception?.InnerException?.Message}");
+                    }, TaskScheduler.Default);
+
                 TokenCache[key] = new CachedTokenState(token, DateTimeOffset.UtcNow.Add(TokenTtl));
             }
 
@@ -243,296 +468,352 @@ public class StalkerPortalService : IStalkerPortalService
         }
     }
 
-    private async Task<string> HandshakeAsync(string endpoint, string macAddress, CancellationToken cancellationToken)
+    private static void InvalidateToken(string normalizedPortalUrl, string macAddress)
+        => TokenCache.TryRemove($"{normalizedPortalUrl}|{macAddress.Trim().ToUpperInvariant()}", out _);
+
+    // ═══════════════════════════════════════════════════════════
+    //  STALKER API ÇAĞRILARI
+    // ═══════════════════════════════════════════════════════════
+
+    private async Task<string> HandshakeAsync(
+        string endpoint, string macAddress, CancellationToken ct)
     {
         var query = BuildQueryString(new Dictionary<string, string>
         {
-            ["action"] = "handshake",
-            ["type"] = "stb",
-            ["mac"] = macAddress
+            ["action"] = "handshake", ["type"] = "stb", ["token"] = "", ["mac"] = macAddress
         });
-
-        var js = await GetForJsAsync(endpoint, query, macAddress, null, cancellationToken);
+        var js = await GetForJsAsync(endpoint, query, macAddress, null, ct);
         return GetString(js, "token") ?? string.Empty;
     }
 
-    private async Task GetProfileAsync(string endpoint, string token, string macAddress, CancellationToken cancellationToken)
+    private async Task GetProfileAsync(
+        string endpoint, string token, string macAddress, CancellationToken ct)
+    {
+        var query = BuildQueryString(new Dictionary<string, string>
+        {
+            ["action"] = "get_profile", ["type"] = "stb", ["token"] = token,
+            ["mac"] = macAddress, ["hd"] = "1", ["num_banks"] = "1",
+            ["sn"] = "00000000000000", ["stb_type"] = "MAG250", ["image_version"] = "218"
+        });
+        await GetForJsAsync(endpoint, query, macAddress, token, ct);
+    }
+
+    /// <summary>
+    /// Bir içerik tipinin tüm kategorilerini çeker.
+    /// ITV için "get_genres", VOD/Series için "get_categories".
+    /// </summary>
+    private async Task<List<StalkerCategory>> FetchCategoriesAsync(
+        string endpoint, string token, string macAddress,
+        string contentType, CancellationToken ct)
     {
         try
         {
-            var query = BuildQueryString(new Dictionary<string, string>
+            // ITV genres, VOD/Series categories — Stalker API farklı action kullanıyor
+            var action = contentType == "itv" ? "get_genres" : "get_categories";
+            var query  = BuildQueryString(new Dictionary<string, string>
             {
-                ["action"] = "get_profile",
-                ["type"] = "stb",
-                ["token"] = token,
-                ["hd"] = "1",
-                ["stb_type"] = "MAG250"
+                ["action"] = action,
+                ["type"]   = contentType,
+                ["token"]  = token
             });
-            await GetForJsAsync(endpoint, query, macAddress, token, cancellationToken);
+
+            var js = await GetForJsAsync(endpoint, query, macAddress, token, ct);
+            if (js.ValueKind != JsonValueKind.Array) return [];
+
+            var categories = new List<StalkerCategory>();
+            foreach (var el in js.EnumerateArray())
+            {
+                var id   = GetString(el, "id")       ?? GetString(el, "category_id") ?? GetString(el, "genre_id");
+                var name = GetString(el, "title")    ?? GetString(el, "name");
+                var cnt  = GetInt(el, "censors")     ?? GetInt(el, "count");
+
+                if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(name)) continue;
+                if (id == "*") continue; // "Tümü" kategorisi — zaten ayrı ayrı çekeceğiz
+
+                categories.Add(new StalkerCategory
+                {
+                    Id   = id,
+                    Name = name.Trim(),
+                    Type = contentType,
+                    Count = cnt
+                });
+            }
+
+            Log($"FetchCategories({contentType}): {categories.Count} categories");
+            return categories;
         }
-        catch { /* Non-fatal */ }
+        catch (Exception ex)
+        {
+            Log($"FetchCategories({contentType}) failed: {ex.Message}");
+            return [];
+        }
     }
 
-    // ─────────────────────────────────────────────────────────────
-    //  KANAL YÜKLEME V2 (MAX PARALELLISM)
-    // ─────────────────────────────────────────────────────────────
-
-    private async Task<List<Channel>> LoadChannelsWithTokenV2Async(
-        string endpoint,
-        string token,
-        string macAddress,
-        bool includeVod,
-        CancellationToken cancellationToken)
+    /// <summary>
+    /// Belirli bir kategorinin TÜM sayfalarını çeker.
+    /// Sayfa sayısı küçük olduğundan (~5-20 sayfa) hızlı çalışır.
+    /// </summary>
+    private async Task<List<StalkerListItem>> GetAllPagesForCategoryAsync(
+        string endpoint, string token, string macAddress,
+        string listType, string categoryId, CancellationToken ct)
     {
-        DiagnosticLog($"LoadChannelsWithTokenV2Async: Starting parallel fetches (IncludeVod: {includeVod})");
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        // Tüm veri çekme işlemlerini paralel başlat
-        var liveGenreTask = GetGenreMapAsync(endpoint, token, macAddress, "itv", cancellationToken);
-        var liveItemsTask = GetOrderedListAllPagesAsync(endpoint, token, macAddress, "itv", cancellationToken);
-        
-        var vodGenreTask = includeVod 
-            ? GetGenreMapAsync(endpoint, token, macAddress, "vod", cancellationToken) 
-            : Task.FromResult<IReadOnlyDictionary<string, string>>(new Dictionary<string, string>());
-            
-        var vodItemsTask = includeVod 
-            ? GetOrderedListAllPagesAsync(endpoint, token, macAddress, "vod", cancellationToken) 
-            : Task.FromResult(new List<StalkerListItem>());
+        // İlk sayfayı çek — sayfa sayısını öğren
+        var (firstItems, totalItems, maxPageItems) =
+            await GetPageAsync(endpoint, token, macAddress, listType, categoryId, 1, ct);
 
-        var seriesGenreTask = includeVod
-            ? GetGenreMapAsync(endpoint, token, macAddress, "series", cancellationToken)
-            : Task.FromResult<IReadOnlyDictionary<string, string>>(new Dictionary<string, string>());
+        if (firstItems.Count == 0) return [];
 
-        var seriesItemsTask = includeVod
-            ? GetOrderedListAllPagesAsync(endpoint, token, macAddress, "series", cancellationToken)
-            : Task.FromResult(new List<StalkerListItem>());
+        int itemsPerPage = maxPageItems ?? firstItems.Count;
+        if (itemsPerPage <= 0) itemsPerPage = 14;
 
-        await Task.WhenAll(liveGenreTask, liveItemsTask, vodGenreTask, vodItemsTask, seriesGenreTask, seriesItemsTask);
-        DiagnosticLog($"LoadChannelsWithTokenV2Async: Parallel fetch completed in {sw.ElapsedMilliseconds}ms");
+        int totalPages = totalItems.HasValue
+            ? (int)Math.Ceiling(totalItems.Value / (double)itemsPerPage)
+            : 1;
 
-        var channels = new List<Channel>();
-        channels.AddRange(BuildChannels(await liveItemsTask, endpoint, token, ChannelType.Live, await liveGenreTask));
-        
+        if (totalPages <= 1) return firstItems;
+
+        // Kalan sayfaları paralel çek (kategori başına max 4 paralel)
+        var pageResults    = new List<StalkerListItem>[totalPages];
+        pageResults[0]     = firstItems;
+
+        using var sem = new SemaphoreSlim(4, 4);
+        var pageTasks = Enumerable.Range(2, totalPages - 1).Select(p => Task.Run(async () =>
+        {
+            await sem.WaitAsync(ct);
+            try
+            {
+                var (items, _, _) = await GetPageAsync(
+                    endpoint, token, macAddress, listType, categoryId, p, ct);
+                pageResults[p - 1] = items;
+            }
+            catch { pageResults[p - 1] = []; }
+            finally { sem.Release(); }
+        }, ct));
+
+        await Task.WhenAll(pageTasks);
+
+        var all = new List<StalkerListItem>(totalItems ?? totalPages * itemsPerPage);
+        foreach (var page in pageResults)
+            if (page != null) all.AddRange(page);
+        return all;
+    }
+
+    private async Task<(List<StalkerListItem> Items, int? TotalItems, int? MaxPageItems)> GetPageAsync(
+        string endpoint, string token, string macAddress,
+        string listType, string categoryId, int page, CancellationToken ct)
+    {
+        var queryParams = new Dictionary<string, string>
+        {
+            ["action"] = "get_ordered_list",
+            ["type"]   = listType,
+            ["sortby"] = listType == "itv" ? "number" : "added",
+            ["p"]      = page.ToString(),
+            ["token"]  = token
+        };
+
+        // Kategori filtresi — * yerine spesifik ID
+        if (listType == "itv")
+            queryParams["genre"] = categoryId;
+        else
+            queryParams["category"] = categoryId;
+
+        var query = BuildQueryString(queryParams);
+        JsonElement js;
+        try
+        {
+            js = await GetForJsAsync(endpoint, query, macAddress, token, ct);
+        }
+        catch
+        {
+            return ([], null, null);
+        }
+
+        var totalItems   = GetInt(js, "total_items");
+        var maxPageItems = GetInt(js, "max_page_items");
+        var items        = new List<StalkerListItem>();
+
+        if (js.TryGetProperty("data", out var dataEl) && dataEl.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in dataEl.EnumerateArray())
+            {
+                items.Add(new StalkerListItem
+                {
+                    Id        = GetString(item, "id"),
+                    Name      = GetString(item, "name"),
+                    Cmd       = GetString(item, "cmd"),
+                    Logo      = GetString(item, "logo"),
+                    TvGenreId = GetString(item, "tv_genre_id") ??
+                                GetString(item, "category_id") ??
+                                GetString(item, "genre_id"),
+                    CategoryName = GetString(item, "category_name") ??
+                                   GetString(item, "genre_name")
+                });
+            }
+        }
+
+        return (items, totalItems, maxPageItems);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  FALLBACK — Kategori sistemi çalışmazsa eski yönteme dön
+    // ═══════════════════════════════════════════════════════════
+
+    private async Task<List<Channel>> LoadAllWithGenreStarAsync(
+        string endpoint, string token, string macAddress,
+        bool includeVod, CancellationToken ct)
+    {
+        var liveGenreTask  = FetchCategoriesAsync(endpoint, token, macAddress, "itv", ct);
+        var liveItemsTask  = GetAllPagesForCategoryAsync(endpoint, token, macAddress, "itv", "*", ct);
+
+        Task<List<StalkerCategory>>?   vodGenreTask  = null;
+        Task<List<StalkerListItem>>?   vodItemsTask  = null;
+        Task<List<StalkerCategory>>?   serGenreTask  = null;
+        Task<List<StalkerListItem>>?   serItemsTask  = null;
+
         if (includeVod)
         {
-            channels.AddRange(BuildChannels(await vodItemsTask, endpoint, token, ChannelType.VOD, await vodGenreTask));
-            channels.AddRange(BuildChannels(await seriesItemsTask, endpoint, token, ChannelType.Series, await seriesGenreTask));
+            vodGenreTask = FetchCategoriesAsync(endpoint, token, macAddress, "vod",    ct);
+            vodItemsTask = GetAllPagesForCategoryAsync(endpoint, token, macAddress, "vod",    "*", ct);
+            serGenreTask = FetchCategoriesAsync(endpoint, token, macAddress, "series", ct);
+            serItemsTask = GetAllPagesForCategoryAsync(endpoint, token, macAddress, "series", "*", ct);
+        }
+
+        await Task.WhenAll(
+            liveGenreTask, liveItemsTask,
+            vodGenreTask  ?? Task.CompletedTask,
+            vodItemsTask  ?? Task.CompletedTask,
+            serGenreTask  ?? Task.CompletedTask,
+            serItemsTask  ?? Task.CompletedTask);
+
+        var baseUrl = ExtractBaseUrl(endpoint);
+        var channels = new List<Channel>();
+
+        channels.AddRange(BuildChannels(liveItemsTask.Result, baseUrl, ChannelType.Live,
+            liveGenreTask.Result.ToDictionary(c => c.Id, c => c.Name)));
+
+        if (includeVod)
+        {
+            channels.AddRange(BuildChannels(vodItemsTask!.Result, baseUrl, ChannelType.VOD,
+                vodGenreTask!.Result.ToDictionary(c => c.Id, c => c.Name)));
+            channels.AddRange(BuildChannels(serItemsTask!.Result, baseUrl, ChannelType.Series,
+                serGenreTask!.Result.ToDictionary(c => c.Id, c => c.Name)));
         }
 
         return channels;
     }
 
-    private async Task<IReadOnlyDictionary<string, string>> GetGenreMapAsync(
-        string endpoint,
-        string token,
-        string macAddress,
-        string contentType,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var action = contentType == "itv" ? "get_genres" : "get_categories";
-            var query = BuildQueryString(new Dictionary<string, string>
-            {
-                ["action"] = action,
-                ["type"] = contentType,
-                ["token"] = token
-            });
-
-            var js = await GetForJsAsync(endpoint, query, macAddress, token, cancellationToken);
-            if (js.ValueKind != JsonValueKind.Array) return new Dictionary<string, string>();
-
-            var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var element in js.EnumerateArray())
-            {
-                var id = GetString(element, "id") ?? GetString(element, "category_id") ?? GetString(element, "genre_id");
-                var title = GetString(element, "title") ?? GetString(element, "name");
-                if (!string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(title))
-                    map[id] = title;
-            }
-            DiagnosticLog($"GetGenreMapAsync ({contentType}): Loaded {map.Count} categories.");
-            return map;
-        }
-        catch { return new Dictionary<string, string>(); }
-    }
-
-    private async Task<List<StalkerListItem>> GetOrderedListAllPagesAsync(
-        string endpoint,
-        string token,
-        string macAddress,
-        string listType,
-        CancellationToken cancellationToken)
-    {
-        DiagnosticLog($"GetOrderedListAllPagesAsync ({listType}) started...");
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-
-        // 1. İlk sayfayı çekip toplam sayfa sayısını bul
-        var firstPage = await GetPageAsync(endpoint, token, macAddress, listType, 1, cancellationToken);
-        DiagnosticLog($"GetOrderedList ({listType}) Page 1: {firstPage.Items.Count} items. Total: {firstPage.TotalItems}");
-
-        if (firstPage.Items.Count == 0) return [];
-
-        int totalPages = 1;
-        if (firstPage.TotalItems.HasValue && firstPage.MaxPageItems.HasValue && firstPage.MaxPageItems.Value > 0)
-        {
-            totalPages = (int)Math.Ceiling(firstPage.TotalItems.Value / (double)firstPage.MaxPageItems.Value);
-        }
-
-        if (totalPages <= 1) return firstPage.Items;
-
-        // FULL SYNC: Removed the page cap to fetch all content as requested.
-        // For massive portals (e.g. 100k+ items), this will take time but provide complete data.
-        DiagnosticLog($"[{listType}] Total pages to fetch: {totalPages}");
-
-        // 2. Diğer tüm sayfaları paralel çek (Semaphore ile limitli)
-        var allPages = new List<StalkerListItem>[totalPages];
-        allPages[0] = firstPage.Items;
-
-        int completedPages = 1;
-        var semaphore = new SemaphoreSlim(15); // Higher concurrency for full sync
-        var tasks = Enumerable.Range(2, totalPages - 1).Select(async p =>
-        {
-            await semaphore.WaitAsync(cancellationToken);
-            try
-            {
-                var result = await GetPageAsync(endpoint, token, macAddress, listType, p, cancellationToken);
-                allPages[p - 1] = result.Items;
-                
-                var done = Interlocked.Increment(ref completedPages);
-                if (done % 50 == 0 || done == totalPages)
-                {
-                    DiagnosticLog($"[{listType}] Fetch Progress: {done}/{totalPages} pages ({(done * 100.0 / totalPages):F1}%)");
-                }
-            }
-            finally { semaphore.Release(); }
-        });
-
-        await Task.WhenAll(tasks);
-
-        var resultList = new List<StalkerListItem>(firstPage.TotalItems ?? totalPages * 14);
-        foreach (var page in allPages) if (page != null) resultList.AddRange(page);
-        
-        return resultList;
-    }
-
-    private async Task<(List<StalkerListItem> Items, int? TotalItems, int? MaxPageItems)> GetPageAsync(
-        string endpoint,
-        string token,
-        string macAddress,
-        string listType,
-        int page,
-        CancellationToken cancellationToken)
-    {
-        var query = BuildQueryString(new Dictionary<string, string>
-        {
-            ["action"] = "get_ordered_list",
-            ["type"] = listType,
-            ["sortby"] = listType == "itv" ? "number" : "added",
-            ["p"] = page.ToString(),
-            ["size"] = "100", // Try to request more items per page to reduce requests
-            ["token"] = token,
-            [listType == "itv" ? "genre" : "category"] = "*"
-        });
-
-        try
-        {
-            var js = await GetForJsAsync(endpoint, query, macAddress, token, cancellationToken);
-            var items = new List<StalkerListItem>();
-            
-            if (js.TryGetProperty("data", out var dataEl) && dataEl.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var item in dataEl.EnumerateArray())
-                {
-                    items.Add(new StalkerListItem
-                    {
-                        Name = GetString(item, "name"),
-                        Cmd = GetString(item, "cmd"),
-                        Logo = GetString(item, "logo"),
-                        TvGenreId = GetString(item, "tv_genre_id") ?? GetString(item, "category_id") ?? GetString(item, "genre_id"),
-                        CategoryName = GetString(item, "category_name") ?? GetString(item, "genre_name")
-                    });
-                }
-            }
-            return (items, GetInt(js, "total_items"), GetInt(js, "max_page_items"));
-        }
-        catch { return ([], null, null); }
-    }
+    // ═══════════════════════════════════════════════════════════
+    //  KANAL OLUŞTURMA
+    // ═══════════════════════════════════════════════════════════
 
     private static List<Channel> BuildChannels(
         IReadOnlyCollection<StalkerListItem> items,
-        string endpoint,
-        string token,
+        string baseUrl,
         ChannelType channelType,
         IReadOnlyDictionary<string, string> genreMap)
     {
         if (items.Count == 0) return [];
-        var baseUrl = ExtractBaseUrl(endpoint);
         var channels = new List<Channel>(items.Count);
 
-        int logCount = 0;
         foreach (var item in items)
         {
-            var streamUrl = NormalizeStreamCommand(item.Cmd, baseUrl, token);
+            var streamUrl = NormalizeStreamCommand(item.Cmd, baseUrl);
+            
+            // Stalker API genellikle diziler için 'cmd' döndürmez.
+            // Arayüzde görünebilmesi için onlara geçici bir kimlik linki atıyoruz.
+            if (string.IsNullOrWhiteSpace(streamUrl) && channelType == ChannelType.Series && !string.IsNullOrWhiteSpace(item.Id))
+            {
+                streamUrl = $"stalker-series://{item.Id}";
+            }
+
             if (string.IsNullOrWhiteSpace(streamUrl)) continue;
 
-            var group = genreMap.TryGetValue(item.TvGenreId ?? "", out var categoryName) ? categoryName : 
-                    (!string.IsNullOrWhiteSpace(item.CategoryName) ? item.CategoryName : 
-                    (channelType == ChannelType.Live ? "Live" : channelType == ChannelType.Series ? "Series" : "VOD"));
-
-            if (logCount < 5)
-            {
-                DiagnosticLog($"[BuildChannels] Item: {item.Name} | ID: {item.TvGenreId} | Category: {group}");
-                logCount++;
-            }
+            var group = item.TvGenreId != null && genreMap.TryGetValue(item.TvGenreId, out var gn)
+                ? gn
+                : (!string.IsNullOrWhiteSpace(item.CategoryName)
+                    ? item.CategoryName
+                    : channelType == ChannelType.Live ? "Live"
+                    : channelType == ChannelType.Series ? "Series" : "VOD");
 
             channels.Add(new Channel
             {
-                Name = string.IsNullOrWhiteSpace(item.Name) ? "İsimsiz Kanal" : item.Name.Trim(),
-                StreamUrl = streamUrl,
-                LogoUrl = NormalizeLogoUrl(item.Logo, baseUrl),
+                Name       = string.IsNullOrWhiteSpace(item.Name) ? "İsimsiz Kanal" : item.Name.Trim(),
+                StreamUrl  = streamUrl,
+                LogoUrl    = NormalizeLogoUrl(item.Logo, baseUrl),
                 GroupTitle = group,
-                Type = channelType
+                Type       = channelType
             });
         }
+
         return channels;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    //  HTTP & URL YARDIMCILARI
-    // ─────────────────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════
+    //  HTTP
+    // ═══════════════════════════════════════════════════════════
 
-    private async Task<JsonElement> GetForJsAsync(string endpoint, string query, string macAddress, string? token, CancellationToken ct)
+    private async Task<JsonElement> GetForJsAsync(
+        string endpoint, string queryString, string macAddress,
+        string? token, CancellationToken ct)
     {
-        using var request = BuildGetRequest(endpoint, query, macAddress, token);
-        using var response = await _httpClient.SendAsync(request, ct);
-        
-        // NetworkRetry kaldırıldı, fail-fast tercih ediliyor.
-        if (!response.IsSuccessStatusCode) throw new HttpRequestException($"Stalker Request Failed: {response.StatusCode}");
-        
+        using var request  = BuildGetRequest(endpoint, queryString, macAddress, token);
+        using var response = await _httpClient.SendAsync(
+            request, HttpCompletionOption.ResponseContentRead, ct);
+
         var json = await response.Content.ReadAsStringAsync(ct);
-        using var doc = JsonDocument.Parse(json);
-        return (doc.RootElement.TryGetProperty("js", out var js) ? js : doc.RootElement).Clone();
+        if (string.IsNullOrWhiteSpace(json)) return default;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            return (doc.RootElement.TryGetProperty("js", out var js) ? js : doc.RootElement).Clone();
+        }
+        catch (JsonException ex)
+        {
+            Log($"JSON parse error: {ex.Message}");
+            return default;
+        }
     }
 
-    private static HttpRequestMessage BuildGetRequest(string endpoint, string query, string macAddress, string? token)
+    private static HttpRequestMessage BuildGetRequest(
+        string endpoint, string queryString, string macAddress, string? token)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, $"{endpoint}?{query}");
-        request.Headers.TryAddWithoutValidation("Cookie", $"mac={macAddress}");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"{endpoint}?{queryString}");
+        request.Headers.TryAddWithoutValidation(
+            "Cookie", $"mac={macAddress}; stb_lang=en; timezone=Europe/Istanbul");
         request.Headers.TryAddWithoutValidation("X-User-Agent", "Model: MAG250; Link: WiFi");
-        request.Headers.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3");
+        request.Headers.TryAddWithoutValidation("User-Agent", 
+            "Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3");
         request.Headers.TryAddWithoutValidation("Accept", "*/*");
-        if (!string.IsNullOrWhiteSpace(token)) request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+        if (!string.IsNullOrWhiteSpace(token))
+            request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {token}");
+        request.Headers.TryAddWithoutValidation("Referer", endpoint);
         return request;
     }
 
-    private static string NormalizeStreamCommand(string? cmd, string baseUrl, string token)
+    // ═══════════════════════════════════════════════════════════
+    //  YARDIMCILAR
+    // ═══════════════════════════════════════════════════════════
+
+    private static string NormalizeStreamCommand(string? cmd, string baseUrl)
     {
         if (string.IsNullOrWhiteSpace(cmd)) return string.Empty;
         var trimmed = cmd.Trim();
-        var idx = trimmed.IndexOf("http", StringComparison.OrdinalIgnoreCase);
-        if (idx >= 0) return trimmed[idx..].Trim();
 
-        var cleaned = System.Text.RegularExpressions.Regex.Replace(trimmed, @"^(ffrt\d*|auto|ch)\s*", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim();
-        if (cleaned.StartsWith('/') && !string.IsNullOrWhiteSpace(baseUrl)) return $"{baseUrl}{cleaned}";
+        var httpIdx = trimmed.IndexOf("http://",  StringComparison.OrdinalIgnoreCase);
+        if (httpIdx < 0) httpIdx = trimmed.IndexOf("https://", StringComparison.OrdinalIgnoreCase);
+        if (httpIdx >= 0) return trimmed[httpIdx..].Trim();
+
+        var cleaned = System.Text.RegularExpressions.Regex.Replace(
+            trimmed, @"^(ffrt\d*|auto|ch)\s*", string.Empty,
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim();
+
+        if (cleaned.StartsWith('/') && !string.IsNullOrWhiteSpace(baseUrl))
+            return $"{baseUrl}{cleaned}";
+        if (!string.IsNullOrWhiteSpace(cleaned) &&
+            !cleaned.StartsWith("http", StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(baseUrl))
+            return $"{baseUrl}/{cleaned.TrimStart('/')}";
         return cleaned;
     }
 
@@ -540,37 +821,103 @@ public class StalkerPortalService : IStalkerPortalService
     {
         if (string.IsNullOrWhiteSpace(logo)) return null;
         if (logo.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return logo;
-        return string.IsNullOrWhiteSpace(baseUrl) ? logo : $"{baseUrl}{(logo.StartsWith('/') ? "" : "/")}{logo}";
+        if (logo.StartsWith('/') && !string.IsNullOrWhiteSpace(baseUrl)) return $"{baseUrl}{logo}";
+        return logo;
     }
 
     private static string ExtractBaseUrl(string endpoint)
     {
-        try { var uri = new Uri(endpoint); return $"{uri.Scheme}://{uri.Host}{(uri.IsDefaultPort ? "" : $":{uri.Port}")}"; }
-        catch { return ""; }
+        try
+        {
+            var uri = new Uri(endpoint);
+            return $"{uri.Scheme}://{uri.Host}{(uri.IsDefaultPort ? "" : $":{uri.Port}")}";
+        }
+        catch { return string.Empty; }
     }
 
-    private static string BuildQueryString(Dictionary<string, string> parameters)
-        => string.Join("&", parameters.Select(kv => $"{HttpUtility.UrlEncode(kv.Key)}={HttpUtility.UrlEncode(kv.Value)}"));
-
-    private static string NormalizePortalUrl(string url)
+    private static string NormalizePortalUrl(string portalUrl)
     {
-        var n = url.Trim();
-        if (!n.StartsWith("http", StringComparison.OrdinalIgnoreCase)) n = $"http://{n}";
+        if (string.IsNullOrWhiteSpace(portalUrl))
+            return string.Empty;
+
+        var n = portalUrl.Trim();
+        if (!n.StartsWith("http://",  StringComparison.OrdinalIgnoreCase) &&
+            !n.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            n = $"http://{n}";
+
+        // Geçersiz bir HTTP URL'si ise boş dön (Örn: http://)
+        if (n.Length <= 7 || (n.StartsWith("http://") && n.Length == 7))
+            return string.Empty;
+
         return n.TrimEnd('/');
     }
 
-    private static string? GetString(JsonElement e, string p) => e.TryGetProperty(p, out var prop) ? prop.ValueKind switch { JsonValueKind.String => prop.GetString(), JsonValueKind.Number => prop.GetRawText(), _ => null } : null;
-    private static int? GetInt(JsonElement e, string p) => int.TryParse(GetString(e, p), out var v) ? v : null;
-    private static string BuildTokenCacheKey(string url, string mac) => $"{url}|{mac.ToUpperInvariant()}";
-    private static void InvalidateToken(string url, string mac) => TokenCache.TryRemove(BuildTokenCacheKey(url, mac), out _);
+    private static string ResolveGenre(
+        string? genreId, IReadOnlyDictionary<string, string> genreMap, ChannelType type)
+    {
+        if (!string.IsNullOrWhiteSpace(genreId) && genreMap.TryGetValue(genreId, out var name))
+            return name;
+        return type == ChannelType.Live ? "Live" : "VOD";
+    }
+
+    private static string BuildQueryString(Dictionary<string, string> parameters)
+    {
+        return string.Join("&", parameters
+            .Where(kv => kv.Value != null)
+            .Select(kv => $"{HttpUtility.UrlEncode(kv.Key)}={HttpUtility.UrlEncode(kv.Value)}"));
+    }
+
+    private static string? GetString(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var prop)) return null;
+        return prop.ValueKind switch
+        {
+            JsonValueKind.String => prop.GetString(),
+            JsonValueKind.Number => prop.GetRawText(),
+            JsonValueKind.True   => "true",
+            JsonValueKind.False  => "false",
+            _ => null
+        };
+    }
+
+    private static int? GetInt(JsonElement element, string propertyName)
+    {
+        var raw = GetString(element, propertyName);
+        return int.TryParse(raw, out var v) ? v : null;
+    }
+
+    private static void Log(string msg)
+    {
+        System.Diagnostics.Debug.WriteLine($"[Stalker] {msg}");
+        try
+        {
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var logPath = Path.Combine(localAppData, "Noctra", "logs", "startup.log");
+            var directory = Path.GetDirectoryName(logPath);
+            if (directory != null && !Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+            var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [StalkerService] {msg}{Environment.NewLine}";
+            File.AppendAllText(logPath, line, System.Text.Encoding.UTF8);
+        }
+        catch { /* Loglama hatası ana akışı bozmamalı */ }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  İÇ SINIFLAR
+    // ═══════════════════════════════════════════════════════════
 
     private sealed class StalkerListItem
     {
-        public string? Name { get; set; }
-        public string? Cmd { get; set; }
-        public string? Logo { get; set; }
-        public string? TvGenreId { get; set; }
+        public string? Id           { get; set; }
+        public string? Name         { get; set; }
+        public string? Cmd          { get; set; }
+        public string? Logo         { get; set; }
+        public string? TvGenreId    { get; set; }
         public string? CategoryName { get; set; }
     }
+
     private readonly record struct CachedTokenState(string Token, DateTimeOffset ExpiresAt);
+    private readonly record struct CachedEndpointState(string Endpoint, DateTimeOffset ExpiresAt);
 }

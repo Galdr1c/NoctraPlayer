@@ -314,6 +314,115 @@ public partial class PlaylistService : IPlaylistService
         }
     }
 
+    /// <summary>
+    /// Stalker aşamalı yükleme için boş playlist oluşturur.
+    /// Kanallar sonradan AppendChannelsAsync ile eklenir.
+    /// </summary>
+    public async Task<Playlist> CreateEmptyPlaylistAsync(
+        string name, string sourceUrl, int? profileId = null)
+    {
+        using var context = await _contextFactory.CreateDbContextAsync();
+
+        // Var olan aktif playlist'i kontrol et
+        var existing = await context.Playlists
+            .FirstOrDefaultAsync(p =>
+                p.Url == sourceUrl &&
+                p.IsActive &&
+                p.ProfileId == profileId);
+
+        if (existing != null)
+            return existing;
+
+        var playlist = new Playlist
+        {
+            Name         = name,
+            Url          = sourceUrl,
+            ProfileId    = profileId,
+            IsActive     = true,
+            ChannelCount = 0,
+            CreatedAt    = DateTime.UtcNow,
+            LastUpdated  = DateTime.UtcNow
+        };
+
+        context.Playlists.Add(playlist);
+        await context.SaveChangesAsync();
+        return playlist;
+    }
+
+    /// <summary>
+    /// Var olan bir playlist'e yeni kanallar ekler.
+    /// Aşamalı yükleme sırasında her kategori bittiğinde çağrılır.
+    /// </summary>
+    public async Task AppendChannelsAsync(
+        int playlistId, IReadOnlyCollection<Channel> channels)
+    {
+        if (channels.Count == 0) return;
+
+        using var context = await _contextFactory.CreateDbContextAsync();
+
+        foreach (var channel in channels)
+            channel.PlaylistId = playlistId;
+
+        // Mevcut FastSqliteBulkInsertAsync metodunu kullan
+        await FastSqliteBulkInsertAsync(context, channels);
+
+        // Kanal sayısını güncelle
+        await context.Playlists
+            .Where(p => p.Id == playlistId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(p => p.ChannelCount,
+                    p => context.Channels.Count(c => c.PlaylistId == p.Id))
+                .SetProperty(p => p.LastUpdated, DateTime.UtcNow));
+    }
+
+    /// <summary>
+    /// Geçici (Dummy) kanalları siler ve yerine gerçek kanalları ekler.
+    /// Lazy loading mekanizmasında anlık kategori gösterimi için kullanılır.
+    /// Idempotent (tekrar edilebilir) olması için gruba ait mevcut tüm kanalları silip yenilerini yazar.
+    /// </summary>
+    public async Task ReplaceDummyWithRealChannelsAsync(
+        int playlistId, string groupTitle, IReadOnlyCollection<Channel> realChannels)
+    {
+        using var context = await _contextFactory.CreateDbContextAsync();
+
+        // Çift (duplicate) kayıt riskini SIFIRLAMAK için:
+        // O kategoriye ait daha önceden inmiş geçici veya gerçek tüm kanalları temizle.
+        await context.Channels
+            .Where(c => c.PlaylistId == playlistId && c.GroupTitle == groupTitle)
+            .ExecuteDeleteAsync();
+
+        // Eğer eklenecek gerçek kanal varsa ekle
+        if (realChannels.Count > 0)
+        {
+            foreach (var channel in realChannels)
+                channel.PlaylistId = playlistId;
+
+            await FastSqliteBulkInsertAsync(context, realChannels);
+        }
+
+        // Kanal sayısını güncelle
+        await context.Playlists
+            .Where(p => p.Id == playlistId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(p => p.ChannelCount,
+                    p => context.Channels.Count(c => c.PlaylistId == p.Id))
+                .SetProperty(p => p.LastUpdated, DateTime.UtcNow));
+    }
+
+    /// <summary>
+    /// Stalker aşamalı yüklemesinde henüz indirilmemiş (geçici kanalı bulunan) kategorileri döndürür.
+    /// </summary>
+    public async Task<List<string>> GetPendingDummyGroupsAsync(int playlistId)
+    {
+        using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Channels
+            .AsNoTracking()
+            .Where(c => c.PlaylistId == playlistId && c.StreamUrl.StartsWith("stalker-dummy://") && c.GroupTitle != null)
+            .Select(c => c.GroupTitle!)
+            .Distinct()
+            .ToListAsync();
+    }
+
     public async Task<Playlist> AddFromFileAsync(string name, string filePath, int? profileId = null)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
