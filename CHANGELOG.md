@@ -5,11 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Akıllı Arka Plan Yenileme ve UI Bloklama Koruması** (2026-02-25 23:45):
+    - **Non-Blocking Manuel Yenileme**: "Kanal Listesini Şimdi Yenile" butonu artık tüm platformlarda (Stalker, Xtream, M3U) ana arayüzü kilitlemeden arka planda çalışır. Kullanıcı yenileme sırasında uygulamayı özgürce kullanabilir.
+    - **Tam Progresif Senkronizasyon**: Yenileme işlemi sırasında sadece eksikler değil, sunucudaki tüm içerik haritası (yeni eklenen/silinen kanallar) taranarak veritabanı en güncel hale getirilir.
+    - **Yenileme-Devam Uyumu**: El ile başlatılan bir yenileme işlemi sırasında uygulama kapatılırsa, sistem bir sonraki açılışta bu durumu "yarım kalmış görev" olarak algılar ve Smart Resume motoruyla otomatik tamamlar.
+
+- **Evrensel Performans Güncellemesi: Xtream ve M3U Aşamalı Yükleme** (2026-02-25 23:15):
+    - **Xtream Aşamalı Yükleme (Progressive Loading)**: Stalker'daki hız devrimi Xtream Codes altyapısına da taşındı. Artık Xtream girişlerinde önce kategoriler çekilerek UI anında açılır, içerikler arka planda paralel olarak (Live/VOD/Series) yüklenmeye devam eder.
+    - **M3U Arka Plan Yükleme (Non-blocking)**: Büyük M3U dosyalarının indirilmesi ve işlenmesi artık ana arayüzü bloklamıyor. Kullanıcı URL'i girdiği an ana ekrana geçer ve yükleme süreci sessizce arka planda tamamlanır.
+    - **Evrensel Akıllı Devam Etme (Universal Resume)**: Uygulama kapatılıp açıldığında sadece Stalker değil, Xtream listeleri de kaldığı eksik kategorileri tespit eder ve arka planda indirmeyi sürdürür.
+    - **UI Akıcılık Motoru (Throttled UI Update)**: Arka planda yüksek hızda veri inerken arayüzün titremesini önlemek için "Throttled" yükleme motoru devreye alındı. Veriler toplu halde ve akıcı bir şekilde ekrana yansıtılır.
+
 - **Akıllı Devam Etme (Smart Resume) ve Sıfır Kopya Garantisi** (2026-02-25 22:30):
     - **Kaldığı Yerden Devam (Resume)**: Uygulama kapatılıp açıldığında Stalker portallarının baştan inmesi veya yarım kalması engellendi. Uygulama açılışta `GetPendingDummyGroupsAsync` veritabanı yordamıyla henüz inmemiş kategorileri tespit eder ve arka planda sadece eksik kısımları indirmeye devam eder.
     - **Idempotent Kanal Ekleme**: İndirme işlemi sırasında internetin kopması veya arayüzün yenilenmesi durumunda kanalların "çift" (duplicate) kaydedilmesi riski %100 oranında çözüldü. Her kategori için veritabanına veri yazılmadan önce o gruba ait tüm kalıntılar tek bir işlem bloğunda silinip yerine yepyeni ve taze veri basılıyor (`ReplaceDummyWithRealChannelsAsync`).
     - **Anlık Dizi Gruplaması (Incremental Aggregation)**: Dizi kategorileri inmeye başladığı andan itibaren beklemeden anında işlenerek `Series` tablosuna aktarılır. Bu sayede indirme bitmeden dizi sekmesine giren kullanıcılar anlık olarak dizileri görebilir (Daha önce tüm listenin inmesi bekleniyordu).
     - **Stalker Dizileri Çekmeme Sorunu Çözüldü**: Stalker API'si diziler için doğrudan bir oynatma linki (`cmd`) döndürmez. Eski sistem, `cmd` parametresi boş gelen bu dizileri "hatalı" sanıp siliyordu. Artık diziler özel bir sanal kimlikle (`stalker-series://`) sisteme kaydediliyor ve kayıpsız olarak Dizi sekmesine aktarılıyor.
+    - **Hayalet Dizi (Ghost Series) ve UI Optimizasyonu**: Tembel yükleme sırasında `Series` tablosunda oluşabilecek mükerrer dizi kayıtları (klonlama) temizlik mantığıyla engellendi. Arka planda kanallar inerken UI'ın titremesini engelleyen "Debounce/Throttled" yükleme motoru devreye alındı. Dizilere tıklandığında oluşabilecek hatalar için güvenli oynatma kontrolü eklendi.
 
 - **Stalker Portal Tembel Yükleme (Lazy Loading) ve Anlık Arayüz (Instant UI)** (2026-02-25 21:45):
     - **Anında Arayüz (Instant UI)**: Stalker portallarının yüzbinlerce kanalı tek tek çekip kullanıcıyı bekletmesi sorunu kökten çözüldü. Sistem açılışında yarım saniye içinde yalnızca kategoriler çekilir ve kullanıcıya anında (dummy kanallar ile) tüm menüler gösterilir.

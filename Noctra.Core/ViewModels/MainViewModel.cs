@@ -381,61 +381,113 @@ public partial class MainViewModel : ObservableObject
                                 _ = CheckPlaylistUrlHealthAsync(playlistUrl);
                             }
             
-                            if (profile.ProviderAccount.Type == ProfileType.StalkerPortal)
-                            {
-                                _ = ResumeStalkerProgressiveLoadingAsync(profile, existingPlaylists[0]);
-                            }
-                        }            else
-            {
-                // No cache - download and parse M3U
-                _logger?.LogDebug($"[MainViewModel] No cache found, downloading playlist for profile {profile.Id}");
-                
-                switch (profile.ProviderAccount.Type)
-                {
-                    case ProfileType.M3U:
-                    {
-                        var m3uUrl = profile.ProviderAccount.Url;
-                        _ = CheckM3UExpirationAsync(profile.ProviderAccount);
-                        StatusMessage = "Kanal listeniz güncelleniyor...";
-                        await _playlistService.AddFromUrlAsync(profile.Name, m3uUrl, profile.Id);
-                        await LoadPlaylistsAsync();
-                        break;
-                    }
-                    case ProfileType.XtreamCodes:
-                    {
-                        StatusMessage = "Sunucuyla bağlantı kuruluyor...";
-                        var baseUrl = profile.ProviderAccount.Url.TrimEnd('/');
-                        if (!baseUrl.StartsWith("http")) baseUrl = "http://" + baseUrl;
- 
-                        _ = CheckXtreamExpirationAsync(profile.ProviderAccount);
-                        var username = profile.ProviderAccount.Username ?? string.Empty;
-                        var password = _securityService.Decrypt(profile.ProviderAccount.Password) ?? string.Empty;
- 
-                        try
-                        {
-                            StatusMessage = "Kategoriler ve kanallar düzenleniyor...";
-                            var xtreamChannels = await _xtreamCodesService.GetChannelsAsync(
-                                baseUrl,
-                                username,
-                                password,
-                                includeSeriesEpisodes: true);
- 
-                            var sourceUrl = $"{baseUrl}/get.php?username={Uri.EscapeDataString(username)}&password={Uri.EscapeDataString(password)}&type=m3u_plus&output=ts";
-                            await _playlistService.AddFromChannelsAsync(profile.Name, sourceUrl, xtreamChannels, profile.Id);
-                            await LoadPlaylistsAsync();
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger?.LogDebug($"[MainViewModel] Xtream API fallback to M3U: {ex.Message}");
-                            var decryptedPassword = _securityService.Decrypt(profile.ProviderAccount.Password) ?? string.Empty;
-                            var fallbackM3uUrl = $"{baseUrl}/get.php?username={Uri.EscapeDataString(username)}&password={Uri.EscapeDataString(decryptedPassword)}&type=m3u_plus&output=ts";
-                            StatusMessage = "Kanal listeniz güncelleniyor (Yedek yöntem)...";
-                            await _playlistService.AddFromUrlAsync(profile.Name, fallbackM3uUrl, profile.Id);
-                            await LoadPlaylistsAsync();
-                        }
- 
-                        break;
-                    }
+                                            if (profile.ProviderAccount.Type == ProfileType.StalkerPortal)
+                                            {
+                                                _ = ResumeStalkerProgressiveLoadingAsync(profile, existingPlaylists[0]);
+                                            }
+                                            else if (profile.ProviderAccount.Type == ProfileType.XtreamCodes)
+                                            {
+                                                _ = ResumeXtreamProgressiveLoadingAsync(profile, existingPlaylists[0]);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            // No cache - download and parse M3U
+                                            _logger?.LogDebug($"[MainViewModel] No cache found, downloading playlist for profile {profile.Id}");
+                                            
+                                            switch (profile.ProviderAccount.Type)
+                                            {
+                                                case ProfileType.M3U:
+                                                {
+                                                    var m3uUrl = profile.ProviderAccount.Url;
+                                                    _ = CheckM3UExpirationAsync(profile.ProviderAccount);
+                                                    StatusMessage = "Kanal listeniz arka planda yükleniyor...";
+                                                    
+                                                    _ = Task.Run(async () =>
+                                                    {
+                                                        try
+                                                        {
+                                                            await _playlistService.AddFromUrlAsync(profile.Name, m3uUrl, profile.Id);
+                                                            _dispatcherService.BeginInvoke(async () =>
+                                                            {
+                                                                await LoadPlaylistsAsync();
+                                                                StatusMessage = "M3U Listesi Hazır ✓";
+                                                            });
+                                                        }
+                                                        catch (Exception ex)
+                                                        {
+                                                            _dispatcherService.BeginInvoke(() => StatusMessage = UserFriendlyErrorMessage.WithPrefix("M3U yükleme hatası", ex));
+                                                        }
+                                                    });
+                                                    break;
+                                                }
+                                                case ProfileType.XtreamCodes:
+                                                {
+                                                    StatusMessage = "Sunucuyla bağlantı kuruluyor...";
+                                                    var baseUrl = profile.ProviderAccount.Url.TrimEnd('/');
+                                                    if (!baseUrl.StartsWith("http")) baseUrl = "http://" + baseUrl;
+                             
+                                                    _ = CheckXtreamExpirationAsync(profile.ProviderAccount);
+                                                    var username = profile.ProviderAccount.Username ?? string.Empty;
+                                                    var password = _securityService.Decrypt(profile.ProviderAccount.Password) ?? string.Empty;
+                             
+                                                    // ── Adım 1: Boş playlist oluştur — UI hemen açılabilir ──────────
+                                                    var sourceUrl = $"{baseUrl}#{username}";
+                                                    var playlist = await _playlistService.CreateEmptyPlaylistAsync(
+                                                        profile.Name, sourceUrl, profile.Id);
+                                                    await LoadPlaylistsAsync();
+                            
+                                                    _ = Task.Run(async () =>
+                                                    {
+                                                        try
+                                                        {
+                                                                                            await _xtreamCodesService.GetChannelsProgressiveAsync(
+                                                                                                baseUrl, username, password,
+                                                                                                includeVod: true,
+                                                                                                onCategoriesDiscovered: async (categories, prioritizeAction) =>
+                                                                                                {
+                                                                                                    // Arayüzün anında dolması için kategori isimleriyle "sahte" kanallar ekle
+                                                                                                    var dummyChannels = categories.Select(c => new Channel
+                                                                                                    {
+                                                                                                        Name = "İçerik yükleniyor...",
+                                                                                                        StreamUrl = $"xtream-dummy://{c.Id}",
+                                                                                                        GroupTitle = c.Name,
+                                                                                                        Type = c.Type == "live" ? ChannelType.Live : (c.Type == "series" ? ChannelType.Series : ChannelType.VOD)
+                                                                                                    }).ToList();
+                                                            
+                                                                                                    await _playlistService.AppendChannelsAsync(playlist.Id, dummyChannels);
+                                                                                                    _dispatcherService.BeginInvoke(() => 
+                                                                                                    {
+                                                                                                        if (SelectedPlaylist?.Id == playlist.Id) _ = LoadChannelsAsync(playlist.Id);
+                                                                                                    });
+                                                                                                    return categories;
+                                                                                                },
+                                                                                                onCategoryLoaded: async (channels, groupName) =>
+                                                                                                {
+                                                                                                    await _playlistService.ReplaceDummyWithRealChannelsAsync(playlist.Id, groupName, channels);
+                                                                                                    
+                                                                                                    if (channels.Any(c => c.Type == ChannelType.Series))
+                                                                                                    {
+                                                                                                        await _mediaService.AggregateContentAsync(playlist.Id);
+                                                                                                        _mediaService.RaiseAggregationCompleted(playlist.Id);
+                                                                                                    }
+                                                            
+                                                                                                    if (SelectedPlaylist?.Id == playlist.Id && SelectedGroup == groupName)
+                                                                                                    {
+                                                                                                        _ = ThrottledLoadChannelsAsync(playlist.Id);
+                                                                                                    }
+                                                                                                },
+                                                                                                cancellationToken: CancellationToken.None);                            
+                                                            _dispatcherService.BeginInvoke(() => StatusMessage = "Xtream içerikleri yüklendi ✓");
+                                                        }
+                                                        catch (Exception ex)
+                                                        {
+                                                            _logger?.LogDebug($"[Xtream] Error: {ex}");
+                                                            // Fallback or Error message
+                                                        }
+                                                    });
+                                                    break;
+                                                }
                     case ProfileType.StalkerPortal:
                     {
                         StatusMessage = "Stalker Portal kategorileri yükleniyor...";
@@ -518,13 +570,10 @@ public partial class MainViewModel : ObservableObject
                                         }
 
                                         // Eğer ekranda bu kategori açıksa anlık göster, değilse sol menü zaten yüklü
-                                        _dispatcherService.BeginInvoke(() =>
+                                        if (SelectedPlaylist?.Id == playlist.Id && SelectedGroup == category.Name)
                                         {
-                                            if (SelectedPlaylist?.Id == playlist.Id && SelectedGroup == category.Name)
-                                            {
-                                                _ = LoadChannelsAsync(playlist.Id);
-                                            }
-                                        });
+                                            _ = ThrottledLoadChannelsAsync(playlist.Id);
+                                        }
                                     },
                                     progress: progress,
                                     cancellationToken: CancellationToken.None);
@@ -661,19 +710,74 @@ public partial class MainViewModel : ObservableObject
         };
     }
 
-    private async Task ResumeStalkerProgressiveLoadingAsync(Profile profile, Playlist playlist)
+    private async Task ResumeXtreamProgressiveLoadingAsync(Profile profile, Playlist playlist, bool isFullRefresh = false)
     {
         if (profile.ProviderAccount == null) return;
 
         try
         {
-            var pendingGroups = await _playlistService.GetPendingDummyGroupsAsync(playlist.Id);
-            if (pendingGroups.Count == 0)
+            List<string> pendingGroups = new();
+            if (!isFullRefresh)
             {
-                return; // Everything is loaded!
+                pendingGroups = await _playlistService.GetPendingDummyGroupsAsync(playlist.Id);
+                if (pendingGroups.Count == 0) return;
             }
 
-            _logger?.LogDebug($"[Stalker] Resuming background load for {pendingGroups.Count} pending categories.");
+            var baseUrl = profile.ProviderAccount.Url.TrimEnd('/');
+            if (!baseUrl.StartsWith("http")) baseUrl = "http://" + baseUrl;
+            var username = profile.ProviderAccount.Username ?? string.Empty;
+            var password = _securityService.Decrypt(profile.ProviderAccount.Password) ?? string.Empty;
+
+            await _xtreamCodesService.GetChannelsProgressiveAsync(
+                baseUrl, username, password,
+                includeVod: true,
+                onCategoriesDiscovered: (categories, _) =>
+                {
+                    if (isFullRefresh) return Task.FromResult(categories);
+
+                    var toLoad = categories.Where(c => pendingGroups.Contains(c.Name, StringComparer.OrdinalIgnoreCase)).ToList();
+                    return Task.FromResult(toLoad);
+                },
+                onCategoryLoaded: async (channels, groupName) =>
+                {
+                    await _playlistService.ReplaceDummyWithRealChannelsAsync(playlist.Id, groupName, channels);
+                    
+                    if (channels.Any(c => c.Type == ChannelType.Series))
+                    {
+                        await _mediaService.AggregateContentAsync(playlist.Id);
+                        _mediaService.RaiseAggregationCompleted(playlist.Id);
+                    }
+
+                    if (SelectedPlaylist?.Id == playlist.Id && SelectedGroup == groupName)
+                    {
+                        _ = ThrottledLoadChannelsAsync(playlist.Id);
+                    }
+                },
+                cancellationToken: CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug($"[Xtream] Resume error: {ex}");
+        }
+    }
+
+    private async Task ResumeStalkerProgressiveLoadingAsync(Profile profile, Playlist playlist, bool isFullRefresh = false)
+    {
+        if (profile.ProviderAccount == null) return;
+
+        try
+        {
+            List<string> pendingGroups = new();
+            if (!isFullRefresh)
+            {
+                pendingGroups = await _playlistService.GetPendingDummyGroupsAsync(playlist.Id);
+                if (pendingGroups.Count == 0)
+                {
+                    return; // Everything is loaded!
+                }
+            }
+
+            _logger?.LogDebug($"[Stalker] {(isFullRefresh ? "Full Refresh" : "Resume background load")} for categories.");
             var portalUrl = profile.ProviderAccount.Url;
             var macAddress = profile.ProviderAccount.Username ?? string.Empty;
 
@@ -692,6 +796,8 @@ public partial class MainViewModel : ObservableObject
                 onCategoriesDiscovered: (categories, prioritizeAction) =>
                 {
                     _prioritizeStalkerCategoryAction = prioritizeAction;
+
+                    if (isFullRefresh) return Task.FromResult(categories);
 
                     // Yalnızca pendingCategories içinde olanları indirilecek listeye filtrele
                     var categoriesToDownload = categories
@@ -720,25 +826,22 @@ public partial class MainViewModel : ObservableObject
                         });
                     }
 
-                    _dispatcherService.BeginInvoke(() =>
+                    if (SelectedPlaylist?.Id == playlist.Id && SelectedGroup == category.Name)
                     {
-                        if (SelectedPlaylist?.Id == playlist.Id && SelectedGroup == category.Name)
-                        {
-                            _ = LoadChannelsAsync(playlist.Id);
-                        }
-                    });
+                        _ = ThrottledLoadChannelsAsync(playlist.Id);
+                    }
                 },
                 progress: progress,
                 cancellationToken: CancellationToken.None);
 
             _dispatcherService.BeginInvoke(() =>
             {
-                StatusMessage = $"Tüm içerikler tamamlandı ✓";
+                StatusMessage = $"{(isFullRefresh ? "Yenileme tamamlandı" : "Tüm içerikler tamamlandı")} ✓";
             });
         }
         catch (Exception ex)
         {
-            _logger?.LogDebug($"[Stalker] Failed to resume load: {ex}");
+            _logger?.LogDebug($"[Stalker] Failed to {(isFullRefresh ? "refresh" : "resume")} load: {ex}");
         }
     }
 
@@ -1236,7 +1339,39 @@ public partial class MainViewModel : ObservableObject
     private readonly Dictionary<int, DateTime> _playlistNoChangeUntilUtc = new();
     private bool _suppressFilterRefresh;
     private Action<string>? _prioritizeStalkerCategoryAction;
+    private int _isThrottledLoadPending = 0;
     private bool _seriesDetailDownloadedOnlyMode;
+
+    private async Task ThrottledLoadChannelsAsync(int playlistId)
+    {
+        // Eğer zaten bir güncelleme sıradaysa (pending), yenisini ekleme
+        if (Interlocked.CompareExchange(ref _isThrottledLoadPending, 1, 0) == 1)
+        {
+            return;
+        }
+
+        try
+        {
+            // 500ms bekle (Aynı anda biten diğer kategorilerin de veritabanına yazılmasına izin ver)
+            await Task.Delay(500);
+            
+            _dispatcherService.BeginInvoke(async () =>
+            {
+                try
+                {
+                    await LoadChannelsAsync(playlistId);
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _isThrottledLoadPending, 0);
+                }
+            });
+        }
+        catch
+        {
+            Interlocked.Exchange(ref _isThrottledLoadPending, 0);
+        }
+    }
 
     public bool IsDownloadedSeriesDetailMode => _seriesDetailDownloadedOnlyMode;
 
@@ -1987,14 +2122,36 @@ public partial class MainViewModel : ObservableObject
                 StatusMessage = "Kanal listesi güncelleniyor...";
             }
 
-            var beforeCount = await _playlistService.GetChannelCountAsync(SelectedPlaylist.Id);
-            await _playlistService.RefreshAsync(SelectedPlaylist.Id);
-            var afterCount = await _playlistService.GetChannelCountAsync(SelectedPlaylist.Id);
+            var playlistId = SelectedPlaylist.Id;
+            var profile = CurrentProfile;
+
+            if (profile != null && profile.ProviderAccount != null)
+            {
+                if (profile.ProviderAccount.Type == ProfileType.StalkerPortal)
+                {
+                    // Stalker için tam yenileme başlat
+                    _ = Task.Run(() => ResumeStalkerProgressiveLoadingAsync(profile, SelectedPlaylist, isFullRefresh: true));
+                    if (!isBackground) StatusMessage = "Stalker listesi arka planda yenileniyor...";
+                    return;
+                }
+                else if (profile.ProviderAccount.Type == ProfileType.XtreamCodes)
+                {
+                    // Xtream için tam yenileme başlat
+                    _ = Task.Run(() => ResumeXtreamProgressiveLoadingAsync(profile, SelectedPlaylist, isFullRefresh: true));
+                    if (!isBackground) StatusMessage = "Xtream listesi arka planda yenileniyor...";
+                    return;
+                }
+            }
+
+            // Varsayılan M3U mantığı
+            var beforeCount = await _playlistService.GetChannelCountAsync(playlistId);
+            await _playlistService.RefreshAsync(playlistId);
+            var afterCount = await _playlistService.GetChannelCountAsync(playlistId);
             var addedCount = Math.Max(0, afterCount - beforeCount);
 
             if (addedCount > 0)
             {
-                await LoadChannelsAsync(SelectedPlaylist.Id);
+                await LoadChannelsAsync(playlistId);
             }
 
             if (!isBackground)
@@ -2007,11 +2164,11 @@ public partial class MainViewModel : ObservableObject
 
                 if (addedCount == 0)
                 {
-                    _playlistNoChangeUntilUtc[SelectedPlaylist.Id] = DateTime.UtcNow.AddMinutes(2);
+                    _playlistNoChangeUntilUtc[playlistId] = DateTime.UtcNow.AddMinutes(2);
                 }
                 else
                 {
-                    _playlistNoChangeUntilUtc.Remove(SelectedPlaylist.Id);
+                    _playlistNoChangeUntilUtc.Remove(playlistId);
                 }
             }
         }

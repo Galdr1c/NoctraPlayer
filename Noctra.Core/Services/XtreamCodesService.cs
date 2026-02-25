@@ -36,6 +36,123 @@ public class XtreamCodesService : IXtreamCodesService
         return string.Equals(payload?.UserInfo?.Status, "Active", StringComparison.OrdinalIgnoreCase);
     }
 
+    public async Task<List<XtreamCategory>> GetCategoriesAsync(
+        string baseUrl, string username, string password, CancellationToken cancellationToken = default)
+    {
+        var normalizedBaseUrl = NormalizeBaseUrl(baseUrl);
+        var authenticated = await EnsureAuthenticatedAsync(normalizedBaseUrl, username, password, cancellationToken);
+        if (!authenticated) return [];
+
+        var liveCategoriesTask = GetJsonAsync<List<XtreamCategoryDto>>(
+            BuildApiUrl(normalizedBaseUrl, username, password, "get_live_categories"), cancellationToken);
+        var vodCategoriesTask = GetJsonAsync<List<XtreamCategoryDto>>(
+            BuildApiUrl(normalizedBaseUrl, username, password, "get_vod_categories"), cancellationToken);
+        var seriesCategoriesTask = GetJsonAsync<List<XtreamCategoryDto>>(
+            BuildApiUrl(normalizedBaseUrl, username, password, "get_series_categories"), cancellationToken);
+
+        await Task.WhenAll(liveCategoriesTask, vodCategoriesTask, seriesCategoriesTask);
+
+        var result = new List<XtreamCategory>();
+        
+        if (liveCategoriesTask.Result != null)
+            result.AddRange(liveCategoriesTask.Result.Select(c => new XtreamCategory { Id = c.CategoryId ?? "", Name = c.CategoryName ?? "Live", Type = "live" }));
+        
+        if (vodCategoriesTask.Result != null)
+            result.AddRange(vodCategoriesTask.Result.Select(c => new XtreamCategory { Id = c.CategoryId ?? "", Name = c.CategoryName ?? "vod", Type = "vod" }));
+            
+        if (seriesCategoriesTask.Result != null)
+            result.AddRange(seriesCategoriesTask.Result.Select(c => new XtreamCategory { Id = c.CategoryId ?? "", Name = c.CategoryName ?? "series", Type = "series" }));
+
+        return result;
+    }
+
+    public async Task GetChannelsProgressiveAsync(
+        string baseUrl,
+        string username,
+        string password,
+        bool includeVod,
+        Func<List<XtreamCategory>, Action<string>, Task<List<XtreamCategory>>> onCategoriesDiscovered,
+        Func<List<Channel>, string, Task> onCategoryLoaded,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedBaseUrl = NormalizeBaseUrl(baseUrl);
+        var authenticated = await EnsureAuthenticatedAsync(normalizedBaseUrl, username, password, cancellationToken);
+
+        if (!authenticated)
+        {
+            throw new InvalidOperationException("Xtream kimlik dogrulamasi basarisiz.");
+        }
+
+        // 1. Kategorileri Çek
+        var allCategories = await GetCategoriesAsync(normalizedBaseUrl, username, password, cancellationToken);
+        
+        // Önemli: Discover Callback - UI'ın dolması için
+        // Xtream'de 'prioritize' pek işe yaramaz çünkü JSON'lar blok halinde gelir ama arayüz uyumu için Action<string> geçiyoruz.
+        var categoriesToLoad = await onCategoriesDiscovered(allCategories, (_) => { });
+        if (categoriesToLoad.Count == 0) return;
+
+        // Map'ler
+        var liveCategoryMap = BuildCategoryMapFromXtream(allCategories.Where(c => c.Type == "live"));
+        var vodCategoryMap = BuildCategoryMapFromXtream(allCategories.Where(c => c.Type == "vod"));
+        var seriesCategoryMap = BuildCategoryMapFromXtream(allCategories.Where(c => c.Type == "series"));
+
+        // 2. İçerikleri Paralel Çek (3 Büyük Görev)
+        var liveTask = Task.Run(async () =>
+        {
+            var streams = await GetJsonAsync<List<XtreamLiveStreamDto>>(
+                BuildApiUrl(normalizedBaseUrl, username, password, "get_live_streams"), cancellationToken);
+            
+            var channels = MapLiveChannels(streams, normalizedBaseUrl, username, password, liveCategoryMap);
+            
+            // Kategorilere göre gruplayıp bildir
+            foreach (var group in channels.GroupBy(c => c.GroupTitle ?? "Live"))
+            {
+                await onCategoryLoaded(group.ToList(), group.Key);
+            }
+        }, cancellationToken);
+
+        Task? vodTask = null;
+        Task? seriesTask = null;
+
+        if (includeVod)
+        {
+            vodTask = Task.Run(async () =>
+            {
+                var streams = await GetJsonAsync<List<XtreamVodStreamDto>>(
+                    BuildApiUrl(normalizedBaseUrl, username, password, "get_vod_streams"), cancellationToken);
+                
+                var channels = MapVodChannels(streams, normalizedBaseUrl, username, password, vodCategoryMap);
+                
+                foreach (var group in channels.GroupBy(c => c.GroupTitle ?? "VOD"))
+                {
+                    await onCategoryLoaded(group.ToList(), group.Key);
+                }
+            }, cancellationToken);
+
+            seriesTask = Task.Run(async () =>
+            {
+                var seriesDtos = await GetJsonAsync<List<XtreamSeriesDto>>(
+                    BuildApiUrl(normalizedBaseUrl, username, password, "get_series"), cancellationToken);
+                
+                if (seriesDtos == null) return;
+
+                var seriesChannels = MapSeriesAsEntries(seriesDtos, seriesCategoryMap);
+                
+                foreach (var group in seriesChannels.GroupBy(c => c.GroupTitle ?? "Series"))
+                {
+                    await onCategoryLoaded(group.ToList(), group.Key);
+                }
+            }, cancellationToken);
+        }
+
+        await Task.WhenAll(new[] { liveTask, vodTask ?? Task.CompletedTask, seriesTask ?? Task.CompletedTask });
+    }
+
+    private static IReadOnlyDictionary<string, string> BuildCategoryMapFromXtream(IEnumerable<XtreamCategory> categories)
+    {
+        return categories.ToDictionary(c => c.Id, c => c.Name, StringComparer.OrdinalIgnoreCase);
+    }
+
     public async Task<List<Channel>> GetChannelsAsync(
         string baseUrl,
         string username,

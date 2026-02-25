@@ -615,6 +615,14 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     public async Task PlayChannelAsync(Channel channel)
     {
         LogDebug($"PlayChannelAsync: Id={channel.Id}, Name={channel.Name}, Type={channel.Type}, StreamUrl={channel.StreamUrl}");
+
+        // Stalker Dizileri için özel kontrol: Stalker dizilerinin ana linki (cmd) yoktur, oynatılamazlar.
+        // Kullanıcıya bölümlere gitmesi gerektiğini belirten bir hata fırlatıyoruz.
+        if (channel.StreamUrl != null && channel.StreamUrl.StartsWith("stalker-series://"))
+        {
+            throw new InvalidOperationException("Bu bir dizi klasörüdür. Lütfen bölümleri görmek için dizinin detayına gidin.");
+        }
+
         var requestVersion = Interlocked.Increment(ref _playRequestVersion);
 
         // Force previous media to stop so stale position events do not leak into the next item.
