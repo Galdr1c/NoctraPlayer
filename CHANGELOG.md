@@ -13,14 +13,19 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - **Gelişmiş Codec Ayarları**: Verim artışı için `avcodec-fast` ve CPU-GPU kopyalama yükünü sıfıra indiren direct rendering (`avcodec-dr`) özellikleri aktif edildi.
     - **Hata Toleransı**: HTTP Range Request desteklemeyen IPTV sunucularında MKV dosyalarının açılmama sorunu için yönlendirme çerezleri (`http-forward-cookies`) ve özel ağ önbellekleme mantığı iyileştirildi.
     
-- **Stalker Portal Desteği ve İyileştirmeler** (2026-02-25 14:35):    
-    - **İlk Uygulama (Core)**: Stalker Portal API istemcisi sıfırdan yazıldı. Handshake ve token tabanlı kimlik doğrulama, canlı yayın (Live TV) ve VOD içeriklerinin sayfalı (pagination) yüklenmesi sağlandı.
-    - **User-Agent Düzeltmesi**: Bazı IPTV sağlayıcılarında "Veri okunamadı" hatasına yol açan `FormatException` hatası, User-Agent header ekleme mantığı (`TryAddWithoutValidation`) iyileştirilerek giderildi.
-    - **Performans Optimizasyonu (Paralel Yükleme)**: Kanal listesi çekme süreci paralel hale getirildi. 180+ sayfalık kanal listeleri artık sırayla değil, eşzamanlı (8 kanal/sn) çekilerek profil yükleme süresi dakikalardan saniyelere (örn: 3dk -> 20sn) düşürüldü.
-    - **Akıllı Endpoint Çözümleme**: `/c/` gibi genel URL'lerle biten Stalker Portallarında API endpoint'inin (load.php) yanlış tespit edilmesi sorunu, daha kapsamlı bir otomatik tarama (probing) sistemiyle çözüldü.
-    - **Cloudflare ve Güvenlik Uyumluluğu**: Kimlik doğrulama akışı, el sıkışma (handshake) token'larını yeniden kullanacak şekilde optimize edildi. Bu sayede Cloudflare 520 hataları ve gereksiz bot koruma tetiklemeleri önlendi.
-    - **Header Standardizasyonu**: MAG cihaz simülasyonu için gerekli olan header'lar (X-User-Agent, Accept, MAC Cookies) optimize edilerek portal uyumluluğu artırıldı.
-    - **UI İyileştirmesi**: Splash, Profil Yükleme Windows görev çubuğunda görünmemesi sorunu, `ShowInTaskbar` özelliği aktif edilerek düzeltildi.
+- **Stalker Kategori Eşleme ve Hızlı Yükleme (Fast Load) Optimizasyonu** (2026-02-25 18:40):
+    - **Akıllı Kategori Eşleme**: Stalker portallarındaki kategori sorunları (boş kategoriler, 'Live' fallback'leri) giderildi. Hem ID (`genre_id`, `category_id`) hem de doğrudan isim (`genre_name`, `category_name`) tabanlı hibrit eşleme ile M3U/Xtream standartlarında kategori desteği sağlandı.
+    - **Fast Load (Hızlı Başlatma)**: 230.000+ içerikli devasa portallarda uygulamanın donmasını engellemek için akıllı sayfa sınırlaması (50 sayfa/kategori) eklendi. Başlangıç süresi saniyeler seviyesine indirildi.
+    - **Tam Seri (Series) Desteği**: Stalker üzerindeki "Series" tipi içeriklerin çekilmesi, kategorize edilmesi ve VOD içeriklerinden ayrı gösterilmesi sağlandı.
+    - **Hata Toleranslı ID Çözümleme**: Farklı portal yazılımları arasındaki `tv_genre_id`, `category_id` gibi alan farklılıkları için çoklu kontrol mekanizması eklendi.
+
+- **Stalker Portal Desteği ve V2 Performans Güncellemesi** (2026-02-25 16:15):
+    - **Stalker V2 Mimarisi**: Sıralı (sequential) bağlantı mantığı tamamen paralel bir mimari ile değiştirildi.
+    - **Paralel Endpoint Keşfi**: 7+ farklı API yolu aynı anda taranır. İlk cevap veren yol seçilerek bağlantı süresi 30-40 saniyeden <3 saniye düşürüldü.
+    - **Birleşik El Sıkışma (Handshake)**: Token alma işlemi tarama (probe) aşamasına dahil edildi, gereksiz ağ trafiği silindi.
+    - **Asenkron Profil Başlatma**: `get_profile` çağrısı arka planda çalıştırılarak kanal yükleme sürecini bloklaması engellendi.
+    - **Maksimum Veri Paralelliği**: Canlı yayın (Live), VOD ve kategori listeleri aynı anda çekilerek bekleme süresi minimize edildi.
+    - **User-Agent Düzeltmesi**: Bazı sağlayıcılarda çökmeye yol açan header doğrulama hatası giderildi.
 
 - **Otomatik Güncelleme Sistemi ve Dizi Normalizasyonu** (2026-02-25 14:05):
     - **Otomatik Güncelleme**: Uygulamaya GitHub manifest tabanlı otomatik güncelleme sistemi eklendi (`UpdateService`). Uygulama açılışında arka plan kontrolü ve "Ayarlar > Hakkında" sekmesinde manuel güncelleme butonu aktif edildi.
