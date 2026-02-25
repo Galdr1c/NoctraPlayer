@@ -5,10 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-- **UX ve Performans İyileştirmeleri (Kullanıcı Deneyimi)** (2026-02-25 13:17):
-    - **Dinamik Yükleme Süreleri**: İşletim sistemi açılışında (`SplashWindow`) ve profil yükleme sürecinde (`ProfileLoadingWindow`) premium hissi vermek için eklenen "sahte" zorunlu bekleme süreleri (3.5s ve 8s) iptal edildi. Süreç artık verilerin yüklenmesine bağlı olarak maksimum hızda çalışıp en az 1.5 saniyelik şık bir geçişle tamamlanıyor.
-    - **Hata Mesajları Esnetildi**: Sadece arkaplan yüklenmesinde beklenen 8 saniyelik zorunlu `Task.Delay`, hata mesajlarının da gereksiz yere ekranda 8 saniye asılı kalmasına sebep oluyordu; bu süre 3 saniyeye düşürüldü.
-    - **İnsan Dilinde EPG ve Oynatma Hataları**: C# exception sınıflarından (`InvalidOperationException`, `NullReferenceException`, `FormatException`) türeyen `CS8602` gibi "Kullanıcıya sızmaması gereken" teknik yazılım hata fırlatmaları maskelendi. Sistem artık bu tip durumlarda "Sistemde anlık bir hata oluştu" veya "Veri okunamadı" gibi kısa ve net Türkçe iletiler gösteriyor.
+- **UX, Test ve Teknik Borç İyileştirmeleri** (2026-02-25 13:42):
+    - **Entegrasyon Testleri**: `PlaylistService`, `MediaService` ve `XtreamCodesService` için kapsamlı entegrasyon testleri eklendi. In-memory SQLite (`Shared Cache`) kullanılarak veri tutarlılığı ve kanal-dizi eşleştirme mantığı doğrulandı.
+    - **Hata Düzeltme (Kanal Parmak İzi)**: Playlist yenileme sırasında çocuk profili filtresinin tüm profillere yanlışlıkla uygulanması ve bu sebeple kanalların "duplicate" olarak algılanıp eklenememesi hatası düzeltildi.
+    - **Legacy WPF Temizliği**: Artık kullanılmayan eski WPF projesine ait tüm referanslar ve proje dosyası bağımlılıkları temizlendi; Avalonia geçişi tamamlandı.
+    - **Dinamik Yükleme Süreleri**: İşletim sistemi açılışında (`SplashWindow`) ve profil yükleme sürecinde (`ProfileLoadingWindow`) premium hissi vermek için eklenen sabit bekleme süreleri (3.5s - 8s) kaldırıldı. Süreç artık verilerin yüklenmesine bağlı olarak dinamik çalışıyor (Min 1.5s).
+    - **İnsan Dilinde Hata Mesajları**: C# Exception sınıflarından fırlayan teknik hata kodları maskelendi. Hata görünüm süresi 8 saniyeden 3 saniyeye düşürülerek kullanıcı deneyimi hızlandırıldı.
 
 - **Oynatma Listesi Performans Optimizasyonları (Phase 28)** (2026-02-25 12:40):
     - **SQLite WAL Modu**: Veritabanında Write-Ahead Logging (WAL) etkinleştirilerek eşzamanlı okuma/yazma desteği eklendi, UI kilitlenmeleri kökten önlendi.
@@ -198,6 +200,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - **Dosya**: `EpgService.cs`
 - **Hata Mesajı Standardizasyonu ve Merkezi Kanal Listesi Hata Takibi** (2026-02-22 14:43):
   - **Merkezi Hata Takibi**: Kanal listesi yenileme hataları artık `MainViewModel.ChannelListLastError` property'si üzerinden merkezi olarak takip ediliyor. Ayarlar penceresindeki kırmızı hata kutusu, yenilemenin nereden tetiklendiğinden bağımsız olarak (Ana pencere, sidebar, arka plan yenileme) her zaman doğru çalışıyor.
+  - **Gelistirme:** `PlaylistService` icin in-memory SQLite tabanli entegrasyon testleri eklendi.
+- **Hata Duzeltme:** Playlist yenileme sirasinda cocuk profili filtresinin tum profillere yanlislikla uygulanmasi hatasi giderildi.
+- **Performans:** Dynamic Splash ve Profil yukleme sureleri optimize edildi.
   - **Tutarlı Hata Mesajları**: Profil ekleme ekranındaki bağlantı testi ve kanal listesi yenileme hataları artık aynı `UserFriendlyErrorMessage` sistemini kullanıyor.
   - **Doğru Zaman Aşımı Mesajı**: Timeout hatası mesajı "Ağ zaman aşımına uğradı" yerine "Sunucu zaman aşımına uğradı veya yanıt vermiyor. Bağlantı adresini kontrol edin." olarak güncellendi — sorunun kullanıcının ağından değil sunucudan kaynaklandığı doğru şekilde ifade ediliyor.
   - **Kod Sadeleştirmesi**: `SettingsViewModel.RefreshChannelListNowAsync` içindeki kırılgan string-matching hata algılama kodu kaldırılıp, `MainViewModel`'deki temiz property binding'e geçildi.

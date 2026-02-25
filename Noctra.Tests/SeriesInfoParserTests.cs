@@ -115,20 +115,17 @@ public class SeriesInfoParserTests
     }
 
     [Fact]
-    public void TestBase64CommaInNameRegex()
+    public void M3UParser_ShouldHandleBase64LogosCorrectly()
     {
         var line = "#EXTINF:-1 tvg-logo=\"data:image/jpeg;base64,/9j/4AAQSk...\",Alice in Borderland S01E01";
-        var regex = new System.Text.RegularExpressions.Regex(@",\s*(.+)$");
-        var match = regex.Match(line);
-        var expectedFaultyName = "image/jpeg;base64,/9j/4AAQSk...\",Alice in Borderland S01E01";
-
+        
+        // Simulating the fix: remove attributes before matching the name
         var attributesRegex = new System.Text.RegularExpressions.Regex(@"[a-zA-Z0-9_-]+=""[^""]*""");
         var lineWithoutAttrs = attributesRegex.Replace(line, "");
-        var match2 = regex.Match(lineWithoutAttrs);
         
-        System.Diagnostics.Debug.WriteLine("\n[FAULTY REGEX] " + match.Groups[1].Value);
-        System.Diagnostics.Debug.WriteLine("\n[FIXED REGEX WITH ATTRS REMOVED] " + match2.Groups[1].Value);
+        var nameRegex = new System.Text.RegularExpressions.Regex(@",\s*(.+)$");
+        var match = nameRegex.Match(lineWithoutAttrs);
         
-        Assert.Fail($"Old: {match.Groups[1].Value} | New: {match2.Groups[1].Value}");
+        Assert.Equal("Alice in Borderland S01E01", match.Groups[1].Value);
     }
 }

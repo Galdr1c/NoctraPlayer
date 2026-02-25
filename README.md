@@ -11,7 +11,6 @@ Ana istemci `Avalonia` uzerindedir ve Live / VOD / Series iceriklerini tek arayu
 - Veritabani: `SQLite + EF Core`
 - Oynatici: `LibVLCSharp` (MemoryVideoView ile)
 
-Not: `Noctra/` altindaki WPF proje legacy durumdadir; aktif gelistirme Avalonia tarafindadir.
 
 ## Temel Ozellikler
 
@@ -106,7 +105,6 @@ dotnet test Noctra.Tests/Noctra.Tests.csproj
 Noctra.Avalonia/   # Ana UI (Avalonia)
 Noctra.Core/       # Is mantigi, servisler, modeller, EF Core
 Noctra.Tests/      # xUnit testleri
-Noctra/            # Legacy WPF istemci
 ```
 
 ## Kisa Gelistirme Notu

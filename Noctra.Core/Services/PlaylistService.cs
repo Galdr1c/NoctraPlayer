@@ -509,11 +509,13 @@ public partial class PlaylistService : IPlaylistService
             .Select(c => new { c.Name, c.StreamUrl, c.GroupTitle, c.TvgId, c.TvgName, c.Type })
             .ToListAsync();
 
+        var isChild = playlist.Profile?.IsChild == true;
         var existingFingerprints = new HashSet<string>(
             existingChannelData
                 .Select(c => {
                     var ch = new Channel { Name = c.Name, StreamUrl = c.StreamUrl, GroupTitle = c.GroupTitle, TvgId = c.TvgId, TvgName = c.TvgName, Type = c.Type };
-                    return ApplyChildFilter(new[] { ch }).Any() ? BuildChannelFingerprint(ch) : null;
+                    if (isChild && !ApplyChildFilter(new[] { ch }).Any()) return null;
+                    return BuildChannelFingerprint(ch);
                 })
                 .Where(f => f != null)!,
             StringComparer.OrdinalIgnoreCase);

@@ -110,8 +110,7 @@ public static partial class SeriesInfoParser
         normalized = StripIptvPrefixes(normalized);
         normalized = EpisodeTokenRegex().Replace(normalized, " ");
         
-        // Strip years, languages, and quality tags for a pure series key
-        normalized = YearTokenRegex().Replace(normalized, " ");
+        // Strip languages and quality tags for a pure series key
         normalized = LanguageTokenRegex().Replace(normalized, " ");
         normalized = NoiseTokenRegex().Replace(normalized, " ");
         
