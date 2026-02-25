@@ -9,8 +9,9 @@ namespace Noctra.Services;
 /// </summary>
 public class VideoPlayerService : IVideoPlayerService
 {
-    private const int NetworkCachingMs = 3000;
-    private const int LiveCachingMs = 3000;
+    private const int NetworkCachingMs = 5000;
+    private const int LiveCachingMs = 4000;
+    private const int FileCachingMs = 1500;
 
     private LibVLC? _libVLC;
     private MediaPlayer? _mediaPlayer;
@@ -92,14 +93,26 @@ public class VideoPlayerService : IVideoPlayerService
                 
                 var options = new string[]
                 {
-                    "--avcodec-hw=dxva2",
+                    // dxva2 (eski) → d3d11va (modern, H.265/HEVC destekli)
+                    "--avcodec-hw=d3d11va",
                     "--vout=direct3d11",
+                    
+                    // avcodec-fast: daha az kalite ama takılma yok
+                    "--avcodec-fast",
+                    // Direct rendering — CPU→GPU kopyalama yükünü azaltır
+                    "--avcodec-dr",
+
                     $"--network-caching={NetworkCachingMs}",
                     $"--live-caching={LiveCachingMs}",
-                    "--file-caching=1000",
+                    $"--file-caching={FileCachingMs}",
+                    
+                    // Canlı TV için clock düzeltmesi
+                    "--clock-synchro=0",
+                    "--clock-jitter=500",
+
                     "--rtsp-tcp",
-                    "--drop-late-frames",
-                    "--skip-frames",
+                    // "--drop-late-frames", // Kaldırıldı (MKV için sorunlu)
+                    // "--skip-frames",      // Kaldırıldı
                     "--ts-seek-percent",
                     "--http-reconnect",
                     "--http-user-agent=IPTVSmartersPro",
@@ -296,26 +309,62 @@ public class VideoPlayerService : IVideoPlayerService
 
             if (isNetworkStream)
             {
-                // 🌐 İNTERNET YAYINI (IPTV / VOD) - Agresif ayarlar
+                // 🌐 İNTERNET YAYINI (IPTV / VOD) - Akıllı profiller
                 media = new Media(_libVLC, url, FromType.FromLocation);
                 
                 media.AddOption(":http-user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
                 media.AddOption(":http-reconnect=true");
+
+                var streamProfile = DetectStreamProfile(url);
+                switch (streamProfile)
+                {
+                    case StreamProfile.LiveTs:
+                        media.AddOption($":network-caching={LiveCachingMs}");
+                        media.AddOption(":clock-synchro=0");
+                        media.AddOption(":clock-jitter=500");
+                        media.AddOption(":ts-seek-percent");
+                        media.AddOption(":drop-late-frames");
+                        break;
+
+                    case StreamProfile.VodMkv:
+                        media.AddOption(":network-caching=8000");
+                        media.AddOption(":demux=mkv,avformat");
+                        media.AddOption(":avcodec-hw=d3d11va");
+                        media.AddOption(":no-drop-late-frames");
+                        media.AddOption(":no-skip-frames");
+                        media.AddOption(":http-forward-cookies");
+                        break;
+
+                    case StreamProfile.VodMp4:
+                        media.AddOption($":network-caching={NetworkCachingMs}");
+                        media.AddOption(":demux=mp4,avformat");
+                        break;
+
+                    case StreamProfile.LiveM3u8:
+                        media.AddOption(":network-caching=6000");
+                        media.AddOption(":adaptive-logic=highest");
+                        break;
+
+                    default:
+                        media.AddOption($":network-caching={NetworkCachingMs}");
+                        media.AddOption(":no-drop-late-frames");
+                        media.AddOption(":no-skip-frames");
+                        break;
+                }
             }
             else
             {
-                // 💾 YEREL DOSYA (İndirilen İçerik) - Standart ayarlar
+                // 💾 YEREL DOSYA (İndirilen İçerik)
                 string localPath = url;
-                
-                // Eğer URL "file:///" formatındaysa bunu düz Windows yolu ("C:\...") formatına çevir
                 if (Uri.TryCreate(url, UriKind.Absolute, out var fileUri) && fileUri.IsFile)
                 {
                     localPath = fileUri.LocalPath;
                 }
                 
-                // Yerel dosyalar için FromLocation yerine FromPath kullanmak çok önemlidir
                 media = new Media(_libVLC, localPath, FromType.FromPath);
-                media.AddOption(":file-caching=1500"); // Yerel dosya için ufak bir disk önbelleği
+                media.AddOption($":file-caching={FileCachingMs}");
+                media.AddOption(":no-drop-late-frames");
+                media.AddOption(":no-skip-frames");
             }
 
             if (startSeconds > 0)
@@ -753,6 +802,30 @@ public class VideoPlayerService : IVideoPlayerService
         
         _disposed = true;
         GC.SuppressFinalize(this);
+    }
+
+    private static StreamProfile DetectStreamProfile(string url)
+    {
+        var lower = url.ToLowerInvariant();
+        if (lower.Contains(".m3u8") || lower.Contains("manifest.m3u8")) return StreamProfile.LiveM3u8;
+        if (lower.EndsWith(".mkv") || lower.Contains("/mkv/") || lower.Contains("format=mkv")) return StreamProfile.VodMkv;
+        if (lower.EndsWith(".mp4") || lower.Contains("/mp4/") || lower.Contains("format=mp4")) return StreamProfile.VodMp4;
+        if (lower.EndsWith(".ts") || lower.Contains("/live/") || lower.Contains("stream_type=live")) return StreamProfile.LiveTs;
+        if (lower.Contains("/movie/") || lower.Contains("/series/"))
+        {
+            if (lower.Contains(".mkv")) return StreamProfile.VodMkv;
+            return StreamProfile.VodMp4;
+        }
+        return StreamProfile.LiveTs;
+    }
+
+    private enum StreamProfile
+    {
+        LiveTs,
+        LiveM3u8,
+        VodMkv,
+        VodMp4,
+        Unknown
     }
 }
 

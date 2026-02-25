@@ -5,7 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-- **Stalker Portal Desteği ve İyileştirmeler** (2026-02-25 14:35):
+- **VLC Oynatıcı ve MKV/Canlı TV Performans Optimizasyonu** (2026-02-25 15:55):
+    - **Modern Donanım Hızlandırma**: Windows 11 ve modern GPU'lar için `dxva2` yerine `d3d11va` (Direct3D11 Video Acceleration) API'sine geçildi. H.265/HEVC ve VP9 içeriklerdeki (MKV) takılmalar ve "artifact" sorunları giderildi.
+    - **Akıllı Stream Profilleri**: Yayın URL'sine göre otomatik değişen (MKV VOD, Live TS, HLS, MP4) özel buffer/caching profilleri eklendi.
+    - **MKV Akıcılık Düzeltmesi**: MKV dosyalarında VLC'nin "geç kaldım" diyerek frame atlamasına sebep olan global `--drop-late-frames` ve `--skip-frames` politikaları kaldırıldı. MKV için 8 saniyelik agresif buffer ve özel demuxer (mkv,avformat) ipuçları eklendi.
+    - **Canlı TV Senkronizasyonu**: Yayıncı kaynaklı zaman damgası (jitter) bozukluklarını tolere eden yeni `clock-jitter` (500ms) ve `clock-synchro` (off) ayarlarıyla canlı yayın kopmalarının önüne geçildi.
+    - **Gelişmiş Codec Ayarları**: Verim artışı için `avcodec-fast` ve CPU-GPU kopyalama yükünü sıfıra indiren direct rendering (`avcodec-dr`) özellikleri aktif edildi.
+    - **Hata Toleransı**: HTTP Range Request desteklemeyen IPTV sunucularında MKV dosyalarının açılmama sorunu için yönlendirme çerezleri (`http-forward-cookies`) ve özel ağ önbellekleme mantığı iyileştirildi.
+    
+- **Stalker Portal Desteği ve İyileştirmeler** (2026-02-25 14:35):    
     - **İlk Uygulama (Core)**: Stalker Portal API istemcisi sıfırdan yazıldı. Handshake ve token tabanlı kimlik doğrulama, canlı yayın (Live TV) ve VOD içeriklerinin sayfalı (pagination) yüklenmesi sağlandı.
     - **User-Agent Düzeltmesi**: Bazı IPTV sağlayıcılarında "Veri okunamadı" hatasına yol açan `FormatException` hatası, User-Agent header ekleme mantığı (`TryAddWithoutValidation`) iyileştirilerek giderildi.
     - **Performans Optimizasyonu (Paralel Yükleme)**: Kanal listesi çekme süreci paralel hale getirildi. 180+ sayfalık kanal listeleri artık sırayla değil, eşzamanlı (8 kanal/sn) çekilerek profil yükleme süresi dakikalardan saniyelere (örn: 3dk -> 20sn) düşürüldü.
