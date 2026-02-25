@@ -13,6 +13,23 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - **Kalıcı Ses Kontrolü**: Video oynatıcıda ayarlanan son ses seviyesi artık otomatik olarak kaydediliyor ve uygulama yeniden açıldığında korunuyor.
     - **Gereksiz Ayarların Kaldırılması**: Ayarlar ekranındaki "Varsayılan Ses Seviyesi" (Default Volume) kaydırıcısı, artık ses seviyesi dinamik olarak hatırlandığı için kaldırıldı.
     - **Oynatma Başlatma Mantığı**: Her yeni kanalda ses seviyesinin varsayılana sıfırlanması sorunu giderildi; kullanıcı tercihi korunarak oynatma başlıyor.
+- **Merkezi Parser ve Sezon Klasörü Doğruluğu (Phase 24)** (2026-02-25 11:00):
+    - **Akıllı Önceliklendirme**: İndirme servisi artık merkezi parser'ı kullanarak "1. Bölüm - S16" gibi başlıklarda gerçek sezon bilgisini (S16) doğru tespit ediyor.
+    - **Merkezi Mantık Konsolidasyonu**: İndirme servisindeki basit regex'ler kaldırılarak, tüm uygulama genelinde tutarlı bir isimlendirme ve klasörleme yapısı sağlandı.
+    - **Garantili Sezon Doğruluğu**: Karmaşık dizi başlıklarında bile sezona göre doğru klasörleme (`Season 16` vb.) garantisi getirildi.
+
+- **Klasör İsimlendirme ve Bölüm Formatı Düzeltmeleri (Phase 23)** (2026-02-24 22:55):
+    - **"1. Bölüm" Desteği**: Dosya isimlerindeki "1. Bölüm" tarzı rakam-öncelikli formatlar artık başarıyla tanınıyor ve dizi adından ayrıştırılıyor.
+    - **Ultra-Temiz Klasörler**: Dizi adı ayıklama algoritması güçlendirilerek folder isimlerindeki "dizi adı - " gibi sarkan parçalar tamamen temizlendi.
+    - **Kapsayıcı Sezon Gruplama**: Sezon bilgisi eksik olan bölümler için varsayılan olarak "Season 01" klasörü oluşturularak organizasyon bütünlüğü sağlandı.
+    - **Belirgin Sezon Gösterimi**: UI başlıklarında sadece epizot numarası değil, sezon bilgisinin de (Sezon X • Bölüm Y) net gösterilmesi garantilendi.
+
+- **Gelişmiş İndirme Organizasyonu ve İsim Sadakati (Phase 22)** (2026-02-24 22:50):
+    - **Akıllı Dizi Klasörlemesi**: İndirilen diziler artık bölüm adı yerine doğrudan dizi ana adı (örn: "4400") ile klasörleniyor.
+    - **Sezon Bazlı Alt Klasörler**: Aynı dizinin farklı sezonlarının birbirinin üzerine yazılmasını önlemek için otomatik "Season 01", "Season 02" alt klasör yapısı eklendi.
+    - **SxE Belirteçlerinin Korunması**: Bölüm isimlerindeki "S01E01", "Season 1" gibi belirteçlerin temizlenmesi durduruldu; bağlam kaybı engellendi.
+    - **Temiz Dosya İsimleri**: Dizi adı ayıklanırken arkada kalan gereksiz tire ve sembol temizliği iyileştirildi.
+
 - **Kapsayıcı Seri Filtreleme (Phase 21)** (2026-02-24 22:35):
     - **Kategori Öncelikli Listeleme**: "Series" kategorisindeki tüm içeriklerin (regex eşleşmesi olmasa bile) listelenmesi sağlandı.
     - **Akıllı Fallback**: Ayrıştırılamayan dizi isimleri için otomatik olarak "Sezon 1 / Bölüm 1" atanarak içerik kaybı önlendi.

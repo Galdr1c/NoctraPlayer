@@ -23,8 +23,11 @@ public static partial class SeriesInfoParser
             {
                 var rawName = match.Groups["name"].Value;
                 var seriesName = CleanSeriesName(rawName);
-                var season = ParseSafeInt(match.Groups["season"].Value, 1);
-                var episode = ParseSafeInt(match.Groups["episode"].Value, 1);
+                var seasonStr = match.Groups["season"].Value;
+                var episodeStr = match.Groups["episode"].Value;
+
+                var season = ParseSafeInt(seasonStr, 1);
+                var episode = ParseSafeInt(episodeStr, 1);
                 return new SeriesInfo(seriesName, season, episode);
             }
         }
@@ -38,14 +41,22 @@ public static partial class SeriesInfoParser
             return new SeriesInfo(seriesName, season, 1);
         }
 
-        var fallbackName = CleanSeriesName(EpisodeTokenRegex().Replace(trimmedTitle, " "));
-        
         // If it's a live series channel, we don't want to assign it a fake episode number
         if (IsLiveSeries(trimmedTitle))
         {
-            return new SeriesInfo(fallbackName, 0, 0); // Special case for live channels
+            return new SeriesInfo(CleanSeriesName(trimmedTitle), 0, 0); 
         }
 
+        // Phase 23: Better fallback for "1. Bölüm" if TurkishEpisodeOnlyRegex missed it for some reason
+        var epMatch = Regex.Match(trimmedTitle, @"(?<ep>\d{1,3})\.?\s*[Bb](?:o|ö)l(?:u|ü)m", RegexOptions.IgnoreCase);
+        if (epMatch.Success)
+        {
+            var epNum = ParseSafeInt(epMatch.Groups["ep"].Value, 1);
+            var rawName = trimmedTitle[..epMatch.Index].Trim().TrimEnd('-', '.', '|', ':', '_', ' ').Trim();
+            return new SeriesInfo(CleanSeriesName(rawName), 1, epNum);
+        }
+
+        var fallbackName = CleanSeriesName(EpisodeTokenRegex().Replace(trimmedTitle, " "));
         return new SeriesInfo(fallbackName, 1, 1);
     }
 
@@ -218,7 +229,8 @@ public static partial class SeriesInfoParser
             }
         }
 
-        cleaned = EpisodeTokenRegex().Replace(cleaned, " ");
+
+        // cleaned = EpisodeTokenRegex().Replace(cleaned, " "); // Phase 22: Keep S01E01 tokens for better context
 
         // Remove specific "X. Bölüm" or "Bölüm X" if it matches episodeNumber
         var epPattern = $@"\b{episodeNumber}\.?\s*[Bb](?:o|ö)l(?:u|ü)m\b|\b[Bb](?:o|ö)l(?:u|ü)m\s*{episodeNumber}\b";

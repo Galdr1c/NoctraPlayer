@@ -18,9 +18,6 @@ public class ContentDownloadService : IContentDownloadService
     private const int ProgressPersistIntervalMs = 1800;
     private const long ProgressPersistMinDeltaBytes = 1024 * 1024; // 1 MB
     private const int MaxAutoResumeAttempts = 3;
-    private static readonly Regex SeriesEpisodeRegex = new(
-        @"(s(?:eason)?\s*(?<s>\d{1,2})\s*e(?:pisode)?\s*(?<e>\d{1,3}))|((?<s2>\d{1,2})\s*x\s*(?<e2>\d{1,3}))|(sezon\s*(?<s3>\d{1,2})\s*b[oö]l[uü]m\s*(?<e3>\d{1,3}))|(b[oö]l[uü]m\s*(?<e4>\d{1,3}))",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = false };
 
     private readonly ISettingsService _settingsService;
@@ -1192,13 +1189,22 @@ public class ContentDownloadService : IContentDownloadService
 
         if (item.ChannelType == ChannelType.Series && !string.IsNullOrWhiteSpace(item.DisplayName))
         {
-            var seriesName = BuildSafeFileName(ExtractSeriesName(item.DisplayName));
+            var parsed = SeriesInfoParser.Parse(item.DisplayName);
+            var seriesName = BuildSafeFileName(parsed.SeriesName);
             var seriesPath = Path.Combine(categoryPath, seriesName);
             if (!Directory.Exists(seriesPath))
             {
                 Directory.CreateDirectory(seriesPath);
             }
-            return seriesPath;
+
+            // Phase 24: Use centralized parser for accurate Season folder grouping
+            var sNum = parsed.Season > 0 ? parsed.Season : 1;
+            var seasonPath = Path.Combine(seriesPath, $"Season {sNum:D2}");
+            if (!Directory.Exists(seasonPath))
+            {
+                Directory.CreateDirectory(seasonPath);
+            }
+            return seasonPath;
         }
 
         return categoryPath;
@@ -1206,17 +1212,10 @@ public class ContentDownloadService : IContentDownloadService
 
     private static string BuildItemFileStem(DownloadItem item)
     {
-        return BuildSafeFileName(item.DisplayName ?? "download");
-    }
+        if (string.IsNullOrWhiteSpace(item.DisplayName)) return "download";
 
-    private static string ExtractSeriesName(string displayName)
-    {
-        var match = SeriesEpisodeRegex.Match(displayName);
-        if (match.Success)
-        {
-            return displayName[..match.Index].Trim();
-        }
-        return displayName;
+        // Phase 24: For Series, ensure the file name preserves critical SxE info but remains "BuildSafe"
+        return BuildSafeFileName(item.DisplayName);
     }
 
 

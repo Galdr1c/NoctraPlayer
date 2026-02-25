@@ -67,9 +67,11 @@ nunit-*.xml
 # Build Log
 *.log
 build_log.txt
+vlc_debug_log.txt
 msbuild.log
 build_output.txt
 errors.txt
+debug.txt
 final_errors.txt
 
 # Publish Web Output
