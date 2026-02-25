@@ -84,7 +84,7 @@ public partial class App : Application
                         
                         // 1. Warmup Settings (Lazy load trigger)
                         var settingsService = Services.GetRequiredService<ISettingsService>();
-                        var _ = settingsService.Settings; 
+                        _ = settingsService.Settings; 
                         StartupDiagnostics.Log("Settings warmed up.");
 
                         // 2. Warmup EF Core (Triggers first-time model compilation)
@@ -104,6 +104,35 @@ public partial class App : Application
                         });
                         
                         StartupDiagnostics.Log("ProfilesWindow resolved.");
+
+                        // 4. Update Check (Silent)
+                        if (settingsService.Settings.AutoUpdate)
+                        {
+                            _ = Task.Run(async () =>
+                            {
+                                try
+                                {
+                                    var updateService = Services.GetRequiredService<IUpdateService>();
+                                    var update = await updateService.CheckForUpdatesAsync();
+                                    if (update != null)
+                                    {
+                                        var dialogService = Services.GetRequiredService<IDialogService>();
+                                        await Dispatcher.UIThread.InvokeAsync(async () =>
+                                        {
+                                            var confirmed = await dialogService.ShowConfirmationAsync(
+                                                "Yeni Güncelleme Mevcut",
+                                                $"v{update.Version} sürümü yayınlandı. Şimdi indirmek ister misiniz?"
+                                            );
+                                            if (confirmed)
+                                            {
+                                                await updateService.StartUpdateAsync(update);
+                                            }
+                                        });
+                                    }
+                                }
+                                catch { /* Ignore background update check failures */ }
+                            });
+                        }
 
                         // Ensure a minimum splash duration (e.g., 1.5 seconds) for premium feel
                         var elapsed = startupStopwatch.ElapsedMilliseconds;
@@ -208,6 +237,7 @@ public partial class App : Application
         services.AddSingleton<LanguageDetectionService>();
         services.AddSingleton<EpgSourceResolver>();
         services.AddSingleton<INetworkService, NetworkService>();
+        services.AddSingleton<IUpdateService, UpdateService>();
 
         services.AddSingleton<IDispatcherService, AvaloniaDispatcherService>();
         services.AddSingleton<IDialogService, AvaloniaDialogService>();

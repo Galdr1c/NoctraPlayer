@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Otomatik Güncelleme Sistemi ve Dizi Normalizasyonu** (2026-02-25 14:05):
+    - **Otomatik Güncelleme**: Uygulamaya GitHub manifest tabanlı otomatik güncelleme sistemi eklendi (`UpdateService`). Uygulama açılışında arka plan kontrolü ve "Ayarlar > Hakkında" sekmesinde manuel güncelleme butonu aktif edildi.
+    - **Yıl Korumalı Dizi Anahtarları**: Dizilerin sağlayıcılar arası progress senkronizasyonunu iyileştirmek için `NormalizeKey` metodunun yılları temizlemesi durduruldu (örn: `Breaking Bad 2008` artık korunuyor).
+    - **M3U Base64 Düzeltme Doğrulaması**: M3U listelerindeki Base64 formatlı logoların kanal isimlerini bozma hatası için kalıcı bir birim test eklendi.
+    - **Derleme ve Tip Güvenliği**: Startup warmup aşamasındaki değişken çakışmaları ve eksik referanslar giderilerek 0 hata ile derleme stabilitesi korundu.
+
 - **UX, Test ve Teknik Borç İyileştirmeleri** (2026-02-25 13:42):
     - **Entegrasyon Testleri**: `PlaylistService`, `MediaService` ve `XtreamCodesService` için kapsamlı entegrasyon testleri eklendi. In-memory SQLite (`Shared Cache`) kullanılarak veri tutarlılığı ve kanal-dizi eşleştirme mantığı doğrulandı.
     - **Hata Düzeltme (Kanal Parmak İzi)**: Playlist yenileme sırasında çocuk profili filtresinin tüm profillere yanlışlıkla uygulanması ve bu sebeple kanalların "duplicate" olarak algılanıp eklenememesi hatası düzeltildi.

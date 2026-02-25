@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using Noctra.Services.Interfaces;
 using Noctra.Services;
 using Noctra.Core.Services;
+using Noctra.Models;
 using System;
 
 using System.ComponentModel;
@@ -16,9 +17,25 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     private readonly IDialogService _dialogService;
     private readonly ISettingsService _settingsService;
     private readonly ICacheService _cacheService;
+    private readonly IUpdateService _updateService;
+    private readonly IDispatcherService _dispatcherService;
 
     [ObservableProperty]
     private string _cacheSizeString = "0 B";
+
+    [ObservableProperty]
+    private string _currentVersion = "1.0.0";
+
+    [ObservableProperty]
+    private string _updateStatusText = "Güncel";
+
+    [ObservableProperty]
+    private bool _isUpdateAvailable;
+
+    [ObservableProperty]
+    private bool _isCheckingUpdates;
+
+    private UpdateInfo? _latestUpdate;
 
     private GlobalSettings _settings = new();
     public GlobalSettings Settings
@@ -41,13 +58,18 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         IThemeService themeService,
         IDialogService dialogService,
         ISettingsService settingsService,
-        ICacheService cacheService)
+        ICacheService cacheService,
+        IUpdateService updateService,
+        IDispatcherService dispatcherService)
     {
         _themeService = themeService;
         _dialogService = dialogService;
         _settingsService = settingsService;
         _cacheService = cacheService;
+        _updateService = updateService;
+        _dispatcherService = dispatcherService;
         
+        CurrentVersion = _updateService.CurrentVersion;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
         
         LoadSettings();
@@ -87,6 +109,58 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     {
         _themeService.SetTheme(Settings.IsDarkTheme);
         SaveSettings();
+    }
+
+    [RelayCommand]
+    private async Task CheckForUpdatesAsync()
+    {
+        if (IsCheckingUpdates) return;
+
+        IsCheckingUpdates = true;
+        UpdateStatusText = "Kontrol ediliyor...";
+        IsUpdateAvailable = false;
+        _latestUpdate = null;
+
+        try
+        {
+            await Task.Delay(800); // UI feedback
+            var update = await _updateService.CheckForUpdatesAsync();
+            
+            if (update != null)
+            {
+                _latestUpdate = update;
+                IsUpdateAvailable = true;
+                UpdateStatusText = $"Yeni Sürüm: v{update.Version}";
+            }
+            else
+            {
+                UpdateStatusText = "Uygulama güncel";
+            }
+        }
+        catch
+        {
+            UpdateStatusText = "Kontrol başarısız";
+        }
+        finally
+        {
+            IsCheckingUpdates = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task StartUpdateAsync()
+    {
+        if (_latestUpdate == null) return;
+
+        var confirmed = await _dialogService.ShowConfirmationAsync(
+            "Güncelleme",
+            $"v{_latestUpdate.Version} sürümünü şimdi indirmek istiyor musunuz?\n\nDeğişiklikler:\n{_latestUpdate.Changelog}"
+        );
+
+        if (confirmed)
+        {
+            await _updateService.StartUpdateAsync(_latestUpdate);
+        }
     }
 
     [RelayCommand]
