@@ -73,6 +73,21 @@ public static class UserFriendlyErrorMessage
             return "Dosya dogrulamasi basarisiz. Icerigi yeniden indirip tekrar deneyin.";
         }
 
+        if (baseException is InvalidOperationException)
+        {
+            return "İşlem beklendiği gibi tamamlanamadı. Kaynak veri eksik veya hatalı olabilir.";
+        }
+
+        if (baseException is NullReferenceException || baseException.GetType().Name == "ArgumentNullException")
+        {
+            return "Geçersiz veri veya eksik bilgi ile karşılaşıldı. Lütfen işlemi tekrar deneyin.";
+        }
+
+        if (baseException is FormatException)
+        {
+            return "Veri okunamadı. EPG veya kanal listenizin formatı hatalı olabilir.";
+        }
+
         if (baseException is IOException ioEx)
         {
             return FromText(ioEx.Message, "Dosya islemi sirasinda hata olustu. Disk alanini ve dosya erisimini kontrol edin.");
@@ -169,6 +184,33 @@ public static class UserFriendlyErrorMessage
         if (ContainsAny(normalized, "0 program", "0 programs", "program bulunamadi"))
         {
             return "EPG kaynaginda kanallarinizla eslesen program bulunamadi.";
+        }
+
+        if (ContainsAny(normalized,
+                "xml",
+                "m3u",
+                "parse",
+                "parsing",
+                "ayristirma",
+                "format exception",
+                "unrecognized element",
+                "unexpected token"))
+        {
+            return "Veri formatı okunamadı. EPG veya kanal listenizin bağlantısını kontrol edin.";
+        }
+
+        if (ContainsAny(normalized,
+                "cs8602",
+                "nullreferenceexception",
+                "invalidoperationexception",
+                "object reference not set",
+                "nesne basvurusu",
+                "indexoutofrangeexception",
+                "argumentnullexception",
+                "exception of type",
+                "an error occurred"))
+        {
+            return "Sistemde anlık bir hata oluştu. Lütfen işlemi tekrar deneyin.";
         }
 
         return defaultMessage;

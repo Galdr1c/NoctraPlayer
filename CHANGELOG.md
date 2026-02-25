@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **UX ve Performans İyileştirmeleri (Kullanıcı Deneyimi)** (2026-02-25 13:17):
+    - **Dinamik Yükleme Süreleri**: İşletim sistemi açılışında (`SplashWindow`) ve profil yükleme sürecinde (`ProfileLoadingWindow`) premium hissi vermek için eklenen "sahte" zorunlu bekleme süreleri (3.5s ve 8s) iptal edildi. Süreç artık verilerin yüklenmesine bağlı olarak maksimum hızda çalışıp en az 1.5 saniyelik şık bir geçişle tamamlanıyor.
+    - **Hata Mesajları Esnetildi**: Sadece arkaplan yüklenmesinde beklenen 8 saniyelik zorunlu `Task.Delay`, hata mesajlarının da gereksiz yere ekranda 8 saniye asılı kalmasına sebep oluyordu; bu süre 3 saniyeye düşürüldü.
+    - **İnsan Dilinde EPG ve Oynatma Hataları**: C# exception sınıflarından (`InvalidOperationException`, `NullReferenceException`, `FormatException`) türeyen `CS8602` gibi "Kullanıcıya sızmaması gereken" teknik yazılım hata fırlatmaları maskelendi. Sistem artık bu tip durumlarda "Sistemde anlık bir hata oluştu" veya "Veri okunamadı" gibi kısa ve net Türkçe iletiler gösteriyor.
+
 - **Oynatma Listesi Performans Optimizasyonları (Phase 28)** (2026-02-25 12:40):
     - **SQLite WAL Modu**: Veritabanında Write-Ahead Logging (WAL) etkinleştirilerek eşzamanlı okuma/yazma desteği eklendi, UI kilitlenmeleri kökten önlendi.
     - **Asenkron Dizi Oluşturma (Fire-and-Forget)**: Hacimli listelerde (50K+ kanal) dizileri kümeleyen ağır işlem (`AggregateContentAsync`) ana iş parçacığından koparılarak arkaplanda otonom hale getirildi; dizi sekmesi tamamlandığında otomatik yenileniyor.

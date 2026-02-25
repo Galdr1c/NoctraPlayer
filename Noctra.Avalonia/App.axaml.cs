@@ -105,11 +105,11 @@ public partial class App : Application
                         
                         StartupDiagnostics.Log("ProfilesWindow resolved.");
 
-                        // Ensure a minimum splash duration (e.g., 3.5 seconds) for premium feel
+                        // Ensure a minimum splash duration (e.g., 1.5 seconds) for premium feel
                         var elapsed = startupStopwatch.ElapsedMilliseconds;
-                        if (elapsed < 3500)
+                        if (elapsed < 1500)
                         {
-                            await Task.Delay(3500 - (int)elapsed);
+                            await Task.Delay(1500 - (int)elapsed);
                         }
 
                         // Transition to Main Window
