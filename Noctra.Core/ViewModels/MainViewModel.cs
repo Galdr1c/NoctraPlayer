@@ -2424,14 +2424,6 @@ public partial class MainViewModel : ObservableObject
                         StatusMessage = $"EPG: {source.Type} kaynağına bağlanılıyor...";
                     }
 
-                    // Eğer bu kaynak için temizlik gerekiyorsa
-                    if (source.ClearBeforeLoad)
-                    {
-                        _logger?.LogDebug("[MainViewModel] Clearing existing EPG data...");
-                        await _epgService.ClearEpgAsync();
-                    }
-
-                    // PERFORMANS VE POPÜLERLİK OPTİMİZASYONU:
                     // Sadece bu kaynağa (ülkeye) ait olan kanalları filtrele
                     List<Channel> targetChannels;
                     
@@ -2467,7 +2459,8 @@ public partial class MainViewModel : ObservableObject
                         source.IsPrimary, 
                         targetChannels, 
                         daysAhead: 1, 
-                        progress: epgProgressReporter);
+                        progress: epgProgressReporter,
+                        clearBeforeSave: source.ClearBeforeLoad); // ATOMIC CLEAR: Only clear if we actually start saving programs
 
                     if (loadedPrograms > 0)
                     {

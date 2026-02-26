@@ -35,7 +35,7 @@ public class EpgService : IEpgService
         LastError = null;
     }
 
-    public async Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1, IProgress<EpgProgressInfo>? progress = null)
+    public async Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1, IProgress<EpgProgressInfo>? progress = null, bool clearBeforeSave = false)
     {
         if (!await _loadSemaphore.WaitAsync(0).ConfigureAwait(false))
         {
@@ -44,6 +44,7 @@ public class EpgService : IEpgService
         }
 
         int totalLoaded = 0;
+        bool hasCleared = false;
         try
         {
             LastError = null; // Clear previous error
@@ -230,6 +231,15 @@ public class EpgService : IEpgService
                                 }
                             }
 
+                            // If this is the FIRST program we are about to save, and clearBeforeSave is true,
+                            // we clear the database NOW. This ensures we don't clear if download fails.
+                            if (clearBeforeSave && !hasCleared)
+                            {
+                                await context.Database.ExecuteSqlRawAsync("DELETE FROM EpgPrograms").ConfigureAwait(false);
+                                hasCleared = true;
+                                _logger?.LogDebug("[EpgService] EPG data cleared just before saving new records (Atomic).");
+                            }
+
                             programs.Add(program);
                             totalLoaded++;
 
@@ -253,6 +263,13 @@ public class EpgService : IEpgService
 
                 if (programs.Any())
                 {
+                    // Handle case where we have small EPG and never reached batchSize
+                    if (clearBeforeSave && !hasCleared)
+                    {
+                        await context.Database.ExecuteSqlRawAsync("DELETE FROM EpgPrograms").ConfigureAwait(false);
+                        hasCleared = true;
+                    }
+
                     await context.EpgPrograms.AddRangeAsync(programs).ConfigureAwait(false);
                     await context.SaveChangesAsync().ConfigureAwait(false);
                 }
@@ -261,6 +278,7 @@ public class EpgService : IEpgService
             {
                 context.ChangeTracker.AutoDetectChangesEnabled = true;
             }
+
 
             IsLoaded = true;
             LastUpdated = DateTime.UtcNow;

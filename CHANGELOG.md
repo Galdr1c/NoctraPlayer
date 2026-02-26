@@ -19,7 +19,8 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - **Dinamik Ölçeklendirme**: Spinner kontrolü, `TemplateBinding` ve geliştirilmiş XAML yapısı sayesinde farklı boyutlarda (30px'ten 100px+'e kadar) bozulmadan ve merkezini koruyarak dönecek şekilde güncellendi.
 
 
-- **Akıllı Kanal Eşleştirme ve beIN Sports Şifre Çözücü** (2026-02-26 15:45):
+- **Akıllı Kanal Eşleştirme ve beIN Sports Şifre Çözücü** (2026-02-26 16:00):
+    - **Atomic EPG Clear (Sıfırlanma Koruması)**: EPG yenileme sırasında verilerin en başta silinip (0'lanma), indirme başarısız olunca boş kalması sorunu giderildi. Artık eski veriler, sadece yeni veriler başarıyla indirilip kaydedilmeye başlandığı anda siliniyor.
     - **beIN Sports & Canlı Kanal Koruması**: `beIN SPORTS`, `S SPORT`, `Tivibu Spor` gibi canlı spor kanallarının isimlerindeki rakamlar nedeniyle (Örn: `beIN SPORTS 1`) yanlışlıkla "Dizi/Series" olarak algılanıp "1. Bölüm" şeklinde görünmesi sorunu kökten çözüldü.
     - **be*IN Maskeleme Desteği**: Sağlayıcılar tarafından kullanılan `be*IN`, `be-IN` gibi alternatif/şifreli kanal isimlendirmeleri `IsLiveSeries` kontrolüne eklenerek bu kanalların her koşulda "Canlı Yayın" kategorisinde kalması sağlandı.
     - **Gelişmiş Seri Ayrıştırma (SeriesInfoParser)**: Dizi isimlerini ayıklayan Regex motoruna "Kelime Sınırı" (`\b`) koruması eklendi. Bu sayede kelime sonundaki harfler (SPORTS'un S'si gibi) artık dizi sezon işareti (S01) olarak yanlış algılanmıyor.

@@ -33,9 +33,11 @@ public interface IEpgService
     /// <param name="epgUrl">EPG XML URL</param>
     /// <param name="isPrimary">Ana EPG mi? (Evet ise veritabanını temizler)</param>
     /// <param name="channelsForMapping">Yedek EPG için isim eşleşmesi yapılacak kanallar</param>
+    /// <param name="daysAhead">Kaç günlük veri çekilecek?</param>
     /// <param name="progress">İlerleme raporlama arayüzü</param>
+    /// <param name="clearBeforeSave">Veri kaydedilmeden hemen önce mevcut veriyi siler (Sadece başarılı yüklemede)</param>
     /// <returns>Yüklenen ve eslesen program sayisi</returns>
-    Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1, IProgress<EpgProgressInfo>? progress = null);
+    Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1, IProgress<EpgProgressInfo>? progress = null, bool clearBeforeSave = false);
 
     /// <summary>
     /// EPG veritabanını temizler
