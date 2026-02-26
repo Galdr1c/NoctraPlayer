@@ -2401,7 +2401,7 @@ public partial class MainViewModel : ObservableObject
             // Yabancı kanallar için popülerlik filtresi kelimeleri (Büyük harf duyarlı, kanal isimleri üst karakter yapıldığı için)
             var popularKeywords = new[] 
             { 
-                "BBC", "ITV", "SKY", "ABC", "CBS", "NBC", "FOX", "CNN", "ESPN", "HBO", "SHOWTIME", "AMC", "TNT", "TBS", "SYFY", 
+                "BBC", "ITV", "SKY", "ABC", "CBS", "NBC", "FOX", "CNN", "ESPN", "HBO", "SHOWTIME", "AMC", "TNT", "TBS", "SYFY", "BEIN", "BE IN", "BEN",
                 "DISCOVERY", "HISTORY", "NAT GEO", "NATGEO", "USA", "TLC", "DMAX", "BLOOMBERG", "CNBC", "AL JAZEERA", "ALJAZEERA", 
                 "EUROSPORT", "ANIMAL PLANET", "HGTV", "FOOD NETWORK", "ARD", "ZDF", "RTL", "SAT1", "PROSIEBEN", "VOX", "WELT", 
                 "NTV", "TF1", "CANAL", "M6", "ARTE", "BFM", "RAI", "MEDIASET", "CANALE5", "ITALIA1", "RETE4", "LA7", "TVE", 

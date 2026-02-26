@@ -390,12 +390,23 @@ public class EpgService : IEpgService
         return true;
     }
 
-        private static string NormalizeName(string name)
+    private static string NormalizeName(string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return "";
 
-        var s = name.ToLowerInvariant()
-            .Replace('ı', 'i')
+        var s = name.ToLowerInvariant();
+
+        // beIN Sports De-obfuscation (Şifreli isimleri çözme)
+        // be*n, b*in, be!n, b.e.i.n, be-in gibi varyasyonları 'bein'e çevir
+        if (s.Contains('b') && (s.Contains('i') || s.Contains('n')))
+        {
+            // Regex: b followed by any non-alphanumeric or digit, then i, n, etc.
+            s = System.Text.RegularExpressions.Regex.Replace(s, @"b[e\*!1\.\-\s]*[i\*!1\.\-\s]*n", "bein");
+            // Eğer hala 'be n' gibi boşluklu kalmışsa birleştir
+            if (s.Contains("be n")) s = s.Replace("be n", "bein");
+        }
+
+        s = s.Replace('ı', 'i')
             .Replace('İ', 'i')
             .Replace('ş', 's')
             .Replace('Ş', 's')
