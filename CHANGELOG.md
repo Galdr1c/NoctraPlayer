@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **M3U Bağlantı Analizi ve Stalker Sınırsız Senkronizasyon** (2026-02-26 15:00):
+    - **Stalker Full Sync (Sınırsız)**: Stalker portalları için önceki "Hızlı Yükleme" limitleri (15-50 sayfa) tamamen kaldırıldı. Artık 100.000+ içerikli devasa portallar bile tek seferde, eksiksiz olarak senkronize edilir.
+    - **Paralel Çekim Optimizasyonu**: Çok sayıda sayfayı (örn: 7000+ sayfa VOD) internet hızını sonuna kadar kullanarak çekebilmek için paralel ağ isteği kapasitesi (Semaphore) artırıldı.
+    - **M3U "Bağlantıyı Analiz Et" Butonu**: M3U profil düzenleme ekranında gizli kalan analiz butonu aktif edildi. Analiz motoru artık M3U linklerinin doğruluğunu HEAD/GET istekleriyle gerçek zamanlı kontrol eder.
+    - **Hibrit Kategori Eşleme**: Stalker portallarındaki eksik/hatalı kategoriler için hem ID hem de isim tabanlı çalışan akıllı bir yedekleme mekanizması (Hybrid Mapping) eklendi.
+    - **Canlı İlerleme Logu**: Devasa veri çekim işlemleri sırasında `startup.log` üzerinden anlık % ilerleme takibi imkanı sağlandı.
+
 - **Merkezi Yükleme Sistemi ve UI Sadeleştirmesi** (2026-02-26 15:30):
     - **Global Yükleme Paneli (Overlay)**: Kanal listesi yenileme gibi uzun süren işlemler için tüm uygulamayı kapsayan merkezi bir yükleme ekranı (`IsGlobalLoading`) eklendi. Bu panel `MainWindow` ve `SettingsWindow` ile tam uyumlu çalışır.
     - **Kararlı Spinner Animasyonu**: `PremiumSpinner` animasyonu, en yüksek uyumluluk için kararlı XAML tabanlı sisteme güncellendi. Akıcı dönüş ve stabilite optimize edildi.

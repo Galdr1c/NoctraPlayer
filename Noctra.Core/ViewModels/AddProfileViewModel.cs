@@ -736,9 +736,9 @@ public partial class AddProfileViewModel : ObservableObject
         }
         else if (IsM3U)
         {
-            // Username/password yok, sadece base sunucuyu kontrol et
-            var uri = new Uri(urlToCheck);
-            urlToCheck = $"{uri.Scheme}://{uri.Host}:{uri.Port}";
+            // M3U için linkin tamamını kontrol ediyoruz (HEAD/GET desteği için)
+            // Eğer username/password varsa player_api fallback'i yukarıda yapıldı.
+            // Yoksa doğrudan girilen URL'i kullanıyoruz.
         }
         else if (IsStalker)
         {

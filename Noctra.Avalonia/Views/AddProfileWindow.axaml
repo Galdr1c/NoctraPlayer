@@ -277,7 +277,7 @@
                                 </StackPanel>
                                 
 
-                                <StackPanel Orientation="Horizontal" Margin="0,16,0,0" IsVisible="{Binding !IsM3U}">
+                                <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
                                     <Button Command="{Binding AnalyzeConnectionCommand}"
                                             Height="42"
                                             Padding="16,8"
