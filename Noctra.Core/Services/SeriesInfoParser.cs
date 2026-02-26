@@ -75,14 +75,32 @@ public static partial class SeriesInfoParser
                EnglishRegex().IsMatch(title) ||
                SeriesPatternHyphen().IsMatch(title) ||
                SeasonOnlyRegex().IsMatch(title) ||
-               title.Contains("Saison", StringComparison.OrdinalIgnoreCase) ||
-               title.Contains("Staffel", StringComparison.OrdinalIgnoreCase) ||
-               title.Contains("Temporada", StringComparison.OrdinalIgnoreCase);
+               title.Contains("Saison ", StringComparison.OrdinalIgnoreCase) ||
+               title.Contains("Staffel ", StringComparison.OrdinalIgnoreCase) ||
+               title.Contains("Temporada ", StringComparison.OrdinalIgnoreCase);
     }
 
     public static bool IsLiveSeries(string? title)
     {
         if (string.IsNullOrWhiteSpace(title)) return false;
+
+        // Common sports and live channel indicators that should never be treated as series
+        // even if they contain numbers or suffixes that look like episode indicators.
+        // Also handling obfuscated versions like "be*IN" or "be-IN"
+        if (title.Contains("beIN", StringComparison.OrdinalIgnoreCase) || 
+            title.Contains("be*IN", StringComparison.OrdinalIgnoreCase) ||
+            title.Contains("be-IN", StringComparison.OrdinalIgnoreCase) ||
+            title.Contains("SPOR", StringComparison.OrdinalIgnoreCase) ||
+            title.Contains("EUROSPORT", StringComparison.OrdinalIgnoreCase) ||
+            title.Contains("TIVIBU", StringComparison.OrdinalIgnoreCase) ||
+            title.Contains("EXXENSPOR", StringComparison.OrdinalIgnoreCase))
+        {
+            // Exception: If it explicitly has S01E01 style patterns, it might be a sports documentary series
+            if (!SxeRegex().IsMatch(title) && !XRegex().IsMatch(title))
+            {
+                return true;
+            }
+        }
 
         // Heavily restricted LiveSeries detection to prevent content loss.
         // Only 24/7 or CANLI/LIVE keywords without any episode indicators are safe.
@@ -346,40 +364,40 @@ public static partial class SeriesInfoParser
     }
 
     // Trailing \s*.*?bölüm vs.. is to consume garbage like " - 1. Bölüm" correctly.
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss](?<season>\d{1,2})\s*[-._ ]*\s*[Ee](?<episode>\d{1,3})(?:\s*[-._ ]*\s*\d{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m)?\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)\b[Ss](?<season>\d{1,2})\s*[-._ ]*\s*[Ee](?<episode>\d{1,3})(?:\s*[-._ ]*\s*\d{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m)?\b", RegexOptions.IgnoreCase)]
     private static partial Regex SxeRegex();
 
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?<season>\d{1,2})\s*[Xx]\s*(?<episode>\d{1,3})(?:\s*[-._ ]*\s*\d{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m)?\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)\b(?<season>\d{1,2})\s*[Xx]\s*(?<episode>\d{1,3})(?:\s*[-._ ]*\s*\d{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m)?\b", RegexOptions.IgnoreCase)]
     private static partial Regex XRegex();
 
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss](?<season>\d{1,2})\s*-\s*[Ee](?<episode>\d{1,3})(?:\s*[-._ ]*\s*\d{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m)?\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)\b[Ss](?<season>\d{1,2})\s*-\s*[Ee](?<episode>\d{1,3})(?:\s*[-._ ]*\s*\d{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m)?\b", RegexOptions.IgnoreCase)]
     private static partial Regex SeriesPatternHyphen();
 
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss]ezon\s*(?<season>\d{1,2}).*?[Bb](?:o|ö)l(?:u|ü)m\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)\b[Ss]ezon\s*(?<season>\d{1,2}).*?[Bb](?:o|ö)l(?:u|ü)m\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
     private static partial Regex TurkishRegex();
 
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?<season>\d{1,2})\.?\s*[Ss]ezon.*?(?<episode>\d{1,3})\.?\s*[Bb](?:o|ö)l(?:u|ü)m\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)\b(?<season>\d{1,2})\.?\s*[Ss]ezon.*?(?<episode>\d{1,3})\.?\s*[Bb](?:o|ö)l(?:u|ü)m\b", RegexOptions.IgnoreCase)]
     private static partial Regex TurkishAltRegex();
 
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?<episode>\d{1,3})\.?\s*[Bb](?:o|ö)l(?:u|ü)m\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)\b(?<episode>\d{1,3})\.?\s*[Bb](?:o|ö)l(?:u|ü)m\b", RegexOptions.IgnoreCase)]
     private static partial Regex TurkishEpisodeOnlyRegex();
 
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss]eason\s*(?<season>\d{1,2}).*?[Ee]pisode\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)\b[Ss]eason\s*(?<season>\d{1,2}).*?[Ee]pisode\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
     private static partial Regex EnglishRegex();
 
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?:[Tt]emporada|[Tt]emp)\s*(?<season>\d{1,2}).*?(?:[Ee]pisodio|[Cc]ap(?:i|í)tulo|[Ee]p)\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)\b(?:[Tt]emporada|[Tt]emp)\s*(?<season>\d{1,2}).*?(?:[Ee]pisodio|[Cc]ap(?:i|í)tulo|[Ee]p)\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
     private static partial Regex SpanishRegex();
 
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?:[Tt]emporada|[Tt]emp)\s*(?<season>\d{1,2}).*?(?:[Ee]pis(?:o|ó)dio|[Ee]p)\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)\b(?:[Tt]emporada|[Tt]emp)\s*(?<season>\d{1,2}).*?(?:[Ee]pis(?:o|ó)dio|[Ee]p)\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
     private static partial Regex PortugueseRegex();
 
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss]aison\s*(?<season>\d{1,2}).*?(?:[Ee](?:pisode|épisode)|[Ee]p)\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)\b[Ss]aison\s*(?<season>\d{1,2}).*?(?:[Ee](?:pisode|épisode)|[Ee]p)\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
     private static partial Regex FrenchRegex();
 
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)[Ss]taffel\s*(?<season>\d{1,2}).*?[Ff]olge\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)\b[Ss]taffel\s*(?<season>\d{1,2}).*?[Ff]olge\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
     private static partial Regex GermanRegex();
 
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)(?:[Ss]eason|[Ss]ezon|[Tt]emporada|[Ss]aison|[Ss]taffel|[Ss])\s*(?<season>\d{1,2})\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)\b(?:[Ss]eason|[Ss]ezon|[Tt]emporada|[Ss]aison|[Ss]taffel|[Ss])\s*(?<season>\d{1,2})\b", RegexOptions.IgnoreCase)]
     private static partial Regex SeasonOnlyRegex();
 
     [GeneratedRegex(@"\b(?:[Ss]\d{1,2}\s*[Ee]\d{1,3}|\d{1,2}\s*[Xx]\s*\d{1,3}|\d{1,2}\.?\s*[Ss]ezon.*?[\d]{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m|[Ss]ezon\s*\d{1,2}\s*[Bb](?:o|ö)l(?:u|ü)m\s*\d{1,3}|[Ss]eason\s*\d{1,2}\s*[Ee]pisode\s*\d{1,3}|[Tt]emporada\s*\d{1,2}\s*(?:[Ee]pisodio|epis(?:o|ó)dio|cap(?:i|í)tulo)\s*\d{1,3}|[Ss]aison\s*\d{1,2}\s*(?:[Ee]pisode|épisode)\s*\d{1,3}|[Ss]taffel\s*\d{1,2}\s*[Ff]olge\s*\d{1,3}|[Ee]p(?:isode)?\s*\d{1,3}|\d{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m|[Bb](?:o|ö)l(?:u|ü)m\s*\d{1,3}|[Ff]olge\s*\d{1,3}|[Cc]ap(?:i|í)tulo\s*\d{1,3}|[Ss]eason\s*\d{1,2}|[Ss]ezon\s*\d{1,2}|[Tt]emporada\s*\d{1,2}|[Ss]aison\s*\d{1,2}|[Ss]taffel\s*\d{1,2}|[Ss]\s*\d{1,2}|[Ss]\d{1,2})\b", RegexOptions.IgnoreCase)]

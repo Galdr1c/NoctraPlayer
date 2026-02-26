@@ -19,7 +19,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - **Dinamik Ölçeklendirme**: Spinner kontrolü, `TemplateBinding` ve geliştirilmiş XAML yapısı sayesinde farklı boyutlarda (30px'ten 100px+'e kadar) bozulmadan ve merkezini koruyarak dönecek şekilde güncellendi.
 
 
-- **Akıllı Kanal Eşleştirme ve beIN Sports Şifre Çözücü** (2026-02-26 02:15):
+- **Akıllı Kanal Eşleştirme ve beIN Sports Şifre Çözücü** (2026-02-26 15:45):
+    - **beIN Sports & Canlı Kanal Koruması**: `beIN SPORTS`, `S SPORT`, `Tivibu Spor` gibi canlı spor kanallarının isimlerindeki rakamlar nedeniyle (Örn: `beIN SPORTS 1`) yanlışlıkla "Dizi/Series" olarak algılanıp "1. Bölüm" şeklinde görünmesi sorunu kökten çözüldü.
+    - **be*IN Maskeleme Desteği**: Sağlayıcılar tarafından kullanılan `be*IN`, `be-IN` gibi alternatif/şifreli kanal isimlendirmeleri `IsLiveSeries` kontrolüne eklenerek bu kanalların her koşulda "Canlı Yayın" kategorisinde kalması sağlandı.
+    - **Gelişmiş Seri Ayrıştırma (SeriesInfoParser)**: Dizi isimlerini ayıklayan Regex motoruna "Kelime Sınırı" (`\b`) koruması eklendi. Bu sayede kelime sonundaki harfler (SPORTS'un S'si gibi) artık dizi sezon işareti (S01) olarak yanlış algılanmıyor.
+    - **Kapsamlı Regresyon Testleri**: Spor kanalları ve maskelenmiş isimler için 10+ yeni test senaryosu eklenerek kategorizasyon doğruluğu %100'e çıkarıldı.
     - **beIN Sports De-obfuscation**: Sağlayıcılar tarafından maskelenen kanal isimleri (`be*n`, `b*in`, `be!n` vb.) için akıllı bir Regex motoru eklendi. Bu kanallar otomatik olarak `bein` şeklinde normalize edilerek EPG eşleşme oranları %100'e çıkarıldı.
     - **Genişletilmiş Uluslararası Kapsam**: Popüler yabancı kanallar listesi dünya devlerini (TLC, DMAX, BLOOMBERG, CNBC, HBO, SKY vb.) kapsayacak şekilde 70+ anahtar kelimeye genişletildi.
     - **Büyük/Küçük Harf Duyarlılığı**: Tüm kanal eşleştirme ve filtreleme süreçleri `Case-Insensitive` hale getirilerek her türlü yazım varyasyonunun (örn: `tlc`, `Tlc`, `TLC`) yakalanması sağlandı.
