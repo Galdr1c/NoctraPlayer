@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Merkezi Yükleme Sistemi ve UI Sadeleştirmesi** (2026-02-26 15:30):
+    - **Global Yükleme Paneli (Overlay)**: Kanal listesi yenileme gibi uzun süren işlemler için tüm uygulamayı kapsayan merkezi bir yükleme ekranı (`IsGlobalLoading`) eklendi. Bu panel `MainWindow` ve `SettingsWindow` ile tam uyumlu çalışır.
+    - **Kararlı Spinner Animasyonu**: `PremiumSpinner` animasyonu, en yüksek uyumluluk için kararlı XAML tabanlı sisteme güncellendi. Akıcı dönüş ve stabilite optimize edildi.
+    - **UI Temizliği**: Ana ekranda bulunan eski iskelet yükleme (skeleton loading) animasyonları, kullanıcı deneyimini basitleştirmek adına tamamen kaldırıldı.
+    - **Dinamik Ölçeklendirme**: Spinner kontrolü, `TemplateBinding` ve geliştirilmiş XAML yapısı sayesinde farklı boyutlarda (30px'ten 100px+'e kadar) bozulmadan ve merkezini koruyarak dönecek şekilde güncellendi.
+
+
 - **Akıllı Kanal Eşleştirme ve beIN Sports Şifre Çözücü** (2026-02-26 02:15):
     - **beIN Sports De-obfuscation**: Sağlayıcılar tarafından maskelenen kanal isimleri (`be*n`, `b*in`, `be!n` vb.) için akıllı bir Regex motoru eklendi. Bu kanallar otomatik olarak `bein` şeklinde normalize edilerek EPG eşleşme oranları %100'e çıkarıldı.
     - **Genişletilmiş Uluslararası Kapsam**: Popüler yabancı kanallar listesi dünya devlerini (TLC, DMAX, BLOOMBERG, CNBC, HBO, SKY vb.) kapsayacak şekilde 70+ anahtar kelimeye genişletildi.

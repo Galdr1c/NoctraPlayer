@@ -145,6 +145,12 @@ public partial class MainViewModel : ObservableObject
     private bool _isLoading;
 
     [ObservableProperty]
+    private bool _isGlobalLoading;
+
+    [ObservableProperty]
+    private string _globalLoadingMessage = string.Empty;
+
+    [ObservableProperty]
     private bool _showOnlyFavorites;
 
     [ObservableProperty]

@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        xmlns:controls="using:Noctra.Avalonia.Controls"
         mc:Ignorable="d"
         x:Class="Noctra.Avalonia.Views.SettingsWindow"
         x:DataType="vm:SettingsViewModel"
@@ -600,6 +601,31 @@
                     </StackPanel>
                 </Grid>
             </Border>
+
+            <!-- Global Loading Overlay -->
+            <Grid Grid.RowSpan="3" Background="#AA000000" IsVisible="{Binding IsGlobalLoading}" ZIndex="10000">
+                <Border Background="{DynamicResource Bg1Brush}" 
+                        CornerRadius="16" 
+                        Padding="32" 
+                        HorizontalAlignment="Center" 
+                        VerticalAlignment="Center"
+                        BoxShadow="0 10 30 5 #80000000">
+                    <StackPanel Spacing="24">
+                        <controls:PremiumSpinner Width="80" Height="80">
+                            <Path Data="M 30,60 L 45,45 C 50,40 60,40 65,45 L 90,70 C 95,75 95,85 90,90 L 65,115 C 60,120 50,120 45,115 L 30,100 Z" 
+                                  Stroke="{DynamicResource AccentBrush}" StrokeThickness="3"
+                                  Width="40" Height="40"
+                                  Stretch="Uniform"
+                                  VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        </controls:PremiumSpinner>
+                        <TextBlock Text="{Binding GlobalLoadingMessage}" 
+                                   Foreground="{DynamicResource TextPrimaryBrush}" 
+                                   FontSize="18" 
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
         </Grid>
     </Border>
 

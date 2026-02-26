@@ -123,7 +123,8 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _tmdbApiKey = string.Empty;
 
-
+    public bool IsGlobalLoading => _mainViewModel.IsGlobalLoading;
+    public string GlobalLoadingMessage => _mainViewModel.GlobalLoadingMessage;
 
     [ObservableProperty]
     private string _currentProfileName = string.Empty;
@@ -200,6 +201,14 @@ public partial class SettingsViewModel : ObservableObject
         else if (e.PropertyName == nameof(MainViewModel.ChannelListLastError))
         {
             ChannelListLastError = _mainViewModel.ChannelListLastError;
+        }
+        else if (e.PropertyName == nameof(MainViewModel.IsGlobalLoading))
+        {
+            OnPropertyChanged(nameof(IsGlobalLoading));
+        }
+        else if (e.PropertyName == nameof(MainViewModel.GlobalLoadingMessage))
+        {
+            OnPropertyChanged(nameof(GlobalLoadingMessage));
         }
     }
 
@@ -495,14 +504,19 @@ public partial class SettingsViewModel : ObservableObject
 
         try
         {
+            _mainViewModel.IsGlobalLoading = true;
+            _mainViewModel.GlobalLoadingMessage = "Kanal listesi yenileniyor...";
+
             SetProgressStatus("Kanal", 12, "Kanal listesi yenileniyor...");
             await _mainViewModel.RefreshSelectedPlaylistAsync();
 
             SetProgressStatus("Kanal", 60, "Kanal listesi verileri guncelleniyor...");
+            _mainViewModel.GlobalLoadingMessage = "Kanal listesi verileri güncelleniyor...";
             await ScanChannelListStatsCoreAsync(updateStatusMessage: false);
 
             // Kanal listesi yenilenirken bitiş süresini de güncelle
             SetProgressStatus("Kanal", 80, "Hesap bilgileri kontrol ediliyor...");
+            _mainViewModel.GlobalLoadingMessage = "Hesap bilgileri kontrol ediliyor...";
             await _mainViewModel.RefreshCurrentProfileExpirationAsync();
             LoadProfileInfo();
 
@@ -531,6 +545,8 @@ public partial class SettingsViewModel : ObservableObject
         }
         finally
         {
+            _mainViewModel.IsGlobalLoading = false;
+            _mainViewModel.GlobalLoadingMessage = string.Empty;
             EndRefreshOperation();
         }
     }

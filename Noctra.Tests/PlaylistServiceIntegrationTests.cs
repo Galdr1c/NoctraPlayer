@@ -28,6 +28,7 @@ namespace Noctra.Tests
         private readonly Mock<IMediaService> _mediaServiceMock;
         private readonly Mock<IPlaylistOrganizerService> _organizerMock;
         private readonly Mock<IEpgService> _epgServiceMock;
+        private readonly Mock<ISettingsService> _settingsServiceMock;
         private readonly LanguageDetectionService _languageDetection;
         private readonly EpgSourceResolver _epgSourceResolver;
         private readonly HttpClient _httpClient;
@@ -54,9 +55,13 @@ namespace Noctra.Tests
             _mediaServiceMock = new Mock<IMediaService>();
             _organizerMock = new Mock<IPlaylistOrganizerService>();
             _epgServiceMock = new Mock<IEpgService>();
+            _settingsServiceMock = new Mock<ISettingsService>();
             _languageDetection = new LanguageDetectionService();
             _epgSourceResolver = new EpgSourceResolver();
             _httpClient = new HttpClient();
+
+            // Setup default settings
+            _settingsServiceMock.Setup(s => s.Settings).Returns(new AppSettings());
 
             // Default organizer behavior: just return what's given
             _organizerMock.Setup(o => o.Organize(It.IsAny<List<Channel>>()))
@@ -210,7 +215,8 @@ namespace Noctra.Tests
                 _languageDetection,
                 _epgSourceResolver,
                 _epgServiceMock.Object,
-                _httpClient
+                _httpClient,
+                _settingsServiceMock.Object
             );
         }
     }
