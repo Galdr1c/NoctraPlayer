@@ -20,7 +20,7 @@ public interface IPlaylistService
     /// <summary>
     /// Stalker aşamalı yükleme için boş playlist oluşturur.
     /// </summary>
-    Task<Playlist> CreateEmptyPlaylistAsync(string name, string sourceUrl, int? profileId = null);
+    Task<Playlist> CreateEmptyPlaylistAsync(string name, string sourceUrl, int? profileId = null, string? epgUrl = null);
 
     /// <summary>
     /// Var olan playlist'e kanallar ekler (aşamalı yükleme için).

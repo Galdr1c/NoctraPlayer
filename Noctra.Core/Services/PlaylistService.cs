@@ -24,6 +24,7 @@ public partial class PlaylistService : IPlaylistService
     private readonly EpgSourceResolver _epgSourceResolver;
     private readonly IEpgService _epgService;
     private readonly HttpClient _httpClient;
+    private readonly ISettingsService _settingsService;
 
     public PlaylistService(
         IDbContextFactory<AppDbContext> contextFactory, 
@@ -33,7 +34,8 @@ public partial class PlaylistService : IPlaylistService
         LanguageDetectionService languageDetection,
         EpgSourceResolver epgSourceResolver,
         IEpgService epgService,
-        HttpClient httpClient)
+        HttpClient httpClient,
+        ISettingsService settingsService)
     {
         _contextFactory = contextFactory;
         _parser = parser;
@@ -43,6 +45,7 @@ public partial class PlaylistService : IPlaylistService
         _epgSourceResolver = epgSourceResolver;
         _epgService = epgService;
         _httpClient = httpClient;
+        _settingsService = settingsService;
     }
 
     public async Task<Playlist> AddFromUrlAsync(string name, string url, int? profileId = null)
@@ -223,9 +226,13 @@ public partial class PlaylistService : IPlaylistService
                     }
 
                     var detectedCountry = countryCandidates[0];
+                    var appLanguage = (_settingsService?.Settings?.Language ?? "tr").ToUpperInvariant();
+                    var majorCountries = countryCandidates.Take(2).ToList(); // Sadece en çok kanallı 2 ülkeyi al
+
                     var epgSources = _epgSourceResolver.ResolveEpgSources(
-                        countryCandidates,
-                        m3uEpgUrl: NormalizeEpgUrl(detectedEpgUrl));
+                        majorCountries,
+                        m3uEpgUrl: NormalizeEpgUrl(detectedEpgUrl),
+                        preferredLanguageCode: appLanguage);
 
                     for (var i = 0; i < epgSources.Count; i++)
                     {
@@ -319,7 +326,7 @@ public partial class PlaylistService : IPlaylistService
     /// Kanallar sonradan AppendChannelsAsync ile eklenir.
     /// </summary>
     public async Task<Playlist> CreateEmptyPlaylistAsync(
-        string name, string sourceUrl, int? profileId = null)
+        string name, string sourceUrl, int? profileId = null, string? epgUrl = null)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
 
@@ -331,7 +338,14 @@ public partial class PlaylistService : IPlaylistService
                 p.ProfileId == profileId);
 
         if (existing != null)
+        {
+            if (string.IsNullOrWhiteSpace(existing.EpgUrl) && !string.IsNullOrWhiteSpace(epgUrl))
+            {
+                existing.EpgUrl = NormalizeEpgUrl(epgUrl);
+                await context.SaveChangesAsync();
+            }
             return existing;
+        }
 
         var playlist = new Playlist
         {
@@ -341,11 +355,17 @@ public partial class PlaylistService : IPlaylistService
             IsActive     = true,
             ChannelCount = 0,
             CreatedAt    = DateTime.UtcNow,
-            LastUpdated  = DateTime.UtcNow
+            LastUpdated  = DateTime.UtcNow,
+            EpgUrl       = NormalizeEpgUrl(epgUrl)
         };
 
         context.Playlists.Add(playlist);
         await context.SaveChangesAsync();
+
+        // Eğer EPG URL'i varsa, kanallar henüz inmemiş olsa bile (dummy'ler için) EPG çekimini başlatabiliriz.
+        // Ama genelde kanallar indikçe eşleşme yapmak daha iyidir.
+        // Şimdilik sadece URL'i kaydettik. Resume/RefreshEpg bunu kullanacaktır.
+
         return playlist;
     }
 
@@ -1352,10 +1372,14 @@ public partial class PlaylistService : IPlaylistService
 
         playlist.DetectedCountry = countryCandidates[0];
 
+        var appLanguage = (_settingsService?.Settings?.Language ?? "tr").ToUpperInvariant();
+        var majorCountries = countryCandidates.Take(2).ToList();
+
         // EPG kaynaklarını çöz (çoklu ülke + tekilleştirme)
         var epgSources = _epgSourceResolver.ResolveEpgSources(
-            countryCandidates,
-            m3uEpgUrl: playlist.EpgUrl);
+            majorCountries,
+            m3uEpgUrl: playlist.EpgUrl,
+            preferredLanguageCode: appLanguage);
 
         for (var i = 0; i < epgSources.Count; i++)
         {

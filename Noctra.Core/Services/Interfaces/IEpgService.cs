@@ -2,6 +2,26 @@
 
 namespace Noctra.Services.Interfaces;
 
+public enum EpgLoadStatus
+{
+    Idle,
+    Downloading,
+    Decompressing,
+    Parsing,
+    Matching,
+    Saving,
+    Completed,
+    Failed
+}
+
+public class EpgProgressInfo
+{
+    public EpgLoadStatus Status { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public double ProgressPercent { get; set; }
+    public int LoadedCount { get; set; }
+}
+
 /// <summary>
 /// EPG (Electronic Program Guide) servis interface'i
 /// </summary>
@@ -13,8 +33,9 @@ public interface IEpgService
     /// <param name="epgUrl">EPG XML URL</param>
     /// <param name="isPrimary">Ana EPG mi? (Evet ise veritabanını temizler)</param>
     /// <param name="channelsForMapping">Yedek EPG için isim eşleşmesi yapılacak kanallar</param>
+    /// <param name="progress">İlerleme raporlama arayüzü</param>
     /// <returns>Yüklenen ve eslesen program sayisi</returns>
-    Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1);
+    Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1, IProgress<EpgProgressInfo>? progress = null);
 
     /// <summary>
     /// EPG veritabanını temizler

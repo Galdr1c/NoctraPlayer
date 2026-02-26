@@ -148,6 +148,9 @@ public partial class MainViewModel : ObservableObject
     private bool _showOnlyFavorites;
 
     [ObservableProperty]
+    private EpgProgressInfo? _epgProgress;
+
+    [ObservableProperty]
     private string _statusMessage = "Hazır";
 
     [ObservableProperty]
@@ -421,22 +424,22 @@ public partial class MainViewModel : ObservableObject
                                                     });
                                                     break;
                                                 }
-                                                case ProfileType.XtreamCodes:
-                                                {
-                                                    StatusMessage = "Sunucuyla bağlantı kuruluyor...";
-                                                    var baseUrl = profile.ProviderAccount.Url.TrimEnd('/');
-                                                    if (!baseUrl.StartsWith("http")) baseUrl = "http://" + baseUrl;
-                             
-                                                    _ = CheckXtreamExpirationAsync(profile.ProviderAccount);
-                                                    var username = profile.ProviderAccount.Username ?? string.Empty;
-                                                    var password = _securityService.Decrypt(profile.ProviderAccount.Password) ?? string.Empty;
-                             
-                                                    // ── Adım 1: Boş playlist oluştur — UI hemen açılabilir ──────────
-                                                    var sourceUrl = $"{baseUrl}#{username}";
-                                                    var playlist = await _playlistService.CreateEmptyPlaylistAsync(
-                                                        profile.Name, sourceUrl, profile.Id);
-                                                    await LoadPlaylistsAsync();
-                            
+                                                                    case ProfileType.XtreamCodes:
+                                                                    {
+                                                                        StatusMessage = "Sunucuyla bağlantı kuruluyor...";
+                                                                        var baseUrl = profile.ProviderAccount.Url.TrimEnd('/');
+                                                                        if (!baseUrl.StartsWith("http")) baseUrl = "http://" + baseUrl;
+                                                 
+                                                                        _ = CheckXtreamExpirationAsync(profile.ProviderAccount);
+                                                                        var username = profile.ProviderAccount.Username ?? string.Empty;
+                                                                        var password = _securityService.Decrypt(profile.ProviderAccount.Password) ?? string.Empty;
+                                                                        var epgUrl = _xtreamCodesService.GetEpgUrl(baseUrl, username, password);
+                                                 
+                                                                        // ── Adım 1: Boş playlist oluştur — UI hemen açılabilir ──────────
+                                                                        var sourceUrl = $"{baseUrl}#{username}";
+                                                                        var playlist = await _playlistService.CreateEmptyPlaylistAsync(
+                                                                            profile.Name, sourceUrl, profile.Id, epgUrl);
+                                                                        await LoadPlaylistsAsync();                            
                                                     _ = Task.Run(async () =>
                                                     {
                                                         try
@@ -494,11 +497,12 @@ public partial class MainViewModel : ObservableObject
                         var portalUrl  = profile.ProviderAccount.Url;
                         var macAddress = profile.ProviderAccount.Username ?? string.Empty;
                         var sourceUrl  = $"{portalUrl.TrimEnd('/')}/stalker_portal#{macAddress}";
+                        var epgUrl     = _stalkerPortalService.GetEpgUrl(portalUrl);
 
                         // ── Adım 1: Boş playlist oluştur — UI hemen açılabilir ──────────
                         // Kanallar geldikçe buraya eklenecek
                         var playlist = await _playlistService.CreateEmptyPlaylistAsync(
-                            profile.Name, sourceUrl, profile.Id);
+                            profile.Name, sourceUrl, profile.Id, epgUrl);
                         await LoadPlaylistsAsync();
 
                         StatusMessage = "İçerikler yükleniyor, bu biraz sürebilir...";
@@ -2350,32 +2354,30 @@ public partial class MainViewModel : ObservableObject
                 providerEpgUrl = $"{baseUrl}/xmltv.php?username={Uri.EscapeDataString(CurrentProfile.ProviderAccount.Username ?? "")}&password={Uri.EscapeDataString(decryptedPassword)}";
             }
 
-            // 2. Çoklu ülke tespiti (Loop through top countries)
+            // 2. Çoklu ülke tespiti (App Language + Top Major Countries)
             var channelNames = channelsForMapping.Select(c => c.Name ?? "").ToList();
-            // Detect top countries (limit to top 3 to avoid excessive downloads)
-            var detectedCountries = _languageDetectionService.DetectCountries(channelNames)
-                .Where(c => c.Percentage > 20 || c.ChannelCount > 20) // Min threshold — prevents downloading huge EPG files for marginal matches
-                .Take(3)
+            var appLanguage = (_settingsService.Settings.Language ?? "tr").ToUpperInvariant();
+
+            // Detect top countries (limit to top 2 other major countries to save data)
+            var majorCountries = _languageDetectionService.DetectCountries(channelNames)
+                .Where(c => c.Percentage > 20 || c.ChannelCount > 50) // Daha sıkı eşik: %20 pay veya 50+ kanal
+                .OrderByDescending(c => c.Percentage)
+                .Take(2)
+                .Select(c => c.CountryCode.ToUpperInvariant())
                 .ToList();
 
-            if (detectedCountries.Count == 0)
-                detectedCountries.Add(("TR", 0, 0));
-
-            _logger?.LogDebug($"[MainViewModel] Detected countries: {string.Join(", ", detectedCountries.Select(c => c.CountryCode))}");
-
-            // 3. EPG kaynaklarını topla
-            var countryCodes = detectedCountries.Select(c => c.CountryCode).ToList();
+            // 3. EPG kaynaklarını topla (App Language her zaman dahil edilir)
             var playlistEpgUrl = (SelectedPlaylist?.EpgUrl ?? string.Empty).Trim();
             var customEpgUrl = (_settingsService.Settings.CustomEpgUrl ?? string.Empty).Trim();
-            
             var hasUsableTvgIds = channelsForMapping.Any(c => !string.IsNullOrWhiteSpace(c.TvgId));
             
             var epgSources = _epgSourceResolver.ResolveEpgSources(
-                countryCodes, 
+                majorCountries, 
                 providerEpgUrl, 
                 playlistEpgUrl, 
                 Uri.TryCreate(customEpgUrl, UriKind.Absolute, out _) ? customEpgUrl : null,
-                hasUsableTvgIds);
+                hasUsableTvgIds,
+                preferredLanguageCode: appLanguage);
 
             if (!isBackgroundSync)
             {
@@ -2387,14 +2389,33 @@ public partial class MainViewModel : ObservableObject
             string? lastSourceError = null;
             string? successfulSourceUrl = null;
             
+            var epgProgressReporter = new Progress<EpgProgressInfo>(p =>
+            {
+                EpgProgress = p;
+                if (!isBackgroundSync)
+                {
+                    StatusMessage = $"EPG: {p.Message}";
+                }
+            });
+
+            // Yabancı kanallar için popülerlik filtresi kelimeleri (Büyük harf duyarlı, kanal isimleri üst karakter yapıldığı için)
+            var popularKeywords = new[] 
+            { 
+                "BBC", "ITV", "SKY", "ABC", "CBS", "NBC", "FOX", "CNN", "ESPN", "HBO", "SHOWTIME", "AMC", "TNT", "TBS", "SYFY", 
+                "DISCOVERY", "HISTORY", "NAT GEO", "NATGEO", "USA", "TLC", "DMAX", "BLOOMBERG", "CNBC", "AL JAZEERA", "ALJAZEERA", 
+                "EUROSPORT", "ANIMAL PLANET", "HGTV", "FOOD NETWORK", "ARD", "ZDF", "RTL", "SAT1", "PROSIEBEN", "VOX", "WELT", 
+                "NTV", "TF1", "CANAL", "M6", "ARTE", "BFM", "RAI", "MEDIASET", "CANALE5", "ITALIA1", "RETE4", "LA7", "TVE", 
+                "ANTENA3", "CUATRO", "TELECINCO", "LASEXTA", "MOVISTAR", "FRANCE24", "NICKELODEON", "CARTOON", "PARAMOUNT", 
+                "SONY", "MTV", "VH1", "INVESTIGATION", "MOVIES", "SPORTS", "KIDS", "DISNEY", "CINEMA", "NEWS", "NETFLIX", "HD", "4K" 
+            };
+
             foreach (var source in epgSources)
             {
                 try
                 {
-                    
                     if (!isBackgroundSync)
                     {
-                        StatusMessage = $"EPG: {source.Type} yükleniyor...";
+                        StatusMessage = $"EPG: {source.Type} kaynağına bağlanılıyor...";
                     }
 
                     // Eğer bu kaynak için temizlik gerekiyorsa
@@ -2404,7 +2425,43 @@ public partial class MainViewModel : ObservableObject
                         await _epgService.ClearEpgAsync();
                     }
 
-                    var loadedPrograms = await _epgService.LoadEpgAsync(source.Url, source.IsPrimary, channelsForMapping.ToList(), daysAhead: 1);
+                    // PERFORMANS VE POPÜLERLİK OPTİMİZASYONU:
+                    // Sadece bu kaynağa (ülkeye) ait olan kanalları filtrele
+                    List<Channel> targetChannels;
+                    
+                    if (source.Type == EpgSourceType.Provider || source.Type == EpgSourceType.CustomUrl || source.Url.Contains($"-{appLanguage.ToLower()}.", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Ana kaynaklar veya kendi dilimiz: Tüm kanalları dene
+                        targetChannels = liveChannels;
+                    }
+                    else 
+                    {
+                        // Yabancı Ülke Kaynağı: Sadece o ülkenin popüler kanallarını işle (Kullanıcı isteği)
+                        var sourceCountryCode = ExtractCountryCodeFromUrl(source.Url);
+                        targetChannels = liveChannels
+                            .Where(c => 
+                            {
+                                var name = (c.Name ?? "").ToUpperInvariant();
+                                // 1. Kanal bu ülkeye mi ait?
+                                bool isThisCountry = !string.IsNullOrEmpty(sourceCountryCode) && name.Contains(sourceCountryCode);
+                                if (!isThisCountry) return false;
+
+                                // 2. Popüler mi? (İsminde majör kelimeler geçiyor mu?)
+                                return popularKeywords.Any(k => name.Contains(k));
+                            })
+                            .ToList();
+
+                        _logger?.LogDebug($"[EPG] Foreign source {sourceCountryCode} optimized: matching only {targetChannels.Count} popular channels.");
+                    }
+
+                    if (targetChannels.Count == 0 && source.Type == EpgSourceType.IptvEpgOrg) continue;
+
+                    var loadedPrograms = await _epgService.LoadEpgAsync(
+                        source.Url, 
+                        source.IsPrimary, 
+                        targetChannels, 
+                        daysAhead: 1, 
+                        progress: epgProgressReporter);
 
                     if (loadedPrograms > 0)
                     {
@@ -2415,15 +2472,8 @@ public partial class MainViewModel : ObservableObject
                     }
                     else
                     {
-                        // Don't overwrite last error if we already had success
-                        if (!anySuccess) 
-                        {
-                            lastSourceError = $"{source.Type}: 0 program";
-                        }
-                        _logger?.LogDebug($"[MainViewModel] EPG source returned 0 programs: {source.Type}");
+                        if (!anySuccess) lastSourceError = $"{source.Type}: 0 program";
                     }
-                    
-                    // Do NOT break here; continue to load other countries/sources
                 }
                 catch (Exception ex)
                 {
@@ -2431,6 +2481,8 @@ public partial class MainViewModel : ObservableObject
                     _logger?.LogDebug($"[MainViewModel] EPG source failed: {source.Type} - {ex.Message}");
                 }
             }
+
+            EpgProgress = null; // Clear progress info when done
 
             EnsureEpgBackgroundSync();
 
@@ -2497,6 +2549,24 @@ public partial class MainViewModel : ObservableObject
                 Interlocked.Exchange(ref _isManualRefreshRunning, 0);
             }
         }
+    }
+
+    private static string ExtractCountryCodeFromUrl(string url)
+    {
+        // Örn: https://iptv-epg.org/files/epg-tr.xml.gz -> TR
+        try
+        {
+            var fileName = Path.GetFileName(url);
+            var parts = fileName.Split('-');
+            if (parts.Length >= 2)
+            {
+                var codePart = parts[1];
+                var dotIdx = codePart.IndexOf('.');
+                if (dotIdx > 0) return codePart.Substring(0, dotIdx).ToUpperInvariant();
+            }
+        }
+        catch { }
+        return string.Empty;
     }
 
     private async Task PersistSelectedPlaylistEpgErrorAsync(string error)

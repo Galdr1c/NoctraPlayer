@@ -35,7 +35,7 @@ public class EpgService : IEpgService
         LastError = null;
     }
 
-    public async Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1)
+    public async Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1, IProgress<EpgProgressInfo>? progress = null)
     {
         if (!await _loadSemaphore.WaitAsync(0).ConfigureAwait(false))
         {
@@ -49,12 +49,15 @@ public class EpgService : IEpgService
             LastError = null; // Clear previous error
             if (string.IsNullOrEmpty(epgUrl)) return 0;
 
+            progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Downloading, Message = "EPG dosyası indiriliyor...", ProgressPercent = 5 });
+
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
             using var response = await NetworkRetry.ExecuteAsync(
                 () => _httpClient.GetAsync(epgUrl, HttpCompletionOption.ResponseHeadersRead, cts.Token),
                 cancellationToken: cts.Token).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
+            var totalBytes = response.Content.Headers.ContentLength;
             using var stream = await response.Content.ReadAsStreamAsync(cts.Token).ConfigureAwait(false);
 
             // GZip decompression support (.gz URLs)
@@ -62,8 +65,11 @@ public class EpgService : IEpgService
             if (epgUrl.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) ||
                 response.Content.Headers.ContentEncoding.Contains("gzip"))
             {
+                progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Decompressing, Message = "Sıkıştırılmış dosya açılıyor...", ProgressPercent = 15 });
                 dataStream = new GZipStream(stream, CompressionMode.Decompress);
             }
+
+            progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Parsing, Message = "EPG içeriği analiz ediliyor...", ProgressPercent = 20 });
 
             var settings = new System.Xml.XmlReaderSettings 
             { 
@@ -71,10 +77,6 @@ public class EpgService : IEpgService
                 DtdProcessing = System.Xml.DtdProcessing.Ignore 
             };
             using var reader = System.Xml.XmlReader.Create(dataStream, settings);
-
-            // NOTE: Clearing is handled by MainViewModel via ClearBeforeLoad flag.
-            // Do NOT clear here — multiple sources may be loaded sequentially,
-            // and clearing on every isPrimary source would wipe previously loaded data.
 
             // Build mapping dictionary for EPG (Name -> channel Id)
             var channelMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -84,6 +86,7 @@ public class EpgService : IEpgService
 
             if (channelsForMapping != null)
             {
+                progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Matching, Message = "Kanallar eşleştiriliyor...", ProgressPercent = 25 });
                 foreach (var channel in channelsForMapping)
                 {
                     if (!string.IsNullOrWhiteSpace(channel.TvgId))
@@ -93,10 +96,8 @@ public class EpgService : IEpgService
                             tvgIdToInternalId[channel.TvgId!] = channel.Id.ToString();
                     }
 
-                    // Some providers use internal numeric IDs; keep this fallback.
                     allowedPrimaryIds.Add(channel.Id.ToString());
 
-                    // Build name map for fuzzy matching (used by both primary and secondary)
                     foreach (var variant in GetNameVariants(channel.Name))
                     {
                         if (!string.IsNullOrEmpty(variant) && !channelMap.ContainsKey(variant))
@@ -113,10 +114,8 @@ public class EpgService : IEpgService
                 }
             }
 
-            // (Name map built above for both primary and secondary)
-
             var programs = new List<EpgProgram>();
-            var batchSize = 2000;
+            var batchSize = 2500; // Slightly larger batch for better performance
             var windowStartUtc = DateTime.UtcNow.Date;
             var windowEndUtc = windowStartUtc.AddDays(Math.Max(1, daysAhead) + 1);
 
@@ -130,26 +129,21 @@ public class EpgService : IEpgService
                     {
                         if (reader.Name == "channel") 
                         {
-                            // Map XML channel ID to DB channel for BOTH primary and secondary EPG
                             if (channelMap.Count > 0)
                             {
                                 var xmlId = reader.GetAttribute("id");
                                 if (xmlId != null)
                                 {
-                                    // Strongest mapping: XML channel id == playlist tvg-id
                                     if (tvgIdToInternalId.TryGetValue(xmlId, out var byTvgId))
                                     {
                                         xmlChannelIdToDbTvgId[xmlId] = byTvgId;
-                                        // For primary EPG, also mark the xmlId as allowed
                                         if (isPrimary) allowedPrimaryIds.Add(xmlId);
                                         continue;
                                     }
 
-                                    // If xmlId is already in allowedPrimaryIds (exact match), skip fuzzy
                                     if (isPrimary && allowedPrimaryIds.Contains(xmlId))
                                         continue;
 
-                                    // Fuzzy: Read display-name and match against channel names
                                     using var subReader = reader.ReadSubtree();
                                     while (await subReader.ReadAsync().ConfigureAwait(false))
                                     {
@@ -167,7 +161,7 @@ public class EpgService : IEpgService
                                             {
                                                 xmlChannelIdToDbTvgId[xmlId] = dbChannelId!;
                                                 if (isPrimary) allowedPrimaryIds.Add(xmlId);
-                                                break; // Found match
+                                                break; 
                                             }
                                         }
                                     }
@@ -182,16 +176,13 @@ public class EpgService : IEpgService
 
                             if (string.IsNullOrEmpty(channel)) continue;
 
-                            // Determine target ChannelId
                             string targetChannelId = channel;
                             if (xmlChannelIdToDbTvgId.TryGetValue(channel, out var mappedId))
                             {
-                                // Use the mapped internal channel ID (works for both primary and secondary)
                                 targetChannelId = mappedId;
                             }
                             else if (isPrimary)
                             {
-                                // Keep only channels present in current playlist.
                                 if (allowedPrimaryIds.Count > 0 && !allowedPrimaryIds.Contains(channel))
                                 {
                                     continue;
@@ -199,14 +190,12 @@ public class EpgService : IEpgService
                             }
                             else
                             {
-                                // Secondary: No match found for this channel in our DB, skip
                                 continue;
                             }
 
                             var startTime = ParseXmlTvDate(start);
                             var endTime = ParseXmlTvDate(stop);
 
-                            // Keep only the requested time window (today + N days)
                             if (endTime <= windowStartUtc || startTime >= windowEndUtc)
                                 continue;
 
@@ -217,7 +206,6 @@ public class EpgService : IEpgService
                                 EndTime = endTime
                             };
 
-                            // Read inner elements
                             using var subReader = reader.ReadSubtree();
                             while (await subReader.ReadAsync().ConfigureAwait(false))
                             {
@@ -229,7 +217,6 @@ public class EpgService : IEpgService
                                             program.Title = await subReader.ReadElementContentAsStringAsync().ConfigureAwait(false);
                                             break;
                                         case "desc":
-                                            // Keep first non-empty description.
                                             if (string.IsNullOrWhiteSpace(program.Description))
                                             {
                                                 var desc = await subReader.ReadElementContentAsStringAsync().ConfigureAwait(false);
@@ -248,6 +235,14 @@ public class EpgService : IEpgService
 
                             if (programs.Count >= batchSize)
                             {
+                                progress?.Report(new EpgProgressInfo 
+                                { 
+                                    Status = EpgLoadStatus.Saving, 
+                                    Message = $"{totalLoaded:N0} program kaydediliyor...", 
+                                    ProgressPercent = Math.Min(98, 30 + (totalLoaded / 5000.0 * 5.0)),
+                                    LoadedCount = totalLoaded
+                                });
+
                                 await context.EpgPrograms.AddRangeAsync(programs).ConfigureAwait(false);
                                 await context.SaveChangesAsync().ConfigureAwait(false);
                                 programs.Clear();
@@ -256,7 +251,6 @@ public class EpgService : IEpgService
                     }
                 }
 
-                // Final batch
                 if (programs.Any())
                 {
                     await context.EpgPrograms.AddRangeAsync(programs).ConfigureAwait(false);
@@ -270,13 +264,14 @@ public class EpgService : IEpgService
 
             IsLoaded = true;
             LastUpdated = DateTime.UtcNow;
+            progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Completed, Message = "Tamamlandı", ProgressPercent = 100, LoadedCount = totalLoaded });
             return totalLoaded;
         }
         catch (Exception ex)
         {
             LastError = UserFriendlyErrorMessage.FromException(ex);
             _logger?.LogError(ex, "EPG load failed for URL {EpgUrl}", epgUrl);
-            // Don't throw if secondary
+            progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Failed, Message = LastError, ProgressPercent = 100 });
             if (isPrimary) throw;
             return 0;
         }
@@ -438,28 +433,39 @@ public class EpgService : IEpgService
         if (string.IsNullOrWhiteSpace(normalizedDisplayName) || normalizedDisplayName.Length < 3)
             return null;
 
+        // Fast path: Exact match (O(1))
         if (channelMap.TryGetValue(normalizedDisplayName, out var exact))
         {
             return exact;
         }
 
+        // Optimization: Do not perform expensive similarity checks if the list is too large 
+        // and we are looking for obscure secondary channels.
+        // Also, skip fuzzy matching for very short names to avoid false positives.
+        if (normalizedDisplayName.Length < 4)
+            return null;
+
         // Dynamic threshold: shorter names need less strict matching
         var maxLen = Math.Max(normalizedDisplayName.Length, 3);
-        var threshold = maxLen <= 6 ? 0.65 : maxLen <= 10 ? 0.72 : 0.78;
+        var threshold = maxLen <= 6 ? 0.70 : maxLen <= 10 ? 0.75 : 0.82; // Thresholds tightened
 
         string? bestId = null;
         double bestScore = 0;
 
         foreach (var kvp in channelMap)
         {
-            if (kvp.Key.Length < 3)
-                continue;
+            // Preliminary check: if first characters don't match, similarity is likely low
+            if (kvp.Key[0] != normalizedDisplayName[0]) continue;
+
             var score = Similarity(normalizedDisplayName, kvp.Key);
             if (score > bestScore)
             {
                 bestScore = score;
                 bestId = kvp.Value;
             }
+            
+            // If we found a very high confidence match, stop searching
+            if (bestScore > 0.95) break;
         }
 
         return bestScore >= threshold ? bestId : null;

@@ -40,5 +40,10 @@ public interface IXtreamCodesService
         Func<List<XtreamCategory>, Action<string>, Task<List<XtreamCategory>>> onCategoriesDiscovered,
         Func<List<Channel>, string, Task> onCategoryLoaded,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Xtream sunucusunun standart XMLTV (EPG) URL'sini döndürür.
+    /// </summary>
+    string GetEpgUrl(string baseUrl, string username, string password);
 }
 

@@ -70,6 +70,11 @@ public interface IStalkerPortalService
         Func<List<Channel>, StalkerCategory, Task> onCategoryLoaded,
         IProgress<StalkerLoadProgress>? progress = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Stalker portalı için olası XMLTV (EPG) URL'sini döndürür.
+    /// </summary>
+    string GetEpgUrl(string portalUrl);
 }
 
 /// <summary>

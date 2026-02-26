@@ -576,7 +576,7 @@ public partial class SettingsViewModel : ObservableObject
     private async Task WatchEpgRefreshOutcomeAsync(CancellationToken cancellationToken)
     {
         var startedAt = DateTime.UtcNow.AddSeconds(-2);
-        var timeoutAt = DateTime.UtcNow.AddMinutes(3);
+        var timeoutAt = DateTime.UtcNow.AddMinutes(10); // Match EpgService timeout
 
         try
         {
@@ -584,29 +584,33 @@ public partial class SettingsViewModel : ObservableObject
             {
                 try
                 {
-                    await Task.Delay(1500, cancellationToken);
-                    await ScanEpgStatsCoreAsync(updateStatusMessage: false);
-                    var elapsed = DateTime.UtcNow - startedAt;
-                    var dynamicPercent = Math.Min(95, 10 + (int)(elapsed.TotalSeconds / 2.0));
-                    if (dynamicPercent > RefreshProgressPercent)
+                    await Task.Delay(1000, cancellationToken);
+                    
+                    // MainViewModel'daki progres verisini yakala
+                    var currentProgress = _mainViewModel.EpgProgress;
+                    if (currentProgress != null)
                     {
-                        SetProgressStatus("EPG", dynamicPercent, "EPG verileri isleniyor...");
+                        var percent = (int)currentProgress.ProgressPercent;
+                        SetProgressStatus("EPG", percent, currentProgress.Message);
+                    }
+                    else 
+                    {
+                        // Progress nesnesi yoksa istatistik taramaya devam et (fall-back)
+                        await ScanEpgStatsCoreAsync(updateStatusMessage: false);
+                        
+                        if (LastEpgUpdate.HasValue && LastEpgUpdate.Value >= startedAt)
+                        {
+                            SetProgressStatus("EPG", 100, "EPG yenileme tamamlandı");
+                            return;
+                        }
                     }
 
                     if (!string.IsNullOrWhiteSpace(EpgLastError))
                     {
-                        // EpgLastError zaten ScanEpgStatsCoreAsync tarafından
-                        // UserFriendlyErrorMessage.FromText ile dönüştürülmüş durumda
                         SetProgressStatus(
                             "EPG",
                             RefreshProgressPercent,
                             $"EPG yenileme hatasi: {EpgLastError}");
-                        return;
-                    }
-
-                    if (LastEpgUpdate.HasValue && LastEpgUpdate.Value >= startedAt)
-                    {
-                        SetProgressStatus("EPG", 100, "EPG yenileme tamamlandi");
                         return;
                     }
                 }
@@ -621,7 +625,10 @@ public partial class SettingsViewModel : ObservableObject
                 }
             }
 
-            SetProgressStatus("EPG", RefreshProgressPercent, "EPG yenileme zaman asimina ugradi");
+            if (DateTime.UtcNow >= timeoutAt)
+            {
+                SetProgressStatus("EPG", RefreshProgressPercent, "EPG yenileme zaman asimina ugradi (10 dk)");
+            }
         }
         finally
         {

@@ -60,6 +60,12 @@ public class StalkerPortalService : IStalkerPortalService
     /// <summary>
     /// Geriye dönük uyum — yeni kodlar GetChannelsProgressiveAsync kullanmalı.
     /// </summary>
+    public string GetEpgUrl(string portalUrl)
+    {
+        var normalized = NormalizePortalUrl(portalUrl);
+        return $"{normalized}/itv/xmltv.php";
+    }
+
     public async Task<List<Channel>> GetChannelsAsync(
         string portalUrl, string macAddress, bool includeVod = true,
         CancellationToken cancellationToken = default)

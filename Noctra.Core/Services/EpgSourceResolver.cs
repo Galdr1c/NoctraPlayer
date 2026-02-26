@@ -1,3 +1,5 @@
+using Noctra.Models;
+
 namespace Noctra.Services;
 
 /// <summary>
@@ -7,60 +9,30 @@ namespace Noctra.Services;
 public class EpgSourceResolver
 {
     /// <summary>
-    /// iptv-epg.org URL kalıbı
+    /// iptv-epg.org URL kalıbı (GZip öncelikli)
     /// </summary>
-    private const string IptvEpgOrgTemplate = "https://iptv-epg.org/files/epg-{0}.xml";
+    private const string IptvEpgOrgTemplate = "https://iptv-epg.org/files/epg-{0}.xml.gz";
 
     /// <summary>
-    /// Global fallback URL (büyük dosya, son çare)
+    /// Global fallback URL (GZip öncelikli)
     /// </summary>
-    private const string GlobalFallbackUrl = "https://iptv-epg.org/files/epg-all.xml";
+    private const string GlobalFallbackUrl = "https://iptv-epg.org/files/epg-all.xml.gz";
 
     /// <summary>
     /// Desteklenen ülkeler ve özel EPG URL'leri
     /// </summary>
     private static readonly Dictionary<string, string[]> CountryEpgSources = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["TR"] = new[]
-        {
-            "https://iptv-epg.org/files/epg-tr.xml"
-        },
-        ["GB"] = new[]
-        {
-            "https://iptv-epg.org/files/epg-gb.xml"
-        },
-        ["US"] = new[]
-        {
-            "https://iptv-epg.org/files/epg-us.xml"
-        },
-        ["DE"] = new[]
-        {
-            "https://iptv-epg.org/files/epg-de.xml"
-        },
-        ["FR"] = new[]
-        {
-            "https://iptv-epg.org/files/epg-fr.xml"
-        },
-        ["IT"] = new[]
-        {
-            "https://iptv-epg.org/files/epg-it.xml"
-        },
-        ["ES"] = new[]
-        {
-            "https://iptv-epg.org/files/epg-es.xml"
-        },
-        ["NL"] = new[]
-        {
-            "https://iptv-epg.org/files/epg-nl.xml"
-        },
-        ["RU"] = new[]
-        {
-            "https://iptv-epg.org/files/epg-ru.xml"
-        },
-        ["AR"] = new[]
-        {
-            "https://iptv-epg.org/files/epg-ar.xml"
-        }
+        ["TR"] = new[] { "https://iptv-epg.org/files/epg-tr.xml.gz" },
+        ["GB"] = new[] { "https://iptv-epg.org/files/epg-gb.xml.gz" },
+        ["US"] = new[] { "https://iptv-epg.org/files/epg-us.xml.gz" },
+        ["DE"] = new[] { "https://iptv-epg.org/files/epg-de.xml.gz" },
+        ["FR"] = new[] { "https://iptv-epg.org/files/epg-fr.xml.gz" },
+        ["IT"] = new[] { "https://iptv-epg.org/files/epg-it.xml.gz" },
+        ["ES"] = new[] { "https://iptv-epg.org/files/epg-es.xml.gz" },
+        ["NL"] = new[] { "https://iptv-epg.org/files/epg-nl.xml.gz" },
+        ["RU"] = new[] { "https://iptv-epg.org/files/epg-ru.xml.gz" },
+        ["AR"] = new[] { "https://iptv-epg.org/files/epg-ar.xml.gz" }
     };
 
     /// <summary>
@@ -68,10 +40,17 @@ public class EpgSourceResolver
     /// Priority 0: Custom EPG
     /// Priority 1: Provider EPG
     /// Priority 2: M3U x-tvg-url
-    /// Priority 3: iptv-epg.org (ülkelere göre)
-    /// Priority 4: Global Fallback
+    /// Priority 3: Preferred Language EPG (App Language)
+    /// Priority 4: Detected Major Countries EPG
+    /// Priority 5: Global Fallback
     /// </summary>
-    public List<EpgSource> ResolveEpgSources(List<string> countryCodes, string? providerEpgUrl = null, string? m3uEpgUrl = null, string? customEpgUrl = null, bool hasUsableTvgIds = false)
+    public List<EpgSource> ResolveEpgSources(
+        List<string> countryCodes, 
+        string? providerEpgUrl = null, 
+        string? m3uEpgUrl = null, 
+        string? customEpgUrl = null, 
+        bool hasUsableTvgIds = false,
+        string? preferredLanguageCode = null)
     {
         var sources = new List<EpgSource>();
 
@@ -83,7 +62,7 @@ public class EpgSourceResolver
                 Url = customEpgUrl,
                 Priority = 0,
                 Type = EpgSourceType.CustomUrl,
-                IsPrimary = true // Kullanıcı kendi URL'ini girdi, güvenilir kaynak
+                IsPrimary = true 
             });
         }
 
@@ -97,7 +76,7 @@ public class EpgSourceResolver
                     Url = providerEpgUrl,
                     Priority = 1,
                     Type = EpgSourceType.Provider,
-                    IsPrimary = true // Provider ID'leri kanal TvgId veya Id ile eşleşir
+                    IsPrimary = true 
                 });
             }
         }
@@ -112,22 +91,21 @@ public class EpgSourceResolver
                     Url = m3uEpgUrl,
                     Priority = 2,
                     Type = EpgSourceType.M3UHeader,
-                    IsPrimary = string.IsNullOrEmpty(providerEpgUrl) // Sadece provider yoksa primary sayılır
+                    IsPrimary = string.IsNullOrEmpty(providerEpgUrl) 
                 });
             }
         }
 
-        // 3. iptv-epg.org (country loops)
-        foreach (var countryCode in countryCodes)
+        // 3. Preferred Language EPG (App Language)
+        if (!string.IsNullOrWhiteSpace(preferredLanguageCode))
         {
-            var code = countryCode.ToLowerInvariant();
-            var countryUrl = string.Format(IptvEpgOrgTemplate, code);
-            
-            if (!sources.Any(s => s.Url == countryUrl))
+            var langCode = preferredLanguageCode.ToLowerInvariant();
+            var langUrl = string.Format(IptvEpgOrgTemplate, langCode);
+            if (!sources.Any(s => s.Url == langUrl))
             {
                 sources.Add(new EpgSource
                 {
-                    Url = countryUrl,
+                    Url = langUrl,
                     Priority = 3,
                     Type = EpgSourceType.IptvEpgOrg,
                     IsPrimary = true
@@ -135,21 +113,40 @@ public class EpgSourceResolver
             }
         }
 
-        // 4. Global fallback (sadece eğer bilinen bir ülke listesinde yoksa vs. ama genelde ekleriz)
-        // Check if any of the provided countries are in our known dictionary, if not add fallback.
-        bool hasKnownCountry = countryCodes.Any(c => CountryEpgSources.ContainsKey(c));
-        if (!hasKnownCountry)
+        // 4. Detected Major Countries (filtered list)
+        foreach (var countryCode in countryCodes)
         {
-            if (!sources.Any(s => s.Url == GlobalFallbackUrl))
+            var code = countryCode.ToLowerInvariant();
+            
+            // App language ile aynıysa zaten eklendi, atla
+            if (!string.IsNullOrEmpty(preferredLanguageCode) && 
+                code.Equals(preferredLanguageCode, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var countryUrl = string.Format(IptvEpgOrgTemplate, code);
+            
+            if (!sources.Any(s => s.Url == countryUrl))
             {
                 sources.Add(new EpgSource
                 {
-                    Url = GlobalFallbackUrl,
+                    Url = countryUrl,
                     Priority = 4,
-                    Type = EpgSourceType.GlobalFallback,
+                    Type = EpgSourceType.IptvEpgOrg,
                     IsPrimary = true
                 });
             }
+        }
+
+        // 5. Global fallback (Sadece hiç kaynak yoksa ekle)
+        if (sources.Count == 0)
+        {
+            sources.Add(new EpgSource
+            {
+                Url = GlobalFallbackUrl,
+                Priority = 5,
+                Type = EpgSourceType.GlobalFallback,
+                IsPrimary = true
+            });
         }
 
         // Sort by priority and set ClearBeforeLoad only for the very first item
@@ -200,5 +197,3 @@ public enum EpgSourceType
     EpgShare01,
     GlobalFallback
 }
-
-

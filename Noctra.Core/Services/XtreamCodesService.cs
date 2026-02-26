@@ -153,6 +153,11 @@ public class XtreamCodesService : IXtreamCodesService
         return categories.ToDictionary(c => c.Id, c => c.Name, StringComparer.OrdinalIgnoreCase);
     }
 
+    public string GetEpgUrl(string baseUrl, string username, string password)
+    {
+        return $"{NormalizeBaseUrl(baseUrl)}/xmltv.php?username={Uri.EscapeDataString(username)}&password={Uri.EscapeDataString(password)}";
+    }
+
     public async Task<List<Channel>> GetChannelsAsync(
         string baseUrl,
         string username,

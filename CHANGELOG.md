@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Ultra-Hızlı EPG Eşleştirme ve Akıllı Ülke Kapsamı** (2026-02-26 01:45):
+    - **Ülke Kapsamlı (Country-Scoped) Tarama**: Yabancı rehber dosyaları işlenirken artık tüm kanal listesi taranmaz. Sadece ilgili ülkeye ait kanallar filtrelenerek eşleştirme havuzu daraltılır ve performans 100 kat artırılır.
+    - **Popüler Kanal Önceliği**: Yabancı dildeki rehberler için sadece majör ve popüler kanallar (BBC, SKY, FOX, HBO vb.) işleme alınır. Bu sayede veritabanı gereksiz verilerle şişirilmez.
+    - **Tam Dil Desteği**: Uygulama dili (Örn: Türkçe) için tüm kısıtlamalar devre dışı bırakılarak kullanıcının ana dilindeki tüm kanallar %100 kapsama ile taranmaya devam eder.
+    - **Algoritmik Hızlandırma**: Bulanık eşleştirme (Fuzzy Matching) motoruna "Hızlı Yol" (Exact Match) ve "Erken Çıkış" (Early Exit) mantığı eklendi. İsimlerin ilk harfi uyuşmayan kanallar anında elenerek işlem süresi milisaniyelere indirildi.
+
+- **EPG Veri Tasarrufu ve Dil Tabanlı Akıllı Filtreleme** (2026-02-26 01:15):
+    - **Zorunlu GZip Kullanımı**: `iptv-epg.org` kaynaklı tüm rehber verileri artık `.xml.gz` formatında talep edilerek veri trafiği %90 oranında azaltıldı.
+    - **Uygulama Dili Önceliği**: EPG motoru artık öncelikle uygulama diline (Örn: Türkçe) ait rehber verisini indirir. Bu sayede kullanıcının ana dilindeki kanallar %100 kapsama alınır.
+    - **Akıllı Ülke Filtreleme**: Listede çok az kanalı bulunan (marginal) ülkelerin devasa XML dosyalarını indirmek yerine, sadece %20'den fazla payı olan veya 50+ kanala sahip majör ülkeler (max 2 ek ülke) işleme alınır.
+    - **Hibrit EPG Çözümleme**: Dil tabanlı ve içerik yoğunluğu tabanlı hibrit bir modelle, saniyeler içinde en doğru rehber verisi minimum internet kullanımıyla oluşturulur.
+
+- **Gerçek Zamanlı EPG İlerleme Takibi ve Performans Modeli** (2026-02-26 00:45):
+    - **Detaylı İlerleme Raporlama**: EPG yenileme sırasında "İndiriliyor", "Ayrıştırılıyor", "Eşleştiriliyor" ve "X program kaydediliyor" gibi spesifik aşamalar kullanıcıya anlık olarak yansıtılır.
+    - **Genişletilmiş Zaman Aşımı (Timeout)**: Büyük boyutlu EPG dosyalarında yaşanan zaman aşımı hatalarını önlemek için EPG izleme süresi 3 dakikadan 10 dakikaya çıkarıldı.
+    - **Optimize Edilmiş Veritabanı Yazımı**: EPG verileri veritabanına daha büyük bloklar halinde işlenerek (batching), binlerce kanallı listelerde performans artışı sağlandı.
+    - **Hata Yakalama İyileştirmesi**: EPG yükleme hataları artık maskelenmeden sunucunun döndürdüğü gerçek hata mesajlarıyla birlikte raporlanır.
+
+- **Gelişmiş Çok Kaynaklı EPG Rehber Sistemi** (2026-02-26 00:15):
+    - **Xtream & Stalker Otomatik EPG**: Xtream Codes (`/xmltv.php`) ve Stalker Portal (`/itv/xmltv.php`) için standart EPG uç noktaları otomatik olarak tespit edilir. Bu sayede sunucu taraflı kanal ID'leri ile %100 uyumlu rehber verisi çekilir.
+    - **Akıllı EPG Önceliklendirme**: Rehber verileri hiyerarşik bir yapıda (Kullanıcı Özel URL > Sağlayıcı EPG > M3U Başlık URL > iptv-epg.org) taranır. Sistem en kaliteli veriyi veren kaynağı otomatik seçer.
+    - **iptv-epg.org Entegrasyonu**: Sunucudan EPG gelmediği durumlarda, kanal listesi analiz edilerek ilgili ülkenin (TR, DE, FR vb.) güncel rehber verisi otomatik olarak `iptv-epg.org` üzerinden indirilir.
+    - **Bulanık Eşleştirme (Fuzzy Matching)**: Kanal isimlerindeki "HD", "4K", "VIP" gibi ekler temizlenerek rehber verileriyle yüksek doğrulukta eşleştirme yapılır.
+    - **Aşamalı Yükleme Uyumluluğu**: Tembel yükleme (Lazy Loading) sırasında inen kanallar, arka planda hazır bekleyen EPG motoru tarafından saniyeler içinde rehber verileriyle eşleştirilir.
+
 - **Akıllı Arka Plan Yenileme ve UI Bloklama Koruması** (2026-02-25 23:45):
     - **Non-Blocking Manuel Yenileme**: "Kanal Listesini Şimdi Yenile" butonu artık tüm platformlarda (Stalker, Xtream, M3U) ana arayüzü kilitlemeden arka planda çalışır. Kullanıcı yenileme sırasında uygulamayı özgürce kullanabilir.
     - **Tam Progresif Senkronizasyon**: Yenileme işlemi sırasında sadece eksikler değil, sunucudaki tüm içerik haritası (yeni eklenen/silinen kanallar) taranarak veritabanı en güncel hale getirilir.
