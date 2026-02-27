@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Noctra — Düşük Etki Tasarım Referansı</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0d0d;--bg2:#111;--surface:#181818;--surface2:#222;--surface3:#2a2a2a;
+  --border:#2a2a2a;--border2:#333;
+  --text:#f0f0f0;--text2:#ccc;--muted:#666;--muted2:#999;
+  --accent:#a855f7;--accent2:#7c3aed;--accent-dim:#a855f715;--accent-mid:#a855f730;
+  --green:#46d369;--red:#e50914;--orange:#f59e0b;--blue:#3b82f6;
+}
+body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--text);line-height:1.5}
+
+/* ── GENEL YARDIMCILAR ──────────────────────────── */
+.pg-label{font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:3px;font-weight:700;margin-bottom:6px}
+.pg-title{font-size:28px;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px}
+.pg-sub{font-size:14px;color:var(--muted2);max-width:680px;line-height:1.7;margin-bottom:0}
+.section{padding:60px 52px;border-bottom:1px solid var(--border)}
+.section:last-child{border-bottom:none}
+
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.tag-before{background:#ef444418;color:#ef4444;border:1px solid #ef444430}
+.tag-after{background:#22c55e18;color:#22c55e;border:1px solid #22c55e30}
+
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:3px;background:var(--border);border-radius:14px;overflow:hidden;margin-top:32px}
+.cbox{background:var(--bg2);padding:28px}
+.cbox-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:18px;display:flex;align-items:center;gap:8px;color:var(--muted2)}
+
+.note{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:8px;padding:18px 22px;margin-top:28px;font-size:12.5px;line-height:1.85;color:var(--muted2)}
+.note strong{color:var(--text)}
+.note h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:8px}
+code{background:var(--accent-dim);color:var(--accent);padding:1px 6px;border-radius:3px;font-family:'Consolas',monospace;font-size:11px}
+.note-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:28px}
+.note-col h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:8px}
+.note-col ul{padding-left:16px}
+.note-col li{font-size:12.5px;color:var(--muted2);margin-bottom:4px;line-height:1.7}
+.note-col li strong{color:var(--text)}
+
+
+/* ═══════════════════════════════════════════════════════
+   7. PROFİL SEÇİM EKRANI
+   ═══════════════════════════════════════════════════════ */
+
+/* ── ÖNCE: Mevcut profil kartları ── */
+.profiles-before{
+  display:flex;justify-content:center;gap:24px;flex-wrap:wrap;padding:32px 16px;
+}
+.profile-card-old{
+  width:150px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;
+  transition:transform 0.16s;
+}
+.profile-card-old:hover{transform:scale(1.04)}
+.pco-avatar{
+  width:120px;height:120px;border-radius:14px;
+  background:linear-gradient(135deg,#1a0a2e,#3d1a78);
+  display:flex;align-items:center;justify-content:center;
+  font-size:52px;border:3px solid transparent;
+  transition:border-color 0.2s;
+}
+.profile-card-old:hover .pco-avatar{border-color:rgba(168,85,247,0.5)}
+.pco-name{font-size:15px;font-weight:500;color:var(--muted2)}
+
+/* ── SONRA: Yeni profil kartları ── */
+.profiles-after{
+  display:flex;justify-content:center;align-items:flex-end;gap:32px;flex-wrap:wrap;
+  padding:32px 16px;
+}
+.profile-card-new{
+  display:flex;flex-direction:column;align-items:center;gap:0;
+  cursor:pointer;
+}
+
+/* Avatar kapsayıcısı — hover scale buraya */
+.pcn-wrap{
+  position:relative;
+  transition:transform 0.2s cubic-bezier(0.25,0.46,0.45,0.94);
+}
+.profile-card-new:hover .pcn-wrap{transform:scale(1.06) translateY(-6px)}
+
+/* Dış glow halkası (aktif/hover) */
+.pcn-glow{
+  position:absolute;inset:-4px;border-radius:22px;
+  background:transparent;
+  transition:box-shadow 0.25s;border:2px solid transparent;
+}
+.profile-card-new:hover .pcn-glow{
+  border-color:rgba(168,85,247,0.6);
+  box-shadow:0 0 24px rgba(168,85,247,0.35), inset 0 0 10px rgba(168,85,247,0.08);
+}
+.profile-card-new.active .pcn-glow{
+  border-color:var(--accent);
+  box-shadow:0 0 30px rgba(168,85,247,0.5), inset 0 0 12px rgba(168,85,247,0.1);
+}
+
+/* Avatar kutusu */
+.pcn-avatar{
+  width:148px;height:148px;border-radius:18px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:64px;overflow:hidden;position:relative;
+}
+
+/* Hover overlay: Düzenle */
+.pcn-edit-overlay{
+  position:absolute;inset:0;border-radius:18px;
+  background:rgba(0,0,0,0.6);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  opacity:0;transition:opacity 0.2s;
+}
+.profile-card-new:hover .pcn-edit-overlay{opacity:1}
+.pcn-edit-icon{font-size:22px}
+.pcn-edit-text{font-size:12px;font-weight:600;color:white}
+
+/* İsim — hover'da mor renk */
+.pcn-name{
+  font-size:15px;font-weight:600;color:var(--muted2);
+  margin-top:12px;transition:color 0.2s;
+  text-align:center;max-width:148px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.profile-card-new:hover .pcn-name{color:var(--text)}
+.profile-card-new.active .pcn-name{color:var(--text);font-weight:700}
+
+/* Plan rozeti */
+.pcn-badge{
+  display:inline-block;margin-top:4px;
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+  padding:2px 8px;border-radius:10px;
+}
+.badge-premium{background:rgba(168,85,247,0.2);color:var(--accent);border:1px solid rgba(168,85,247,0.3)}
+.badge-child{background:rgba(59,130,246,0.2);color:var(--blue);border:1px solid rgba(59,130,246,0.3)}
+.badge-free{background:rgba(100,100,100,0.2);color:var(--muted2);border:1px solid var(--border2)}
+
+/* "Profil Ekle" butonu */
+.pcn-add{
+  width:148px;height:148px;border-radius:18px;
+  border:2px dashed var(--border2);background:transparent;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:8px;cursor:pointer;color:var(--muted);font-size:13px;font-weight:500;
+  transition:border-color 0.2s,color 0.2s,background 0.2s;
+}
+.pcn-add:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.pcn-add-icon{font-size:28px;opacity:0.5;transition:opacity 0.2s}
+.pcn-add:hover .pcn-add-icon{opacity:1}
+
+/* Alt buton barı */
+.profiles-footer{
+  display:flex;justify-content:center;gap:12px;padding:20px;
+  border-top:1px solid var(--border);margin-top:4px;
+}
+.pf-btn{
+  padding:9px 24px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;
+  transition:opacity 0.15s;border:none;
+}
+.pf-btn-ghost{background:transparent;color:var(--muted2);border:1px solid var(--border2)}
+.pf-btn-ghost:hover{color:var(--text);border-color:var(--text)}
+
+/* Profil seçim penceresi çerçevesi */
+.profiles-window{
+  background:var(--bg2);border:1px solid var(--border);border-radius:16px;overflow:hidden;
+}
+.profiles-header{
+  padding:32px 40px 0;text-align:center;
+}
+.profiles-header h2{font-size:36px;font-weight:800;letter-spacing:-1px;margin-bottom:6px}
+.profiles-header p{font-size:15px;color:var(--muted2)}
+
+
+/* ═══════════════════════════════════════════════════════
+   8. ARAMA EKRANI
+   ═══════════════════════════════════════════════════════ */
+
+/* Kategori pill'leri */
+.search-pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
+.pill{
+  padding:7px 16px;border-radius:20px;font-size:13px;font-weight:500;
+  cursor:pointer;border:1px solid var(--border2);background:var(--surface2);color:var(--muted2);
+  transition:all 0.15s;display:flex;align-items:center;gap:6px;
+}
+.pill:hover{border-color:var(--accent);color:var(--text)}
+.pill.active{background:var(--accent-mid);border-color:var(--accent);color:var(--text);font-weight:600}
+.pill-count{
+  background:rgba(255,255,255,0.1);color:var(--muted2);
+  font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;
+}
+.pill.active .pill-count{background:rgba(168,85,247,0.3);color:var(--accent)}
+
+/* Arama terimi highlight */
+.highlight{
+  background:rgba(168,85,247,0.25);color:#d8b4fe;
+  border-radius:2px;padding:0 2px;font-weight:700;
+}
+
+/* Arama sonuç satırı */
+.search-result-row{
+  display:flex;align-items:center;gap:14px;
+  padding:12px 16px;border-radius:8px;cursor:pointer;
+  transition:background 0.12s;
+  border-bottom:1px solid var(--border);
+}
+.search-result-row:last-child{border-bottom:none}
+.search-result-row:hover{background:var(--surface2)}
+
+.sr-thumb{
+  width:56px;height:56px;border-radius:8px;flex-shrink:0;
+  background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:24px;
+  overflow:hidden;position:relative;
+}
+.sr-thumb.portrait{width:40px;height:56px;border-radius:6px}
+.sr-thumb-live-dot{
+  position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;
+  background:var(--red);border:1.5px solid var(--bg);
+  animation:blink 1.2s ease-in-out infinite;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.sr-info{flex:1;min-width:0}
+.sr-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sr-meta{font-size:12px;color:var(--muted2);margin-top:2px}
+.sr-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.sr-type{
+  padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;
+}
+.sr-live{background:#e5091420;color:var(--red);border:1px solid #e5091430}
+.sr-series{background:#a855f720;color:var(--accent);border:1px solid #a855f730}
+.sr-vod{background:#3b82f620;color:var(--blue);border:1px solid #3b82f630}
+.sr-play{
+  width:30px;height:30px;border-radius:50%;background:white;border:none;
+  color:black;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity 0.15s;
+}
+.search-result-row:hover .sr-play{opacity:1}
+
+/* Arama bölüm başlığı */
+.search-section{margin-bottom:28px}
+.search-section-hdr{
+  display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;
+}
+.search-section-title{
+  font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;
+}
+.search-section-count{font-size:12px;color:var(--muted);font-weight:400}
+.search-see-all{font-size:12px;color:var(--accent);cursor:pointer;font-weight:500}
+.search-see-all:hover{text-decoration:underline}
+
+/* Sonuç kutusu */
+.search-result-list{
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;
+}
+
+/* Öneri rozeti */
+.suggestion-box{
+  display:flex;align-items:center;gap:10px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:12px 16px;margin-bottom:20px;
+}
+.sug-icon{font-size:16px}
+.sug-text{font-size:13px;color:var(--muted2)}
+.sug-btn{
+  padding:4px 12px;border-radius:5px;font-size:12px;font-weight:600;
+  background:var(--accent-mid);color:var(--accent);border:1px solid rgba(168,85,247,0.3);
+  cursor:pointer;transition:background 0.15s;
+}
+.sug-btn:hover{background:rgba(168,85,247,0.25)}
+
+/* Arama istatistik şeridi */
+.search-stats{
+  display:flex;align-items:center;gap:16px;margin-bottom:24px;
+  font-size:12px;color:var(--muted2);
+}
+.ss-num{color:var(--text);font-weight:600}
+.ss-dot{width:3px;height:3px;border-radius:50%;background:var(--border2)}
+.ss-time{font-size:11px}
+
+
+/* ═══════════════════════════════════════════════════════
+   9. İNDİRİLENLER EKRANI
+   ═══════════════════════════════════════════════════════ */
+
+/* Özet metrik barı */
+.dl-metrics{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;
+}
+.dl-metric{
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;
+}
+.dl-metric-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:4px}
+.dl-metric-val{font-size:22px;font-weight:800;letter-spacing:-0.5px}
+.dl-metric-sub{font-size:11px;color:var(--muted2);margin-top:2px}
+.dl-metric.active .dl-metric-val{color:var(--accent)}
+.dl-metric.speed .dl-metric-val{color:var(--green)}
+
+/* İndirme satırı — YENİ */
+.dl-item{
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:14px 16px;margin-bottom:8px;
+  transition:border-color 0.15s,background 0.15s;
+}
+.dl-item:hover{border-color:var(--border2);background:var(--surface2)}
+.dl-item.downloading{border-left:3px solid var(--accent)}
+.dl-item.paused{border-left:3px solid var(--orange)}
+.dl-item.completed{border-left:3px solid var(--green)}
+.dl-item.error{border-left:3px solid var(--red)}
+
+.dl-row-top{display:flex;align-items:center;gap:14px}
+
+/* Poster küçük resim */
+.dl-poster{
+  width:52px;height:74px;border-radius:6px;flex-shrink:0;
+  background:var(--surface3);display:flex;align-items:center;justify-content:center;
+  font-size:24px;overflow:hidden;position:relative;
+}
+.dl-poster.square{width:52px;height:52px;border-radius:6px}
+.dl-poster-overlay{
+  position:absolute;inset:0;background:rgba(0,0,0,0.55);
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+
+/* İçerik bilgisi */
+.dl-info{flex:1;min-width:0}
+.dl-title{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dl-subtitle{font-size:12px;color:var(--muted2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dl-meta-row{display:flex;align-items:center;gap:10px;margin-top:5px;flex-wrap:wrap}
+.dl-meta-item{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px}
+.dl-meta-dot{width:3px;height:3px;border-radius:50%;background:var(--muted)}
+
+/* Durum badge */
+.dl-status{
+  flex-shrink:0;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;
+  display:flex;align-items:center;gap:5px;
+}
+.dl-status.st-active{background:rgba(168,85,247,0.15);color:var(--accent);border:1px solid rgba(168,85,247,0.25)}
+.dl-status.st-paused{background:rgba(245,158,11,0.12);color:var(--orange);border:1px solid rgba(245,158,11,0.25)}
+.dl-status.st-done{background:rgba(70,211,105,0.12);color:var(--green);border:1px solid rgba(70,211,105,0.25)}
+.dl-status.st-error{background:rgba(229,9,20,0.12);color:var(--red);border:1px solid rgba(229,9,20,0.25)}
+.dl-status.st-queue{background:rgba(100,100,100,0.12);color:var(--muted2);border:1px solid var(--border2)}
+.st-dot{width:6px;height:6px;border-radius:50%}
+.st-dot.active{background:var(--accent);animation:pulse 1.5s ease-in-out infinite}
+.st-dot.done{background:var(--green)}
+.st-dot.paused{background:var(--orange)}
+.st-dot.error{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.6;transform:scale(0.85)}}
+
+/* Kontrol butonları */
+.dl-controls{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.dl-btn{
+  height:30px;padding:0 10px;border-radius:6px;font-size:11px;font-weight:600;
+  cursor:pointer;border:1px solid transparent;display:flex;align-items:center;gap:4px;
+  transition:opacity 0.15s;
+}
+.dl-btn:hover{opacity:0.8}
+.dl-btn-pause{background:#a855f715;border-color:rgba(168,85,247,0.2);color:var(--accent)}
+.dl-btn-resume{background:rgba(70,211,105,0.1);border-color:rgba(70,211,105,0.2);color:var(--green)}
+.dl-btn-cancel{background:rgba(229,9,20,0.1);border-color:rgba(229,9,20,0.2);color:var(--red)}
+.dl-btn-play{background:rgba(255,255,255,0.08);border-color:var(--border2);color:var(--text)}
+.dl-btn-del{background:rgba(229,9,20,0.08);border-color:rgba(229,9,20,0.15);color:#f87171}
+.dl-btn-icon{font-size:12px}
+
+/* Progress bar — yeni */
+.dl-progress-area{margin-top:12px}
+.dl-progress-track{
+  height:5px;background:var(--surface3);border-radius:3px;overflow:hidden;position:relative;
+}
+.dl-progress-fill{height:100%;border-radius:3px;transition:width 0.5s}
+.dl-progress-fill.active{background:linear-gradient(90deg,var(--accent2),var(--accent))}
+.dl-progress-fill.paused{background:var(--orange)}
+.dl-progress-fill.done{background:var(--green)}
+.dl-progress-fill.error{background:var(--red);width:100%!important;opacity:0.4}
+
+.dl-progress-row{display:flex;justify-content:space-between;margin-top:5px;font-size:11px}
+.dl-progress-pct{font-weight:700;color:var(--accent)}
+.dl-progress-right{display:flex;gap:12px;color:var(--muted2)}
+
+/* Bölümler (dizi için genişleyen) */
+.dl-episodes{
+  margin-top:10px;padding-top:10px;border-top:1px solid var(--border);
+  display:none;
+}
+.dl-ep-row{
+  display:flex;align-items:center;gap:10px;
+  padding:6px 4px;border-radius:5px;cursor:pointer;
+  transition:background 0.1s;
+}
+.dl-ep-row:hover{background:var(--surface3)}
+.dl-ep-num{width:24px;font-size:11px;color:var(--muted);text-align:center;flex-shrink:0}
+.dl-ep-name{flex:1;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dl-ep-size{font-size:11px;color:var(--muted2);flex-shrink:0}
+.dl-ep-play{font-size:13px;color:var(--accent);flex-shrink:0;cursor:pointer}
+.dl-expand-btn{
+  font-size:12px;color:var(--accent);cursor:pointer;
+  display:flex;align-items:center;gap:4px;margin-top:8px;
+  font-weight:500;
+}
+.dl-expand-btn:hover{text-decoration:underline}
+
+/* Bölüm başlıkları */
+.dl-section-hdr{
+  font-size:13px;font-weight:700;color:var(--muted2);text-transform:uppercase;
+  letter-spacing:1px;margin:20px 0 10px;display:flex;align-items:center;gap:8px;
+}
+.dl-section-count{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:1px 8px;font-size:10px;font-weight:700;color:var(--muted);
+  text-transform:none;letter-spacing:0;
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     7. PROFİL SEÇİM EKRANI
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="pg-label">Düşük Etki #7</div>
+  <div class="pg-title">Profil Seçim Ekranı</div>
+  <div class="pg-sub">Mevcut: 120px kare avatar, düz hover scale. Hedef: 148px, dış glow halkası, plan rozeti, hover'da "Düzenle" overlay'i, sıradan değil anlamlı seçim hissi.</div>
+
+  <div class="compare">
+    <!-- ÖNCE -->
+    <div class="cbox">
+      <div class="cbox-label"><span class="tag tag-before">Mevcut</span> 120px kare, scale(1.04) hover</div>
+      <div class="profiles-before">
+        <div class="profile-card-old">
+          <div class="pco-avatar" style="background:linear-gradient(135deg,#1a0a2e,#3d1a78)">👤</div>
+          <div class="pco-name">Ana Profil</div>
+        </div>
+        <div class="profile-card-old">
+          <div class="pco-avatar" style="background:linear-gradient(135deg,#0a1628,#1e4d8c)">👦</div>
+          <div class="pco-name">Çocuk</div>
+        </div>
+        <div class="profile-card-old">
+          <div class="pco-avatar" style="background:linear-gradient(135deg,#1a0a0a,#6e1a1a)">👩</div>
+          <div class="pco-name">Misafir</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SONRA -->
+    <div class="cbox">
+      <div class="cbox-label"><span class="tag tag-after">Hedef</span> 148px, glow halkası, plan rozeti, Düzenle overlay</div>
+      <div class="profiles-after">
+
+        <!-- Aktif profil — glow görünür -->
+        <div class="profile-card-new active">
+          <div class="pcn-wrap">
+            <div class="pcn-glow"></div>
+            <div class="pcn-avatar" style="background:linear-gradient(135deg,#1a0a2e,#4a1a8c)">
+              👤
+              <div class="pcn-edit-overlay">
+                <div class="pcn-edit-icon">✏️</div>
+                <div class="pcn-edit-text">Düzenle</div>
+              </div>
+            </div>
+          </div>
+          <div class="pcn-name">Ana Profil</div>
+          <span class="pcn-badge badge-premium">Premium</span>
+        </div>
+
+        <!-- Normal profil -->
+        <div class="profile-card-new">
+          <div class="pcn-wrap">
+            <div class="pcn-glow"></div>
+            <div class="pcn-avatar" style="background:linear-gradient(135deg,#0a1628,#1e4d8c)">
+              👦
+              <div class="pcn-edit-overlay">
+                <div class="pcn-edit-icon">✏️</div>
+                <div class="pcn-edit-text">Düzenle</div>
+              </div>
+            </div>
+          </div>
+          <div class="pcn-name">Emirhan</div>
+          <span class="pcn-badge badge-child">Çocuk</span>
+        </div>
+
+        <!-- Misafir profil -->
+        <div class="profile-card-new">
+          <div class="pcn-wrap">
+            <div class="pcn-glow"></div>
+            <div class="pcn-avatar" style="background:linear-gradient(135deg,#1a0f0a,#6e3a1a)">
+              👩
+              <div class="pcn-edit-overlay">
+                <div class="pcn-edit-icon">✏️</div>
+                <div class="pcn-edit-text">Düzenle</div>
+              </div>
+            </div>
+          </div>
+          <div class="pcn-name">Misafir</div>
+          <span class="pcn-badge badge-free">Ücretsiz</span>
+        </div>
+
+        <!-- Profil ekle butonu -->
+        <div class="profile-card-new">
+          <div class="pcn-add">
+            <span class="pcn-add-icon">+</span>
+            Profil Ekle
+          </div>
+          <div class="pcn-name" style="color:transparent">—</div>
+          <span class="pcn-badge" style="visibility:hidden">—</span>
+        </div>
+
+      </div>
+      <div class="profiles-footer">
+        <button class="pf-btn pf-btn-ghost">Profilleri Yönet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detaylı notlar -->
+  <div class="note">
+    <h4>Avalonia Uygulama Detayları</h4>
+
+    <div class="note-grid">
+      <div class="note-col">
+        <h4>Avatar Boyutu & Glow</h4>
+        <ul>
+          <li><strong>Boyut:</strong> <code>Width=148, Height=148</code> (mevcut 120px → 148px). <code>ItemWidth=180, ItemHeight=220</code> olarak güncelle.</li>
+          <li><strong>Dış glow halkası:</strong> Ana <code>Border</code>'ın <code>:focus</code> veya <code>:pointerover</code> stilinde <code>BoxShadow</code> ekle. Mevcut <code>FocusGlow</code> kaynağı zaten var, hover'a da uygula.</li>
+          <li><strong>Hover ölçeği:</strong> Mevcut <code>scale(1.04)</code> → <code>scale(1.06) translateY(-6px)</code>'e çıkar. Daha dramatik ama aşırı değil.</li>
+          <li><strong>"Düzenle" overlay'i:</strong> Profil kartında <code>Panel</code> içine ikinci bir <code>Border</code> ekle. <code>:pointerover</code> ile <code>Opacity 0→1</code>. <code>IsVisible="{Binding IsManageMode}"</code> ile sadece yönetim modunda aktif. Yoksa sadece hover'da görünür.</li>
+        </ul>
+      </div>
+      <div class="note-col">
+        <h4>Rozetler & İsim</h4>
+        <ul>
+          <li><strong>Plan rozeti:</strong> Profil kartının altına küçük <code>Border</code> ekle. <code>IsPremium</code>, <code>IsChild</code> property'lerine göre renk değişir. <code>Profile</code> modeline <code>PlanLabel</code> computed property ekle.</li>
+          <li><strong>İsim hover rengi:</strong> Mevcut stil zaten <code>:focus</code>'ta renk değişiyor. <code>:pointerover</code>'a da ekle: <code>Foreground=TextPrimaryBrush</code>.</li>
+          <li><strong>Aktif profil:</strong> <code>ProfilesViewModel.ActiveProfileId</code> ile karşılaştır. Eşleşen karta <code>Classes="ProfileCardStyle active"</code> ekle. <code>active</code> class'ı <code>BorderBrush=AccentBrush</code> ve <code>BoxShadow=AccentGlow</code> uygular.</li>
+          <li><strong>"Profil Ekle" butonu:</strong> Mevcut <code>AddProfileButtonStyle</code> aynı 148px boyuta taşı, noktalı kenar göster.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     8. ARAMA EKRANI
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="pg-label">Düşük Etki #8</div>
+  <div class="pg-title">Arama Ekranı — Kategori Filtreleme & Highlight</div>
+  <div class="pg-sub">Mevcut: WrapPanel'li kategoriler, düz başlıklar, highlight yok, sıkışık görünüm. Hedef: kategori pill'leri, satır bazlı sonuçlar, arama terimi vurgusu, toplam/süre istatistiği.</div>
+
+  <!-- Yeni arama ekranı (tam genişlik demo) -->
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-top:32px">
+
+    <!-- Başlık + arama kutusu -->
+    <div style="padding:24px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px">
+      <div style="font-size:20px;font-weight:800">Arama Sonuçları</div>
+      <div style="flex:1">
+        <div style="background:var(--surface2);border:1px solid rgba(168,85,247,0.4);border-radius:8px;padding:8px 14px;display:flex;align-items:center;gap:10px;max-width:340px;margin-left:auto">
+          <span style="color:var(--accent)">🔍</span>
+          <span style="font-size:14px;color:var(--text)">breaking bad</span>
+          <span style="margin-left:auto;font-size:13px;color:var(--muted);cursor:pointer">✕</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:24px 28px">
+
+      <!-- İstatistik şeridi -->
+      <div class="search-stats">
+        <span><span class="ss-num">23</span> sonuç</span>
+        <span class="ss-dot"></span>
+        <span><span class="ss-num">8</span> Canlı TV</span>
+        <span class="ss-dot"></span>
+        <span><span class="ss-num">11</span> Dizi</span>
+        <span class="ss-dot"></span>
+        <span><span class="ss-num">4</span> Film</span>
+        <span class="ss-dot"></span>
+        <span class="ss-time">0.18 saniyede</span>
+      </div>
+
+      <!-- Öneri -->
+      <div class="suggestion-box">
+        <span class="sug-icon">💡</span>
+        <span class="sug-text">Bunu mu demek istediniz?</span>
+        <button class="sug-btn">Breaking Bad</button>
+      </div>
+
+      <!-- Kategori pill'leri -->
+      <div class="search-pills">
+        <button class="pill active" onclick="filterPill(this,'all')">Tümü <span class="pill-count">23</span></button>
+        <button class="pill" onclick="filterPill(this,'live')">● Canlı TV <span class="pill-count">8</span></button>
+        <button class="pill" onclick="filterPill(this,'series')">Diziler <span class="pill-count">11</span></button>
+        <button class="pill" onclick="filterPill(this,'vod')">Filmler <span class="pill-count">4</span></button>
+        <button class="pill" onclick="filterPill(this,'similar')">Yakın Sonuçlar <span class="pill-count">—</span></button>
+      </div>
+
+      <!-- CANLI TV SONUÇLARI -->
+      <div class="search-section">
+        <div class="search-section-hdr">
+          <div class="search-section-title">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--red);display:inline-block"></span>
+            Canlı TV
+            <span class="search-section-count">8 sonuç</span>
+          </div>
+          <span class="search-see-all">Tümünü Gör →</span>
+        </div>
+        <div class="search-result-list">
+
+          <div class="search-result-row">
+            <div class="sr-thumb">
+              📺
+              <div class="sr-thumb-live-dot"></div>
+            </div>
+            <div class="sr-info">
+              <div class="sr-name"><span class="highlight">Breaking</span> <span class="highlight">Bad</span> TR HD</div>
+              <div class="sr-meta">TR: Genel · FHD · Şu an yayında</div>
+            </div>
+            <div class="sr-right">
+              <span class="sr-type sr-live">● CANLI</span>
+              <button class="sr-play">▶</button>
+            </div>
+          </div>
+
+          <div class="search-result-row">
+            <div class="sr-thumb">⚗️<div class="sr-thumb-live-dot"></div></div>
+            <div class="sr-info">
+              <div class="sr-name">AMC — <span class="highlight">Breaking</span> <span class="highlight">Bad</span> Marathon</div>
+              <div class="sr-meta">EN: Dizi · HD · 8 saat devam edecek</div>
+            </div>
+            <div class="sr-right">
+              <span class="sr-type sr-live">● CANLI</span>
+              <button class="sr-play">▶</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- DİZİ SONUÇLARI -->
+      <div class="search-section">
+        <div class="search-section-hdr">
+          <div class="search-section-title">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block"></span>
+            Diziler
+            <span class="search-section-count">11 sonuç</span>
+          </div>
+          <span class="search-see-all">Tümünü Gör →</span>
+        </div>
+        <div class="search-result-list">
+
+          <div class="search-result-row">
+            <div class="sr-thumb portrait" style="background:linear-gradient(135deg,#1a0a2e,#4a1a8c)">📺</div>
+            <div class="sr-info">
+              <div class="sr-name"><span class="highlight">Breaking</span> <span class="highlight">Bad</span></div>
+              <div class="sr-meta">2008 · 5 Sezon · 62 Bölüm · IMDb 9.5</div>
+            </div>
+            <div class="sr-right">
+              <span class="sr-type sr-series">Dizi</span>
+              <button class="sr-play">▶</button>
+            </div>
+          </div>
+
+          <div class="search-result-row">
+            <div class="sr-thumb portrait" style="background:linear-gradient(135deg,#0a1a0a,#1a5c1a)">🎭</div>
+            <div class="sr-info">
+              <div class="sr-name"><span class="highlight">Breaking</span> <span class="highlight">Bad</span> — Better Call Saul</div>
+              <div class="sr-meta">2015 · 6 Sezon · 63 Bölüm · IMDb 9.0</div>
+            </div>
+            <div class="sr-right">
+              <span class="sr-type sr-series">Dizi</span>
+              <button class="sr-play">▶</button>
+            </div>
+          </div>
+
+          <div class="search-result-row">
+            <div class="sr-thumb portrait" style="background:linear-gradient(135deg,#1a0a0a,#6e1a1a)">⚗️</div>
+            <div class="sr-info">
+              <div class="sr-name"><span class="highlight">Bad</span> Blood: The Series</div>
+              <div class="sr-meta">2017 · 2 Sezon · Yakın sonuç</div>
+            </div>
+            <div class="sr-right">
+              <span class="sr-type sr-series" style="opacity:0.6">Dizi</span>
+              <button class="sr-play">▶</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Notlar -->
+  <div class="note">
+    <h4>Avalonia Uygulama Detayları</h4>
+
+    <div class="note-grid">
+      <div class="note-col">
+        <h4>Kategori Pill'leri</h4>
+        <ul>
+          <li><strong>Mevcut yapı:</strong> SearchView'daki 5 ayrı <code>StackPanel</code> (Live, Series, VOD, Similar) zaten kategorili. Pill'ler bunların görünürlüğünü toggle eder — büyük mimari değişiklik yok.</li>
+          <li><strong>Pill butonları:</strong> <code>ToggleButton</code> veya <code>Button</code> + <code>IsChecked</code> pattern. <code>SearchViewModel</code>'e <code>SelectedCategory</code> property ekle (<code>All</code>, <code>Live</code>, <code>Series</code>, <code>Vod</code>).</li>
+          <li><strong>Sayılar:</strong> <code>SearchLiveChannels.Count</code>, <code>SearchSeriesChannels.Count</code> vb. zaten mevcut — pill içinde StringFormat ile göster.</li>
+          <li><strong>İstatistik satırı:</strong> Hero başlığının altına küçük <code>StackPanel Orientation="Horizontal"</code>. Toplam count binding + sabit "saniyede" metni.</li>
+        </ul>
+      </div>
+      <div class="note-col">
+        <h4>Arama Terimi Highlight</h4>
+        <ul>
+          <li><strong>En kolay yol:</strong> Mevcut <code>TextBlock Text="{Binding Name}"</code> yerine custom <code>HighlightTextBlock</code> control yaz. <code>SearchTerm</code> ve <code>FullText</code> DepProp alır, terimi sarı/mor span ile böler.</li>
+          <li><strong>Alternatif:</strong> <code>FormattedText</code> veya <code>InlineCollection</code> ile <code>Run</code> elementleri dinamik oluştur. Daha kırılgan ama hızlı.</li>
+          <li><strong>Satır bazlı sonuçlar:</strong> Mevcut kart grid'ini liste satırına çevir. Her satır: poster thumbnail (40×56px portrait veya 52×52px square) + bilgi + tür rozeti. Poster için mevcut <code>RemoteImage</code> kullan.</li>
+          <li><strong>Yakın sonuçlar ayrımı:</strong> Liste içinde sonuç opacity'sini 60%'a düşür (<code>Opacity=0.6</code>) veya "Yakın sonuç" alt metni ekle.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     9. İNDİRİLENLER EKRANI
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="pg-label">Düşük Etki #9</div>
+  <div class="pg-title">İndirilenler Ekranı</div>
+  <div class="pg-sub">Mevcut: metin ağırlıklı satırlar, standart ProgressBar, poster yok. Hedef: poster küçük resim, renkli durum göstergesi, gradient progress bar, dizi bölüm genişletme.</div>
+
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;padding:28px;margin-top:32px">
+
+    <!-- Metrik barı -->
+    <div class="dl-metrics">
+      <div class="dl-metric active">
+        <div class="dl-metric-label">Aktif İndirme</div>
+        <div class="dl-metric-val">2</div>
+        <div class="dl-metric-sub">3 kuyrukta</div>
+      </div>
+      <div class="dl-metric speed">
+        <div class="dl-metric-label">Toplam Hız</div>
+        <div class="dl-metric-val">4.2 MB/s</div>
+        <div class="dl-metric-sub">~8 dk kaldı</div>
+      </div>
+      <div class="dl-metric">
+        <div class="dl-metric-label">Tamamlanan</div>
+        <div class="dl-metric-val">14</div>
+        <div class="dl-metric-sub">bu oturumda</div>
+      </div>
+      <div class="dl-metric">
+        <div class="dl-metric-label">Boş Alan</div>
+        <div class="dl-metric-val">127 GB</div>
+        <div class="dl-metric-sub">C:/ sürücüsü</div>
+      </div>
+    </div>
+
+    <!-- ── AKTİF İNDİRMELER ── -->
+    <div class="dl-section-hdr">
+      Aktif İndirmeler <span class="dl-section-count">2</span>
+    </div>
+
+    <!-- Aktif: Dizi bölümü -->
+    <div class="dl-item downloading">
+      <div class="dl-row-top">
+        <div class="dl-poster" style="background:linear-gradient(135deg,#1a0a2e,#3d1a78)">📺</div>
+        <div class="dl-info">
+          <div class="dl-title">Breaking Bad</div>
+          <div class="dl-subtitle">S1 B3 — "...and the Bag's in the River"</div>
+          <div class="dl-meta-row">
+            <span class="dl-meta-item">🎬 Dizi Bölümü</span>
+            <span class="dl-meta-dot"></span>
+            <span class="dl-meta-item">1080p · H.264</span>
+            <span class="dl-meta-dot"></span>
+            <span class="dl-meta-item">1.2 GB / 2.8 GB</span>
+          </div>
+        </div>
+        <div class="dl-status st-active">
+          <div class="st-dot active"></div>
+          İndiriliyor
+        </div>
+        <div class="dl-controls">
+          <button class="dl-btn dl-btn-pause"><span class="dl-btn-icon">⏸</span> Duraklat</button>
+          <button class="dl-btn dl-btn-cancel"><span class="dl-btn-icon">✕</span></button>
+        </div>
+      </div>
+      <div class="dl-progress-area">
+        <div class="dl-progress-track">
+          <div class="dl-progress-fill active" style="width:43%"></div>
+        </div>
+        <div class="dl-progress-row">
+          <span class="dl-progress-pct">43%</span>
+          <div class="dl-progress-right">
+            <span>3.2 MB/s</span>
+            <span>~6 dk kaldı</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Aktif: Film -->
+    <div class="dl-item downloading">
+      <div class="dl-row-top">
+        <div class="dl-poster square" style="background:linear-gradient(135deg,#0a1628,#1e4d8c)">🎬</div>
+        <div class="dl-info">
+          <div class="dl-title">Interstellar</div>
+          <div class="dl-subtitle">2014 · Christopher Nolan</div>
+          <div class="dl-meta-row">
+            <span class="dl-meta-item">🎥 Film</span>
+            <span class="dl-meta-dot"></span>
+            <span class="dl-meta-item">1080p · H.265</span>
+            <span class="dl-meta-dot"></span>
+            <span class="dl-meta-item">3.1 GB / 8.4 GB</span>
+          </div>
+        </div>
+        <div class="dl-status st-active">
+          <div class="st-dot active"></div>
+          İndiriliyor
+        </div>
+        <div class="dl-controls">
+          <button class="dl-btn dl-btn-pause"><span class="dl-btn-icon">⏸</span> Duraklat</button>
+          <button class="dl-btn dl-btn-cancel"><span class="dl-btn-icon">✕</span></button>
+        </div>
+      </div>
+      <div class="dl-progress-area">
+        <div class="dl-progress-track">
+          <div class="dl-progress-fill active" style="width:37%"></div>
+        </div>
+        <div class="dl-progress-row">
+          <span class="dl-progress-pct">37%</span>
+          <div class="dl-progress-right">
+            <span>1.0 MB/s</span>
+            <span>~14 dk kaldı</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DURAKLATILMIŞ ── -->
+    <div class="dl-section-hdr">
+      Duraklatıldı <span class="dl-section-count">1</span>
+    </div>
+
+    <div class="dl-item paused">
+      <div class="dl-row-top">
+        <div class="dl-poster" style="background:linear-gradient(135deg,#0a200a,#1a5c1a)">🌙</div>
+        <div class="dl-info">
+          <div class="dl-title">Dark</div>
+          <div class="dl-subtitle">S2 B1 — "Beginn und Ende"</div>
+          <div class="dl-meta-row">
+            <span class="dl-meta-item">🎬 Dizi Bölümü</span>
+            <span class="dl-meta-dot"></span>
+            <span class="dl-meta-item">720p</span>
+            <span class="dl-meta-dot"></span>
+            <span class="dl-meta-item">680 MB / 1.8 GB</span>
+          </div>
+        </div>
+        <div class="dl-status st-paused">
+          <div class="st-dot paused"></div>
+          Duraklatıldı
+        </div>
+        <div class="dl-controls">
+          <button class="dl-btn dl-btn-resume"><span class="dl-btn-icon">▶</span> Devam Et</button>
+          <button class="dl-btn dl-btn-cancel"><span class="dl-btn-icon">✕</span></button>
+        </div>
+      </div>
+      <div class="dl-progress-area">
+        <div class="dl-progress-track">
+          <div class="dl-progress-fill paused" style="width:38%"></div>
+        </div>
+        <div class="dl-progress-row">
+          <span class="dl-progress-pct" style="color:var(--orange)">38%</span>
+          <div class="dl-progress-right"><span>Duraklatıldı</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAMAMLANANLAR ── -->
+    <div class="dl-section-hdr">
+      Tamamlananlar <span class="dl-section-count">14</span>
+    </div>
+
+    <!-- Tamamlanan dizi — bölüm genişletme -->
+    <div class="dl-item completed">
+      <div class="dl-row-top">
+        <div class="dl-poster" style="background:linear-gradient(135deg,#200a20,#5c1a5c)">🎭</div>
+        <div class="dl-info">
+          <div class="dl-title">Severance</div>
+          <div class="dl-subtitle">3 bölüm indirildi</div>
+          <div class="dl-meta-row">
+            <span class="dl-meta-item">🎬 Dizi</span>
+            <span class="dl-meta-dot"></span>
+            <span class="dl-meta-item">1080p</span>
+            <span class="dl-meta-dot"></span>
+            <span class="dl-meta-item">5.2 GB toplam</span>
+          </div>
+        </div>
+        <div class="dl-status st-done">
+          <div class="st-dot done"></div>
+          Tamamlandı
+        </div>
+        <div class="dl-controls">
+          <button class="dl-btn dl-btn-play"><span class="dl-btn-icon">▶</span> İzle</button>
+          <button class="dl-btn dl-btn-del"><span class="dl-btn-icon">🗑</span></button>
+        </div>
+      </div>
+      <!-- Genişleyen bölümler -->
+      <div class="dl-episodes" id="ep1" style="display:block">
+        <div class="dl-ep-row">
+          <div class="dl-ep-num">1</div>
+          <div class="dl-ep-name">S1 B1 — Good News About Hell</div>
+          <div class="dl-ep-size">1.7 GB</div>
+          <div class="dl-ep-play">▶</div>
+        </div>
+        <div class="dl-ep-row">
+          <div class="dl-ep-num">2</div>
+          <div class="dl-ep-name">S1 B2 — Half Loop</div>
+          <div class="dl-ep-size">1.8 GB</div>
+          <div class="dl-ep-play">▶</div>
+        </div>
+        <div class="dl-ep-row">
+          <div class="dl-ep-num">3</div>
+          <div class="dl-ep-name">S1 B3 — In Perpetuity</div>
+          <div class="dl-ep-size">1.7 GB</div>
+          <div class="dl-ep-play">▶</div>
+        </div>
+      </div>
+      <div class="dl-expand-btn" onclick="toggleEp('ep1',this)">▲ Bölümleri Gizle</div>
+    </div>
+
+    <!-- Tamamlanan tek film -->
+    <div class="dl-item completed">
+      <div class="dl-row-top">
+        <div class="dl-poster square" style="background:linear-gradient(135deg,#1a1a0a,#4c4c1a)">🚀</div>
+        <div class="dl-info">
+          <div class="dl-title">Interstellar (2014)</div>
+          <div class="dl-subtitle">Christopher Nolan · 2s 49dk</div>
+          <div class="dl-meta-row">
+            <span class="dl-meta-item">🎥 Film</span>
+            <span class="dl-meta-dot"></span>
+            <span class="dl-meta-item">4K · H.265</span>
+            <span class="dl-meta-dot"></span>
+            <span class="dl-meta-item">18.4 GB</span>
+          </div>
+        </div>
+        <div class="dl-status st-done">
+          <div class="st-dot done"></div>
+          Tamamlandı
+        </div>
+        <div class="dl-controls">
+          <button class="dl-btn dl-btn-play"><span class="dl-btn-icon">▶</span> İzle</button>
+          <button class="dl-btn dl-btn-del"><span class="dl-btn-icon">🗑</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hata durumu -->
+    <div class="dl-item error">
+      <div class="dl-row-top">
+        <div class="dl-poster square" style="background:linear-gradient(135deg,#1a0a0a,#4c1a1a)">⚡</div>
+        <div class="dl-info">
+          <div class="dl-title">The Bear — S3 B1</div>
+          <div class="dl-subtitle">Sunucu zaman aşımı — bağlantı kesildi</div>
+          <div class="dl-meta-row">
+            <span class="dl-meta-item" style="color:var(--red)">⚠ İndirme başarısız</span>
+          </div>
+        </div>
+        <div class="dl-status st-error">
+          <div class="st-dot error"></div>
+          Hata
+        </div>
+        <div class="dl-controls">
+          <button class="dl-btn dl-btn-resume" style="background:rgba(229,9,20,0.1);border-color:rgba(229,9,20,0.2);color:var(--red)"><span class="dl-btn-icon">↺</span> Tekrar</button>
+          <button class="dl-btn dl-btn-del"><span class="dl-btn-icon">🗑</span></button>
+        </div>
+      </div>
+      <div class="dl-progress-area">
+        <div class="dl-progress-track">
+          <div class="dl-progress-fill error"></div>
+        </div>
+        <div class="dl-progress-row">
+          <span class="dl-progress-pct" style="color:var(--red)">12%'de kesildi</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Detaylı notlar -->
+  <div class="note">
+    <h4>Avalonia Uygulama Detayları</h4>
+
+    <div class="note-grid">
+      <div class="note-col">
+        <h4>Poster Thumbnail & Metrik Bar</h4>
+        <ul>
+          <li><strong>Poster küçük resim:</strong> <code>controls:RemoteImage</code> zaten var. Dizi için <code>Width=52, Height=74</code> (portrait 2:3), film için <code>Width=52, Height=52</code> (square). <code>Url="{Binding CoverUrl}"</code> — mevcut <code>DownloadItem.CoverUrl</code> property'si var mı kontrol et; yoksa <code>ChannelCoverUrl</code> veya <code>ThumbnailPath</code>'e bak.</li>
+          <li><strong>Sol kenarlık:</strong> <code>dl-item</code> sınıfındaki sol renkli çizgi için <code>Border BorderThickness="3,0,0,0"</code> ve <code>BorderBrush</code>'u <code>Status</code>'a göre set et. Converter: <code>DownloadStatusToBorderBrushConverter</code>.</li>
+          <li><strong>Metrik bar:</strong> Mevcut <code>ActiveDownloadsTotalSpeedText</code>, <code>ActiveDownloadCount</code>, <code>DownloadFreeDiskSpaceText</code> binding'leri zaten var. Bunları 4 kartlı grid'e taşı, mevcut <code>StackPanel</code>'i değiştir.</li>
+          <li><strong>Durum badge renkleri:</strong> Mevcut <code>DownloadStatus</code> enum zaten var: <code>Queued, Downloading, Paused, Completed, Failed, Canceled</code>. Her durum için ayrı <code>DataTrigger</code> veya converter kullan.</li>
+        </ul>
+      </div>
+      <div class="note-col">
+        <h4>Progress Bar & Bölüm Genişletme</h4>
+        <ul>
+          <li><strong>Gradient progress bar:</strong> Mevcut <code>ProgressBar Value="{Binding ProgressPercent}"</code> kontrolünü koru. <code>Styles.axaml</code>'daki ProgressBar temasında <code>Track</code> arka planını ve <code>Indicator</code>'ı (<code>LinearGradientBrush</code>) güncelle. Durum bazlı renk: <code>Downloading → Accent</code>, <code>Paused → Orange</code>, <code>Completed → Green</code>, <code>Error → Red</code>.</li>
+          <li><strong>Bölüm genişletme (dizi):</strong> <code>DownloadItem.ChannelType == Series</code> ise alt bölüm listesi göster. <code>Expander</code> kontrolü veya <code>IsVisible</code> toggle. İçeride <code>SeriesEpisodeDownloads</code> listesi (yeni property — aynı dizi adına ait tamamlanan item'lar).</li>
+          <li><strong>İzle butonu — lokal oynatma:</strong> Mevcut <code>PlayDownloadedCommand</code> var. Sadece buton stilini güncelle: <code>dl-btn dl-btn-play</code>.</li>
+          <li><strong>Sil butonu:</strong> Mevcut <code>CancelDownloadCommand</code> tamamlananlarda silme işlevi görür. Ayrı <code>DeleteDownloadCommand</code> eklenebilir.</li>
+          <li><strong>Hata satırı "Tekrar" butonu:</strong> <code>ResumeDownloadCommand</code> mevcut. Sadece hata durumunda ikonu ve metni değiştir.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function filterPill(el, cat){
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+}
+function toggleEp(id, btn){
+  const el = document.getElementById(id);
+  if(el.style.display === 'none'){
+    el.style.display = 'block';
+    btn.textContent = '▲ Bölümleri Gizle';
+  } else {
+    el.style.display = 'none';
+    btn.textContent = '▼ 3 Bölümü Göster';
+  }
+}
+</script>
+</body>
+</html>

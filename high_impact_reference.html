@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Noctra — Yüksek Etki Tasarım Referansı</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    :root {
+      --bg: #0d0d0d;
+      --bg2: #111;
+      --surface: #1a1a1a;
+      --surface2: #222;
+      --border: #2a2a2a;
+      --text: #f0f0f0;
+      --muted: #666;
+      --muted2: #999;
+      --accent: #a855f7;
+      --accent2: #7c3aed;
+      --accent-glow: #a855f730;
+      --green: #46d369;
+      --red: #e50914;
+    }
+
+    body {
+      background: var(--bg);
+      font-family: 'Inter', sans-serif;
+      color: var(--text)
+    }
+
+    .page {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      height: 100vh;
+      overflow: hidden
+    }
+
+    /* ═══════════════════════════════════════════════
+   1. SIDEBAR
+   ═══════════════════════════════════════════════ */
+    .sidebar {
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 28px 0 24px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 20px 28px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+
+    .sidebar-logo-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .sidebar-logo-text {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.5px
+    }
+
+    .nav-section-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--muted);
+      padding: 0 24px 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 20px;
+      margin: 1px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.18s;
+      text-decoration: none;
+      color: var(--muted2);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .nav-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text)
+    }
+
+    .nav-item.active {
+      background: rgba(168, 85, 247, 0.12);
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* Sol aktif çizgi */
+    .nav-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 60%;
+      background: var(--accent);
+      border-radius: 0 2px 2px 0;
+    }
+
+    /* Hover slide-in efekti */
+    .nav-item::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(168, 85, 247, 0.08), transparent);
+      opacity: 0;
+      transform: translateX(-100%);
+      transition: opacity 0.2s, transform 0.25s;
+    }
+
+    .nav-item:hover::after,
+    .nav-item.active::after {
+      opacity: 1;
+      transform: translateX(0)
+    }
+
+    .nav-item.active::after {
+      background: linear-gradient(90deg, rgba(168, 85, 247, 0.15), transparent)
+    }
+
+    .nav-icon {
+      width: 18px;
+      height: 18px;
+      opacity: 0.7;
+      flex-shrink: 0
+    }
+
+    .nav-item.active .nav-icon,
+    .nav-item:hover .nav-icon {
+      opacity: 1
+    }
+
+    .nav-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 12px 20px
+    }
+
+    .sidebar-bottom {
+      margin-top: auto;
+      padding: 16px 10px 0;
+      border-top: 1px solid var(--border)
+    }
+
+    .sidebar-profile {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .sidebar-profile:hover {
+      background: rgba(255, 255, 255, 0.05)
+    }
+
+    .profile-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .profile-name {
+      font-size: 13px;
+      font-weight: 600
+    }
+
+    .profile-plan {
+      font-size: 10px;
+      color: var(--accent);
+      font-weight: 500
+    }
+
+    /* ═══════════════════════════════════════════════
+   MAIN CONTENT AREA
+   ═══════════════════════════════════════════════ */
+    .main {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative
+    }
+
+    /* ═══════════════════════════════════════════════
+   2. HOME RAILS
+   ═══════════════════════════════════════════════ */
+    .content-scroll {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden
+    }
+
+    .content-scroll::-webkit-scrollbar {
+      width: 6px
+    }
+
+    .content-scroll::-webkit-scrollbar-track {
+      background: transparent
+    }
+
+    .content-scroll::-webkit-scrollbar-thumb {
+      background: #333;
+      border-radius: 3px
+    }
+
+    /* Hero */
+    .hero {
+      height: 400px;
+      background: linear-gradient(135deg, #0d1117 0%, #1a2332 40%, #0f3460 100%);
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      font-size: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.15
+    }
+
+    .hero-gradient {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 70%;
+      background: linear-gradient(to top, var(--bg) 0%, transparent 100%);
+    }
+
+    .hero-content {
+      position: absolute;
+      bottom: 48px;
+      left: 48px;
+      right: 48px;
+      display: flex;
+      align-items: flex-end;
+      gap: 32px;
+    }
+
+    .hero-text {
+      flex: 1
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(168, 85, 247, 0.2);
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      color: var(--accent);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+
+    .hero-title {
+      font-size: 42px;
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 12px;
+      letter-spacing: -1px
+    }
+
+    .hero-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: var(--muted2)
+    }
+
+    .hero-meta-dot {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--muted)
+    }
+
+    .hero-desc {
+      font-size: 14px;
+      color: var(--muted2);
+      line-height: 1.6;
+      max-width: 480px;
+      margin-bottom: 24px
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 12px
+    }
+
+    .btn-hero-play {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: white;
+      color: black;
+      font-weight: 700;
+      font-size: 15px;
+      padding: 12px 28px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s;
+    }
+
+    .btn-hero-play:hover {
+      opacity: 0.88
+    }
+
+    .btn-hero-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      font-weight: 600;
+      font-size: 15px;
+      padding: 12px 28px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: none;
+      backdrop-filter: blur(4px);
+      transition: background 0.15s;
+    }
+
+    .btn-hero-info:hover {
+      background: rgba(255, 255, 255, 0.22)
+    }
+
+    /* Rail */
+    .rails {
+      padding: 32px 0 48px
+    }
+
+    .rail {
+      margin-bottom: 40px
+    }
+
+    .rail-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      padding: 0 32px;
+      margin-bottom: 14px;
+    }
+
+    .rail-title {
+      font-size: 18px;
+      font-weight: 700
+    }
+
+    .rail-title span {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--accent);
+      margin-left: 10px;
+      cursor: pointer
+    }
+
+    .rail-title span:hover {
+      text-decoration: underline
+    }
+
+    .rail-scroll {
+      overflow-x: auto;
+      overflow-y: visible;
+      padding: 8px 32px 16px;
+      cursor: grab
+    }
+
+    .rail-scroll::-webkit-scrollbar {
+      height: 0
+    }
+
+    .rail-inner {
+      display: flex;
+      gap: 10px;
+      width: max-content
+    }
+
+    /* Rail kartlar */
+    .rail-card {
+      position: relative;
+      cursor: pointer;
+      flex-shrink: 0;
+      border-radius: 6px;
+      overflow: hidden;
+      transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.25s;
+    }
+
+    .rail-card:hover {
+      transform: scale(1.07) translateY(-6px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+      z-index: 10;
+    }
+
+    .card-16x9 {
+      width: 220px;
+      height: 124px
+    }
+
+    .card-2x3 {
+      width: 130px;
+      height: 195px
+    }
+
+    .card-square {
+      width: 120px;
+      height: 120px
+    }
+
+    .rc-bg {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px
+    }
+
+    .rc-gradient {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 65%;
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+    }
+
+    .rc-hover {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.35);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .rail-card:hover .rc-hover {
+      opacity: 1
+    }
+
+    .rc-info {
+      position: absolute;
+      bottom: 8px;
+      left: 10px;
+      right: 10px
+    }
+
+    .rc-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: white;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .rc-meta {
+      font-size: 9px;
+      color: rgba(255, 255, 255, 0.6);
+      margin-top: 2px
+    }
+
+    .rc-progress {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .rc-progress-fill {
+      height: 100%;
+      background: var(--red)
+    }
+
+    /* Square kart (live) */
+    .card-square .rc-bg {
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface2)
+    }
+
+    .live-badge-sm {
+      position: absolute;
+      top: 7px;
+      left: 7px;
+      background: #CC0000;
+      color: white;
+      font-size: 7px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 2px 5px;
+      border-radius: 2px;
+    }
+
+    .card-label {
+      margin-top: 6px;
+      text-align: left;
+    }
+
+    .card-label-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 120px
+    }
+
+    .card-label-cat {
+      font-size: 9px;
+      color: var(--muted2);
+      margin-top: 1px
+    }
+
+    /* ═══════════════════════════════════════════════
+   3. PLAYER OVERLAY
+   ═══════════════════════════════════════════════ */
+    .player-demo {
+      position: relative;
+      width: 100%;
+      height: 340px;
+      background: linear-gradient(135deg, #050810 0%, #0a1628 50%, #061024 100%);
+      overflow: hidden;
+      border-radius: 0;
+      flex-shrink: 0;
+      display: none;
+    }
+
+    .player-demo.active {
+      display: block
+    }
+
+    .player-content-bg {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 100px;
+      opacity: 0.08;
+    }
+
+    /* Frosted glass control bar */
+    .control-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 0 40px 28px;
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.7) 60%, transparent 100%);
+      backdrop-filter: blur(2px);
+    }
+
+    /* Progress bar */
+    .progress-area {
+      margin-bottom: 14px
+    }
+
+    .progress-track {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+      cursor: pointer;
+      position: relative;
+      margin-bottom: 6px;
+      transition: height 0.15s;
+    }
+
+    .progress-track:hover {
+      height: 6px
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--accent);
+      position: relative;
+    }
+
+    .progress-thumb {
+      position: absolute;
+      right: -6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: white;
+      opacity: 0;
+      transition: opacity 0.15s;
+      box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+    }
+
+    .progress-track:hover .progress-thumb {
+      opacity: 1
+    }
+
+    .progress-times {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.55)
+    }
+
+    /* Controls row */
+    .controls-row {
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .ctrl-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 15px;
+      transition: background 0.15s, border-color 0.15s;
+      flex-shrink: 0;
+    }
+
+    .ctrl-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+      border-color: rgba(255, 255, 255, 0.4)
+    }
+
+    .ctrl-btn.play-main {
+      width: 44px;
+      height: 44px;
+      font-size: 18px;
+      background: white;
+      border-color: white;
+      color: black;
+    }
+
+    .ctrl-btn.play-main:hover {
+      background: rgba(255, 255, 255, 0.88)
+    }
+
+    .ctrl-spacer {
+      flex: 1
+    }
+
+    .volume-group {
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .volume-slider {
+      width: 70px;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.25);
+      border-radius: 2px;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .volume-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: white;
+      width: 70%
+    }
+
+    .quality-badge {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .quality-badge:hover {
+      background: rgba(255, 255, 255, 0.18)
+    }
+
+    .ctrl-label {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6)
+    }
+
+    /* Top gradient on player */
+    .player-top-gradient {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 100px;
+      background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent);
+      display: flex;
+      align-items: flex-start;
+      padding: 16px 40px;
+      justify-content: space-between;
+    }
+
+    .player-title-area {
+      display: flex;
+      flex-direction: column;
+      gap: 4px
+    }
+
+    .player-show-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.9)
+    }
+
+    .player-ep-title {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.5)
+    }
+
+    .player-top-actions {
+      display: flex;
+      gap: 8px
+    }
+
+    /* Skip button (jenerik) */
+    .skip-btn {
+      position: absolute;
+      right: 40px;
+      bottom: 120px;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1.5px solid rgba(255, 255, 255, 0.4);
+      color: white;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 18px;
+      border-radius: 4px;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .skip-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: white
+    }
+
+    /* ── TABS ──────────────────── */
+    .tabs {
+      display: flex;
+      gap: 2px;
+      padding: 20px 32px 0;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0
+    }
+
+    .tab {
+      padding: 10px 20px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted2);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .tab:hover {
+      color: var(--text)
+    }
+
+    .tab.active {
+      color: var(--text);
+      font-weight: 600;
+      border-color: var(--accent)
+    }
+
+    .tab-content {
+      display: none;
+      flex: 1;
+      overflow: hidden
+    }
+
+    .tab-content.active {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden
+    }
+
+    /* ── NOTES ─────────────────── */
+    .note-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin: 16px 32px;
+      font-size: 12px;
+      line-height: 1.7;
+      color: var(--muted2);
+    }
+
+    .note-box strong {
+      color: var(--text)
+    }
+
+    code {
+      background: rgba(168, 85, 247, 0.15);
+      color: var(--accent);
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 11px
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="page">
+    <!-- ── SIDEBAR ─────────────────────────────────────────────── -->
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">🎬</div>
+        <span class="sidebar-logo-text">Noctra</span>
+      </div>
+
+      <div class="nav-section-label">Ana Menü</div>
+
+      <a class="nav-item active">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+        </svg>
+        Ana Sayfa
+      </a>
+      <a class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z" />
+        </svg>
+        Canlı TV
+      </a>
+      <a class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z" />
+        </svg>
+        Filmler
+      </a>
+      <a class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z" />
+        </svg>
+        Diziler
+      </a>
+      <a class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+        </svg>
+        Listem
+      </a>
+
+      <div class="nav-divider"></div>
+      <div class="nav-section-label">Kütüphane</div>
+
+      <a class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.62L12 2 9.19 8.62 2 9.24l5.45 4.73L5.82 21z" />
+        </svg>
+        Favoriler
+      </a>
+      <a class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z" />
+        </svg>
+        Geçmiş
+      </a>
+      <a class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+        </svg>
+        İndirilenler
+      </a>
+    </div>
+
+  </div>
+
+  <script>
+    function showTab(name) {
+      document.querySelectorAll('.tab').forEach((t, i) => {
+        t.classList.toggle('active', ['home', 'player'][i] === name)
+      });
+      document.querySelectorAll('.tab-content').forEach(c => {
+        c.classList.toggle('active', c.id === 'tab-' + name)
+      });
+    }
+  </script>
+</body>
+
+</html>
