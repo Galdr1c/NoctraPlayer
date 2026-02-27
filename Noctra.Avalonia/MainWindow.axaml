@@ -16,59 +16,213 @@
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource Bg0Brush}">
 
-  <Window.Styles>
-    <Style Selector="Button.SettingsGearButton materialIcons|MaterialIcon#SettingsGearIcon">
-      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
-      <Setter Property="RenderTransform" Value="rotate(0deg)"/>
-    </Style>
-    <Style Selector="Button.SettingsGearButton:pointerover materialIcons|MaterialIcon#SettingsGearIcon">
-      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-      <Setter Property="RenderTransform" Value="rotate(120deg)"/>
-    </Style>
-    <Style Selector="Button.pipButton">
-      <Setter Property="CornerRadius" Value="10"/>
-      <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="FocusAdorner" Value="{x:Null}"/>
-      <Setter Property="Transitions">
-        <Transitions>
-          <BrushTransition Property="Background" Duration="0:0:0.15"/>
-        </Transitions>
-      </Setter>
-    </Style>
-    <Style Selector="Button.pipButton:pointerover">
-      <Setter Property="Background" Value="#33FFFFFF"/>
-    </Style>
-    <Style Selector="Button.pipButton:pressed">
-        <Setter Property="Background" Value="#44FFFFFF"/>
-        <Setter Property="RenderTransform" Value="scale(0.95)"/>
-    </Style>
-    <Style Selector="materialIcons|MaterialIcon.cornerMask">
-        <Setter Property="Foreground" Value="Black"/>
-        <Setter Property="Width" Value="12"/>
-        <Setter Property="Height" Value="12"/>
-        <Setter Property="ZIndex" Value="5000"/>
-    </Style>
-  </Window.Styles>
+    <Window.Styles>
+      <Style Selector="Button.SettingsGearButton materialIcons|MaterialIcon#SettingsGearIcon">
+        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+        <Setter Property="RenderTransform" Value="rotate(0deg)"/>
+      </Style>
+      <Style Selector="Button.SettingsGearButton:pointerover materialIcons|MaterialIcon#SettingsGearIcon">  
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="RenderTransform" Value="rotate(120deg)"/>
+      </Style>
+      <Style Selector="Button.pipButton">
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FocusAdorner" Value="{x:Null}"/>
+      </Style>
+      <Style Selector="Button.pipButton:pointerover">
+        <Setter Property="Background" Value="#33FFFFFF"/>
+      </Style>
+      <Style Selector="Button.pipButton:pressed">
+          <Setter Property="Background" Value="#44FFFFFF"/>
+          <Setter Property="RenderTransform" Value="scale(0.95)"/>
+      </Style>
+      <Style Selector="materialIcons|MaterialIcon.cornerMask">
+          <Setter Property="Foreground" Value="Black"/>
+          <Setter Property="Width" Value="12"/>
+          <Setter Property="Height" Value="12"/>
+          <Setter Property="ZIndex" Value="5000"/>
+      </Style>
+  
+      <!-- HIGH IMPACT SIDEBAR STYLES -->
+      <Style Selector="Button.navItem">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Margin" Value="10,1"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+      </Style>
+  
+      <Style Selector="Button.navItem StackPanel.ItemContent">
+        <Setter Property="Margin" Value="20,11"/>
+      </Style>          
+      <Style Selector="Button.navItem:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
+      </Style>
+  
+      <Style Selector="Button.navItem.active">
+        <Setter Property="Background" Value="{DynamicResource NavActiveBackgroundBrush}"/>
+      </Style>
 
-  <Grid RowDefinitions="64,*,48">
+      <Style Selector="Button.navItem Border.ActiveIndicator">
+        <Setter Property="IsVisible" Value="False"/>
+        <Setter Property="Width" Value="4"/>
+        <Setter Property="CornerRadius" Value="0,2,2,0"/>
+        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+        <Setter Property="Height" Value="24"/>
+      </Style>
+
+      <Style Selector="Button.navItem.active Border.ActiveIndicator">
+        <Setter Property="IsVisible" Value="True"/>
+      </Style>
+
+      <Style Selector="Button.navItem TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="FontSize" Value="14"/>
+      </Style>
+
+      <Style Selector="Button.navItem:pointerover TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+      </Style>
+
+      <Style Selector="Button.navItem.active TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+      </Style>
+
+      <Style Selector="Button.navItem materialIcons|MaterialIcon">
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="Opacity" Value="0.7"/>
+        <Setter Property="Width" Value="18"/>
+        <Setter Property="Height" Value="18"/>
+        <Setter Property="Margin" Value="0,0,12,0"/>
+      </Style>
+
+      <Style Selector="Button.navItem:pointerover materialIcons|MaterialIcon">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="Opacity" Value="1"/>
+      </Style>
+
+      <Style Selector="Button.navItem.active materialIcons|MaterialIcon">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="Opacity" Value="1"/>
+      </Style>
+  
+      <!-- HEADER SEARCH STYLES -->
+      <Style Selector="TextBox.headerSearch">
+        <Setter Property="Height" Value="36"/>
+        <Setter Property="Width" Value="40"/>
+        <Setter Property="MinWidth" Value="40"/>
+        <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="Watermark" Value=""/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="Transitions">
+          <Transitions>
+            <DoubleTransition Property="Width" Duration="0:0:0.15" Easing="QuadraticEaseOut"/>
+          </Transitions>
+        </Setter>
+      </Style>
+
+      <Style Selector="TextBox.headerSearch:pointerover">
+        <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+      </Style>
+
+      <Style Selector="TextBox.headerSearch:focus, TextBox.headerSearch.notEmpty, TextBox.headerSearch.isSearchView">
+        <Setter Property="Background" Value="{DynamicResource Surface0Brush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="Width" Value="300"/>
+        <Setter Property="Padding" Value="12,0"/>
+        <Setter Property="Watermark" Value="Film, dizi veya kanal ara..."/>
+      </Style>
+
+    </Window.Styles>
+
+  <Grid RowDefinitions="64,*,48" Focusable="True">
 
     <!-- ========== HEADER BAR ========== -->
-    <Border x:Name="HeaderBar" Grid.Row="0" Background="{DynamicResource HeaderGradientBrush}" Padding="24,0" PointerPressed="HeaderBar_PointerPressed">
+    <Border x:Name="HeaderBar" Grid.Row="0" Background="{DynamicResource HeaderGradientBrush}" 
+            Padding="24,0" PointerPressed="HeaderBar_PointerPressed" Focusable="True">
       <Grid ColumnDefinitions="Auto,*,Auto">
-        <!-- Logo -->
-        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="12" Margin="8,0,0,0">
-          <Image Source="avares://Noctra.Avalonia/Assets/Logo.png" Height="32" />
-          <TextBlock Text="Noctra" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-        </StackPanel>
+        <!-- Spacer for Logo removal -->
+        <Border Width="1" Height="32" Margin="8,0,0,0"/>
 
-        <!-- Search Button -->
-        <Button Grid.Column="1" HorizontalAlignment="Right" Margin="0,0,24,0"
-                Command="{Binding OpenSearchCommand}" Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="8">
-          <StackPanel Orientation="Horizontal">
-            <materialIcons:MaterialIcon Kind="Magnify" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,8,0"/>
-            <TextBlock Text="Ara" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}"/>
-          </StackPanel>
-        </Button>
+        <!-- New Expanding Search -->
+        <TextBox x:Name="HeaderSearchBox" Classes="headerSearch" 
+                 Classes.notEmpty="{Binding SearchQuery, Converter={StaticResource StringNotEmptyToBoolConverter}}"
+                 Classes.isSearchView="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter=Search}"
+                 Grid.Column="1" HorizontalAlignment="Right"
+                 Text="{Binding SearchQuery, Mode=TwoWay}"
+                 Margin="0,0,12,0"
+                 KeyDown="SearchInput_KeyDown">
+          <TextBox.InnerLeftContent>
+            <Border Width="38" Height="34" CornerRadius="8" VerticalAlignment="Center" HorizontalAlignment="Center">
+               <materialIcons:MaterialIcon Kind="Magnify" Width="18" Height="18" 
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+            </Border>
+          </TextBox.InnerLeftContent>
+        </TextBox>
+
+        <!-- Search Results Popup -->
+        <Popup IsOpen="{Binding !!SearchResults.Count}" 
+               PlacementTarget="{Binding #HeaderSearchBox}"
+               Placement="Bottom"
+               IsLightDismissEnabled="True">
+          <Border Width="340" MaxHeight="400" Background="{DynamicResource SurfaceBrush}" 
+                  CornerRadius="12" Padding="8" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+            <ScrollViewer>
+              <ItemsControl ItemsSource="{Binding SearchResults}">
+                <ItemsControl.DataTemplates>
+                  <DataTemplate x:DataType="models:Channel">
+                    <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" 
+                            CommandParameter="{Binding}"
+                            Background="Transparent" BorderThickness="0" Padding="8" Cursor="Hand" HorizontalAlignment="Stretch">
+                      <Grid ColumnDefinitions="40,*">
+                        <Border Width="32" Height="32" CornerRadius="4" ClipToBounds="True">
+                          <controls:RemoteImage Stretch="UniformToFill" Url="{Binding LogoUrl}"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding Name}" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
+                          <TextBlock Text="{Binding GroupTitle}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                      </Grid>
+                    </Button>
+                  </DataTemplate>
+                  <DataTemplate x:DataType="models:Series">
+                    <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" 
+                            CommandParameter="{Binding}"
+                            Background="Transparent" BorderThickness="0" Padding="8" Cursor="Hand" HorizontalAlignment="Stretch">
+                      <Grid ColumnDefinitions="40,*">
+                        <Border Width="32" Height="32" CornerRadius="4" ClipToBounds="True">
+                          <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding Name}" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
+                          <TextBlock Text="Dizi" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+                        </StackPanel>
+                      </Grid>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.DataTemplates>
+              </ItemsControl>
+            </ScrollViewer>
+          </Border>
+        </Popup>
 
         <!-- Header Actions -->
         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
@@ -92,49 +246,110 @@
     <Grid x:Name="MainContentArea" Grid.Row="1" ColumnDefinitions="280,*">
 
       <!-- SIDEBAR -->
-      <Border x:Name="SideBar" Grid.Column="0" Background="{DynamicResource Bg1Brush}">
-        <StackPanel Margin="16,24,16,16">
+      <Border x:Name="SideBar" Grid.Column="0" Background="{DynamicResource Bg1Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
+        <StackPanel Margin="0,24,0,24">
+          <!-- Nav Section Label -->
+          <TextBlock Text="ANA MENÜ" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="24,0,24,8" LetterSpacing="2"/>
+
           <!-- Home -->
-          <Button Classes="navItem" Click="NavigateHome_Click" Cursor="Hand"
-                  Background="{Binding ActiveView, Converter={StaticResource EqualityToBrushConverter}, ConverterParameter={x:Static vm:AppView.Home}}">
-            <Grid ColumnDefinitions="Auto,*" Margin="16,14"><materialIcons:MaterialIcon Kind="HomeOutline" Width="18" Height="18" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/><TextBlock Grid.Column="1" Text="Ana Sayfa" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/></Grid>
+          <Button Classes="navItem" Click="NavigateHome_Click"
+                  Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Home}}">
+            <Panel>
+              <Border Classes="ActiveIndicator" />
+              <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
+                <materialIcons:MaterialIcon Kind="HomeVariantOutline" />
+                <TextBlock Text="Ana Sayfa" VerticalAlignment="Center"/>
+              </StackPanel>
+            </Panel>
           </Button>
+
           <!-- Live TV -->
-          <Button Classes="navItem" Click="NavigateLive_Click" Cursor="Hand"
-                  Background="{Binding ActiveView, Converter={StaticResource EqualityToBrushConverter}, ConverterParameter={x:Static vm:AppView.Live}}">
-            <Grid ColumnDefinitions="Auto,*" Margin="16,14"><materialIcons:MaterialIcon Kind="Television" Width="18" Height="18" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/><TextBlock Grid.Column="1" Text="Canl&#305; TV" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/></Grid>
+          <Button Classes="navItem" Click="NavigateLive_Click"
+                  Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Live}}">
+            <Panel>
+              <Border Classes="ActiveIndicator" />
+              <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
+                <materialIcons:MaterialIcon Kind="Television" />
+                <TextBlock Text="Canlı TV" VerticalAlignment="Center"/>
+              </StackPanel>
+            </Panel>
           </Button>
+
           <!-- Movies -->
-          <Button Classes="navItem" Click="NavigateMovies_Click" Cursor="Hand"
-                  Background="{Binding ActiveView, Converter={StaticResource EqualityToBrushConverter}, ConverterParameter={x:Static vm:AppView.Movies}}">
-            <Grid ColumnDefinitions="Auto,*" Margin="16,14"><materialIcons:MaterialIcon Kind="MovieOpenOutline" Width="18" Height="18" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/><TextBlock Grid.Column="1" Text="Filmler" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/></Grid>
+          <Button Classes="navItem" Click="NavigateMovies_Click"
+                  Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Movies}}">
+            <Panel>
+              <Border Classes="ActiveIndicator" />
+              <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
+                <materialIcons:MaterialIcon Kind="MovieOpenOutline" />
+                <TextBlock Text="Filmler" VerticalAlignment="Center"/>
+              </StackPanel>
+            </Panel>
           </Button>
+
           <!-- Series -->
-          <Button Classes="navItem" Click="NavigateSeries_Click" Cursor="Hand"
-                  Background="{Binding ActiveView, Converter={StaticResource EqualityToBrushConverter}, ConverterParameter={x:Static vm:AppView.Series}}">
-            <Grid ColumnDefinitions="Auto,*" Margin="16,14"><materialIcons:MaterialIcon Kind="Television" Width="18" Height="18" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/><TextBlock Grid.Column="1" Text="Diziler" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/></Grid>
+          <Button Classes="navItem" Click="NavigateSeries_Click"
+                  Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Series}}">
+            <Panel>
+              <Border Classes="ActiveIndicator" />
+              <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
+                <materialIcons:MaterialIcon Kind="TelevisionPlay" />
+                <TextBlock Text="Diziler" VerticalAlignment="Center"/>
+              </StackPanel>
+            </Panel>
           </Button>
+
           <!-- My List -->
-          <Button Classes="navItem" Click="NavigateMyList_Click" Cursor="Hand"
-                  Background="{Binding ActiveView, Converter={StaticResource EqualityToBrushConverter}, ConverterParameter={x:Static vm:AppView.MyList}}">
-            <Grid ColumnDefinitions="Auto,*" Margin="16,14"><materialIcons:MaterialIcon Kind="PlaylistPlus" Width="18" Height="18" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/><TextBlock Grid.Column="1" Text="Listem" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/></Grid>
+          <Button Classes="navItem" Click="NavigateMyList_Click"
+                  Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.MyList}}">
+            <Panel>
+              <Border Classes="ActiveIndicator" />
+              <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
+                <materialIcons:MaterialIcon Kind="PlaylistPlus" />
+                <TextBlock Text="Listem" VerticalAlignment="Center"/>
+              </StackPanel>
+            </Panel>
           </Button>
-          <!-- Divider -->
-          <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,20"/>
+
+          <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="20,12"/>
+
+          <!-- Nav Section Label 2 -->
+          <TextBlock Text="KÜTÜPHANE" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="24,0,24,8" LetterSpacing="2"/>
+
           <!-- Favorites -->
-          <Button Classes="navItem" Click="NavigateFavorites_Click" Cursor="Hand"
-                  Background="{Binding ActiveView, Converter={StaticResource EqualityToBrushConverter}, ConverterParameter={x:Static vm:AppView.Favorites}}">
-            <Grid ColumnDefinitions="Auto,*" Margin="16,12"><materialIcons:MaterialIcon Kind="StarOutline" Width="16" Height="16" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/><TextBlock Grid.Column="1" Text="Favoriler" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="14" VerticalAlignment="Center"/></Grid>
+          <Button Classes="navItem" Click="NavigateFavorites_Click"
+                  Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Favorites}}">
+            <Panel>
+              <Border Classes="ActiveIndicator" />
+              <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
+                <materialIcons:MaterialIcon Kind="StarOutline" />
+                <TextBlock Text="Favoriler" VerticalAlignment="Center"/>
+              </StackPanel>
+            </Panel>
           </Button>
+
           <!-- History -->
-          <Button Classes="navItem" Click="NavigateHistory_Click" Cursor="Hand"
-                  Background="{Binding ActiveView, Converter={StaticResource EqualityToBrushConverter}, ConverterParameter={x:Static vm:AppView.History}}">
-            <Grid ColumnDefinitions="Auto,*" Margin="16,12"><materialIcons:MaterialIcon Kind="History" Width="16" Height="16" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/><TextBlock Grid.Column="1" Text="Ge&#231;mi&#351;" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="14" VerticalAlignment="Center"/></Grid>
+          <Button Classes="navItem" Click="NavigateHistory_Click"
+                  Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.History}}">
+            <Panel>
+              <Border Classes="ActiveIndicator" />
+              <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
+                <materialIcons:MaterialIcon Kind="History" />
+                <TextBlock Text="Geçmiş" VerticalAlignment="Center"/>
+              </StackPanel>
+            </Panel>
           </Button>
+
           <!-- Downloads -->
-          <Button Classes="navItem" Click="NavigateDownloads_Click" Cursor="Hand"
-                  Background="{Binding ActiveView, Converter={StaticResource EqualityToBrushConverter}, ConverterParameter={x:Static vm:AppView.Downloads}}">
-            <Grid ColumnDefinitions="Auto,*" Margin="16,12"><materialIcons:MaterialIcon Kind="Download" Width="16" Height="16" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/><TextBlock Grid.Column="1" Text="&#304;ndirilenler" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="14" VerticalAlignment="Center"/></Grid>
+          <Button Classes="navItem" Click="NavigateDownloads_Click"
+                  Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Downloads}}">
+            <Panel>
+              <Border Classes="ActiveIndicator" />
+              <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
+                <materialIcons:MaterialIcon Kind="DownloadOutline" />
+                <TextBlock Text="İndirilenler" VerticalAlignment="Center"/>
+              </StackPanel>
+            </Panel>
           </Button>
         </StackPanel>
       </Border>
@@ -177,68 +392,6 @@
                 <views:DownloadsView IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Downloads}}" />
 
 
-        <!-- Search Overlay -->
-        <Grid x:Name="SearchOverlay" Background="#CC000000" IsVisible="{Binding IsSearchOverlayVisible}" ZIndex="1000">
-          <StackPanel MaxWidth="800" VerticalAlignment="Top" Margin="0,100,0,0">
-            <Border Background="{DynamicResource Bg1Brush}" CornerRadius="8" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="2">
-              <Grid ColumnDefinitions="*,Auto">
-                <TextBox x:Name="SearchInput" FontSize="24" Background="Transparent" BorderThickness="0" Padding="20" Watermark="Film, dizi veya kanal ara..."
-                         Text="{Binding SearchQuery}" KeyDown="SearchInput_KeyDown"/>
-                <Button Grid.Column="1" Command="{Binding CommitSearchCommand}" Background="Transparent" BorderThickness="0" Padding="20" Cursor="Hand">
-                  <materialIcons:MaterialIcon Kind="Magnify" Width="24" Height="24" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                </Button>
-              </Grid>
-            </Border>
-            <ScrollViewer MaxHeight="500" Margin="0,20,0,0">
-              <ItemsControl ItemsSource="{Binding SearchResults}">
-                <ItemsControl.DataTemplates>
-                  <DataTemplate x:DataType="models:Channel">
-                    <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}"
-                            Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" Margin="0,0,0,12" HorizontalAlignment="Stretch">
-                      <Border Background="{DynamicResource Surface1Brush}" CornerRadius="8" Padding="16">
-                        <Grid ColumnDefinitions="120,*">
-                          <Border Width="100" Height="56" CornerRadius="4" Background="{DynamicResource Surface1Brush}" ClipToBounds="True">
-                            <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
-                          </Border>
-                          <StackPanel Grid.Column="1" Margin="16,0,0,0">
-                            <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="{Binding GroupTitle}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
-                            <Border Height="3" Background="#33FFFFFF" Margin="0,12,0,0"
-                                    IsVisible="{Binding WatchedPercentage, Converter={StaticResource CountToVisibilityConverter}}">
-                              <Border Width="{Binding WatchedPercentage, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=640}"
-                                      Background="#8D09E5" HorizontalAlignment="Left"/>
-                            </Border>
-                          </StackPanel>
-                        </Grid>
-                      </Border>
-                    </Button>
-                  </DataTemplate>
-
-                  <DataTemplate x:DataType="models:Series">
-                    <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}"
-                            Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" Margin="0,0,0,12" HorizontalAlignment="Stretch">
-                      <Border Background="{DynamicResource Surface1Brush}" CornerRadius="8" Padding="16">
-                        <Grid ColumnDefinitions="120,*">
-                          <Border Width="100" Height="56" CornerRadius="4" Background="{DynamicResource Surface1Brush}" ClipToBounds="True">
-                            <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
-                          </Border>
-                          <StackPanel Grid.Column="1" Margin="16,0,0,0">
-                            <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="{Binding Genre}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
-                          </StackPanel>
-                        </Grid>
-                      </Border>
-                    </Button>
-                  </DataTemplate>
-                </ItemsControl.DataTemplates>
-              </ItemsControl>
-            </ScrollViewer>
-          </StackPanel>
-          <Button HorizontalAlignment="Right" VerticalAlignment="Top" Margin="40" Foreground="White"
-                  Background="Transparent" BorderThickness="0" Command="{Binding CloseSearchCommand}" Cursor="Hand">
-            <materialIcons:MaterialIcon Kind="Close" Width="22" Height="22" Foreground="White"/>
-          </Button>
-        </Grid>
 
         <!-- Series Detail Overlay -->
         <Grid x:Name="SeriesDetailOverlay" Background="{DynamicResource BackgroundGradientBrush}"
@@ -296,11 +449,9 @@
                                     <Border Grid.Row="1" Padding="12">
                                       <StackPanel>
                                         <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis"/>
-                                        <Border Height="3" Background="#33FFFFFF" Margin="0,12,0,0"
-                                                IsVisible="{Binding ., Converter={StaticResource EpisodeWatchedProgressVisibilityConverter}}">
-                                          <Border Width="{Binding ., Converter={StaticResource EpisodeWatchedProgressWidthConverter}, ConverterParameter=150}"
-                                                  Background="{DynamicResource AccentBrush}" HorizontalAlignment="Left"/>
-                                        </Border>
+                                        <ProgressBar Height="4" Margin="0,12,0,0" CornerRadius="0" Minimum="0" Maximum="100" Value="{Binding WatchedPercentage}"
+                                                     Foreground="{DynamicResource AccentBrush}" Background="#4D000000" BorderThickness="0"
+                                                     IsVisible="{Binding ., Converter={StaticResource EpisodeWatchedProgressVisibilityConverter}}"/>
                                       </StackPanel>
                                     </Border>
                                   </Grid>
@@ -515,12 +666,66 @@
     </Grid>
 
     <!-- ========== STATUS BAR ========== -->
-    <Border x:Name="StatusBar" Grid.Row="2" Background="{DynamicResource HeaderGradientBrush}">
-      <Grid Margin="24,0" ColumnDefinitions="*,Auto">
-        <TextBlock Text="{Binding StatusMessage}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
-        <Border Grid.Column="1" Background="{DynamicResource AccentBrush}" CornerRadius="{DynamicResource RadiusPill}" Padding="14,6">
-          <TextBlock Text="{Binding FilteredChannels.Count, StringFormat='{}{0} kanal'}" FontSize="12" FontWeight="SemiBold" Foreground="White"/>
-        </Border>
+    <Border x:Name="StatusBar" Grid.Row="2" Background="{DynamicResource Bg1Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Height="40">
+      <Grid>
+        <!-- Progressive Channel Loading Bar -->
+        <ProgressBar IsVisible="{Binding IsChannelLoading}" 
+                     Value="{Binding ChannelLoadingProgress}" 
+                     Minimum="0" Maximum="100"
+                     Height="2" VerticalAlignment="Top" 
+                     Background="Transparent" 
+                     Foreground="{DynamicResource AccentBrush}" 
+                     BorderThickness="0"/>
+
+        <Grid Margin="20,0" ColumnDefinitions="*,Auto">
+          <!-- Left: Status & Stats -->
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="12">
+            <ProgressBar IsIndeterminate="True" Width="14" Height="14" 
+                         IsVisible="{Binding IsLoading}" 
+                         Theme="{StaticResource ProgressRingTheme}"/>
+            <TextBlock Text="{Binding StatusMessage}" FontSize="12" 
+                       Foreground="{DynamicResource TextPrimaryBrush}" 
+                       VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding ChannelLoadingStats}" 
+                       IsVisible="{Binding IsChannelLoading}" 
+                       FontSize="11" Foreground="{DynamicResource TextMutedBrush}" 
+                       VerticalAlignment="Center" Margin="8,0,0,0"/>
+          </StackPanel>
+
+          <!-- Right: Badges -->
+          <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+            <!-- Connection Health Badge -->
+            <Border IsVisible="{Binding ConnectionQuality, Converter={StaticResource ConnectionHealthToVisibilityConverter}}"
+                    CornerRadius="4" Padding="8,3" Background="#0AFFFFFF" BorderBrush="#1AFFFFFF" BorderThickness="1">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <!-- Dot indicator scaled by quality -->
+                <Ellipse Width="8" Height="8" VerticalAlignment="Center"
+                         Fill="{Binding ConnectionQuality, Converter={StaticResource ConnectionHealthToBrushConverter}}">
+                  <Ellipse.Transitions>
+                    <Transitions>
+                      <BrushTransition Property="Fill" Duration="0:0:0.5"/>
+                    </Transitions>
+                  </Ellipse.Transitions>
+                </Ellipse>
+                <TextBlock Text="{Binding ConnectionStatusText}" FontSize="10" FontWeight="SemiBold" 
+                           Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+              </StackPanel>
+            </Border>
+
+            <!-- Channel Counter Badge -->
+            <Border CornerRadius="4" Padding="8,3" Background="{DynamicResource Surface1Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <materialIcons:MaterialIcon Kind="Television" Width="12" Height="12" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+                <TextBlock FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center">
+                  <Run Text="{Binding FilteredChannels.Count, Mode=OneWay}"/>
+                  <Run Text="/"/>
+                  <Run Text="{Binding Channels.Count, Mode=OneWay}"/>
+                  <Run Text=" Kanal"/>
+                </TextBlock>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </Grid>
       </Grid>
     </Border>
 
@@ -551,4 +756,3 @@
 
   </Grid>
 </Window>
-

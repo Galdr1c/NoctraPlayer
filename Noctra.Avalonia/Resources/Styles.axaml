@@ -40,7 +40,6 @@
 
         <Style Selector="^:pointerover /template/ Border#PART_Border">
             <Setter Property="Opacity" Value="0.9"/>
-            <Setter Property="BoxShadow" Value="0 4 20 0 #40000000"/>
         </Style>
         <Style Selector="^:pressed /template/ Border#PART_Border">
             <Setter Property="Opacity" Value="0.8"/>
@@ -422,7 +421,6 @@
         </Style>
         <Style Selector="^:checked /template/ Border#PART_Border">
             <Setter Property="Background" Value="{DynamicResource Surface0Brush}"/>
-            <Setter Property="BoxShadow" Value="{DynamicResource DefaultShadow}"/>
         </Style>
         <Style Selector="^:pointerover">
             <Setter Property="Opacity" Value="0.8"/>
@@ -502,7 +500,6 @@
         </Style>
         <Style Selector="^:checked /template/ Border#PART_Border">
             <Setter Property="Background" Value="White"/>
-            <Setter Property="BoxShadow" Value="{DynamicResource DefaultShadow}"/>
         </Style>
     </ControlTheme>
 
@@ -726,7 +723,6 @@
                                     <ControlTemplate>
                                         <Grid>
                                             <Ellipse Fill="{DynamicResource PrimaryBrush}"/>
-                                            <Ellipse x:Name="Shadow" Fill="Black" Opacity="0.2" Margin="-2"/>
                                         </Grid>
                                     </ControlTemplate>
                                 </Thumb.Template>

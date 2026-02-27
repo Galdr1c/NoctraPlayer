@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Akıllı Arama, Gelişmiş Durum Çubuğu ve Ultra Performans Optimizasyonu** (2026-02-27 14:35):
+    - **Akıllı Genişleyen Arama Kutusu**: Arama kutusu artık bağlama duyarlı olarak çalışır; odaklandığında, içinde metin olduğunda veya "Arama Sonuçları" sayfasındayken 300px genişliğe çıkar. Boş ve odaksız olduğunda yer kaplamamak için 40px simge moduna küçülür.
+    - **Arama Metni Korunması**: Aramalar artık navigasyon sırasında (örneğin Arama Sonuçları ekranına geçişte) silinmez, kutu içinde kalmaya devam eder.
+    - **Modern Durum Çubuğu (Status Bar)**: Uygulamanın en altındaki statü barı tamamen yenilendi. Artık kanal yükleme ilerlemesi (ProgressBar), bağlantı sağlığı (Speed/Quality), toplam kanal istatistikleri ve anlık durum mesajlarını modern bir tasarımda sunar.
+    - **Radikal Görüntü Performansı**: Ekran kartı (GPU) ve işlemciye (CPU) yük bindiren tüm `BoxShadow` (gölge) efektleri global düzeyde temizlendi.
+    - **Sıfır Gecikmeli Kaydırma (Scrolling)**: Medya kartlarındaki (`VodCard`, `LiveTvCard`, `SeriesCard`) "büyüme" (scale) efektleri ve ağır geçişler kaldırıldı. Binlerce kanalın listelendiği ekranlarda kaydırma akıcılığı maksimuma çıkarıldı.
+    - **Sidebar İyileştirmesi**: Sol menüdeki gereksiz animasyonlar temizlendi, aktif öğe seçimi belirgin arka plan rengiyle modernize edildi.
+    - **Arama İkonu & Hizalama**: Arama çubuğu içeriği ve büyüteç ikonu hizalaması, her türlü genişlik geçişinde sabit ve görsel olarak kusursuz kalacak şekilde Border katmanıyla güçlendirildi.
+
 - **M3U Bağlantı Analizi ve Stalker Sınırsız Senkronizasyon** (2026-02-26 15:00):
     - **Stalker Full Sync (Sınırsız)**: Stalker portalları için önceki "Hızlı Yükleme" limitleri (15-50 sayfa) tamamen kaldırıldı. Artık 100.000+ içerikli devasa portallar bile tek seferde, eksiksiz olarak senkronize edilir.
     - **Paralel Çekim Optimizasyonu**: Çok sayıda sayfayı (örn: 7000+ sayfa VOD) internet hızını sonuna kadar kullanarak çekebilmek için paralel ağ isteği kapasitesi (Semaphore) artırıldı.
@@ -269,6 +278,16 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - **Açılışta %100 Ses Toast Hatası:** Canlı TV ve Diziler açılırken ses barı 100% olarak ekranın ortasında beliriyordu. Kütüphane bağlama özellikleri sırasında ilk ses atamasının UI Toast Popup'ı tetiklemesinin önüne geçildi.
 
 
+- **Gelişmiş Arama Deneyimi ve Sidebar Modernizasyonu** (2026-02-27):
+    - **Genişleyen Arama Çubuğu**: Header kısmındaki arama butonu, üzerine gelindiğinde veya tıklandığında 200px'den 340px'e pürüzsüzce genişleyen (`WidthTransition`) modern bir `TextBox` ile değiştirildi.
+    - **Hızlı Sonuç Paneli (`Popup`)**: Arama yaparken tam ekran overlay açılmak yerine, arama çubuğunun hemen altında açılan şık bir panel sayesinde bağlamdan kopmadan (context-free) anlık sonuçlar görüntülenebilir hale getirildi.
+    - **UI Performans ve Navigasyon Optimizasyonu**:
+        - **Gereksiz Animasyonların Kaldırılması**: Binlerce kartın render yükünü artıran `scale(1.05)` (büyüme) efekti kaldırıldı.
+        - **Sidebar Modernizasyonu**: Sol menüdeki karmaşık kayma (`Slide-in`) ve gradyan efektleri kaldırılarak daha performanslı, sade ve belirgin bir arayüze geçildi. Aktif menü öğeleri için net bir arka plan rengi (`AccentBrush` %15 opaklık) atandı.
+        - **Hızlandırılmış Geçişler**: Animasyon ve opaklık süresi (0.2s -> 0.1s) düşürülerek arayüz tepkiselliği artırıldı.
+        - **Arama Çubuğu**: Genişleme süresi 0.15s'ye çekildi ve Popup gölge maliyetleri sıfırlandı.
+    - **Sidebar Tasarımı (Netflix Style)**: Sidebar arka planı daha koyu (`#0F0F0F`) bir tona çekildi. Navigasyon öğeleri için Netflix tarzı hover ve aktif durum efektleri uygulandı. Aktif öğeler için mor gradyan yüzey kullanımı optimize edildi.
+    - **M3U Liste Analizi Düzeltmesi**: M3U playlistler için gizlenen "Bağlantıyı Analiz Et" butonu görünür hale getirildi ve tüm içeriklerin (VOD/Dizi) analiz edilebilmesi sağlandı.
 - **Gelişmiş Ses Denetimi ve Agresif Senkronizasyon** (2026-02-22 17:00):
   - **Agresif Ses Zorlama (Aggressive Force)**: Videonun ilk açılışındaki ses uyumsuzluğunu (UI'da %100 görünüp sesin az gelmesi) gidermek için; ses seviyesi video açılırken ve oynatılmaya başladıktan sonraki ilk 2 saniye boyunca kademeli aralıklarla (50ms'den 2s'ye kadar) tekrar tekrar doğrulanarak VLC/donanım kısıtlamaları aşıldı.
   - **Sabit Ayar Mantığı**: Ayarlardaki "Varsayılan Ses Seviyesi" artık oyuncu içindeki geçici değişikliklerden etkilenmez, kullanıcı değiştirene kadar sabit kalır.

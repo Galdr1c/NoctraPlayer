@@ -132,8 +132,6 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private ChannelType? _selectedChannelType;
 
-    [ObservableProperty]
-    private bool _isSearchOverlayVisible;
 
     [ObservableProperty]
     private string _searchQuery = string.Empty;
@@ -158,6 +156,21 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private string _statusMessage = "Hazır";
+
+    [ObservableProperty]
+    private bool _isChannelLoading;
+
+    [ObservableProperty]
+    private double _channelLoadingProgress;
+
+    [ObservableProperty]
+    private string _channelLoadingStats = string.Empty;
+
+    [ObservableProperty]
+    private ConnectionHealth _connectionQuality = ConnectionHealth.Good;
+
+    [ObservableProperty]
+    private string _connectionStatusText = "Bağlantı İyi";
 
     [ObservableProperty]
     private string? _channelListLastError;
@@ -281,11 +294,15 @@ public partial class MainViewModel : ObservableObject
             await Task.Delay(8_000, ct);
             if (ct.IsCancellationRequested) return;
 
+            ConnectionQuality = ConnectionHealth.Weak;
+            ConnectionStatusText = "Bağlantı Yavaş";
             LoadingWarningMessage = "⚠️ Bağlantı normalden uzun sürüyor...";
 
             await Task.Delay(12_000, ct);
             if (ct.IsCancellationRequested) return;
 
+            ConnectionQuality = ConnectionHealth.Critical;
+            ConnectionStatusText = "Bağlantı Sorunlu";
             LoadingWarningMessage = "⚠️ Sunucuya erişilemiyor olabilir. Playlist adresinizi kontrol edin.";
         }
         catch (TaskCanceledException)
@@ -359,6 +376,11 @@ public partial class MainViewModel : ObservableObject
         ClearProfileState();
 
         IsLoading = true;
+        IsChannelLoading = true;
+        ChannelLoadingProgress = 0;
+        ChannelLoadingStats = string.Empty;
+        ConnectionQuality = ConnectionHealth.Good;
+        ConnectionStatusText = "Bağlantı İyi";
         StatusMessage = "Kanal ve içerik listeleriniz hazırlanıyor...";
         CurrentProfileId = profile.Id;
         CurrentProfile = profile;
@@ -450,49 +472,70 @@ public partial class MainViewModel : ObservableObject
                                                     {
                                                         try
                                                         {
-                                                                                            await _xtreamCodesService.GetChannelsProgressiveAsync(
-                                                                                                baseUrl, username, password,
-                                                                                                includeVod: true,
-                                                                                                onCategoriesDiscovered: async (categories, prioritizeAction) =>
-                                                                                                {
-                                                                                                    // Arayüzün anında dolması için kategori isimleriyle "sahte" kanallar ekle
-                                                                                                    var dummyChannels = categories.Select(c => new Channel
-                                                                                                    {
-                                                                                                        Name = "İçerik yükleniyor...",
-                                                                                                        StreamUrl = $"xtream-dummy://{c.Id}",
-                                                                                                        GroupTitle = c.Name,
-                                                                                                        Type = c.Type == "live" ? ChannelType.Live : (c.Type == "series" ? ChannelType.Series : ChannelType.VOD)
-                                                                                                    }).ToList();
+                                                            int loadedCats = 0;
+                                                            int totalCats = 1;
+
+                                                            await _xtreamCodesService.GetChannelsProgressiveAsync(
+                                                                baseUrl, username, password,
+                                                                includeVod: true,
+                                                                onCategoriesDiscovered: async (categories, prioritizeAction) =>
+                                                                {
+                                                                    totalCats = categories.Count;
+                                                                    _dispatcherService.BeginInvoke(() => 
+                                                                    {
+                                                                        ChannelLoadingStats = $"0 / {totalCats} kategori";
+                                                                    });
+
+                                                                    // Arayüzün anında dolması için kategori isimleriyle "sahte" kanallar ekle
+                                                                    var dummyChannels = categories.Select(c => new Channel
+                                                                    {
+                                                                        Name = "İçerik yükleniyor...",
+                                                                        StreamUrl = $"xtream-dummy://{c.Id}",
+                                                                        GroupTitle = c.Name,
+                                                                        Type = c.Type == "live" ? ChannelType.Live : (c.Type == "series" ? ChannelType.Series : ChannelType.VOD)
+                                                                    }).ToList();
                                                             
-                                                                                                    await _playlistService.AppendChannelsAsync(playlist.Id, dummyChannels);
-                                                                                                    _dispatcherService.BeginInvoke(() => 
-                                                                                                    {
-                                                                                                        if (SelectedPlaylist?.Id == playlist.Id) _ = LoadChannelsAsync(playlist.Id);
-                                                                                                    });
-                                                                                                    return categories;
-                                                                                                },
-                                                                                                onCategoryLoaded: async (channels, groupName) =>
-                                                                                                {
-                                                                                                    await _playlistService.ReplaceDummyWithRealChannelsAsync(playlist.Id, groupName, channels);
-                                                                                                    
-                                                                                                    if (channels.Any(c => c.Type == ChannelType.Series))
-                                                                                                    {
-                                                                                                        await _mediaService.AggregateContentAsync(playlist.Id);
-                                                                                                        _mediaService.RaiseAggregationCompleted(playlist.Id);
-                                                                                                    }
+                                                                    await _playlistService.AppendChannelsAsync(playlist.Id, dummyChannels);
+                                                                    _dispatcherService.BeginInvoke(() => 
+                                                                    {
+                                                                        if (SelectedPlaylist?.Id == playlist.Id) _ = LoadChannelsAsync(playlist.Id);
+                                                                    });
+                                                                    return categories;
+                                                                },
+                                                                onCategoryLoaded: async (channels, groupName) =>
+                                                                {
+                                                                    await _playlistService.ReplaceDummyWithRealChannelsAsync(playlist.Id, groupName, channels);
+                                                                    
+                                                                    loadedCats++;
+                                                                    _dispatcherService.BeginInvoke(() =>
+                                                                    {
+                                                                        ChannelLoadingProgress = (double)loadedCats / totalCats * 100;
+                                                                        ChannelLoadingStats = $"{loadedCats} / {totalCats} kategori • {groupName}";
+                                                                    });
+
+                                                                    if (channels.Any(c => c.Type == ChannelType.Series))
+                                                                    {
+                                                                        await _mediaService.AggregateContentAsync(playlist.Id);
+                                                                        _mediaService.RaiseAggregationCompleted(playlist.Id);
+                                                                    }
                                                             
-                                                                                                    if (SelectedPlaylist?.Id == playlist.Id && SelectedGroup == groupName)
-                                                                                                    {
-                                                                                                        _ = ThrottledLoadChannelsAsync(playlist.Id);
-                                                                                                    }
-                                                                                                },
-                                                                                                cancellationToken: CancellationToken.None);                            
-                                                            _dispatcherService.BeginInvoke(() => StatusMessage = "Xtream içerikleri yüklendi ✓");
+                                                                    if (SelectedPlaylist?.Id == playlist.Id && SelectedGroup == groupName)
+                                                                    {
+                                                                        _ = ThrottledLoadChannelsAsync(playlist.Id);
+                                                                    }
+                                                                },
+                                                                cancellationToken: CancellationToken.None);                            
+                                                            _dispatcherService.BeginInvoke(() => 
+                                                            {
+                                                                StatusMessage = "Xtream içerikleri yüklendi ✓";
+                                                                IsChannelLoading = false;
+                                                                ChannelLoadingProgress = 100;
+                                                            });
                                                         }
                                                         catch (Exception ex)
                                                         {
                                                             _logger?.LogDebug($"[Xtream] Error: {ex}");
-                                                            // Fallback or Error message
+                                                            _dispatcherService.BeginInvoke(() => IsChannelLoading = false);
                                                         }
                                                     });
                                                     break;
@@ -524,6 +567,11 @@ public partial class MainViewModel : ObservableObject
                                     _dispatcherService.BeginInvoke(() =>
                                     {
                                         StatusMessage = p.Message;
+                                        ChannelLoadingStats = p.Message;
+                                        if (p.TotalCategories > 0)
+                                        {
+                                            ChannelLoadingProgress = (double)p.LoadedCategories / p.TotalCategories * 100;
+                                        }
                                     });
                                 });
 
@@ -592,6 +640,8 @@ public partial class MainViewModel : ObservableObject
                                 _dispatcherService.BeginInvoke(() =>
                                 {
                                     StatusMessage = $"Tüm içerikler hazır ✓";
+                                    IsChannelLoading = false;
+                                    ChannelLoadingProgress = 100;
 
                                     // Dizi yapısını arka planda oluştur
                                     _ = Task.Run(async () =>
@@ -2784,10 +2834,6 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void Navigate(AppView view)
     {
-        IsSearchOverlayVisible = false;
-        SearchQuery = string.Empty;
-        SearchResults.Clear();
-
         if (view != AppView.Search && !string.IsNullOrWhiteSpace(SearchText))
         {
             SearchText = string.Empty;
@@ -3932,15 +3978,6 @@ public partial class MainViewModel : ObservableObject
         _ = LoadMoreSeriesAsync();
     }
 
-    [RelayCommand]
-    private void OpenSearch()
-    {
-        IsSearchOverlayVisible = true;
-        SearchQuery = string.Empty;
-        SearchResults.Clear();
-        // Notify view to focus
-        OnPropertyChanged(nameof(SearchQuery)); // Just to trigger some UI logic if needed
-    }
 
     [RelayCommand]
     private void CommitSearch()
@@ -3950,7 +3987,6 @@ public partial class MainViewModel : ObservableObject
             // Sync with global search and navigate
             SearchText = SearchQuery;
             Navigate(AppView.Search);
-            CloseSearch();
         }
     }
 
@@ -3966,13 +4002,6 @@ public partial class MainViewModel : ObservableObject
         Navigate(AppView.Search);
     }
 
-    [RelayCommand]
-    private void CloseSearch()
-    {
-        IsSearchOverlayVisible = false;
-        SearchQuery = string.Empty;
-        SearchResults.Clear();
-    }
 
     partial void OnSearchQueryChanged(string value)
     {
@@ -4376,8 +4405,6 @@ public partial class MainViewModel : ObservableObject
     {
         if (media == null) return;
 
-        // Arama overlay açıkken seçim sonrası detay/oynatıcıyı kapatmasın diye önce overlay'i kapat.
-        IsSearchOverlayVisible = false;
         SearchQuery = string.Empty;
 
         if (media is Channel channel)

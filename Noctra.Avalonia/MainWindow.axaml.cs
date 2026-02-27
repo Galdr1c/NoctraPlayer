@@ -135,7 +135,7 @@ public partial class MainWindow : Window
         }
         else if (e.Key == Key.Escape)
         {
-            _mainViewModel.CloseSearchCommand.Execute(null);
+            _mainViewModel.SearchQuery = string.Empty;
         }
     }
 

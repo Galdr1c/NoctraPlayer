@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="using:Noctra.Models"
+             xmlns:controls="using:Noctra.Avalonia.Controls"
+             xmlns:vm="using:Noctra.ViewModels"
+             x:Class="Noctra.Avalonia.Controls.LiveTvCard"
+             x:DataType="models:Channel"
+             Width="150" Height="100"
+             ClipToBounds="False">
+  <UserControl.Styles>
+    <Style Selector="Button.CardContainer:pointerover">
+      <Setter Property="ZIndex" Value="10"/>
+    </Style>
+    <Style Selector="Border.HoverOverlay">
+      <Setter Property="Opacity" Value="0"/>
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.CardContainer:pointerover Border.HoverOverlay">
+      <Setter Property="Opacity" Value="1"/>
+    </Style>
+  </UserControl.Styles>
+
+  <Button Classes="CardContainer" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+    
+    <Button.ContextFlyout>
+      <MenuFlyout>
+        <MenuItem Header="Favorilere Ekle/Çıkar" Click="Context_ToggleFavorite_Click"
+                  IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
+      </MenuFlyout>
+    </Button.ContextFlyout>
+
+    <Border CornerRadius="{DynamicResource RadiusSmall}" ClipToBounds="True" Background="{DynamicResource Surface0Brush}">
+      <Grid>
+        <!-- Background -->
+        <Border Background="{DynamicResource Surface1Brush}" />
+        
+        <!-- Logo -->
+        <controls:RemoteImage Width="50" Stretch="Uniform" Url="{Binding CoverUrl}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,16" RenderOptions.BitmapInterpolationMode="MediumQuality"/>
+        
+        <!-- Hover Overlay -->
+        <Border Classes="HoverOverlay" Background="#4D000000" />
+        
+        <!-- Bottom Info Bar -->
+        <Border VerticalAlignment="Bottom" Background="#CC000000" Padding="8,4">
+          <StackPanel Spacing="1">
+            <TextBlock Text="{Binding Name}" Foreground="White" FontSize="11" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
+            <TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="9" TextTrimming="CharacterEllipsis"/>
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Border>
+  </Button>
+</UserControl>

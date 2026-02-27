@@ -543,16 +543,12 @@
                                                             <!-- Text Info -->
                                                             <StackPanel Grid.Column="1" Margin="16,0,16,0" VerticalAlignment="Center">
                                                                 <TextBlock Text="{Binding EpisodeNumber, StringFormat='Bölüm {0}'}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" FontWeight="Medium"/>
-                                                                <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" Margin="0,2,0,4"/>
+                                                                                                                                <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" Margin="0,2,0,4"/>
                                                                 
-                                                                <!-- Progress Bar -->
-                                                                <Border Height="3" Background="{DynamicResource SurfaceLightBrush}" CornerRadius="1.5" HorizontalAlignment="Left" Width="100"
-                                                                        IsVisible="{Binding ., Converter={StaticResource EpisodeWatchedProgressVisibilityConverter}}">
-                                                                    <Border Width="{Binding ., Converter={StaticResource EpisodeWatchedProgressWidthConverter}, ConverterParameter=100}"
-                                                                            Background="{DynamicResource AccentBrush}" CornerRadius="1.5" HorizontalAlignment="Left"/>
-                                                                </Border>
-                                                            </StackPanel>
-
+                                                                                                                                                                                                <!-- Progress Bar -->
+                                                                                                                                                                                                <ProgressBar Height="4" HorizontalAlignment="Left" Width="100" CornerRadius="0" Minimum="0" Maximum="100" Value="{Binding WatchedPercentage}"
+                                                                                                                                                                                                             Foreground="{DynamicResource AccentBrush}" Background="#4D000000" BorderThickness="0"
+                                                                                                                                                                                                             IsVisible="{Binding ., Converter={StaticResource EpisodeWatchedProgressVisibilityConverter}}"/>                                                                                                                            </StackPanel>
                                                             <!-- Check Badge -->
                                                             <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
                                                                 <Border Width="28" Height="28" CornerRadius="14" Background="{DynamicResource AccentBrush}"

@@ -76,19 +76,7 @@
                 <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="12"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="models:Channel">
-                    <Button Width="300" Height="169" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
-                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
-                      <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusSmall}" ClipToBounds="True">
-                        <Grid>
-                          <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}" Opacity="0.8"/>
-                          <Border Background="{DynamicResource HeroOverlayBrush}"/>
-                          <StackPanel VerticalAlignment="Bottom" Margin="12">
-                            <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis"/>
-                            <TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
-                          </StackPanel>
-                        </Grid>
-                      </Border>
-                    </Button>
+                    <controls:VodCard />
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
@@ -101,27 +89,7 @@
                 <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="12"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="models:Channel">
-                    <Button Width="300" Height="169" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
-                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
-                      <Button.ContextFlyout>
-                        <MenuFlyout>
-                          <MenuItem Header="Listem'e Ekle/&#199;&#305;kar" Click="Context_AddToMyList_Click" Tag="{Binding}"  CommandParameter="{Binding}"
-                                    IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
-                          <MenuItem Header="Favorilere Ekle/&#199;&#305;kar" Click="Context_ToggleFavorite_Click" Tag="{Binding}"  CommandParameter="{Binding}"
-                                    IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
-                        </MenuFlyout>
-                      </Button.ContextFlyout>
-                      <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusSmall}" ClipToBounds="True">
-                        <Grid>
-                          <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}" Opacity="0.8"/>
-                          <Border Background="{DynamicResource HeroOverlayBrush}"/>
-                          <StackPanel VerticalAlignment="Bottom" Margin="12">
-                            <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis"/>
-                            <TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
-                          </StackPanel>
-                        </Grid>
-                      </Border>
-                    </Button>
+                    <controls:VodCard />
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
@@ -134,27 +102,7 @@
                 <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="12"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="models:Channel">
-                    <Button Width="160" Height="240" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
-                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
-                      <Button.ContextFlyout>
-                        <MenuFlyout>
-                          <MenuItem Header="Listem'e Ekle/&#199;&#305;kar" Click="Context_AddToMyList_Click" Tag="{Binding}"  CommandParameter="{Binding}"
-                                    IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
-                          <MenuItem Header="Favorilere Ekle/&#199;&#305;kar" Click="Context_ToggleFavorite_Click" Tag="{Binding}"  CommandParameter="{Binding}"
-                                    IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
-                        </MenuFlyout>
-                      </Button.ContextFlyout>
-                      <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusSmall}" ClipToBounds="True">
-                        <Grid>
-                          <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
-                          <Border Background="{DynamicResource HeroOverlayBrush}"/>
-                          <StackPanel VerticalAlignment="Bottom" Margin="12">
-                            <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="Bold" FontSize="14" TextTrimming="CharacterEllipsis"/>
-                            <TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
-                          </StackPanel>
-                        </Grid>
-                      </Border>
-                    </Button>
+                    <controls:VodCard />
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
@@ -167,27 +115,7 @@
                 <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="12"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="models:Series">
-                    <Button Width="160" Height="240" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
-                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
-                      <Button.ContextFlyout>
-                        <MenuFlyout>
-                          <MenuItem Header="Listem'e Ekle/&#199;&#305;kar" Click="Context_AddToMyList_Click" Tag="{Binding}"  CommandParameter="{Binding}"
-                                    IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
-                          <MenuItem Header="Favorilere Ekle/&#199;&#305;kar" Click="Context_ToggleFavorite_Click" Tag="{Binding}"  CommandParameter="{Binding}"
-                                    IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
-                        </MenuFlyout>
-                      </Button.ContextFlyout>
-                      <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusSmall}" ClipToBounds="True">
-                        <Grid>
-                          <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
-                          <Border Background="{DynamicResource HeroOverlayBrush}"/>
-                          <StackPanel VerticalAlignment="Bottom" Margin="12">
-                            <TextBlock Text="{Binding Name}" Foreground="White" FontWeight="Bold" FontSize="14" TextTrimming="CharacterEllipsis"/>
-                            <TextBlock Text="{Binding Genre}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
-                          </StackPanel>
-                        </Grid>
-                      </Border>
-                    </Button>
+                    <controls:SeriesCard />
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>

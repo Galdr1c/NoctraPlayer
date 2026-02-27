@@ -26,6 +26,7 @@
   <converters:EqualityToVisibilityConverter x:Key="EqualityToVisibilityConverter" />
   <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
   <converters:AvatarPathConverter x:Key="AvatarPathConverter" />
+  <converters:BoolOrMultiConverter x:Key="BoolOrMultiConverter" />
   <converters:EqualityToBoolMultiConverter x:Key="EqualityToBoolMultiConverter" />
   <converters:AvatarExpressionConverter x:Key="AvatarExpressionConverter" />
   <converters:StringContainsConverter x:Key="StringContainsConverter" />
@@ -33,6 +34,7 @@
   <converters:StringToVisibilityConverter x:Key="StringNotEmptyToVisibilityConverter" />
   <converters:MediaThumbnailConverter x:Key="MediaThumbnailConverter" />
   <converters:BoolToIconConverter x:Key="BoolToIconConverter" />
+  <converters:BoolToThicknessConverter x:Key="BoolToThicknessConverter" />
   <converters:PercentToWidthConverter x:Key="PercentToWidthConverter" />
   <converters:DoubleToFloatConverter x:Key="DoubleToFloatConverter" />
   <converters:BitrateDisplayConverter x:Key="BitrateDisplayConverter" />
@@ -43,4 +45,5 @@
   <converters:ConnectionHealthToBrushConverter x:Key="ConnectionHealthToBrushConverter" />
   <converters:ConnectionHealthToIconConverter x:Key="ConnectionHealthToIconConverter" />
   <converters:ConnectionHealthToVisibilityConverter x:Key="ConnectionHealthToVisibilityConverter" />
+  <converters:StringNotEmptyToBoolConverter x:Key="StringNotEmptyToBoolConverter" />
 </ResourceDictionary>

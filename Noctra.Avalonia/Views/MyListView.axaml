@@ -15,23 +15,19 @@
             <TextBlock Text="Listem" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
             <ItemsControl ItemsSource="{Binding MyList}">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:CompileBindings="False">
-                  <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
-                          Command="{Binding DataContext.SelectMediaCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}">
-                    <Button.ContextMenu>
-                      <ContextMenu>
-                        <MenuItem Header="Listeden &#199;&#305;kar"
-                                  Click="Context_RemoveFromMyList_Click" Tag="{Binding}" 
-                                  CommandParameter="{Binding}"/>
-                      </ContextMenu>
-                    </Button.ContextMenu>
-                    <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
-                      <StackPanel><Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12"><controls:RemoteImage Width="60" Stretch="Uniform" Url="{Binding CoverUrl}"/></Border><TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/></StackPanel>
-                    </Border>
-                  </Button>
+              <ItemsControl.DataTemplates>
+                <DataTemplate DataType="models:Series">
+                  <controls:SeriesCard Margin="0,0,16,16"/>
                 </DataTemplate>
-              </ItemsControl.ItemTemplate>
+                <DataTemplate DataType="models:Channel">
+                  <Panel>
+                    <controls:VodCard Margin="0,0,16,16" IsVisible="{Binding Type, Converter={StaticResource ChannelTypeToVisibilityConverter}, ConverterParameter=VOD}"/>
+                    <controls:LiveTvCard Margin="0,0,16,16" IsVisible="{Binding Type, Converter={StaticResource ChannelTypeToVisibilityConverter}, ConverterParameter=Live}"/>
+                    <!-- Just in case it's a Series channel object somehow -->
+                    <controls:VodCard Margin="0,0,16,16" IsVisible="{Binding Type, Converter={StaticResource ChannelTypeToVisibilityConverter}, ConverterParameter=Series}"/>
+                  </Panel>
+                </DataTemplate>
+              </ItemsControl.DataTemplates>
             </ItemsControl>
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0" IsVisible="{Binding ShowMyListEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
               <Image Source="avares://Noctra.Avalonia/Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>

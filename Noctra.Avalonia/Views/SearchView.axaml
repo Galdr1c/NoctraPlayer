@@ -12,59 +12,14 @@
              x:DataType="vm:MainViewModel">
     <ScrollViewer x:Name="SearchScrollViewer" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Search}}">
           <ScrollViewer.Resources>
-            <DataTemplate x:Key="SearchChannelCardTemplate" x:DataType="models:Channel">
-              <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
-                      Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
-                <Button.ContextFlyout>
-                  <MenuFlyout>
-                    <MenuItem Header="Listem'e Ekle/&#199;&#305;kar"
-                              Click="Context_AddToMyList_Click" Tag="{Binding}" 
-                              CommandParameter="{Binding}"
-                              IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
-                    <MenuItem Header="Favorilere Ekle/&#199;&#305;kar"
-                              Click="Context_ToggleFavorite_Click" Tag="{Binding}" 
-                              CommandParameter="{Binding}"
-                              IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
-                  </MenuFlyout>
-                </Button.ContextFlyout>
-                <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
-                  <StackPanel>
-                    <Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12">
-                      <controls:RemoteImage Width="60" Stretch="Uniform" Url="{Binding CoverUrl}"/>
-                    </Border>
-                    <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center" TextTrimming="CharacterEllipsis"
-                               IsVisible="{Binding GroupTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
-                  </StackPanel>
-                </Border>
-              </Button>
+            <DataTemplate x:Key="SearchLiveCardTemplate" x:DataType="models:Channel">
+              <controls:LiveTvCard Margin="0,0,16,16"/>
             </DataTemplate>
-
+            <DataTemplate x:Key="SearchVodCardTemplate" x:DataType="models:Channel">
+              <controls:VodCard Margin="0,0,16,16"/>
+            </DataTemplate>
             <DataTemplate x:Key="SearchSeriesCardTemplate" x:DataType="models:Series">
-              <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
-                      Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
-                <Button.ContextFlyout>
-                  <MenuFlyout>
-                    <MenuItem Header="Listem'e Ekle/&#199;&#305;kar"
-                              Click="Context_AddToMyList_Click" Tag="{Binding}" 
-                              CommandParameter="{Binding}"
-                              IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
-                    <MenuItem Header="Favorilere Ekle/&#199;&#305;kar"
-                              Click="Context_ToggleFavorite_Click" Tag="{Binding}" 
-                              CommandParameter="{Binding}"
-                              IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
-                  </MenuFlyout>
-                </Button.ContextFlyout>
-                <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
-                  <StackPanel>
-                    <Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12" ClipToBounds="True">
-                      <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
-                    </Border>
-                    <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{Binding SeasonCountSafe, StringFormat='Sezon: {0}'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center" Margin="0,4,0,0"/>
-                  </StackPanel>
-                </Border>
-              </Button>
+              <controls:SeriesCard Margin="0,0,16,16"/>
             </DataTemplate>
           </ScrollViewer.Resources>
 
@@ -83,7 +38,7 @@
             <!-- Live results -->
             <StackPanel Margin="0,0,0,24" IsVisible="{Binding SearchLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
               <TextBlock Text="Canl&#305; TV" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
-              <ItemsControl ItemsSource="{Binding SearchLiveChannels}" ItemTemplate="{StaticResource SearchChannelCardTemplate}">
+              <ItemsControl ItemsSource="{Binding SearchLiveChannels}" ItemTemplate="{StaticResource SearchLiveCardTemplate}">
                 <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               </ItemsControl>
             </StackPanel>
@@ -99,7 +54,7 @@
             <!-- VOD results -->
             <StackPanel Margin="0,0,0,24" IsVisible="{Binding SearchVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
               <TextBlock Text="VOD" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
-              <ItemsControl ItemsSource="{Binding SearchVodChannels}" ItemTemplate="{StaticResource SearchChannelCardTemplate}">
+              <ItemsControl ItemsSource="{Binding SearchVodChannels}" ItemTemplate="{StaticResource SearchVodCardTemplate}">
                 <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               </ItemsControl>
             </StackPanel>
@@ -111,7 +66,7 @@
               <!-- Similar Live -->
               <StackPanel Margin="0,0,0,20" IsVisible="{Binding SearchSimilarLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
                 <TextBlock Text="Canl&#305; TV" FontSize="16" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
-                <ItemsControl ItemsSource="{Binding SearchSimilarLiveChannels}" ItemTemplate="{StaticResource SearchChannelCardTemplate}">
+                <ItemsControl ItemsSource="{Binding SearchSimilarLiveChannels}" ItemTemplate="{StaticResource SearchLiveCardTemplate}">
                   <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 </ItemsControl>
               </StackPanel>
@@ -127,7 +82,7 @@
               <!-- Similar VOD -->
               <StackPanel Margin="0,0,0,8" IsVisible="{Binding SearchSimilarVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
                 <TextBlock Text="VOD" FontSize="16" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
-                <ItemsControl ItemsSource="{Binding SearchSimilarVodChannels}" ItemTemplate="{StaticResource SearchChannelCardTemplate}">
+                <ItemsControl ItemsSource="{Binding SearchSimilarVodChannels}" ItemTemplate="{StaticResource SearchVodCardTemplate}">
                   <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 </ItemsControl>
               </StackPanel>

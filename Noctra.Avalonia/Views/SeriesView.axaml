@@ -25,30 +25,7 @@
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="models:Series">
-                  <Button Width="180" Margin="0,0,16,16" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
-                          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
-                    <Button.ContextFlyout>
-                      <MenuFlyout>
-                        <MenuItem Header="Listem'e Ekle/&#199;&#305;kar"
-                                  Click="Context_AddToMyList_Click" Tag="{Binding}" 
-                                  CommandParameter="{Binding}"
-                                  IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
-                        <MenuItem Header="Favorilere Ekle/&#199;&#305;kar"
-                                  Click="Context_ToggleFavorite_Click" Tag="{Binding}" 
-                                  CommandParameter="{Binding}"
-                                  IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
-                      </MenuFlyout>
-                    </Button.ContextFlyout>
-                    <Border Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusMedium}" Padding="12">
-                      <StackPanel Spacing="6">
-                        <Border Height="100" Background="{DynamicResource IconGradientBrush}" CornerRadius="{DynamicResource RadiusSmall}" Margin="0,0,0,12">
-                          <controls:RemoteImage Width="60" Stretch="Uniform" Url="{Binding CoverUrl}"/>
-                        </Border>
-                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                        <TextBlock Text="{Binding SeasonCountSafe, StringFormat='Sezon: {0}'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" TextAlignment="Center" Margin="0,4,0,0"/>
-                      </StackPanel>
-                    </Border>
-                  </Button>
+                  <controls:SeriesCard Margin="0,0,16,16" />
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>

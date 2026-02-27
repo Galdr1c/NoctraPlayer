@@ -527,6 +527,18 @@ public class EqualityToBoolMultiConverter : IMultiValueConverter
     }
 }
 
+public class BoolOrMultiConverter : IMultiValueConverter
+{
+    public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
+    {
+        foreach (var val in values)
+        {
+            if (val is bool b && b) return true;
+        }
+        return false;
+    }
+}
+
 public class StringToVisibilityConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -904,6 +916,31 @@ public class ChannelTypeToVisibilityConverter : IValueConverter
         => null;
 }
 
+public class BoolToThicknessConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var boolValue = value is bool b && b;
+        var trueValue = new Thickness(0);
+        var falseValue = new Thickness(0);
+
+        if (parameter is string raw && !string.IsNullOrWhiteSpace(raw))
+        {
+            var parts = raw.Split('|', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 2)
+            {
+                trueValue = Thickness.Parse(parts[0]);
+                falseValue = Thickness.Parse(parts[1]);
+            }
+        }
+
+        return boolValue ? trueValue : falseValue;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => null;
+}
+
 public class BoolToDoubleConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -1019,4 +1056,15 @@ public class ConnectionHealthToVisibilityConverter : IValueConverter
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
+}
+
+public class StringNotEmptyToBoolConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        return !string.IsNullOrWhiteSpace(value as string);
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => null;
 }

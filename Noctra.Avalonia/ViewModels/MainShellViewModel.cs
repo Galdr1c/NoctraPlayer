@@ -19,8 +19,6 @@ public partial class MainShellViewModel : ObservableObject
     [ObservableProperty]
     private string _searchQuery = string.Empty;
 
-    [ObservableProperty]
-    private bool _isSearchOverlayVisible;
 
     [ObservableProperty]
     private double _contentScrollOffset;
@@ -103,18 +101,6 @@ public partial class MainShellViewModel : ObservableObject
         IsPlayerVisible = !IsPlayerVisible;
     }
 
-    [RelayCommand]
-    private void OpenSearch()
-    {
-        SearchQuery = SearchText;
-        IsSearchOverlayVisible = true;
-    }
-
-    [RelayCommand]
-    private void CloseSearch()
-    {
-        IsSearchOverlayVisible = false;
-    }
 
     [RelayCommand]
     private void CommitSearch()
@@ -124,7 +110,6 @@ public partial class MainShellViewModel : ObservableObject
         StatusMessage = string.IsNullOrWhiteSpace(SearchText)
             ? "Arama temizlendi"
             : $"Arama uygulandi: {SearchText}";
-        IsSearchOverlayVisible = false;
     }
 
     [RelayCommand]
