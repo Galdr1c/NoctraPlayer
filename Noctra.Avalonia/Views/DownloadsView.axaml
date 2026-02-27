@@ -11,10 +11,6 @@
              x:Class="Noctra.Avalonia.Views.DownloadsView"
              x:DataType="vm:MainViewModel">
   
-  <UserControl.Resources>
-    <converters:DoubleToStarGridLengthConverter x:Key="DoubleToStarGridLengthConverter"/>
-  </UserControl.Resources>
-
   <UserControl.Styles>
     <!-- Tab Button Style -->
     <Style Selector="RadioButton.tabBtn">
@@ -178,7 +174,7 @@
       <StackPanel IsVisible="{Binding !IsDownloadCenterVisible}">
         
         <!-- Storage Quota Section -->
-        <Border Background="{DynamicResource Surface0Brush}" CornerRadius="12" Padding="20" Margin="0,0,0,24" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+        <Border Background="{DynamicResource Surface0Brush}" CornerRadius="12" Padding="20" Margin="0,0,0,24" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
           <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto">
             <!-- Icon -->
             <Border Width="40" Height="40" CornerRadius="20" Background="{DynamicResource SurfaceLightBrush}">
@@ -251,31 +247,35 @@
           <ItemsControl ItemsSource="{Binding DownloadedSeriesItems}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:Series">
-                <Button Classes="downloadRow" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
-                  <Grid ColumnDefinitions="Auto,*,Auto">
-                    <!-- Mini Poster -->
-                    <Border Width="48" Height="48" CornerRadius="6" ClipToBounds="True" Background="{DynamicResource Surface0Brush}">
-                      <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
-                    </Border>
-                    
-                    <StackPanel Grid.Column="1" Margin="16,0" VerticalAlignment="Center" Spacing="2">
-                      <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                      <TextBlock Text="{Binding SeasonCountSafe, StringFormat='Sezon {0}'}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
-                    </StackPanel>
-
-                    <!-- Info -->
-                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal" Spacing="16">
-                       <TextBlock Text="{Binding LocalSizeText}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
-                       <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).DeleteDownloadedMediaCommand}" 
-                               CommandParameter="{Binding}"
-                               Classes="dangerTextHover"
-                               Padding="4">
-                         <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="18" Height="18"/>
-                       </Button>
-                       <materialIcons:MaterialIcon Kind="ChevronRight" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5"/>
-                    </StackPanel>
-                  </Grid>
-                </Button>
+                <Border Background="{DynamicResource Surface0Brush}" CornerRadius="12" Margin="0,0,0,12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
+                  <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectMediaCommand}" 
+                          CommandParameter="{Binding}"
+                          Background="Transparent" BorderThickness="0" Padding="16" HorizontalAlignment="Stretch" CornerRadius="12">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                      <!-- Mini Poster -->
+                      <Border Width="48" Height="56" CornerRadius="6" ClipToBounds="True" Background="{DynamicResource Surface1Brush}">
+                        <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
+                      </Border>
+                      
+                      <StackPanel Grid.Column="1" Margin="16,0" VerticalAlignment="Center" Spacing="4">
+                        <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Text="{Binding SeasonCountSafe, StringFormat='Sezon {0}'}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                      </StackPanel>
+  
+                      <!-- Info -->
+                      <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal" Spacing="16">
+                         <TextBlock Text="{Binding LocalSizeText}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+                         <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).DeleteDownloadedMediaCommand}" 
+                                 CommandParameter="{Binding}"
+                                 Classes="dangerTextHover"
+                                 Padding="8" Background="Transparent" BorderThickness="0">
+                           <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="18" Height="18"/>
+                         </Button>
+                         <materialIcons:MaterialIcon Kind="ChevronRight" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5"/>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                </Border>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
@@ -287,34 +287,41 @@
           <ItemsControl ItemsSource="{Binding DownloadedVodChannels}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:Channel">
-                <Button Classes="downloadRow" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
-                  <Grid ColumnDefinitions="Auto,*,Auto">
-                    <!-- Mini Poster -->
-                    <Border Width="48" Height="48" CornerRadius="6" ClipToBounds="True" Background="{DynamicResource Surface0Brush}">
-                      <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
-                    </Border>
-                    
-                    <StackPanel Grid.Column="1" Margin="16,0" VerticalAlignment="Center" Spacing="2">
-                      <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                      <TextBlock Text="Film • 2023" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
-                    </StackPanel>
+                <Border Background="{DynamicResource Surface0Brush}" CornerRadius="12" Margin="0,0,0,12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
+                  <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectMediaCommand}" 
+                          CommandParameter="{Binding}"
+                          Background="Transparent" BorderThickness="0" Padding="16" HorizontalAlignment="Stretch" CornerRadius="12">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                      <!-- Mini Poster -->
+                      <Border Width="48" Height="56" CornerRadius="6" ClipToBounds="True" Background="{DynamicResource Surface1Brush}">
+                        <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
+                      </Border>
+                      
+                      <StackPanel Grid.Column="1" Margin="16,0" VerticalAlignment="Center" Spacing="4">
+                        <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Text="Film" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                      </StackPanel>
+  
+                      <!-- Info -->
+                      <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal" Spacing="16">
+                         <TextBlock Text="{Binding LocalSizeText}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+                         
+                         <!-- Resolution Badge -->
+                         <Border Background="{DynamicResource SurfaceLightBrush}" CornerRadius="4" Padding="6,2">
+                           <TextBlock Text="4K" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}"/>
+                         </Border>
 
-                    <!-- Info -->
-                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal" Spacing="12">
-                       <TextBlock Text="{Binding LocalSizeText}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
-                       <Border Background="{DynamicResource SurfaceLightBrush}" CornerRadius="4" Padding="6,2">
-                         <TextBlock Text="4K" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}"/>
-                       </Border>
-                       <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).DeleteDownloadedMediaCommand}" 
-                               CommandParameter="{Binding}"
-                               Classes="dangerTextHover"
-                               Padding="4">
-                         <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="18" Height="18"/>
-                       </Button>
-                       <materialIcons:MaterialIcon Kind="PlayCircleOutline" Width="20" Height="20" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.7"/>
-                    </StackPanel>
-                  </Grid>
-                </Button>
+                         <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).DeleteDownloadedMediaCommand}" 
+                                 CommandParameter="{Binding}"
+                                 Classes="dangerTextHover"
+                                 Padding="8" Background="Transparent" BorderThickness="0">
+                           <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="18" Height="18"/>
+                         </Button>
+                         <materialIcons:MaterialIcon Kind="PlayCircleOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" Opacity="0.8"/>
+                      </StackPanel>
+                    </Grid>
+                  </Button>
+                </Border>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
@@ -324,7 +331,8 @@
       <!-- TABS CONTENT: DOWNLOAD CENTER -->
       <StackPanel IsVisible="{Binding IsDownloadCenterVisible}">
         
-        <Border Background="{DynamicResource Surface0Brush}" CornerRadius="12" Padding="16" Margin="0,0,0,20" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+        <!-- Summary Header (Optional, kept for speed/status info) -->
+        <Border Background="{DynamicResource Surface0Brush}" CornerRadius="12" Padding="16" Margin="0,0,0,24" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
           <Grid ColumnDefinitions="Auto,Auto,*">
             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,24,0">
               <materialIcons:MaterialIcon Kind="DownloadNetwork" Foreground="{DynamicResource AccentBrush}"/>
@@ -334,42 +342,116 @@
           </Grid>
         </Border>
 
-        <!-- Active/Queued items (Reuse your existing logic but styled to match) -->
-        <ItemsControl ItemsSource="{Binding ActiveDownloadItems}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="models:DownloadItem">
-              <Border Background="{DynamicResource Surface0Brush}" CornerRadius="12" Padding="16" Margin="0,0,0,12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto">
-                  <Border Grid.RowSpan="2" Width="48" Height="64" CornerRadius="6" ClipToBounds="True" Background="{DynamicResource Surface1Brush}" Margin="0,0,16,0">
-                    <controls:RemoteImage Stretch="UniformToFill" Url="{Binding PosterUrl}"/>
-                  </Border>
-                  
-                  <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
-                    <TextBlock Text="{Binding BaseDisplayName}" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                    <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource AccentBrush}"/>
-                  </StackPanel>
-
-                  <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
-                    <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).TogglePauseDownloadCommand}" CommandParameter="{Binding}" Background="Transparent" Padding="4">
-                      <materialIcons:MaterialIcon Kind="{Binding IsPaused, Converter={StaticResource BoolToMaterialIconKindConverter}, ConverterParameter='Play|Pause'}"/>
-                    </Button>
-                    <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).CancelDownloadCommand}" CommandParameter="{Binding}" Background="Transparent" Padding="4">
-                      <materialIcons:MaterialIcon Kind="Close" Foreground="{DynamicResource ErrorBrush}"/>
-                    </Button>
-                  </StackPanel>
-
-                  <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,12,0,0" Spacing="6">
-                    <Grid ColumnDefinitions="*,Auto">
-                      <TextBlock Text="{Binding ProgressText}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
-                      <TextBlock Grid.Column="1" Text="{Binding SpeedText}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
-                    </Grid>
-                    <ProgressBar Height="4" Minimum="0" Maximum="100" Value="{Binding ProgressPercent}" Foreground="{DynamicResource AccentBrush}" CornerRadius="2"/>
-                  </StackPanel>
-                </Grid>
+        <!-- Ongoing SECTION -->
+        <StackPanel Spacing="16" Margin="0,0,0,40" IsVisible="{Binding ActiveDownloadingItems.Count, Converter={StaticResource CountToVisibilityConverter}}">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <TextBlock Text="Devam Eden" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+              <Border Background="{DynamicResource SurfaceLightBrush}" CornerRadius="10" Padding="8,1" VerticalAlignment="Center">
+                <TextBlock Text="{Binding ActiveDownloadingItems.Count, StringFormat='{}{0} aktif'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12"/>
               </Border>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
+            </StackPanel>
+            <Button Grid.Column="1" Content="Tümünü Durdur" Command="{Binding StopAllDownloadsCommand}"
+                    Padding="12,6" Background="{DynamicResource SurfaceLightBrush}" BorderThickness="0" Foreground="{DynamicResource TextPrimaryBrush}" CornerRadius="6" FontSize="12"/>
+          </Grid>
+
+          <!-- Active Cards -->
+          <ItemsControl ItemsSource="{Binding ActiveDownloadingItems}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="models:DownloadItem">
+                <Border Background="{DynamicResource Surface0Brush}" CornerRadius="12" Padding="16" Margin="0,0,0,12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
+                  <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto">
+                    <!-- Poster -->
+                    <Border Grid.RowSpan="2" Width="48" Height="64" CornerRadius="6" ClipToBounds="True" Background="{DynamicResource Surface1Brush}" Margin="0,0,16,0">
+                      <controls:RemoteImage Stretch="UniformToFill" Url="{Binding PosterUrl}"/>
+                    </Border>
+                    
+                    <!-- Info Center -->
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+                      <TextBlock Text="{Binding BaseDisplayName}" FontWeight="Bold" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                    </StackPanel>
+
+                    <!-- Speed/Percent Info (Overlaying progress area) -->
+                    <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,12,0,0" VerticalAlignment="Center">
+                      <StackPanel Spacing="6">
+                         <Grid ColumnDefinitions="*,Auto">
+                           <TextBlock Text="{Binding SizeText}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+                           <TextBlock Grid.Column="1" Text="{Binding SpeedText}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" FontWeight="SemiBold"/>
+                         </Grid>
+                         <ProgressBar Height="4" Minimum="0" Maximum="100" Value="{Binding ProgressPercent}" 
+                                      Foreground="{Binding Status, Converter={StaticResource DownloadStatusToBrushConverter}}" 
+                                      CornerRadius="2"/>
+                      </StackPanel>
+                    </Grid>
+
+                    <!-- Actions Right -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+                      <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).TogglePauseDownloadCommand}" CommandParameter="{Binding}" Background="{DynamicResource SurfaceLightBrush}" Padding="8" CornerRadius="6">
+                        <materialIcons:MaterialIcon Kind="{Binding IsPaused, Converter={StaticResource BoolToMaterialIconKindConverter}, ConverterParameter='Play|Pause'}" Width="16" Height="16"/>
+                      </Button>
+                      <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).CancelDownloadCommand}" CommandParameter="{Binding}" Background="{DynamicResource SurfaceLightBrush}" Padding="8" CornerRadius="6">
+                        <materialIcons:MaterialIcon Kind="Close" Foreground="{DynamicResource ErrorBrush}" Width="16" Height="16"/>
+                      </Button>
+                    </StackPanel>
+
+                    <!-- Status Label End -->
+                    <TextBlock Grid.Column="2" Grid.Row="1" 
+                               Text="{Binding StatusText}" 
+                               IsVisible="{Binding !IsPaused}"
+                               FontSize="11" Foreground="{DynamicResource AccentBrush}" 
+                               FontWeight="Bold" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,0,-18"/>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+
+        <!-- Queue SECTION -->
+        <StackPanel Spacing="16" IsVisible="{Binding QueuedDownloadItems.Count, Converter={StaticResource CountToVisibilityConverter}}">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="Sıradakiler" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+            <Button Grid.Column="1" Content="Kuyruğu Temizle" Command="{Binding ClearQueueCommand}"
+                    Padding="12,6" Background="{DynamicResource SurfaceLightBrush}" BorderThickness="0" Foreground="{DynamicResource TextPrimaryBrush}" CornerRadius="6" FontSize="12"/>
+          </Grid>
+
+          <!-- Queued Kompakt Liste -->
+          <ItemsControl ItemsSource="{Binding QueuedDownloadItems}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="models:DownloadItem">
+                <Border Background="{DynamicResource Surface0Brush}" Opacity="0.7" CornerRadius="8" Padding="12,8" Margin="0,0,0,8">
+                  <Grid ColumnDefinitions="32,40,*,Auto">
+                    <!-- Number -->
+                    <TextBlock Text="{Binding QueueOrder}" VerticalAlignment="Center" HorizontalAlignment="Center" 
+                               FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}"/>
+                    
+                    <!-- Mini Icon -->
+                    <Border Grid.Column="1" Width="28" Height="28" CornerRadius="4" ClipToBounds="True" Background="{DynamicResource Surface1Brush}" Margin="8,0">
+                      <controls:RemoteImage Stretch="UniformToFill" Url="{Binding PosterUrl}"/>
+                    </Border>
+
+                    <!-- Title -->
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
+                      <TextBlock Text="{Binding BaseDisplayName}" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+                    </StackPanel>
+
+                    <!-- Actions/Size -->
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding BytesTotal, Converter={StaticResource BytesToHumanConverter}}" 
+                                 FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                      <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).CancelDownloadCommand}" 
+                              CommandParameter="{Binding}" Background="Transparent" Padding="4">
+                        <materialIcons:MaterialIcon Kind="Close" Width="14" Height="14" Foreground="{DynamicResource TextMutedBrush}"/>
+                      </Button>
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
 
       </StackPanel>
 

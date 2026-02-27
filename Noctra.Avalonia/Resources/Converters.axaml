@@ -48,4 +48,7 @@
   <converters:ConnectionHealthToIconConverter x:Key="ConnectionHealthToIconConverter" />
   <converters:ConnectionHealthToVisibilityConverter x:Key="ConnectionHealthToVisibilityConverter" />
   <converters:StringNotEmptyToBoolConverter x:Key="StringNotEmptyToBoolConverter" />
+  <converters:DoubleToStarGridLengthConverter x:Key="DoubleToStarGridLengthConverter" />
+  <converters:BytesToHumanConverter x:Key="BytesToHumanConverter" />
+  <converters:DownloadStatusToBrushConverter x:Key="DownloadStatusToBrushConverter" />
 </ResourceDictionary>

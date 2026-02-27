@@ -413,7 +413,10 @@ public class ContentDownloadService : IContentDownloadService
         _activeDownloadCts[downloadId] = localCts;
         using var startDb = await _contextFactory.CreateDbContextAsync();
         var item = await startDb.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId);
-        if (item == null || item.Status == DownloadStatus.Completed || item.Status == DownloadStatus.Canceled)
+        if (item == null || 
+            item.Status == DownloadStatus.Completed || 
+            item.Status == DownloadStatus.Canceled ||
+            item.Status == DownloadStatus.Paused)
         {
             _activeDownloadCts.TryRemove(downloadId, out _);
             localCts.Dispose();

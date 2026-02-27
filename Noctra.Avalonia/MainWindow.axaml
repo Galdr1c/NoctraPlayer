@@ -345,10 +345,19 @@
                   Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Downloads}}">
             <Panel>
               <Border Classes="ActiveIndicator" />
-              <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
-                <materialIcons:MaterialIcon Kind="DownloadOutline" />
-                <TextBlock Text="İndirilenler" VerticalAlignment="Center"/>
-              </StackPanel>
+              <Grid ColumnDefinitions="*,Auto" Margin="20,11">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                  <materialIcons:MaterialIcon Kind="DownloadOutline" />
+                  <TextBlock Text="İndirilenler" VerticalAlignment="Center"/>
+                </StackPanel>
+                
+                <!-- Badge -->
+                <Border Grid.Column="1" 
+                        IsVisible="{Binding ActiveDownloadCount, Converter={StaticResource CountToVisibilityConverter}}"
+                        Background="{DynamicResource AccentBrush}" CornerRadius="10" Padding="6,1" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding ActiveDownloadCount}" Foreground="White" FontSize="10" FontWeight="Bold"/>
+                </Border>
+              </Grid>
             </Panel>
           </Button>
         </StackPanel>

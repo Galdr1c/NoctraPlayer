@@ -7,10 +7,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 - **İndirilenler Sayfası Görselleştirme ve Kontrol İyileştirmeleri** (2026-02-27):
     - **Sıralı Depolama Barı (Stacked Storage)**: Üst bilgi alanındaki depolama barı, "Diğer Doluluk", "Noctra Doluluğu" ve "İnecekler" şeklinde birbirini takip eden mantıksal bölümlere ayrıldı. Bu sayede Noctra'nın disk üzerindeki etkisi net bir şekilde takip edilebilir hale getirildi.
+    - **Dinamik Durum Renkleri**: İndirme ilerleme barları duruma göre renklenir hale getirildi (Duraklatıldı: Turuncu, Hata: Kırmızı, İniyor: Mor).
+    - **Detaylı Dosya Boyutu Gösterimi**: İndirme merkezinde sadece yüzde (%) yerine inen ve toplam boyutu gösteren (Örn: 220 MB / 2.7 GB) detaylı veri görünümü eklendi.
+    - **Reorganize İndirme Merkezi**: Liste "Devam Eden" ve "Sıradakiler" olarak ikiye ayrıldı; "Tümünü Durdur" ve "Kuyruğu Temizle" fonksiyonları eklendi.
     - **Tahribatlı İşlem Geri Bildirimi (Hover UI)**: "Tümünü Sil" butonu ve tekil çöp kutusu ikonları, yanlış işlemleri önlemek adına üzerine gelindiğinde (Hover) belirgin kırmızı renge bürünecek şekilde güncellendi.
-    - **Bireysel İçerik Yönetimi**: Kütüphanedeki her bir medya öğesi için tekil silme özelliği eklendi. Bu işlem hem fiziki dosyayı hem de veritabanı kaydını güvenli bir şekilde temizler.
+    - **Bireysel İçerik Yönetimi**: Kütüphanedeki her bir medya öğesi için tekil silme özelliği eklendi.
+    - **Kütüphane Kart Tasarımı**: Kütüphanedeki dizi ve film listeleri, İndirme Merkezi ile uyumlu, çerçeveli (bordered) kart tasarımına güncellendi.
+    - **İndirme Kuyruğu Kararlılığı**: Kuyruktaki öğelerin "Paused" durumundayken otomatik başlaması engellendi; "Tümünü Durdur" komutu tüm kuyruğu kapsayacak şekilde genişletildi.
     - **Performanslı Layout Motoru**: Proporitonal (yıldız tabanlı) Grid hesaplamaları için `DoubleToStarGridLengthConverter` eklendi; bar grafiklerinin her çözünürlükte kusursuz görünmesi sağlandı.
-    - **Hizalama ve Görsel Standartlar**: İndirilenler listesindeki ikon yerleşimleri, metin hizalamaları ve "Tümünü Sil" butonu tasarımları standartlaştırıldı.
 
 - **İndirilenler Sayfası İyileştirmeleri ve Yerel Yönetim** (2026-02-27):
     - **Tab Tasarımı Fix**: "Kütüphane" ve "İndirme Merkezi" sekmeleri arasındaki "ters çalışma" (toggle) hatası giderildi; sekmeler artık kararlı bir şekilde geçiş yapıyor.

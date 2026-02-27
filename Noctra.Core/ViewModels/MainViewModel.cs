@@ -3727,6 +3727,51 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    [RelayCommand]
+    private async Task StopAllDownloadsAsync()
+    {
+        try
+        {
+            // Pause active downloads
+            foreach (var item in ActiveDownloadingItems.Where(d => !d.IsPaused).ToList())
+            {
+                await _contentDownloadService.PauseDownloadAsync(item.Id);
+            }
+
+            // Also pause queued items so they don't start automatically
+            foreach (var item in QueuedDownloadItems.ToList())
+            {
+                await _contentDownloadService.PauseDownloadAsync(item.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to stop all downloads");
+        }
+    }
+
+    [RelayCommand]
+    private async Task ClearQueueAsync()
+    {
+        try
+        {
+            var confirmed = await _dialogService.ShowConfirmationAsync(
+                "Kuyruğu Temizle",
+                "Kuyruktaki tüm indirmeler iptal edilecektir. Emin misiniz?");
+
+            if (!confirmed) return;
+
+            foreach (var item in QueuedDownloadItems.ToList())
+            {
+                await _contentDownloadService.CancelDownloadAsync(item.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to clear download queue");
+        }
+    }
+
     partial void OnIsDownloadCenterVisibleChanged(bool value)
     {
         OnPropertyChanged(nameof(ShowDownloadsLandingEmptyState));

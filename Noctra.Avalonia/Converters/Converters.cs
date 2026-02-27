@@ -1119,3 +1119,50 @@ public class StringNotEmptyToBoolConverter : IValueConverter
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => null;
 }
+
+public class BytesToHumanConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        long bytes = 0;
+        if (value is long l) bytes = l;
+        else if (value is int i) bytes = i;
+        else if (value is double d) bytes = (long)d;
+        else if (value != null && long.TryParse(value.ToString(), out var parsed)) bytes = parsed;
+
+        if (bytes <= 0) return "0 B";
+
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        var doubleValue = (double)bytes;
+        var unitIndex = 0;
+        while (doubleValue >= 1024 && unitIndex < units.Length - 1)
+        {
+            doubleValue /= 1024;
+            unitIndex++;
+        }
+
+        return $"{doubleValue:N2} {units[unitIndex]}";
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => null;
+}
+
+public class DownloadStatusToBrushConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is DownloadStatus status)
+        {
+            return status switch
+            {
+                DownloadStatus.Paused => Application.Current?.TryGetResource("WarningBrush", out var warning) == true ? warning : Brushes.Orange,
+                DownloadStatus.Failed => Application.Current?.TryGetResource("ErrorBrush", out var error) == true ? error : Brushes.Red,
+                _ => Application.Current?.TryGetResource("AccentBrush", out var accent) == true ? accent : Brushes.Purple
+            };
+        }
+        return Brushes.Transparent;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
+}
