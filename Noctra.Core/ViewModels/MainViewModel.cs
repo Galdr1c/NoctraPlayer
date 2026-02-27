@@ -3727,36 +3727,6 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
-    private async Task PauseAllDownloadsAsync()
-    {
-        var downloading = ActiveDownloadingItems.Where(d => d.Status == DownloadStatus.Downloading).ToList();
-        if (downloading.Count == 0) return;
-
-        foreach (var item in downloading)
-        {
-            await _contentDownloadService.PauseDownloadAsync(item.Id);
-        }
-    }
-
-    [RelayCommand]
-    private async Task ClearQueuedDownloadsAsync()
-    {
-        var queued = QueuedDownloadItems.ToList();
-        if (queued.Count == 0) return;
-
-        var confirmed = await _dialogService.ShowConfirmationAsync(
-            "Kuyruğu Temizle",
-            $"{queued.Count} bekleyen indirme iptal edilecektir. Emin misiniz?");
-
-        if (!confirmed) return;
-
-        foreach (var item in queued)
-        {
-            await _contentDownloadService.CancelDownloadAsync(item.Id);
-        }
-    }
-
     partial void OnIsDownloadCenterVisibleChanged(bool value)
     {
         OnPropertyChanged(nameof(ShowDownloadsLandingEmptyState));
