@@ -35,6 +35,7 @@
   <converters:MediaThumbnailConverter x:Key="MediaThumbnailConverter" />
   <converters:BoolToIconConverter x:Key="BoolToIconConverter" />
   <converters:BoolToBrushConverter x:Key="BoolToBrushConverter" />
+  <converters:BoolToMaterialIconKindConverter x:Key="BoolToMaterialIconKindConverter" />
   <converters:BoolToThicknessConverter x:Key="BoolToThicknessConverter" />
   <converters:PercentToWidthConverter x:Key="PercentToWidthConverter" />
   <converters:DoubleToFloatConverter x:Key="DoubleToFloatConverter" />

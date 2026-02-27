@@ -39,6 +39,9 @@ public class Series
     public string? GroupTitle => Genre;
 
     [NotMapped]
+    public string? LocalSizeText { get; set; }
+
+    [NotMapped]
     public int SeasonCountSafe
     {
         get

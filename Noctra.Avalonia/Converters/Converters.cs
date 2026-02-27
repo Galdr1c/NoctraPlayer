@@ -9,8 +9,24 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Noctra.Models;
+using Material.Icons;
 
 namespace Noctra.Avalonia.Converters;
+
+public class DoubleToStarGridLengthConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is double d)
+        {
+            return new GridLength(Math.Max(0.0001, d), GridUnitType.Star);
+        }
+        return new GridLength(0.0001, GridUnitType.Star);
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => null;
+}
 
 public class BoolToVisibilityConverter : IValueConverter
 {
@@ -863,6 +879,29 @@ public class PercentToWidthConverter : IValueConverter
         => null;
 }
 
+public class BoolToMaterialIconKindConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var boolValue = value is bool b && b;
+        var param = parameter as string;
+        if (string.IsNullOrEmpty(param)) return null;
+
+        var parts = param.Split('|');
+        if (parts.Length != 2) return null;
+
+        var iconName = boolValue ? parts[0] : parts[1];
+        if (Enum.TryParse<MaterialIconKind>(iconName, true, out var kind))
+        {
+            return kind;
+        }
+
+        return null;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
+}
+
 public class BoolToIconConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -1005,7 +1044,6 @@ public class EqualityToVisibilityConverter : IValueConverter
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => null;
 }
-
 
 
 

@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using Noctra.Models;
 using System.Net.Http;
 using System.Text.Json;
+using System.Globalization;
 using Noctra.Services.Interfaces;
 using Noctra.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,6 +29,13 @@ public enum AppView
     Downloads
 }
 
+public enum DownloadSortOrder
+{
+    Latest,
+    NameAZ,
+    SizeLarge
+}
+
 /// <summary>
 /// Ana sayfa view model
 /// </summary>
@@ -40,6 +48,7 @@ public partial class MainViewModel : ObservableObject
     private readonly ISettingsService _settingsService;
     private readonly IMetadataService _metadataService;
     private readonly IContentDownloadService _contentDownloadService;
+    private readonly IDialogService _dialogService;
     private readonly ILogger<MainViewModel>? _logger;
     private readonly ISecurityService _securityService;
     private readonly IChannelService _channelService;
@@ -201,6 +210,7 @@ public partial class MainViewModel : ObservableObject
         IContentDownloadService contentDownloadService,
         IMetadataService metadataService,
         IDispatcherService dispatcherService,
+        IDialogService dialogService,
         WatermarkViewModel watermarkViewModel,
         IChannelService channelService,
         IMediaService mediaService,
@@ -220,6 +230,7 @@ public partial class MainViewModel : ObservableObject
         _contentDownloadService = contentDownloadService;
         _metadataService = metadataService;
         _dispatcherService = dispatcherService;
+        _dialogService = dialogService;
         _logger = logger;
         WatermarkViewModel = watermarkViewModel;
         _channelService = channelService;
@@ -1941,7 +1952,6 @@ public partial class MainViewModel : ObservableObject
         }
         
         SelectedChannel = channel;
-        StatusMessage = $"Seçildi: {channel.Name}";
         
         // Update last watched
         channel.LastWatched = DateTime.UtcNow;
@@ -2781,6 +2791,27 @@ public partial class MainViewModel : ObservableObject
     private int _activeDownloadCount;
 
     [ObservableProperty]
+    private int _totalDownloadedCount;
+
+    [ObservableProperty]
+    private string _totalDownloadsInfoText = "0 içerik • 0 B kullanıldı";
+
+    [ObservableProperty]
+    private double _storageOtherPercent;
+
+    [ObservableProperty]
+    private double _storageNoctraPercent;
+
+    [ObservableProperty]
+    private double _storagePendingPercent;
+
+    [ObservableProperty]
+    private double _storageFreePercent = 100;
+
+    [ObservableProperty]
+    private string _storageUsageDetailText = "0 B / 0 B";
+
+    [ObservableProperty]
     private string _activeDownloadsTotalSpeedText = "0 B/sn";
 
     [ObservableProperty]
@@ -2828,6 +2859,11 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isDownloadCenterVisible;
+
+    [ObservableProperty]
+    private DownloadSortOrder _selectedDownloadSortOrder = DownloadSortOrder.Latest;
+
+    partial void OnSelectedDownloadSortOrderChanged(DownloadSortOrder value) => _ = RefreshDownloadedItemsFromDatabaseAsync();
 
     public bool ShowDownloadsLandingEmptyState => !IsDownloadCenterVisible && ShowDownloadsEmptyState;
 
@@ -3039,6 +3075,7 @@ public partial class MainViewModel : ObservableObject
             if (string.IsNullOrWhiteSpace(item.LocalFilePath) || !File.Exists(item.LocalFilePath))
                 continue;
 
+            var size = new FileInfo(item.LocalFilePath).Length;
             vodList.Add(new Channel
             {
                 Name = string.IsNullOrWhiteSpace(item.DisplayName) ? "VOD" : item.DisplayName,
@@ -3046,7 +3083,8 @@ public partial class MainViewModel : ObservableObject
                 LogoUrl = item.PosterUrl,
                 BackdropUrl = item.PosterUrl,
                 Type = ChannelType.VOD,
-                PlaylistId = item.PlaylistId
+                PlaylistId = item.PlaylistId,
+                LocalSizeText = FormatDownloadBytes(size)
             });
         }
 
@@ -3098,11 +3136,13 @@ public partial class MainViewModel : ObservableObject
                     {
                         // Treat as VOD / Movie
                         var fileName = Path.GetFileNameWithoutExtension(filePath);
+                        var size = new FileInfo(filePath).Length;
                         vodList.Add(new Channel
                         {
                             Name = fileName,
                             StreamUrl = filePath,
-                            Type = ChannelType.VOD
+                            Type = ChannelType.VOD,
+                            LocalSizeText = FormatDownloadBytes(size)
                         });
                     }
                 }
@@ -3113,15 +3153,139 @@ public partial class MainViewModel : ObservableObject
             _logger?.LogDebug(ex, "Filesystem discovery for orphan downloads failed.");
         }
 
-        // ── 5. Deduplicate and set UI lists ──
-        SetItems(DownloadedVodChannels, vodList
+        // ── 4.1 Calculate Final Series Sizes (including orphans) ──
+        foreach (var series in seriesMap.Values)
+        {
+            long totalSeriesSize = 0;
+            foreach (var season in series.Seasons)
+            {
+                foreach (var ep in season.Episodes)
+                {
+                    if (!string.IsNullOrEmpty(ep.StreamUrl) && File.Exists(ep.StreamUrl))
+                    {
+                        totalSeriesSize += new FileInfo(ep.StreamUrl).Length;
+                    }
+                }
+            }
+            series.LocalSizeText = $"Toplam {FormatDownloadBytes(totalSeriesSize)}";
+        }
+
+        // ── 5. Filtering and Sorting ──
+        var finalVodList = vodList.AsEnumerable();
+        var finalSeriesList = seriesMap.Values.AsEnumerable();
+
+        // Helper to get file date
+        static DateTime GetFileDate(string? path) => 
+            string.IsNullOrEmpty(path) || !File.Exists(path) ? DateTime.MinValue : File.GetCreationTime(path);
+
+        // Helper to get series date (max of episodes)
+        static DateTime GetSeriesDate(Series s) => 
+            s.Seasons.SelectMany(sea => sea.Episodes)
+              .Select(e => GetFileDate(e.StreamUrl))
+              .DefaultIfEmpty(DateTime.MinValue)
+              .Max();
+        
+        // Helper to get size
+        static long GetFileSize(string? path) => 
+            string.IsNullOrEmpty(path) || !File.Exists(path) ? 0 : new FileInfo(path).Length;
+        
+        static long GetSeriesSize(Series s) => 
+            s.Seasons.SelectMany(sea => sea.Episodes).Sum(e => GetFileSize(e.StreamUrl));
+
+        // Apply Sort
+        switch (SelectedDownloadSortOrder)
+        {
+            case DownloadSortOrder.Latest:
+                finalVodList = finalVodList.OrderByDescending(c => GetFileDate(c.StreamUrl));
+                finalSeriesList = finalSeriesList.OrderByDescending(s => GetSeriesDate(s));
+                break;
+            case DownloadSortOrder.NameAZ:
+                finalVodList = finalVodList.OrderBy(c => c.Name);
+                finalSeriesList = finalSeriesList.OrderBy(s => s.Name);
+                break;
+            case DownloadSortOrder.SizeLarge:
+                finalVodList = finalVodList.OrderByDescending(c => GetFileSize(c.StreamUrl));
+                finalSeriesList = finalSeriesList.OrderByDescending(s => GetSeriesSize(s));
+                break;
+        }
+
+        // ── 5.1 Deduplicate and set UI lists ──
+        SetItems(DownloadedVodChannels, finalVodList
             .GroupBy(c => c.StreamUrl ?? string.Empty, StringComparer.OrdinalIgnoreCase)
-            .Select(g => g.First())
-            .OrderBy(c => c.Name));
+            .Select(g => g.First()));
 
-        SetItems(DownloadedSeriesItems, seriesMap.Values.OrderBy(s => s.Name));
+        SetItems(DownloadedSeriesItems, finalSeriesList);
 
-        // ── 6. Refresh active/queued downloads globally ──
+        // ── 6. Storage Stats ──
+        try
+        {
+            var totalCount = DownloadedVodChannels.Count + seriesMap.Values.Sum(s => s.Seasons.Sum(se => se.Episodes.Count));
+            long totalSizeBytes = 0;
+
+            foreach (var vod in vodList)
+            {
+                if (!string.IsNullOrEmpty(vod.StreamUrl) && File.Exists(vod.StreamUrl))
+                {
+                    totalSizeBytes += new FileInfo(vod.StreamUrl).Length;
+                }
+            }
+
+            foreach (var series in seriesMap.Values)
+            {
+                foreach (var season in series.Seasons)
+                {
+                    foreach (var ep in season.Episodes)
+                    {
+                        if (!string.IsNullOrEmpty(ep.StreamUrl) && File.Exists(ep.StreamUrl))
+                        {
+                            totalSizeBytes += new FileInfo(ep.StreamUrl).Length;
+                        }
+                    }
+                }
+            }
+
+            TotalDownloadedCount = totalCount;
+            TotalDownloadsInfoText = $"{totalCount} içerik • {FormatDownloadBytes(totalSizeBytes)} kullanıldı";
+
+            var root = ResolveGlobalDownloadRoot();
+            var driveRoot = Path.GetPathRoot(root);
+            if (!string.IsNullOrEmpty(driveRoot))
+            {
+                var drive = new DriveInfo(driveRoot);
+                var totalSpace = drive.TotalSize;
+                var freeSpace = drive.AvailableFreeSpace;
+                var usedSpace = totalSpace - freeSpace;
+
+                var totalUsedPercent = (usedSpace / (double)totalSpace) * 100.0;
+                var noctraPercent = (totalSizeBytes / (double)totalSpace) * 100.0;
+                
+                StorageOtherPercent = Math.Max(0, totalUsedPercent - noctraPercent);
+                StorageNoctraPercent = noctraPercent;
+                
+                // Calculate pending bytes from active downloads
+                long pendingBytes = 0;
+                foreach (var activeItem in ActiveDownloadItems)
+                {
+                    if (activeItem.BytesTotal.HasValue && activeItem.BytesTotal.Value > 0)
+                    {
+                        var remaining = activeItem.BytesTotal.Value - activeItem.BytesDownloaded;
+                        if (remaining > 0) pendingBytes += remaining;
+                    }
+                }
+                
+                var pendingPercent = (pendingBytes / (double)totalSpace) * 100.0;
+                StoragePendingPercent = pendingPercent;
+                StorageFreePercent = Math.Max(0, 100.0 - (totalUsedPercent + pendingPercent));
+                
+                StorageUsageDetailText = $"{FormatDownloadBytes(usedSpace)} / {FormatDownloadBytes(totalSpace)}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "Failed to calculate storage stats.");
+        }
+
+        // ── 7. Refresh active/queued downloads globally ──
         await RefreshDownloadsFromServiceAsync(0);
         ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
                                  DownloadedSeriesItems.Count == 0;
@@ -3345,10 +3509,7 @@ public partial class MainViewModel : ObservableObject
 
     private static string FormatDownloadBytes(long bytes)
     {
-        if (bytes <= 0)
-        {
-            return "0 B";
-        }
+        if (bytes <= 0) return "0 B";
 
         string[] units = ["B", "KB", "MB", "GB", "TB"];
         var value = (double)bytes;
@@ -3359,7 +3520,8 @@ public partial class MainViewModel : ObservableObject
             unitIndex++;
         }
 
-        return $"{value:0.##} {units[unitIndex]}";
+        // Use a format that respects local culture for decimals (like comma in Turkish)
+        return $"{value.ToString("N2", CultureInfo.CurrentCulture)} {units[unitIndex]}";
     }
 
     private void ScheduleDownloadsLandingRefresh(int profileId)
@@ -3408,9 +3570,132 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ToggleDownloadCenter()
+    private void SetDownloadCenterVisible(bool visible)
     {
-        IsDownloadCenterVisible = !IsDownloadCenterVisible;
+        IsDownloadCenterVisible = visible;
+    }
+
+    [RelayCommand]
+    private async Task DeleteDownloadedMediaAsync(object? media)
+    {
+        if (media == null) return;
+
+        string title = media is Series s ? s.Name : (media is Channel c ? c.Name : "İçerik");
+        var confirmed = await _dialogService.ShowConfirmationAsync(
+            "İçeriği Sil",
+            $"'{title}' içeriği ve tüm dosyaları kalıcı olarak silinecektir. Emin misiniz?");
+
+        if (!confirmed) return;
+
+        try
+        {
+            var filesToDelete = new List<string>();
+
+            if (media is Series series)
+            {
+                foreach (var season in series.Seasons)
+                {
+                    foreach (var ep in season.Episodes)
+                    {
+                        if (!string.IsNullOrEmpty(ep.StreamUrl) && File.Exists(ep.StreamUrl))
+                            filesToDelete.Add(ep.StreamUrl);
+                    }
+                }
+            }
+            else if (media is Channel channel)
+            {
+                if (!string.IsNullOrEmpty(channel.StreamUrl) && File.Exists(channel.StreamUrl))
+                    filesToDelete.Add(channel.StreamUrl);
+            }
+
+            // 1. Delete Files
+            foreach (var file in filesToDelete)
+            {
+                try { File.Delete(file); } catch { /* ignore */ }
+            }
+
+            // 2. Delete from DB
+            using var db = await _contextFactory.CreateDbContextAsync();
+            foreach (var file in filesToDelete)
+            {
+                var record = await db.DownloadItems.FirstOrDefaultAsync(d => d.LocalFilePath == file);
+                if (record != null) db.DownloadItems.Remove(record);
+            }
+            await db.SaveChangesAsync();
+
+            // 3. Refresh
+            await RefreshDownloadedItemsFromDatabaseAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, $"Failed to delete media: {title}");
+            await _dialogService.ShowErrorAsync("Hata", "İçerik silinirken bir hata oluştu.");
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeleteAllDownloadsAsync()
+    {
+        var confirmed = await _dialogService.ShowConfirmationAsync(
+            "Tüm İndirmeleri Sil",
+            "Tüm indirilen içerikler ve dosyalar kalıcı olarak silinecektir. Emin misiniz?");
+
+        if (!confirmed) return;
+
+        try
+        {
+            var root = ResolveGlobalDownloadRoot();
+            if (Directory.Exists(root))
+            {
+                var files = Directory.GetFiles(root, "*.*", SearchOption.AllDirectories);
+                foreach (var file in files)
+                {
+                    try { File.Delete(file); } catch { /* ignore */ }
+                }
+                
+                var dirs = Directory.GetDirectories(root);
+                foreach (var dir in dirs)
+                {
+                    try { Directory.Delete(dir, true); } catch { /* ignore */ }
+                }
+            }
+
+            using var db = await _contextFactory.CreateDbContextAsync();
+            var items = await db.DownloadItems.ToListAsync();
+            db.DownloadItems.RemoveRange(items);
+            await db.SaveChangesAsync();
+
+            await RefreshDownloadedItemsFromDatabaseAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to delete all downloads.");
+            await _dialogService.ShowErrorAsync("Hata", "İndirmeler silinirken bir hata oluştu.");
+        }
+    }
+
+    [RelayCommand]
+    private void OpenDownloadsFolder()
+    {
+        try
+        {
+            var root = ResolveGlobalDownloadRoot();
+            if (!Directory.Exists(root))
+            {
+                Directory.CreateDirectory(root);
+            }
+            
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = root,
+                UseShellExecute = true,
+                Verb = "open"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to open downloads folder.");
+        }
     }
 
     [RelayCommand]
@@ -3439,6 +3724,36 @@ public partial class MainViewModel : ObservableObject
         else
         {
             await _contentDownloadService.PauseDownloadAsync(item.Id);
+        }
+    }
+
+    [RelayCommand]
+    private async Task PauseAllDownloadsAsync()
+    {
+        var downloading = ActiveDownloadingItems.Where(d => d.Status == DownloadStatus.Downloading).ToList();
+        if (downloading.Count == 0) return;
+
+        foreach (var item in downloading)
+        {
+            await _contentDownloadService.PauseDownloadAsync(item.Id);
+        }
+    }
+
+    [RelayCommand]
+    private async Task ClearQueuedDownloadsAsync()
+    {
+        var queued = QueuedDownloadItems.ToList();
+        if (queued.Count == 0) return;
+
+        var confirmed = await _dialogService.ShowConfirmationAsync(
+            "Kuyruğu Temizle",
+            $"{queued.Count} bekleyen indirme iptal edilecektir. Emin misiniz?");
+
+        if (!confirmed) return;
+
+        foreach (var item in queued)
+        {
+            await _contentDownloadService.CancelDownloadAsync(item.Id);
         }
     }
 
@@ -4455,7 +4770,6 @@ public partial class MainViewModel : ObservableObject
             }
 
             SelectedChannel = channel;
-            StatusMessage = $"Seçildi: {channel.Name}";
             OnMediaSelected?.Invoke(channel);
         }
         else if (media is Series series)
@@ -4489,7 +4803,6 @@ public partial class MainViewModel : ObservableObject
 
             SelectedSeries = selectedSeries;
             IsSeriesDetailVisible = true;
-            StatusMessage = $"Seçildi: {selectedSeries.Name}";
             OnMediaSelected?.Invoke(selectedSeries);
             _ = LoadSelectedSeriesMetadataAsync(selectedSeries);
         }

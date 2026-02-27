@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **İndirilenler Sayfası Görselleştirme ve Kontrol İyileştirmeleri** (2026-02-27):
+    - **Sıralı Depolama Barı (Stacked Storage)**: Üst bilgi alanındaki depolama barı, "Diğer Doluluk", "Noctra Doluluğu" ve "İnecekler" şeklinde birbirini takip eden mantıksal bölümlere ayrıldı. Bu sayede Noctra'nın disk üzerindeki etkisi net bir şekilde takip edilebilir hale getirildi.
+    - **Tahribatlı İşlem Geri Bildirimi (Hover UI)**: "Tümünü Sil" butonu ve tekil çöp kutusu ikonları, yanlış işlemleri önlemek adına üzerine gelindiğinde (Hover) belirgin kırmızı renge bürünecek şekilde güncellendi.
+    - **Bireysel İçerik Yönetimi**: Kütüphanedeki her bir medya öğesi için tekil silme özelliği eklendi. Bu işlem hem fiziki dosyayı hem de veritabanı kaydını güvenli bir şekilde temizler.
+    - **Performanslı Layout Motoru**: Proporitonal (yıldız tabanlı) Grid hesaplamaları için `DoubleToStarGridLengthConverter` eklendi; bar grafiklerinin her çözünürlükte kusursuz görünmesi sağlandı.
+    - **Hizalama ve Görsel Standartlar**: İndirilenler listesindeki ikon yerleşimleri, metin hizalamaları ve "Tümünü Sil" butonu tasarımları standartlaştırıldı.
+
+- **İndirilenler Sayfası İyileştirmeleri ve Yerel Yönetim** (2026-02-27):
+    - **Tab Tasarımı Fix**: "Kütüphane" ve "İndirme Merkezi" sekmeleri arasındaki "ters çalışma" (toggle) hatası giderildi; sekmeler artık kararlı bir şekilde geçiş yapıyor.
+    - **Gelişmiş Sıralama**: İndirilen içerikler için "Son İndirilen", "İsim (A-Z)" ve "Boyut (Büyükten Küçüğe)" sıralama seçenekleri eklendi.
+    - **Bireysel Silme Mantığı**: Her dizi ve film satırına "Çöp Kutusu" ikonu eklendi. Silme işlemi hem yerel dosyaları hem de veritabanı kayıtlarını kalıcı olarak temizler.
+    - **Hover ve UI Polish**: "Tümünü Sil" butonu için tehlike uyarısı renginde (Kırmızı) hover efekti eklendi. Silme ikonları için de görsel geri bildirimler iyileştirildi.
+    - **Doğru Boyut Hesaplama**: Dizilerin toplam boyutu, yerel dosya keşif sürecinden sonra hesaplanacak şekilde optimize edildi ve yerel sayı formatına (`1,23 GB`) uygun hale getirildi.
+    - **Depolama İstatistikleri**: İndirilenler sayfasının üst kısmına toplam kullanılan alan ve ilerleme çubuğu (Progress Bar) eklendi.
+    - **Hata Giderme**: `EqualityToBoolConverter` ve eksik `using` ifadeleri gibi derleme hataları giderildi, dosya sistemi senkronizasyonu güçlendirildi.
+
 - **Evrensel Medya Kartları (Netflix Standartı), Akıllı Arama ve Yüksek Performans** (2026-02-27):
     *   **Netflix Tarzı Medya Kartları**: Tüm uygulama genelinde (`Home`, `Movies`, `Series`, `Live`, `Search` vb.) eski düzensiz listeler kaldırılarak yerlerine standart `VodCard`, `SeriesCard` ve `LiveTvCard` bileşenleri eklendi. Kartlar tam kaplayan (full-bleed) poster tasarımına, üzerine gelince büyüme (Scale) ve kararma efektlerine kavuşturuldu.
     *   **Akıllı Yer Tutucular ve Sıfır Overdraw**: Posterler ve logolar yüklenene kadar kartların boyutunun bozulmasını (layout shift) engellemek için temaya uygun (`SurfaceLightBrush`), sabit boyutlu yer tutucular eklendi. Resim başarıyla yüklendiği anda bu yer tutucu katmanı otomatik olarak gizlenerek ekran kartı (GPU) üzerindeki gereksiz çizim yükü (Overdraw) tamamen ortadan kaldırıldı.

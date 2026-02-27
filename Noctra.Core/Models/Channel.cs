@@ -72,6 +72,9 @@ public class Channel
     public Playlist? Playlist { get; set; }
     
     [NotMapped]
+    public string? LocalSizeText { get; set; }
+
+    [NotMapped]
     public string? CoverUrl => !string.IsNullOrEmpty(BackdropUrl) ? BackdropUrl : LogoUrl;
     
     [NotMapped]
