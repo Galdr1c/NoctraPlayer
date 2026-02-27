@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Noctra — İndirilenler</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#0d0d0d;--bg2:#111;--surface:#1a1a1a;--surface2:#222;
+  --border:#2a2a2a;--text:#f0f0f0;--muted:#666;--muted2:#999;
+  --accent:#a855f7;--accent2:#7c3aed;--accent-glow:#a855f730;
+  --green:#46d369;--red:#e50914;
+}
+
+body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--text)}
+.page{display:grid;grid-template-columns:260px 1fr;height:100vh;overflow:hidden}
+
+/* ─── SIDEBAR ─── */
+.sidebar{
+  background:var(--bg2);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;padding:28px 0 24px;overflow:hidden;
+}
+.sidebar-logo{
+  display:flex;align-items:center;gap:10px;
+  padding:0 20px 28px;border-bottom:1px solid var(--border);margin-bottom:16px;
+}
+.sidebar-logo-icon{
+  width:32px;height:32px;border-radius:8px;
+  background:linear-gradient(135deg,var(--accent2),var(--accent));
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+}
+.sidebar-logo-text{font-size:18px;font-weight:800;letter-spacing:-0.5px}
+.nav-section-label{
+  font-size:9px;font-weight:700;text-transform:uppercase;
+  letter-spacing:2px;color:var(--muted);padding:0 24px 8px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 20px;margin:1px 10px;border-radius:8px;cursor:pointer;
+  position:relative;overflow:hidden;transition:background 0.18s;
+  text-decoration:none;color:var(--muted2);font-size:14px;font-weight:500;
+}
+.nav-item:hover{background:rgba(255,255,255,0.05);color:var(--text)}
+.nav-item.active{background:rgba(168,85,247,0.12);color:var(--text);font-weight:600}
+.nav-item.active::before{
+  content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:3px;height:60%;background:var(--accent);border-radius:0 2px 2px 0;
+}
+.nav-item::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,rgba(168,85,247,0.08),transparent);
+  opacity:0;transform:translateX(-100%);transition:opacity 0.2s,transform 0.25s;
+}
+.nav-item:hover::after,.nav-item.active::after{opacity:1;transform:translateX(0)}
+.nav-item.active::after{background:linear-gradient(90deg,rgba(168,85,247,0.15),transparent)}
+.nav-icon{width:18px;height:18px;opacity:0.7;flex-shrink:0}
+.nav-item.active .nav-icon,.nav-item:hover .nav-icon{opacity:1}
+.nav-divider{height:1px;background:var(--border);margin:12px 20px}
+.sidebar-bottom{margin-top:auto;padding:16px 10px 0;border-top:1px solid var(--border)}
+.sidebar-profile{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;border-radius:8px;cursor:pointer;transition:background 0.15s;
+}
+.sidebar-profile:hover{background:rgba(255,255,255,0.05)}
+.profile-avatar{
+  width:32px;height:32px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent2),var(--accent));
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;
+}
+.profile-name{font-size:13px;font-weight:600}
+.profile-plan{font-size:10px;color:var(--accent);font-weight:500}
+
+/* ─── MAIN ─── */
+.main{display:flex;flex-direction:column;overflow:hidden}
+.content-scroll{flex:1;overflow-y:auto;overflow-x:hidden}
+.content-scroll::-webkit-scrollbar{width:6px}
+.content-scroll::-webkit-scrollbar-track{background:transparent}
+.content-scroll::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+
+/* ─── BAŞLIK ─── */
+.page-header{padding:32px 36px 0;flex-shrink:0}
+.page-title{font-size:24px;font-weight:800;letter-spacing:-0.4px;margin-bottom:2px}
+.page-subtitle{font-size:13px;color:var(--muted2)}
+
+/* ─── TABS ─── */
+.tabs{
+  display:flex;gap:2px;padding:20px 36px 0;
+  border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.tab{
+  padding:10px 18px;font-size:13px;font-weight:500;color:var(--muted2);
+  cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+  transition:color 0.15s,border-color 0.15s;display:flex;align-items:center;gap:7px;
+}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--text);font-weight:600;border-color:var(--accent)}
+.tab-badge{
+  background:var(--accent);color:#fff;font-size:9px;font-weight:700;
+  padding:1px 6px;border-radius:8px;line-height:1.6;
+}
+.tab-content{display:none;flex:1;overflow:hidden}
+.tab-content.active{display:flex;flex-direction:column;flex:1;overflow:hidden}
+.tab-scroll{flex:1;overflow-y:auto;padding:24px 36px 48px}
+.tab-scroll::-webkit-scrollbar{width:4px}
+.tab-scroll::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:2px}
+
+/* ─── DEPOLAMA ─── */
+.storage-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:18px 22px;margin-bottom:24px;
+  display:flex;align-items:center;gap:20px;
+}
+.storage-icon{
+  width:40px;height:40px;border-radius:9px;flex-shrink:0;
+  background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);
+  display:flex;align-items:center;justify-content:center;
+}
+.storage-icon svg{width:18px;height:18px;fill:var(--accent)}
+.storage-info{flex:1}
+.storage-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
+.storage-label{font-size:12px;font-weight:600}
+.storage-nums{font-size:11px;color:var(--muted2)}
+.storage-bar{height:4px;background:var(--surface2);border-radius:2px}
+.storage-fill{
+  height:100%;border-radius:2px;
+  background:linear-gradient(90deg,var(--accent2),var(--accent));
+}
+.storage-btns{display:flex;gap:6px;flex-shrink:0}
+.btn-sm{
+  padding:6px 13px;border-radius:6px;font-size:11px;font-weight:600;
+  cursor:pointer;transition:all 0.15s;border:1px solid var(--border);
+  background:var(--surface2);color:var(--muted2);font-family:'Inter',sans-serif;
+}
+.btn-sm:hover{background:#2e2e2e;color:var(--text);border-color:#3a3a3a}
+.btn-sm.danger:hover{border-color:rgba(229,9,20,0.4);color:var(--red);background:rgba(229,9,20,0.06)}
+
+/* ─── ARAÇ ÇUBUĞU ─── */
+.list-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.filter-btn{
+  padding:5px 13px;border-radius:16px;font-size:11px;font-weight:600;
+  cursor:pointer;transition:all 0.15s;border:1px solid var(--border);
+  background:transparent;color:var(--muted2);font-family:'Inter',sans-serif;
+}
+.filter-btn:hover{border-color:#3a3a3a;color:var(--text)}
+.filter-btn.active{background:rgba(168,85,247,0.12);border-color:rgba(168,85,247,0.35);color:var(--accent)}
+.toolbar-spacer{flex:1}
+.sort-select{
+  background:var(--surface);border:1px solid var(--border);color:var(--muted2);
+  font-size:11px;padding:5px 10px;border-radius:6px;cursor:pointer;
+  font-family:'Inter',sans-serif;outline:none;
+}
+.sort-select:hover{border-color:#3a3a3a;color:var(--text)}
+
+/* ─── KÜTÜPHANe LİSTESİ ─── */
+.group-label{
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;
+  color:var(--muted);padding:16px 0 8px;
+}
+.group-label:first-child{padding-top:0}
+.dl-list{display:flex;flex-direction:column;gap:4px}
+
+.dl-item{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 12px;border-radius:8px;
+  background:var(--surface);border:1px solid var(--border);
+  cursor:pointer;transition:border-color 0.15s,background 0.15s;
+}
+.dl-item:hover{border-color:#383838;background:#1e1e1e}
+
+.dl-thumb{
+  width:68px;height:40px;border-radius:5px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+}
+.dl-thumb.p{width:40px;height:58px;font-size:18px}
+
+.dl-body{flex:1;min-width:0}
+.dl-title{font-size:12px;font-weight:700;margin-bottom:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dl-sub{font-size:10px;color:var(--muted2)}
+
+.dl-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.dl-size{font-size:11px;color:var(--muted)}
+.dl-badge{
+  font-size:8px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:0.5px;
+}
+.b-hd{border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.5)}
+.b-4k{background:rgba(70,211,105,0.12);border:1px solid rgba(70,211,105,0.28);color:var(--green)}
+
+.dl-actions{display:flex;gap:4px;opacity:0;transition:opacity 0.15s}
+.dl-item:hover .dl-actions{opacity:1}
+.act-btn{
+  width:28px;height:28px;border-radius:6px;
+  background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:var(--muted2);transition:all 0.15s;
+}
+.act-btn:hover{background:rgba(255,255,255,0.1);color:var(--text);border-color:#3a3a3a}
+.act-btn.del:hover{background:rgba(229,9,20,0.08);color:var(--red);border-color:rgba(229,9,20,0.25)}
+.act-btn svg{width:12px;height:12px;fill:currentColor}
+
+/* ─── İNDİRME MERKEZİ ─── */
+.section-header{
+  display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;
+}
+.section-title{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+.count-pill{
+  font-size:10px;color:var(--muted2);
+  background:var(--surface2);border:1px solid var(--border);
+  padding:2px 8px;border-radius:8px;
+}
+
+.dl-active{
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:14px 16px;margin-bottom:5px;transition:border-color 0.15s;
+}
+.dl-active:hover{border-color:#383838}
+
+.dla-row{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.dla-thumb{
+  width:52px;height:30px;border-radius:4px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+}
+.dla-thumb.p{width:30px;height:44px;font-size:14px}
+.dla-info{flex:1;min-width:0}
+.dla-title{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:1px}
+.dla-sub{font-size:10px;color:var(--muted2)}
+.dla-btns{display:flex;gap:5px}
+.dla-btn{
+  width:26px;height:26px;border-radius:6px;
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:var(--muted2);transition:all 0.15s;
+}
+.dla-btn:hover{background:rgba(255,255,255,0.12);color:var(--text)}
+.dla-btn.x:hover{background:rgba(229,9,20,0.1);color:var(--red)}
+.dla-btn svg{width:11px;height:11px;fill:currentColor}
+
+/* Progress */
+.prog-track{height:3px;background:var(--surface2);border-radius:2px;position:relative;overflow:hidden;margin-bottom:5px}
+.prog-fill{
+  height:100%;border-radius:2px;
+  background:linear-gradient(90deg,var(--accent2),var(--accent));
+  position:relative;transition:width 0.4s ease;
+}
+.prog-fill::after{
+  content:'';position:absolute;top:0;right:0;width:40px;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.35),transparent);
+  animation:shim 1.4s infinite;
+}
+@keyframes shim{0%{transform:translateX(-80px)}100%{transform:translateX(80px)}}
+.prog-fill.paused{background:var(--surface2)}.prog-fill.paused::after{display:none}
+.prog-fill.done{background:linear-gradient(90deg,#278c47,var(--green))}.prog-fill.done::after{display:none}
+.prog-fill.err{background:var(--red)}.prog-fill.err::after{display:none}
+
+.prog-meta{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}
+.prog-speed{color:var(--accent);font-weight:600}
+.prog-status{font-weight:600}
+.s-dl{color:var(--accent)}.s-pause{color:var(--muted2)}.s-done{color:var(--green)}.s-err{color:var(--red)}
+
+/* Kuyruk */
+.queue-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 12px;border-radius:8px;
+  background:var(--surface);border:1px solid var(--border);
+  margin-bottom:4px;opacity:0.65;transition:opacity 0.15s,border-color 0.15s;
+}
+.queue-item:hover{opacity:1;border-color:#383838}
+.q-num{font-size:11px;font-weight:700;color:var(--muted);width:18px;text-align:center;flex-shrink:0}
+.q-thumb{width:42px;height:26px;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px}
+.q-info{flex:1;min-width:0}
+.q-title{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.q-sub{font-size:10px;color:var(--muted2)}
+.q-size{font-size:10px;color:var(--muted);flex-shrink:0;margin-right:4px}
+.q-rm{
+  width:22px;height:22px;border-radius:5px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:var(--muted);font-size:10px;
+  opacity:0;transition:all 0.15s;
+}
+.queue-item:hover .q-rm{opacity:1}
+.q-rm:hover{color:var(--red)}
+
+/* ─── AYARLAR ─── */
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.set-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px 18px}
+.set-card-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:10px}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.set-row:last-child{border-bottom:none;padding-bottom:0}
+.set-label{font-size:12px;color:var(--muted2)}
+.set-val{font-size:12px;font-weight:600}
+.toggle{width:34px;height:18px;border-radius:9px;background:rgba(255,255,255,0.1);position:relative;cursor:pointer;transition:background 0.2s;flex-shrink:0}
+.toggle.on{background:var(--accent)}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.3)}
+.toggle.on::after{transform:translateX(16px)}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ─────────── SIDEBAR ─────────── -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">🎬</div>
+      <span class="sidebar-logo-text">Noctra</span>
+    </div>
+
+    <div class="nav-section-label">Ana Menü</div>
+    <a class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Ana Sayfa
+    </a>
+    <a class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>Canlı TV
+    </a>
+    <a class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg>Filmler
+    </a>
+    <a class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>Diziler
+    </a>
+    <a class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>Listem
+    </a>
+
+    <div class="nav-divider"></div>
+    <div class="nav-section-label">Kütüphane</div>
+    <a class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.62L12 2 9.19 8.62 2 9.24l5.45 4.73L5.82 21z"/></svg>Favoriler
+    </a>
+    <a class="nav-item">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>Geçmiş
+    </a>
+    <a class="nav-item active">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>İndirilenler
+    </a>
+
+    <div class="sidebar-bottom">
+      <div class="sidebar-profile">
+        <div class="profile-avatar">A</div>
+        <div><div class="profile-name">Ana Profil</div><div class="profile-plan">Premium</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────── MAIN ─────────── -->
+  <div class="main">
+
+    <div class="page-header">
+      <div class="page-title">İndirilenler</div>
+      <div class="page-subtitle">23 içerik · 14.2 GB kullanıldı</div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('library')">Kütüphane</div>
+      <div class="tab" onclick="showTab('center')">
+        İndirme Merkezi <span class="tab-badge">3</span>
+      </div>
+      <div class="tab" onclick="showTab('settings')">Ayarlar</div>
+    </div>
+
+    <!-- ══ KÜTÜPHANe ══ -->
+    <div class="tab-content active" id="tab-library">
+      <div class="tab-scroll content-scroll">
+
+        <div class="storage-card">
+          <div class="storage-icon">
+            <svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.07-.44.18-.88.18-1 0-2.21-1.79-4-4-4s-4 1.79-4 4c0 .12.11.56.18 1H8c-1.11 0-2 .89-2 2v11c0 1.11.89 2 2 2h12c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6-3c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 10l-4-4h2.55V9h2.9v4H18l-4 4z"/></svg>
+          </div>
+          <div class="storage-info">
+            <div class="storage-top">
+              <span class="storage-label">Cihaz Depolama</span>
+              <span class="storage-nums">14.2 GB / 25 GB</span>
+            </div>
+            <div class="storage-bar"><div class="storage-fill" style="width:57%"></div></div>
+          </div>
+          <div class="storage-btns">
+            <button class="btn-sm danger">Tümünü Sil</button>
+            <button class="btn-sm">Klasörü Aç</button>
+          </div>
+        </div>
+
+        <div class="list-toolbar">
+          <button class="filter-btn active" onclick="setFilter(this)">Tümü (23)</button>
+          <button class="filter-btn" onclick="setFilter(this)">Diziler</button>
+          <button class="filter-btn" onclick="setFilter(this)">Filmler</button>
+          <button class="filter-btn" onclick="setFilter(this)">4K</button>
+          <div class="toolbar-spacer"></div>
+          <select class="sort-select">
+            <option>Son İndirilen</option>
+            <option>İsme Göre</option>
+            <option>Boyuta Göre</option>
+          </select>
+        </div>
+
+        <div class="dl-list">
+
+          <div class="group-label">Diziler</div>
+
+          <div class="dl-item">
+            <div class="dl-thumb p" style="background:linear-gradient(135deg,#0d0518,#2d1060)">🧪</div>
+            <div class="dl-body">
+              <div class="dl-title">Breaking Bad — S1 B1 · Pilot</div>
+              <div class="dl-sub">Sezon 1 · 2008 · 58 dk</div>
+            </div>
+            <div class="dl-right">
+              <span class="dl-size">1.4 GB</span>
+              <span class="dl-badge b-hd">HD</span>
+              <div class="dl-actions">
+                <div class="act-btn" title="Oynat"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+                <div class="act-btn del" title="Sil"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="dl-item">
+            <div class="dl-thumb p" style="background:linear-gradient(135deg,#0d0518,#2d1060)">🧪</div>
+            <div class="dl-body">
+              <div class="dl-title">Breaking Bad — S1 B2 · Kalabalık Bir El</div>
+              <div class="dl-sub">Sezon 1 · 2008 · 47 dk</div>
+            </div>
+            <div class="dl-right">
+              <span class="dl-size">1.1 GB</span>
+              <span class="dl-badge b-hd">HD</span>
+              <div class="dl-actions">
+                <div class="act-btn" title="Oynat"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+                <div class="act-btn del" title="Sil"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="dl-item">
+            <div class="dl-thumb p" style="background:linear-gradient(135deg,#020817,#1a3060)">🌙</div>
+            <div class="dl-body">
+              <div class="dl-title">Dark — S1 B1 · Yolculuklar</div>
+              <div class="dl-sub">Sezon 1 · 2017 · 51 dk</div>
+            </div>
+            <div class="dl-right">
+              <span class="dl-size">1.2 GB</span>
+              <span class="dl-badge b-hd">HD</span>
+              <div class="dl-actions">
+                <div class="act-btn" title="Oynat"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+                <div class="act-btn del" title="Sil"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="dl-item">
+            <div class="dl-thumb p" style="background:linear-gradient(135deg,#050d05,#1a5020)">🏢</div>
+            <div class="dl-body">
+              <div class="dl-title">Severance — S2 B1 · Geri Dönüş</div>
+              <div class="dl-sub">Sezon 2 · 2024 · 56 dk</div>
+            </div>
+            <div class="dl-right">
+              <span class="dl-size">2.8 GB</span>
+              <span class="dl-badge b-4k">4K</span>
+              <div class="dl-actions">
+                <div class="act-btn" title="Oynat"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+                <div class="act-btn del" title="Sil"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="group-label">Filmler</div>
+
+          <div class="dl-item">
+            <div class="dl-thumb" style="background:linear-gradient(135deg,#1a0505,#a01a1a)">🎬</div>
+            <div class="dl-body">
+              <div class="dl-title">Oppenheimer</div>
+              <div class="dl-sub">Film · 2023 · 3s 1dk</div>
+            </div>
+            <div class="dl-right">
+              <span class="dl-size">5.6 GB</span>
+              <span class="dl-badge b-4k">4K</span>
+              <div class="dl-actions">
+                <div class="act-btn" title="Oynat"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+                <div class="act-btn del" title="Sil"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="dl-item">
+            <div class="dl-thumb" style="background:linear-gradient(135deg,#050818,#1a2d80)">🌌</div>
+            <div class="dl-body">
+              <div class="dl-title">Interstellar</div>
+              <div class="dl-sub">Film · 2014 · 2s 49dk</div>
+            </div>
+            <div class="dl-right">
+              <span class="dl-size">1.8 GB</span>
+              <span class="dl-badge b-hd">HD</span>
+              <div class="dl-actions">
+                <div class="act-btn" title="Oynat"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+                <div class="act-btn del" title="Sil"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="dl-item">
+            <div class="dl-thumb" style="background:linear-gradient(135deg,#080308,#4a1060)">🏜️</div>
+            <div class="dl-body">
+              <div class="dl-title">Dune: Part Two</div>
+              <div class="dl-sub">Film · 2024 · 2s 46dk</div>
+            </div>
+            <div class="dl-right">
+              <span class="dl-size">2.2 GB</span>
+              <span class="dl-badge b-4k">4K</span>
+              <div class="dl-actions">
+                <div class="act-btn" title="Oynat"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+                <div class="act-btn del" title="Sil"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div><!-- /library -->
+
+
+    <!-- ══ İNDİRME MERKEZİ ══ -->
+    <div class="tab-content" id="tab-center">
+      <div class="tab-scroll content-scroll">
+
+        <div class="section-header">
+          <div class="section-title">
+            Devam Eden
+            <span class="count-pill">3 aktif</span>
+          </div>
+          <button class="btn-sm" onclick="pauseAll()">Tümünü Durdur</button>
+        </div>
+
+        <!-- Aktif 1 -->
+        <div class="dl-active">
+          <div class="dla-row">
+            <div class="dla-thumb p" style="background:linear-gradient(135deg,#080308,#4a1060)">🏜️</div>
+            <div class="dla-info">
+              <div class="dla-title">Dune: Part Two</div>
+              <div class="dla-sub">Film · 4K · 2024</div>
+            </div>
+            <div class="dla-btns">
+              <div class="dla-btn" onclick="toggleDl(this)" title="Durdur">
+                <svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+              </div>
+              <div class="dla-btn x" title="İptal">
+                <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+              </div>
+            </div>
+          </div>
+          <div class="prog-track"><div class="prog-fill" style="width:34%"></div></div>
+          <div class="prog-meta">
+            <span>756 MB / 2.2 GB</span>
+            <span class="prog-speed">↓ 8.4 MB/s</span>
+            <span class="prog-status s-dl">İndiriliyor</span>
+          </div>
+        </div>
+
+        <!-- Aktif 2: duraklatılmış -->
+        <div class="dl-active">
+          <div class="dla-row">
+            <div class="dla-thumb p" style="background:linear-gradient(135deg,#1a0505,#600a0a)">🎯</div>
+            <div class="dla-info">
+              <div class="dla-title">Squid Game — S2 B3</div>
+              <div class="dla-sub">Dizi · HD · 2024</div>
+            </div>
+            <div class="dla-btns">
+              <div class="dla-btn" onclick="toggleDl(this)" title="Devam Et">
+                <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              </div>
+              <div class="dla-btn x" title="İptal">
+                <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+              </div>
+            </div>
+          </div>
+          <div class="prog-track"><div class="prog-fill paused" style="width:62%"></div></div>
+          <div class="prog-meta">
+            <span>710 MB / 1.1 GB</span>
+            <span class="prog-speed" style="color:var(--muted)">—</span>
+            <span class="prog-status s-pause">Duraklatıldı</span>
+          </div>
+        </div>
+
+        <!-- Aktif 3 -->
+        <div class="dl-active">
+          <div class="dla-row">
+            <div class="dla-thumb p" style="background:linear-gradient(135deg,#050d05,#1a5020)">🏢</div>
+            <div class="dla-info">
+              <div class="dla-title">Severance — S2 B2</div>
+              <div class="dla-sub">Dizi · 4K · 2024</div>
+            </div>
+            <div class="dla-btns">
+              <div class="dla-btn" onclick="toggleDl(this)" title="Durdur">
+                <svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+              </div>
+              <div class="dla-btn x" title="İptal">
+                <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+              </div>
+            </div>
+          </div>
+          <div class="prog-track"><div class="prog-fill" style="width:9%"></div></div>
+          <div class="prog-meta">
+            <span>220 MB / 2.7 GB</span>
+            <span class="prog-speed">↓ 5.1 MB/s</span>
+            <span class="prog-status s-dl">İndiriliyor</span>
+          </div>
+        </div>
+
+        <!-- Kuyruk -->
+        <div class="section-header" style="margin-top:28px">
+          <div class="section-title">Sıradakiler</div>
+          <button class="btn-sm">Kuyruğu Temizle</button>
+        </div>
+
+        <div class="queue-item">
+          <span class="q-num">4</span>
+          <div class="q-thumb" style="background:linear-gradient(135deg,#020817,#1a3060)">🌙</div>
+          <div class="q-info">
+            <div class="q-title">Dark — S1 B3 · Geçmiş ve Şimdiki Zaman</div>
+            <div class="q-sub">Dizi · HD</div>
+          </div>
+          <span class="q-size">~1.1 GB</span>
+          <div class="q-rm">✕</div>
+        </div>
+
+        <div class="queue-item">
+          <span class="q-num">5</span>
+          <div class="q-thumb" style="background:linear-gradient(135deg,#020817,#1a3060)">🌙</div>
+          <div class="q-info">
+            <div class="q-title">Dark — S1 B4 · Çift</div>
+            <div class="q-sub">Dizi · HD</div>
+          </div>
+          <span class="q-size">~1.0 GB</span>
+          <div class="q-rm">✕</div>
+        </div>
+
+        <div class="queue-item">
+          <span class="q-num">6</span>
+          <div class="q-thumb" style="background:linear-gradient(135deg,#0a0505,#501818)">🐉</div>
+          <div class="q-info">
+            <div class="q-title">House of the Dragon — S1 B1</div>
+            <div class="q-sub">Dizi · 4K</div>
+          </div>
+          <span class="q-size">~3.1 GB</span>
+          <div class="q-rm">✕</div>
+        </div>
+
+      </div>
+    </div><!-- /center -->
+
+
+    <!-- ══ AYARLAR ══ -->
+    <div class="tab-content" id="tab-settings">
+      <div class="tab-scroll content-scroll">
+        <div class="settings-grid">
+
+          <div class="set-card">
+            <div class="set-card-title">İndirme Kalitesi</div>
+            <div class="set-row">
+              <span class="set-label">Varsayılan Kalite</span>
+              <span class="set-val">1080p HD</span>
+            </div>
+            <div class="set-row">
+              <span class="set-label">WiFi'da Otomatik 4K</span>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="set-row">
+              <span class="set-label">Mobil Verida İndir</span>
+              <div class="toggle" onclick="this.classList.toggle('on')"></div>
+            </div>
+          </div>
+
+          <div class="set-card">
+            <div class="set-card-title">Depolama</div>
+            <div class="set-row">
+              <span class="set-label">İndirme Klasörü</span>
+              <span class="set-val">C:\Noctra</span>
+            </div>
+            <div class="set-row">
+              <span class="set-label">Max Depolama</span>
+              <span class="set-val">25 GB</span>
+            </div>
+            <div class="set-row">
+              <span class="set-label">İzleneni Otomatik Sil</span>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+          </div>
+
+          <div class="set-card">
+            <div class="set-card-title">Ağ</div>
+            <div class="set-row">
+              <span class="set-label">Eş Zamanlı İndirme</span>
+              <span class="set-val">3 bağlantı</span>
+            </div>
+            <div class="set-row">
+              <span class="set-label">Bant Genişliği Limiti</span>
+              <span class="set-val">Sınırsız</span>
+            </div>
+            <div class="set-row">
+              <span class="set-label">Sadece WiFi</span>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+          </div>
+
+          <div class="set-card">
+            <div class="set-card-title">Bildirimler</div>
+            <div class="set-row">
+              <span class="set-label">İndirme Tamamlandı</span>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="set-row">
+              <span class="set-label">İndirme Hatası</span>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="set-row">
+              <span class="set-label">Depolama Dolmak Üzere</span>
+              <div class="toggle" onclick="this.classList.toggle('on')"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div><!-- /settings -->
+
+  </div><!-- /main -->
+</div><!-- /page -->
+
+<script>
+function showTab(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    t.classList.toggle('active',['library','center','settings'][i]===name)
+  });
+  document.querySelectorAll('.tab-content').forEach(c=>{
+    c.classList.toggle('active',c.id==='tab-'+name)
+  });
+}
+function setFilter(btn){
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function pauseAll(){
+  document.querySelectorAll('.prog-fill').forEach(f=>f.classList.add('paused'));
+  document.querySelectorAll('.prog-status').forEach(s=>{s.textContent='Duraklatıldı';s.className='prog-status s-pause'});
+  document.querySelectorAll('.prog-speed').forEach(s=>{s.textContent='—';s.style.color='var(--muted)'});
+}
+function toggleDl(btn){
+  const item=btn.closest('.dl-active');
+  const fill=item.querySelector('.prog-fill');
+  const status=item.querySelector('.prog-status');
+  const speed=item.querySelector('.prog-speed');
+  const paused=fill.classList.contains('paused');
+  if(paused){
+    fill.classList.remove('paused');
+    status.textContent='İndiriliyor';status.className='prog-status s-dl';
+    speed.textContent='↓ 6.2 MB/s';speed.style.color='';
+    btn.innerHTML='<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+  } else {
+    fill.classList.add('paused');
+    status.textContent='Duraklatıldı';status.className='prog-status s-pause';
+    speed.textContent='—';speed.style.color='var(--muted)';
+    btn.innerHTML='<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+  }
+}
+</script>
+</body>
+</html>
