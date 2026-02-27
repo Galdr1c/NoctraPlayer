@@ -18,17 +18,16 @@ public class RemoteImage : Image
     public static readonly StyledProperty<string?> UrlProperty =
         AvaloniaProperty.Register<RemoteImage, string?>(nameof(Url));
 
+    public static readonly StyledProperty<bool> IsImageLoadedProperty =
+        AvaloniaProperty.Register<RemoteImage, bool>(nameof(IsImageLoaded), false);
+
     private static readonly HttpClient HttpClient = CreateHttpClient();
     private static readonly ConcurrentDictionary<string, Bitmap> Cache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, Task<Bitmap?>> InFlightLoads = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, byte> FailedUrlLog = new(StringComparer.OrdinalIgnoreCase);
     private static readonly LinkedList<string> CacheLruList = new();
     private static readonly object CacheLock = new();
-    private static readonly Uri PlaceholderUri = new("avares://Noctra.Avalonia/Assets/Logo.png");
-    private static readonly object PlaceholderLock = new();
-    private static Bitmap? _placeholderBitmap;
     private const int MaxCacheEntries = 1500;
-    private const int PlaceholderFallbackDelayMs = 300;
     private const int PreloadConcurrency = 10;
     private const int HttpImageMaxAttempts = 2;
     private const int HttpRetryBaseDelayMs = 120;
@@ -44,6 +43,12 @@ public class RemoteImage : Image
     {
         get => GetValue(UrlProperty);
         set => SetValue(UrlProperty, value);
+    }
+
+    public bool IsImageLoaded
+    {
+        get => GetValue(IsImageLoadedProperty);
+        set => SetValue(IsImageLoadedProperty, value);
     }
 
     public static async Task PreloadAsync(IEnumerable<string?> urls, int maxCount = 120, CancellationToken cancellationToken = default)
@@ -126,8 +131,6 @@ public class RemoteImage : Image
         if (string.IsNullOrWhiteSpace(normalizedUrl))
         {
             SetSourceOnUiThread(null);
-            _loadCts = new CancellationTokenSource();
-            _ = SetPlaceholderWithDelayAsync(_loadCts.Token);
             return;
         }
 
@@ -150,38 +153,11 @@ public class RemoteImage : Image
         _ = AwaitImageAsync(normalizedUrl, loadTask, _loadCts.Token);
     }
 
-    private async Task SetPlaceholderWithDelayAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            if (PlaceholderFallbackDelayMs > 0)
-            {
-                await Task.Delay(PlaceholderFallbackDelayMs, cancellationToken).ConfigureAwait(false);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-
-        if (cancellationToken.IsCancellationRequested)
-        {
-            return;
-        }
-
-        SetSourceOnUiThread(GetPlaceholderBitmap());
-    }
-
     private async Task AwaitImageAsync(string url, Task<Bitmap?> loadTask, CancellationToken cancellationToken)
     {
         try
         {
             var bitmap = await loadTask.WaitAsync(cancellationToken).ConfigureAwait(false);
-            if (bitmap == null && PlaceholderFallbackDelayMs > 0)
-            {
-                await Task.Delay(PlaceholderFallbackDelayMs, cancellationToken).ConfigureAwait(false);
-            }
-
             TrySetSource(url, bitmap, cancellationToken);
         }
         catch (OperationCanceledException)
@@ -190,18 +166,6 @@ public class RemoteImage : Image
         }
         catch
         {
-            try
-            {
-                if (PlaceholderFallbackDelayMs > 0)
-                {
-                    await Task.Delay(PlaceholderFallbackDelayMs, cancellationToken).ConfigureAwait(false);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                return;
-            }
-
             TrySetSource(url, null, cancellationToken);
         }
     }
@@ -419,10 +383,14 @@ public class RemoteImage : Image
         if (Dispatcher.UIThread.CheckAccess())
         {
             Source = bitmap;
+            IsImageLoaded = bitmap != null;
             return;
         }
 
-        Dispatcher.UIThread.Post(() => Source = bitmap, DispatcherPriority.Background);
+        Dispatcher.UIThread.Post(() => {
+            Source = bitmap;
+            IsImageLoaded = bitmap != null;
+        }, DispatcherPriority.Background);
     }
 
     private void TrySetSource(string sourceUrl, Bitmap? bitmap, CancellationToken cancellationToken)
@@ -445,7 +413,8 @@ public class RemoteImage : Image
                 return;
             }
 
-            Source = bitmap ?? GetPlaceholderBitmap();
+            Source = bitmap;
+            IsImageLoaded = bitmap != null;
         }
 
         if (Dispatcher.UIThread.CheckAccess())
@@ -538,32 +507,6 @@ public class RemoteImage : Image
         }
 
         return normalized;
-    }
-
-    private static Bitmap? GetPlaceholderBitmap()
-    {
-        lock (PlaceholderLock)
-        {
-            if (_placeholderBitmap != null)
-            {
-                return _placeholderBitmap;
-            }
-
-            try
-            {
-                if (AssetLoader.Exists(PlaceholderUri))
-                {
-                    using var stream = AssetLoader.Open(PlaceholderUri);
-                    _placeholderBitmap = new Bitmap(stream);
-                }
-            }
-            catch
-            {
-                _placeholderBitmap = null;
-            }
-
-            return _placeholderBitmap;
-        }
     }
 
     private static void LogFailure(string url, string reason)

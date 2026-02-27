@@ -5,14 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-- **Akıllı Arama, Gelişmiş Durum Çubuğu ve Ultra Performans Optimizasyonu** (2026-02-27 14:35):
-    - **Akıllı Genişleyen Arama Kutusu**: Arama kutusu artık bağlama duyarlı olarak çalışır; odaklandığında, içinde metin olduğunda veya "Arama Sonuçları" sayfasındayken 300px genişliğe çıkar. Boş ve odaksız olduğunda yer kaplamamak için 40px simge moduna küçülür.
-    - **Arama Metni Korunması**: Aramalar artık navigasyon sırasında (örneğin Arama Sonuçları ekranına geçişte) silinmez, kutu içinde kalmaya devam eder.
-    - **Modern Durum Çubuğu (Status Bar)**: Uygulamanın en altındaki statü barı tamamen yenilendi. Artık kanal yükleme ilerlemesi (ProgressBar), bağlantı sağlığı (Speed/Quality), toplam kanal istatistikleri ve anlık durum mesajlarını modern bir tasarımda sunar.
-    - **Radikal Görüntü Performansı**: Ekran kartı (GPU) ve işlemciye (CPU) yük bindiren tüm `BoxShadow` (gölge) efektleri global düzeyde temizlendi.
-    - **Sıfır Gecikmeli Kaydırma (Scrolling)**: Medya kartlarındaki (`VodCard`, `LiveTvCard`, `SeriesCard`) "büyüme" (scale) efektleri ve ağır geçişler kaldırıldı. Binlerce kanalın listelendiği ekranlarda kaydırma akıcılığı maksimuma çıkarıldı.
-    - **Sidebar İyileştirmesi**: Sol menüdeki gereksiz animasyonlar temizlendi, aktif öğe seçimi belirgin arka plan rengiyle modernize edildi.
-    - **Arama İkonu & Hizalama**: Arama çubuğu içeriği ve büyüteç ikonu hizalaması, her türlü genişlik geçişinde sabit ve görsel olarak kusursuz kalacak şekilde Border katmanıyla güçlendirildi.
+- **Evrensel Medya Kartları (Netflix Standartı), Akıllı Arama ve Yüksek Performans** (2026-02-27):
+    *   **Netflix Tarzı Medya Kartları**: Tüm uygulama genelinde (`Home`, `Movies`, `Series`, `Live`, `Search` vb.) eski düzensiz listeler kaldırılarak yerlerine standart `VodCard`, `SeriesCard` ve `LiveTvCard` bileşenleri eklendi. Kartlar tam kaplayan (full-bleed) poster tasarımına, üzerine gelince büyüme (Scale) ve kararma efektlerine kavuşturuldu.
+    *   **Akıllı Yer Tutucular ve Sıfır Overdraw**: Posterler ve logolar yüklenene kadar kartların boyutunun bozulmasını (layout shift) engellemek için temaya uygun (`SurfaceLightBrush`), sabit boyutlu yer tutucular eklendi. Resim başarıyla yüklendiği anda bu yer tutucu katmanı otomatik olarak gizlenerek ekran kartı (GPU) üzerindeki gereksiz çizim yükü (Overdraw) tamamen ortadan kaldırıldı.
+    *   **Legacy Temizliği**: Eski "Logo.png" tabanlı yer tutucu sistemi ve `RemoteImage` içerisindeki tüm atıl kodlar (zaman aşımı kontrolleri, fallback mantığı vb.) silinerek kod tabanı ve bellek kullanımı optimize edildi.
+    *   **Yüksek Performans Optimizasyonu**: Binlerce içerik listelenirken kasmaya neden olan `DropShadowEffect` (Gölge), `LinearGradientBrush` (Gradyan) ve ağır `Transitions` (Animasyon) yapıları temizlendi. Listeleme performansı için `ListBox` sanallaştırması ve `MediumQuality` resim render seçenekleri optimize edildi.
+    *   **Akıllı Genişleyen Arama Kutusu**: Header kısmındaki arama kutusu; tıklandığında, metin içerdiğinde veya arama sonuçları sayfasındayken otomatik genişleyen (300px), diğer durumlarda ise ikon moduna (40px) daralan akıllı bir yapıya kavuşturuldu. Arama metni navigasyon sırasında korunur hale getirildi.
+    *   **High-Impact Sidebar (Sol Menü)**: Sol menüdeki Noctra logosu ve mükerrer ayarlar butonu kaldırılarak tasarım sadeleştirildi. Seçili menü öğesinin soluna karakteristik aktif vurgu çizgisi (Active Indicator) eklendi.
+    *   **Standardize ProgressBar**: Uygulama genelindeki tüm sahte ilerleme çubukları kaldırılarak, temanın ana renklerine (`AccentBrush`) tam uyumlu, modern ve native Avalonia `ProgressBar` bileşenine geçildi.
+    *   **Stabilite ve Hata Giderme**: XAML katmanındaki sözdizimi hataları, `InvalidCastException` çökmesi ve kartların büyümesi sırasında yaşanan kesilme (clipping) sorunları giderildi.
+
 
 - **M3U Bağlantı Analizi ve Stalker Sınırsız Senkronizasyon** (2026-02-26 15:00):
     - **Stalker Full Sync (Sınırsız)**: Stalker portalları için önceki "Hızlı Yükleme" limitleri (15-50 sayfa) tamamen kaldırıldı. Artık 100.000+ içerikli devasa portallar bile tek seferde, eksiksiz olarak senkronize edilir.

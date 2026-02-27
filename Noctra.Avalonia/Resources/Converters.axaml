@@ -34,6 +34,7 @@
   <converters:StringToVisibilityConverter x:Key="StringNotEmptyToVisibilityConverter" />
   <converters:MediaThumbnailConverter x:Key="MediaThumbnailConverter" />
   <converters:BoolToIconConverter x:Key="BoolToIconConverter" />
+  <converters:BoolToBrushConverter x:Key="BoolToBrushConverter" />
   <converters:BoolToThicknessConverter x:Key="BoolToThicknessConverter" />
   <converters:PercentToWidthConverter x:Key="PercentToWidthConverter" />
   <converters:DoubleToFloatConverter x:Key="DoubleToFloatConverter" />
