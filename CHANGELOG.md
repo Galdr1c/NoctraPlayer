@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Arama Algoritması ve Alaka Düzeyi (Relevance Scoring) İyileştirmesi** (2026-02-28):
+    - **Ağırlıklı Sıralama Sistemi**: Arama sonuçları artık basit bir "içeriyor mu?" kontrolü yerine 100 üzerinden puanlama sistemiyle sıralanıyor. Tam eşleşme (100p), kelime başı eşleşme (80p) ve içerik eşleşmesi (40p) şeklinde ağırlıklandırılarak en alakalı sonuçların en üstte çıkması sağlandı.
+    - **Kısa Sorgu Filtreleme**: `%3` gibi çok kısa (3 karakter altı) aramalarda, binlerce alakasız sonucun (örn: bölüm isminde 3 geçen tüm diziler) gelmesini önlemek için derin içerik araması bu tür sorgularda kısıtlandı.
+    - **Akıllı Hata Düzeltme Önerileri**: Arama motoruna "Bunu mu demek istediniz?" (Did you mean) zekası eklendi. Kullanıcı 2-3 harfi yanlış yazsa bile (örn: `Kurtuluş` yerine `Kurtuls`) Levenshtein mesafesi ve benzerlik skoru hesaplanarak en doğru öneri otomatik olarak sunuluyor.
+
 - **Dil/Ülke Tespiti (Language Detection) Geliştirmesi** (2026-02-28):
     - Kanal gruplarındaki (örn: `|TR| BELGESEL`) ülke kodlarını algılama sistemi düzeltildi. Önceden sadece kelime sınırlarına bakan sistem, artık boru (`|`), köşeli parantez (`[]`) veya parantez (`()`) içine yazılan ülke kodlarını (örn: `|US|`, `[DE]`, `(FR)`) başarıyla algılayıp kullanıcının yerel diline en uygun kategorileri en başa çekiyor.
 

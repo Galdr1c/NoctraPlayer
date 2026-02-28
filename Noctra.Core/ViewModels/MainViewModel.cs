@@ -4069,22 +4069,76 @@ public partial class MainViewModel : ObservableObject
         var rawQuery = SearchText.Trim();
         var normalizedSeriesQuery = NormalizeSeriesQuery(rawQuery);
 
-        SetItems(SearchLiveChannels, FilteredChannels
-            .Where(c => c.Type == ChannelType.Live)
-            .OrderByDescending(HasDisplayImage)
-            .ThenBy(c => c.Name));
+        // Scoring and Sorting Logic
+        int CalculateScore(string? name, string? group, ChannelType type)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return 0;
+            
+            // Exact match is king
+            if (name.Equals(rawQuery, StringComparison.OrdinalIgnoreCase)) return 100;
+            if (!string.IsNullOrEmpty(normalizedSeriesQuery) && name.Equals(normalizedSeriesQuery, StringComparison.OrdinalIgnoreCase)) return 95;
 
-        var seriesSnapshot = _allSeriesCache.ToList();
+            // Starts with is very strong
+            if (name.StartsWith(rawQuery, StringComparison.OrdinalIgnoreCase)) return 80;
+            if (!string.IsNullOrEmpty(normalizedSeriesQuery) && name.StartsWith(normalizedSeriesQuery, StringComparison.OrdinalIgnoreCase)) return 75;
+
+            // Contains as a word boundary
+            if (name.Contains(" " + rawQuery, StringComparison.OrdinalIgnoreCase) || name.Contains("-" + rawQuery, StringComparison.OrdinalIgnoreCase)) return 60;
+
+            // Contains anywhere
+            if (name.Contains(rawQuery, StringComparison.OrdinalIgnoreCase)) return 40;
+            if (!string.IsNullOrEmpty(normalizedSeriesQuery) && name.Contains(normalizedSeriesQuery, StringComparison.OrdinalIgnoreCase)) return 35;
+
+            // Group match
+            if (!string.IsNullOrWhiteSpace(group) && group.Contains(rawQuery, StringComparison.OrdinalIgnoreCase)) return 20;
+
+            return 0;
+        }
+
+        var channelsSnapshot = FilteredChannels.ToList();
+
+        SetItems(SearchLiveChannels, channelsSnapshot
+            .Where(c => c.Type == ChannelType.Live)
+            .Select(c => new { Item = c, Score = CalculateScore(c.Name, c.GroupTitle, c.Type) })
+            .Where(x => x.Score > 0)
+            .OrderByDescending(x => x.Score)
+            .ThenByDescending(x => HasDisplayImage(x.Item))
+            .ThenBy(x => x.Item.Name)
+            .Select(x => x.Item));
+
+        var seriesSnapshot = _allSeriesCache;
+        
+        int CalculateSeriesScore(Series s)
+        {
+            var nameScore = CalculateScore(s.Name, s.Genre, ChannelType.Series);
+            if (nameScore >= 40) return nameScore; // Name match is enough
+
+            // Only check episodes if query is long enough to avoid noise like "%3" matching "Episode 3"
+            if (rawQuery.Length >= 3)
+            {
+                if (s.Seasons.SelectMany(sea => sea.Episodes).Any(ep => ep.Name?.Contains(rawQuery, StringComparison.OrdinalIgnoreCase) ?? false))
+                    return 10;
+            }
+            
+            return 0;
+        }
 
         SetItems(SearchSeriesChannels, seriesSnapshot
-            .Where(series => SeriesMatchesSearch(series, rawQuery, normalizedSeriesQuery))
-            .OrderByDescending(HasDisplayImage)
-            .ThenBy(series => series.Name));
+            .Select(s => new { Item = s, Score = CalculateSeriesScore(s) })
+            .Where(x => x.Score > 0)
+            .OrderByDescending(x => x.Score)
+            .ThenByDescending(x => HasDisplayImage(x.Item))
+            .ThenBy(x => x.Item.Name)
+            .Select(x => x.Item));
 
-        SetItems(SearchVodChannels, FilteredChannels
+        SetItems(SearchVodChannels, channelsSnapshot
             .Where(c => c.Type == ChannelType.VOD)
-            .OrderByDescending(HasDisplayImage)
-            .ThenBy(c => c.Name));
+            .Select(c => new { Item = c, Score = CalculateScore(c.Name, c.GroupTitle, c.Type) })
+            .Where(x => x.Score > 0)
+            .OrderByDescending(x => x.Score)
+            .ThenByDescending(x => HasDisplayImage(x.Item))
+            .ThenBy(x => x.Item.Name)
+            .Select(x => x.Item));
 
         var hasAnyExact = SearchLiveChannels.Count > 0
             || SearchSeriesChannels.Count > 0
@@ -4159,39 +4213,46 @@ public partial class MainViewModel : ObservableObject
     private static string ComputeBestSuggestion(string query, IEnumerable<string> candidates)
     {
         var normalizedQuery = NormalizeFuzzyText(query);
-        if (string.IsNullOrWhiteSpace(normalizedQuery))
+        if (string.IsNullOrWhiteSpace(normalizedQuery) || normalizedQuery.Length < 2)
         {
             return string.Empty;
         }
 
         string best = string.Empty;
-        var bestDistance = int.MaxValue;
+        double bestScore = 0; // Higher is better
 
         foreach (var candidate in candidates)
         {
-            if (string.IsNullOrWhiteSpace(candidate))
-            {
-                continue;
-            }
+            if (string.IsNullOrWhiteSpace(candidate)) continue;
 
             var normalizedCandidate = NormalizeFuzzyText(candidate);
             if (string.IsNullOrWhiteSpace(normalizedCandidate) || normalizedCandidate == normalizedQuery)
-            {
                 continue;
-            }
 
-            var maxDistance = GetDistanceThreshold(Math.Max(normalizedQuery.Length, normalizedCandidate.Length));
-            var distance = LevenshteinDistance(normalizedQuery, normalizedCandidate, maxDistance);
-            if (distance < 0 || distance >= bestDistance)
-            {
+            // Reject if lengths are too different
+            if (Math.Abs(normalizedCandidate.Length - normalizedQuery.Length) > 3)
                 continue;
-            }
 
-            bestDistance = distance;
-            best = candidate;
+            var maxAllowedDist = GetDistanceThreshold(Math.Max(normalizedQuery.Length, normalizedCandidate.Length));
+            var distance = LevenshteinDistance(normalizedQuery, normalizedCandidate, maxAllowedDist);
+            
+            if (distance < 0) continue;
+
+            // Calculate similarity score (0.0 to 1.0)
+            double similarity = 1.0 - ((double)distance / Math.Max(normalizedQuery.Length, normalizedCandidate.Length));
+            
+            // Bonus for starting with the same letters
+            if (normalizedCandidate.StartsWith(normalizedQuery[..Math.Min(2, normalizedQuery.Length)], StringComparison.OrdinalIgnoreCase))
+                similarity += 0.1;
+
+            if (similarity > bestScore && similarity > 0.7)
+            {
+                bestScore = similarity;
+                best = candidate;
+            }
         }
 
-        return bestDistance == int.MaxValue ? string.Empty : best;
+        return best;
     }
 
     private static bool IsLikelySimilar(string query, string? candidate)
@@ -4210,7 +4271,12 @@ public partial class MainViewModel : ObservableObject
         }
 
         var maxDistance = GetDistanceThreshold(Math.Max(normalizedQuery.Length, normalizedCandidate.Length));
-        return LevenshteinDistance(normalizedQuery, normalizedCandidate, maxDistance) >= 0;
+        var distance = LevenshteinDistance(normalizedQuery, normalizedCandidate, maxDistance);
+        
+        if (distance < 0) return false;
+
+        double similarity = 1.0 - ((double)distance / Math.Max(normalizedQuery.Length, normalizedCandidate.Length));
+        return similarity >= 0.75;
     }
 
     private static int GetDistanceThreshold(int length)
