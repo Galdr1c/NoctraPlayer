@@ -129,10 +129,7 @@ public partial class MainViewModel : ObservableObject
     private string _selectedSeriesCast = string.Empty;
 
     [ObservableProperty]
-    private string _selectedSeriesMatchPercentage = "98% Eşleşme";
-
-    [ObservableProperty]
-    private string _selectedSeriesYears = "";
+    private string _selectedSeriesYears = "2000";
 
     [ObservableProperty]
     private int _selectedSeriesTotalEpisodesCount;
@@ -142,6 +139,9 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private string _selectedSeriesAgeRating = "16+";
+
+    [ObservableProperty]
+    private string _selectedSeriesGenres = "Dram";
 
     [ObservableProperty]
     private bool _selectedSeriesIsHd = true;
@@ -5042,14 +5042,12 @@ public partial class MainViewModel : ObservableObject
             SelectedSeriesBackdropUrl = null;
             SelectedSeriesOverview = series.Plot ?? string.Empty;
             SelectedSeriesCast = string.Empty;
+            SelectedSeriesGenres = string.Empty; // Clear previous or category-based genre
 
             // Initial basic metadata
             SelectedSeriesTotalEpisodesCount = series.Seasons.Sum(s => s.Episodes.Count);
             SelectedSeriesTotalSeasonsCount = series.SeasonCountSafe;
             SelectedSeriesYears = series.ReleaseYear?.ToString() ?? "";
-            
-            // Random match for demo/vibe as in Netflix
-            SelectedSeriesMatchPercentage = $"{90 + new Random().Next(10)}% Eşleşme";
 
             // Find last watched or first episode for "Continue" button
             var allEpisodes = series.Seasons
@@ -5115,6 +5113,11 @@ public partial class MainViewModel : ObservableObject
             if (!string.IsNullOrWhiteSpace(metadata.Cast))
             {
                 SelectedSeriesCast = metadata.Cast;
+            }
+
+            if (metadata.Genres != null && metadata.Genres.Count > 0)
+            {
+                SelectedSeriesGenres = string.Join(", ", metadata.Genres);
             }
         }
         catch (Exception ex)

@@ -444,19 +444,25 @@
                                    Foreground="White" TextWrapping="Wrap" LineHeight="58" LetterSpacing="-1"/>
                     </StackPanel>
 
-                    <!-- Badges & Stats -->
-                    <StackPanel Orientation="Horizontal" Margin="0,18,0,0" Spacing="16" VerticalAlignment="Center">
-                      <TextBlock Text="{Binding SelectedSeriesYears}" Foreground="{DynamicResource TextMutedBrush}" FontSize="16"/>
-                      <TextBlock Text="{Binding SelectedSeries.Genre}" Foreground="{DynamicResource TextMutedBrush}" FontSize="16"/>
+                    <!-- Badges & Stats (Netflix Style Meta) -->
+                    <StackPanel Orientation="Horizontal" Margin="0,18,0,0" Spacing="8" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding SelectedSeriesYears}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="SemiBold"
+                                 IsVisible="{Binding SelectedSeriesYears, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
                       
-                      <Border BorderBrush="{DynamicResource TextMutedBrush}" BorderThickness="1" CornerRadius="3" Padding="4,0" VerticalAlignment="Center">
-                          <TextBlock Text="{Binding SelectedSeriesAgeRating}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" FontWeight="Bold"/>
+                      <TextBlock Text="•" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" VerticalAlignment="Center" Margin="4,0"
+                                 IsVisible="{Binding SelectedSeriesYears, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+                      
+                      <TextBlock Text="{Binding SelectedSeriesGenres}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="Medium"/>
+                      
+                      <Border BorderBrush="{DynamicResource TextMutedBrush}" BorderThickness="1.5" CornerRadius="3" Padding="6,1" VerticalAlignment="Center" Margin="12,0,0,0">
+                          <TextBlock Text="{Binding SelectedSeriesAgeRating}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" FontWeight="Black"/>
                       </Border>
                     </StackPanel>
 
+                    <!-- Seasons & Episodes Stats -->
                     <StackPanel Orientation="Horizontal" Margin="0,12,0,0" Spacing="16">
-                      <TextBlock Text="{Binding SelectedSeriesTotalSeasonsCount, StringFormat='{}{0} Sezon'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="16"/>
-                      <TextBlock Text="{Binding SelectedSeriesTotalEpisodesCount, StringFormat='{}{0} Bölüm'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="16"/>
+                      <TextBlock Text="{Binding SelectedSeriesTotalSeasonsCount, StringFormat='{}{0} Sezon'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="Medium"/>
+                      <TextBlock Text="{Binding SelectedSeriesTotalEpisodesCount, StringFormat='{}{0} Bölüm'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="Medium"/>
                     </StackPanel>
 
                     <!-- Description -->

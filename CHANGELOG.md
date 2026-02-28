@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Dizi Detay Sayfası Tasarım Güncellemesi ve Dinamik Tür (Genre) Desteği** (2026-02-28):
+    - **Dinamik Tür (Genre) Yükleme**: Dizi detay sayfasındaki sabit "Dizi" kategori yazısı kaldırılarak TMDB üzerinden çekilen gerçek tür bilgileriyle ("Suç, Gerilim" vb.) değiştirildi.
+    - **Gelişmiş Başlık Paneli (Metadata)**: Dizi yılı ve türü arasına akıllı nokta (`•`) ayırıcı eklendi. Ayırıcı sadece her iki bilgi de mevcutsa görünecek şekilde optimize edildi.
+    - **Yeniden Düzenlenen Bilgi Satırı**: Yıl bilgisi `SemiBold`, tür bilgisi `Medium` font ağırlığına çekilerek Netflix tarzı hiyerarşi güçlendirildi.
+    - **Demo Veri Temizliği**: Geliştirme aşamasında kullanılan rastgele "Eşleşme Yüzdesi" (`MatchPercentage`) alanı, gerçekçi bir görünüm için yayından kaldırıldı.
+    - **Bağlayıcı (Binding) İyileştirmeleri**: `SelectedSeriesGenres` özelliği `MainViewModel`'e eklenerek sağlayıcıdan gelen ham kategori metni yerine işlenmiş tür verisinin gösterilmesi sağlandı.
+
+- **Premium Dizi Detay Sayfası Tasarımı ve Reaktivite** (2026-02-28):
+    - **Netflix Tarzı Modern Arayüz**: Dizi detay sayfası tamamen yenilenerek bulanık arka plan (backdrop blur), geniş afiş alanı ve dikey bölümlendirme yapısına geçildi.
+    - **Sabitlenmiş Üst Panel**: Dizi adı, yılı, türü ve yaş sınırı gibi kritik bilgiler sayfanın en üstüne sabitlendi; içerik açıklaması boş olsa dahi düzenin bozulmaması sağlandı.
+    - **Gelişmiş Bölüm Kartları**: Bölümler artık 200px genişliğinde önizleme görselleri, bölüm numaraları, izlenme ilerleme çubukları ve "İZLENDİ" rozetleri içeren modern kartlar şeklinde listeleniyor.
+    - **Akıllı İkon Senkronizasyonu**: Favori (Kalp) ve Listem (+/-) butonlarındaki takılma ve güncellenmeme sorunları giderildi. Artık tıklandığında ikonlar anlık olarak tepki veriyor ve veritabanıyla tam senkronize çalışıyor.
+    - **Global Kaydırma (Scroll)**: Tüm sayfa yapısı tek bir kaydırma alanına alınarak akıcı bir gezinti deneyimi sağlandı.
+
 - **İndirme Güvenliği ve Hesap Bütünlüğü (Phase 28)** (2026-02-28):
     - **Profil Bazlı İndirme Koruması**: İndirmelerin farklı hesaplar (profiler) arasında paylaştırılması veya yanlış hesapla devam ettirilmesi engellendi. Artık bir indirme sadece başlatıldığı hesap aktifken devam ettirilebilir. Bu sayede yanlış hesaptan gelen geçersiz link/token kullanımıyla oluşan "ses var görüntü yok" veya "altyazı eksik" gibi veri bozulmaları önlendi.
     - **Hesap Bilgisi Güncelleme Koruması**: Bir profilin kullanıcı adı, şifre veya URL bilgisi değiştirildiğinde, o profile ait tüm aktif (indirilmekte olan veya duraklatılan) indirmeler otomatik olarak "Hatalı" durumuna çekilir ve kullanıcıya bilgilendirme yapılır. Bu, eski/geçersiz token'larla indirmeye devam edip bozuk dosya oluşmasını engeller.
