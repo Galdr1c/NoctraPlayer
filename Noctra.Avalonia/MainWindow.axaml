@@ -432,49 +432,72 @@
                   </Border>
 
                   <!-- Metadata & Info -->
-                  <StackPanel Grid.Column="1" Margin="48,0,0,0" VerticalAlignment="Center">
-                    <!-- Back button -->
-                    <Button Command="{Binding CloseSeriesDetailCommand}" HorizontalAlignment="Left" Margin="0,0,0,24" 
-                            Background="#33000000" CornerRadius="30" Width="48" Height="48" Padding="0">
-                      <materialIcons:MaterialIcon Kind="ArrowLeft" Width="24" Height="24" Foreground="White"/>
-                    </Button>
+                  <Grid Grid.Column="1" Margin="48,0,0,0" Height="450" RowDefinitions="*,Auto">
+                    <StackPanel Grid.Row="0" VerticalAlignment="Top">
+                      <!-- Back button -->
+                      <Button Command="{Binding CloseSeriesDetailCommand}" HorizontalAlignment="Left" Margin="0,0,0,16" 
+                              Background="#33000000" CornerRadius="30" Width="48" Height="48" Padding="0">
+                        <materialIcons:MaterialIcon Kind="ArrowLeft" Width="24" Height="24" Foreground="White"/>
+                      </Button>
 
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="{Binding SelectedSeries.Name}" FontSize="52" FontWeight="Black" 
-                                   Foreground="White" TextWrapping="Wrap" LineHeight="58" LetterSpacing="-1"/>
-                    </StackPanel>
+                      <StackPanel Spacing="8">
+                          <TextBlock Text="{Binding SelectedSeries.Name}" FontSize="52" FontWeight="Black" 
+                                    Foreground="White" TextWrapping="Wrap" LineHeight="58" LetterSpacing="-1"/>
+                      </StackPanel>
 
-                    <!-- Badges & Stats (Netflix Style Meta) -->
-                    <StackPanel Orientation="Horizontal" Margin="0,18,0,0" Spacing="8" VerticalAlignment="Center">
-                      <TextBlock Text="{Binding SelectedSeriesYears}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="SemiBold"
-                                 IsVisible="{Binding SelectedSeriesYears, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+                      <!-- Badges & Stats (Netflix Style Meta) -->
+                      <StackPanel Orientation="Horizontal" Margin="0,18,0,0" Spacing="8" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding SelectedSeriesYears}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="SemiBold"
+                                  IsVisible="{Binding SelectedSeriesYears, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+                        
+                        <TextBlock Text="•" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" VerticalAlignment="Center" Margin="4,0">
+                          <TextBlock.IsVisible>
+                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                              <Binding Path="SelectedSeriesYears" Converter="{StaticResource StringNotEmptyToBoolConverter}"/>
+                              <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                                <Binding Path="SelectedSeriesGenres" Converter="{StaticResource StringNotEmptyToBoolConverter}"/>
+                                <Binding Path="SelectedSeriesAgeRating" Converter="{StaticResource StringNotEmptyToBoolConverter}"/>
+                              </MultiBinding>
+                            </MultiBinding>
+                          </TextBlock.IsVisible>
+                        </TextBlock>
+                        
+                        <TextBlock Text="{Binding SelectedSeriesGenres}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="Medium"
+                                  IsVisible="{Binding SelectedSeriesGenres, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+
+                        <TextBlock Text="•" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" VerticalAlignment="Center" Margin="4,0">
+                          <TextBlock.IsVisible>
+                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                              <Binding Path="SelectedSeriesGenres" Converter="{StaticResource StringNotEmptyToBoolConverter}"/>
+                              <Binding Path="SelectedSeriesAgeRating" Converter="{StaticResource StringNotEmptyToBoolConverter}"/>
+                            </MultiBinding>
+                          </TextBlock.IsVisible>
+                        </TextBlock>
+                        
+                        <Border BorderBrush="{DynamicResource TextMutedBrush}" BorderThickness="1.5" CornerRadius="3" Padding="6,1" VerticalAlignment="Center" Margin="12,0,0,0"
+                                IsVisible="{Binding SelectedSeriesAgeRating, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+                            <TextBlock Text="{Binding SelectedSeriesAgeRating}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" FontWeight="Black"/>
+                        </Border>
+                      </StackPanel>
+
+                      <!-- Seasons & Episodes Stats -->
+                      <StackPanel Orientation="Horizontal" Margin="0,12,0,0" Spacing="16">
+                        <TextBlock Text="{Binding SelectedSeriesTotalSeasonsCount, StringFormat='{}{0} Sezon'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="Medium"/>
+                        <TextBlock Text="{Binding SelectedSeriesTotalEpisodesCount, StringFormat='{}{0} Bölüm'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="Medium"/>
+                      </StackPanel>
+
+                      <!-- Description -->
+                      <TextBlock Text="{Binding SelectedSeriesOverview}" FontSize="17" Foreground="White" 
+                                TextWrapping="Wrap" Margin="0,24,0,0" MaxHeight="120" Opacity="0.9" LineHeight="24"
+                                IsVisible="{Binding SelectedSeriesOverview, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
                       
-                      <TextBlock Text="•" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" VerticalAlignment="Center" Margin="4,0"
-                                 IsVisible="{Binding SelectedSeriesYears, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
-                      
-                      <TextBlock Text="{Binding SelectedSeriesGenres}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="Medium"/>
-                      
-                      <Border BorderBrush="{DynamicResource TextMutedBrush}" BorderThickness="1.5" CornerRadius="3" Padding="6,1" VerticalAlignment="Center" Margin="12,0,0,0">
-                          <TextBlock Text="{Binding SelectedSeriesAgeRating}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" FontWeight="Black"/>
-                      </Border>
+                      <TextBlock Text="{Binding SelectedSeriesCast, StringFormat='Oyuncular: {0}'}" FontSize="14" 
+                                Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,16,0,0"
+                                IsVisible="{Binding SelectedSeriesCast, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
                     </StackPanel>
-
-                    <!-- Seasons & Episodes Stats -->
-                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0" Spacing="16">
-                      <TextBlock Text="{Binding SelectedSeriesTotalSeasonsCount, StringFormat='{}{0} Sezon'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="Medium"/>
-                      <TextBlock Text="{Binding SelectedSeriesTotalEpisodesCount, StringFormat='{}{0} Bölüm'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="Medium"/>
-                    </StackPanel>
-
-                    <!-- Description -->
-                    <TextBlock Text="{Binding SelectedSeriesOverview}" FontSize="17" Foreground="White" 
-                               TextWrapping="Wrap" Margin="0,24,0,0" MaxHeight="120" Opacity="0.9" LineHeight="24"/>
-                    
-                    <TextBlock Text="{Binding SelectedSeriesCast, StringFormat='Oyuncular: {0}'}" FontSize="14" 
-                               Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,16,0,0"
-                               IsVisible="{Binding SelectedSeriesCast, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
 
                     <!-- Action Buttons -->
-                    <StackPanel Orientation="Horizontal" Margin="0,32,0,0" Spacing="12">
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,32,0,0" Spacing="12">
                         <Button Command="{Binding PlayEpisodeCommand}" CommandParameter="{Binding SelectedSeriesContinueEpisode}" 
                                 Background="White" Foreground="Black" CornerRadius="6" Padding="32,14" FontWeight="Bold" FontSize="18">
                             <StackPanel Orientation="Horizontal" Spacing="10">
@@ -512,7 +535,7 @@
                             </Panel>
                         </Button>
                     </StackPanel>
-                  </StackPanel>
+                  </Grid>
                 </Grid>
 
                 <!-- Seasons & Episodes -->

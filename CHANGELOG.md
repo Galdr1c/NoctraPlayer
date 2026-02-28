@@ -5,12 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-- **Dizi Detay Sayfası Tasarım Güncellemesi ve Dinamik Tür (Genre) Desteği** (2026-02-28):
-    - **Dinamik Tür (Genre) Yükleme**: Dizi detay sayfasındaki sabit "Dizi" kategori yazısı kaldırılarak TMDB üzerinden çekilen gerçek tür bilgileriyle ("Suç, Gerilim" vb.) değiştirildi.
-    - **Gelişmiş Başlık Paneli (Metadata)**: Dizi yılı ve türü arasına akıllı nokta (`•`) ayırıcı eklendi. Ayırıcı sadece her iki bilgi de mevcutsa görünecek şekilde optimize edildi.
-    - **Yeniden Düzenlenen Bilgi Satırı**: Yıl bilgisi `SemiBold`, tür bilgisi `Medium` font ağırlığına çekilerek Netflix tarzı hiyerarşi güçlendirildi.
-    - **Demo Veri Temizliği**: Geliştirme aşamasında kullanılan rastgele "Eşleşme Yüzdesi" (`MatchPercentage`) alanı, gerçekçi bir görünüm için yayından kaldırıldı.
-    - **Bağlayıcı (Binding) İyileştirmeleri**: `SelectedSeriesGenres` özelliği `MainViewModel`'e eklenerek sağlayıcıdan gelen ham kategori metni yerine işlenmiş tür verisinin gösterilmesi sağlandı.
+- **Dizi Detay Sayfası Tasarım Güncellemesi ve Dinamik Meta Veri Entegrasyonu** (2026-02-28):
+    - **Dinamik Tür ve Yaş Sınırı**: Sabit metinler yerine TMDB API'den gelen gerçek tür (Genre) ve yaş sınırı (ContentRating) bilgileri entegre edildi.
+    - **Akıllı Meta Veri Paneli**: Yıl, tür ve yaş sınırı alanları sadece veri varsa görünecek şekilde güncellendi; ayırıcı noktalar (`•`) dinamik olarak konumlandırıldı.
+    - **Yerleşim Sabitleme**: Dizi açıklaması veya meta veriler eksik olsa dahi başlık, geri butonu ve kontrol butonlarının (Oynat, Listem) ekrandaki yerleri sabitlendi (Sticky Layout).
+    - **Otomatik İçerik Güncelleme**: Dizi açıklaması (Overview) ve oyuncu kadrosu (Cast) bilgileri artık otomatik olarak TMDB üzerinden çekiliyor.
+    - **Demo Veri Temizliği**: Rastgele üretilen "Eşleşme Yüzdesi" alanı, daha temiz ve profesyonel bir görünüm için kaldırıldı.
 
 - **Premium Dizi Detay Sayfası Tasarımı ve Reaktivite** (2026-02-28):
     - **Netflix Tarzı Modern Arayüz**: Dizi detay sayfası tamamen yenilenerek bulanık arka plan (backdrop blur), geniş afiş alanı ve dikey bölümlendirme yapısına geçildi.

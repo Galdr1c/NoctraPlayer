@@ -129,7 +129,7 @@ public partial class MainViewModel : ObservableObject
     private string _selectedSeriesCast = string.Empty;
 
     [ObservableProperty]
-    private string _selectedSeriesYears = "2000";
+    private string _selectedSeriesYears = string.Empty;
 
     [ObservableProperty]
     private int _selectedSeriesTotalEpisodesCount;
@@ -138,10 +138,10 @@ public partial class MainViewModel : ObservableObject
     private int _selectedSeriesTotalSeasonsCount;
 
     [ObservableProperty]
-    private string _selectedSeriesAgeRating = "16+";
+    private string _selectedSeriesAgeRating = string.Empty;
 
     [ObservableProperty]
-    private string _selectedSeriesGenres = "Dram";
+    private string _selectedSeriesGenres = string.Empty;
 
     [ObservableProperty]
     private bool _selectedSeriesIsHd = true;
@@ -5042,7 +5042,8 @@ public partial class MainViewModel : ObservableObject
             SelectedSeriesBackdropUrl = null;
             SelectedSeriesOverview = series.Plot ?? string.Empty;
             SelectedSeriesCast = string.Empty;
-            SelectedSeriesGenres = string.Empty; // Clear previous or category-based genre
+            SelectedSeriesGenres = string.Empty;
+            SelectedSeriesAgeRating = string.Empty;
 
             // Initial basic metadata
             SelectedSeriesTotalEpisodesCount = series.Seasons.Sum(s => s.Episodes.Count);
@@ -5113,6 +5114,11 @@ public partial class MainViewModel : ObservableObject
             if (!string.IsNullOrWhiteSpace(metadata.Cast))
             {
                 SelectedSeriesCast = metadata.Cast;
+            }
+
+            if (!string.IsNullOrWhiteSpace(metadata.ContentRating))
+            {
+                SelectedSeriesAgeRating = metadata.ContentRating;
             }
 
             if (metadata.Genres != null && metadata.Genres.Count > 0)
