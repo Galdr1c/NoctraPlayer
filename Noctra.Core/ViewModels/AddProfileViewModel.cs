@@ -839,8 +839,13 @@ public partial class AddProfileViewModel : ObservableObject
     {
         try
         {
-            using var client = new System.Net.Http.HttpClient();
-            client.Timeout = TimeSpan.FromSeconds(10); // 10s timeout
+            using var handler = new System.Net.Http.HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+            };
+            using var client = new System.Net.Http.HttpClient(handler);
+            client.Timeout = TimeSpan.FromSeconds(15); // 15s timeout
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
 
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             
@@ -876,6 +881,7 @@ public partial class AddProfileViewModel : ObservableObject
                 {
                     401 or 403 => "Yetkisiz Erişim (Kullanıcı adı/Şifre hatalı olabilir)",
                     404 => "URL Bulunamadı (Link bozuk veya kanal silinmiş)",
+                    405 => "Erişim Reddedildi (Sunucu bu kontrolü desteklemiyor)",
                     >= 500 => "Sunucu Hatası (Sağlayıcı kaynaklı sorun)",
                     _ => $"HTTP Hatası {code}"
                 };

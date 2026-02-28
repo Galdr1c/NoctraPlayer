@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **İndirme Merkezi Hata Yönetimi ve Şeffaflık** (2026-02-28):
+    - **Ölümcül Hataların Yakalanması**: İndirme motoru güncellendi. Eski/pasif hesaplardan veya artık sunucuda bulunmayan (404 Not Found, 401 Unauthorized, 403 Forbidden) içerikler indirilmeye çalışıldığında; sistemin bu durumu geçici bir internet kopması sanıp sonsuz "Duraklatıldı" döngüsüne girmesi engellendi. Bu tür kritik durumlarda indirme doğrudan iptal edilerek "Hatalı" (Failed) statüsüne çekiliyor.
+    - **Arayüzde Detaylı Hata Gösterimi**: İndirilenler ve İndirme Merkezi ekranlarında, bir içeriğin durumu "Hatalı" veya "Duraklatıldı" olduğunda sadece bu kelimeleri yazmak yerine, hatanın alt metni (Örn: "Hatalı - Yetkisiz erişim. Hesap süresi dolmuş veya iptal edilmiş olabilir.") kullanıcının görebileceği şekilde doğrudan durum çubuğuna entegre edildi.
+
+- **Bağlantı Analizi ve Hata Gösterimi İyileştirmeleri** (2026-02-28):
+    - **Detaylı Hata Mesajları**: "Bilinmeyen bir hata oluştu" şeklindeki genel hatalar; "DNS veya Ağ hatası", "SSL/Güvenlik sertifikası hatası" gibi gerçek teknik sorunu yansıtacak şekilde Türkçe ve anlaşılır hale getirildi.
+    - **Sağlayıcı Engeli Atlatma (User-Agent)**: Bazı IPTV sağlayıcılarının (özellikle Xtream/M3U) tarayıcı dışı istekleri engellemesini (403 Forbidden) önlemek için, bağlantı analizi testlerine Chrome "User-Agent" başlığı eklendi.
+    - **SSL Sertifika Bypass**: Geçersiz veya süresi dolmuş SSL sertifikasına sahip sağlayıcılarda bağlantı testinin başarısız olmasını engellemek amacıyla, yalnızca test aşamasında geçerli olacak şekilde SSL doğrulama kısıtlaması esnetildi.
+    - **Zaman Aşımı İyileştirmesi**: Ağır yanıt veren sunucular için bağlantı testi bekleme süresi 10 saniyeden 15 saniyeye çıkarıldı.
+
 - **Çift Gösterim Hatası Giderimi ve Depolama Bilgilendirmesi** (2026-02-28):
     - **7/24 Kanal Sınıflandırma Düzeltmesi**: M3U, Xtream Codes ve Stalker Portal servislerinde "7/24" veya "24/7" ifadesi içeren kanalların yanlışlıkla "Dizi" olarak sınıflandırılması engellendi. Artık kanal adında veya grup/kategori başlığında bu ifadeler geçtiğinde içerik her zaman "Canlı TV" (Live) olarak gruplandırılıyor.
     - **Mükerrer Kayıt Senkronizasyonu**: İndirilenler, Favoriler, Geçmiş ve Listem sayfalarında içeriklerin bazen çift görünmesine neden olan asenkron yarış durumu (Race Condition) giderildi. `SemaphoreSlim` ve UI kanalı atomik güncelleme (`IDispatcherService.Invoke`) mekanizmalarıyla listelerin kararlılığı sağlandı.

@@ -492,6 +492,21 @@ public class ContentDownloadService : IContentDownloadService
                 return;
             }
 
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorMsg = response.StatusCode switch
+                {
+                    System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden => "Yetkisiz erisim. Hesap suresi dolmus veya iptal edilmis olabilir.",
+                    System.Net.HttpStatusCode.NotFound => "Icerik bulunamadi. Kaynak silinmis veya saglayici degistirilmis olabilir.",
+                    _ => $"Sunucu hatasi: {(int)response.StatusCode}"
+                };
+                
+                // Clear any auto resume attempts so it doesn't loop
+                _autoResumeAttempts.TryRemove(downloadId, out _);
+                await MarkFailedAsync(downloadId, errorMsg);
+                return;
+            }
+
             var supportsRange = response.StatusCode == System.Net.HttpStatusCode.PartialContent;
             if (resumedBytes > 0 && !supportsRange)
             {
@@ -665,6 +680,13 @@ public class ContentDownloadService : IContentDownloadService
                 if (response.IsSuccessStatusCode)
                 {
                     return response;
+                }
+
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized ||
+                    response.StatusCode == System.Net.HttpStatusCode.Forbidden ||
+                    response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    return response; // Return fatal errors to be handled by the caller
                 }
 
                 response.Dispose();

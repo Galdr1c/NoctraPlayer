@@ -98,7 +98,17 @@ public static class UserFriendlyErrorMessage
             return FromText(ioEx.Message, "Dosya islemi sirasinda hata olustu. Disk alanini ve dosya erisimini kontrol edin.");
         }
 
-        return FromText(baseException.Message, defaultMessage);
+        if (baseException.GetType().Name == "SocketException")
+        {
+            return "Sunucuya bağlanılamadı (DNS veya Ağ hatası). Bağlantı adresini kontrol edin.";
+        }
+
+        if (baseException.GetType().Name == "AuthenticationException" || baseException.Message.Contains("SSL") || baseException.Message.Contains("certificate"))
+        {
+            return "SSL/Güvenlik sertifikası hatası. 'https://' yerine 'http://' kullanmayı deneyin.";
+        }
+
+        return FromText(baseException.Message, $"Bilinmeyen bir hata oluştu: {baseException.Message}");
     }
 
     public static string FromText(string? rawMessage, string? fallback = null)

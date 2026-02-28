@@ -58,16 +58,29 @@ public class DownloadItem
     public int QueueOrder { get; set; }
 
     [NotMapped]
-    public string StatusText => Status switch
+    public string StatusText
     {
-        DownloadStatus.Queued => "Kuyrukta",
-        DownloadStatus.Downloading => "Indiriliyor",
-        DownloadStatus.Paused => "Duraklatildi",
-        DownloadStatus.Completed => "Tamamlandi",
-        DownloadStatus.Failed => "Hatali",
-        DownloadStatus.Canceled => "Iptal",
-        _ => "-"
-    };
+        get
+        {
+            var text = Status switch
+            {
+                DownloadStatus.Queued => "Kuyrukta",
+                DownloadStatus.Downloading => "Indiriliyor",
+                DownloadStatus.Paused => "Duraklatildi",
+                DownloadStatus.Completed => "Tamamlandi",
+                DownloadStatus.Failed => "Hatali",
+                DownloadStatus.Canceled => "Iptal",
+                _ => "-"
+            };
+
+            if ((Status == DownloadStatus.Failed || Status == DownloadStatus.Paused) && !string.IsNullOrWhiteSpace(ErrorMessage))
+            {
+                return $"{text} - {ErrorMessage}";
+            }
+
+            return text;
+        }
+    }
 
     [NotMapped]
     public double ProgressPercent
