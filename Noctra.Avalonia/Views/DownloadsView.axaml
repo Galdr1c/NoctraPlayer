@@ -181,14 +181,14 @@
               <materialIcons:MaterialIcon Kind="Harddisk" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}"/>
             </Border>
             
-            <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center" Spacing="8">
+            <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center" Spacing="12">
               <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Text="Cihaz Depolama" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
                 <TextBlock Grid.Column="1" Text="{Binding StorageUsageDetailText}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
               </Grid>
               
               <!-- Progress Bar -->
-              <Border Height="6" Background="{DynamicResource Bg1Brush}" CornerRadius="3" ClipToBounds="True">
+              <Border Height="8" Background="{DynamicResource Bg1Brush}" CornerRadius="4" ClipToBounds="True">
                 <Grid>
                   <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="{Binding StorageOtherPercent, Converter={StaticResource DoubleToStarGridLengthConverter}}"/>
@@ -198,7 +198,7 @@
                   </Grid.ColumnDefinitions>
                   
                   <!-- Other Usage (Lighter Purple) -->
-                  <Rectangle Grid.Column="0" Fill="{DynamicResource AccentBrush}" Opacity="0.25"/>
+                  <Rectangle Grid.Column="0" Fill="{DynamicResource AccentLightBrush}"/>
                   
                   <!-- Noctra Usage (Solid Accent Purple) -->
                   <Rectangle Grid.Column="1" Fill="{DynamicResource AccentBrush}"/>
@@ -209,6 +209,35 @@
                   <!-- Free Space (Empty/Background) -->
                   <Rectangle Grid.Column="3" Fill="Transparent"/>
                 </Grid>
+              </Border>
+
+              <!-- Legend -->
+              <WrapPanel Orientation="Horizontal">
+                <StackPanel Orientation="Horizontal" Margin="0,0,12,0" Spacing="6">
+                  <Border Width="10" Height="10" CornerRadius="2" Background="{DynamicResource AccentLightBrush}"/>
+                  <TextBlock Text="Disk Doluluğu" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,12,0" Spacing="6">
+                  <Border Width="10" Height="10" CornerRadius="2" Background="{DynamicResource AccentBrush}"/>
+                  <TextBlock Text="Noctra" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,12,0" Spacing="6">
+                  <Border Width="10" Height="10" CornerRadius="2" Background="{DynamicResource AccentBrush}" Opacity="0.5"/>
+                  <TextBlock Text="İndirilmesi Devam Edenler" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Border Width="10" Height="10" CornerRadius="2" BorderThickness="1" BorderBrush="{DynamicResource TextMutedBrush}" Opacity="0.3"/>
+                  <TextBlock Text="Boş Alan" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
+                </StackPanel>
+              </WrapPanel>
+
+              <!-- Warning -->
+              <Border Background="#33FF4444" CornerRadius="6" Padding="10,6" IsVisible="{Binding ShowStorageWarning}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <materialIcons:MaterialIcon Kind="AlertCircleOutline" Width="14" Height="14" Foreground="#FFFF4444"/>
+                  <TextBlock Text="Dikkat: Disk doluluğu %90'ı geçti. Yeni indirmeler başarısız olabilir." 
+                             Foreground="#FFFF4444" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                </StackPanel>
               </Border>
             </StackPanel>
 

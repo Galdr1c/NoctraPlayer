@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Çift Gösterim Hatası Giderimi ve Depolama Bilgilendirmesi** (2026-02-28):
+    - **Mükerrer Kayıt Senkronizasyonu**: İndirilenler, Favoriler, Geçmiş ve Listem sayfalarında içeriklerin bazen çift görünmesine neden olan asenkron yarış durumu (Race Condition) giderildi. `SemaphoreSlim` ve UI kanalı atomik güncelleme (`IDispatcherService.Invoke`) mekanizmalarıyla listelerin kararlılığı sağlandı.
+    - **Depolama Bilgi Paneli (Legend)**: İndirilenler sayfasındaki depolama barının altına; "Disk Doluluğu", "Noctra", "İndirilenler" (Devam edenler) ve "Boş Alan" verilerini temsil eden renkli bir açıklama paneli eklendi.
+    - **Kritik Depolama Uyarısı**: Cihazın toplam doluluğu (Noctra indirmeleri dahil) %90'ı geçtiğinde, kullanıcıyı yeni indirmelerin başarısız olabileceği konusunda uyaran görsel bir ikaz bandı eklendi.
+    - **Atomik Liste Güncelleme**: Uygulama genelindeki tüm kişisel listeler (`MyList`, `Favorites`, `History`) artık arka plan ve arayüz iş parçacıkları arasında tam senkronize şekilde güncellenerek tutarsız veri gösteriminin önüne geçildi.
+
 - **İndirilenler Sayfası Görselleştirme ve Kontrol İyileştirmeleri** (2026-02-27):
     - **Sıralı Depolama Barı (Stacked Storage)**: Üst bilgi alanındaki depolama barı, "Diğer Doluluk", "Noctra Doluluğu" ve "İnecekler" şeklinde birbirini takip eden mantıksal bölümlere ayrıldı. Bu sayede Noctra'nın disk üzerindeki etkisi net bir şekilde takip edilebilir hale getirildi.
     - **Dinamik Durum Renkleri**: İndirme ilerleme barları duruma göre renklenir hale getirildi (Duraklatıldı: Turuncu, Hata: Kırmızı, İniyor: Mor).

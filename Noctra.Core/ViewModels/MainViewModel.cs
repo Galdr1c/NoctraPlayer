@@ -3047,6 +3047,9 @@ public partial class MainViewModel : ObservableObject
         _ = RefreshDownloadedItemsFromDatabaseAsync();
     }
 
+    [ObservableProperty]
+    private bool _showStorageWarning;
+
     private async Task RefreshDownloadedItemsFromDatabaseAsync()
     {
         // Phase 27: Completely global — no profile guards, no early returns.
@@ -3278,6 +3281,7 @@ public partial class MainViewModel : ObservableObject
                 StorageFreePercent = Math.Max(0, 100.0 - (totalUsedPercent + pendingPercent));
                 
                 StorageUsageDetailText = $"{FormatDownloadBytes(usedSpace)} / {FormatDownloadBytes(totalSpace)}";
+                ShowStorageWarning = (totalUsedPercent + pendingPercent) > 90.0;
             }
         }
         catch (Exception ex)
@@ -3786,100 +3790,110 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowDownloadsLandingEmptyState));
     }
 
+    private readonly SemaphoreSlim _refreshSemaphore = new(1, 1);
+
     private async Task RefreshPersonalListsFromDatabaseAsync()
     {
-        if (!CurrentProfileId.HasValue)
+        await _refreshSemaphore.WaitAsync();
+        try
         {
-            MyList.Clear();
-            FavoriteChannels.Clear();
-            HistoryChannels.Clear();
-            HistoryLiveChannels.Clear();
-            HistorySeriesChannels.Clear();
-            HistoryVodChannels.Clear();
-            DownloadedSeriesItems.Clear();
-            DownloadedVodChannels.Clear();
-            if (CurrentProfileId.HasValue)
+            if (!CurrentProfileId.HasValue)
             {
+                MyList.Clear();
+                FavoriteChannels.Clear();
+                HistoryChannels.Clear();
+                HistoryLiveChannels.Clear();
+                HistorySeriesChannels.Clear();
+                HistoryVodChannels.Clear();
+                DownloadedSeriesItems.Clear();
+                DownloadedVodChannels.Clear();
+                if (CurrentProfileId.HasValue)
+                {
+                    await RefreshDownloadsFromServiceAsync(CurrentProfileId.Value);
+                }
+                else
+                {
+                    ActiveDownloadItems.Clear();
+                    SetDownloadCenterSummaryEmpty();
+                }
+                ShowMyListEmptyState = true;
+                ShowFavoritesEmptyState = true;
+                ShowHistoryEmptyState = true;
+                ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
+                                         DownloadedSeriesItems.Count == 0;
+                return;
+            }
+
+            using var db = await _contextFactory.CreateDbContextAsync();
+            await _watchHistoryService.CleanupOlderThanDaysAsync(CurrentProfileId.Value, 7);
+            var profilePlaylistIds = await GetProfilePlaylistIdsAsync(db, CurrentProfileId.Value);
+
+            if (profilePlaylistIds.Count == 0)
+            {
+                MyList.Clear();
+                FavoriteChannels.Clear();
+                HistoryChannels.Clear();
+                HistoryLiveChannels.Clear();
+                HistorySeriesChannels.Clear();
+                HistoryVodChannels.Clear();
+                DownloadedSeriesItems.Clear();
+                DownloadedVodChannels.Clear();
                 await RefreshDownloadsFromServiceAsync(CurrentProfileId.Value);
+                ShowMyListEmptyState = true;
+                ShowFavoritesEmptyState = true;
+                ShowHistoryEmptyState = true;
+                ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
+                                         DownloadedSeriesItems.Count == 0;
+                return;
             }
-            else
+
+            var myListChannels = await db.Channels
+                .AsNoTracking()
+                .Where(c => profilePlaylistIds.Contains(c.PlaylistId) && c.Type != ChannelType.Series && c.IsInMyList)
+                .OrderBy(c => c.Name)
+                .ToListAsync();
+
+            var myListSeries = await db.Series
+                .AsNoTracking()
+                .Where(s => profilePlaylistIds.Contains(s.PlaylistId) && s.IsInMyList)
+                .OrderBy(s => s.Name)
+                .ToListAsync();
+
+            SetItems(MyList, myListChannels
+                .Cast<object>()
+                .Concat(myListSeries.Cast<object>())
+                .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty));
+
+            var favoriteChannels = await db.Channels
+                .AsNoTracking()
+                .Where(c => profilePlaylistIds.Contains(c.PlaylistId) && c.Type != ChannelType.Series && c.IsFavorite)
+                .OrderBy(c => c.Name)
+                .ToListAsync();
+
+            var favoriteSeries = await db.Series
+                .AsNoTracking()
+                .Where(s => profilePlaylistIds.Contains(s.PlaylistId) && s.IsFavorite)
+                .OrderBy(s => s.Name)
+                .ToListAsync();
+
+            SetItems(FavoriteChannels, favoriteChannels
+                .Cast<object>()
+                .Concat(favoriteSeries.Cast<object>())
+                .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty));
+
+            SetItems(HistoryChannels, await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds));
+            UpdateHistoryBuckets();
+
+            ShowMyListEmptyState = MyList.Count == 0;
+            ShowFavoritesEmptyState = FavoriteChannels.Count == 0;
+            if (ActiveView == AppView.Downloads)
             {
-                ActiveDownloadItems.Clear();
-                SetDownloadCenterSummaryEmpty();
+                await RefreshDownloadedItemsFromDatabaseAsync();
             }
-            ShowMyListEmptyState = true;
-            ShowFavoritesEmptyState = true;
-            ShowHistoryEmptyState = true;
-            ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
-                                     DownloadedSeriesItems.Count == 0;
-            return;
         }
-
-        using var db = await _contextFactory.CreateDbContextAsync();
-        await _watchHistoryService.CleanupOlderThanDaysAsync(CurrentProfileId.Value, 7);
-        var profilePlaylistIds = await GetProfilePlaylistIdsAsync(db, CurrentProfileId.Value);
-
-        if (profilePlaylistIds.Count == 0)
+        finally
         {
-            MyList.Clear();
-            FavoriteChannels.Clear();
-            HistoryChannels.Clear();
-            HistoryLiveChannels.Clear();
-            HistorySeriesChannels.Clear();
-            HistoryVodChannels.Clear();
-            DownloadedSeriesItems.Clear();
-            DownloadedVodChannels.Clear();
-            await RefreshDownloadsFromServiceAsync(CurrentProfileId.Value);
-            ShowMyListEmptyState = true;
-            ShowFavoritesEmptyState = true;
-            ShowHistoryEmptyState = true;
-            ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
-                                     DownloadedSeriesItems.Count == 0;
-            return;
-        }
-
-        var myListChannels = await db.Channels
-            .AsNoTracking()
-            .Where(c => profilePlaylistIds.Contains(c.PlaylistId) && c.Type != ChannelType.Series && c.IsInMyList)
-            .OrderBy(c => c.Name)
-            .ToListAsync();
-
-        var myListSeries = await db.Series
-            .AsNoTracking()
-            .Where(s => profilePlaylistIds.Contains(s.PlaylistId) && s.IsInMyList)
-            .OrderBy(s => s.Name)
-            .ToListAsync();
-
-        SetItems(MyList, myListChannels
-            .Cast<object>()
-            .Concat(myListSeries.Cast<object>())
-            .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty));
-
-        var favoriteChannels = await db.Channels
-            .AsNoTracking()
-            .Where(c => profilePlaylistIds.Contains(c.PlaylistId) && c.Type != ChannelType.Series && c.IsFavorite)
-            .OrderBy(c => c.Name)
-            .ToListAsync();
-
-        var favoriteSeries = await db.Series
-            .AsNoTracking()
-            .Where(s => profilePlaylistIds.Contains(s.PlaylistId) && s.IsFavorite)
-            .OrderBy(s => s.Name)
-            .ToListAsync();
-
-        SetItems(FavoriteChannels, favoriteChannels
-            .Cast<object>()
-            .Concat(favoriteSeries.Cast<object>())
-            .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty));
-
-        SetItems(HistoryChannels, await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds));
-        UpdateHistoryBuckets();
-
-        ShowMyListEmptyState = MyList.Count == 0;
-        ShowFavoritesEmptyState = FavoriteChannels.Count == 0;
-        if (ActiveView == AppView.Downloads)
-        {
-            await RefreshDownloadedItemsFromDatabaseAsync();
+            _refreshSemaphore.Release();
         }
     }
 
@@ -5539,11 +5553,16 @@ public partial class MainViewModel : ObservableObject
 
     private void SetItems<T>(ObservableCollection<T> collection, IEnumerable<T> items)
     {
-        collection.Clear();
-        foreach (var item in items)
+        if (items == null) return;
+        var list = items.ToList();
+        _dispatcherService.Invoke(() =>
         {
-            collection.Add(item);
-        }
+            collection.Clear();
+            foreach (var item in list)
+            {
+                collection.Add(item);
+            }
+        });
     }
 }
 
