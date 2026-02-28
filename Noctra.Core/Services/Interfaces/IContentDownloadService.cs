@@ -59,6 +59,11 @@ public interface IContentDownloadService
         int downloadId,
         CancellationToken cancellationToken = default);
 
+    Task FailActiveDownloadsForProfileAsync(
+        int profileId,
+        string errorMessage,
+        CancellationToken cancellationToken = default);
+
     Task DeleteProfileDownloadsAsync(
         int profileId,
         CancellationToken cancellationToken = default);

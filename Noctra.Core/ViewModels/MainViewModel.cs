@@ -3733,6 +3733,15 @@ public partial class MainViewModel : ObservableObject
 
         if (item.IsPaused)
         {
+            // Phase 28: Enforce profile guard for manual resume
+            if (CurrentProfileId.HasValue && item.ProfileId != CurrentProfileId.Value)
+            {
+                await _dialogService.ShowErrorAsync(
+                    "Devam Ettirilemedi", 
+                    "Bu indirme baska bir hesaba ait. Devam ettirmek icin once o hesaba (profile) gecis yapmalisiniz.");
+                return;
+            }
+
             await _contentDownloadService.ResumeDownloadAsync(item.Id);
         }
         else

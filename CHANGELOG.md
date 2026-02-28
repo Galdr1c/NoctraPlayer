@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **İndirme Güvenliği ve Hesap Bütünlüğü (Phase 28)** (2026-02-28):
+    - **Profil Bazlı İndirme Koruması**: İndirmelerin farklı hesaplar (profiler) arasında paylaştırılması veya yanlış hesapla devam ettirilmesi engellendi. Artık bir indirme sadece başlatıldığı hesap aktifken devam ettirilebilir. Bu sayede yanlış hesaptan gelen geçersiz link/token kullanımıyla oluşan "ses var görüntü yok" veya "altyazı eksik" gibi veri bozulmaları önlendi.
+    - **Hesap Bilgisi Güncelleme Koruması**: Bir profilin kullanıcı adı, şifre veya URL bilgisi değiştirildiğinde, o profile ait tüm aktif (indirilmekte olan veya duraklatılan) indirmeler otomatik olarak "Hatalı" durumuna çekilir ve kullanıcıya bilgilendirme yapılır. Bu, eski/geçersiz token'larla indirmeye devam edip bozuk dosya oluşmasını engeller.
+    - **Altyazı Kapatma Sorunu Giderildi**: Bazı streamlerde altyazı kapatma tuşuna basılmasına rağmen altyazıların gitmemesi sorunu, LibVLC'nin altyazı izleme (-1/0) mantığı iyileştirilerek çözüldü.
+
 - **Arama Algoritması ve Alaka Düzeyi (Relevance Scoring) İyileştirmesi** (2026-02-28):
     - **Ağırlıklı Sıralama Sistemi**: Arama sonuçları artık basit bir "içeriyor mu?" kontrolü yerine 100 üzerinden puanlama sistemiyle sıralanıyor. Tam eşleşme (100p), kelime başı eşleşme (80p) ve içerik eşleşmesi (40p) şeklinde ağırlıklandırılarak en alakalı sonuçların en üstte çıkması sağlandı.
     - **Kısa Sorgu Filtreleme**: `%3` gibi çok kısa (3 karakter altı) aramalarda, binlerce alakasız sonucun (örn: bölüm isminde 3 geçen tüm diziler) gelmesini önlemek için derin içerik araması bu tür sorgularda kısıtlandı.

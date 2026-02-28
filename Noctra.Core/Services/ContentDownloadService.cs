@@ -206,6 +206,44 @@ public class ContentDownloadService : IContentDownloadService
             .ToListAsync(cancellationToken);
     }
 
+    public async Task FailActiveDownloadsForProfileAsync(
+        int profileId,
+        string errorMessage,
+        CancellationToken cancellationToken = default)
+    {
+        using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        
+        var activeItems = await db.DownloadItems
+            .Where(d => d.ProfileId == profileId && 
+                        (d.Status == DownloadStatus.Queued || 
+                         d.Status == DownloadStatus.Downloading || 
+                         d.Status == DownloadStatus.Paused))
+            .ToListAsync(cancellationToken);
+
+        if (activeItems.Count == 0) return;
+
+        foreach (var item in activeItems)
+        {
+            // Cancel any running worker for this item
+            if (_activeDownloadCts.TryGetValue(item.Id, out var cts))
+            {
+                cts.Cancel();
+            }
+
+            // Mark as Failed in DB
+            item.Status = DownloadStatus.Failed;
+            item.ErrorMessage = errorMessage;
+            item.UpdatedAt = DateTime.UtcNow;
+            
+            _queuedIds.TryRemove(item.Id, out _);
+            _pauseRequestedIds.TryRemove(item.Id, out _);
+            _autoResumeAttempts.TryRemove(item.Id, out _);
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        DownloadsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     public Task DeleteProfileDownloadsAsync(
         int profileId,
         CancellationToken cancellationToken = default)
@@ -289,6 +327,12 @@ public class ContentDownloadService : IContentDownloadService
         {
             return;
         }
+
+        // Phase 28: Enforce profile ownership. 
+        // We do not have the current active profile ID here easily without changing the interface,
+        // but the UI (MainViewModel) passes the profileId to GetDownloadsAsync.
+        // For Resume, we will assume the caller ensures the profile is correct,
+        // but we'll add a guard in MainViewModel before calling this.
 
         if (item.Status != DownloadStatus.Paused && item.Status != DownloadStatus.Failed)
         {

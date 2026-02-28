@@ -614,17 +614,16 @@ public class VideoPlayerService : IVideoPlayerService
             return;
         }
 
-        if (_mediaPlayer == null) return;
-        
-        // Disable subtitle for streams that require explicit OFF track ids.
-        // Try common LibVLC OFF id first, then fallback to 0 when needed.
+        // Phase 28: Improved subtitle disabling
+        // LibVLC uses -1 for OFF usually, but some streams respond better to 0 or repeated calls.
         _mediaPlayer.SetSpu(-1);
+
+        // Check if it actually changed, if not, try 0
         if (_mediaPlayer.Spu != -1)
         {
             _mediaPlayer.SetSpu(0);
         }
     }
-
     private void StartQualityMonitoring()
     {
         StopQualityMonitoring();

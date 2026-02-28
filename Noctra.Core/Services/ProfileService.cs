@@ -118,6 +118,12 @@ public class ProfileService : IProfileService
             await db.Playlists
                 .Where(pl => pl.ProfileId == profile.Id)
                 .ExecuteDeleteAsync();
+
+            // Phase 28: Fail active downloads for this profile because credentials changed
+            // and the source URLs/tokens may no longer be valid.
+            await _contentDownloadService.FailActiveDownloadsForProfileAsync(
+                profile.Id, 
+                "Hesap bilgileri degistirildi. Indirmeyi yeni bilgilerle bastan baslatmaniz gerekiyor.");
         }
         await transaction.CommitAsync();
         return profile;
