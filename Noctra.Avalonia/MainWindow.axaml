@@ -402,112 +402,222 @@
 
 
 
-        <!-- Series Detail Overlay -->
-        <Grid x:Name="SeriesDetailOverlay" Background="{DynamicResource BackgroundGradientBrush}"
+        <!-- Series Detail Overlay (Modern Netflix Style) -->
+        <Grid x:Name="SeriesDetailOverlay" 
+              Background="{DynamicResource BackgroundGradientBrush}"
               IsVisible="{Binding IsSeriesDetailVisible}" ZIndex="998">
-          <Grid Margin="52,88">
-            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-            <Grid ColumnDefinitions="260,*" Margin="0,0,0,28">
-              <Border Height="360" CornerRadius="14" ClipToBounds="True" Background="{DynamicResource Surface0Brush}">
-                <controls:RemoteImage Stretch="UniformToFill" Url="{Binding SelectedSeriesPosterUrl}"/>
-              </Border>
-              <StackPanel Grid.Column="1" Margin="28,0,0,0">
-                <Button Command="{Binding CloseSeriesDetailCommand}" HorizontalAlignment="Left" Margin="0,0,0,20" Background="Transparent" BorderThickness="0" Cursor="Hand">
-                  <materialIcons:MaterialIcon Kind="ArrowLeft" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                </Button>
-                <TextBlock Text="{Binding SelectedSeries.Name}" FontSize="44" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap"/>
-                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                  <TextBlock Text="{Binding SelectedSeries.Genre}" FontSize="16" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,16,0"/>
-                  <TextBlock Text="{Binding SelectedSeries.ReleaseYear}" FontSize="16" Foreground="{DynamicResource TextMutedBrush}"/>
-                </StackPanel>
-                <TextBlock Text="{Binding SelectedSeriesOverview}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" Margin="0,16,0,0" MaxHeight="96"/>
-                <TextBlock Text="{Binding SelectedSeriesCast, StringFormat='Oyuncular: {0}'}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,14,0,0"
-                           IsVisible="{Binding SelectedSeriesCast, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
-                <TextBlock Text="Detaylar y&#252;kleniyor..." FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,10,0,0"
-                           IsVisible="{Binding IsSelectedSeriesMetadataLoading, Converter={StaticResource BoolToVisibilityConverter}}"/>
-              </StackPanel>
+          
+          <Grid>
+            <!-- Background Backdrop with Blur -->
+            <Grid IsHitTestVisible="False" Opacity="0.3">
+                <controls:RemoteImage Stretch="UniformToFill" Url="{Binding SelectedSeriesPosterUrl}">
+                    <controls:RemoteImage.Effect>
+                        <BlurEffect Radius="60"/>
+                    </controls:RemoteImage.Effect>
+                </controls:RemoteImage>
+                <Border Background="{DynamicResource BackgroundGradientBrush}"/>
             </Grid>
-            <ScrollViewer Grid.Row="1" Padding="0,8,0,0">
-              <Grid>
-                <!-- Normal detay görünümü -->
-                <ItemsControl ItemsSource="{Binding SelectedSeries.Seasons}"
-                              IsVisible="{Binding IsDownloadedSeriesDetailMode, Converter={StaticResource InverseBoolConverter}}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                      <StackPanel Margin="0,0,0,40">
-                        <TextBlock Text="{Binding SeasonNumber, StringFormat='Sezon {0}'}" FontSize="24" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,16"/>
-                        <ItemsControl ItemsSource="{Binding Episodes}">
-                          <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                          <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                              <Button Margin="0,0,16,24" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand" x:DataType="models:Episode"
-                                      Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).PlayEpisodeCommand}" CommandParameter="{Binding}">
-                                <Border Background="{DynamicResource Bg1Brush}" CornerRadius="8" Width="240">
-                                  <Grid RowDefinitions="Auto,*">
-                                    <Border Height="100" CornerRadius="8,8,0,0" ClipToBounds="True">
-                                      <Grid>
-                                        <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
-                                        <Border Background="#44000000"/>
-                                        <materialIcons:MaterialIcon Kind="Play" Foreground="White" Width="24" Height="24" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.6"/>
-                                        <Border Width="24" Height="24" CornerRadius="12" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8"
-                                                Background="{DynamicResource AccentBrush}" IsVisible="{Binding ., Converter={StaticResource EpisodeCompletionBadgeVisibilityConverter}}">
-                                          <materialIcons:MaterialIcon Kind="Check" Foreground="White" Width="14" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                      </Grid>
-                                    </Border>
-                                    <Border Grid.Row="1" Padding="12">
-                                      <StackPanel>
-                                        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis"/>
-                                        <ProgressBar Height="4" Margin="0,12,0,0" CornerRadius="0" Minimum="0" Maximum="100" Value="{Binding WatchedPercentage}"
-                                                     Foreground="{DynamicResource AccentBrush}" Background="#4D000000" BorderThickness="0"
-                                                     IsVisible="{Binding ., Converter={StaticResource EpisodeWatchedProgressVisibilityConverter}}"/>
-                                      </StackPanel>
-                                    </Border>
-                                  </Grid>
-                                </Border>
-                              </Button>
-                            </DataTemplate>
-                          </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                      </StackPanel>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
 
-                <!-- İndirilen dizi görünümü: sezonlara ayrılmış düz liste -->
-                <ItemsControl ItemsSource="{Binding SelectedSeries.Seasons}"
-                              IsVisible="{Binding IsDownloadedSeriesDetailMode}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="models:Season">
-                      <StackPanel Margin="0,0,0,20">
-                        <TextBlock Text="{Binding SeasonNumber, StringFormat='Season {0}'}" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
-                        <ItemsControl ItemsSource="{Binding Episodes}">
-                          <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="models:Episode">
-                              <Button Margin="0,0,0,8"
-                                      Padding="12,10"
-                                      Background="{DynamicResource Surface0Brush}"
-                                      BorderBrush="{DynamicResource BorderBrush}"
-                                      BorderThickness="1"
-                                      HorizontalContentAlignment="Stretch"
-                                      Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).PlayEpisodeCommand}"
-                                      CommandParameter="{Binding}">
-                                <Grid ColumnDefinitions="*,Auto">
-                                  <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding BaseDisplayName}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding SeriesInfoText}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" Margin="0,2,0,0"
-                                               IsVisible="{Binding SeriesInfoText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
-                                  </StackPanel>
-                                  <materialIcons:MaterialIcon Grid.Column="2" Kind="Play" Width="16" Height="16" Foreground="{DynamicResource TextMutedBrush}"/>
-                                </Grid>
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+              <Grid Margin="60,40" RowDefinitions="Auto,Auto">
+                
+                <!-- Header Section -->
+                <Grid ColumnDefinitions="300,*" Grid.Row="0">
+                  <!-- Large Poster -->
+                  <Border Grid.Column="0" Height="450" CornerRadius="12" ClipToBounds="True" Background="{DynamicResource Surface0Brush}">
+                    <Border.BoxShadow>
+                      <BoxShadows>0 15 50 5 #88000000</BoxShadows>
+                    </Border.BoxShadow>
+                    <controls:RemoteImage Stretch="UniformToFill" Url="{Binding SelectedSeriesPosterUrl}"/>
+                  </Border>
+
+                  <!-- Metadata & Info -->
+                  <StackPanel Grid.Column="1" Margin="48,0,0,0" VerticalAlignment="Center">
+                    <!-- Back button -->
+                    <Button Command="{Binding CloseSeriesDetailCommand}" HorizontalAlignment="Left" Margin="0,0,0,24" 
+                            Background="#33000000" CornerRadius="30" Width="48" Height="48" Padding="0">
+                      <materialIcons:MaterialIcon Kind="ArrowLeft" Width="24" Height="24" Foreground="White"/>
+                    </Button>
+
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{Binding SelectedSeries.Name}" FontSize="52" FontWeight="Black" 
+                                   Foreground="White" TextWrapping="Wrap" LineHeight="58" LetterSpacing="-1"/>
+                    </StackPanel>
+
+                    <!-- Badges & Stats -->
+                    <StackPanel Orientation="Horizontal" Margin="0,18,0,0" Spacing="16" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding SelectedSeriesYears}" Foreground="{DynamicResource TextMutedBrush}" FontSize="16"/>
+                      <TextBlock Text="{Binding SelectedSeries.Genre}" Foreground="{DynamicResource TextMutedBrush}" FontSize="16"/>
+                      
+                      <Border BorderBrush="{DynamicResource TextMutedBrush}" BorderThickness="1" CornerRadius="3" Padding="4,0" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding SelectedSeriesAgeRating}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" FontWeight="Bold"/>
+                      </Border>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0" Spacing="16">
+                      <TextBlock Text="{Binding SelectedSeriesTotalSeasonsCount, StringFormat='{}{0} Sezon'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="16"/>
+                      <TextBlock Text="{Binding SelectedSeriesTotalEpisodesCount, StringFormat='{}{0} Bölüm'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="16"/>
+                    </StackPanel>
+
+                    <!-- Description -->
+                    <TextBlock Text="{Binding SelectedSeriesOverview}" FontSize="17" Foreground="White" 
+                               TextWrapping="Wrap" Margin="0,24,0,0" MaxHeight="120" Opacity="0.9" LineHeight="24"/>
+                    
+                    <TextBlock Text="{Binding SelectedSeriesCast, StringFormat='Oyuncular: {0}'}" FontSize="14" 
+                               Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,16,0,0"
+                               IsVisible="{Binding SelectedSeriesCast, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+
+                    <!-- Action Buttons -->
+                    <StackPanel Orientation="Horizontal" Margin="0,32,0,0" Spacing="12">
+                        <Button Command="{Binding PlayEpisodeCommand}" CommandParameter="{Binding SelectedSeriesContinueEpisode}" 
+                                Background="White" Foreground="Black" CornerRadius="6" Padding="32,14" FontWeight="Bold" FontSize="18">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <materialIcons:MaterialIcon Kind="Play" Width="24" Height="24"/>
+                                <TextBlock Text="Oynat" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Command="{Binding PlayEpisodeCommand}" CommandParameter="{Binding SelectedSeriesContinueEpisode}"
+                                Background="#33FFFFFF" Foreground="White" CornerRadius="6" Padding="24,14" FontWeight="Bold" FontSize="16"
+                                IsVisible="{Binding SelectedSeriesContinueText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <materialIcons:MaterialIcon Kind="History" Width="20" Height="20"/>
+                                <TextBlock Text="{Binding SelectedSeriesContinueText}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Command="{Binding AddToMyListCommand}" CommandParameter="{Binding SelectedSeries}"
+                                Width="52" Height="52" CornerRadius="26" Background="#33FFFFFF" Padding="0" BorderThickness="0">
+                            <Panel>
+                                <materialIcons:MaterialIcon Kind="Minus" Width="24" Height="24" Foreground="White"
+                                                            IsVisible="{Binding SelectedSeries.IsInMyList}"/>
+                                <materialIcons:MaterialIcon Kind="Plus" Width="24" Height="24" Foreground="White"
+                                                            IsVisible="{Binding !SelectedSeries.IsInMyList}"/>
+                            </Panel>
+                        </Button>
+
+                        <Button Command="{Binding ToggleFavoriteCommand}" CommandParameter="{Binding SelectedSeries}"
+                                Width="52" Height="52" CornerRadius="26" Background="#33FFFFFF" Padding="0" BorderThickness="0">
+                            <Panel>
+                                <materialIcons:MaterialIcon Kind="Heart" Width="22" Height="22" Foreground="#E50914" 
+                                                            IsVisible="{Binding SelectedSeries.IsFavorite}"/>
+                                <materialIcons:MaterialIcon Kind="HeartOutline" Width="22" Height="22" Foreground="White" 
+                                                            IsVisible="{Binding !SelectedSeries.IsFavorite}"/>
+                            </Panel>
+                        </Button>
+                    </StackPanel>
+                  </StackPanel>
+                </Grid>
+
+                <!-- Seasons & Episodes -->
+                <Grid Grid.Row="1" Margin="0,48,0,0" RowDefinitions="Auto,Auto">
+                  <!-- Seasons Tab Menu -->
+                  <StackPanel Grid.Row="0">
+                      <ListBox ItemsSource="{Binding SelectedSeries.Seasons}" 
+                               SelectedItem="{Binding SelectedSeason}"
+                               Background="Transparent" BorderThickness="0" Padding="0">
+                          <ListBox.ItemsPanel>
+                              <ItemsPanelTemplate>
+                                  <StackPanel Orientation="Horizontal" Spacing="32"/>
+                              </ItemsPanelTemplate>
+                          </ListBox.ItemsPanel>
+                          <ListBox.ItemTemplate>
+                              <DataTemplate>
+                                  <TextBlock Text="{Binding SeasonNumber, StringFormat='Sezon {0}'}" 
+                                             FontSize="18" FontWeight="SemiBold" 
+                                             VerticalAlignment="Center"/>
+                              </DataTemplate>
+                          </ListBox.ItemTemplate>
+                          <ListBox.Styles>
+                              <Style Selector="ListBoxItem">
+                                  <Setter Property="Padding" Value="0,0,0,12"/>
+                                  <Setter Property="Background" Value="Transparent"/>
+                                  <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                                  <Setter Property="BorderThickness" Value="0,0,0,3"/>
+                                  <Setter Property="BorderBrush" Value="Transparent"/>
+                                  <Setter Property="Transitions">
+                                      <Transitions>
+                                          <BrushTransition Property="Foreground" Duration="0:0:0.2"/>
+                                          <BrushTransition Property="BorderBrush" Duration="0:0:0.2"/>
+                                      </Transitions>
+                                  </Setter>
+                              </Style>
+                              <Style Selector="ListBoxItem:selected">
+                                  <Setter Property="Foreground" Value="White"/>
+                                  <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                  <Setter Property="Background" Value="Transparent"/>
+                              </Style>
+                              <Style Selector="ListBoxItem:pointerover">
+                                  <Setter Property="Foreground" Value="White"/>
+                                  <Setter Property="Background" Value="Transparent"/>
+                              </Style>
+                          </ListBox.Styles>
+                      </ListBox>
+                      <Border Height="1" Background="#1AFFFFFF" Margin="0,0,0,24"/>
+                  </StackPanel>
+
+                  <!-- Episode Row List -->
+                  <ItemsControl Grid.Row="1" ItemsSource="{Binding SelectedSeason.Episodes}">
+                      <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                              <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).PlayEpisodeCommand}"
+                                      CommandParameter="{Binding}"
+                                      Padding="0" Background="Transparent" BorderThickness="0" Margin="0,0,0,4" HorizontalAlignment="Stretch">
+                                  <Border Background="#0DFFFFFF" CornerRadius="8" Padding="16" x:Name="EpBorder" BorderThickness="2,0,0,0" BorderBrush="Transparent">
+                                      <Grid ColumnDefinitions="60, 200, *, Auto">
+                                          <!-- Index -->
+                                          <TextBlock Text="{Binding EpisodeNumber}" FontSize="28" FontWeight="Bold" 
+                                                     Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.5"/>
+                                          
+                                          <!-- Thumbnail -->
+                                          <Border Grid.Column="1" Height="110" CornerRadius="8" ClipToBounds="True" Margin="16,0" Background="#1AFFFFFF">
+                                              <Grid>
+                                                  <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
+                                                  <Border Background="#22000000"/>
+                                                  <materialIcons:MaterialIcon Kind="Play" Width="32" Height="32" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.7"/>
+                                                  
+                                                  <!-- Progress Bar (Internal) -->
+                                                  <ProgressBar VerticalAlignment="Bottom" Height="3" Minimum="0" Maximum="100" 
+                                                               Value="{Binding WatchedPercentage}" Foreground="{DynamicResource AccentBrush}" Background="#4D000000" BorderThickness="0"
+                                                               IsVisible="{Binding WatchedPercentage, Converter={StaticResource CountToVisibilityConverter}}"/>
+                                              </Grid>
+                                          </Border>
+
+                                          <!-- Info -->
+                                          <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="6" Margin="12,0">
+                                              <StackPanel Orientation="Horizontal" Spacing="16">
+                                                  <TextBlock Text="{Binding Name}" FontSize="18" FontWeight="Bold" Foreground="White"/>
+                                                  <TextBlock Text="45 dk" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+                                                  
+                                                  <!-- Status Badge -->
+                                                  <Border Background="#3346D369" CornerRadius="4" Padding="6,2" VerticalAlignment="Center"
+                                                          IsVisible="{Binding IsCompleted}">
+                                                      <TextBlock Text="İZLENDİ" FontSize="10" FontWeight="Bold" Foreground="#46D369"/>
+                                                  </Border>
+                                              </StackPanel>
+                                              <TextBlock Text="{Binding Plot}" 
+                                                         FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" MaxHeight="44" Opacity="0.7" LineHeight="20"/>
+                                          </StackPanel>
+                                          
+                                          <!-- Action -->
+                                          <materialIcons:MaterialIcon Grid.Column="3" Kind="Download" Width="22" Height="22" 
+                                                                      Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" Margin="0,0,16,0" Opacity="0.6"/>
+                                      </Grid>
+                                  </Border>
                               </Button>
-                            </DataTemplate>
-                          </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                      </StackPanel>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                          </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                      <ItemsControl.Styles>
+                          <Style Selector="Button:pointerover Border#EpBorder">
+                              <Setter Property="Background" Value="#1AFFFFFF"/>
+                          </Style>
+                          <Style Selector="Button:pressed Border#EpBorder">
+                              <Setter Property="Background" Value="#22FFFFFF"/>
+                          </Style>
+                      </ItemsControl.Styles>
+                  </ItemsControl>
+                </Grid>
+
               </Grid>
             </ScrollViewer>
           </Grid>

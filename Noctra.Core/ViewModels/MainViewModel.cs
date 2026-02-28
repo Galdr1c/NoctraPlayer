@@ -129,6 +129,33 @@ public partial class MainViewModel : ObservableObject
     private string _selectedSeriesCast = string.Empty;
 
     [ObservableProperty]
+    private string _selectedSeriesMatchPercentage = "98% Eşleşme";
+
+    [ObservableProperty]
+    private string _selectedSeriesYears = "";
+
+    [ObservableProperty]
+    private int _selectedSeriesTotalEpisodesCount;
+
+    [ObservableProperty]
+    private int _selectedSeriesTotalSeasonsCount;
+
+    [ObservableProperty]
+    private string _selectedSeriesAgeRating = "16+";
+
+    [ObservableProperty]
+    private bool _selectedSeriesIsHd = true;
+
+    [ObservableProperty]
+    private string? _selectedSeriesContinueText;
+
+    [ObservableProperty]
+    private Episode? _selectedSeriesContinueEpisode;
+
+    [ObservableProperty]
+    private Season? _selectedSeason;
+
+    [ObservableProperty]
     private bool _isSelectedSeriesMetadataLoading;
 
     [ObservableProperty]
@@ -5015,6 +5042,54 @@ public partial class MainViewModel : ObservableObject
             SelectedSeriesBackdropUrl = null;
             SelectedSeriesOverview = series.Plot ?? string.Empty;
             SelectedSeriesCast = string.Empty;
+
+            // Initial basic metadata
+            SelectedSeriesTotalEpisodesCount = series.Seasons.Sum(s => s.Episodes.Count);
+            SelectedSeriesTotalSeasonsCount = series.SeasonCountSafe;
+            SelectedSeriesYears = series.ReleaseYear?.ToString() ?? "";
+            
+            // Random match for demo/vibe as in Netflix
+            SelectedSeriesMatchPercentage = $"{90 + new Random().Next(10)}% Eşleşme";
+
+            // Find last watched or first episode for "Continue" button
+            var allEpisodes = series.Seasons
+                .OrderBy(s => s.SeasonNumber)
+                .SelectMany(s => s.Episodes.OrderBy(e => e.EpisodeNumber))
+                .ToList();
+            
+            var lastWatched = allEpisodes.LastOrDefault(e => e.LastWatched.HasValue);
+            if (lastWatched != null)
+            {
+                var nextIndex = allEpisodes.IndexOf(lastWatched) + 1;
+                if (nextIndex < allEpisodes.Count)
+                {
+                    var next = allEpisodes[nextIndex];
+                    SelectedSeriesContinueEpisode = next;
+                    SelectedSeriesContinueText = $"S{next.Season?.SeasonNumber ?? 1} B{next.EpisodeNumber}'den Devam Et";
+                }
+                else
+                {
+                    SelectedSeriesContinueEpisode = lastWatched;
+                    SelectedSeriesContinueText = $"S{lastWatched.Season?.SeasonNumber ?? 1} B{lastWatched.EpisodeNumber}'i Yeniden İzle";
+                }
+            }
+            else if (allEpisodes.Count > 0)
+            {
+                var first = allEpisodes[0];
+                SelectedSeriesContinueEpisode = first;
+                SelectedSeriesContinueText = $"S{first.Season?.SeasonNumber ?? 1} B{first.EpisodeNumber}'den Başla";
+            }
+            else
+            {
+                SelectedSeriesContinueEpisode = null;
+                SelectedSeriesContinueText = null;
+            }
+
+            // Set first season by default
+            if (series.Seasons.Count > 0 && SelectedSeason == null)
+            {
+                SelectedSeason = series.Seasons.OrderBy(s => s.SeasonNumber).FirstOrDefault();
+            }
 
             var metadata = await _metadataService.FetchMetadataAsync(series.Name, ChannelType.Series);
             if (metadata == null || SelectedSeries?.Id != series.Id)
