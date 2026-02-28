@@ -356,16 +356,22 @@ public class XtreamCodesService : IXtreamCodesService
 
         return series
             .Where(s => s.SeriesId > 0)
-            .Select(s => new Channel
+            .Select(s => 
             {
-                Name = SafeName(s.Name, "Dizi"),
-                StreamUrl = string.Empty,
-                LogoUrl = s.Cover,
-                GroupTitle = ResolveCategory(s.CategoryId, null, categories, "Series"),
-                Type = ChannelType.Series,
-                Plot = s.Plot,
-                ReleaseYear = ParseInt(s.Year),
-                Rating = ParseDouble(s.Rating)
+                var groupTitle = ResolveCategory(s.CategoryId, null, categories, "Series");
+                var isLive = SeriesInfoParser.IsLiveSeries(s.Name) || SeriesInfoParser.IsLiveSeries(groupTitle);
+                
+                return new Channel
+                {
+                    Name = SafeName(s.Name, "Dizi"),
+                    StreamUrl = string.Empty,
+                    LogoUrl = s.Cover,
+                    GroupTitle = groupTitle,
+                    Type = isLive ? ChannelType.Live : ChannelType.Series,
+                    Plot = s.Plot,
+                    ReleaseYear = ParseInt(s.Year),
+                    Rating = ParseDouble(s.Rating)
+                };
             })
             .ToList();
     }
@@ -478,6 +484,9 @@ public class XtreamCodesService : IXtreamCodesService
         string password,
         IReadOnlyDictionary<string, string> categories)
     {
+        var groupTitle = ResolveCategory(series.CategoryId, null, categories, "Series");
+        var isLive = SeriesInfoParser.IsLiveSeries(series.Name) || SeriesInfoParser.IsLiveSeries(groupTitle);
+
         foreach (var ep in episodeArray.EnumerateArray())
         {
             var id = ParseLong(GetStringOrNull(ep, "id") ?? GetStringOrNull(ep, "episode_id"));
@@ -502,8 +511,8 @@ public class XtreamCodesService : IXtreamCodesService
                 Name = $"{prefix} {episodeTitle}".Trim(),
                 StreamUrl = $"{baseUrl}/series/{Uri.EscapeDataString(username)}/{Uri.EscapeDataString(password)}/{id.Value}.{extension}",
                 LogoUrl = series.Cover,
-                GroupTitle = ResolveCategory(series.CategoryId, null, categories, "Series"),
-                Type = ChannelType.Series,
+                GroupTitle = groupTitle,
+                Type = isLive ? ChannelType.Live : ChannelType.Series,
                 Plot = plot ?? series.Plot,
                 ReleaseYear = ParseInt(series.Year),
                 Rating = ParseDouble(series.Rating)

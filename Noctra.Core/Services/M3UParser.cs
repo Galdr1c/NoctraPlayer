@@ -243,7 +243,13 @@ public partial class M3UParser : IM3UParser
         var lowerGroup = groupTitle?.ToLowerInvariant() ?? "";
         var lowerName = name.ToLowerInvariant();
 
-        // 1. URL Pattern Analizi (Kesin Belirteçler)
+        // 1. En Güçlü Belirteç: 7/24 veya 24/7 Kanalları (Canlı Döngü)
+        if (SeriesInfoParser.IsLiveSeries(name) || SeriesInfoParser.IsLiveSeries(groupTitle))
+        {
+            return ChannelType.Live;
+        }
+
+        // 2. URL Pattern Analizi (Kesin Belirteçler)
         if (lowerUrl.Contains("/series/") || lowerUrl.Contains("/tv_show/") || lowerUrl.Contains("type=series"))
             return ChannelType.Series;
 
@@ -253,7 +259,7 @@ public partial class M3UParser : IM3UParser
         if (lowerUrl.Contains("/live/") || lowerUrl.Contains("type=live"))
             return ChannelType.Live;
 
-        // 2. Başlık ve İsim Analizi (Regex + Keywords)
+        // 3. Başlık ve İsim Analizi (Regex + Keywords)
         // Dizi: S01E01, 1x01, Sezon 1, Bölüm 1
         if (SeriesInfoParser.IsSeries(name) || 
             lowerName.Contains("bolum") ||
@@ -271,7 +277,7 @@ public partial class M3UParser : IM3UParser
             return ChannelType.VOD;
         }
 
-        // 3. Grup Başlığı Analizi (En Güçlü İkinci Sinyal)
+        // 4. Grup Başlığı Analizi (En Güçlü İkinci Sinyal)
         if (lowerGroup.Contains("series") || 
             lowerGroup.Contains("dizi") || 
             lowerGroup.Contains("tv show") || 

@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **Çift Gösterim Hatası Giderimi ve Depolama Bilgilendirmesi** (2026-02-28):
+    - **7/24 Kanal Sınıflandırma Düzeltmesi**: M3U, Xtream Codes ve Stalker Portal servislerinde "7/24" veya "24/7" ifadesi içeren kanalların yanlışlıkla "Dizi" olarak sınıflandırılması engellendi. Artık kanal adında veya grup/kategori başlığında bu ifadeler geçtiğinde içerik her zaman "Canlı TV" (Live) olarak gruplandırılıyor.
     - **Mükerrer Kayıt Senkronizasyonu**: İndirilenler, Favoriler, Geçmiş ve Listem sayfalarında içeriklerin bazen çift görünmesine neden olan asenkron yarış durumu (Race Condition) giderildi. `SemaphoreSlim` ve UI kanalı atomik güncelleme (`IDispatcherService.Invoke`) mekanizmalarıyla listelerin kararlılığı sağlandı.
     - **Depolama Bilgi Paneli (Legend)**: İndirilenler sayfasındaki depolama barının altına; "Disk Doluluğu", "Noctra", "İndirilenler" (Devam edenler) ve "Boş Alan" verilerini temsil eden renkli bir açıklama paneli eklendi.
     - **Kritik Depolama Uyarısı**: Cihazın toplam doluluğu (Noctra indirmeleri dahil) %90'ı geçtiğinde, kullanıcıyı yeni indirmelerin başarısız olabileceği konusunda uyaran görsel bir ikaz bandı eklendi.

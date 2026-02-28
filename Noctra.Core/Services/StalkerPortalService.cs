@@ -724,7 +724,7 @@ public class StalkerPortalService : IStalkerPortalService
         foreach (var item in items)
         {
             var streamUrl = NormalizeStreamCommand(item.Cmd, baseUrl);
-            
+
             // Stalker API genellikle diziler için 'cmd' döndürmez.
             // Arayüzde görünebilmesi için onlara geçici bir kimlik linki atıyoruz.
             if (string.IsNullOrWhiteSpace(streamUrl) && channelType == ChannelType.Series && !string.IsNullOrWhiteSpace(item.Id))
@@ -741,19 +741,30 @@ public class StalkerPortalService : IStalkerPortalService
                     : channelType == ChannelType.Live ? "Live"
                     : channelType == ChannelType.Series ? "Series" : "VOD");
 
+            var name = string.IsNullOrWhiteSpace(item.Name) ? "İsimsiz Kanal" : item.Name.Trim();
+
+            // 7/24 ve canlı dizi kanallarını Live olarak sınıflandır
+            var finalChannelType = channelType;
+            if (finalChannelType == ChannelType.Series || finalChannelType == ChannelType.VOD)
+            {
+                if (SeriesInfoParser.IsLiveSeries(name) || SeriesInfoParser.IsLiveSeries(group))
+                {
+                    finalChannelType = ChannelType.Live;
+                }
+            }
+
             channels.Add(new Channel
             {
-                Name       = string.IsNullOrWhiteSpace(item.Name) ? "İsimsiz Kanal" : item.Name.Trim(),
+                Name       = name,
                 StreamUrl  = streamUrl,
                 LogoUrl    = NormalizeLogoUrl(item.Logo, baseUrl),
                 GroupTitle = group,
-                Type       = channelType
+                Type       = finalChannelType
             });
         }
 
         return channels;
     }
-
     // ═══════════════════════════════════════════════════════════
     //  HTTP
     // ═══════════════════════════════════════════════════════════
