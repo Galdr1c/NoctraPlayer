@@ -80,6 +80,8 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<Series> _latestSeries = new();
 
+    private List<Series> _allSeriesCache = new();
+
     [ObservableProperty]
     private ObservableCollection<Series> _seriesViewItems = new();
 
@@ -524,25 +526,29 @@ public partial class MainViewModel : ObservableObject
                                                                         ChannelLoadingStats = $"{loadedCats} / {totalCats} kategori • {groupName}";
                                                                     });
 
-                                                                    if (channels.Any(c => c.Type == ChannelType.Series))
-                                                                    {
-                                                                        await _mediaService.AggregateContentAsync(playlist.Id);
-                                                                        _mediaService.RaiseAggregationCompleted(playlist.Id);
-                                                                    }
-                                                            
                                                                     if (SelectedPlaylist?.Id == playlist.Id && SelectedGroup == groupName)
                                                                     {
                                                                         _ = ThrottledLoadChannelsAsync(playlist.Id);
                                                                     }
-                                                                },
-                                                                cancellationToken: CancellationToken.None);                            
-                                                            _dispatcherService.BeginInvoke(() => 
-                                                            {
-                                                                StatusMessage = "Xtream içerikleri yüklendi ✓";
-                                                                IsChannelLoading = false;
-                                                                ChannelLoadingProgress = 100;
-                                                            });
-                                                        }
+                                                                    },
+                                                                    cancellationToken: CancellationToken.None);
+
+                                                                    _ = Task.Run(async () =>
+                                                                    {
+                                                                    try
+                                                                    {
+                                                                    await _mediaService.AggregateContentAsync(playlist.Id);
+                                                                    _mediaService.RaiseAggregationCompleted(playlist.Id);
+                                                                    }
+                                                                    catch { }
+                                                                    });
+
+                                                                    _dispatcherService.BeginInvoke(() =>
+                                                                    {
+                                                                    StatusMessage = "Xtream içerikleri yüklendi ✓";
+                                                                    IsChannelLoading = false;
+                                                                    ChannelLoadingProgress = 100;
+                                                                    });                                                        }
                                                         catch (Exception ex)
                                                         {
                                                             _logger?.LogDebug($"[Xtream] Error: {ex}");
@@ -573,17 +579,23 @@ public partial class MainViewModel : ObservableObject
                         {
                             try
                             {
+                                var lastProgressUpdate = DateTime.MinValue;
                                 var progress = new Progress<StalkerLoadProgress>(p =>
                                 {
-                                    _dispatcherService.BeginInvoke(() =>
+                                    var now = DateTime.UtcNow;
+                                    if ((now - lastProgressUpdate).TotalMilliseconds > 100)
                                     {
-                                        StatusMessage = p.Message;
-                                        ChannelLoadingStats = p.Message;
-                                        if (p.TotalCategories > 0)
+                                        lastProgressUpdate = now;
+                                        _dispatcherService.BeginInvoke(() =>
                                         {
-                                            ChannelLoadingProgress = (double)p.LoadedCategories / p.TotalCategories * 100;
-                                        }
-                                    });
+                                            StatusMessage = p.Message;
+                                            ChannelLoadingStats = p.Message;
+                                            if (p.TotalCategories > 0)
+                                            {
+                                                ChannelLoadingProgress = (double)p.LoadedCategories / p.TotalCategories * 100;
+                                            }
+                                        });
+                                    }
                                 });
 
                                 await _stalkerPortalService.GetChannelsProgressiveAsync(
@@ -620,23 +632,6 @@ public partial class MainViewModel : ObservableObject
                                     {
                                         // Kategori dolduğunda sahte kanalı silip gerçekleriyle değiştir
                                         await _playlistService.ReplaceDummyWithRealChannelsAsync(playlist.Id, category.Name, channels);
-
-                                        // Eğer bu bir dizi kategorisi ise, hemen arkasından dizileri grupla (Aggregate)
-                                        if (category.Type == "series")
-                                        {
-                                            _ = Task.Run(async () =>
-                                            {
-                                                try
-                                                {
-                                                    await _mediaService.AggregateContentAsync(playlist.Id);
-                                                    _mediaService.RaiseAggregationCompleted(playlist.Id);
-                                                }
-                                                catch (Exception ex)
-                                                {
-                                                    System.Diagnostics.Debug.WriteLine($"[Stalker] Incremental AggregateContent failed: {ex.Message}");
-                                                }
-                                            });
-                                        }
 
                                         // Eğer ekranda bu kategori açıksa anlık göster, değilse sol menü zaten yüklü
                                         if (SelectedPlaylist?.Id == playlist.Id && SelectedGroup == category.Name)
@@ -812,12 +807,6 @@ public partial class MainViewModel : ObservableObject
                 onCategoryLoaded: async (channels, groupName) =>
                 {
                     await _playlistService.ReplaceDummyWithRealChannelsAsync(playlist.Id, groupName, channels);
-                    
-                    if (channels.Any(c => c.Type == ChannelType.Series))
-                    {
-                        await _mediaService.AggregateContentAsync(playlist.Id);
-                        _mediaService.RaiseAggregationCompleted(playlist.Id);
-                    }
 
                     if (SelectedPlaylist?.Id == playlist.Id && SelectedGroup == groupName)
                     {
@@ -825,6 +814,16 @@ public partial class MainViewModel : ObservableObject
                     }
                 },
                 cancellationToken: CancellationToken.None);
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _mediaService.AggregateContentAsync(playlist.Id);
+                    _mediaService.RaiseAggregationCompleted(playlist.Id);
+                }
+                catch { }
+            });
         }
         catch (Exception ex)
         {
@@ -852,12 +851,18 @@ public partial class MainViewModel : ObservableObject
             var portalUrl = profile.ProviderAccount.Url;
             var macAddress = profile.ProviderAccount.Username ?? string.Empty;
 
+            var lastProgressUpdate = DateTime.MinValue;
             var progress = new Progress<StalkerLoadProgress>(p =>
             {
-                _dispatcherService.BeginInvoke(() =>
+                var now = DateTime.UtcNow;
+                if ((now - lastProgressUpdate).TotalMilliseconds > 100)
                 {
-                    StatusMessage = p.Message;
-                });
+                    lastProgressUpdate = now;
+                    _dispatcherService.BeginInvoke(() =>
+                    {
+                        StatusMessage = p.Message;
+                    });
+                }
             });
 
             await _stalkerPortalService.GetChannelsProgressiveAsync(
@@ -881,22 +886,6 @@ public partial class MainViewModel : ObservableObject
                 {
                     await _playlistService.ReplaceDummyWithRealChannelsAsync(playlist.Id, category.Name, channels);
 
-                    if (category.Type == "series")
-                    {
-                        _ = Task.Run(async () =>
-                        {
-                            try
-                            {
-                                await _mediaService.AggregateContentAsync(playlist.Id);
-                                _mediaService.RaiseAggregationCompleted(playlist.Id);
-                            }
-                            catch (Exception ex)
-                            {
-                                System.Diagnostics.Debug.WriteLine($"[Stalker] Incremental AggregateContent failed: {ex.Message}");
-                            }
-                        });
-                    }
-
                     if (SelectedPlaylist?.Id == playlist.Id && SelectedGroup == category.Name)
                     {
                         _ = ThrottledLoadChannelsAsync(playlist.Id);
@@ -905,9 +894,22 @@ public partial class MainViewModel : ObservableObject
                 progress: progress,
                 cancellationToken: CancellationToken.None);
 
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _mediaService.AggregateContentAsync(playlist.Id);
+                    _mediaService.RaiseAggregationCompleted(playlist.Id);
+                }
+                catch { }
+            });
+
             _dispatcherService.BeginInvoke(() =>
             {
-                StatusMessage = $"{(isFullRefresh ? "Yenileme tamamlandı" : "Tüm içerikler tamamlandı")} ✓";
+                StatusMessage = $"{(isFullRefresh ? "Yenileme tamamlandı" : "Tüm içerikler hazır")} ✓";
+                IsChannelLoading = false;
+                ChannelLoadingStats = string.Empty;
+                ChannelLoadingProgress = 100;
             });
         }
         catch (Exception ex)
@@ -1220,7 +1222,9 @@ public partial class MainViewModel : ObservableObject
             .Take(10));
 
         var playlistId = SelectedPlaylist?.Id ?? 0;
-        SetItems(LatestSeries, await _mediaService.GetSeriesAsync(playlistId));
+        _allSeriesCache = await _mediaService.GetSeriesAsync(playlistId);
+        
+        SetItems(LatestSeries, _allSeriesCache.Take(20));
         UpdateSeriesViewItems();
 
         SetItems(ContinueWatching, Channels
@@ -1762,7 +1766,7 @@ public partial class MainViewModel : ObservableObject
             _ => _allGroupsCache
         };
 
-        SetItems(Groups, nextGroups);
+        _dispatcherService.Invoke(() => Groups = new ObservableCollection<string>(nextGroups));
 
         if (!string.IsNullOrWhiteSpace(SelectedGroup) && !Groups.Contains(SelectedGroup))
         {
@@ -1800,10 +1804,16 @@ public partial class MainViewModel : ObservableObject
 
         var normalized = group.Trim();
         return normalized.StartsWith(countryCode + "/", StringComparison.OrdinalIgnoreCase)
+            || normalized.StartsWith(countryCode + "|", StringComparison.OrdinalIgnoreCase)
             || normalized.StartsWith(countryCode + " |", StringComparison.OrdinalIgnoreCase)
             || normalized.StartsWith(countryCode + ":", StringComparison.OrdinalIgnoreCase)
+            || normalized.StartsWith(countryCode + "-", StringComparison.OrdinalIgnoreCase)
+            || normalized.StartsWith(countryCode + "_", StringComparison.OrdinalIgnoreCase)
             || normalized.StartsWith(countryCode + " ", StringComparison.OrdinalIgnoreCase)
-            || normalized.Equals(countryCode, StringComparison.OrdinalIgnoreCase);
+            || normalized.Equals(countryCode, StringComparison.OrdinalIgnoreCase)
+            || normalized.StartsWith($"|{countryCode}|", StringComparison.OrdinalIgnoreCase)
+            || normalized.StartsWith($"[{countryCode}]", StringComparison.OrdinalIgnoreCase)
+            || normalized.StartsWith($"({countryCode})", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string GetPreferredCountryCodeFromLanguage(string? language)
@@ -4064,7 +4074,7 @@ public partial class MainViewModel : ObservableObject
             .OrderByDescending(HasDisplayImage)
             .ThenBy(c => c.Name));
 
-        var seriesSnapshot = LatestSeries.ToList();
+        var seriesSnapshot = _allSeriesCache.ToList();
 
         SetItems(SearchSeriesChannels, seriesSnapshot
             .Where(series => SeriesMatchesSearch(series, rawQuery, normalizedSeriesQuery))
@@ -4236,44 +4246,54 @@ public partial class MainViewModel : ObservableObject
             return -1;
         }
 
-        var previous = new int[target.Length + 1];
-        var current = new int[target.Length + 1];
-        for (var j = 0; j <= target.Length; j++)
-        {
-            previous[j] = j;
-        }
+        var pool = System.Buffers.ArrayPool<int>.Shared;
+        var previous = pool.Rent(target.Length + 1);
+        var current = pool.Rent(target.Length + 1);
 
-        for (var i = 1; i <= source.Length; i++)
+        try
         {
-            current[0] = i;
-            var rowMin = current[0];
-
-            for (var j = 1; j <= target.Length; j++)
+            for (var j = 0; j <= target.Length; j++)
             {
-                var cost = source[i - 1] == target[j - 1] ? 0 : 1;
-                current[j] = Math.Min(
-                    Math.Min(current[j - 1] + 1, previous[j] + 1),
-                    previous[j - 1] + cost);
-                if (current[j] < rowMin)
+                previous[j] = j;
+            }
+
+            for (var i = 1; i <= source.Length; i++)
+            {
+                current[0] = i;
+                var rowMin = current[0];
+
+                for (var j = 1; j <= target.Length; j++)
                 {
-                    rowMin = current[j];
+                    var cost = source[i - 1] == target[j - 1] ? 0 : 1;
+                    current[j] = Math.Min(
+                        Math.Min(current[j - 1] + 1, previous[j] + 1),
+                        previous[j - 1] + cost);
+                    if (current[j] < rowMin)
+                    {
+                        rowMin = current[j];
+                    }
                 }
+
+                if (rowMin > maxDistance)
+                {
+                    return -1;
+                }
+
+                (previous, current) = (current, previous);
             }
 
-            if (rowMin > maxDistance)
-            {
-                return -1;
-            }
-
-            (previous, current) = (current, previous);
+            return previous[target.Length] <= maxDistance ? previous[target.Length] : -1;
         }
-
-        return previous[target.Length] <= maxDistance ? previous[target.Length] : -1;
+        finally
+        {
+            pool.Return(previous);
+            pool.Return(current);
+        }
     }
 
     private void UpdateSeriesViewItems()
     {
-        var source = LatestSeries;
+        var source = _allSeriesCache;
         if (source.Count == 0)
         {
             ResetSeriesIncrementalState();
@@ -4369,7 +4389,7 @@ public partial class MainViewModel : ObservableObject
             await Task.Delay(_searchDelayMs, token);
 
             var channelsSnapshot = Channels;
-            var seriesSnapshot = LatestSeries;
+            var seriesSnapshot = _allSeriesCache;
             var searchLower = query.ToLowerInvariant();
 
             var results = await Task.Run(() =>
@@ -4379,8 +4399,8 @@ public partial class MainViewModel : ObservableObject
 
                 localResults.AddRange(channelsSnapshot.Where(c =>
                     c.Type != ChannelType.Series &&
-                    (c.Name.ToLower().Contains(searchLower) ||
-                     (c.GroupTitle?.ToLower().Contains(searchLower) ?? false)))
+                    (c.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                     (c.GroupTitle?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)))
                     .OrderByDescending(HasDisplayImage)
                     .ThenBy(c => c.Name)
                     .Take(10));
@@ -4888,16 +4908,15 @@ public partial class MainViewModel : ObservableObject
 
     private static bool SeriesMatchesSearch(Series series, string rawQuery, string normalizedQuery)
     {
-        var seriesName = series.Name?.ToLowerInvariant() ?? string.Empty;
-        var genre = series.Genre?.ToLowerInvariant() ?? string.Empty;
-        var rawLower = rawQuery.ToLowerInvariant();
+        var seriesName = series.Name ?? string.Empty;
+        var genre = series.Genre ?? string.Empty;
 
-        if (!string.IsNullOrWhiteSpace(normalizedQuery) && seriesName.Contains(normalizedQuery))
+        if (!string.IsNullOrWhiteSpace(normalizedQuery) && seriesName.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }
 
-        if (genre.Contains(rawLower) || (!string.IsNullOrWhiteSpace(normalizedQuery) && genre.Contains(normalizedQuery)))
+        if (genre.Contains(rawQuery, StringComparison.OrdinalIgnoreCase) || (!string.IsNullOrWhiteSpace(normalizedQuery) && genre.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase)))
         {
             return true;
         }
@@ -4905,9 +4924,9 @@ public partial class MainViewModel : ObservableObject
         var episodes = series.Seasons.SelectMany(s => s.Episodes);
         return episodes.Any(ep =>
         {
-            var episodeName = ep.Name?.ToLowerInvariant() ?? string.Empty;
-            return episodeName.Contains(rawLower) ||
-                   (!string.IsNullOrWhiteSpace(normalizedQuery) && episodeName.Contains(normalizedQuery));
+            var episodeName = ep.Name ?? string.Empty;
+            return episodeName.Contains(rawQuery, StringComparison.OrdinalIgnoreCase) ||
+                   (!string.IsNullOrWhiteSpace(normalizedQuery) && episodeName.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase));
         });
     }
 

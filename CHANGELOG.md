@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Dil/Ülke Tespiti (Language Detection) Geliştirmesi** (2026-02-28):
+    - Kanal gruplarındaki (örn: `|TR| BELGESEL`) ülke kodlarını algılama sistemi düzeltildi. Önceden sadece kelime sınırlarına bakan sistem, artık boru (`|`), köşeli parantez (`[]`) veya parantez (`()`) içine yazılan ülke kodlarını (örn: `|US|`, `[DE]`, `(FR)`) başarıyla algılayıp kullanıcının yerel diline en uygun kategorileri en başa çekiyor.
+
+- **Performans: Profil Yükleme ve Arayüz Kilitlenmeleri (Yanıt Vermiyor) Çözüldü** (2026-02-28):
+    - **O(N^2) Veritabanı Kilitlenmesi Giderildi**: Büyük Stalker Portal veya Xtream hesapları eklenirken, her kategori yüklendiğinde tüm veritabanını tarayıp dizileri gruplayan (AggregateContentAsync) ağır işlemin yüzlerce kez üst üste çalışarak SQLite'ı kilitlemesi engellendi. Gruplama işlemi artık yükleme tamamen bittikten sonra sadece bir kez çalışıyor.
+    - **Arayüz (UI) İş Parçacığı Taşması Önüldü**: Binlerce kategori/kanal içeren hesapların arka plan yüklemesi sırasında her bir ilerleme (progress) adımının anında ekrana yansıtılmaya çalışılması sonucu oluşan "Yanıt Vermiyor" donmaları düzeltildi. İlerleme çubuğu güncellemeleri 100 milisaniyelik bir geciktirme (debounce) mekanizmasına bağlandı.
+
+- **Performans: Gerçek Zamanlı Arama Optimizasyonları** (2026-02-28):
+    - **Sıfır Bellek Tahsisi (Zero-Allocation) ile Arama**: On binlerce içeriğin içinde arama yaparken her harfe basıldığında `.ToLower()` ve `.ToLowerInvariant()` kullanılması yüzünden saniyede on binlerce geçici string oluşturulup Çöp Toplayıcıyı (GC) yorması engellendi. Aramalar artık yeni bellek tahsis etmeyen `StringComparison.OrdinalIgnoreCase` ile yapılıyor, arama anındaki takılmalar (stuttering) tamamen yok edildi.
+    - **ArrayPool Optimizasyonu**: Bulanık eşleştirme (Fuzzy Match / Levenshtein Distance) algoritması içindeki geçici dizi (`int[]`) oluşturmaları kaldırılarak ortak bellek havuzuna (`ArrayPool`) geçirildi.
+
 - **İndirme Merkezi Hata Yönetimi ve Şeffaflık** (2026-02-28):
     - **Ölümcül Hataların Yakalanması**: İndirme motoru güncellendi. Eski/pasif hesaplardan veya artık sunucuda bulunmayan (404 Not Found, 401 Unauthorized, 403 Forbidden) içerikler indirilmeye çalışıldığında; sistemin bu durumu geçici bir internet kopması sanıp sonsuz "Duraklatıldı" döngüsüne girmesi engellendi. Bu tür kritik durumlarda indirme doğrudan iptal edilerek "Hatalı" (Failed) statüsüne çekiliyor.
     - **Arayüzde Detaylı Hata Gösterimi**: İndirilenler ve İndirme Merkezi ekranlarında, bir içeriğin durumu "Hatalı" veya "Duraklatıldı" olduğunda sadece bu kelimeleri yazmak yerine, hatanın alt metni (Örn: "Hatalı - Yetkisiz erişim. Hesap süresi dolmuş veya iptal edilmiş olabilir.") kullanıcının görebileceği şekilde doğrudan durum çubuğuna entegre edildi.

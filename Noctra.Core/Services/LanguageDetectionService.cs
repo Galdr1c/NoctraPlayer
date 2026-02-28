@@ -200,6 +200,21 @@ public class LanguageDetectionService
         if (string.IsNullOrWhiteSpace(name))
             return Array.Empty<string>();
 
+        // Find country codes directly inside common brackets/pipes like |TR| or [TR]
+        var matches = System.Text.RegularExpressions.Regex.Matches(name, @"[\|\[\(\{]([a-zA-Z]{2,3})[\|\]\)\}]");
+        if (matches.Count > 0)
+        {
+            var results = new List<string>();
+            foreach (System.Text.RegularExpressions.Match match in matches)
+            {
+                if (match.Groups.Count > 1)
+                {
+                    results.Add(match.Groups[1].Value.ToUpperInvariant());
+                }
+            }
+            return results;
+        }
+
         var chars = name.Select(ch => char.IsLetterOrDigit(ch) ? ch : ' ').ToArray();
         return new string(chars)
             .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
