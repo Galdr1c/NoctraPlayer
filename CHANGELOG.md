@@ -17,6 +17,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - Dizi bölümleri listesindeki aktif sezon sekmesinin kaba, mor arkaplanı kaldırılıp Netflix benzeri şeffaf alt-çizgi stiline (`NavActiveBackgroundBrush`) geçirildi.
   - Fragmanı İzle butonunun renk uyumsuzluğu Sidebar tonuyla (`AccentBrush`) eşitlenerek giderildi.
   - Uzun açıklama (Plot) ve oyuncu listesine sahip olan dizilerde yazıların detay sayfasındaki oynat butonlarının üstüne taşması/binmesi problemi, esnek ızgara yapısı ve gizli `ScrollViewer` eklenerek kökten çözüldü.
+- **TMDB Posteri Kaydedilmiyordu**: `TmdbSyncService` ve `LoadSelectedSeriesMetadataAsync` poster kayıt mantığı "poster boşsa yaz" şeklindeydi, sağlayıcıdan düşük kaliteli bir poster geldiğinde TMDB posterini yazmayı reddediyordu. Artık **TMDB posteri varsa her zaman provider posterinin üstüne yazılıyor** ve veritabanına kaydediliyor. Aynı "boşsa yaz" sorunu tüm metadata alanlarında (Cast, Genre, Plot, ContentRating vb.) da mevcuttu ve hepsi düzeltildi.
+- **On-Demand Zenginleştirme Dil Hatası**: Scroll ederken çalışan `TmdbSyncService.EnrichSingleSeriesAsync`, dil algılamasında sadece dizi adına (`series.Name`) bakıyordu. Artık `series.GroupTitle ?? series.Genre ?? series.Name` kullanarak EU kategorisindeki dizileri de İngilizce çekiyor.
+- **Cache Temizlenmiş Diziler Yeniden Çekilmiyordu**: Enrichment filtresi yalnızca `TmdbId == null && LastTmdbSync == null` kontrol ediyordu. `MetadataFetchedAt == null` (cache'i invalidate edilen EU dizileri) olanlar da artık tekrar zenginleştiriliyor.
 
 ### 🚀 Yeni Özellikler
 - **On-Demand TMDB Mimarisi**: Arka planda sürekli çalışan `TmdbSyncService` kaldırıldı. Artık TMDB verileri **sadece kullanıcının ekranında gördüğü diziler** için çekiliyor:

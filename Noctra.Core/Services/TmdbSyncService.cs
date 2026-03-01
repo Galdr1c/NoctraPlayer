@@ -34,7 +34,7 @@ public class TmdbSyncService : ITmdbSyncService
     {
         // Only process series that haven't been synced yet
         var pending = series
-            .Where(s => s.TmdbId == null && s.LastTmdbSync == null)
+            .Where(s => s.TmdbId == null && s.LastTmdbSync == null || s.MetadataFetchedAt == null)
             .ToList();
 
         if (pending.Count == 0)
@@ -65,7 +65,7 @@ public class TmdbSyncService : ITmdbSyncService
     {
         try
         {
-            var languageCode = SeriesInfoParser.ExtractLanguageCode(series.Name);
+            var languageCode = SeriesInfoParser.ExtractLanguageCode(series.GroupTitle ?? series.Genre ?? series.Name);
             var cleanName = SeriesInfoParser.CleanSeriesName(series.Name);
 
             var meta = await _metadataService.FetchMetadataAsync(cleanName, ChannelType.Series, languageCode, cancellationToken);
@@ -90,7 +90,7 @@ public class TmdbSyncService : ITmdbSyncService
                 dbSeries.ContentRating = meta.ContentRating;
                 dbSeries.MetadataFetchedAt = DateTime.UtcNow;
 
-                if (string.IsNullOrEmpty(dbSeries.CoverUrl) && !string.IsNullOrEmpty(meta.PosterUrl))
+                if (!string.IsNullOrEmpty(meta.PosterUrl))
                     dbSeries.CoverUrl = meta.PosterUrl;
 
                 if (meta.Genres != null && meta.Genres.Count > 0)
@@ -107,7 +107,7 @@ public class TmdbSyncService : ITmdbSyncService
                 series.Cast = meta.Cast;
                 series.ContentRating = meta.ContentRating;
                 series.MetadataFetchedAt = DateTime.UtcNow;
-                if (string.IsNullOrEmpty(series.CoverUrl) && !string.IsNullOrEmpty(meta.PosterUrl))
+                if (!string.IsNullOrEmpty(meta.PosterUrl))
                     series.CoverUrl = meta.PosterUrl;
                 if (meta.Genres != null && meta.Genres.Count > 0)
                     series.Genre = string.Join(", ", meta.Genres);
