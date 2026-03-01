@@ -10,6 +10,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - **Akıllı Meta Veri Paneli**: Yıl, tür ve yaş sınırı alanları sadece veri varsa görünecek şekilde güncellendi; ayırıcı noktalar (`•`) dinamik olarak konumlandırıldı.
     - **Yerleşim Sabitleme**: Dizi açıklaması veya meta veriler eksik olsa dahi başlık, geri butonu ve kontrol butonlarının (Oynat, Listem) ekrandaki yerleri sabitlendi (Sticky Layout).
     - **Otomatik İçerik Güncelleme**: Dizi açıklaması (Overview) ve oyuncu kadrosu (Cast) bilgileri artık otomatik olarak TMDB üzerinden çekiliyor.
+    - **TMDB API Anahtarı Yönetimi**: Kullanıcıdan TMDB API anahtarı isteme zorunluluğu kaldırıldı; uygulama artık dahili anahtar ile çalışıyor ve ayarlar ekranı sadeleştirildi.
     - **Demo Veri Temizliği**: Rastgele üretilen "Eşleşme Yüzdesi" alanı, daha temiz ve profesyonel bir görünüm için kaldırıldı.
 
 - **Premium Dizi Detay Sayfası Tasarımı ve Reaktivite** (2026-02-28):

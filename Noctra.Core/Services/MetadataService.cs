@@ -313,15 +313,9 @@ public partial class MetadataService : IMetadataService
 
     private void EnsureApiKeyLoaded()
     {
-        // Always check current settings first to allow runtime updates
-        var fromSettings = _settingsService?.Settings?.TmdbApiKey;
-        if (!string.IsNullOrWhiteSpace(fromSettings))
-        {
-            _apiKey = fromSettings.Trim();
-            return;
-        }
+        // Rely purely on environment variable or hardcoded internal key
+        if (!string.IsNullOrWhiteSpace(_apiKey)) return;
 
-        // If not in settings, fallback to environment variable
         var fromEnv = Environment.GetEnvironmentVariable("TMDB_API_KEY");
         if (!string.IsNullOrWhiteSpace(fromEnv))
         {

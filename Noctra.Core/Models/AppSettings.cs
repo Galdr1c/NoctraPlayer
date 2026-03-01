@@ -85,11 +85,6 @@ public class AppSettings
     /// Koyu tema aktif mi
     /// </summary>
     public bool IsDarkTheme { get; set; } = true;
-    
-    /// <summary>
-    /// TMDB API anahtarı
-    /// </summary>
-    public string? TmdbApiKey { get; set; }
 
     // ============ Global Ayarlar ============
     

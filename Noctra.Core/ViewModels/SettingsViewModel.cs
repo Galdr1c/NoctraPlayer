@@ -118,10 +118,6 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private int _refreshProgressPercent;
     
-    // ============ TMDB ============
-    
-    [ObservableProperty]
-    private string _tmdbApiKey = string.Empty;
 
     public bool IsGlobalLoading => _mainViewModel.IsGlobalLoading;
     public string GlobalLoadingMessage => _mainViewModel.GlobalLoadingMessage;
@@ -318,8 +314,6 @@ public partial class SettingsViewModel : ObservableObject
 
         CustomEpgUrl = s.CustomEpgUrl ?? string.Empty;
         
-        // TMDB
-        TmdbApiKey = s.TmdbApiKey ?? string.Empty;
     }
 
     [RelayCommand]
@@ -346,8 +340,6 @@ public partial class SettingsViewModel : ObservableObject
         s.EpgRefreshFrequencyHours = Math.Max(0, EpgRefreshFrequencyHours);
         s.CustomEpgUrl = string.IsNullOrWhiteSpace(CustomEpgUrl) ? null : CustomEpgUrl.Trim();
         
-        // TMDB
-        s.TmdbApiKey = string.IsNullOrWhiteSpace(TmdbApiKey) ? null : TmdbApiKey;
         
         await _settingsService.SaveAsync();
         StatusMessage = "Ayarlar kaydedildi";
