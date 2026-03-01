@@ -16,6 +16,7 @@
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.1" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.1" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="DotNetEnv" Version="3.1.1" />
     <PackageReference Include="LibVLCSharp" Version="3.9.5" />
     <PackageReference Include="LibVLCSharp.Avalonia" Version="3.9.5" />
     <PackageReference Include="Material.Icons.Avalonia" Version="2.4.1" />
@@ -32,6 +33,7 @@
     <Content Include="Assets\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <None Include="..\.env" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\.env')" />
   </ItemGroup>
 
 </Project>

@@ -35,8 +35,8 @@ public partial class MetadataService : IMetadataService
         _settingsService = settingsService;
         _logger = logger;
         
-        // Try to get API key from environment, fall back to internal key
-        _apiKey = Environment.GetEnvironmentVariable("TMDB_API_KEY") ?? "3d0918cdba35a22f17818094ed481698";
+        // Try to get API key from environment
+        _apiKey = Environment.GetEnvironmentVariable("TMDB_API_KEY") ?? string.Empty;
     }
     
     /// <summary>

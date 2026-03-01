@@ -9,8 +9,15 @@ internal sealed class Program
     {
         try
         {
-            var tracePath = Path.Combine(AppContext.BaseDirectory, "startup_trace.txt");
-            File.AppendAllText(tracePath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Main entered.{Environment.NewLine}");
+            var envPath = Path.Combine(AppContext.BaseDirectory, ".env");
+            if (File.Exists(envPath))
+            {
+                DotNetEnv.Env.Load(envPath);
+            }
+            else
+            {
+                DotNetEnv.Env.TraversePath().Load();
+            }
         }
         catch
         {
