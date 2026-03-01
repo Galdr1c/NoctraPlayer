@@ -62,6 +62,7 @@ public partial class MainViewModel : ObservableObject
     private readonly EpgSourceResolver _epgSourceResolver;
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly HttpClient _httpClient;
+    private readonly ITmdbSyncService _tmdbSyncService;
     private readonly DateTime _downloadCenterSessionStartUtc = DateTime.UtcNow;
     private CancellationTokenSource? _slowLoadingWarnCts;
 
@@ -253,6 +254,7 @@ public partial class MainViewModel : ObservableObject
         IDbContextFactory<AppDbContext> contextFactory,
         ISecurityService securityService,
         HttpClient httpClient,
+        ITmdbSyncService tmdbSyncService,
         ILogger<MainViewModel>? logger = null)
     {
         _settingsService = settingsService;
@@ -274,6 +276,7 @@ public partial class MainViewModel : ObservableObject
         _contextFactory = contextFactory;
         _securityService = securityService;
         _httpClient = httpClient;
+        _tmdbSyncService = tmdbSyncService;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
         InitializeAsync();
         _contentDownloadService.DownloadsChanged += (_, _) =>
@@ -1652,6 +1655,23 @@ public partial class MainViewModel : ObservableObject
             foreach (var item in page)
             {
                 SeriesViewItems.Add(item);
+            }
+
+            // On-demand TMDB enrichment for newly visible series
+            var enrichPage = page.Where(s => s.TmdbId == null && s.LastTmdbSync == null).ToList();
+            if (enrichPage.Count > 0)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _tmdbSyncService.EnrichSeriesBatchAsync(enrichPage);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogDebug($"TMDB enrichment for page failed: {ex.Message}");
+                    }
+                });
             }
         }
         finally
@@ -4473,15 +4493,12 @@ public partial class MainViewModel : ObservableObject
     {
         _searchCts?.Cancel();
 
+        // Only clear results when query is emptied.
+        // Actual search triggers on Enter/button via CommitSearch.
         if (string.IsNullOrWhiteSpace(value))
         {
             SearchResults.Clear();
-            return;
         }
-
-        _searchCts = new CancellationTokenSource();
-        var token = _searchCts.Token;
-        _ = SearchOverlayAsync(value, token);
     }
 
     private async Task SearchOverlayAsync(string query, CancellationToken token)
@@ -5039,11 +5056,11 @@ public partial class MainViewModel : ObservableObject
             IsSelectedSeriesMetadataLoading = true;
 
             SelectedSeriesPosterUrl = series.CoverUrl;
-            SelectedSeriesBackdropUrl = null;
+            SelectedSeriesBackdropUrl = series.BackdropUrl;
             SelectedSeriesOverview = series.Plot ?? string.Empty;
-            SelectedSeriesCast = string.Empty;
-            SelectedSeriesGenres = string.Empty;
-            SelectedSeriesAgeRating = string.Empty;
+            SelectedSeriesCast = series.Cast ?? string.Empty;
+            SelectedSeriesGenres = series.Genre ?? string.Empty;
+            SelectedSeriesAgeRating = series.ContentRating ?? string.Empty;
 
             // Initial basic metadata
             SelectedSeriesTotalEpisodesCount = series.Seasons.Sum(s => s.Episodes.Count);
@@ -5090,41 +5107,136 @@ public partial class MainViewModel : ObservableObject
                 SelectedSeason = series.Seasons.OrderBy(s => s.SeasonNumber).FirstOrDefault();
             }
 
-            var metadata = await _metadataService.FetchMetadataAsync(series.Name, ChannelType.Series);
+            // --- TMDB Metadata Fetch Strategy ---
+            // 1. If we already have full TMDB data cached in DB → skip API call entirely
+            var hasFullData = !string.IsNullOrWhiteSpace(series.Plot) &&
+                              !string.IsNullOrWhiteSpace(series.Cast) &&
+                              !string.IsNullOrWhiteSpace(series.ContentRating) &&
+                              !string.IsNullOrWhiteSpace(series.BackdropUrl);
+            if (hasFullData)
+            {
+                return; // All data already loaded from DB, no API call needed
+            }
+
+            var languageCode = SeriesInfoParser.ExtractLanguageCode(series.Genre ?? series.Name);
+            ChannelMetadata? metadata = null;
+
+            // 2. If we have a TmdbId → use direct ID lookup (no search, no wrong matches)
+            if (series.TmdbId.HasValue && series.TmdbId.Value > 0)
+            {
+                var details = await _metadataService.FetchSeriesDetailsAsync(series.TmdbId.Value, languageCode);
+                if (details != null && SelectedSeries?.Id == series.Id)
+                {
+                    metadata = new ChannelMetadata
+                    {
+                        TmdbId = series.TmdbId,
+                        Title = details.Name,
+                        Description = details.Overview,
+                        PosterUrl = !string.IsNullOrEmpty(details.PosterPath) ? $"https://image.tmdb.org/t/p/w500{details.PosterPath}" : null,
+                        BackdropUrl = !string.IsNullOrEmpty(details.BackdropPath) ? $"https://image.tmdb.org/t/p/original{details.BackdropPath}" : null,
+                        Rating = details.VoteAverage,
+                        ReleaseYear = details.ReleaseYear
+                    };
+
+                    // Genres from detail response
+                    if (details.Genres != null && details.Genres.Count > 0)
+                    {
+                        metadata.Genres = details.Genres.Select(g => g.Name).ToList();
+                    }
+
+                    // Credits
+                    if (details.Credits != null)
+                    {
+                        var director = details.Credits.Crew?.FirstOrDefault(c => c.Job == "Director")?.Name;
+                        if (!string.IsNullOrEmpty(director))
+                            metadata.Director = director;
+
+                        var castList = details.Credits.Cast?.OrderBy(c => c.Order).Take(5).Select(c => c.Name).ToList();
+                        if (castList != null && castList.Any())
+                            metadata.Cast = string.Join(", ", castList);
+                    }
+
+                    // Content Rating
+                    if (details.ContentRatings?.Results != null)
+                    {
+                        var trRating = details.ContentRatings.Results.FirstOrDefault(r => r.IsoCode == "US")?.Rating;
+                        var usRating = details.ContentRatings.Results.FirstOrDefault(r => r.IsoCode == "TR")?.Rating;
+                        metadata.ContentRating = usRating ?? trRating;
+                    }
+                }
+            }
+
+            // 3. Fallback: search by cleaned name (only if no TmdbId)
+            if (metadata == null && !series.TmdbId.HasValue)
+            {
+                var cleanName = SeriesInfoParser.CleanSeriesName(series.Name);
+                metadata = await _metadataService.FetchMetadataAsync(cleanName, ChannelType.Series, languageCode);
+            }
+
             if (metadata == null || SelectedSeries?.Id != series.Id)
             {
                 return;
             }
 
+            // Apply metadata to UI
             if (!string.IsNullOrWhiteSpace(metadata.PosterUrl))
-            {
                 SelectedSeriesPosterUrl = metadata.PosterUrl;
-            }
 
             if (!string.IsNullOrWhiteSpace(metadata.BackdropUrl))
-            {
                 SelectedSeriesBackdropUrl = metadata.BackdropUrl;
-            }
 
             if (!string.IsNullOrWhiteSpace(metadata.Description))
-            {
                 SelectedSeriesOverview = metadata.Description;
-            }
 
             if (!string.IsNullOrWhiteSpace(metadata.Cast))
-            {
                 SelectedSeriesCast = metadata.Cast;
-            }
 
             if (!string.IsNullOrWhiteSpace(metadata.ContentRating))
-            {
                 SelectedSeriesAgeRating = metadata.ContentRating;
-            }
 
             if (metadata.Genres != null && metadata.Genres.Count > 0)
-            {
                 SelectedSeriesGenres = string.Join(", ", metadata.Genres);
-            }
+
+            if (metadata.ReleaseYear.HasValue && metadata.ReleaseYear.Value > 0)
+                SelectedSeriesYears = metadata.ReleaseYear.Value.ToString();
+
+            // 4. Persist fetched data back to DB so future clicks are instant
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var db = await _contextFactory.CreateDbContextAsync();
+                    var dbSeries = await db.Series.FindAsync(series.Id);
+                    if (dbSeries == null) return;
+
+                    var changed = false;
+                    if (metadata.TmdbId.HasValue && !dbSeries.TmdbId.HasValue) { dbSeries.TmdbId = metadata.TmdbId; changed = true; }
+                    if (!string.IsNullOrWhiteSpace(metadata.Description) && string.IsNullOrWhiteSpace(dbSeries.Plot)) { dbSeries.Plot = metadata.Description; changed = true; }
+                    if (!string.IsNullOrWhiteSpace(metadata.Cast) && string.IsNullOrWhiteSpace(dbSeries.Cast)) { dbSeries.Cast = metadata.Cast; changed = true; }
+                    if (!string.IsNullOrWhiteSpace(metadata.Director) && string.IsNullOrWhiteSpace(dbSeries.Director)) { dbSeries.Director = metadata.Director; changed = true; }
+                    if (!string.IsNullOrWhiteSpace(metadata.ContentRating) && string.IsNullOrWhiteSpace(dbSeries.ContentRating)) { dbSeries.ContentRating = metadata.ContentRating; changed = true; }
+                    if (!string.IsNullOrWhiteSpace(metadata.BackdropUrl) && string.IsNullOrWhiteSpace(dbSeries.BackdropUrl)) { dbSeries.BackdropUrl = metadata.BackdropUrl; changed = true; }
+                    if (!string.IsNullOrWhiteSpace(metadata.PosterUrl) && string.IsNullOrWhiteSpace(dbSeries.CoverUrl)) { dbSeries.CoverUrl = metadata.PosterUrl; changed = true; }
+                    if (metadata.ReleaseYear.HasValue && !dbSeries.ReleaseYear.HasValue) { dbSeries.ReleaseYear = metadata.ReleaseYear; changed = true; }
+                    if (metadata.Rating.HasValue && !dbSeries.Rating.HasValue) { dbSeries.Rating = metadata.Rating; changed = true; }
+                    if (string.IsNullOrWhiteSpace(dbSeries.LastTmdbSync?.ToString())) { dbSeries.LastTmdbSync = DateTime.UtcNow; changed = true; }
+                    if (metadata.Genres != null && metadata.Genres.Count > 0 && string.IsNullOrWhiteSpace(dbSeries.Genre))
+                    {
+                        dbSeries.Genre = string.Join(", ", metadata.Genres);
+                        changed = true;
+                    }
+
+                    if (changed)
+                    {
+                        dbSeries.MetadataFetchedAt = DateTime.UtcNow;
+                        await db.SaveChangesAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogDebug($"Failed to persist series metadata: {ex.Message}");
+                }
+            });
         }
         catch (Exception ex)
         {

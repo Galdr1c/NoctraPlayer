@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v29.2 – TMDB Akıllı Eşleştirme ve On-Demand Mimari (2026-03-01)
+
+### 🔧 Düzeltilen Hatalar
+- **TMDB API Anahtarı Çalışmıyordu**: `MetadataService` içindeki kritik bir hata düzeltildi — API anahtarı ortam değişkeninin **adı** olarak kullanılıyordu, bu yüzden tüm TMDB çağrıları sessizce başarısız oluyordu. 32.850 dizinin hiçbirinde TMDB verisi yoktu.
+- **Dizi Detayında Veriler Boş Geliyordu**: `LoadSelectedSeriesMetadataAsync` veritabanında kayıtlı Cast, Genre, ContentRating ve BackdropUrl verilerini sıfırlıyordu. Artık mevcut veritabanı verileri ilk değer olarak gösteriliyor.
+- **Yanlış TMDB Eşleştirmesi**: "Barry" (HBO) aramasında "The Drew Barrymore Show" geliyordu çünkü sadece popülerliğe göre sıralanıyordu. Yeni **isim-benzerlik skorlama sistemi** eklendi: tam eşleşme (100), başlangıç eşleşmesi (80), kelime eşleşmesi (40) — popülerlik sadece eşit skorlarda devreye giriyor.
+
+### 🚀 Yeni Özellikler
+- **On-Demand TMDB Mimarisi**: Arka planda sürekli çalışan `TmdbSyncService` kaldırıldı. Artık TMDB verileri **sadece kullanıcının ekranında gördüğü diziler** için çekiliyor:
+  - Dizi sayfasına girildiğinde her 50'lik sayfa için arka planda 3 paralel istek ile zenginleştirme yapılıyor
+  - Canlı TV izlerken **sıfır API çağrısı**
+  - Dizi detayına girildiğinde veriler anında veritabanından gösteriliyor
+  - Çekilen tüm veriler veritabanına kaydediliyor, tekrar çekilmiyor
+- **TmdbId Bazlı Doğrudan Çekim**: Dizi detayında `TmdbId` biliniyorsa isim araması yerine doğrudan `/tv/{id}` endpoint'i kullanılıyor — yanlış eşleşme riski sıfır.
+- **`TmdbDetail` Modeline Genres Desteği**: TMDB detay endpoint'inden gelen tür bilgileri (`genres`) artık doğrudan parse ediliyor.
+
+### ⚡ Performans İyileştirmeleri
+- **Otomatik Arama Kaldırıldı**: Arama kutusuna yazarken otomatik sonuç gösterimi devre dışı bırakıldı. Arama sadece **Enter** tuşu veya arama butonu ile tetikleniyor — gereksiz işlem yükü ortadan kalktı.
+- **Akıllı Veri Atlaması**: TMDB'de karşılığı olmayan diziler `LastTmdbSync` ile işaretlenip tekrar sorgulanmıyor. Provider'dan gelen orijinal veriler korunuyor.
+
+### 📁 Değişen Dosyalar
+| Dosya | Değişiklik |
+|-------|-----------|
+| `MetadataService.cs` | API key düzeltmesi + isim-benzerlik skorlama |
+| `TmdbSyncService.cs` | Arka plan döngüsü → on-demand `EnrichSeriesBatchAsync` |
+| `ITmdbSyncService.cs` | Basitleştirilmiş arayüz |
+| `MainViewModel.cs` | On-demand tetikleme + auto-search kaldırma + DB-first veri yükleme |
+| `TmdbModels.cs` | `TmdbDetail`'e `Genres` property |
+| `App.axaml.cs` | `StartSync()` kaldırıldı |
+
 - **Birim Testleri (Unit Testing) ile Güvence Altına Alınmış Mimari**: 
     - Yeni TMDB eşleştirme mekanizması ve çoklu dil analiz motorumuz (Language Detection), kapsamlı xUnit testleriyle (`SeriesInfoParserTests` ve `WatchHistoryServiceTests`) koruma altına alınmıştır. 
     - *Stranger Things (Cross-Provider Match)* gibi kritik izleme senaryoları simüle edilip 100+ başarılı test durumuyla sistemin hatasız çalıştığı (%100 TMDB senkronizasyonu) tescillenmiştir.

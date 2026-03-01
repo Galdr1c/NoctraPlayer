@@ -1,7 +1,3 @@
-using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Noctra.Data;
@@ -11,25 +7,18 @@ using Noctra.Services.Interfaces;
 namespace Noctra.Services;
 
 /// <summary>
-/// Background worker that scans the database for VOD and Series without a TmdbId
-/// and enriches them via TMDB API. It respects rate limits and runs silently.
+/// On-demand TMDB enrichment service. Fetches metadata only when requested
+/// (e.g., when series become visible on screen), not in the background.
 /// </summary>
-public class TmdbSyncService : ITmdbSyncService, IDisposable
+public class TmdbSyncService : ITmdbSyncService
 {
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly IMetadataService _metadataService;
     private readonly ILogger<TmdbSyncService>? _logger;
 
-    private CancellationTokenSource? _cts;
-    private Task? _workerTask;
-    private readonly SemaphoreSlim _triggerSignal = new(0, 1);
-
-    // How many items to process per batch before pausing
-    private const int BATCH_SIZE = 50;
-    // Delay between individual TMDB requests to avoid 429 Too Many Requests (TMDB limit: ~40 req / 10s)
-    private const int REQUEST_DELAY_MS = 300; 
-    // Sleep duration when database is fully synced and there is no work left
-    private readonly TimeSpan _idleSleepDuration = TimeSpan.FromHours(1);
+    // Rate limit: TMDB allows ~40 req / 10s
+    private const int REQUEST_DELAY_MS = 300;
+    private const int MAX_CONCURRENT = 3;
 
     public TmdbSyncService(
         IDbContextFactory<AppDbContext> dbContextFactory,
@@ -41,131 +30,73 @@ public class TmdbSyncService : ITmdbSyncService, IDisposable
         _logger = logger;
     }
 
-    public void StartSync()
+    public async Task EnrichSeriesBatchAsync(List<Series> series, CancellationToken cancellationToken = default)
     {
-        if (_workerTask != null && !_workerTask.IsCompleted)
+        // Only process series that haven't been synced yet
+        var pending = series
+            .Where(s => s.TmdbId == null && s.LastTmdbSync == null)
+            .ToList();
+
+        if (pending.Count == 0)
             return;
 
-        _cts = new CancellationTokenSource();
-        _workerTask = Task.Run(() => SyncLoopAsync(_cts.Token), _cts.Token);
-        _logger?.LogInformation("TmdbSyncService started.");
-    }
+        _logger?.LogDebug("Enriching {Count} series with TMDB data", pending.Count);
 
-    public void TriggerSync()
-    {
-        if (_triggerSignal.CurrentCount == 0)
+        // Process with limited concurrency (MAX_CONCURRENT parallel requests)
+        using var semaphore = new SemaphoreSlim(MAX_CONCURRENT);
+        var tasks = pending.Select(async s =>
         {
-            _triggerSignal.Release();
-        }
-    }
-
-    public void StopSync()
-    {
-        if (_cts != null)
-        {
-            _cts.Cancel();
-            _logger?.LogInformation("TmdbSyncService stopping...");
-        }
-    }
-
-    private async Task SyncLoopAsync(CancellationToken cancellationToken)
-    {
-        while (!cancellationToken.IsCancellationRequested)
-        {
+            await semaphore.WaitAsync(cancellationToken);
             try
             {
-                var workDone = await ProcessBatchAsync(cancellationToken);
+                await EnrichSingleSeriesAsync(s, cancellationToken);
+                await Task.Delay(REQUEST_DELAY_MS, cancellationToken);
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        });
 
-                if (workDone)
-                {
-                    // If we processed items, take a short breath before the next batch
-                    await Task.Delay(5000, cancellationToken);
-                }
-                else
-                {
-                    // No items left to sync. Sleep for a long time OR until manually triggered
-                    _logger?.LogInformation("TmdbSyncService is idle. All content is synced.");
-                    await WaitUntilTriggeredOrTimeoutAsync(_idleSleepDuration, cancellationToken);
-                }
-            }
-            catch (TaskCanceledException)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Fatal error in TmdbSyncService loop. Retrying in 1 minute.");
-                await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken);
-            }
-        }
+        await Task.WhenAll(tasks);
     }
 
-    private async Task<bool> ProcessBatchAsync(CancellationToken cancellationToken)
+    private async Task EnrichSingleSeriesAsync(Series series, CancellationToken cancellationToken)
     {
-        bool processedAny = false;
-
-        using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-
-        // 1. Process VODs (Channels where Type == VOD and TmdbId is null)
-        var pendingVods = await context.Channels
-            .Where(c => c.Type == ChannelType.VOD && c.TmdbId == null && c.LastTmdbSync == null)
-            .OrderByDescending(c => c.Id)
-            .Take(BATCH_SIZE)
-            .ToListAsync(cancellationToken);
-
-        foreach (var vod in pendingVods)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            
-            var languageCode = SeriesInfoParser.ExtractLanguageCode(vod.GroupTitle ?? vod.Name);
-            _logger?.LogDebug("Syncing VOD: {Name} with Language: {Lang}", vod.Name, languageCode);
-            
-            var meta = await _metadataService.FetchMetadataAsync(vod.Name, ChannelType.VOD, languageCode, cancellationToken);
-            
-            vod.LastTmdbSync = DateTime.UtcNow;
-
-            if (meta != null && meta.TmdbId.HasValue)
-            {
-                vod.TmdbId = meta.TmdbId;
-                vod.Plot = meta.Description;
-                vod.Rating = meta.Rating;
-                vod.ReleaseYear = meta.ReleaseYear;
-                vod.BackdropUrl = meta.BackdropUrl;
-                vod.Director = meta.Director;
-                vod.Cast = meta.Cast;
-                vod.ContentRating = meta.ContentRating;
-                
-                if (string.IsNullOrEmpty(vod.LogoUrl) && !string.IsNullOrEmpty(meta.PosterUrl))
-                    vod.LogoUrl = meta.PosterUrl;
-            }
-
-            processedAny = true;
-            await context.SaveChangesAsync(cancellationToken);
-            await Task.Delay(REQUEST_DELAY_MS, cancellationToken); // Rate limit
-        }
-
-        // 2. Process Series (Where TmdbId is null)
-        var pendingSeries = await context.Series
-            .Where(s => s.TmdbId == null && s.LastTmdbSync == null)
-            .OrderByDescending(s => s.Id)
-            .Take(BATCH_SIZE)
-            .ToListAsync(cancellationToken);
-
-        foreach (var series in pendingSeries)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            
             var languageCode = SeriesInfoParser.ExtractLanguageCode(series.Name);
-            // Clean the name using our robust parser before sending to TMDB
             var cleanName = SeriesInfoParser.CleanSeriesName(series.Name);
-            _logger?.LogDebug("Syncing Series: {Name} -> {CleanName} ({Lang})", series.Name, cleanName, languageCode);
-            
+
             var meta = await _metadataService.FetchMetadataAsync(cleanName, ChannelType.Series, languageCode, cancellationToken);
-            
-            series.LastTmdbSync = DateTime.UtcNow;
+
+            // Persist to database
+            using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+            var dbSeries = await context.Series.FindAsync(new object[] { series.Id }, cancellationToken);
+            if (dbSeries == null) return;
+
+            dbSeries.LastTmdbSync = DateTime.UtcNow;
 
             if (meta != null && meta.TmdbId.HasValue)
             {
+                dbSeries.TmdbId = meta.TmdbId;
+                dbSeries.TmdbTitle = meta.Title;
+                dbSeries.Plot = meta.Description;
+                dbSeries.Rating = meta.Rating;
+                dbSeries.ReleaseYear = meta.ReleaseYear;
+                dbSeries.BackdropUrl = meta.BackdropUrl;
+                dbSeries.Director = meta.Director;
+                dbSeries.Cast = meta.Cast;
+                dbSeries.ContentRating = meta.ContentRating;
+                dbSeries.MetadataFetchedAt = DateTime.UtcNow;
+
+                if (string.IsNullOrEmpty(dbSeries.CoverUrl) && !string.IsNullOrEmpty(meta.PosterUrl))
+                    dbSeries.CoverUrl = meta.PosterUrl;
+
+                if (meta.Genres != null && meta.Genres.Count > 0)
+                    dbSeries.Genre = string.Join(", ", meta.Genres);
+
+                // Update the in-memory object so UI reflects changes immediately
                 series.TmdbId = meta.TmdbId;
                 series.TmdbTitle = meta.Title;
                 series.Plot = meta.Description;
@@ -176,42 +107,17 @@ public class TmdbSyncService : ITmdbSyncService, IDisposable
                 series.Cast = meta.Cast;
                 series.ContentRating = meta.ContentRating;
                 series.MetadataFetchedAt = DateTime.UtcNow;
-                
                 if (string.IsNullOrEmpty(series.CoverUrl) && !string.IsNullOrEmpty(meta.PosterUrl))
                     series.CoverUrl = meta.PosterUrl;
+                if (meta.Genres != null && meta.Genres.Count > 0)
+                    series.Genre = string.Join(", ", meta.Genres);
             }
 
-            processedAny = true;
             await context.SaveChangesAsync(cancellationToken);
-            await Task.Delay(REQUEST_DELAY_MS, cancellationToken); // Rate limit
         }
-
-        return processedAny;
-    }
-
-    private async Task WaitUntilTriggeredOrTimeoutAsync(TimeSpan timeout, CancellationToken cancellationToken)
-    {
-        try
+        catch (Exception ex)
         {
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            linkedCts.CancelAfter(timeout);
-
-            // Wait until someone calls TriggerSync() OR the timeout expires
-            await _triggerSignal.WaitAsync(linkedCts.Token);
+            _logger?.LogDebug(ex, "Failed to enrich series: {Name}", series.Name);
         }
-        catch (OperationCanceledException)
-        {
-            // If it was cancelled by the timeout, we just swallow it and loop continues
-            if (cancellationToken.IsCancellationRequested)
-                throw; 
-        }
-    }
-
-    public void Dispose()
-    {
-        StopSync();
-        _cts?.Dispose();
-        _triggerSignal.Dispose();
-        GC.SuppressFinalize(this);
     }
 }

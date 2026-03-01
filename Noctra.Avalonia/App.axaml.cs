@@ -95,10 +95,8 @@ public partial class App : Application
                             StartupDiagnostics.Log("EF Core warmed up.");
                         }
 
-                        // 2.5 Start Background TMDB Matcher
-                        var tmdbSync = Services.GetRequiredService<ITmdbSyncService>();
-                        tmdbSync.StartSync();
-                        StartupDiagnostics.Log("TMDB Sync Service started.");
+                        // 2.5 TMDB Sync Service is now on-demand (no background processing)
+                        StartupDiagnostics.Log("TMDB Sync Service ready (on-demand mode).");
 
                         // 3. Resolve MainWindow/ProfilesWindow early
                         var profilesWindow = await Dispatcher.UIThread.InvokeAsync(() => 
@@ -340,6 +338,13 @@ public partial class App : Application
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN IntroEndSec REAL;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN CreditsStartSec REAL;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN IsFavorite INTEGER NOT NULL DEFAULT 0;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN IsInMyList INTEGER NOT NULL DEFAULT 0;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN Genre TEXT;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN Plot TEXT;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN ReleaseYear INTEGER;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN Rating REAL;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN ContentRating TEXT;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN PlaylistId INTEGER NOT NULL DEFAULT 0;"); } catch { }
         
         // TMDB Extensions
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN TmdbId INTEGER;"); } catch { }
@@ -350,11 +355,19 @@ public partial class App : Application
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN BackdropUrl TEXT;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN MetadataFetchedAt TEXT;"); } catch { }
         
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Season ADD COLUMN TmdbSeasonId INTEGER;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Seasons ADD COLUMN TmdbSeasonId INTEGER;"); } catch (Exception ex) { StartupDiagnostics.Log($"Failed to add TmdbSeasonId: {ex.Message}"); }
         
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN Genre TEXT;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN ReleaseYear INTEGER;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN Rating REAL;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN ContentRating TEXT;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN TmdbId INTEGER;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN LastTmdbSync TEXT;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN IsInMyList INTEGER NOT NULL DEFAULT 0;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN IsFavorite INTEGER NOT NULL DEFAULT 0;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN WatchedPosition TEXT;"); } catch { }
         
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Seasons ADD COLUMN Plot TEXT;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE SeriesEpisodeProgresses ADD COLUMN TmdbId INTEGER;"); } catch { }
         
         try

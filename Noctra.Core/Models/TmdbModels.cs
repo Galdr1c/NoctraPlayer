@@ -110,6 +110,12 @@ public class TmdbDetail : TmdbResult
 
     [JsonPropertyName("content_ratings")]
     public TmdbContentRatingsResponse? ContentRatings { get; set; }
+
+    /// <summary>
+    /// Full genre objects returned by detail endpoints (tv/{id}, movie/{id})
+    /// </summary>
+    [JsonPropertyName("genres")]
+    public List<TmdbGenre>? Genres { get; set; }
 }
 
 /// <summary>

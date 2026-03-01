@@ -113,6 +113,10 @@ public partial class MediaService : IMediaService
                         PlaylistId = playlistId,
                         CoverUrl = channel.LogoUrl,
                         Genre = channel.GroupTitle,
+                        TmdbId = channel.TmdbId,
+                        ReleaseYear = channel.ReleaseYear,
+                        Rating = channel.Rating,
+                        ContentRating = channel.ContentRating,
                         IsInMyList = false,
                         IsFavorite = false
                     };
@@ -130,6 +134,18 @@ public partial class MediaService : IMediaService
                     {
                         series.Genre = channel.GroupTitle;
                     }
+
+                    if (!series.TmdbId.HasValue && channel.TmdbId.HasValue)
+                        series.TmdbId = channel.TmdbId;
+                    
+                    if (!series.ReleaseYear.HasValue && channel.ReleaseYear.HasValue)
+                        series.ReleaseYear = channel.ReleaseYear;
+                        
+                    if (!series.Rating.HasValue && channel.Rating.HasValue)
+                        series.Rating = channel.Rating;
+                        
+                    if (string.IsNullOrWhiteSpace(series.ContentRating) && !string.IsNullOrWhiteSpace(channel.ContentRating))
+                        series.ContentRating = channel.ContentRating;
                 }
 
                 // O(1) season lookup instead of FirstOrDefault
