@@ -5214,18 +5214,12 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
 
-            // Apply metadata to UI and update the in-memory instance
+            // Apply metadata to UI
             if (!string.IsNullOrWhiteSpace(metadata.PosterUrl))
-            {
                 SelectedSeriesPosterUrl = metadata.PosterUrl;
-                series.CoverUrl = metadata.PosterUrl;
-            }
 
             if (!string.IsNullOrWhiteSpace(metadata.BackdropUrl))
-            {
                 SelectedSeriesBackdropUrl = metadata.BackdropUrl;
-                series.BackdropUrl = metadata.BackdropUrl;
-            }
 
             if (!string.IsNullOrWhiteSpace(metadata.Description))
                 SelectedSeriesOverview = metadata.Description;
@@ -5256,15 +5250,12 @@ public partial class MainViewModel : ObservableObject
 
                     var changed = false;
                     if (metadata.TmdbId.HasValue && !dbSeries.TmdbId.HasValue) { dbSeries.TmdbId = metadata.TmdbId; changed = true; }
-                    
-                    // Allow TMDB data to overwrite provider data for key fields
-                    if (!string.IsNullOrWhiteSpace(metadata.Description) && dbSeries.Plot != metadata.Description) { dbSeries.Plot = metadata.Description; changed = true; }
-                    if (!string.IsNullOrWhiteSpace(metadata.Cast) && dbSeries.Cast != metadata.Cast) { dbSeries.Cast = metadata.Cast; changed = true; }
-                    if (!string.IsNullOrWhiteSpace(metadata.Director) && dbSeries.Director != metadata.Director) { dbSeries.Director = metadata.Director; changed = true; }
-                    if (!string.IsNullOrWhiteSpace(metadata.ContentRating) && dbSeries.ContentRating != metadata.ContentRating) { dbSeries.ContentRating = metadata.ContentRating; changed = true; }
-                    if (!string.IsNullOrWhiteSpace(metadata.BackdropUrl) && dbSeries.BackdropUrl != metadata.BackdropUrl) { dbSeries.BackdropUrl = metadata.BackdropUrl; changed = true; }
-                    if (!string.IsNullOrWhiteSpace(metadata.PosterUrl) && dbSeries.CoverUrl != metadata.PosterUrl) { dbSeries.CoverUrl = metadata.PosterUrl; changed = true; }
-                    
+                    if (!string.IsNullOrWhiteSpace(metadata.Description) && string.IsNullOrWhiteSpace(dbSeries.Plot)) { dbSeries.Plot = metadata.Description; changed = true; }
+                    if (!string.IsNullOrWhiteSpace(metadata.Cast) && string.IsNullOrWhiteSpace(dbSeries.Cast)) { dbSeries.Cast = metadata.Cast; changed = true; }
+                    if (!string.IsNullOrWhiteSpace(metadata.Director) && string.IsNullOrWhiteSpace(dbSeries.Director)) { dbSeries.Director = metadata.Director; changed = true; }
+                    if (!string.IsNullOrWhiteSpace(metadata.ContentRating) && string.IsNullOrWhiteSpace(dbSeries.ContentRating)) { dbSeries.ContentRating = metadata.ContentRating; changed = true; }
+                    if (!string.IsNullOrWhiteSpace(metadata.BackdropUrl) && string.IsNullOrWhiteSpace(dbSeries.BackdropUrl)) { dbSeries.BackdropUrl = metadata.BackdropUrl; changed = true; }
+                    if (!string.IsNullOrWhiteSpace(metadata.PosterUrl) && string.IsNullOrWhiteSpace(dbSeries.CoverUrl)) { dbSeries.CoverUrl = metadata.PosterUrl; changed = true; }
                     if (metadata.ReleaseYear.HasValue && !dbSeries.ReleaseYear.HasValue) { dbSeries.ReleaseYear = metadata.ReleaseYear; changed = true; }
                     if (metadata.Rating.HasValue && !dbSeries.Rating.HasValue) { dbSeries.Rating = metadata.Rating; changed = true; }
                     if (string.IsNullOrWhiteSpace(dbSeries.LastTmdbSync?.ToString())) { dbSeries.LastTmdbSync = DateTime.UtcNow; changed = true; }
