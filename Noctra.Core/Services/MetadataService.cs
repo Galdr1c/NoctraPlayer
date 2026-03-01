@@ -206,7 +206,8 @@ public partial class MetadataService : IMetadataService
 
         try
         {
-            var url = $"{TMDB_BASE_URL}/tv/{tmdbId}?api_key={_apiKey}&append_to_response=credits,content_ratings&language={languageCode}";
+            var lang = languageCode.Contains('-') ? languageCode.Split('-')[0] : languageCode;
+            var url = $"{TMDB_BASE_URL}/tv/{tmdbId}?api_key={_apiKey}&append_to_response=credits,content_ratings,videos&include_video_language={lang},en,null&language={languageCode}";
             return await _httpClient.GetFromJsonAsync<TmdbDetail>(url, cancellationToken);
         }
         catch (Exception ex)

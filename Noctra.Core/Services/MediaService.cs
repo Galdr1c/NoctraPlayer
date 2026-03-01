@@ -112,7 +112,7 @@ public partial class MediaService : IMediaService
                         Name = seriesName,
                         PlaylistId = playlistId,
                         CoverUrl = channel.LogoUrl,
-                        Genre = channel.GroupTitle,
+                        GroupTitle = channel.GroupTitle,
                         TmdbId = channel.TmdbId,
                         ReleaseYear = channel.ReleaseYear,
                         Rating = channel.Rating,
@@ -130,10 +130,8 @@ public partial class MediaService : IMediaService
                         series.CoverUrl = channel.LogoUrl;
                     }
 
-                    if (string.IsNullOrWhiteSpace(series.Genre) && !string.IsNullOrWhiteSpace(channel.GroupTitle))
-                    {
-                        series.Genre = channel.GroupTitle;
-                    }
+                    if (string.IsNullOrEmpty(series.GroupTitle) && !string.IsNullOrEmpty(channel.GroupTitle))
+                        series.GroupTitle = channel.GroupTitle;
 
                     if (!series.TmdbId.HasValue && channel.TmdbId.HasValue)
                         series.TmdbId = channel.TmdbId;
@@ -416,6 +414,8 @@ public partial class MediaService : IMediaService
         {
             target.Genre = source.Genre;
         }
+        if (!string.IsNullOrEmpty(source.GroupTitle))
+            target.GroupTitle = source.GroupTitle;
 
         foreach (var sourceSeason in source.Seasons)
         {

@@ -124,6 +124,9 @@ public partial class MainViewModel : ObservableObject
     private string? _selectedSeriesBackdropUrl;
 
     [ObservableProperty]
+    private string? _selectedSeriesTrailerUrl;
+
+    [ObservableProperty]
     private string _selectedSeriesOverview = string.Empty;
 
     [ObservableProperty]
@@ -4432,8 +4435,8 @@ public partial class MainViewModel : ObservableObject
             var groupOk = true;
             if (!hasSearch && !string.IsNullOrWhiteSpace(selectedGroup))
             {
-                var genre = series.Genre ?? string.Empty;
-                groupOk = genre.Contains(selectedGroup, StringComparison.OrdinalIgnoreCase);
+                var category = series.DisplayCategory ?? string.Empty;
+                groupOk = category.Contains(selectedGroup, StringComparison.OrdinalIgnoreCase);
             }
 
             if (!groupOk)
@@ -4790,6 +4793,26 @@ public partial class MainViewModel : ObservableObject
         _ = PlayEpisodeSafeAsync(episode);
     }
 
+    [RelayCommand]
+    private void WatchTrailer()
+    {
+        if (!string.IsNullOrWhiteSpace(SelectedSeriesTrailerUrl))
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = SelectedSeriesTrailerUrl,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Failed to open trailer URL");
+            }
+        }
+    }
+
     private async Task PlayEpisodeSafeAsync(Episode? episode)
     {
         try
@@ -4852,6 +4875,7 @@ public partial class MainViewModel : ObservableObject
         SelectedSeries = null;
         SelectedSeriesPosterUrl = null;
         SelectedSeriesBackdropUrl = null;
+        SelectedSeriesTrailerUrl = null;
         SelectedSeriesOverview = string.Empty;
         SelectedSeriesCast = string.Empty;
     }
@@ -5061,6 +5085,7 @@ public partial class MainViewModel : ObservableObject
             SelectedSeriesCast = series.Cast ?? string.Empty;
             SelectedSeriesGenres = series.Genre ?? string.Empty;
             SelectedSeriesAgeRating = series.ContentRating ?? string.Empty;
+            SelectedSeriesTrailerUrl = series.TrailerUrl;
 
             // Initial basic metadata
             SelectedSeriesTotalEpisodesCount = series.Seasons.Sum(s => s.Episodes.Count);
@@ -5112,13 +5137,14 @@ public partial class MainViewModel : ObservableObject
             var hasFullData = !string.IsNullOrWhiteSpace(series.Plot) &&
                               !string.IsNullOrWhiteSpace(series.Cast) &&
                               !string.IsNullOrWhiteSpace(series.ContentRating) &&
-                              !string.IsNullOrWhiteSpace(series.BackdropUrl);
+                              !string.IsNullOrWhiteSpace(series.BackdropUrl) &&
+                              !string.IsNullOrWhiteSpace(series.TrailerUrl);
             if (hasFullData)
             {
                 return; // All data already loaded from DB, no API call needed
             }
 
-            var languageCode = SeriesInfoParser.ExtractLanguageCode(series.Genre ?? series.Name);
+            var languageCode = SeriesInfoParser.ExtractLanguageCode(series.GroupTitle ?? series.Genre ?? series.Name);
             ChannelMetadata? metadata = null;
 
             // 2. If we have a TmdbId → use direct ID lookup (no search, no wrong matches)
@@ -5163,6 +5189,16 @@ public partial class MainViewModel : ObservableObject
                         var usRating = details.ContentRatings.Results.FirstOrDefault(r => r.IsoCode == "TR")?.Rating;
                         metadata.ContentRating = usRating ?? trRating;
                     }
+                    // Trailer Video (YouTube)
+                    var trailer = details.Videos?.Results?
+                        .Where(v => v.Site == "YouTube" && (v.Type == "Trailer" || v.Type == "Teaser"))
+                        .OrderByDescending(v => v.Official)
+                        .ThenByDescending(v => v.Type == "Trailer")
+                        .FirstOrDefault();
+                    if (trailer != null && !string.IsNullOrEmpty(trailer.Key))
+                    {
+                        metadata.TrailerUrl = $"https://www.youtube.com/watch?v={trailer.Key}";
+                    }
                 }
             }
 
@@ -5178,12 +5214,18 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
 
-            // Apply metadata to UI
+            // Apply metadata to UI and update the in-memory instance
             if (!string.IsNullOrWhiteSpace(metadata.PosterUrl))
+            {
                 SelectedSeriesPosterUrl = metadata.PosterUrl;
+                series.CoverUrl = metadata.PosterUrl;
+            }
 
             if (!string.IsNullOrWhiteSpace(metadata.BackdropUrl))
+            {
                 SelectedSeriesBackdropUrl = metadata.BackdropUrl;
+                series.BackdropUrl = metadata.BackdropUrl;
+            }
 
             if (!string.IsNullOrWhiteSpace(metadata.Description))
                 SelectedSeriesOverview = metadata.Description;
@@ -5200,6 +5242,9 @@ public partial class MainViewModel : ObservableObject
             if (metadata.ReleaseYear.HasValue && metadata.ReleaseYear.Value > 0)
                 SelectedSeriesYears = metadata.ReleaseYear.Value.ToString();
 
+            if (!string.IsNullOrWhiteSpace(metadata.TrailerUrl))
+                SelectedSeriesTrailerUrl = metadata.TrailerUrl;
+
             // 4. Persist fetched data back to DB so future clicks are instant
             _ = Task.Run(async () =>
             {
@@ -5211,12 +5256,15 @@ public partial class MainViewModel : ObservableObject
 
                     var changed = false;
                     if (metadata.TmdbId.HasValue && !dbSeries.TmdbId.HasValue) { dbSeries.TmdbId = metadata.TmdbId; changed = true; }
-                    if (!string.IsNullOrWhiteSpace(metadata.Description) && string.IsNullOrWhiteSpace(dbSeries.Plot)) { dbSeries.Plot = metadata.Description; changed = true; }
-                    if (!string.IsNullOrWhiteSpace(metadata.Cast) && string.IsNullOrWhiteSpace(dbSeries.Cast)) { dbSeries.Cast = metadata.Cast; changed = true; }
-                    if (!string.IsNullOrWhiteSpace(metadata.Director) && string.IsNullOrWhiteSpace(dbSeries.Director)) { dbSeries.Director = metadata.Director; changed = true; }
-                    if (!string.IsNullOrWhiteSpace(metadata.ContentRating) && string.IsNullOrWhiteSpace(dbSeries.ContentRating)) { dbSeries.ContentRating = metadata.ContentRating; changed = true; }
-                    if (!string.IsNullOrWhiteSpace(metadata.BackdropUrl) && string.IsNullOrWhiteSpace(dbSeries.BackdropUrl)) { dbSeries.BackdropUrl = metadata.BackdropUrl; changed = true; }
-                    if (!string.IsNullOrWhiteSpace(metadata.PosterUrl) && string.IsNullOrWhiteSpace(dbSeries.CoverUrl)) { dbSeries.CoverUrl = metadata.PosterUrl; changed = true; }
+                    
+                    // Allow TMDB data to overwrite provider data for key fields
+                    if (!string.IsNullOrWhiteSpace(metadata.Description) && dbSeries.Plot != metadata.Description) { dbSeries.Plot = metadata.Description; changed = true; }
+                    if (!string.IsNullOrWhiteSpace(metadata.Cast) && dbSeries.Cast != metadata.Cast) { dbSeries.Cast = metadata.Cast; changed = true; }
+                    if (!string.IsNullOrWhiteSpace(metadata.Director) && dbSeries.Director != metadata.Director) { dbSeries.Director = metadata.Director; changed = true; }
+                    if (!string.IsNullOrWhiteSpace(metadata.ContentRating) && dbSeries.ContentRating != metadata.ContentRating) { dbSeries.ContentRating = metadata.ContentRating; changed = true; }
+                    if (!string.IsNullOrWhiteSpace(metadata.BackdropUrl) && dbSeries.BackdropUrl != metadata.BackdropUrl) { dbSeries.BackdropUrl = metadata.BackdropUrl; changed = true; }
+                    if (!string.IsNullOrWhiteSpace(metadata.PosterUrl) && dbSeries.CoverUrl != metadata.PosterUrl) { dbSeries.CoverUrl = metadata.PosterUrl; changed = true; }
+                    
                     if (metadata.ReleaseYear.HasValue && !dbSeries.ReleaseYear.HasValue) { dbSeries.ReleaseYear = metadata.ReleaseYear; changed = true; }
                     if (metadata.Rating.HasValue && !dbSeries.Rating.HasValue) { dbSeries.Rating = metadata.Rating; changed = true; }
                     if (string.IsNullOrWhiteSpace(dbSeries.LastTmdbSync?.ToString())) { dbSeries.LastTmdbSync = DateTime.UtcNow; changed = true; }
@@ -5225,6 +5273,7 @@ public partial class MainViewModel : ObservableObject
                         dbSeries.Genre = string.Join(", ", metadata.Genres);
                         changed = true;
                     }
+                    if (!string.IsNullOrWhiteSpace(metadata.TrailerUrl) && string.IsNullOrWhiteSpace(dbSeries.TrailerUrl)) { dbSeries.TrailerUrl = metadata.TrailerUrl; changed = true; }
 
                     if (changed)
                     {

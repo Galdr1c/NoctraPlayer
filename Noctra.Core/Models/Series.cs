@@ -29,6 +29,7 @@ public partial class Series : ObservableObject
     public string? Cast { get; set; }
     public string? Director { get; set; }
     public string? BackdropUrl { get; set; }
+    public string? TrailerUrl { get; set; }
     public DateTime? MetadataFetchedAt { get; set; }
 
     [ObservableProperty]
@@ -49,8 +50,10 @@ public partial class Series : ObservableObject
         }
     }
 
+    public string? GroupTitle { get; set; }
+
     [NotMapped]
-    public string? GroupTitle => Genre;
+    public string? DisplayCategory => !string.IsNullOrEmpty(GroupTitle) ? GroupTitle : Genre;
 
     [NotMapped]
     public string? LocalSizeText { get; set; }

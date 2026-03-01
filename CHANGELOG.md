@@ -11,6 +11,13 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **TMDB API Anahtarı Çalışmıyordu**: `MetadataService` içindeki kritik bir hata düzeltildi — API anahtarı ortam değişkeninin **adı** olarak kullanılıyordu, bu yüzden tüm TMDB çağrıları sessizce başarısız oluyordu. 32.850 dizinin hiçbirinde TMDB verisi yoktu.
 - **Dizi Detayında Veriler Boş Geliyordu**: `LoadSelectedSeriesMetadataAsync` veritabanında kayıtlı Cast, Genre, ContentRating ve BackdropUrl verilerini sıfırlıyordu. Artık mevcut veritabanı verileri ilk değer olarak gösteriliyor.
 - **Yanlış TMDB Eşleştirmesi**: "Barry" (HBO) aramasında "The Drew Barrymore Show" geliyordu çünkü sadece popülerliğe göre sıralanıyordu. Yeni **isim-benzerlik skorlama sistemi** eklendi: tam eşleşme (100), başlangıç eşleşmesi (80), kelime eşleşmesi (40) — popülerlik sadece eşit skorlarda devreye giriyor.
+- **Diziler Listesinde Tür Karışması**: Sağlayıcıdan gelen kategoriler (örn. "TR BİLMEMNE DİZİLER"), TMDB'den çekilen Film Türü (Genre) alanını eziyordu. Veritabanı şeması güncellenerek `GroupTitle` ve `Genre` kolonları **ayrıldı**. Kartlarda artık sadece sağlayıcı kategorisi, detayda ise orijinal TMDB türleri gösteriliyor.
+- **Uluslararası Dizi Dili Tespiti (EU Kategorisi)**: Sağlayıcının `EU` önekiyle sunduğu dizilerin dili yanlışlıkla Türkçe tespit edilip TMDB'den Türkçe (ya da Kanji) olarak çekiliyordu. Parser güncellenerek adında "EU" geçen grup/isimlerin İngilizce (`en-US`) olarak çekilmesi sağlandı.
+- **TMDB Afişlerinin Geri Dönmesi**: Dizi detayından çıkıldığında veya uygulama yeniden başlatıldığında, TMDB'den çekilen yüksek çözünürlüklü afişler (`PosterUrl`), sağlayıcının düşük kaliteli logosu (`CoverUrl`) tarafından ezilmeye devam ediyordu. `MainViewModel` güncellenerek TMDB afişlerinin **kalıcı olarak veritabanına ve arayüze** kaydedilmesi sağlandı.
+- **Arayüz Tasarım Hataları**:
+  - Dizi bölümleri listesindeki aktif sezon sekmesinin kaba, mor arkaplanı kaldırılıp Netflix benzeri şeffaf alt-çizgi stiline (`NavActiveBackgroundBrush`) geçirildi.
+  - Fragmanı İzle butonunun renk uyumsuzluğu Sidebar tonuyla (`AccentBrush`) eşitlenerek giderildi.
+  - Uzun açıklama (Plot) ve oyuncu listesine sahip olan dizilerde yazıların detay sayfasındaki oynat butonlarının üstüne taşması/binmesi problemi, esnek ızgara yapısı ve gizli `ScrollViewer` eklenerek kökten çözüldü.
 
 ### 🚀 Yeni Özellikler
 - **On-Demand TMDB Mimarisi**: Arka planda sürekli çalışan `TmdbSyncService` kaldırıldı. Artık TMDB verileri **sadece kullanıcının ekranında gördüğü diziler** için çekiliyor:
@@ -20,6 +27,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - Çekilen tüm veriler veritabanına kaydediliyor, tekrar çekilmiyor
 - **TmdbId Bazlı Doğrudan Çekim**: Dizi detayında `TmdbId` biliniyorsa isim araması yerine doğrudan `/tv/{id}` endpoint'i kullanılıyor — yanlış eşleşme riski sıfır.
 - **`TmdbDetail` Modeline Genres Desteği**: TMDB detay endpoint'inden gelen tür bilgileri (`genres`) artık doğrudan parse ediliyor.
+- **Dizi Fragmanı (Trailer) Desteği**: `append_to_response=videos` parametresi ile TMDB'den dizilere ait YouTube fragmanları çekilerek veritabanına (`TrailerUrl`) kaydediliyor. Dizi detay sayfasına, temaya uygun mor renkli bir "Fragmanı İzle" butonu eklendi. Butona tıklandığında fragman varsayılan tarayıcıda açılır.
 
 ### ⚡ Performans İyileştirmeleri
 - **Otomatik Arama Kaldırıldı**: Arama kutusuna yazarken otomatik sonuç gösterimi devre dışı bırakıldı. Arama sadece **Enter** tuşu veya arama butonu ile tetikleniyor — gereksiz işlem yükü ortadan kalktı.

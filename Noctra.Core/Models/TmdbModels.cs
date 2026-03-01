@@ -116,6 +116,33 @@ public class TmdbDetail : TmdbResult
     /// </summary>
     [JsonPropertyName("genres")]
     public List<TmdbGenre>? Genres { get; set; }
+
+    [JsonPropertyName("videos")]
+    public TmdbVideosResponse? Videos { get; set; }
+}
+
+/// <summary>
+/// TMDB video (trailer, teaser, etc.)
+/// </summary>
+public class TmdbVideo
+{
+    [JsonPropertyName("key")]
+    public string? Key { get; set; }
+
+    [JsonPropertyName("site")]
+    public string? Site { get; set; }
+
+    [JsonPropertyName("type")]
+    public string? Type { get; set; }
+
+    [JsonPropertyName("official")]
+    public bool Official { get; set; }
+}
+
+public class TmdbVideosResponse
+{
+    [JsonPropertyName("results")]
+    public List<TmdbVideo>? Results { get; set; }
 }
 
 /// <summary>
@@ -156,6 +183,7 @@ public class ChannelMetadata
     public string? Director { get; set; }
     public string? Cast { get; set; }
     public string? ContentRating { get; set; }
+    public string? TrailerUrl { get; set; }
 }
 
 public class TmdbCredits

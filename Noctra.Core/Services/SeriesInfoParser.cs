@@ -168,6 +168,13 @@ public static partial class SeriesInfoParser
     {
         if (string.IsNullOrWhiteSpace(titleOrCategory)) return "tr-TR";
 
+        if (titleOrCategory.TrimStart().StartsWith("EU ", StringComparison.OrdinalIgnoreCase) || 
+            titleOrCategory.TrimStart().StartsWith("EU|", StringComparison.OrdinalIgnoreCase) ||
+            titleOrCategory.TrimStart().Equals("EU", StringComparison.OrdinalIgnoreCase))
+        {
+            return "en-US";
+        }
+
         var matches = StrictLanguageCodeRegex().Matches(titleOrCategory);
         if (matches.Count > 0)
         {
@@ -179,7 +186,7 @@ public static partial class SeriesInfoParser
                     switch (code)
                     {
                         case "TR": return "tr-TR";
-                        case "EN": case "UK": case "US": return "en-US";
+                        case "EN": case "UK": case "US": case "EU": return "en-US";
                         case "DE": return "de-DE";
                         case "FR": return "fr-FR";
                         case "ES": case "SP": return "es-ES";

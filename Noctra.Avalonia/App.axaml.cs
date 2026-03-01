@@ -353,8 +353,19 @@ public partial class App : Application
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN Cast TEXT;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN Director TEXT;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN BackdropUrl TEXT;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN TrailerUrl TEXT;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN MetadataFetchedAt TEXT;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN GroupTitle TEXT;"); } catch { }
         
+        try 
+        { 
+            // Invalidate TMDB cache for EU series so they fetch English metadata instead of the cached Turkish metadata
+            await context.Database.ExecuteSqlRawAsync(@"
+                UPDATE Series 
+                SET Plot = NULL, Cast = NULL, BackdropUrl = NULL, TrailerUrl = NULL, ContentRating = NULL, MetadataFetchedAt = NULL 
+                WHERE GroupTitle LIKE 'EU %' OR GroupTitle LIKE 'EU|%' OR GroupTitle = 'EU'");
+        } catch (Exception ex) { StartupDiagnostics.Log($"Failed to migrate GroupTitle: {ex.Message}"); }
+
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Seasons ADD COLUMN TmdbSeasonId INTEGER;"); } catch (Exception ex) { StartupDiagnostics.Log($"Failed to add TmdbSeasonId: {ex.Message}"); }
         
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN Genre TEXT;"); } catch { }

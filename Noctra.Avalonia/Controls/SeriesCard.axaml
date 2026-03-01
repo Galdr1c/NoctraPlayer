@@ -54,17 +54,15 @@
             <TextBlock Text="{Binding Name}" Foreground="White" FontSize="12" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
             <StackPanel Orientation="Horizontal" Spacing="6">
               <TextBlock Text="{Binding SeasonCountSafe, StringFormat={}{0} Sezon}" Foreground="#A6FFFFFF" FontSize="10"/>
-              <Ellipse Width="3" Height="3" Fill="#66FFFFFF" VerticalAlignment="Center" />
-              <TextBlock Text="{Binding ReleaseYear}" Foreground="#A6FFFFFF" FontSize="10" IsVisible="{Binding ReleaseYear, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-              <Ellipse Width="3" Height="3" Fill="#66FFFFFF" VerticalAlignment="Center" IsVisible="{Binding ReleaseYear, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-              <TextBlock Text="{Binding Genre}" Foreground="#A6FFFFFF" FontSize="10" TextTrimming="CharacterEllipsis"/>
+              
+              <!-- Separator only visible if there's a DisplayCategory -->
+              <Ellipse Width="3" Height="3" Fill="#66FFFFFF" VerticalAlignment="Center" 
+                       IsVisible="{Binding DisplayCategory, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+              
+              <TextBlock Text="{Binding DisplayCategory}" Foreground="#A6FFFFFF" FontSize="10" TextTrimming="CharacterEllipsis"
+                         IsVisible="{Binding DisplayCategory, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
             </StackPanel>
           </StackPanel>
-        </Border>
-
-        <Border VerticalAlignment="Top" HorizontalAlignment="Right" Margin="6" Background="#B3000000" CornerRadius="3" Padding="4,2"
-                IsVisible="{Binding Rating, Converter={x:Static ObjectConverters.IsNotNull}}">
-          <TextBlock Text="{Binding Rating, StringFormat={}{0:F1}}" Foreground="{DynamicResource SuccessBrush}" FontSize="10" FontWeight="Bold"/>
         </Border>
       </Grid>
     </Border>
