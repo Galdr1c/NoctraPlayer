@@ -20,6 +20,8 @@ public class SeriesEpisodeProgress
     [MaxLength(255)]
     public string SeriesTitle { get; set; } = string.Empty;
 
+    public int? TmdbId { get; set; }
+
     public int SeasonNumber { get; set; }
     public int EpisodeNumber { get; set; }
 

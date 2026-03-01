@@ -104,7 +104,8 @@ public class WatchHistoryService : IWatchHistoryService
         TimeSpan? duration,
         DateTime watchedAt)
     {
-        var seriesTitle = episode.Season?.Series?.Name;
+        var series = episode.Season?.Series;
+        var seriesTitle = series?.Name;
         if (string.IsNullOrWhiteSpace(seriesTitle))
         {
             seriesTitle = episode.Name;
@@ -117,12 +118,15 @@ public class WatchHistoryService : IWatchHistoryService
         }
 
         var (seasonNumber, episodeNumber) = SeriesProgressIdentity.ResolveSeasonEpisode(episode);
+        var tmdbId = series?.TmdbId;
+
+        // Try to find by TmdbId first (Absolute match), fallback to SeriesKey if TmdbId is null or no record found
         var existing = await context.SeriesEpisodeProgresses
             .FirstOrDefaultAsync(p =>
                 p.ProfileId == profileId &&
-                p.SeriesKey == seriesKey &&
                 p.SeasonNumber == seasonNumber &&
-                p.EpisodeNumber == episodeNumber);
+                p.EpisodeNumber == episodeNumber &&
+                ((tmdbId.HasValue && p.TmdbId == tmdbId.Value) || p.SeriesKey == seriesKey));
 
         var isCompletedNow = existing?.Completed == true || completed;
         var finalStoppedAt = isCompletedNow && duration.HasValue
@@ -136,6 +140,7 @@ public class WatchHistoryService : IWatchHistoryService
                 ProfileId = profileId,
                 SeriesKey = seriesKey,
                 SeriesTitle = seriesTitle ?? string.Empty,
+                TmdbId = tmdbId, // Save the TMDB ID!
                 SeasonNumber = seasonNumber,
                 EpisodeNumber = episodeNumber,
                 LastWatchedAt = watchedAt,
@@ -152,6 +157,12 @@ public class WatchHistoryService : IWatchHistoryService
         existing.LastWatchedAt = watchedAt;
         existing.StoppedAt = finalStoppedAt;
         existing.Completed = isCompletedNow;
+
+        // Upgrade legacy SeriesKey progress to absolute TmdbId progress if available
+        if (!existing.TmdbId.HasValue && tmdbId.HasValue)
+        {
+            existing.TmdbId = tmdbId;
+        }
 
         if (duration.HasValue && duration.Value.TotalSeconds > 0)
         {

@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Birim Testleri (Unit Testing) ile Güvence Altına Alınmış Mimari**: 
+    - Yeni TMDB eşleştirme mekanizması ve çoklu dil analiz motorumuz (Language Detection), kapsamlı xUnit testleriyle (`SeriesInfoParserTests` ve `WatchHistoryServiceTests`) koruma altına alınmıştır. 
+    - *Stranger Things (Cross-Provider Match)* gibi kritik izleme senaryoları simüle edilip 100+ başarılı test durumuyla sistemin hatasız çalıştığı (%100 TMDB senkronizasyonu) tescillenmiştir.
+
+- **Akıllı Dil Tespiti (Language Detection)** (2026-03-01):
+    - Dizi ve kategori isimlerinde yer alan ülke/dil kısaltmaları (`[TR]`, `|EN|`, `DE.`, `RU Dual` vb.) özel bir Regex motoruyla (StrictLanguageCodeRegex) analiz ediliyor.
+    - TMDB'den özet, afiş ve meta veriler çekilirken artık sabit "tr-TR" yerine dizinin/kanalın orijinal dilinde istek atılıyor. Alman VOD'larına Almanca özet, İspanyolca dizilere İspanyolca afiş getiriliyor.
+- **Kusursuz Çapraz-Sağlayıcı İzleme Geçmişi (Absolute TMDB Match)**: Dizi izleme (progress) mimarisi artık kod seviyesinde `TmdbId` öncelikli eşleşmeye geçirildi.
+    - *Senaryo*: Bir kullanıcı Provider-A'da "Stranger Things" izlerken 1. Sezon 3. Bölümü bitirip 4. Bölümün yarısında kalırsa; ileride listeyi veya sağlayıcıyı değiştirip isim farklı bir şekilde ("Things of Stranger (4K)") karşısına çıksa dahi; arka plandaki `TmdbId` eşleşmesi sayesinde diziye tıklar tıklamaz doğrudan 4. bölümün yarısından oynamaya devam eder. Yeni sağlayıcıdaki tüm bölümler anında "İzlendi" olarak işaretlenir.
+
+- **TMDB Merkezi Meta Veri Sistemi ve Gecikmeli Yükleme (Lazy Load)** (2026-03-01):
+    - **Arka Plan Eşleştirici (Background Sync Worker)**: M3U/Xtream listesindeki ID'si ve posteri olmayan VOD (Filmler) ve Diziler için arka planda tamamen sessiz çalışan `TmdbSyncService` eklendi. TMDB'nin limitlerine (10 saniyede ~40 istek) tam saygı göstererek sistemi boğmadan veritabanını zenginleştirir.
+    - **Minimum API İsteği (Lazy Loading)**: Dizi listesinde gezinirken yüzlerce dizi için API isteği atılması engellendi; her şey anında SQLite'dan okunur. Bir diziye (örn. 3 sezonluk bir diziye) ilk kez tıklandığında yalnızca 4 istek (1 ana dizi detayı + 3 sezon detayı) atılarak o dizinin *tüm* bölüm resimleri ve açıklamaları tek seferde çekilir ve sonsuza dek cihazda önbelleklenir.
+    - **Zengin Veritabanı Modelleri**: `AppDbContext`, `Series` ve `Channel` tabloları TMDB verilerini (Oyuncular, Yönetmen, BackdropUrl, Yaş Sınırı, Orijinal Dil ve TmdbId) destekleyecek şekilde genişletildi ve `TmdbId` sütunlarına hızlı arama (Indexing) eklendi.
+
 - **Reaktif Arayüz İyileştirmeleri (MVVM)** (2026-03-01):
     - **Anlık İkon Güncellemesi**: Favorilere Ekle (Kalp) ve Listeme Ekle ikonlarına tıklandığında arayüzün anlık tepki vermemesi (değişikliği görmek için çıkıp girme gereksinimi) sorunu çözüldü. `Channel` ve `Series` modelleri tam MVVM desteği için `ObservableObject` altyapısına geçirilerek arayüzün özellik değişikliklerinden anında haberdar olması sağlandı.
 

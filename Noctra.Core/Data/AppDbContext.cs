@@ -37,6 +37,7 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.Name);
             entity.HasIndex(e => e.GroupTitle);
             entity.HasIndex(e => e.IsFavorite);
+            entity.HasIndex(e => e.TmdbId);
         });
 
         // Playlist yapılandırması
@@ -56,6 +57,7 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
+            entity.HasIndex(e => e.TmdbId);
             entity.HasMany(e => e.Seasons)
                   .WithOne(e => e.Series)
                   .HasForeignKey(e => e.SeriesId)
@@ -66,6 +68,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Season>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.TmdbSeasonId);
             entity.HasMany(e => e.Episodes)
                   .WithOne(e => e.Season)
                   .HasForeignKey(e => e.SeasonId)

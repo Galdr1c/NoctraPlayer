@@ -218,3 +218,51 @@ public class TmdbCountryContentRating
     public string Rating { get; set; } = string.Empty;
 }
 
+/// <summary>
+/// TMDB Season details including episode list
+/// </summary>
+public class TmdbSeasonDetail
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("season_number")]
+    public int SeasonNumber { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("overview")]
+    public string? Overview { get; set; }
+
+    [JsonPropertyName("poster_path")]
+    public string? PosterPath { get; set; }
+
+    [JsonPropertyName("episodes")]
+    public List<TmdbEpisodeDetail> Episodes { get; set; } = new();
+}
+
+/// <summary>
+/// TMDB Episode details inside a season
+/// </summary>
+public class TmdbEpisodeDetail
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("episode_number")]
+    public int EpisodeNumber { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("overview")]
+    public string? Overview { get; set; }
+
+    [JsonPropertyName("still_path")]
+    public string? StillPath { get; set; } // Episode Thumbnail
+    
+    [JsonPropertyName("air_date")]
+    public string? AirDate { get; set; }
+}
+

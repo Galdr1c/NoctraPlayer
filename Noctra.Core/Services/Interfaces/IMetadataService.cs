@@ -13,7 +13,7 @@ public interface IMetadataService
     /// <param name="searchQuery">Movie or TV show name to search</param>
     /// <param name="type">Optional channel type to filter (Movie/Series)</param>
     /// <returns>Metadata if found, null otherwise</returns>
-    Task<ChannelMetadata?> FetchMetadataAsync(string searchQuery, ChannelType? type = null, CancellationToken cancellationToken = default);
+    Task<ChannelMetadata?> FetchMetadataAsync(string searchQuery, ChannelType? type = null, string languageCode = "tr-TR", CancellationToken cancellationToken = default);
     
     /// <summary>
     /// Enriches a channel with metadata from TMDB
@@ -33,11 +33,21 @@ public interface IMetadataService
     /// </summary>
     /// <param name="genreIds">TMDB genre IDs</param>
     /// <returns>List of genre names</returns>
-    Task<List<string>> GetGenresAsync(List<int> genreIds, CancellationToken cancellationToken = default);
+    Task<List<string>> GetGenresAsync(List<int> genreIds, string languageCode = "tr-TR", CancellationToken cancellationToken = default);
     
     /// <summary>
     /// Clears the genre cache
     /// </summary>
+    /// <summary>
+    /// Fetches deep details for a series (Credits, Cast, etc) by TmdbId
+    /// </summary>
+    Task<TmdbDetail?> FetchSeriesDetailsAsync(int tmdbId, string languageCode = "tr-TR", CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Fetches a specific season's details including all episode overviews and thumbnails
+    /// </summary>
+    Task<TmdbSeasonDetail?> FetchSeasonDetailsAsync(int tmdbId, int seasonNumber, string languageCode = "tr-TR", CancellationToken cancellationToken = default);
+
     void ClearCache();
 }
 

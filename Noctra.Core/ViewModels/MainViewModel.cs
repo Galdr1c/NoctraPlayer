@@ -5212,12 +5212,88 @@ public partial class MainViewModel : ObservableObject
         var dbSeries = await db.Series
             .Include(s => s.Seasons)
             .ThenInclude(sn => sn.Episodes)
-            .AsNoTracking()
+            // Use tracking to save Tmdb changes back to the DB immediately if lazy load occurs
             .FirstOrDefaultAsync(s =>
                 s.PlaylistId == SelectedPlaylist.Id &&
                 (s.Id == series.Id || s.Name == series.Name));
 
         var source = dbSeries ?? series;
+
+        // --- LAZY LOAD TMDB METADATA (Seasons & Episodes) ---
+        if (source.TmdbId.HasValue && source.MetadataFetchedAt == null)
+        {
+            try
+            {
+                var languageCode = SeriesInfoParser.ExtractLanguageCode(source.Name);
+
+                // 1. Fetch deep Series info
+                var tmdbSeries = await _metadataService.FetchSeriesDetailsAsync(source.TmdbId.Value, languageCode);
+                if (tmdbSeries != null)
+                {
+                    // Optionally update Series fields if background worker missed something
+                    if (string.IsNullOrEmpty(source.Cast) && tmdbSeries.Credits?.Cast != null)
+                    {
+                        source.Cast = string.Join(", ", tmdbSeries.Credits.Cast.OrderBy(c => c.Order).Take(5).Select(c => c.Name));
+                    }
+                    if (string.IsNullOrEmpty(source.Director) && tmdbSeries.Credits?.Crew != null)
+                    {
+                        source.Director = tmdbSeries.Credits.Crew.FirstOrDefault(c => c.Job == "Director")?.Name;
+                    }
+                }
+
+                // 2. Fetch Season and Episode details
+                bool changesMade = false;
+                foreach (var season in source.Seasons)
+                {
+                    if (season.SeasonNumber <= 0) continue;
+
+                    var tmdbSeason = await _metadataService.FetchSeasonDetailsAsync(source.TmdbId.Value, season.SeasonNumber, languageCode);
+                    if (tmdbSeason != null)
+                    {
+                        season.TmdbSeasonId = tmdbSeason.Id;
+                        if (!string.IsNullOrEmpty(tmdbSeason.PosterPath))
+                        {
+                            season.CoverUrl = $"https://image.tmdb.org/t/p/w500{tmdbSeason.PosterPath}";
+                        }
+                        if (string.IsNullOrEmpty(season.Plot))
+                        {
+                            season.Plot = tmdbSeason.Overview;
+                        }
+
+                        // Update Episodes
+                        foreach (var episode in season.Episodes)
+                        {
+                            var tmdbEp = tmdbSeason.Episodes.FirstOrDefault(e => e.EpisodeNumber == episode.EpisodeNumber);
+                            if (tmdbEp != null)
+                            {
+                                if (!string.IsNullOrEmpty(tmdbEp.StillPath))
+                                {
+                                    episode.CoverUrl = $"https://image.tmdb.org/t/p/w500{tmdbEp.StillPath}";
+                                }
+                                if (string.IsNullOrEmpty(episode.Plot))
+                                {
+                                    episode.Plot = tmdbEp.Overview;
+                                }
+                            }
+                        }
+                        changesMade = true;
+                    }
+                }
+
+                // 3. Mark as fetched and Save
+                if (changesMade && dbSeries != null)
+                {
+                    source.MetadataFetchedAt = DateTime.UtcNow;
+                    await db.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Lazy load TMDB fetch failed for Series {Name}", source.Name);
+            }
+        }
+        // ----------------------------------------------------
+
         await ApplyProfileProgressAsync(source, db);
         return source;
     }

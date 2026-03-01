@@ -95,6 +95,11 @@ public partial class App : Application
                             StartupDiagnostics.Log("EF Core warmed up.");
                         }
 
+                        // 2.5 Start Background TMDB Matcher
+                        var tmdbSync = Services.GetRequiredService<ITmdbSyncService>();
+                        tmdbSync.StartSync();
+                        StartupDiagnostics.Log("TMDB Sync Service started.");
+
                         // 3. Resolve MainWindow/ProfilesWindow early
                         var profilesWindow = await Dispatcher.UIThread.InvokeAsync(() => 
                         {
@@ -239,6 +244,8 @@ public partial class App : Application
         services.AddSingleton<INetworkService, NetworkService>();
         services.AddSingleton<IUpdateService, UpdateService>();
 
+        services.AddSingleton<ITmdbSyncService, TmdbSyncService>();
+
         services.AddSingleton<IDispatcherService, AvaloniaDispatcherService>();
         services.AddSingleton<IDialogService, AvaloniaDialogService>();
         services.AddSingleton<IThemeService, AvaloniaThemeService>();
@@ -333,6 +340,23 @@ public partial class App : Application
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN IntroEndSec REAL;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN CreditsStartSec REAL;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN IsFavorite INTEGER NOT NULL DEFAULT 0;"); } catch { }
+        
+        // TMDB Extensions
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN TmdbId INTEGER;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN TmdbTitle TEXT;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN LastTmdbSync TEXT;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN Cast TEXT;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN Director TEXT;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN BackdropUrl TEXT;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN MetadataFetchedAt TEXT;"); } catch { }
+        
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Season ADD COLUMN TmdbSeasonId INTEGER;"); } catch { }
+        
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN TmdbId INTEGER;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN LastTmdbSync TEXT;"); } catch { }
+        
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE SeriesEpisodeProgresses ADD COLUMN TmdbId INTEGER;"); } catch { }
+        
         try
         {
             await context.Database.ExecuteSqlRawAsync(@"

@@ -39,6 +39,9 @@ public partial class Channel : ObservableObject
     public string? Language { get; set; }
     public ChannelType Type { get; set; } = ChannelType.Live;
     
+    public int? TmdbId { get; set; }
+    public DateTime? LastTmdbSync { get; set; }
+    
     [ObservableProperty]
     private bool _isFavorite;
     

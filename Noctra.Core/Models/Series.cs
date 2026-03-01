@@ -22,6 +22,15 @@ public partial class Series : ObservableObject
     public string? ContentRating { get; set; }
     public int PlaylistId { get; set; }
     
+    // TMDB Integration
+    public int? TmdbId { get; set; }
+    public string? TmdbTitle { get; set; }
+    public DateTime? LastTmdbSync { get; set; }
+    public string? Cast { get; set; }
+    public string? Director { get; set; }
+    public string? BackdropUrl { get; set; }
+    public DateTime? MetadataFetchedAt { get; set; }
+
     [ObservableProperty]
     private bool _isInMyList;
     
@@ -86,7 +95,9 @@ public class Season
     public int SeasonNumber { get; set; }
     public string? Name { get; set; }
     public string? CoverUrl { get; set; }
+    public string? Plot { get; set; }
     public int SeriesId { get; set; }
+    public int? TmdbSeasonId { get; set; }
     
     // Navigation properties
     public Series? Series { get; set; }

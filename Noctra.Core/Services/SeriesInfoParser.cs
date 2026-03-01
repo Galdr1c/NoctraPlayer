@@ -156,6 +156,66 @@ public static partial class SeriesInfoParser
         return MultiSpaceRegex().Replace(buffer.ToString(), " ").Trim();
     }
 
+    [GeneratedRegex(@"[\|\[\(\{]([a-zA-Z]{2,3})[\|\]\)\}]")]
+    private static partial Regex StrictLanguageCodeRegex();
+
+    /// <summary>
+    /// Analyzes the string (category or channel name) to detect language prefixes/tags 
+    /// and returns a TMDB-compatible ISO language code (e.g. "tr-TR", "en-US").
+    /// Falls back to "tr-TR" if no language is detected.
+    /// </summary>
+    public static string ExtractLanguageCode(string? titleOrCategory)
+    {
+        if (string.IsNullOrWhiteSpace(titleOrCategory)) return "tr-TR";
+
+        var matches = StrictLanguageCodeRegex().Matches(titleOrCategory);
+        if (matches.Count > 0)
+        {
+            foreach (Match match in matches)
+            {
+                if (match.Groups.Count > 1)
+                {
+                    var code = match.Groups[1].Value.ToUpperInvariant();
+                    switch (code)
+                    {
+                        case "TR": return "tr-TR";
+                        case "EN": case "UK": case "US": return "en-US";
+                        case "DE": return "de-DE";
+                        case "FR": return "fr-FR";
+                        case "ES": case "SP": return "es-ES";
+                        case "IT": return "it-IT";
+                        case "RU": return "ru-RU";
+                        case "AR": return "ar-SA";
+                        case "NL": return "nl-NL";
+                        case "PT": return "pt-PT";
+                        case "PL": return "pl-PL";
+                        case "GR": return "el-GR";
+                        case "SE": return "sv-SE";
+                        case "DK": return "sv-SE"; // Sometimes DK/SE grouped, ideally da-DK
+                        case "DA": return "da-DK";
+                    }
+                }
+            }
+        }
+
+        // Fallback checks for common tags that might not be tightly wrapped 
+        // e.g., "TR Dual", "EN Sub", which our LanguageTokenRegex handles.
+        var langMatch = LanguageTokenRegex().Match(titleOrCategory);
+        if (langMatch.Success)
+        {
+            var tag = langMatch.Value.ToUpperInvariant();
+            if (tag.Contains("TR")) return "tr-TR";
+            if (tag.Contains("EN")) return "en-US";
+            if (tag.Contains("DE")) return "de-DE";
+            if (tag.Contains("FR")) return "fr-FR";
+            if (tag.Contains("RU")) return "ru-RU";
+            if (tag.Contains("AR")) return "ar-SA";
+        }
+
+        // Default
+        return "tr-TR";
+    }
+
     public static string CleanSeriesName(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))

@@ -47,7 +47,7 @@ public partial class MetadataService : IMetadataService
         _apiKey = apiKey;
     }
     
-    public async Task<ChannelMetadata?> FetchMetadataAsync(string searchQuery, ChannelType? type = null, CancellationToken cancellationToken = default)
+    public async Task<ChannelMetadata?> FetchMetadataAsync(string searchQuery, ChannelType? type = null, string languageCode = "tr-TR", CancellationToken cancellationToken = default)
     {
         EnsureApiKeyLoaded();
 
@@ -67,17 +67,17 @@ public partial class MetadataService : IMetadataService
             if (type == ChannelType.VOD)
             {
                 // Sadece film ara
-                url = $"{TMDB_BASE_URL}/search/movie?api_key={_apiKey}&query={Uri.EscapeDataString(cleanQuery)}&include_adult=false&language=tr-TR";
+                url = $"{TMDB_BASE_URL}/search/movie?api_key={_apiKey}&query={Uri.EscapeDataString(cleanQuery)}&include_adult=false&language={languageCode}";
             }
             else if (type == ChannelType.Series)
             {
                 // Sadece dizi ara
-                url = $"{TMDB_BASE_URL}/search/tv?api_key={_apiKey}&query={Uri.EscapeDataString(cleanQuery)}&include_adult=false&language=tr-TR";
+                url = $"{TMDB_BASE_URL}/search/tv?api_key={_apiKey}&query={Uri.EscapeDataString(cleanQuery)}&include_adult=false&language={languageCode}";
             }
             else
             {
                 // Karışık ara (Multi search)
-                url = $"{TMDB_BASE_URL}/search/multi?api_key={_apiKey}&query={Uri.EscapeDataString(cleanQuery)}&include_adult=false&language=tr-TR";
+                url = $"{TMDB_BASE_URL}/search/multi?api_key={_apiKey}&query={Uri.EscapeDataString(cleanQuery)}&include_adult=false&language={languageCode}";
             }
             
             var response = await _httpClient.GetAsync(url, cancellationToken);
@@ -120,10 +120,10 @@ public partial class MetadataService : IMetadataService
             
             // Get detailed info (Cast, Director, etc.)
             var mediaType = best.MediaType ?? (type == ChannelType.VOD ? "movie" : "tv");
-            var details = await FetchDetailsAsync(best.Id, mediaType, cancellationToken);
+            var details = await FetchDetailsAsync(best.Id, mediaType, languageCode, cancellationToken);
             
             // Get genre names
-            var genres = await GetGenresAsync(best.GenreIds, cancellationToken);
+            var genres = await GetGenresAsync(best.GenreIds, languageCode, cancellationToken);
             
             var metadata = new ChannelMetadata
             {
@@ -175,13 +175,47 @@ public partial class MetadataService : IMetadataService
         }
     }
     
-    private async Task<TmdbDetail?> FetchDetailsAsync(int id, string mediaType, CancellationToken cancellationToken)
+    public async Task<TmdbDetail?> FetchSeriesDetailsAsync(int tmdbId, string languageCode = "tr-TR", CancellationToken cancellationToken = default)
+    {
+        EnsureApiKeyLoaded();
+        if (string.IsNullOrEmpty(_apiKey)) return null;
+
+        try
+        {
+            var url = $"{TMDB_BASE_URL}/tv/{tmdbId}?api_key={_apiKey}&append_to_response=credits,content_ratings&language={languageCode}";
+            return await _httpClient.GetFromJsonAsync<TmdbDetail>(url, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Error fetching series details for TmdbId {Id}", tmdbId);
+            return null;
+        }
+    }
+
+    public async Task<TmdbSeasonDetail?> FetchSeasonDetailsAsync(int tmdbId, int seasonNumber, string languageCode = "tr-TR", CancellationToken cancellationToken = default)
+    {
+        EnsureApiKeyLoaded();
+        if (string.IsNullOrEmpty(_apiKey)) return null;
+
+        try
+        {
+            var url = $"{TMDB_BASE_URL}/tv/{tmdbId}/season/{seasonNumber}?api_key={_apiKey}&language={languageCode}";
+            return await _httpClient.GetFromJsonAsync<TmdbSeasonDetail>(url, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Error fetching season {SeasonNumber} details for TmdbId {Id}", seasonNumber, tmdbId);
+            return null;
+        }
+    }
+
+    private async Task<TmdbDetail?> FetchDetailsAsync(int id, string mediaType, string languageCode, CancellationToken cancellationToken)
     {
         try
         {
             var endpoint = mediaType == "movie" ? "movie" : "tv";
             var append = mediaType == "movie" ? "credits,release_dates" : "credits,content_ratings";
-            var url = $"{TMDB_BASE_URL}/{endpoint}/{id}?api_key={_apiKey}&append_to_response={append}&language=tr-TR";
+            var url = $"{TMDB_BASE_URL}/{endpoint}/{id}?api_key={_apiKey}&append_to_response={append}&language={languageCode}";
             
             return await _httpClient.GetFromJsonAsync<TmdbDetail>(url, cancellationToken);
         }
@@ -197,8 +231,10 @@ public partial class MetadataService : IMetadataService
         if (channel.Type == ChannelType.Live)
             return; // Don't enrich live channels
         
+        var languageCode = SeriesInfoParser.ExtractLanguageCode(channel.GroupTitle ?? channel.Name);
+        
         // Kanal türünü geçirerek aramayı daralt
-        var metadata = await FetchMetadataAsync(channel.Name, channel.Type, cancellationToken);
+        var metadata = await FetchMetadataAsync(channel.Name, channel.Type, languageCode, cancellationToken);
         
         if (metadata == null)
             return;
@@ -209,7 +245,7 @@ public partial class MetadataService : IMetadataService
         channel.ReleaseYear = metadata.ReleaseYear;
         channel.BackdropUrl = metadata.BackdropUrl;
         channel.Director = metadata.Director;
-        channel.Cast = metadata.Cast;
+        channel.Cast = metadata.Cast; // Fix CS0428
         channel.ContentRating = metadata.ContentRating;
         
         // Use poster as logo if no logo exists OR if default logo is generic
@@ -233,12 +269,12 @@ public partial class MetadataService : IMetadataService
         }
     }
     
-    public async Task<List<string>> GetGenresAsync(List<int> genreIds, CancellationToken cancellationToken = default)
+    public async Task<List<string>> GetGenresAsync(List<int> genreIds, string languageCode = "tr-TR", CancellationToken cancellationToken = default)
     {
         if (genreIds.Count == 0)
             return new List<string>();
         
-        await EnsureGenresCachedAsync(cancellationToken);
+        await EnsureGenresCachedAsync(languageCode, cancellationToken);
         
         var genres = new List<string>();
         
@@ -259,7 +295,7 @@ public partial class MetadataService : IMetadataService
         _tvGenres = null;
     }
     
-    private async Task EnsureGenresCachedAsync(CancellationToken cancellationToken)
+    private async Task EnsureGenresCachedAsync(string languageCode, CancellationToken cancellationToken)
     {
         if (_movieGenres != null && _tvGenres != null)
             return;
@@ -271,12 +307,12 @@ public partial class MetadataService : IMetadataService
                 return;
             
             // Fetch movie genres
-            var movieGenreUrl = $"{TMDB_BASE_URL}/genre/movie/list?api_key={_apiKey}&language=tr-TR";
+            var movieGenreUrl = $"{TMDB_BASE_URL}/genre/movie/list?api_key={_apiKey}&language={languageCode}";
             var movieResponse = await _httpClient.GetFromJsonAsync<TmdbGenreResponse>(movieGenreUrl, cancellationToken);
             _movieGenres = movieResponse?.Genres.ToDictionary(g => g.Id, g => g.Name) ?? new();
             
             // Fetch TV genres
-            var tvGenreUrl = $"{TMDB_BASE_URL}/genre/tv/list?api_key={_apiKey}&language=tr-TR";
+            var tvGenreUrl = $"{TMDB_BASE_URL}/genre/tv/list?api_key={_apiKey}&language={languageCode}";
             var tvResponse = await _httpClient.GetFromJsonAsync<TmdbGenreResponse>(tvGenreUrl, cancellationToken);
             _tvGenres = tvResponse?.Genres.ToDictionary(g => g.Id, g => g.Name) ?? new();
         }
