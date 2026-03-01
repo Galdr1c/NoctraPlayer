@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+- **Reaktif Arayüz İyileştirmeleri (MVVM)** (2026-03-01):
+    - **Anlık İkon Güncellemesi**: Favorilere Ekle (Kalp) ve Listeme Ekle ikonlarına tıklandığında arayüzün anlık tepki vermemesi (değişikliği görmek için çıkıp girme gereksinimi) sorunu çözüldü. `Channel` ve `Series` modelleri tam MVVM desteği için `ObservableObject` altyapısına geçirilerek arayüzün özellik değişikliklerinden anında haberdar olması sağlandı.
+
+- **Görsel Kimlik ve İkon Güncellemesi** (2026-03-01):
+    - **Favori İkonu Değişimi**: Uygulama genelindeki favori (star) ikonları, daha modern bir görünüm için kalp (heart) ikonları ile değiştirildi.
+    - **Sidebar Güncellemesi**: Yan menüdeki "Favoriler" ikonu kalp olarak güncellendi.
+    - **Kanal Kartları Tasarımı**: Canlı TV kartlarındaki favori butonları kalbe dönüştürüldü ve favori durumunda vurgu rengi olarak kırmızı (`#E50914`) kullanıldı.
+    - **Puanlama Göstergesi**: Oynatıcı bilgi panelindeki yıldız karakteri kalp karakteri (`❤`) ile değiştirildi.
 - **Dizi Detay Sayfası Tasarım Güncellemesi ve Dinamik Meta Veri Entegrasyonu** (2026-02-28):
     - **Dinamik Tür ve Yaş Sınırı**: Sabit metinler yerine TMDB API'den gelen gerçek tür (Genre) ve yaş sınırı (ContentRating) bilgileri entegre edildi.
     - **Akıllı Meta Veri Paneli**: Yıl, tür ve yaş sınırı alanları sadece veri varsa görünecek şekilde güncellendi; ayırıcı noktalar (`•`) dinamik olarak konumlandırıldı.

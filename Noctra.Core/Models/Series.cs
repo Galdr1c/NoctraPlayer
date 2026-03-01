@@ -1,12 +1,13 @@
 using System.Text.RegularExpressions;
 using System.ComponentModel.DataAnnotations.Schema;
 using Noctra.Services;
+using CommunityToolkit.Mvvm.ComponentModel;
 namespace Noctra.Models;
 
 /// <summary>
 /// Dizi bilgilerini tutar
 /// </summary>
-public class Series
+public partial class Series : ObservableObject
 {
     private ICollection<Season> _seasons = new List<Season>();
     private int? _cachedSeasonCount;
@@ -20,8 +21,12 @@ public class Series
     public double? Rating { get; set; }
     public string? ContentRating { get; set; }
     public int PlaylistId { get; set; }
-    public bool IsInMyList { get; set; }
-    public bool IsFavorite { get; set; }
+    
+    [ObservableProperty]
+    private bool _isInMyList;
+    
+    [ObservableProperty]
+    private bool _isFavorite;
     
     // Navigation properties
     public Playlist? Playlist { get; set; }

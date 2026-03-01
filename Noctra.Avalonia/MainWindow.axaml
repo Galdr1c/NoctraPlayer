@@ -322,7 +322,7 @@
             <Panel>
               <Border Classes="ActiveIndicator" />
               <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
-                <materialIcons:MaterialIcon Kind="StarOutline" />
+                <materialIcons:MaterialIcon Kind="HeartOutline" />
                 <TextBlock Text="Favoriler" VerticalAlignment="Center"/>
               </StackPanel>
             </Panel>

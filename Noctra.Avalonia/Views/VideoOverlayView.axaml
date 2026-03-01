@@ -356,7 +356,7 @@
                             </Border>
                             <Border Background="#E50914" CornerRadius="4" Padding="6,2" Margin="0,0,8,0"
                                     IsVisible="{Binding CurrentChannel.Rating, Converter={StaticResource NullToVisibilityConverter}}">
-                                <TextBlock Text="{Binding CurrentChannel.Rating, StringFormat='&#9733; {0:F1}'}" Foreground="White" FontSize="12" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding CurrentChannel.Rating, StringFormat='&#10084; {0:F1}'}" Foreground="White" FontSize="12" FontWeight="Bold"/>
                             </Border>
                             <TextBlock Text="{Binding DurationText}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" VerticalAlignment="Center"/>
                         </StackPanel>

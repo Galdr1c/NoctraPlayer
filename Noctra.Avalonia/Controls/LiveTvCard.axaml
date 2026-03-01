@@ -69,8 +69,8 @@
               Classes.active="{Binding IsFavorite}"
               Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}" CommandParameter="{Binding}">
         <Panel>
-          <materialIcons:MaterialIcon Kind="Star" Width="20" Height="20" Foreground="{DynamicResource WarningBrush}" IsVisible="{Binding IsFavorite}"/>
-          <materialIcons:MaterialIcon Kind="StarOutline" Width="20" Height="20" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsFavorite}"/>
+          <materialIcons:MaterialIcon Kind="Heart" Width="20" Height="20" Foreground="#E50914" IsVisible="{Binding IsFavorite}"/>
+          <materialIcons:MaterialIcon Kind="HeartOutline" Width="20" Height="20" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsFavorite}"/>
         </Panel>
       </Button>
     </Grid>

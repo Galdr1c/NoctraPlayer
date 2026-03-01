@@ -27,7 +27,7 @@ public enum ChannelSortOrder
 /// <summary>
 /// Noctra channel entity.
 /// </summary>
-public class Channel
+public partial class Channel : ObservableObject
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
@@ -38,8 +38,12 @@ public class Channel
     public string? TvgName { get; set; }
     public string? Language { get; set; }
     public ChannelType Type { get; set; } = ChannelType.Live;
-    public bool IsFavorite { get; set; }
-    public bool IsInMyList { get; set; }
+    
+    [ObservableProperty]
+    private bool _isFavorite;
+    
+    [ObservableProperty]
+    private bool _isInMyList;
     public DateTime? LastWatched { get; set; }
     public int PlaylistId { get; set; }
     
