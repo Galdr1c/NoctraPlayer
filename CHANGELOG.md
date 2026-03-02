@@ -5,6 +5,69 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v29.7 – Saydamlık ve Estetik Geri Kazanımı (2026-03-02)
+
+### 🎨 Görsel İyileştirmeler
+- **Bağımsız Saydamlık Konsepti**: Bölüm kartlarının arka planı yarı saydam (glassy) hale getirilirken, bu işlemin içerikleri etkilemesi engellendi. Artık bölüm afişleri (posterler) ve yazılar (metadata) arka plandan bağımsız olarak %100 net ve keskin görünüyor.
+- **Yarı Saydam (Glassy) Görünüm**: Bölüm kartlarının arka planına modern ve estetik bir saydamlık kazandırıldı. Bu sayede arka plan dokusu hissedilirken okunabilirlik korunuyor.
+- **Dinamik Etkileşim**: Hover durumunda sadece arka planın saydamlığı %90'a çıkarılarak odağın hangi kartta olduğu netleştirildi. Tıklama (press) anında ise %100 opaklık ile net bir basılma hissi sağlandı.
+
+---
+
+## v29.6 – Etkileşim ve Hizalama İyileştirmeleri (2026-03-02)
+
+### 🎨 Görsel ve İşlevsel İyileştirmeler
+- **Belirgin Hover Durumu**: Bölüm kartlarının üzerine gelindiğinde (hover) oluşan renk değişimi daha belirgin (`InteractiveHoverBrush`) hale getirildi. Artık hangi kartın üzerinde olduğunuz kolayca fark edilebiliyor.
+- **Tıklama Geri Bildirimi**: Bölüm kartlarına basıldığında (click) oluşan renk değişimi optimize edildi ve bu sırada sol kenarda çıkan istenmeyen çizgi kaldırıldı.
+- **Mükemmel Sezon Hizalaması**: Sezon listesi butonları ve altlarındaki seçim çizgisi, görsel ayırıcı hatla (separator line) kusursuz bir şekilde hizalandı. Sezonlar arası yatay ve dikey boşluklar pixel-perfect hale getirildi.
+
+### 📁 Değişen Dosyalar
+| Dosya | Değişiklik |
+|-------|------------|
+| `MainWindow.axaml` | Sezon listesi hizalaması ve bölüm kartı etkileşim stilleri rafine edildi. |
+
+---
+
+## v29.5 – UI Rafine Etme ve Görsel Canlılık (2026-03-02)
+
+### 🎨 Görsel ve İşlevsel İyileştirmeler
+- **Yatay Sezon Gezintisi**: Sezon seçici tekrar klasik yatay kaydırmalı (horizontal scroll) yapıya döndürüldü. Sezonlar arası boşluklar artırılarak daha ferah bir görünüm sağlandı.
+- **Canlı Bölüm Görselleri**: Bölüm kartlarının soluk (pale) görünmesi sorunu, taban opaklık değerleri (`0.5` -> `0.9`) artırılarak ve posterler üzerindeki ekstra karartma katmanı kaldırılarak çözüldü.
+- **Okunabilir Açıklamalar**: Bölüm özetlerinin (plot) opaklığı artırılarak metin netliği sağlandı.
+- **Gelişmiş Buton Etkileşimi**: "Sezonu İndir" butonunun arkaplanı ve hover efekti, özellikle Karanlık Tema'da daha belirgin olacak şekilde optimize edildi.
+
+### 🌓 Metin Kontrastı
+- **Işık Teması Metadata Kontrastı**: Bölüm süresi ve tarihi gibi metadata verileri, Işık Teması'nda daha koyu ve okunabilir bir tona (`#4B5563`) çekildi.
+- **Etkileşim Renkleri**: Işık Teması'ndaki buton hover ve basılma renkleri daha belirgin hale getirildi.
+
+### 📁 Değişen Dosyalar
+| Dosya | Değişiklik |
+|-------|------------|
+| `MainWindow.axaml` | Sezon listesi, bölüm kartı opaklıkları ve buton tasarımları güncellendi. |
+| `LightTheme.axaml` | Metin ve etkileşim renkleri kontrast için rafine edildi. |
+
+---
+
+## v29.4 – UI Estetik İyileştirmeleri ve Tema Optimizasyonları (2026-03-02)
+
+### 🎨 Görsel İyileştirmeler
+- **Kompakt Bölüm Kartları**: Dizi bölümleri listesindeki kartların yüksekliği ve iç boşlukları (padding) optimize edilerek daha fazla içeriğin aynı anda görünmesi sağlandı. Yazı boyutları ve ikon ölçüleri estetikten ödün vermeden küçültüldü.
+- **Dinamik Sezon Seçici**: Sezon sayısı çok fazla olan dizilerde yaşanan yatay kaydırma sorunu giderildi. Sezon butonları artık ekrana sığmadığında otomatik olarak alt satıra geçer (`WrapPanel` entegrasyonu).
+- **Hover Efekti Düzeltmesi**: Bölüm kartlarının üzerine gelindiğinde (hover) oluşan vurgu çerçevesinin köşe kavislerinin (radius) ana kartla uyumsuz olması sorunu giderildi.
+- **Modern Aksiyon Butonları**: Dizi detay sayfasındaki "Oynat", "Fragman" ve "Listem" butonları daha kompakt ve premium bir görünüme kavuşturuldu.
+
+### 🌓 Tema Optimizasyonları
+- **Işık Teması (Light Theme) Contrast İyileştirmesi**: Açık renkli temada okunabilirliği düşük olan beyaz metinler ve gri metadata verileri, koyu tonlu dinamik fırçalarla (`TextPrimaryBrush`, `TextMutedBrush`) değiştirilerek kontrast artırıldı.
+- **Dinamik Renk Entegrasyonu**: Tüm UI bileşenleri `StaticResource` yerine `DynamicResource` kullanımına geçirilerek, tema değişimlerinde anlık ve kusursuz renk adaptasyonu sağlandı.
+
+### 📁 Değişen Dosyalar
+| Dosya | Değişiklik |
+|-------|------------|
+| `MainWindow.axaml` | Bölüm kartları, sezon seçici ve butonların XAML yapısı optimize edildi. |
+| `LightTheme.axaml` | Metin ve metadata renk tanımları kontrast için güncellendi. |
+
+---
+
 ## v29.3 – İndirme Merkezi Hata Düzeltmeleri (2026-03-02)
 
 ### 🔧 Düzeltilen Hatalar
