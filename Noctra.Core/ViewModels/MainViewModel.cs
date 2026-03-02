@@ -3008,28 +3008,47 @@ public partial class MainViewModel : ObservableObject
         try
         {
             var channelsSnapshot = Channels?.ToList() ?? new List<Channel>();
-            var latestSeriesSnapshot = LatestSeries?.ToList() ?? new List<Series>();
-            var seriesViewSnapshot = SeriesViewItems?.ToList() ?? new List<Series>();
+            var seriesSnapshot = _allSeriesCache;
+
+            var seriesMap = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
+            var episodeUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (seriesSnapshot != null)
+            {
+                foreach (var series in seriesSnapshot)
+                {
+                    if (series == null)
+                    {
+                        continue;
+                    }
+
+                    var key = series.Id > 0 ? $"id:{series.Id}" : $"p:{series.PlaylistId}|n:{series.Name}";
+                    if (!seriesMap.ContainsKey(key))
+                    {
+                        seriesMap[key] = series;
+                    }
+
+                    if (series.Seasons != null)
+                    {
+                        foreach (var s in series.Seasons)
+                        {
+                            if (s?.Episodes == null) continue;
+                            foreach (var ep in s.Episodes)
+                            {
+                                if (!string.IsNullOrWhiteSpace(ep.StreamUrl))
+                                {
+                                    episodeUrls.Add(ep.StreamUrl);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             var list = new List<object>();
             list.AddRange(channelsSnapshot
-                .Where(c => c.Type != ChannelType.Series && c.IsInMyList)
+                .Where(c => c.Type != ChannelType.Series && c.IsInMyList && (string.IsNullOrWhiteSpace(c.StreamUrl) || !episodeUrls.Contains(c.StreamUrl)))
                 .Cast<object>());
-
-            var seriesMap = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
-            foreach (var series in latestSeriesSnapshot.Concat(seriesViewSnapshot))
-            {
-                if (series == null)
-                {
-                    continue;
-                }
-
-                var key = series.Id > 0 ? $"id:{series.Id}" : $"p:{series.PlaylistId}|n:{series.Name}";
-                if (!seriesMap.ContainsKey(key))
-                {
-                    seriesMap[key] = series;
-                }
-            }
 
             list.AddRange(seriesMap.Values.Where(s => s.IsInMyList).Cast<object>());
             SetItems(MyList, list
@@ -3049,28 +3068,47 @@ public partial class MainViewModel : ObservableObject
         try
         {
             var channelsSnapshot = Channels?.ToList() ?? new List<Channel>();
-            var latestSeriesSnapshot = LatestSeries?.ToList() ?? new List<Series>();
-            var seriesViewSnapshot = SeriesViewItems?.ToList() ?? new List<Series>();
+            var seriesSnapshot = _allSeriesCache;
+
+            var seriesMap = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
+            var episodeUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (seriesSnapshot != null)
+            {
+                foreach (var series in seriesSnapshot)
+                {
+                    if (series == null)
+                    {
+                        continue;
+                    }
+
+                    var key = series.Id > 0 ? $"id:{series.Id}" : $"p:{series.PlaylistId}|n:{series.Name}";
+                    if (!seriesMap.ContainsKey(key))
+                    {
+                        seriesMap[key] = series;
+                    }
+
+                    if (series.Seasons != null)
+                    {
+                        foreach (var s in series.Seasons)
+                        {
+                            if (s?.Episodes == null) continue;
+                            foreach (var ep in s.Episodes)
+                            {
+                                if (!string.IsNullOrWhiteSpace(ep.StreamUrl))
+                                {
+                                    episodeUrls.Add(ep.StreamUrl);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             var list = new List<object>();
             list.AddRange(channelsSnapshot
-                .Where(c => c.Type != ChannelType.Series && c.IsFavorite)
+                .Where(c => c.Type != ChannelType.Series && c.IsFavorite && (string.IsNullOrWhiteSpace(c.StreamUrl) || !episodeUrls.Contains(c.StreamUrl)))
                 .Cast<object>());
-
-            var seriesMap = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
-            foreach (var series in latestSeriesSnapshot.Concat(seriesViewSnapshot))
-            {
-                if (series == null)
-                {
-                    continue;
-                }
-
-                var key = series.Id > 0 ? $"id:{series.Id}" : $"p:{series.PlaylistId}|n:{series.Name}";
-                if (!seriesMap.ContainsKey(key))
-                {
-                    seriesMap[key] = series;
-                }
-            }
 
             list.AddRange(seriesMap.Values.Where(s => s.IsFavorite).Cast<object>());
             SetItems(FavoriteChannels, list

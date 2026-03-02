@@ -61,9 +61,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **Boş Kalan İndirme Klasörleri Temizleniyor**: İndirilen bir bölüm silindiğinde veya iptal edildiğinde, dizinin klasöründe başka dosya kalmamışsa o boş seri klasörü de otomatik olarak sistemden silinerek disk kirliliği önleniyor.
 - **Kayıp İndirme Dosyaları Koruması**: Uygulama kapalıyken (veya indirme duraklatılmışken) arka planda klasör/dosya silinirse, uygulama açıldığında yarım kalan indirmeleri baştan silbaştan indirmek yerine "İndirme dosyaları klasörden silinmiş veya bulunamıyor" uyarısıyla **Hata** durumuna çeker.
 
+### 🐛 Hata Düzeltmeleri
+- **Favoriler ve Listem Görünümü**: Dizi bölümleri Favori/Listem'e eklendiğinde, genel listede tek tek (VOD gibi) görünme hatası düzeltildi. Artık Listem ve Favoriler sekmelerinde **sadece dizinin ana kartı** görünecektir.
+
 ### 📁 Değişen Dosyalar
 | Dosya | Değişiklik |
 |-------|-----------|
+| `MainViewModel.cs` | Listem ve Favoriler ekranında VOD gibi listelenen dizilere ait bölümler (episodes) filtrelenerek sadece ana dizi kartları bırakıldı. |
+| `ContentDownloadService.cs` | Yarım kalan/duraklatılan indirme dosyaları silindiğinde uygulamanın baştan indirmesi engellenip **Hata** fırlatıldı; iptal edilen dosyalardan boşalan dizi klasörleri temizlendi. |
 | `MetadataService.cs` | API key düzeltmesi + isim-benzerlik skorlama |
 | `TmdbSyncService.cs` | Arka plan döngüsü → on-demand `EnrichSeriesBatchAsync` |
 | `ITmdbSyncService.cs` | Basitleştirilmiş arayüz |
