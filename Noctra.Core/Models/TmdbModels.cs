@@ -119,6 +119,27 @@ public class TmdbDetail : TmdbResult
 
     [JsonPropertyName("videos")]
     public TmdbVideosResponse? Videos { get; set; }
+
+    [JsonPropertyName("networks")]
+    public List<TmdbNetwork>? Networks { get; set; }
+}
+
+/// <summary>
+/// TMDB Network (Netflix, HBO, Disney+, etc.)
+/// </summary>
+public class TmdbNetwork
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("logo_path")]
+    public string? LogoPath { get; set; }
+
+    [JsonPropertyName("origin_country")]
+    public string? OriginCountry { get; set; }
 }
 
 /// <summary>

@@ -31,6 +31,8 @@ public partial class Series : ObservableObject
     public string? BackdropUrl { get; set; }
     public string? TrailerUrl { get; set; }
     public DateTime? MetadataFetchedAt { get; set; }
+    public string? NetworkName { get; set; }
+    public string? NetworkLogoUrl { get; set; }
 
     [ObservableProperty]
     private bool _isInMyList;
@@ -117,6 +119,7 @@ public class Episode
     public string Name { get; set; } = string.Empty;
     public string StreamUrl { get; set; } = string.Empty;
     public string? Plot { get; set; }
+    public string? TmdbEpisodeName { get; set; }
     public string? CoverUrl { get; set; }
     public TimeSpan? Duration { get; set; }
     public DateTime? LastWatched { get; set; }

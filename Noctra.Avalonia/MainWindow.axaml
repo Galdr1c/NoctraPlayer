@@ -480,6 +480,13 @@
                                 IsVisible="{Binding SelectedSeriesAgeRating, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
                             <TextBlock Text="{Binding SelectedSeriesAgeRating}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" FontWeight="Black"/>
                         </Border>
+
+                        <!-- Network Logo (Netflix, HBO, Disney+, etc.) -->
+                        <Border VerticalAlignment="Center" Margin="12,0,0,0" Height="20"
+                                IsVisible="{Binding SelectedSeriesNetworkLogoUrl, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+                            <controls:RemoteImage Url="{Binding SelectedSeriesNetworkLogoUrl}" 
+                                                  Stretch="Uniform" Height="20" MaxWidth="80"/>
+                        </Border>
                       </StackPanel>
 
                       <!-- Seasons & Episodes Stats -->
@@ -559,6 +566,7 @@
                 <Grid Grid.Row="1" Margin="0,48,0,0" RowDefinitions="Auto,Auto">
                   <!-- Seasons Tab Menu -->
                   <StackPanel Grid.Row="0">
+                      <Grid ColumnDefinitions="*,Auto">
                       <ListBox ItemsSource="{Binding SelectedSeries.Seasons}" 
                                SelectedItem="{Binding SelectedSeason}"
                                Background="Transparent" BorderThickness="0" Padding="0">
@@ -606,6 +614,18 @@
                               </Style>
                           </ListBox.Styles>
                       </ListBox>
+
+                      <!-- Download Season Button -->
+                      <Button Grid.Column="1" VerticalAlignment="Center" Padding="12,8" CornerRadius="8"
+                              Background="#1AFFFFFF" BorderThickness="0" Margin="0,0,0,12"
+                              Command="{Binding DownloadSelectedSeasonCommand}"
+                              ToolTip.Tip="Aktif sezondaki tüm bölümleri indirme kuyruğuna ekle">
+                          <StackPanel Orientation="Horizontal" Spacing="8">
+                              <materialIcons:MaterialIcon Kind="Download" Width="18" Height="18" Foreground="{DynamicResource AccentBrush}"/>
+                              <TextBlock Text="Sezonu İndir" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                          </StackPanel>
+                      </Button>
+                      </Grid>
                       <Border Height="1" Background="#1AFFFFFF" Margin="0,0,0,24"/>
                   </StackPanel>
 
@@ -649,13 +669,20 @@
                                                       <TextBlock Text="İZLENDİ" FontSize="10" FontWeight="Bold" Foreground="#46D369"/>
                                                   </Border>
                                               </StackPanel>
+                                              <TextBlock Text="{Binding TmdbEpisodeName}" 
+                                                         FontSize="15" Foreground="{DynamicResource AccentBrush}" FontStyle="Italic" Opacity="0.85"
+                                                         IsVisible="{Binding TmdbEpisodeName, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
                                               <TextBlock Text="{Binding Plot}" 
                                                          FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" MaxHeight="44" Opacity="0.7" LineHeight="20"/>
                                           </StackPanel>
                                           
                                           <!-- Action -->
-                                          <materialIcons:MaterialIcon Grid.Column="3" Kind="Download" Width="22" Height="22" 
-                                                                      Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" Margin="0,0,16,0" Opacity="0.6"/>
+                                          <Button Grid.Column="3" VerticalAlignment="Center" Margin="0,0,8,0" Padding="8" Background="Transparent" BorderThickness="0" CornerRadius="6"
+                                                  Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).DownloadEpisodeCommand}"
+                                                  CommandParameter="{Binding}"
+                                                  ToolTip.Tip="Bölümü İndir">
+                                              <materialIcons:MaterialIcon Kind="Download" Width="22" Height="22" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.6"/>
+                                          </Button>
                                       </Grid>
                                   </Border>
                               </Button>

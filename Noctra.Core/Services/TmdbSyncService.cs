@@ -195,6 +195,15 @@ public class TmdbSyncService : ITmdbSyncService
             if (trailer != null && !string.IsNullOrEmpty(trailer.Key))
                 dbSeries.TrailerUrl = $"https://www.youtube.com/watch?v={trailer.Key}";
 
+            // Network (Netflix, HBO, Disney+, etc.)
+            if (details.Networks != null && details.Networks.Count > 0)
+            {
+                var network = details.Networks[0];
+                dbSeries.NetworkName = network.Name;
+                if (!string.IsNullOrEmpty(network.LogoPath))
+                    dbSeries.NetworkLogoUrl = $"https://image.tmdb.org/t/p/h50{network.LogoPath}";
+            }
+
             // Update in-memory for immediate UI refresh
             series.TmdbTitle = dbSeries.TmdbTitle;
             series.Plot = dbSeries.Plot;
@@ -206,6 +215,8 @@ public class TmdbSyncService : ITmdbSyncService
             series.ContentRating = dbSeries.ContentRating;
             series.MetadataFetchedAt = dbSeries.MetadataFetchedAt;
             series.LastTmdbSync = dbSeries.LastTmdbSync;
+            series.NetworkName = dbSeries.NetworkName;
+            series.NetworkLogoUrl = dbSeries.NetworkLogoUrl;
             if (!string.IsNullOrEmpty(dbSeries.CoverUrl))
                 series.CoverUrl = dbSeries.CoverUrl;
             if (!string.IsNullOrEmpty(dbSeries.Genre))

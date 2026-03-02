@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v29.3 – İndirme Merkezi Hata Düzeltmeleri (2026-03-02)
+
+### 🔧 Düzeltilen Hatalar
+- **İndirme Kuyruğunda Yanlış İsim Gösterimi**: Sezon indirme başlatıldığında tüm bölümler kuyruğa aynı isimle (yalnızca dizi adı, örn: "Black Warrant") ekleniyordu. `DownloadItem.BaseDisplayName` özelliğindeki `SeriesInfoParser.Parse()` mantığı bölüm/sezon bilgisini siliyordu. Artık her bölüm tam ismiyle (örn: "Black Warrant - 1. Bölüm - S01 E01") gösteriliyor.
+- **Sessiz İndirme Başarısızlığı**: Provider kaynaklı veri eksikliği (boş stream URL) durumunda indirme sessizce başarısız oluyordu — kullanıcıya hiçbir uyarı gösterilmiyordu. Artık tekli indirmede `"⚠️ İndirme başarısız: ... için kaynak URL bulunamadı"` uyarısı, sezon indirmede ise özet mesajında başarısız bölüm sayısı gösteriliyor.
+
+### 📁 Değişen Dosyalar
+| Dosya | Değişiklik |
+|-------|------------|
+| `DownloadItem.cs` | `BaseDisplayName` artık `SeriesInfoParser` kullanmıyor, tam `DisplayName` döndürüyor |
+| `MainViewModel.cs` | `DownloadEpisode` ve `DownloadSelectedSeason` metodlarına boş URL erken kontrolü eklendi |
+
+---
+
 ## v29.2 – TMDB Akıllı Eşleştirme ve On-Demand Mimari (2026-03-01)
 
 ### 🔧 Düzeltilen Hatalar
@@ -36,6 +50,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **TmdbId Bazlı Doğrudan Çekim**: Dizi detayında `TmdbId` biliniyorsa isim araması yerine doğrudan `/tv/{id}` endpoint'i kullanılıyor — yanlış eşleşme riski sıfır.
 - **`TmdbDetail` Modeline Genres Desteği**: TMDB detay endpoint'inden gelen tür bilgileri (`genres`) artık doğrudan parse ediliyor.
 - **Dizi Fragmanı (Trailer) Desteği**: `append_to_response=videos` parametresi ile TMDB'den dizilere ait YouTube fragmanları çekilerek veritabanına (`TrailerUrl`) kaydediliyor. Dizi detay sayfasına, temaya uygun mor renkli bir "Fragmanı İzle" butonu eklendi. Butona tıklandığında fragman varsayılan tarayıcıda açılır.
+- **Bölüm Açıklaması İngilizce Fallback**: Türkçe bölüm açıklaması TMDB'de yoksa (çevirisi yapılmamış sezonlar), aynı sezon `en-US` ile otomatik çekilerek eksik açıklamalar İngilizce ile dolduruluyor. Sezon başına max **+1 ek istek**, tüm açıklamalar Türkçe doluysa 0 ek istek.
+- **TMDB Bölüm Alt Başlıkları (Episode Titles)**: TMDB'den gelen bölüm isimleri (örn: "Will Byers'ın Ortadan Kayboluşu") artık episode row'da accent renkli, italic alt başlık olarak gösteriliyor. `Episode.TmdbEpisodeName` alanı eklendi — aynı `/tv/{id}/season/{n}` yanıtından, ek API isteği yok.
+- **Yayıncı Ağ Logoları (Network Logos)**: Dizi detay sayfasında yaş sınırı badge'inin yanında yayıncı logosu (Netflix, HBO, Disney+, Amazon, vb.) gösteriliyor. `Series.NetworkName` ve `Series.NetworkLogoUrl` alanları eklendi — aynı `/tv/{id}` yanıtından, ek API isteği yok.
+- **Bölüm ve Sezon İndirme Desteği**: Dizi detay sayfasındaki her bölüm için indirme butonu aktif hale getirildi. Ayrıca aktif sezonun tüm bölümlerini sırasıyla indirme kuyruğuna ekleyen "Sezonu İndir" butonu eklendi. `DownloadEpisodeCommand` ve `DownloadSelectedSeasonCommand` eklendi.
 
 ### ⚡ Performans İyileştirmeleri
 - **Otomatik Arama Kaldırıldı**: Arama kutusuna yazarken otomatik sonuç gösterimi devre dışı bırakıldı. Arama sadece **Enter** tuşu veya arama butonu ile tetikleniyor — gereksiz işlem yükü ortadan kalktı.

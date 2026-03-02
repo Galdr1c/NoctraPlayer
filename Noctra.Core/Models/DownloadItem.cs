@@ -158,13 +158,7 @@ public class DownloadItem
     {
         get
         {
-            if (ChannelType != ChannelType.Series || string.IsNullOrWhiteSpace(DisplayName))
-            {
-                return DisplayName;
-            }
-
-            var info = SeriesInfoParser.Parse(DisplayName);
-            return info.SeriesName;
+            return string.IsNullOrWhiteSpace(DisplayName) ? string.Empty : DisplayName;
         }
     }
 

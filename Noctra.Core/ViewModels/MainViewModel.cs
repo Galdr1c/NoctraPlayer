@@ -127,6 +127,9 @@ public partial class MainViewModel : ObservableObject
     private string? _selectedSeriesTrailerUrl;
 
     [ObservableProperty]
+    private string? _selectedSeriesNetworkLogoUrl;
+
+    [ObservableProperty]
     private string _selectedSeriesOverview = string.Empty;
 
     [ObservableProperty]
@@ -4813,6 +4816,97 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    [RelayCommand]
+    private async Task DownloadEpisode(Episode? episode)
+    {
+        if (episode == null || !CurrentProfileId.HasValue) return;
+
+        if (string.IsNullOrWhiteSpace(episode.StreamUrl))
+        {
+            StatusMessage = $"⚠️ İndirme başarısız: \"{episode.Name}\" için kaynak URL bulunamadı. Provider verisi eksik olabilir.";
+            return;
+        }
+
+        try
+        {
+            var request = new DownloadContentRequest(
+                CurrentProfileId.Value,
+                DownloadItemType.SeriesEpisode,
+                episode.Name,
+                episode.StreamUrl,
+                SelectedSeries?.CoverUrl,
+                SelectedPlaylist?.Id ?? 0,
+                0,
+                episode.Id);
+
+            var result = await _contentDownloadService.QueueDownloadAsync(request);
+            StatusMessage = result.Success
+                ? $"✅ İndirme kuyruğuna eklendi: {episode.Name}"
+                : result.AlreadyExists
+                    ? $"ℹ️ Zaten indirilmiş: {episode.Name}"
+                    : $"❌ {result.Message}";
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Episode download failed: {Name}", episode.Name);
+            StatusMessage = $"❌ İndirme hatası: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task DownloadSelectedSeason()
+    {
+        if (SelectedSeason == null || !CurrentProfileId.HasValue) return;
+
+        var episodes = SelectedSeason.Episodes
+            .OrderBy(e => e.EpisodeNumber)
+            .ToList();
+        
+        if (episodes.Count == 0) return;
+
+        int queued = 0;
+        int skipped = 0;
+        int failed = 0;
+
+        StatusMessage = $"📥 Sezon {SelectedSeason.SeasonNumber} indirme kuyruğuna ekleniyor... ({episodes.Count} bölüm)";
+
+        foreach (var episode in episodes)
+        {
+            if (string.IsNullOrWhiteSpace(episode.StreamUrl))
+            {
+                failed++;
+                continue;
+            }
+
+            try
+            {
+                var request = new DownloadContentRequest(
+                    CurrentProfileId.Value,
+                    DownloadItemType.SeriesEpisode,
+                    episode.Name,
+                    episode.StreamUrl,
+                    SelectedSeries?.CoverUrl,
+                    SelectedPlaylist?.Id ?? 0,
+                    0,
+                    episode.Id);
+
+                var result = await _contentDownloadService.QueueDownloadAsync(request);
+                if (result.Success) queued++;
+                else if (result.AlreadyExists) skipped++;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Season download failed for episode: {Name}", episode.Name);
+            }
+        }
+
+        var parts = new List<string>();
+        if (queued > 0) parts.Add($"{queued} bölüm kuyruğa eklendi");
+        if (failed > 0) parts.Add($"{failed} bölüm için kaynak URL bulunamadı");
+        if (skipped > 0) parts.Add($"{skipped} bölüm zaten indirilmiş");
+        StatusMessage = $"✅ Sezon {SelectedSeason.SeasonNumber}: {string.Join(", ", parts)}";
+    }
+
     private async Task PlayEpisodeSafeAsync(Episode? episode)
     {
         try
@@ -4876,6 +4970,7 @@ public partial class MainViewModel : ObservableObject
         SelectedSeriesPosterUrl = null;
         SelectedSeriesBackdropUrl = null;
         SelectedSeriesTrailerUrl = null;
+        SelectedSeriesNetworkLogoUrl = null;
         SelectedSeriesOverview = string.Empty;
         SelectedSeriesCast = string.Empty;
     }
@@ -5086,6 +5181,7 @@ public partial class MainViewModel : ObservableObject
             SelectedSeriesGenres = series.Genre ?? string.Empty;
             SelectedSeriesAgeRating = series.ContentRating ?? string.Empty;
             SelectedSeriesTrailerUrl = series.TrailerUrl;
+            SelectedSeriesNetworkLogoUrl = series.NetworkLogoUrl;
 
             // Initial basic metadata
             SelectedSeriesTotalEpisodesCount = series.Seasons.Sum(s => s.Episodes.Count);
@@ -5426,6 +5522,15 @@ public partial class MainViewModel : ObservableObject
                     {
                         source.Genre = string.Join(", ", tmdbSeries.Genres.Select(g => g.Name));
                     }
+
+                    // Network (Netflix, HBO, Disney+, etc. — from same API call)
+                    if (string.IsNullOrEmpty(source.NetworkName) && tmdbSeries.Networks != null && tmdbSeries.Networks.Count > 0)
+                    {
+                        var network = tmdbSeries.Networks[0];
+                        source.NetworkName = network.Name;
+                        if (!string.IsNullOrEmpty(network.LogoPath))
+                            source.NetworkLogoUrl = $"https://image.tmdb.org/t/p/h50{network.LogoPath}";
+                    }
                 }
 
                 // 2. Fetch Season and Episode details
@@ -5461,6 +5566,10 @@ public partial class MainViewModel : ObservableObject
                                 {
                                     episode.Plot = tmdbEp.Overview;
                                 }
+                                if (string.IsNullOrEmpty(episode.TmdbEpisodeName) && !string.IsNullOrEmpty(tmdbEp.Name))
+                                {
+                                    episode.TmdbEpisodeName = tmdbEp.Name;
+                                }
                                 // Runtime (from same API call — no extra request)
                                 if (tmdbEp.Runtime.HasValue && tmdbEp.Runtime.Value > 0 && !episode.Duration.HasValue)
                                 {
@@ -5490,6 +5599,8 @@ public partial class MainViewModel : ObservableObject
                                     {
                                         if (!string.IsNullOrEmpty(enEp.Overview))
                                             episode.Plot = enEp.Overview;
+                                        if (string.IsNullOrEmpty(episode.TmdbEpisodeName) && !string.IsNullOrEmpty(enEp.Name))
+                                            episode.TmdbEpisodeName = enEp.Name;
                                         if (string.IsNullOrEmpty(episode.CoverUrl) && !string.IsNullOrEmpty(enEp.StillPath))
                                             episode.CoverUrl = $"https://image.tmdb.org/t/p/w500{enEp.StillPath}";
                                     }
