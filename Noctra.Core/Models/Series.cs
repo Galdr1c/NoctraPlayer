@@ -121,6 +121,7 @@ public class Episode
     public TimeSpan? Duration { get; set; }
     public DateTime? LastWatched { get; set; }
     public TimeSpan? WatchedPosition { get; set; }
+    public DateTime? AirDate { get; set; }
     public int SeasonId { get; set; }
 
     // Intro/Credits timestamps (seconds)
@@ -130,6 +131,28 @@ public class Episode
     
     // Navigation property
     public Season? Season { get; set; }
+
+    [NotMapped]
+    public string? DurationText => Duration.HasValue && Duration.Value.TotalMinutes > 0
+        ? $"{(int)Duration.Value.TotalMinutes} dk"
+        : null;
+
+    [NotMapped]
+    public string? AirDateText => AirDate.HasValue
+        ? AirDate.Value.ToString("dd MMM yyyy")
+        : null;
+
+    [NotMapped]
+    public string? EpisodeMetaText
+    {
+        get
+        {
+            var parts = new List<string>();
+            if (AirDate.HasValue) parts.Add(AirDate.Value.ToString("dd MMM yyyy"));
+            if (Duration.HasValue && Duration.Value.TotalMinutes > 0) parts.Add($"{(int)Duration.Value.TotalMinutes} dk");
+            return parts.Count > 0 ? string.Join("  •  ", parts) : null;
+        }
+    }
 
     [NotMapped]
     public double WatchedPercentage

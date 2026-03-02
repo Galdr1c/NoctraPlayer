@@ -5133,12 +5133,9 @@ public partial class MainViewModel : ObservableObject
             }
 
             // --- TMDB Metadata Fetch Strategy ---
-            // 1. If we already have full TMDB data cached in DB → skip API call entirely
-            var hasFullData = !string.IsNullOrWhiteSpace(series.Plot) &&
-                              !string.IsNullOrWhiteSpace(series.Cast) &&
-                              !string.IsNullOrWhiteSpace(series.ContentRating) &&
-                              !string.IsNullOrWhiteSpace(series.BackdropUrl) &&
-                              !string.IsNullOrWhiteSpace(series.TrailerUrl);
+            // MetadataFetchedAt is set only when full detail data (cast, contentRating, trailer) has been fetched.
+            // Phase 1 (scroll search-only) intentionally leaves this null.
+            var hasFullData = series.MetadataFetchedAt.HasValue;
             if (hasFullData)
             {
                 return; // All data already loaded from DB, no API call needed
@@ -5382,7 +5379,7 @@ public partial class MainViewModel : ObservableObject
                 var tmdbSeries = await _metadataService.FetchSeriesDetailsAsync(source.TmdbId.Value, languageCode);
                 if (tmdbSeries != null)
                 {
-                    // Optionally update Series fields if background worker missed something
+                    // Update series fields from the detail response (same API call, no extra request)
                     if (string.IsNullOrEmpty(source.Cast) && tmdbSeries.Credits?.Cast != null)
                     {
                         source.Cast = string.Join(", ", tmdbSeries.Credits.Cast.OrderBy(c => c.Order).Take(5).Select(c => c.Name));
@@ -5390,6 +5387,44 @@ public partial class MainViewModel : ObservableObject
                     if (string.IsNullOrEmpty(source.Director) && tmdbSeries.Credits?.Crew != null)
                     {
                         source.Director = tmdbSeries.Credits.Crew.FirstOrDefault(c => c.Job == "Director")?.Name;
+                    }
+                    if (string.IsNullOrEmpty(source.Plot) && !string.IsNullOrEmpty(tmdbSeries.Overview))
+                    {
+                        source.Plot = tmdbSeries.Overview;
+                    }
+                    if (!string.IsNullOrEmpty(tmdbSeries.PosterPath))
+                    {
+                        source.CoverUrl = $"https://image.tmdb.org/t/p/w500{tmdbSeries.PosterPath}";
+                    }
+                    if (string.IsNullOrEmpty(source.BackdropUrl) && !string.IsNullOrEmpty(tmdbSeries.BackdropPath))
+                    {
+                        source.BackdropUrl = $"https://image.tmdb.org/t/p/original{tmdbSeries.BackdropPath}";
+                    }
+
+                    // Content Rating (from same API call)
+                    if (string.IsNullOrEmpty(source.ContentRating) && tmdbSeries.ContentRatings?.Results != null)
+                    {
+                        var usRating = tmdbSeries.ContentRatings.Results.FirstOrDefault(r => r.IsoCode == "US")?.Rating;
+                        var trRating = tmdbSeries.ContentRatings.Results.FirstOrDefault(r => r.IsoCode == "TR")?.Rating;
+                        source.ContentRating = trRating ?? usRating;
+                    }
+
+                    // Trailer (from same API call — videos included via append_to_response)
+                    if (string.IsNullOrEmpty(source.TrailerUrl))
+                    {
+                        var trailer = tmdbSeries.Videos?.Results?
+                            .Where(v => v.Site == "YouTube" && (v.Type == "Trailer" || v.Type == "Teaser"))
+                            .OrderByDescending(v => v.Official)
+                            .ThenByDescending(v => v.Type == "Trailer")
+                            .FirstOrDefault();
+                        if (trailer != null && !string.IsNullOrEmpty(trailer.Key))
+                            source.TrailerUrl = $"https://www.youtube.com/watch?v={trailer.Key}";
+                    }
+
+                    // Genres
+                    if (string.IsNullOrEmpty(source.Genre) && tmdbSeries.Genres != null && tmdbSeries.Genres.Count > 0)
+                    {
+                        source.Genre = string.Join(", ", tmdbSeries.Genres.Select(g => g.Name));
                     }
                 }
 
@@ -5426,8 +5461,45 @@ public partial class MainViewModel : ObservableObject
                                 {
                                     episode.Plot = tmdbEp.Overview;
                                 }
+                                // Runtime (from same API call — no extra request)
+                                if (tmdbEp.Runtime.HasValue && tmdbEp.Runtime.Value > 0 && !episode.Duration.HasValue)
+                                {
+                                    episode.Duration = TimeSpan.FromMinutes(tmdbEp.Runtime.Value);
+                                }
+                                // Air Date (from same API call — no extra request)
+                                if (!string.IsNullOrEmpty(tmdbEp.AirDate) && !episode.AirDate.HasValue)
+                                {
+                                    if (DateTime.TryParse(tmdbEp.AirDate, out var airDate))
+                                        episode.AirDate = airDate;
+                                }
                             }
                         }
+
+                        // en-US fallback: if any episodes still have empty Plot/Overview after Turkish fetch,
+                        // fetch the same season once in English and fill only the gaps (1 extra request per season max)
+                        var missingPlots = season.Episodes.Where(e => string.IsNullOrEmpty(e.Plot)).ToList();
+                        if (missingPlots.Count > 0 && languageCode != "en-US")
+                        {
+                            var enSeason = await _metadataService.FetchSeasonDetailsAsync(source.TmdbId.Value, season.SeasonNumber, "en-US");
+                            if (enSeason != null)
+                            {
+                                foreach (var episode in missingPlots)
+                                {
+                                    var enEp = enSeason.Episodes.FirstOrDefault(e => e.EpisodeNumber == episode.EpisodeNumber);
+                                    if (enEp != null)
+                                    {
+                                        if (!string.IsNullOrEmpty(enEp.Overview))
+                                            episode.Plot = enEp.Overview;
+                                        if (string.IsNullOrEmpty(episode.CoverUrl) && !string.IsNullOrEmpty(enEp.StillPath))
+                                            episode.CoverUrl = $"https://image.tmdb.org/t/p/w500{enEp.StillPath}";
+                                    }
+                                }
+                                // Also fill season overview if missing
+                                if (string.IsNullOrEmpty(season.Plot) && !string.IsNullOrEmpty(enSeason.Overview))
+                                    season.Plot = enSeason.Overview;
+                            }
+                        }
+
                         changesMade = true;
                     }
                 }

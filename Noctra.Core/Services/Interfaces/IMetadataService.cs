@@ -48,6 +48,13 @@ public interface IMetadataService
     /// </summary>
     Task<TmdbSeasonDetail?> FetchSeasonDetailsAsync(int tmdbId, int seasonNumber, string languageCode = "tr-TR", CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Lightweight search-only method for scroll enrichment.
+    /// Returns basic metadata (poster, overview, year, rating, genres) WITHOUT fetching details (cast, contentRating, trailer).
+    /// This uses 1 API call instead of 2.
+    /// </summary>
+    Task<ChannelMetadata?> SearchSeriesAsync(string searchQuery, string languageCode = "tr-TR", CancellationToken cancellationToken = default);
+
     void ClearCache();
 }
 

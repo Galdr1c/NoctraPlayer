@@ -298,5 +298,8 @@ public class TmdbEpisodeDetail
     
     [JsonPropertyName("air_date")]
     public string? AirDate { get; set; }
+
+    [JsonPropertyName("runtime")]
+    public int? Runtime { get; set; } // Episode duration in minutes
 }
 

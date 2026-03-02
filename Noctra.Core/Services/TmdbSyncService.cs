@@ -32,9 +32,9 @@ public class TmdbSyncService : ITmdbSyncService
 
     public async Task EnrichSeriesBatchAsync(List<Series> series, CancellationToken cancellationToken = default)
     {
-        // Only process series that haven't been synced yet
+        // Process: never-synced series OR series whose cache was invalidated (MetadataFetchedAt cleared)
         var pending = series
-            .Where(s => s.TmdbId == null && s.LastTmdbSync == null || s.MetadataFetchedAt == null)
+            .Where(s => (s.TmdbId == null && s.LastTmdbSync == null) || s.MetadataFetchedAt == null)
             .ToList();
 
         if (pending.Count == 0)
@@ -66,58 +66,154 @@ public class TmdbSyncService : ITmdbSyncService
         try
         {
             var languageCode = SeriesInfoParser.ExtractLanguageCode(series.GroupTitle ?? series.Genre ?? series.Name);
-            var cleanName = SeriesInfoParser.CleanSeriesName(series.Name);
 
-            var meta = await _metadataService.FetchMetadataAsync(cleanName, ChannelType.Series, languageCode, cancellationToken);
-
-            // Persist to database
-            using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-            var dbSeries = await context.Series.FindAsync(new object[] { series.Id }, cancellationToken);
-            if (dbSeries == null) return;
-
-            dbSeries.LastTmdbSync = DateTime.UtcNow;
-
-            if (meta != null && meta.TmdbId.HasValue)
+            // PHASE DECISION:
+            // - TmdbId known (cache invalidated) → full detail via /tv/{id} (1 request, sets MetadataFetchedAt)
+            // - TmdbId unknown → search-only via /search/tv (1 request, MetadataFetchedAt stays null → detail view will fetch cast/trailer)
+            if (series.TmdbId.HasValue && series.TmdbId.Value > 0)
             {
-                dbSeries.TmdbId = meta.TmdbId;
-                dbSeries.TmdbTitle = meta.Title;
-                dbSeries.Plot = meta.Description;
-                dbSeries.Rating = meta.Rating;
-                dbSeries.ReleaseYear = meta.ReleaseYear;
-                dbSeries.BackdropUrl = meta.BackdropUrl;
-                dbSeries.Director = meta.Director;
-                dbSeries.Cast = meta.Cast;
-                dbSeries.ContentRating = meta.ContentRating;
-                dbSeries.MetadataFetchedAt = DateTime.UtcNow;
-
-                if (!string.IsNullOrEmpty(meta.PosterUrl))
-                    dbSeries.CoverUrl = meta.PosterUrl;
-
-                if (meta.Genres != null && meta.Genres.Count > 0)
-                    dbSeries.Genre = string.Join(", ", meta.Genres);
-
-                // Update the in-memory object so UI reflects changes immediately
-                series.TmdbId = meta.TmdbId;
-                series.TmdbTitle = meta.Title;
-                series.Plot = meta.Description;
-                series.Rating = meta.Rating;
-                series.ReleaseYear = meta.ReleaseYear;
-                series.BackdropUrl = meta.BackdropUrl;
-                series.Director = meta.Director;
-                series.Cast = meta.Cast;
-                series.ContentRating = meta.ContentRating;
-                series.MetadataFetchedAt = DateTime.UtcNow;
-                if (!string.IsNullOrEmpty(meta.PosterUrl))
-                    series.CoverUrl = meta.PosterUrl;
-                if (meta.Genres != null && meta.Genres.Count > 0)
-                    series.Genre = string.Join(", ", meta.Genres);
+                await EnrichWithFullDetailsAsync(series, languageCode, cancellationToken);
             }
-
-            await context.SaveChangesAsync(cancellationToken);
+            else
+            {
+                await EnrichWithSearchOnlyAsync(series, languageCode, cancellationToken);
+            }
         }
         catch (Exception ex)
         {
             _logger?.LogDebug(ex, "Failed to enrich series: {Name}", series.Name);
         }
+    }
+
+    /// <summary>
+    /// Phase 1 — Search-only enrichment (1 API call).
+    /// Provides list-view data: poster, overview, year, rating, genres, backdrop, TmdbId.
+    /// MetadataFetchedAt is intentionally left NULL so detail view triggers Phase 2.
+    /// </summary>
+    private async Task EnrichWithSearchOnlyAsync(Series series, string languageCode, CancellationToken cancellationToken)
+    {
+        var cleanName = SeriesInfoParser.CleanSeriesName(series.Name);
+        var meta = await _metadataService.SearchSeriesAsync(cleanName, languageCode, cancellationToken);
+
+        using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var dbSeries = await context.Series.FindAsync(new object[] { series.Id }, cancellationToken);
+        if (dbSeries == null) return;
+
+        dbSeries.LastTmdbSync = DateTime.UtcNow;
+
+        if (meta != null && meta.TmdbId.HasValue)
+        {
+            // List-view fields only — NO cast, contentRating, trailer
+            dbSeries.TmdbId = meta.TmdbId;
+            dbSeries.TmdbTitle = meta.Title;
+            dbSeries.Plot = meta.Description;
+            dbSeries.Rating = meta.Rating;
+            dbSeries.ReleaseYear = meta.ReleaseYear;
+            dbSeries.BackdropUrl = meta.BackdropUrl;
+            // MetadataFetchedAt intentionally NULL → detail view will fetch full data
+
+            if (!string.IsNullOrEmpty(meta.PosterUrl))
+                dbSeries.CoverUrl = meta.PosterUrl;
+
+            if (meta.Genres != null && meta.Genres.Count > 0)
+                dbSeries.Genre = string.Join(", ", meta.Genres);
+
+            // Update in-memory for immediate UI refresh
+            series.TmdbId = meta.TmdbId;
+            series.TmdbTitle = meta.Title;
+            series.Plot = meta.Description;
+            series.Rating = meta.Rating;
+            series.ReleaseYear = meta.ReleaseYear;
+            series.BackdropUrl = meta.BackdropUrl;
+            series.LastTmdbSync = DateTime.UtcNow;
+            if (!string.IsNullOrEmpty(meta.PosterUrl))
+                series.CoverUrl = meta.PosterUrl;
+            if (meta.Genres != null && meta.Genres.Count > 0)
+                series.Genre = string.Join(", ", meta.Genres);
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Phase 2 — Full detail enrichment (1 API call with append_to_response).
+    /// Used when TmdbId is already known (cache invalidated series).
+    /// Fetches cast, content rating, trailer, and sets MetadataFetchedAt.
+    /// </summary>
+    private async Task EnrichWithFullDetailsAsync(Series series, string languageCode, CancellationToken cancellationToken)
+    {
+        var details = await _metadataService.FetchSeriesDetailsAsync(series.TmdbId!.Value, languageCode, cancellationToken);
+
+        using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var dbSeries = await context.Series.FindAsync(new object[] { series.Id }, cancellationToken);
+        if (dbSeries == null) return;
+
+        dbSeries.LastTmdbSync = DateTime.UtcNow;
+
+        if (details != null)
+        {
+            dbSeries.TmdbTitle = details.Name;
+            dbSeries.Plot = details.Overview;
+            dbSeries.Rating = details.VoteAverage;
+            dbSeries.ReleaseYear = details.ReleaseYear;
+            dbSeries.MetadataFetchedAt = DateTime.UtcNow;
+
+            if (!string.IsNullOrEmpty(details.PosterPath))
+                dbSeries.CoverUrl = $"https://image.tmdb.org/t/p/w500{details.PosterPath}";
+            if (!string.IsNullOrEmpty(details.BackdropPath))
+                dbSeries.BackdropUrl = $"https://image.tmdb.org/t/p/original{details.BackdropPath}";
+
+            if (details.Genres != null && details.Genres.Count > 0)
+                dbSeries.Genre = string.Join(", ", details.Genres.Select(g => g.Name));
+
+            // Credits — cast + director
+            if (details.Credits != null)
+            {
+                var director = details.Credits.Crew?.FirstOrDefault(c => c.Job == "Director")?.Name;
+                if (!string.IsNullOrEmpty(director))
+                    dbSeries.Director = director;
+
+                var castList = details.Credits.Cast?.OrderBy(c => c.Order).Take(5).Select(c => c.Name).ToList();
+                if (castList != null && castList.Any())
+                    dbSeries.Cast = string.Join(", ", castList);
+            }
+
+            // Content Rating
+            if (details.ContentRatings?.Results != null)
+            {
+                var usRating = details.ContentRatings.Results.FirstOrDefault(r => r.IsoCode == "US")?.Rating;
+                var trRating = details.ContentRatings.Results.FirstOrDefault(r => r.IsoCode == "TR")?.Rating;
+                dbSeries.ContentRating = trRating ?? usRating;
+            }
+
+            // Trailer
+            var trailer = details.Videos?.Results?
+                .Where(v => v.Site == "YouTube" && (v.Type == "Trailer" || v.Type == "Teaser"))
+                .OrderByDescending(v => v.Official)
+                .ThenByDescending(v => v.Type == "Trailer")
+                .FirstOrDefault();
+            if (trailer != null && !string.IsNullOrEmpty(trailer.Key))
+                dbSeries.TrailerUrl = $"https://www.youtube.com/watch?v={trailer.Key}";
+
+            // Update in-memory for immediate UI refresh
+            series.TmdbTitle = dbSeries.TmdbTitle;
+            series.Plot = dbSeries.Plot;
+            series.Rating = dbSeries.Rating;
+            series.ReleaseYear = dbSeries.ReleaseYear;
+            series.BackdropUrl = dbSeries.BackdropUrl;
+            series.Director = dbSeries.Director;
+            series.Cast = dbSeries.Cast;
+            series.ContentRating = dbSeries.ContentRating;
+            series.MetadataFetchedAt = dbSeries.MetadataFetchedAt;
+            series.LastTmdbSync = dbSeries.LastTmdbSync;
+            if (!string.IsNullOrEmpty(dbSeries.CoverUrl))
+                series.CoverUrl = dbSeries.CoverUrl;
+            if (!string.IsNullOrEmpty(dbSeries.Genre))
+                series.Genre = dbSeries.Genre;
+            if (!string.IsNullOrEmpty(dbSeries.TrailerUrl))
+                series.TrailerUrl = dbSeries.TrailerUrl;
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
     }
 }

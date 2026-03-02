@@ -22,6 +22,9 @@ public sealed class StubMetadataService : IMetadataService
     public Task<TmdbSeasonDetail?> FetchSeasonDetailsAsync(int tmdbId, int seasonNumber, string languageCode = "tr-TR", CancellationToken cancellationToken = default)
         => Task.FromResult<TmdbSeasonDetail?>(null);
 
+    public Task<ChannelMetadata?> SearchSeriesAsync(string searchQuery, string languageCode = "tr-TR", CancellationToken cancellationToken = default)
+        => Task.FromResult<ChannelMetadata?>(null);
+
     public void ClearCache()
     {
     }

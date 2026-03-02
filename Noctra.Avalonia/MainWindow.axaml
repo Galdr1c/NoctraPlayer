@@ -640,7 +640,8 @@
                                           <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="6" Margin="12,0">
                                               <StackPanel Orientation="Horizontal" Spacing="16">
                                                   <TextBlock Text="{Binding Name}" FontSize="18" FontWeight="Bold" Foreground="White"/>
-                                                  <TextBlock Text="45 dk" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+                                                  <TextBlock Text="{Binding EpisodeMetaText}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"
+                                                             IsVisible="{Binding EpisodeMetaText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
                                                   
                                                   <!-- Status Badge -->
                                                   <Border Background="#3346D369" CornerRadius="4" Padding="6,2" VerticalAlignment="Center"

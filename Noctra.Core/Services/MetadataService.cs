@@ -1,8 +1,10 @@
 ﻿using System.Net.Http.Json;
 using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Noctra.Data;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
-using Microsoft.Extensions.Logging;
 
 namespace Noctra.Services;
 
@@ -12,6 +14,7 @@ namespace Noctra.Services;
 public partial class MetadataService : IMetadataService
 {
     private readonly HttpClient _httpClient;
+    private readonly IDbContextFactory<AppDbContext>? _dbContextFactory;
     private readonly ISettingsService? _settingsService;
     private readonly ILogger<MetadataService>? _logger;
     
@@ -28,10 +31,12 @@ public partial class MetadataService : IMetadataService
     
     public MetadataService(
         HttpClient httpClient,
+        IDbContextFactory<AppDbContext>? dbContextFactory = null,
         ISettingsService? settingsService = null,
         ILogger<MetadataService>? logger = null)
     {
         _httpClient = httpClient;
+        _dbContextFactory = dbContextFactory;
         _settingsService = settingsService;
         _logger = logger;
         
@@ -256,6 +261,10 @@ public partial class MetadataService : IMetadataService
         if (channel.Type == ChannelType.Live)
             return; // Don't enrich live channels
         
+        // Skip if already enriched from TMDB
+        if (channel.TmdbId.HasValue)
+            return;
+        
         var languageCode = SeriesInfoParser.ExtractLanguageCode(channel.GroupTitle ?? channel.Name);
         
         // Kanal türünü geçirerek aramayı daralt
@@ -264,18 +273,47 @@ public partial class MetadataService : IMetadataService
         if (metadata == null)
             return;
         
-        // Apply metadata to channel
+        // Apply metadata to in-memory channel
+        channel.TmdbId = metadata.TmdbId;
         channel.Plot = metadata.Description;
         channel.Rating = metadata.Rating;
         channel.ReleaseYear = metadata.ReleaseYear;
         channel.BackdropUrl = metadata.BackdropUrl;
         channel.Director = metadata.Director;
-        channel.Cast = metadata.Cast; // Fix CS0428
+        channel.Cast = metadata.Cast;
         channel.ContentRating = metadata.ContentRating;
         
-        // Use poster as logo if no logo exists OR if default logo is generic
-        if (string.IsNullOrEmpty(channel.LogoUrl) && !string.IsNullOrEmpty(metadata.PosterUrl))
+        // Use TMDB poster if available
+        if (!string.IsNullOrEmpty(metadata.PosterUrl))
             channel.LogoUrl = metadata.PosterUrl;
+        
+        // Persist to database so next play doesn't re-fetch
+        if (_dbContextFactory != null)
+        {
+            try
+            {
+                using var ctx = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+                var dbChannel = await ctx.Channels.FindAsync(new object[] { channel.Id }, cancellationToken);
+                if (dbChannel != null)
+                {
+                    dbChannel.TmdbId = channel.TmdbId;
+                    dbChannel.Plot = channel.Plot;
+                    dbChannel.Rating = channel.Rating;
+                    dbChannel.ReleaseYear = channel.ReleaseYear;
+                    dbChannel.BackdropUrl = channel.BackdropUrl;
+                    dbChannel.Director = channel.Director;
+                    dbChannel.Cast = channel.Cast;
+                    dbChannel.ContentRating = channel.ContentRating;
+                    if (!string.IsNullOrEmpty(metadata.PosterUrl))
+                        dbChannel.LogoUrl = metadata.PosterUrl;
+                    await ctx.SaveChangesAsync(cancellationToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "VOD metadata persist failed for channel: {Name}", channel.Name);
+            }
+        }
     }
     
     public async Task EnrichChannelsAsync(IEnumerable<Channel> channels, IProgress<int>? progress = null, CancellationToken cancellationToken = default)
@@ -291,6 +329,79 @@ public partial class MetadataService : IMetadataService
             
             // Rate limiting - TMDB allows ~40 requests per 10 seconds
             await Task.Delay(250, cancellationToken);
+        }
+    }
+    
+    /// <summary>
+    /// Lightweight search-only method for scroll enrichment.
+    /// Returns basic metadata from the search response WITHOUT fetching details (credits, content_ratings, trailer).
+    /// 1 API call instead of 2.
+    /// </summary>
+    public async Task<ChannelMetadata?> SearchSeriesAsync(string searchQuery, string languageCode = "tr-TR", CancellationToken cancellationToken = default)
+    {
+        EnsureApiKeyLoaded();
+
+        if (string.IsNullOrWhiteSpace(searchQuery) || string.IsNullOrEmpty(_apiKey))
+            return null;
+
+        try
+        {
+            var cleanQuery = CleanSearchQuery(searchQuery);
+            if (string.IsNullOrWhiteSpace(cleanQuery))
+                cleanQuery = searchQuery;
+
+            var url = $"{TMDB_BASE_URL}/search/tv?api_key={_apiKey}&query={Uri.EscapeDataString(cleanQuery)}&include_adult=false&language={languageCode}";
+
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var data = await response.Content.ReadFromJsonAsync<TmdbSearchResponse>(cancellationToken: cancellationToken);
+            if (data?.Results == null || data.Results.Count == 0)
+                return null;
+
+            // Same scoring logic as FetchMetadataAsync
+            int ScoreResult(TmdbResult r)
+            {
+                var resultName = r.DisplayTitle ?? "";
+                if (resultName.Equals(cleanQuery, StringComparison.OrdinalIgnoreCase)) return 100;
+                if ((r.OriginalTitle ?? r.OriginalName ?? "").Equals(cleanQuery, StringComparison.OrdinalIgnoreCase)) return 95;
+                if (resultName.StartsWith(cleanQuery, StringComparison.OrdinalIgnoreCase)) return 80;
+                if (cleanQuery.StartsWith(resultName, StringComparison.OrdinalIgnoreCase)) return 75;
+                if (resultName.Contains(" " + cleanQuery, StringComparison.OrdinalIgnoreCase) ||
+                    resultName.Contains(cleanQuery + " ", StringComparison.OrdinalIgnoreCase)) return 40;
+                if (resultName.Contains(cleanQuery, StringComparison.OrdinalIgnoreCase)) return 20;
+                return 1;
+            }
+
+            var best = data.Results
+                .OrderByDescending(r => ScoreResult(r))
+                .ThenByDescending(r => r.Popularity)
+                .FirstOrDefault();
+
+            if (best == null)
+                return null;
+
+            // Genre ID → name conversion (uses cache, no extra API call after first)
+            var genres = await GetGenresAsync(best.GenreIds, languageCode, cancellationToken);
+
+            return new ChannelMetadata
+            {
+                TmdbId = best.Id,
+                Title = best.DisplayTitle,
+                Description = best.Overview,
+                PosterUrl = GetImageUrl(best.PosterPath, "w500"),
+                BackdropUrl = GetImageUrl(best.BackdropPath, "w780"),
+                Rating = best.VoteAverage,
+                ReleaseYear = best.ReleaseYear,
+                Genres = genres,
+                MediaType = "tv"
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "TMDB series search failed for: {Query}", searchQuery);
+            return null;
         }
     }
     

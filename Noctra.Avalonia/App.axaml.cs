@@ -379,6 +379,7 @@ public partial class App : Application
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN WatchedPosition TEXT;"); } catch { }
         
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Seasons ADD COLUMN Plot TEXT;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN AirDate TEXT;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE SeriesEpisodeProgresses ADD COLUMN TmdbId INTEGER;"); } catch { }
         
         try
