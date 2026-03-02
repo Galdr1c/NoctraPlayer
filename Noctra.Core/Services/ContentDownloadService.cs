@@ -342,6 +342,23 @@ public class ContentDownloadService : IContentDownloadService
         // Manuel resume — otomatik yeniden deneme sayacını sıfırla
         _autoResumeAttempts.TryRemove(downloadId, out _);
 
+        var isMissingFiles = item.BytesDownloaded > 0 && 
+                             (!string.IsNullOrWhiteSpace(item.TempFilePath) && !File.Exists(item.TempFilePath)) && 
+                             (!string.IsNullOrWhiteSpace(item.LocalFilePath) && !File.Exists(item.LocalFilePath));
+
+        if (isMissingFiles)
+        {
+            item.Status = DownloadStatus.Failed;
+            item.ErrorMessage = "İndirme dosyaları klasörden silinmiş veya bulunamıyor. Lütfen tekrar indirmeyi deneyin.";
+            item.BytesDownloaded = 0;
+            item.SpeedBytesPerSecond = 0;
+            item.EstimatedSecondsRemaining = null;
+            item.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(cancellationToken);
+            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
         item.Status = DownloadStatus.Queued;
         item.ErrorMessage = null;
         item.UpdatedAt = DateTime.UtcNow;
@@ -406,6 +423,22 @@ public class ContentDownloadService : IContentDownloadService
             var hasChanges = false;
             foreach (var item in pendingItems)
             {
+                var isMissingFiles = item.BytesDownloaded > 0 && 
+                                     (!string.IsNullOrWhiteSpace(item.TempFilePath) && !File.Exists(item.TempFilePath)) && 
+                                     (!string.IsNullOrWhiteSpace(item.LocalFilePath) && !File.Exists(item.LocalFilePath));
+
+                if (isMissingFiles)
+                {
+                    item.Status = DownloadStatus.Failed;
+                    item.ErrorMessage = "İndirme dosyaları klasörden silinmiş veya bulunamıyor. Lütfen tekrar indirmeyi deneyin.";
+                    item.BytesDownloaded = 0;
+                    item.SpeedBytesPerSecond = 0;
+                    item.EstimatedSecondsRemaining = null;
+                    item.UpdatedAt = DateTime.UtcNow;
+                    hasChanges = true;
+                    continue; // Do not add to queue
+                }
+
                 if (item.Status == DownloadStatus.Downloading)
                 {
                     // App unexpectedly closed; automatically resume by setting back to Queued
@@ -818,13 +851,25 @@ public class ContentDownloadService : IContentDownloadService
         _queuedIds.TryRemove(downloadId, out _);
         _autoResumeAttempts.TryRemove(downloadId, out _);
 
+        string? dirToCheck = null;
+
         using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId, cancellationToken);
         if (item != null)
         {
             await RestoreMappedEntitiesToSourceUrlAsync(db, item);
-            TryDeleteFileWithRetry(item.LocalFilePath);
-            TryDeleteFileWithRetry(item.TempFilePath);
+            
+            if (!string.IsNullOrWhiteSpace(item.LocalFilePath))
+            {
+                TryDeleteFileWithRetry(item.LocalFilePath);
+                dirToCheck = Path.GetDirectoryName(item.LocalFilePath);
+            }
+            if (!string.IsNullOrWhiteSpace(item.TempFilePath))
+            {
+                TryDeleteFileWithRetry(item.TempFilePath);
+                dirToCheck ??= Path.GetDirectoryName(item.TempFilePath);
+            }
+            
             // Phase 27: Explicitly removing the row from DB on Cancel
             db.DownloadItems.Remove(item);
             await db.SaveChangesAsync(cancellationToken);
@@ -833,6 +878,25 @@ public class ContentDownloadService : IContentDownloadService
         if (_activeTempFiles.TryRemove(downloadId, out var tempPath))
         {
             TryDeleteFileWithRetry(tempPath);
+            dirToCheck ??= Path.GetDirectoryName(tempPath);
+        }
+
+        // Clean up empty parent directory if applicable (e.g., for series folders)
+        if (!string.IsNullOrWhiteSpace(dirToCheck) && Directory.Exists(dirToCheck))
+        {
+            try
+            {
+                var files = Directory.EnumerateFileSystemEntries(dirToCheck).Any();
+                if (!files)
+                {
+                    Directory.Delete(dirToCheck, false);
+                    _logger?.LogInformation("Deleted empty download directory: {Dir}", dirToCheck);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogDebug(ex, "Failed to delete potentially empty directory: {Dir}", dirToCheck);
+            }
         }
     }
 

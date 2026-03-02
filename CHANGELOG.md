@@ -58,6 +58,8 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ### ⚡ Performans İyileştirmeleri
 - **Otomatik Arama Kaldırıldı**: Arama kutusuna yazarken otomatik sonuç gösterimi devre dışı bırakıldı. Arama sadece **Enter** tuşu veya arama butonu ile tetikleniyor — gereksiz işlem yükü ortadan kalktı.
 - **Akıllı Veri Atlaması**: TMDB'de karşılığı olmayan diziler `LastTmdbSync` ile işaretlenip tekrar sorgulanmıyor. Provider'dan gelen orijinal veriler korunuyor.
+- **Boş Kalan İndirme Klasörleri Temizleniyor**: İndirilen bir bölüm silindiğinde veya iptal edildiğinde, dizinin klasöründe başka dosya kalmamışsa o boş seri klasörü de otomatik olarak sistemden silinerek disk kirliliği önleniyor.
+- **Kayıp İndirme Dosyaları Koruması**: Uygulama kapalıyken (veya indirme duraklatılmışken) arka planda klasör/dosya silinirse, uygulama açıldığında yarım kalan indirmeleri baştan silbaştan indirmek yerine "İndirme dosyaları klasörden silinmiş veya bulunamıyor" uyarısıyla **Hata** durumuna çeker.
 
 ### 📁 Değişen Dosyalar
 | Dosya | Değişiklik |
