@@ -14,7 +14,10 @@ public partial class Series : ObservableObject
 
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
-    public string? CoverUrl { get; set; }
+    
+    [ObservableProperty]
+    private string? _coverUrl;
+    
     public string? Plot { get; set; }
     public string? Genre { get; set; }
     public int? ReleaseYear { get; set; }
@@ -25,7 +28,10 @@ public partial class Series : ObservableObject
     // TMDB Integration
     public int? TmdbId { get; set; }
     public string? TmdbTitle { get; set; }
-    public DateTime? LastTmdbSync { get; set; }
+    
+    [ObservableProperty]
+    private DateTime? _lastTmdbSync;
+    
     public string? Cast { get; set; }
     public string? Director { get; set; }
     public string? BackdropUrl { get; set; }

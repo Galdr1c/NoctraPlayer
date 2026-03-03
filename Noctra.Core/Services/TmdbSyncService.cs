@@ -14,6 +14,7 @@ public class TmdbSyncService : ITmdbSyncService
 {
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly IMetadataService _metadataService;
+    private readonly IDispatcherService _dispatcherService;
     private readonly ILogger<TmdbSyncService>? _logger;
 
     // Rate limit: TMDB allows ~40 req / 10s
@@ -23,10 +24,12 @@ public class TmdbSyncService : ITmdbSyncService
     public TmdbSyncService(
         IDbContextFactory<AppDbContext> dbContextFactory,
         IMetadataService metadataService,
+        IDispatcherService dispatcherService,
         ILogger<TmdbSyncService>? logger = null)
     {
         _dbContextFactory = dbContextFactory;
         _metadataService = metadataService;
+        _dispatcherService = dispatcherService;
         _logger = logger;
     }
 
@@ -119,17 +122,20 @@ public class TmdbSyncService : ITmdbSyncService
                 dbSeries.Genre = string.Join(", ", meta.Genres);
 
             // Update in-memory for immediate UI refresh
-            series.TmdbId = meta.TmdbId;
-            series.TmdbTitle = meta.Title;
-            series.Plot = meta.Description;
-            series.Rating = meta.Rating;
-            series.ReleaseYear = meta.ReleaseYear;
-            series.BackdropUrl = meta.BackdropUrl;
-            series.LastTmdbSync = DateTime.UtcNow;
-            if (!string.IsNullOrEmpty(meta.PosterUrl))
-                series.CoverUrl = meta.PosterUrl;
-            if (meta.Genres != null && meta.Genres.Count > 0)
-                series.Genre = string.Join(", ", meta.Genres);
+            _dispatcherService.Invoke(() =>
+            {
+                series.TmdbId = meta.TmdbId;
+                series.TmdbTitle = meta.Title;
+                series.Plot = meta.Description;
+                series.Rating = meta.Rating;
+                series.ReleaseYear = meta.ReleaseYear;
+                series.BackdropUrl = meta.BackdropUrl;
+                series.LastTmdbSync = DateTime.UtcNow;
+                if (!string.IsNullOrEmpty(meta.PosterUrl))
+                    series.CoverUrl = meta.PosterUrl;
+                if (meta.Genres != null && meta.Genres.Count > 0)
+                    series.Genre = string.Join(", ", meta.Genres);
+            });
         }
 
         await context.SaveChangesAsync(cancellationToken);
@@ -205,24 +211,27 @@ public class TmdbSyncService : ITmdbSyncService
             }
 
             // Update in-memory for immediate UI refresh
-            series.TmdbTitle = dbSeries.TmdbTitle;
-            series.Plot = dbSeries.Plot;
-            series.Rating = dbSeries.Rating;
-            series.ReleaseYear = dbSeries.ReleaseYear;
-            series.BackdropUrl = dbSeries.BackdropUrl;
-            series.Director = dbSeries.Director;
-            series.Cast = dbSeries.Cast;
-            series.ContentRating = dbSeries.ContentRating;
-            series.MetadataFetchedAt = dbSeries.MetadataFetchedAt;
-            series.LastTmdbSync = dbSeries.LastTmdbSync;
-            series.NetworkName = dbSeries.NetworkName;
-            series.NetworkLogoUrl = dbSeries.NetworkLogoUrl;
-            if (!string.IsNullOrEmpty(dbSeries.CoverUrl))
-                series.CoverUrl = dbSeries.CoverUrl;
-            if (!string.IsNullOrEmpty(dbSeries.Genre))
-                series.Genre = dbSeries.Genre;
-            if (!string.IsNullOrEmpty(dbSeries.TrailerUrl))
-                series.TrailerUrl = dbSeries.TrailerUrl;
+            _dispatcherService.Invoke(() =>
+            {
+                series.TmdbTitle = dbSeries.TmdbTitle;
+                series.Plot = dbSeries.Plot;
+                series.Rating = dbSeries.Rating;
+                series.ReleaseYear = dbSeries.ReleaseYear;
+                series.BackdropUrl = dbSeries.BackdropUrl;
+                series.Director = dbSeries.Director;
+                series.Cast = dbSeries.Cast;
+                series.ContentRating = dbSeries.ContentRating;
+                series.MetadataFetchedAt = dbSeries.MetadataFetchedAt;
+                series.LastTmdbSync = dbSeries.LastTmdbSync;
+                series.NetworkName = dbSeries.NetworkName;
+                series.NetworkLogoUrl = dbSeries.NetworkLogoUrl;
+                if (!string.IsNullOrEmpty(dbSeries.CoverUrl))
+                    series.CoverUrl = dbSeries.CoverUrl;
+                if (!string.IsNullOrEmpty(dbSeries.Genre))
+                    series.Genre = dbSeries.Genre;
+                if (!string.IsNullOrEmpty(dbSeries.TrailerUrl))
+                    series.TrailerUrl = dbSeries.TrailerUrl;
+            });
         }
 
         await context.SaveChangesAsync(cancellationToken);

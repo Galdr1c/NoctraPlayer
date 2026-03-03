@@ -39,11 +39,15 @@
         <!-- Poster Area Placeholder -->
         <Border x:Name="PlaceholderBorder" Width="160" Height="240" Background="{DynamicResource SurfaceLightBrush}">
           <Border.IsVisible>
-            <Binding Path="#PosterImage.IsImageLoaded" Converter="{StaticResource InverseBoolConverter}"/>
+            <MultiBinding Converter="{StaticResource BoolOrMultiConverter}">
+              <Binding Path="#PosterImage.IsImageLoaded" Converter="{StaticResource InverseBoolConverter}"/>
+              <Binding Path="LastTmdbSync" Converter="{x:Static ObjectConverters.IsNull}"/>
+            </MultiBinding>
           </Border.IsVisible>
         </Border>
 
-        <controls:RemoteImage x:Name="PosterImage" Stretch="UniformToFill" Url="{Binding CoverUrl}" RenderOptions.BitmapInterpolationMode="MediumQuality"/>
+        <controls:RemoteImage x:Name="PosterImage" Stretch="UniformToFill" Url="{Binding CoverUrl}" RenderOptions.BitmapInterpolationMode="MediumQuality"
+                              IsVisible="{Binding LastTmdbSync, Converter={x:Static ObjectConverters.IsNotNull}}"/>
         
         <!-- Hover Overlay -->
         <Border Classes="HoverOverlay" Background="#4D000000" />

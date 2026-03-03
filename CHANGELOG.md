@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v29.9 – Poster Yükleme Deneyimi (Skeleton Loading) (2026-03-03)
+
+### ⚡ Performans ve Mimari İyileştirmeler
+- **Kusursuz Görsel Geçiş (No-Flash Update)**: Dizi ve film sayfalarında aşağı kaydırırken (scroll) eski "sağlayıcı (provider)" afişinin görünüp sonra aniden "TMDB" afişiyle değişmesi sonucu oluşan kötü görüntü kirliliği (flicker/flash efekti) tamamen ortadan kaldırıldı.
+- **Skeleton Loading Mantığı**: Kartlar ekrana geldiğinde, eğer o içerik için arka plandaki TMDB araması henüz sonuçlanmamışsa, kullanıcıya önce sağlayıcı resmi yerine **temiz bir Placeholder (mor yer tutucu)** gösterilir. Arama sonuçlanıp en kaliteli afiş bulunduğunda (veya bulunamayıp mevcuda dönüldüğünde) afiş, yeri tutulan boşluğa anında ve yumuşak bir şekilde yerleşir.
+- **Thread-Safe UI Senkronizasyonu**: Arka plan TMDB servisinden gelen poster güncellemelerinin Avalonia arayüzünü kilitlemesini veya görselleri boşta bırakmasını engellemek için tüm özellik güncellemeleri `IDispatcherService` üzerinden doğrudan ana UI kanalına bağlandı.
+
+### 📁 Değişen Dosyalar
+| Dosya | Değişiklik |
+|-------|------------|
+| `SeriesCard.axaml` & `VodCard.axaml` | Placeholder mantığı `LastTmdbSync` durumuna göre koşullandırıldı (MultiBinding/BoolOrMultiConverter eklendi). |
+| `RemoteImage.cs` | Yeni URL geldiğinde eski resmi hemen silip boşluğa düşüren hatalı mantık kaldırılarak, yumuşak geçiş sağlandı. |
+| `TmdbSyncService.cs` | Özellik güncellemeleri `IDispatcherService.Invoke` içine alındı. |
+| `Series.cs` & `Channel.cs` | `LastTmdbSync` özelliği reaktif (`ObservableProperty`) hale getirildi. |
+
+---
+
+## v29.8 – Tema Optimizasyonu ve Anlık TMDB Posterleri (2026-03-03)
+
+### 🎨 Görsel ve Arayüz İyileştirmeleri
+- **Mor Tema Optimizasyonu**: Hem Açık (Light) hem de Koyu (Dark) temalarda bulunan ve uygulamanın konseptine uymayan mavi ve indigo tonları (Gradients, InfoColor, Profil seçim ekranı) tamamen kaldırılarak yerine uygulamanın ana kimliği olan estetik mor tonları entegre edildi.
+- **Detay Sayfası Butonları Kontrastı**: Dizi detay sayfasındaki Geri Dön (Back), Listeme Ekle (Plus) ve Favorilere Ekle (Heart) butonlarının arkaplanı Açık Temada beyaz üzerine beyaz denk geldiği için görünmüyordu. Bu butonlar için `ActionCircleButtonStyle` oluşturuldu ve tema destekli (`DynamicResource`) dinamik renklere geçirilerek hover durumları mükemmelleştirildi.
+- **Sezon Listesi "İki Ton" Hatası**: Açık temada sezon listesinin üzerine gelindiğinde (hover) oluşan metinlerin çift renk kalma veya geçişlerde takılma sorunu çözüldü. Farklı görsel durumlar (PointerOver, Selected, Pressed) için `ListBoxItem` stilleri spesifikleştirildi.
+
+### ⚡ Performans ve Mimari İyileştirmeler
+- **Anlık Yüksek Kaliteli Poster Güncellemesi**: Arka planda TMDB'den dizi eşleştirmesi (`TmdbSyncService`) yapıldığında, bulunan yüksek kaliteli dizi afişlerinin (posterlerin) arayüze yansıması için dizinin içine girilmesi gerekiyordu. `Series` modelindeki `CoverUrl` özelliği `[ObservableProperty]` yapısına dönüştürülerek, eşleşen dizilerin posterlerinin ana liste üzerinde anlık olarak değişmesi sağlandı.
+
+### 📁 Değişen Dosyalar
+| Dosya | Değişiklik |
+|-------|------------|
+| `DarkTheme.axaml` & `LightTheme.axaml` | Mavi tonlar temizlendi, mor konsept oturtuldu. |
+| `Styles.axaml` | Yuvarlak etkileşimli ikon butonları için `ActionCircleButtonStyle` eklendi. |
+| `MainWindow.axaml` | Detay butonları yeni stile taşındı, sezon listesi görsel durumları düzeltildi. |
+| `ProfilesWindow.axaml` | Hardcoded çocuk profili indigo rengi mora çevrildi. |
+| `Series.cs` & `MainViewModel.cs` | `CoverUrl` Reaktif UI için Observable yapıya geçirildi, anlık TMDB posterleri yansıtıldı. |
+
+---
+
 ## v29.7 – Saydamlık ve Estetik Geri Kazanımı (2026-03-02)
 
 ### 🎨 Görsel İyileştirmeler

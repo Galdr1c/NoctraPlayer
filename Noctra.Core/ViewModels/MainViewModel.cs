@@ -5347,7 +5347,10 @@ public partial class MainViewModel : ObservableObject
 
             // Apply metadata to UI
             if (!string.IsNullOrWhiteSpace(metadata.PosterUrl))
+            {
                 SelectedSeriesPosterUrl = metadata.PosterUrl;
+                series.CoverUrl = metadata.PosterUrl;
+            }
 
             if (!string.IsNullOrWhiteSpace(metadata.BackdropUrl))
                 SelectedSeriesBackdropUrl = metadata.BackdropUrl;

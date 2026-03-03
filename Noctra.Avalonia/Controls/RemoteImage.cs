@@ -141,18 +141,20 @@ public class RemoteImage : Image
                 // LRU usage update
                 CacheLruList.Remove(normalizedUrl);
                 CacheLruList.AddLast(normalizedUrl);
-                
+
                 SetSourceOnUiThread(cached);
                 return;
             }
         }
 
-        SetSourceOnUiThread(null);
+        // DO NOT clear the existing source immediately here if we already have an image.
+        // This ensures a smooth transition from a provider poster to a TMDB poster without flashing a placeholder.
+        // If we don't have an image, it will remain as placeholder until loaded.
+
         _loadCts = new CancellationTokenSource();
         var loadTask = InFlightLoads.GetOrAdd(normalizedUrl, static url => DownloadBitmapAsync(url));
         _ = AwaitImageAsync(normalizedUrl, loadTask, _loadCts.Token);
     }
-
     private async Task AwaitImageAsync(string url, Task<Bitmap?> loadTask, CancellationToken cancellationToken)
     {
         try

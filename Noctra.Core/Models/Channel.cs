@@ -40,10 +40,11 @@ public partial class Channel : ObservableObject
     public ChannelType Type { get; set; } = ChannelType.Live;
     
     public int? TmdbId { get; set; }
-    public DateTime? LastTmdbSync { get; set; }
-    
+
     [ObservableProperty]
-    private bool _isFavorite;
+    private DateTime? _lastTmdbSync;
+
+    [ObservableProperty]    private bool _isFavorite;
     
     [ObservableProperty]
     private bool _isInMyList;
