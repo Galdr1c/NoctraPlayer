@@ -61,7 +61,7 @@ public partial class Series : ObservableObject
     public string? GroupTitle { get; set; }
 
     [NotMapped]
-    public string? DisplayCategory => !string.IsNullOrEmpty(GroupTitle) ? SeriesInfoParser.StripIptvPrefixes(GroupTitle) : Genre;
+    public string? DisplayCategory => !string.IsNullOrEmpty(GroupTitle) ? GroupTitle : Genre;
 
     [NotMapped]
     public string? LocalSizeText { get; set; }

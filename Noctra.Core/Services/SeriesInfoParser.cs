@@ -524,13 +524,14 @@ public static partial class SeriesInfoParser
     [GeneratedRegex(@"[\[\]\(\)\{\}\-_\.\:]")]
     private static partial Regex SymbolsRegex();
 
-    [GeneratedRegex(@"^\s*(?:[a-z]{2,3}\s*[|:\.\-/]\s*)+", RegexOptions.IgnoreCase)]
+    // Phase 1: Country prefixes like "TR | ", "EN.", "DE:" - but NOT "TR/DIZI"
+    [GeneratedRegex(@"^\s*(?:[a-z]{2,3}\s*[|:\.]\s*)+", RegexOptions.IgnoreCase)]
     private static partial Regex CountryPrefixRegex();
 
     [GeneratedRegex(@"^\s*(?:[^|]+?\s*\|\s*)", RegexOptions.IgnoreCase)]
     private static partial Regex PipeTagRegex();
 
-    [GeneratedRegex(@"\b(DIZIAX|NETFLIX|AMAZON|PRIME|DISNEY|APPLE|EXXEN|GAIN|BLUTV|TOD|VOD|PREMIUM|VIP|HD|FHD|UHD|4K)\s*", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(DIZIAX|PREMIUM|VIP|HD|FHD|UHD|4K)\s*", RegexOptions.IgnoreCase)]
     private static partial Regex ProviderPrefixRegex();
 
     [GeneratedRegex(@"\b(?:19\d{2}|20\d{2})\b", RegexOptions.IgnoreCase)]

@@ -252,82 +252,6 @@ public partial class MetadataService : IMetadataService
         }
     }
 
-    public async Task EnrichChannelAsync(Channel channel, CancellationToken cancellationToken = default)
-    {
-        if (channel.Type == ChannelType.Live)
-            return; // Don't enrich live channels
-        
-        // Skip if already enriched from TMDB
-        if (channel.TmdbId.HasValue)
-            return;
-        
-        var languageCode = SeriesInfoParser.ExtractLanguageCode(channel.GroupTitle ?? channel.Name);
-        
-        // Kanal türünü geçirerek aramayı daralt
-        var metadata = await FetchMetadataAsync(channel.Name, channel.Type, languageCode, cancellationToken);
-        
-        if (metadata == null)
-            return;
-        
-        // Apply metadata to in-memory channel
-        channel.TmdbId = metadata.TmdbId;
-        channel.Plot = metadata.Description;
-        channel.Rating = metadata.Rating;
-        channel.ReleaseYear = metadata.ReleaseYear;
-        channel.BackdropUrl = metadata.BackdropUrl;
-        channel.Director = metadata.Director;
-        channel.Cast = metadata.Cast;
-        channel.ContentRating = metadata.ContentRating;
-        
-        // Use TMDB poster if available
-        if (!string.IsNullOrEmpty(metadata.PosterUrl))
-            channel.LogoUrl = metadata.PosterUrl;
-        
-        // Persist to database so next play doesn't re-fetch
-        if (_dbContextFactory != null)
-        {
-            try
-            {
-                using var ctx = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-                var dbChannel = await ctx.Channels.FindAsync(new object[] { channel.Id }, cancellationToken);
-                if (dbChannel != null)
-                {
-                    dbChannel.TmdbId = channel.TmdbId;
-                    dbChannel.Plot = channel.Plot;
-                    dbChannel.Rating = channel.Rating;
-                    dbChannel.ReleaseYear = channel.ReleaseYear;
-                    dbChannel.BackdropUrl = channel.BackdropUrl;
-                    dbChannel.Director = channel.Director;
-                    dbChannel.Cast = channel.Cast;
-                    dbChannel.ContentRating = channel.ContentRating;
-                    if (!string.IsNullOrEmpty(metadata.PosterUrl))
-                        dbChannel.LogoUrl = metadata.PosterUrl;
-                    await ctx.SaveChangesAsync(cancellationToken);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogWarning(ex, "VOD metadata persist failed for channel: {Name}", channel.Name);
-            }
-        }
-    }
-    
-    public async Task EnrichChannelsAsync(IEnumerable<Channel> channels, IProgress<int>? progress = null, CancellationToken cancellationToken = default)
-    {
-        var vodChannels = channels.Where(c => c.Type != ChannelType.Live).ToList();
-        var processed = 0;
-        
-        foreach (var channel in vodChannels)
-        {
-            await EnrichChannelAsync(channel, cancellationToken);
-            processed++;
-            progress?.Report(processed * 100 / vodChannels.Count);
-            
-            // Rate limiting - TMDB allows ~40 requests per 10 seconds
-            await Task.Delay(250, cancellationToken);
-        }
-    }
-    
     public void ApplyHeuristics(TmdbDetail details, ChannelMetadata metadata, string languageCode, string? contextTitle)
     {
         var contextLower = (contextTitle ?? "").ToLower()
@@ -497,13 +421,10 @@ public partial class MetadataService : IMetadataService
             if (best == null)
                 return null;
 
-            // Get basic details for network info (still 1 extra call, but necessary for correct logo)
-            var details = await FetchDetailsAsync(best.Id, "tv", languageCode, cancellationToken);
-
             // Genre ID → name conversion (uses cache, no extra API call after first)
             var genres = await GetGenresAsync(best.GenreIds, languageCode, cancellationToken);
 
-            var metadata = new ChannelMetadata
+            return new ChannelMetadata
             {
                 TmdbId = best.Id,
                 Title = best.DisplayTitle,
@@ -515,14 +436,6 @@ public partial class MetadataService : IMetadataService
                 Genres = genres,
                 MediaType = "tv"
             };
-
-            // Apply network/rating heuristics
-            if (details != null)
-            {
-                ApplyHeuristics(details, metadata, languageCode, searchQuery);
-            }
-
-            return metadata;
         }
         catch (Exception ex)
         {

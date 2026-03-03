@@ -16,19 +16,6 @@ public interface IMetadataService
     Task<ChannelMetadata?> FetchMetadataAsync(string searchQuery, ChannelType? type = null, string languageCode = "tr-TR", CancellationToken cancellationToken = default);
     
     /// <summary>
-    /// Enriches a channel with metadata from TMDB
-    /// </summary>
-    /// <param name="channel">Channel to enrich</param>
-    Task EnrichChannelAsync(Channel channel, CancellationToken cancellationToken = default);
-    
-    /// <summary>
-    /// Enriches multiple channels in batch
-    /// </summary>
-    /// <param name="channels">Channels to enrich</param>
-    /// <param name="progress">Optional progress callback</param>
-    Task EnrichChannelsAsync(IEnumerable<Channel> channels, IProgress<int>? progress = null, CancellationToken cancellationToken = default);
-    
-    /// <summary>
     /// Gets genre names for given genre IDs
     /// </summary>
     /// <param name="genreIds">TMDB genre IDs</param>
