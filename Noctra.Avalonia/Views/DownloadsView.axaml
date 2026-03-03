@@ -15,29 +15,39 @@
     <!-- Tab Button Style -->
     <Style Selector="RadioButton.tabBtn">
       <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="BorderThickness" Value="0,0,0,2"/>
+      <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="BorderBrush" Value="Transparent"/>
-      <Setter Property="Padding" Value="16,8"/>
+      <Setter Property="Padding" Value="16,12"/>
       <Setter Property="Margin" Value="0,0,12,0"/>
       <Setter Property="FontSize" Value="14"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
       <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
       <Setter Property="Template">
         <ControlTemplate>
-          <Border Background="{TemplateBinding Background}"
-                  BorderBrush="{TemplateBinding BorderBrush}"
-                  BorderThickness="{TemplateBinding BorderThickness}"
-                  Padding="{TemplateBinding Padding}">
-            <ContentPresenter Content="{TemplateBinding Content}"
-                              HorizontalAlignment="Center"
-                              VerticalAlignment="Center"/>
-          </Border>
+          <Grid>
+            <Border Background="{TemplateBinding Background}"
+                    Padding="{TemplateBinding Padding}">
+              <ContentPresenter Content="{TemplateBinding Content}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"/>
+            </Border>
+            <Border x:Name="SelectionIndicator"
+                    Height="3"
+                    Width="20"
+                    Background="{DynamicResource AccentBrush}"
+                    VerticalAlignment="Bottom"
+                    HorizontalAlignment="Center"
+                    CornerRadius="1.5"
+                    IsVisible="False"/>
+          </Grid>
         </ControlTemplate>
       </Setter>
     </Style>
     <Style Selector="RadioButton.tabBtn:checked">
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+    </Style>
+    <Style Selector="RadioButton.tabBtn:checked /template/ Border#SelectionIndicator">
+      <Setter Property="IsVisible" Value="True"/>
     </Style>
     <Style Selector="RadioButton.tabBtn:pointerover:not(:checked)">
       <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>

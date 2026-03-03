@@ -1,4 +1,4 @@
-﻿using Noctra.Models;
+using Noctra.Models;
 
 namespace Noctra.Services;
 
@@ -38,6 +38,8 @@ public interface IMetadataService
     /// <summary>
     /// Clears the genre cache
     /// </summary>
+    void ClearCache();
+
     /// <summary>
     /// Fetches deep details for a series (Credits, Cast, etc) by TmdbId
     /// </summary>
@@ -55,6 +57,8 @@ public interface IMetadataService
     /// </summary>
     Task<ChannelMetadata?> SearchSeriesAsync(string searchQuery, string languageCode = "tr-TR", CancellationToken cancellationToken = default);
 
-    void ClearCache();
+    /// <summary>
+    /// Applies heuristics to select the best content rating and network logo based on context.
+    /// </summary>
+    void ApplyHeuristics(TmdbDetail details, ChannelMetadata metadata, string languageCode, string? contextTitle);
 }
-

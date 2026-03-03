@@ -121,6 +121,11 @@ public class TmdbSyncService : ITmdbSyncService
             if (meta.Genres != null && meta.Genres.Count > 0)
                 dbSeries.Genre = string.Join(", ", meta.Genres);
 
+            // Apply heuristics (Network, Rating etc.)
+            dbSeries.NetworkName = meta.NetworkName;
+            dbSeries.NetworkLogoUrl = meta.NetworkLogoUrl;
+            dbSeries.ContentRating = meta.ContentRating;
+
             // Update in-memory for immediate UI refresh
             _dispatcherService.Invoke(() =>
             {
@@ -135,6 +140,11 @@ public class TmdbSyncService : ITmdbSyncService
                     series.CoverUrl = meta.PosterUrl;
                 if (meta.Genres != null && meta.Genres.Count > 0)
                     series.Genre = string.Join(", ", meta.Genres);
+
+                // Real-time update
+                series.NetworkName = meta.NetworkName;
+                series.NetworkLogoUrl = meta.NetworkLogoUrl;
+                series.ContentRating = meta.ContentRating;
             });
         }
 
@@ -184,13 +194,13 @@ public class TmdbSyncService : ITmdbSyncService
                     dbSeries.Cast = string.Join(", ", castList);
             }
 
-            // Content Rating
-            if (details.ContentRatings?.Results != null)
-            {
-                var usRating = details.ContentRatings.Results.FirstOrDefault(r => r.IsoCode == "US")?.Rating;
-                var trRating = details.ContentRatings.Results.FirstOrDefault(r => r.IsoCode == "TR")?.Rating;
-                dbSeries.ContentRating = trRating ?? usRating;
-            }
+            // Centralized Heuristics (Network, Rating, etc.)
+            var tempMetadata = new ChannelMetadata();
+            _metadataService.ApplyHeuristics(details, tempMetadata, languageCode, series.GroupTitle ?? series.Name);
+            
+            dbSeries.ContentRating = tempMetadata.ContentRating;
+            dbSeries.NetworkName = tempMetadata.NetworkName;
+            dbSeries.NetworkLogoUrl = tempMetadata.NetworkLogoUrl;
 
             // Trailer
             var trailer = details.Videos?.Results?
@@ -200,15 +210,6 @@ public class TmdbSyncService : ITmdbSyncService
                 .FirstOrDefault();
             if (trailer != null && !string.IsNullOrEmpty(trailer.Key))
                 dbSeries.TrailerUrl = $"https://www.youtube.com/watch?v={trailer.Key}";
-
-            // Network (Netflix, HBO, Disney+, etc.)
-            if (details.Networks != null && details.Networks.Count > 0)
-            {
-                var network = details.Networks[0];
-                dbSeries.NetworkName = network.Name;
-                if (!string.IsNullOrEmpty(network.LogoPath))
-                    dbSeries.NetworkLogoUrl = $"https://image.tmdb.org/t/p/h50{network.LogoPath}";
-            }
 
             // Update in-memory for immediate UI refresh
             _dispatcherService.Invoke(() =>

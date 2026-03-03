@@ -457,11 +457,11 @@
                       </StackPanel>
 
                       <!-- Badges & Stats (Netflix Style Meta) -->
-                      <StackPanel Orientation="Horizontal" Margin="0,18,0,0" Spacing="8" VerticalAlignment="Center">
+                      <WrapPanel Orientation="Horizontal" Margin="0,18,0,0" VerticalAlignment="Center">
                         <TextBlock Text="{Binding SelectedSeriesYears}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="SemiBold"
                                   IsVisible="{Binding SelectedSeriesYears, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
                         
-                        <TextBlock Text="•" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" VerticalAlignment="Center" Margin="4,0">
+                        <TextBlock Text="•" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" VerticalAlignment="Center" Margin="8,0">
                           <TextBlock.IsVisible>
                             <MultiBinding Converter="{x:Static BoolConverters.And}">
                               <Binding Path="SelectedSeriesYears" Converter="{StaticResource StringNotEmptyToBoolConverter}"/>
@@ -476,7 +476,7 @@
                         <TextBlock Text="{Binding SelectedSeriesGenres}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="Medium"
                                   IsVisible="{Binding SelectedSeriesGenres, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
 
-                        <TextBlock Text="•" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" VerticalAlignment="Center" Margin="4,0">
+                        <TextBlock Text="•" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" VerticalAlignment="Center" Margin="8,0">
                           <TextBlock.IsVisible>
                             <MultiBinding Converter="{x:Static BoolConverters.And}">
                               <Binding Path="SelectedSeriesGenres" Converter="{StaticResource StringNotEmptyToBoolConverter}"/>
@@ -485,18 +485,18 @@
                           </TextBlock.IsVisible>
                         </TextBlock>
                         
-                        <Border BorderBrush="{DynamicResource TextMutedBrush}" BorderThickness="1.5" CornerRadius="3" Padding="6,1" VerticalAlignment="Center" Margin="12,0,0,0"
+                        <Border BorderBrush="{DynamicResource TextMutedBrush}" BorderThickness="1.5" CornerRadius="3" Padding="6,1" VerticalAlignment="Center" Margin="4,0,0,0"
                                 IsVisible="{Binding SelectedSeriesAgeRating, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
                             <TextBlock Text="{Binding SelectedSeriesAgeRating}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" FontWeight="Black"/>
                         </Border>
 
                         <!-- Network Logo (Netflix, HBO, Disney+, etc.) -->
-                        <Border VerticalAlignment="Center" Margin="12,0,0,0" Height="20"
+                        <Border VerticalAlignment="Center" Margin="12,4,0,4" Height="20"
                                 IsVisible="{Binding SelectedSeriesNetworkLogoUrl, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
                             <controls:RemoteImage Url="{Binding SelectedSeriesNetworkLogoUrl}" 
                                                   Stretch="Uniform" Height="20" MaxWidth="80"/>
                         </Border>
-                      </StackPanel>
+                      </WrapPanel>
 
                       <!-- Seasons & Episodes Stats -->
                       <StackPanel Orientation="Horizontal" Margin="0,12,0,0" Spacing="16">
@@ -579,7 +579,9 @@
                   <!-- Seasons Tab Menu -->
                   <StackPanel Grid.Row="0">
                       <Grid ColumnDefinitions="*,Auto">
-                      <ListBox ItemsSource="{Binding SelectedSeries.Seasons}" 
+                      <!-- Seasons List Area -->
+                      <ListBox x:Name="SeasonsListBox"
+                               ItemsSource="{Binding SelectedSeries.Seasons}" 
                                SelectedItem="{Binding SelectedSeason}"
                                Background="Transparent" BorderThickness="0" Padding="0"
                                ScrollViewer.HorizontalScrollBarVisibility="Auto">
@@ -596,51 +598,81 @@
                               </DataTemplate>
                           </ListBox.ItemTemplate>
                           <ListBox.Styles>
+                              <!-- Custom ScrollViewer Template to move scrollbar to TOP -->
+                              <Style Selector="ListBox#SeasonsListBox /template/ ScrollViewer">
+                                  <Setter Property="Template">
+                                      <ControlTemplate>
+                                          <Grid RowDefinitions="Auto,*">
+                                              <ScrollBar Name="PART_HorizontalScrollBar" 
+                                                         Orientation="Horizontal" 
+                                                         Grid.Row="0"
+                                                         Margin="0,0,0,4"/>
+                                              <ScrollContentPresenter Name="PART_ContentPresenter" 
+                                                                      Grid.Row="1"
+                                                                      Padding="{TemplateBinding Padding}"
+                                                                      Background="{TemplateBinding Background}"/>
+                                              <ScrollBar Name="PART_VerticalScrollBar" 
+                                                         Orientation="Vertical" 
+                                                         IsVisible="False"/>
+                                          </Grid>
+                                      </ControlTemplate>
+                                  </Setter>
+                              </Style>
+
                               <Style Selector="ListBoxItem">
-                                  <Setter Property="Padding" Value="0,0,0,8"/>
+                                  <Setter Property="Padding" Value="0,0,0,12"/>
                                   <Setter Property="Margin" Value="0,0,24,0"/>
                                   <Setter Property="Background" Value="Transparent"/>
                                   <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
-                                  <Setter Property="BorderThickness" Value="0,0,0,3"/>
+                                  <Setter Property="BorderThickness" Value="0"/>
                                   <Setter Property="BorderBrush" Value="Transparent"/>
                                   <Setter Property="FontWeight" Value="Medium"/>
+                                  <Setter Property="Template">
+                                      <ControlTemplate>
+                                          <Grid Background="Transparent">
+                                              <Border Background="{TemplateBinding Background}"
+                                                      Padding="{TemplateBinding Padding}">
+                                                  <ContentPresenter Content="{TemplateBinding Content}"
+                                                                    ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                                    HorizontalAlignment="Center"
+                                                                    VerticalAlignment="Center"/>
+                                              </Border>
+                                              <Border x:Name="SelectionIndicator"
+                                                      Height="3"
+                                                      Width="20"
+                                                      Background="{DynamicResource AccentBrush}"
+                                                      VerticalAlignment="Bottom"
+                                                      HorizontalAlignment="Center"
+                                                      CornerRadius="1.5"
+                                                      IsVisible="False"/>
+                                          </Grid>
+                                      </ControlTemplate>
+                                  </Setter>
                                   <Setter Property="Transitions">
                                       <Transitions>
                                           <BrushTransition Property="Foreground" Duration="0:0:0.15"/>
-                                          <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
                                       </Transitions>
                                   </Setter>
-                              </Style>
-                              
-                              <Style Selector="ListBoxItem /template/ ContentPresenter">
-                                  <Setter Property="Background" Value="Transparent" />
                               </Style>
                               
                               <!-- PointerOver State -->
                               <Style Selector="ListBoxItem:pointerover">
                                   <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                               </Style>
-                              <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
-                                  <Setter Property="Background" Value="Transparent" />
-                              </Style>
 
                               <!-- Selected State -->
                               <Style Selector="ListBoxItem:selected">
                                   <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-                                  <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                   <Setter Property="FontWeight" Value="Bold"/>
                               </Style>
-                              <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-                                  <Setter Property="Background" Value="Transparent" />
+                              <Style Selector="ListBoxItem:selected /template/ Border#SelectionIndicator">
+                                  <Setter Property="IsVisible" Value="True"/>
                               </Style>
 
                               <!-- Pressed State -->
                               <Style Selector="ListBoxItem:pressed">
                                   <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
                                   <Setter Property="RenderTransform" Value="scale(0.98)"/>
-                              </Style>
-                              <Style Selector="ListBoxItem:pressed /template/ ContentPresenter">
-                                  <Setter Property="Background" Value="Transparent" />
                               </Style>
                           </ListBox.Styles>
                       </ListBox>

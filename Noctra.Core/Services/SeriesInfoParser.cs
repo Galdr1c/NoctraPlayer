@@ -156,7 +156,7 @@ public static partial class SeriesInfoParser
         return MultiSpaceRegex().Replace(buffer.ToString(), " ").Trim();
     }
 
-    [GeneratedRegex(@"[\|\[\(\{]([a-zA-Z]{2,3})[\|\]\)\}]")]
+    [GeneratedRegex(@"[\|\[\(\{]([a-zA-Z]{2,5})[\|\]\)\}]")]
     private static partial Regex StrictLanguageCodeRegex();
 
     /// <summary>
@@ -168,14 +168,37 @@ public static partial class SeriesInfoParser
     {
         if (string.IsNullOrWhiteSpace(titleOrCategory)) return "tr-TR";
 
-        if (titleOrCategory.TrimStart().StartsWith("EU ", StringComparison.OrdinalIgnoreCase) || 
-            titleOrCategory.TrimStart().StartsWith("EU|", StringComparison.OrdinalIgnoreCase) ||
-            titleOrCategory.TrimStart().Equals("EU", StringComparison.OrdinalIgnoreCase))
+        var trimmed = titleOrCategory.Trim().ToUpperInvariant();
+        
+        // 1. Check for strong English/International indicators anywhere as tags
+        if (trimmed.Contains("MULTI") || 
+            trimmed.Contains("ENG") ||
+            trimmed.Contains("EN-US") ||
+            trimmed.StartsWith("EU ") || 
+            trimmed.StartsWith("EU|") ||
+            trimmed.StartsWith("EU/"))
         {
             return "en-US";
         }
 
-        var matches = StrictLanguageCodeRegex().Matches(titleOrCategory);
+        // 2. Check for Turkish prefixes with various delimiters (TR/, TR|, TR-, [TR], etc.)
+        if (trimmed.StartsWith("TR/") || 
+            trimmed.StartsWith("TR|") || 
+            trimmed.StartsWith("TR-") ||
+            trimmed.StartsWith("TR ") ||
+            trimmed.Contains("[TR]") ||
+            trimmed.Contains("(TR)") ||
+            trimmed.Contains("|TR|"))
+        {
+            return "tr-TR";
+        }
+
+        // 3. Check for other common country prefixes
+        if (trimmed.StartsWith("DE/") || trimmed.StartsWith("DE|") || trimmed.StartsWith("DE-")) return "de-DE";
+        if (trimmed.StartsWith("FR/") || trimmed.StartsWith("FR|") || trimmed.StartsWith("FR-")) return "fr-FR";
+
+        // 4. Strict tag matching: [TR], (EN), |DE|, {FR}, etc.
+        var matches = StrictLanguageCodeRegex().Matches(trimmed);
         if (matches.Count > 0)
         {
             foreach (Match match in matches)
@@ -186,7 +209,7 @@ public static partial class SeriesInfoParser
                     switch (code)
                     {
                         case "TR": return "tr-TR";
-                        case "EN": case "UK": case "US": case "EU": return "en-US";
+                        case "EN": case "UK": case "US": case "EU": case "MULTI": return "en-US";
                         case "DE": return "de-DE";
                         case "FR": return "fr-FR";
                         case "ES": case "SP": return "es-ES";
@@ -223,6 +246,30 @@ public static partial class SeriesInfoParser
         return "tr-TR";
     }
 
+    /// <summary>
+    /// Detects common streaming platforms from category or series names.
+    /// </summary>
+    public static string? ExtractPlatform(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        var lower = text.ToLower().Replace('ı', 'i').Replace('İ', 'i');
+
+        if (lower.Contains("netflix")) return "Netflix";
+        if (lower.Contains("hbo")) return "HBO";
+        if (lower.Contains("disney")) return "Disney+";
+        if (lower.Contains("amazon") || lower.Contains("prime")) return "Amazon";
+        if (lower.Contains("apple")) return "Apple TV+";
+        if (lower.Contains("paramount")) return "Paramount+";
+        if (lower.Contains("hulu")) return "Hulu";
+        if (lower.Contains("exxen")) return "Exxen";
+        if (lower.Contains("blutv")) return "BluTV";
+        if (lower.Contains("gain")) return "GAİN";
+        if (lower.Contains("tod")) return "TOD";
+        if (lower.Contains("tv plus") || lower.Contains("tv+") || lower.Contains("turkcell")) return "TV+";
+        
+        return null;
+    }
+
     public static string CleanSeriesName(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -236,15 +283,11 @@ public static partial class SeriesInfoParser
         cleaned = StripIptvPrefixes(cleaned);
         cleaned = EpisodeTokenRegex().Replace(cleaned, " ");
         
-        // We no longer strip years or general noise aggressively here because user wants to keep parentheses content
-        // But we still want to clean up excessive symbols and underscores
-        cleaned = cleaned.Replace('_', ' ');
-        
         // Remove known noise but WITHOUT word boundaries if they are next to symbols we want to keep
-        // Actually, let's keep it simple: keep the noise cleaning but ensure it doesn't break the structure
+        cleaned = cleaned.Replace('_', ' ');
         cleaned = NoiseTokenRegex().Replace(cleaned, " ");
         
-        cleaned = MultiSpaceRegex().Replace(cleaned, " ").Trim(' ', '-', '|', ':', '.');
+        cleaned = MultiSpaceRegex().Replace(cleaned, " ").Trim(' ', '-', '|', ':', '.', '>', '»');
 
         if (string.IsNullOrWhiteSpace(cleaned)) return "Bilinmeyen Dizi";
 
@@ -324,7 +367,7 @@ public static partial class SeriesInfoParser
         cleaned = LanguageTokenRegex().Replace(cleaned, " ");
         cleaned = NoiseTokenRegex().Replace(cleaned, " ");
         cleaned = cleaned.Replace('_', ' ').Replace('.', ' ');
-        cleaned = MultiSpaceRegex().Replace(cleaned, " ").Trim(' ', '-', '|', ':', '.');
+        cleaned = MultiSpaceRegex().Replace(cleaned, " ").Trim(' ', '-', '|', ':', '.', '>', '»');
 
         if (string.IsNullOrWhiteSpace(cleaned)) return string.Empty;
 
@@ -372,16 +415,18 @@ public static partial class SeriesInfoParser
     /// CountryPrefixRegex handles short 2-3 letter codes with any delimiter.
     /// PipeTagRegex handles longer tags but ONLY with pipe delimiter (safe, unambiguous).
     /// </summary>
-    private static string StripIptvPrefixes(string text)
+    public static string StripIptvPrefixes(string text)
     {
-        // Phase 1: Strip country codes (safe with any delimiter including dots)
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+
+        // Phase 1: Strip country codes (safe with any delimiter including dots and slashes)
         text = CountryPrefixRegex().Replace(text, " ").Trim();
 
         // Phase 2: Strip known provider names that aren't part of the series name
         text = ProviderPrefixRegex().Replace(text, " ").Trim();
 
-        // Phase 3: Strip pipe-delimited tags only (e.g. "Kanal D | ")
-        if (text.Contains('|'))
+        // Phase 3: Strip pipe or angle bracket delimited tags only (e.g. "Kanal D | ", "TR/DIZI > ")
+        if (text.Contains('|') || text.Contains('>') || text.Contains('»'))
         {
             bool changed;
             do
@@ -390,7 +435,7 @@ public static partial class SeriesInfoParser
                 var before = text;
                 text = PipeTagRegex().Replace(text, " ").Trim();
                 if (text != before) changed = true;
-            } while (changed && text.Contains('|'));
+            } while (changed && (text.Contains('|') || text.Contains('>') || text.Contains('»')));
         }
 
         return text;
@@ -479,7 +524,7 @@ public static partial class SeriesInfoParser
     [GeneratedRegex(@"[\[\]\(\)\{\}\-_\.\:]")]
     private static partial Regex SymbolsRegex();
 
-    [GeneratedRegex(@"^\s*(?:[a-z]{2,3}\s*[|:\.\-]\s*)+", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^\s*(?:[a-z]{2,3}\s*[|:\.\-/]\s*)+", RegexOptions.IgnoreCase)]
     private static partial Regex CountryPrefixRegex();
 
     [GeneratedRegex(@"^\s*(?:[^|]+?\s*\|\s*)", RegexOptions.IgnoreCase)]

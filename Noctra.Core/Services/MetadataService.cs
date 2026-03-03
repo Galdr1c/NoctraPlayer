@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -24,9 +24,8 @@ public partial class MetadataService : IMetadataService
     // API key - should be configured via appsettings or environment variable
     private string _apiKey = string.Empty;
     
-    // Genre cache
-    private Dictionary<int, string>? _movieGenres;
-    private Dictionary<int, string>? _tvGenres;
+    // Genre cache: LanguageCode -> (GenreID -> GenreName)
+    private Dictionary<string, Dictionary<int, string>> _genreCache = new();
     private readonly SemaphoreSlim _genreLock = new(1, 1);
     
     public MetadataService(
@@ -186,19 +185,10 @@ public partial class MetadataService : IMetadataService
                     metadata.Cast = string.Join(", ", castList);
             }
 
-            // Extract Content Rating (Sertifika)
-            if (mediaType == "movie" && details?.ReleaseDates?.Results != null)
+            // Apply heuristics (Rating, Network etc.)
+            if (details != null)
             {
-                // Öncelik: US veya TR sertifikası
-                var usRating = details.ReleaseDates.Results.FirstOrDefault(r => r.IsoCode == "US")?.ReleaseDates.FirstOrDefault(rd => !string.IsNullOrEmpty(rd.Certification))?.Certification;
-                var trRating = details.ReleaseDates.Results.FirstOrDefault(r => r.IsoCode == "TR")?.ReleaseDates.FirstOrDefault(rd => !string.IsNullOrEmpty(rd.Certification))?.Certification;
-                metadata.ContentRating = trRating ?? usRating;
-            }
-            else if (mediaType == "tv" && details?.ContentRatings?.Results != null)
-            {
-                var usRating = details.ContentRatings.Results.FirstOrDefault(r => r.IsoCode == "US")?.Rating;
-                var trRating = details.ContentRatings.Results.FirstOrDefault(r => r.IsoCode == "TR")?.Rating;
-                metadata.ContentRating = trRating ?? usRating;
+                ApplyHeuristics(details, metadata, languageCode, searchQuery);
             }
 
             return metadata;
@@ -218,7 +208,7 @@ public partial class MetadataService : IMetadataService
         try
         {
             var lang = languageCode.Contains('-') ? languageCode.Split('-')[0] : languageCode;
-            var url = $"{TMDB_BASE_URL}/tv/{tmdbId}?api_key={_apiKey}&append_to_response=credits,content_ratings,videos&include_video_language={lang},en,null&language={languageCode}";
+            var url = $"{TMDB_BASE_URL}/tv/{tmdbId}?api_key={_apiKey}&append_to_response=credits,content_ratings,videos,watch/providers&include_video_language={lang},en,null&language={languageCode}";
             return await _httpClient.GetFromJsonAsync<TmdbDetail>(url, cancellationToken);
         }
         catch (Exception ex)
@@ -250,7 +240,7 @@ public partial class MetadataService : IMetadataService
         try
         {
             var endpoint = mediaType == "movie" ? "movie" : "tv";
-            var append = mediaType == "movie" ? "credits,release_dates" : "credits,content_ratings";
+            var append = mediaType == "movie" ? "credits,release_dates,watch/providers" : "credits,content_ratings,watch/providers";
             var url = $"{TMDB_BASE_URL}/{endpoint}/{id}?api_key={_apiKey}&append_to_response={append}&language={languageCode}";
             
             return await _httpClient.GetFromJsonAsync<TmdbDetail>(url, cancellationToken);
@@ -338,6 +328,109 @@ public partial class MetadataService : IMetadataService
         }
     }
     
+    public void ApplyHeuristics(TmdbDetail details, ChannelMetadata metadata, string languageCode, string? contextTitle)
+    {
+        var contextLower = (contextTitle ?? "").ToLower()
+            .Replace('ı', 'i')
+            .Replace('İ', 'i');
+
+        // Determine country code with better fallback for TR/DIZI style contexts
+        var countryCode = languageCode.Contains('-') ? languageCode.Split('-').Last().ToUpper() : "TR";
+        if (contextLower.Contains("tr/dizi") || contextLower.Contains("tr-dizi") || contextLower.Contains("[tr]"))
+        {
+            countryCode = "TR";
+        }
+
+        // 1. Content Rating (Certification)
+        if (details.ContentRatings?.Results != null)
+        {
+            // Priority: Detected country -> TR -> DE -> US -> Any
+            var trRating = details.ContentRatings.Results.FirstOrDefault(r => r.IsoCode == "TR")?.Rating;
+            var deRating = details.ContentRatings.Results.FirstOrDefault(r => r.IsoCode == "DE")?.Rating;
+            var usRating = details.ContentRatings.Results.FirstOrDefault(r => r.IsoCode == "US")?.Rating;
+            var detectedRating = details.ContentRatings.Results.FirstOrDefault(r => r.IsoCode == countryCode)?.Rating;
+            var anyRating = details.ContentRatings.Results.FirstOrDefault(r => !string.IsNullOrEmpty(r.Rating))?.Rating;
+
+            metadata.ContentRating = detectedRating ?? trRating ?? deRating ?? usRating ?? anyRating;
+        }
+        else if (details.ReleaseDates?.Results != null) // Movies
+        {
+            var trRating = details.ReleaseDates.Results.FirstOrDefault(r => r.IsoCode == "TR")?.ReleaseDates.FirstOrDefault(rd => !string.IsNullOrEmpty(rd.Certification))?.Certification;
+            var deRating = details.ReleaseDates.Results.FirstOrDefault(r => r.IsoCode == "DE")?.ReleaseDates.FirstOrDefault(rd => !string.IsNullOrEmpty(rd.Certification))?.Certification;
+            var usRating = details.ReleaseDates.Results.FirstOrDefault(r => r.IsoCode == "US")?.ReleaseDates.FirstOrDefault(rd => !string.IsNullOrEmpty(rd.Certification))?.Certification;
+            var detectedRating = details.ReleaseDates.Results.FirstOrDefault(r => r.IsoCode == countryCode)?.ReleaseDates.FirstOrDefault(rd => !string.IsNullOrEmpty(rd.Certification))?.Certification;
+            var anyRating = details.ReleaseDates.Results.SelectMany(r => r.ReleaseDates).FirstOrDefault(rd => !string.IsNullOrEmpty(rd.Certification))?.Certification;
+
+            metadata.ContentRating = detectedRating ?? trRating ?? deRating ?? usRating ?? anyRating;
+        }
+
+        // 2. Network / Publisher Logos
+        if ((details.Networks != null && details.Networks.Count > 0) || (details.WatchProviders?.Results != null))
+        {
+            // Priority 1: Direct match in category/title name (Original Networks)
+            var matchingNetwork = details.Networks?.FirstOrDefault(n => 
+            {
+                if (string.IsNullOrEmpty(n.Name)) return false;
+                var nName = n.Name.ToLower();
+                if (contextLower.Contains(nName)) return true;
+                
+                // Common aliases
+                if (nName == "prime video" && contextLower.Contains("amazon")) return true;
+                if (nName == "apple tv+" && contextLower.Contains("apple")) return true;
+                if (nName == "disney+" && contextLower.Contains("disney")) return true;
+                if (nName == "hbo" || nName == "hbo max" || nName == "max") { if (contextLower.Contains("hbo") || contextLower.Contains("max")) return true; }
+                if (nName == "paramount+" && contextLower.Contains("paramount")) return true;
+                return false;
+            });
+
+            // Priority 2: Direct match in Watch Providers (Streaming Platforms for the current country)
+            if (matchingNetwork == null && details.WatchProviders?.Results != null && details.WatchProviders.Results.TryGetValue(countryCode, out var countryProviders))
+            {
+                var allProviders = new List<TmdbProvider>();
+                if (countryProviders.Flatrate != null) allProviders.AddRange(countryProviders.Flatrate);
+                if (countryProviders.Rent != null) allProviders.AddRange(countryProviders.Rent);
+                if (countryProviders.Buy != null) allProviders.AddRange(countryProviders.Buy);
+
+                var bestProvider = allProviders.FirstOrDefault(p => 
+                {
+                    if (string.IsNullOrEmpty(p.Name)) return false;
+                    var pName = p.Name.ToLower()
+                        .Replace('ı', 'i')
+                        .Replace('İ', 'i')
+                        .Replace(" ", "")
+                        .Replace("+", "plus");
+                    
+                    var contextSimple = contextLower.Replace(" ", "").Replace("+", "plus");
+                    
+                    if (contextSimple.Contains(pName)) return true;
+                    if (pName.Contains("tvplus") && contextSimple.Contains("tvplus")) return true;
+                    return false;
+                });
+
+                if (bestProvider != null)
+                {
+                    metadata.NetworkName = bestProvider.Name;
+                    if (!string.IsNullOrEmpty(bestProvider.LogoPath))
+                        metadata.NetworkLogoUrl = $"https://image.tmdb.org/t/p/h50{bestProvider.LogoPath}";
+                    return; // Found a specific streaming provider match
+                }
+            }
+
+            // Priority 3: Origin Country match in Networks
+            matchingNetwork ??= details.Networks?.FirstOrDefault(n => n.OriginCountry == countryCode);
+
+            // Priority 4: First network in list
+            var network = matchingNetwork ?? (details.Networks != null && details.Networks.Count > 0 ? details.Networks[0] : null);
+
+            if (network != null)
+            {
+                metadata.NetworkName = network.Name;
+                if (!string.IsNullOrEmpty(network.LogoPath))
+                    metadata.NetworkLogoUrl = $"https://image.tmdb.org/t/p/h50{network.LogoPath}";
+            }
+        }
+    }
+
     private static (string CleanedQuery, int? Year) ExtractYearFromQuery(string query)
     {
         var yearMatch = Regex.Match(query, @"\(?(?:19|20)(\d{2})\)?");
@@ -404,10 +497,13 @@ public partial class MetadataService : IMetadataService
             if (best == null)
                 return null;
 
+            // Get basic details for network info (still 1 extra call, but necessary for correct logo)
+            var details = await FetchDetailsAsync(best.Id, "tv", languageCode, cancellationToken);
+
             // Genre ID → name conversion (uses cache, no extra API call after first)
             var genres = await GetGenresAsync(best.GenreIds, languageCode, cancellationToken);
 
-            return new ChannelMetadata
+            var metadata = new ChannelMetadata
             {
                 TmdbId = best.Id,
                 Title = best.DisplayTitle,
@@ -419,6 +515,14 @@ public partial class MetadataService : IMetadataService
                 Genres = genres,
                 MediaType = "tv"
             };
+
+            // Apply network/rating heuristics
+            if (details != null)
+            {
+                ApplyHeuristics(details, metadata, languageCode, searchQuery);
+            }
+
+            return metadata;
         }
         catch (Exception ex)
         {
@@ -438,10 +542,8 @@ public partial class MetadataService : IMetadataService
         
         foreach (var id in genreIds)
         {
-            if (_movieGenres?.TryGetValue(id, out var movieGenre) == true)
-                genres.Add(movieGenre);
-            else if (_tvGenres?.TryGetValue(id, out var tvGenre) == true)
-                genres.Add(tvGenre);
+            if (_genreCache.TryGetValue(languageCode, out var langCache) && langCache.TryGetValue(id, out var genreName))
+                genres.Add(genreName);
         }
         
         return genres.Distinct().ToList();
@@ -449,36 +551,45 @@ public partial class MetadataService : IMetadataService
     
     public void ClearCache()
     {
-        _movieGenres = null;
-        _tvGenres = null;
+        _genreCache.Clear();
     }
     
     private async Task EnsureGenresCachedAsync(string languageCode, CancellationToken cancellationToken)
     {
-        if (_movieGenres != null && _tvGenres != null)
+        if (_genreCache.ContainsKey(languageCode))
             return;
         
         await _genreLock.WaitAsync(cancellationToken);
         try
         {
-            if (_movieGenres != null && _tvGenres != null)
+            if (_genreCache.ContainsKey(languageCode))
                 return;
             
+            var langGenres = new Dictionary<int, string>();
+
             // Fetch movie genres
             var movieGenreUrl = $"{TMDB_BASE_URL}/genre/movie/list?api_key={_apiKey}&language={languageCode}";
             var movieResponse = await _httpClient.GetFromJsonAsync<TmdbGenreResponse>(movieGenreUrl, cancellationToken);
-            _movieGenres = movieResponse?.Genres.ToDictionary(g => g.Id, g => g.Name) ?? new();
+            if (movieResponse?.Genres != null)
+            {
+                foreach (var g in movieResponse.Genres)
+                    langGenres[g.Id] = g.Name;
+            }
             
             // Fetch TV genres
             var tvGenreUrl = $"{TMDB_BASE_URL}/genre/tv/list?api_key={_apiKey}&language={languageCode}";
             var tvResponse = await _httpClient.GetFromJsonAsync<TmdbGenreResponse>(tvGenreUrl, cancellationToken);
-            _tvGenres = tvResponse?.Genres.ToDictionary(g => g.Id, g => g.Name) ?? new();
+            if (tvResponse?.Genres != null)
+            {
+                foreach (var g in tvResponse.Genres)
+                    langGenres[g.Id] = g.Name;
+            }
+
+            _genreCache[languageCode] = langGenres;
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "Error caching genres");
-            _movieGenres ??= new();
-            _tvGenres ??= new();
+            _logger?.LogError(ex, "Error caching genres for language: {Lang}", languageCode);
         }
         finally
         {

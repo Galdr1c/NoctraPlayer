@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Noctra.Models;
 
@@ -111,17 +111,47 @@ public class TmdbDetail : TmdbResult
     [JsonPropertyName("content_ratings")]
     public TmdbContentRatingsResponse? ContentRatings { get; set; }
 
-    /// <summary>
-    /// Full genre objects returned by detail endpoints (tv/{id}, movie/{id})
-    /// </summary>
     [JsonPropertyName("genres")]
     public List<TmdbGenre>? Genres { get; set; }
 
     [JsonPropertyName("videos")]
-    public TmdbVideosResponse? Videos { get; set; }
+    public TmdbVideoResponse? Videos { get; set; }
+
+    [JsonPropertyName("watch/providers")]
+    public TmdbWatchProviderResponse? WatchProviders { get; set; }
 
     [JsonPropertyName("networks")]
     public List<TmdbNetwork>? Networks { get; set; }
+}
+
+public class TmdbWatchProviderResponse
+{
+    [JsonPropertyName("results")]
+    public Dictionary<string, TmdbCountryProviders>? Results { get; set; }
+}
+
+public class TmdbCountryProviders
+{
+    [JsonPropertyName("flatrate")]
+    public List<TmdbProvider>? Flatrate { get; set; }
+
+    [JsonPropertyName("rent")]
+    public List<TmdbProvider>? Rent { get; set; }
+
+    [JsonPropertyName("buy")]
+    public List<TmdbProvider>? Buy { get; set; }
+}
+
+public class TmdbProvider
+{
+    [JsonPropertyName("provider_name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("logo_path")]
+    public string? LogoPath { get; set; }
+
+    [JsonPropertyName("provider_id")]
+    public int Id { get; set; }
 }
 
 /// <summary>
@@ -160,7 +190,7 @@ public class TmdbVideo
     public bool Official { get; set; }
 }
 
-public class TmdbVideosResponse
+public class TmdbVideoResponse
 {
     [JsonPropertyName("results")]
     public List<TmdbVideo>? Results { get; set; }
@@ -205,6 +235,8 @@ public class ChannelMetadata
     public string? Cast { get; set; }
     public string? ContentRating { get; set; }
     public string? TrailerUrl { get; set; }
+    public string? NetworkName { get; set; }
+    public string? NetworkLogoUrl { get; set; }
 }
 
 public class TmdbCredits
@@ -323,4 +355,3 @@ public class TmdbEpisodeDetail
     [JsonPropertyName("runtime")]
     public int? Runtime { get; set; } // Episode duration in minutes
 }
-

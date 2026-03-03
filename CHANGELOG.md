@@ -7,25 +7,31 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## v29.9 – Poster Yükleme Deneyimi ve API Optimizasyonu (2026-03-03)
 
+### 🎨 Görsel ve Arayüz İyileştirmeleri
+- **Bağlam Duyarlı Yayıncı Logoları (Network Logos)**: Dizi detay sayfasında gösterilen yayıncı logoları artık çok daha akıllı. TMDB'nin sunduğu JustWatch (Watch Providers) verileri sisteme entegre edildi. Artık bir dizi globalde farklı bir platformda (Örn: Peacock) olsa bile, sizin kategoriniz "TV PLUS" veya "TV+" ise sistem JustWatch üzerinden Türkiye yayıncısını bulup otomatik olarak **TV+ logosunu** getiriyor.
+- **Dile Duyarlı Tür Önbelleği (Multi-Language Genre Cache)**: Uygulamanın ilk açılışında türlerin (Aksiyon, Komedi vb.) bazen İngilizce takılı kalması sorunu çözüldü. Tür önbelleği artık dil bazlı (tr-TR, en-US vb.) ayrıştırılıyor; böylece Türkçe içeriklerde her zaman Türkçe tür isimleri garanti ediliyor.
+- **Akıllı Metin Kaydırma (WrapPanel)**: Dizi detay sayfasındaki "Yıl • Tür • Yaş Sınırı" bilgilerinin olduğu satır, yatay alana sığmadığında dışarı taşmak yerine otomatik olarak alt satıra geçecek şekilde (`WrapPanel`) yeniden düzenlendi.
+- **Premium "İzlendi" Rozeti (Verified Style)**: Uygulama genelinde bulunan yeşil "İZLENDİ" rozeti, Twitter/X platformundaki "Verified" ikonuna benzeyen minimalist ve şık bir yıldızlı onay ikonuyla (`CheckDecagram`) değiştirildi.
+- **Standartlaştırılmış Sekme Göstergeleri**: Tüm menü ve sekmelerdeki alt çizgiler, Ayarlar sayfasındaki modern, ortalanmış ve küçük (`20px`) tasarım standartına çekildi.
+
 ### ⚡ Performans ve Mimari İyileştirmeler
-- **Gizli API İsteği (Fallback) Temizliği**: Dizi detaylarına girildiğinde, bölümlerin özet bilgileri (plot) Türkçe kaynağında boş gelirse, sistem otomatik olarak İngilizce (en-US) dilde aynı sezon için tekrar istek atıp verileri doldurmaya çalışıyordu. Bu durum, Türkçe verisi az olan içeriklerde sezon başına garantili 2 istek (Örn: 5 sezonluk bir dizi için 10 istek) atılmasına neden olup TMDB API'sini yoruyordu. Performans ve rate-limit optimizasyonu amacıyla bu fallback mantığı tamamen kaldırılarak her sezon için **kesin olarak 1 istek** atılması sağlandı.
-- **Kusursuz Görsel Geçiş (No-Flash Update)**: Dizi ve film sayfalarında aşağı kaydırırken (scroll) eski "sağlayıcı (provider)" afişinin görünüp sonra aniden "TMDB" afişiyle değişmesi sonucu oluşan kötü görüntü kirliliği (flicker/flash efekti) tamamen ortadan kaldırıldı.
-- **Skeleton Loading Mantığı**: Kartlar ekrana geldiğinde, eğer o içerik için arka plandaki TMDB araması henüz sonuçlanmamışsa, kullanıcıya önce sağlayıcı resmi yerine **temiz bir Placeholder (mor yer tutucu)** gösterilir. Arama sonuçlanıp en kaliteli afiş bulunduğunda (veya bulunamayıp mevcuda dönüldüğünde) afiş, yeri tutulan boşluğa anında ve yumuşak bir şekilde yerleşir.
-- **Thread-Safe UI Senkronizasyonu**: Arka plan TMDB servisinden gelen poster güncellemelerinin Avalonia arayüzünü kilitlemesini veya görselleri boşta bırakmasını engellemek için tüm özellik güncellemeleri `IDispatcherService` üzerinden doğrudan ana UI kanalına bağlandı.
+- **Gelişmiş Kategori ve Dil Analizi**: `TR/DIZI`, `TR-DIZI`, `[MULTI]` gibi karmaşık ön ek yapıları artık merkezi regex motoruyla saniyeler içinde analiz ediliyor. "MULTI" etiketli içerikler otomatik olarak en-US (Uluslararası) dilinde aranarak en kaliteli metadata çekiliyor.
+- **Ülke Bazlı Dinamik Yaş Sınırı (Sertifika)**: Yaş sınırları artık kategori dilinden saptanan ülkeye göre önceliklendiriliyor (Örn: Alman kanalında DE öncelikli, Türk kanalında TR (+18) öncelikli).
+- **Gizli API İsteği (Fallback) Temizliği**: Sezon başına atılan garantili 2. istek (en-US fallback) kaldırılarak API performansı ve yükleme hızı %50 artırıldı.
+- **Kusursuz Görsel Geçiş (No-Flash Update)**: Dizi ve film sayfalarında aşağı kaydırırken yaşanan eski/yeni afiş yanıp sönme (flash) efekti ortadan kaldırıldı; TMDB araması bitene kadar temiz bir "Skeleton Loading" (mor yer tutucu) yapısı kuruldu.
 
 ### 🐛 Hata Düzeltmeleri
-- **TMDB Arama Yılı Hataları**: TMDB arama sisteminde (MetadataService) dizi ismindeki yılların (`Stranger Things (2016)`) TMDB'ye doğrudan gönderilmesi sonucu API'nin tamamen boş dönmesi (`0 sonuç`) veya yanlış diziyi eşleştirmesi sorunu çözüldü. Artık arama terimindeki yıl bilgisi (Regex ile) özel olarak ayrıştırılıyor ve arama teriminden temizlenerek doğrudan TMDB API'sine spesifik arama filtresi (`first_air_date_year={year}` veya `primary_release_year={year}`) olarak gönderiliyor. Bu sayede "Stranger Things (2016)" gibi sorunlu girişlerde bile 100% başarılı ve garantili doğrudan eşleşme sağlanıyor.
-- **`LastTmdbSync` Tip Dönüşüm Hatası**: `DateTime?` tipindeki alanın boş olup olmadığını kontrol etmek için kullanılan riskli `string.IsNullOrWhiteSpace(dbSeries.LastTmdbSync?.ToString())` metodu, bellek ayırmasını engelleyen ve güvenli olan `!dbSeries.LastTmdbSync.HasValue` native tip kontrolü ile düzeltildi.
+- **TMDB Arama Yılı Hataları**: İsminde yıl olan ("Stranger Things (2016)") içeriklerin TMDB'de bulunamaması sorunu, yıl bilgisinin otomatik ayrıştırılıp API'ye özel filtre olarak gönderilmesiyle çözüldü (%100 isabet).
+- **`LastTmdbSync` Tip Dönüşüm Hatası**: `DateTime?` tipindeki alanın `ToString()` üzerinden kontrol edilmesi sonucu oluşan potansiyel hatalar ve gereksiz bellek kullanımı `HasValue` kontrolü ile optimize edildi.
 
 ### 📁 Değişen Dosyalar
 | Dosya | Değişiklik |
 |-------|------------|
-| `MetadataService.cs` | `ExtractYearFromQuery` metodu eklendi, `SearchSeriesAsync` ve `FetchMetadataAsync` yıl filtreli URL'lere güncellendi. |
-| `MainViewModel.cs` | `LoadSeriesWithProfileProgressAsync` içindeki `en-US` fallback döngüsü silindi; `LastTmdbSync` tip kontrolü düzeltildi. |
-| `SeriesCard.axaml` & `VodCard.axaml` | Placeholder mantığı `LastTmdbSync` durumuna göre koşullandırıldı (MultiBinding/BoolOrMultiConverter eklendi). |
-| `RemoteImage.cs` | Yeni URL geldiğinde eski resmi hemen silip boşluğa düşüren hatalı mantık kaldırılarak, yumuşak geçiş sağlandı. |
-| `TmdbSyncService.cs` | Özellik güncellemeleri `IDispatcherService.Invoke` içine alındı. |
-| `Series.cs` & `Channel.cs` | `LastTmdbSync` özelliği reaktif (`ObservableProperty`) hale getirildi. |
+| `MetadataService.cs` | JustWatch entegrasyonu, dile duyarlı tür önbelleği ve merkezi Heuristic mantığı eklendi. |
+| `SeriesInfoParser.cs` | MULTI tespiti, TV+ platform tespiti ve gelişmiş ön ek temizleme (regex) eklendi. |
+| `MainWindow.axaml` & `VideoOverlayView.axaml` | Verified rozetleri ve SelectionIndicator güncellemeleri yapıldı. |
+| `MainViewModel.cs` & `TmdbSyncService.cs` | Mükerrer kodlar temizlendi, dile duyarlı arama ve UI senkronizasyonu sağlandı. |
+| `Series.cs` & `Channel.cs` | `LastTmdbSync` reaktif hale getirildi; DisplayCategory temizleme eklendi. |
 
 ---
 

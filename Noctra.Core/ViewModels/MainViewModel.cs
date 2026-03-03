@@ -4476,7 +4476,7 @@ public partial class MainViewModel : ObservableObject
             var groupOk = true;
             if (!hasSearch && !string.IsNullOrWhiteSpace(selectedGroup))
             {
-                var category = series.DisplayCategory ?? string.Empty;
+                var category = series.GroupTitle ?? string.Empty;
                 groupOk = category.Contains(selectedGroup, StringComparison.OrdinalIgnoreCase);
             }
 
@@ -5313,13 +5313,10 @@ public partial class MainViewModel : ObservableObject
                             metadata.Cast = string.Join(", ", castList);
                     }
 
-                    // Content Rating
-                    if (details.ContentRatings?.Results != null)
-                    {
-                        var trRating = details.ContentRatings.Results.FirstOrDefault(r => r.IsoCode == "US")?.Rating;
-                        var usRating = details.ContentRatings.Results.FirstOrDefault(r => r.IsoCode == "TR")?.Rating;
-                        metadata.ContentRating = usRating ?? trRating;
-                    }
+                    // Apply Heuristics (Network, Rating etc.)
+                    _metadataService.ApplyHeuristics(details, metadata, languageCode, series.GroupTitle ?? series.Name);
+
+
                     // Trailer Video (YouTube)
                     var trailer = details.Videos?.Results?
                         .Where(v => v.Site == "YouTube" && (v.Type == "Trailer" || v.Type == "Teaser"))
@@ -5345,7 +5342,6 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
 
-            // Apply metadata to UI
             if (!string.IsNullOrWhiteSpace(metadata.PosterUrl))
             {
                 SelectedSeriesPosterUrl = metadata.PosterUrl;
@@ -5354,6 +5350,9 @@ public partial class MainViewModel : ObservableObject
 
             if (!string.IsNullOrWhiteSpace(metadata.BackdropUrl))
                 SelectedSeriesBackdropUrl = metadata.BackdropUrl;
+
+            if (!string.IsNullOrWhiteSpace(metadata.NetworkLogoUrl))
+                SelectedSeriesNetworkLogoUrl = metadata.NetworkLogoUrl;
 
             if (!string.IsNullOrWhiteSpace(metadata.Description))
                 SelectedSeriesOverview = metadata.Description;
@@ -5510,7 +5509,7 @@ public partial class MainViewModel : ObservableObject
         {
             try
             {
-                var languageCode = SeriesInfoParser.ExtractLanguageCode(source.Name);
+                var languageCode = SeriesInfoParser.ExtractLanguageCode(source.GroupTitle ?? source.Genre ?? source.Name);
 
                 // 1. Fetch deep Series info
                 var tmdbSeries = await _metadataService.FetchSeriesDetailsAsync(source.TmdbId.Value, languageCode);
@@ -5538,13 +5537,13 @@ public partial class MainViewModel : ObservableObject
                         source.BackdropUrl = $"https://image.tmdb.org/t/p/original{tmdbSeries.BackdropPath}";
                     }
 
-                    // Content Rating (from same API call)
-                    if (string.IsNullOrEmpty(source.ContentRating) && tmdbSeries.ContentRatings?.Results != null)
-                    {
-                        var usRating = tmdbSeries.ContentRatings.Results.FirstOrDefault(r => r.IsoCode == "US")?.Rating;
-                        var trRating = tmdbSeries.ContentRatings.Results.FirstOrDefault(r => r.IsoCode == "TR")?.Rating;
-                        source.ContentRating = trRating ?? usRating;
-                    }
+                    // Centralized Heuristics (Network, Rating etc.)
+                    var tempMeta = new ChannelMetadata();
+                    _metadataService.ApplyHeuristics(tmdbSeries, tempMeta, languageCode, source.GroupTitle ?? source.Name);
+                    
+                    source.ContentRating = tempMeta.ContentRating;
+                    source.NetworkName = tempMeta.NetworkName;
+                    source.NetworkLogoUrl = tempMeta.NetworkLogoUrl;
 
                     // Trailer (from same API call — videos included via append_to_response)
                     if (string.IsNullOrEmpty(source.TrailerUrl))
@@ -5562,15 +5561,6 @@ public partial class MainViewModel : ObservableObject
                     if (string.IsNullOrEmpty(source.Genre) && tmdbSeries.Genres != null && tmdbSeries.Genres.Count > 0)
                     {
                         source.Genre = string.Join(", ", tmdbSeries.Genres.Select(g => g.Name));
-                    }
-
-                    // Network (Netflix, HBO, Disney+, etc. — from same API call)
-                    if (string.IsNullOrEmpty(source.NetworkName) && tmdbSeries.Networks != null && tmdbSeries.Networks.Count > 0)
-                    {
-                        var network = tmdbSeries.Networks[0];
-                        source.NetworkName = network.Name;
-                        if (!string.IsNullOrEmpty(network.LogoPath))
-                            source.NetworkLogoUrl = $"https://image.tmdb.org/t/p/h50{network.LogoPath}";
                     }
                 }
 
