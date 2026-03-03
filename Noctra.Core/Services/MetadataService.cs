@@ -68,21 +68,27 @@ public partial class MetadataService : IMetadataService
             if (string.IsNullOrWhiteSpace(cleanQuery))
                 cleanQuery = searchQuery;
 
+            var (queryWithoutYear, year) = ExtractYearFromQuery(cleanQuery);
+
             string url;
             if (type == ChannelType.VOD)
             {
                 // Sadece film ara
-                url = $"{TMDB_BASE_URL}/search/movie?api_key={_apiKey}&query={Uri.EscapeDataString(cleanQuery)}&include_adult=false&language={languageCode}";
+                url = $"{TMDB_BASE_URL}/search/movie?api_key={_apiKey}&query={Uri.EscapeDataString(queryWithoutYear)}&include_adult=false&language={languageCode}";
+                if (year.HasValue)
+                    url += $"&primary_release_year={year.Value}";
             }
             else if (type == ChannelType.Series)
             {
                 // Sadece dizi ara
-                url = $"{TMDB_BASE_URL}/search/tv?api_key={_apiKey}&query={Uri.EscapeDataString(cleanQuery)}&include_adult=false&language={languageCode}";
+                url = $"{TMDB_BASE_URL}/search/tv?api_key={_apiKey}&query={Uri.EscapeDataString(queryWithoutYear)}&include_adult=false&language={languageCode}";
+                if (year.HasValue)
+                    url += $"&first_air_date_year={year.Value}";
             }
             else
             {
                 // Karışık ara (Multi search)
-                url = $"{TMDB_BASE_URL}/search/multi?api_key={_apiKey}&query={Uri.EscapeDataString(cleanQuery)}&include_adult=false&language={languageCode}";
+                url = $"{TMDB_BASE_URL}/search/multi?api_key={_apiKey}&query={Uri.EscapeDataString(queryWithoutYear)}&include_adult=false&language={languageCode}";
             }
             
             var response = await _httpClient.GetAsync(url, cancellationToken);
@@ -103,18 +109,18 @@ public partial class MetadataService : IMetadataService
             {
                 var resultName = r.DisplayTitle ?? "";
                 // Exact match is king
-                if (resultName.Equals(cleanQuery, StringComparison.OrdinalIgnoreCase)) return 100;
+                if (resultName.Equals(queryWithoutYear, StringComparison.OrdinalIgnoreCase)) return 100;
                 // Exact match on original title/name
-                if ((r.OriginalTitle ?? r.OriginalName ?? "").Equals(cleanQuery, StringComparison.OrdinalIgnoreCase)) return 95;
+                if ((r.OriginalTitle ?? r.OriginalName ?? "").Equals(queryWithoutYear, StringComparison.OrdinalIgnoreCase)) return 95;
                 // Result title starts with query
-                if (resultName.StartsWith(cleanQuery, StringComparison.OrdinalIgnoreCase)) return 80;
+                if (resultName.StartsWith(queryWithoutYear, StringComparison.OrdinalIgnoreCase)) return 80;
                 // Query starts with result title (e.g. query="Barry 2018", result="Barry")
-                if (cleanQuery.StartsWith(resultName, StringComparison.OrdinalIgnoreCase)) return 75;
+                if (queryWithoutYear.StartsWith(resultName, StringComparison.OrdinalIgnoreCase)) return 75;
                 // Contains as whole word
-                if (resultName.Contains(" " + cleanQuery, StringComparison.OrdinalIgnoreCase) ||
-                    resultName.Contains(cleanQuery + " ", StringComparison.OrdinalIgnoreCase)) return 40;
+                if (resultName.Contains(" " + queryWithoutYear, StringComparison.OrdinalIgnoreCase) ||
+                    resultName.Contains(queryWithoutYear + " ", StringComparison.OrdinalIgnoreCase)) return 40;
                 // Contains anywhere
-                if (resultName.Contains(cleanQuery, StringComparison.OrdinalIgnoreCase)) return 20;
+                if (resultName.Contains(queryWithoutYear, StringComparison.OrdinalIgnoreCase)) return 20;
                 // Fallback
                 return 1;
             }
@@ -332,6 +338,17 @@ public partial class MetadataService : IMetadataService
         }
     }
     
+    private static (string CleanedQuery, int? Year) ExtractYearFromQuery(string query)
+    {
+        var yearMatch = Regex.Match(query, @"\(?(?:19|20)(\d{2})\)?");
+        if (!yearMatch.Success)
+            return (query.Trim(), null);
+
+        int year = int.Parse(yearMatch.Value.Trim('(', ')'));
+        var cleaned = query.Remove(yearMatch.Index, yearMatch.Length).Trim(' ', '-', '(', ')');
+        return (cleaned, year);
+    }
+
     /// <summary>
     /// Lightweight search-only method for scroll enrichment.
     /// Returns basic metadata from the search response WITHOUT fetching details (credits, content_ratings, trailer).
@@ -350,7 +367,12 @@ public partial class MetadataService : IMetadataService
             if (string.IsNullOrWhiteSpace(cleanQuery))
                 cleanQuery = searchQuery;
 
-            var url = $"{TMDB_BASE_URL}/search/tv?api_key={_apiKey}&query={Uri.EscapeDataString(cleanQuery)}&include_adult=false&language={languageCode}";
+            var (queryWithoutYear, year) = ExtractYearFromQuery(cleanQuery);
+
+            var url = $"{TMDB_BASE_URL}/search/tv?api_key={_apiKey}&query={Uri.EscapeDataString(queryWithoutYear)}&include_adult=false&language={languageCode}";
+
+            if (year.HasValue)
+                url += $"&first_air_date_year={year.Value}";
 
             var response = await _httpClient.GetAsync(url, cancellationToken);
             if (!response.IsSuccessStatusCode)
@@ -364,13 +386,13 @@ public partial class MetadataService : IMetadataService
             int ScoreResult(TmdbResult r)
             {
                 var resultName = r.DisplayTitle ?? "";
-                if (resultName.Equals(cleanQuery, StringComparison.OrdinalIgnoreCase)) return 100;
-                if ((r.OriginalTitle ?? r.OriginalName ?? "").Equals(cleanQuery, StringComparison.OrdinalIgnoreCase)) return 95;
-                if (resultName.StartsWith(cleanQuery, StringComparison.OrdinalIgnoreCase)) return 80;
-                if (cleanQuery.StartsWith(resultName, StringComparison.OrdinalIgnoreCase)) return 75;
-                if (resultName.Contains(" " + cleanQuery, StringComparison.OrdinalIgnoreCase) ||
-                    resultName.Contains(cleanQuery + " ", StringComparison.OrdinalIgnoreCase)) return 40;
-                if (resultName.Contains(cleanQuery, StringComparison.OrdinalIgnoreCase)) return 20;
+                if (resultName.Equals(queryWithoutYear, StringComparison.OrdinalIgnoreCase)) return 100;
+                if ((r.OriginalTitle ?? r.OriginalName ?? "").Equals(queryWithoutYear, StringComparison.OrdinalIgnoreCase)) return 95;
+                if (resultName.StartsWith(queryWithoutYear, StringComparison.OrdinalIgnoreCase)) return 80;
+                if (queryWithoutYear.StartsWith(resultName, StringComparison.OrdinalIgnoreCase)) return 75;
+                if (resultName.Contains(" " + queryWithoutYear, StringComparison.OrdinalIgnoreCase) ||
+                    resultName.Contains(queryWithoutYear + " ", StringComparison.OrdinalIgnoreCase)) return 40;
+                if (resultName.Contains(queryWithoutYear, StringComparison.OrdinalIgnoreCase)) return 20;
                 return 1;
             }
 

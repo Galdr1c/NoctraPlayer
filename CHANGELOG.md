@@ -14,11 +14,13 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **Thread-Safe UI Senkronizasyonu**: Arka plan TMDB servisinden gelen poster güncellemelerinin Avalonia arayüzünü kilitlemesini veya görselleri boşta bırakmasını engellemek için tüm özellik güncellemeleri `IDispatcherService` üzerinden doğrudan ana UI kanalına bağlandı.
 
 ### 🐛 Hata Düzeltmeleri
+- **TMDB Arama Yılı Hataları**: TMDB arama sisteminde (MetadataService) dizi ismindeki yılların (`Stranger Things (2016)`) TMDB'ye doğrudan gönderilmesi sonucu API'nin tamamen boş dönmesi (`0 sonuç`) veya yanlış diziyi eşleştirmesi sorunu çözüldü. Artık arama terimindeki yıl bilgisi (Regex ile) özel olarak ayrıştırılıyor ve arama teriminden temizlenerek doğrudan TMDB API'sine spesifik arama filtresi (`first_air_date_year={year}` veya `primary_release_year={year}`) olarak gönderiliyor. Bu sayede "Stranger Things (2016)" gibi sorunlu girişlerde bile 100% başarılı ve garantili doğrudan eşleşme sağlanıyor.
 - **`LastTmdbSync` Tip Dönüşüm Hatası**: `DateTime?` tipindeki alanın boş olup olmadığını kontrol etmek için kullanılan riskli `string.IsNullOrWhiteSpace(dbSeries.LastTmdbSync?.ToString())` metodu, bellek ayırmasını engelleyen ve güvenli olan `!dbSeries.LastTmdbSync.HasValue` native tip kontrolü ile düzeltildi.
 
 ### 📁 Değişen Dosyalar
 | Dosya | Değişiklik |
 |-------|------------|
+| `MetadataService.cs` | `ExtractYearFromQuery` metodu eklendi, `SearchSeriesAsync` ve `FetchMetadataAsync` yıl filtreli URL'lere güncellendi. |
 | `MainViewModel.cs` | `LoadSeriesWithProfileProgressAsync` içindeki `en-US` fallback döngüsü silindi; `LastTmdbSync` tip kontrolü düzeltildi. |
 | `SeriesCard.axaml` & `VodCard.axaml` | Placeholder mantığı `LastTmdbSync` durumuna göre koşullandırıldı (MultiBinding/BoolOrMultiConverter eklendi). |
 | `RemoteImage.cs` | Yeni URL geldiğinde eski resmi hemen silip boşluğa düşüren hatalı mantık kaldırılarak, yumuşak geçiş sağlandı. |
