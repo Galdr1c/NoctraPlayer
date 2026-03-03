@@ -447,7 +447,7 @@
                     <StackPanel Grid.Row="0" VerticalAlignment="Top">
                       <!-- Back button -->
                       <Button Command="{Binding CloseSeriesDetailCommand}" HorizontalAlignment="Left" Margin="0,0,0,16" 
-                              Background="#1A000000" CornerRadius="30" Width="48" Height="48" Padding="0">
+                              Theme="{StaticResource ActionCircleButtonStyle}" Width="48" Height="48" Padding="0">
                         <materialIcons:MaterialIcon Kind="ArrowLeft" Width="24" Height="24" Foreground="{DynamicResource TextPrimaryBrush}"/>
                       </Button>
  
@@ -552,21 +552,21 @@
                         </Button>
 
                         <Button Command="{Binding AddToMyListCommand}" CommandParameter="{Binding SelectedSeries}"
-                                Width="52" Height="52" CornerRadius="26" Background="#33FFFFFF" Padding="0" BorderThickness="0">
+                                Theme="{StaticResource ActionCircleButtonStyle}" Width="52" Height="52" Padding="0">
                             <Panel>
-                                <materialIcons:MaterialIcon Kind="Minus" Width="24" Height="24" Foreground="White"
+                                <materialIcons:MaterialIcon Kind="Minus" Width="24" Height="24" Foreground="{DynamicResource TextPrimaryBrush}"
                                                             IsVisible="{Binding SelectedSeries.IsInMyList}"/>
-                                <materialIcons:MaterialIcon Kind="Plus" Width="24" Height="24" Foreground="White"
+                                <materialIcons:MaterialIcon Kind="Plus" Width="24" Height="24" Foreground="{DynamicResource TextPrimaryBrush}"
                                                             IsVisible="{Binding !SelectedSeries.IsInMyList}"/>
                             </Panel>
                         </Button>
 
                         <Button Command="{Binding ToggleFavoriteCommand}" CommandParameter="{Binding SelectedSeries}"
-                                Width="52" Height="52" CornerRadius="26" Background="#33FFFFFF" Padding="0" BorderThickness="0">
+                                Theme="{StaticResource ActionCircleButtonStyle}" Width="52" Height="52" Padding="0">
                             <Panel>
                                 <materialIcons:MaterialIcon Kind="Heart" Width="22" Height="22" Foreground="#E50914" 
                                                             IsVisible="{Binding SelectedSeries.IsFavorite}"/>
-                                <materialIcons:MaterialIcon Kind="HeartOutline" Width="22" Height="22" Foreground="White" 
+                                <materialIcons:MaterialIcon Kind="HeartOutline" Width="22" Height="22" Foreground="{DynamicResource TextPrimaryBrush}" 
                                                             IsVisible="{Binding !SelectedSeries.IsFavorite}"/>
                             </Panel>
                         </Button>
@@ -603,28 +603,44 @@
                                   <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
                                   <Setter Property="BorderThickness" Value="0,0,0,3"/>
                                   <Setter Property="BorderBrush" Value="Transparent"/>
+                                  <Setter Property="FontWeight" Value="Medium"/>
                                   <Setter Property="Transitions">
                                       <Transitions>
-                                          <BrushTransition Property="Foreground" Duration="0:0:0.2"/>
-                                          <BrushTransition Property="BorderBrush" Duration="0:0:0.2"/>
+                                          <BrushTransition Property="Foreground" Duration="0:0:0.15"/>
+                                          <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
                                       </Transitions>
                                   </Setter>
                               </Style>
+                              
                               <Style Selector="ListBoxItem /template/ ContentPresenter">
                                   <Setter Property="Background" Value="Transparent" />
                               </Style>
-                              <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-                                  <Setter Property="Background" Value="Transparent" />
+                              
+                              <!-- PointerOver State -->
+                              <Style Selector="ListBoxItem:pointerover">
+                                  <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                               </Style>
                               <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
                                   <Setter Property="Background" Value="Transparent" />
                               </Style>
+
+                              <!-- Selected State -->
                               <Style Selector="ListBoxItem:selected">
-                                  <Setter Property="Foreground" Value="White"/>
+                                  <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                                   <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                  <Setter Property="FontWeight" Value="Bold"/>
                               </Style>
-                              <Style Selector="ListBoxItem:pointerover">
-                                  <Setter Property="Foreground" Value="White"/>
+                              <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+                                  <Setter Property="Background" Value="Transparent" />
+                              </Style>
+
+                              <!-- Pressed State -->
+                              <Style Selector="ListBoxItem:pressed">
+                                  <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                  <Setter Property="RenderTransform" Value="scale(0.98)"/>
+                              </Style>
+                              <Style Selector="ListBoxItem:pressed /template/ ContentPresenter">
+                                  <Setter Property="Background" Value="Transparent" />
                               </Style>
                           </ListBox.Styles>
                       </ListBox>
@@ -640,7 +656,7 @@
                           </StackPanel>
                       </Button>
                       </Grid>
-                      <Border Height="1" Background="#1AFFFFFF" Margin="0,0,0,24"/>
+                      <Border Height="1" Background="{DynamicResource BorderBrush}" Opacity="0.3" Margin="0,0,0,24"/>
                   </StackPanel>
 
                   <!-- Episode Row List -->

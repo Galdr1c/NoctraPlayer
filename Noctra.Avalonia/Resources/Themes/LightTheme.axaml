@@ -1,10 +1,10 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <Color x:Key="Bg0Color">#F5F6FA</Color>
-  <Color x:Key="Bg1Color">#EBEEF5</Color>
+  <Color x:Key="Bg0Color">#F7F6FF</Color>
+  <Color x:Key="Bg1Color">#F0EBFF</Color>
   <Color x:Key="Surface0Color">#FFFFFF</Color>
-  <Color x:Key="Surface1Color">#F8FAFC</Color>
-  <Color x:Key="BorderColor">#DFE6E9</Color>
+  <Color x:Key="Surface1Color">#F9F8FF</Color>
+  <Color x:Key="BorderColor">#E0DDF0</Color>
 
   <Color x:Key="Accent300Color">#DDD6FE</Color>
   <Color x:Key="Accent500Color">#8B5CF6</Color>
@@ -12,15 +12,15 @@
   <Color x:Key="Accent700Color">#6D28D9</Color>
   <Color x:Key="GlowColor">#A78BFA</Color>
 
-  <Color x:Key="TextPrimaryColor">#111827</Color>
-  <Color x:Key="TextSecondaryColor">#374151</Color>
-  <Color x:Key="TextMutedColor">#4B5563</Color>
-  <Color x:Key="TextDisabledColor">#9CA3AF</Color>
+  <Color x:Key="TextPrimaryColor">#1A1535</Color>
+  <Color x:Key="TextSecondaryColor">#4A4565</Color>
+  <Color x:Key="TextMutedColor">#7A7595</Color>
+  <Color x:Key="TextDisabledColor">#B0ACD0</Color>
 
   <Color x:Key="SuccessColor">#10B981</Color>
   <Color x:Key="WarningColor">#F59E0B</Color>
   <Color x:Key="ErrorColor">#EF4444</Color>
-  <Color x:Key="InfoColor">#3B82F6</Color>
+  <Color x:Key="InfoColor">#8B5CF6</Color>
   <Color x:Key="LiveRedColor">#E50914</Color>
 
   <SolidColorBrush x:Key="Bg0Brush" Color="{StaticResource Bg0Color}" />
@@ -52,9 +52,9 @@
   <SolidColorBrush x:Key="CardBackgroundBrush" Color="{StaticResource Surface0Color}" />
   <SolidColorBrush x:Key="InputBackgroundBrush" Color="{StaticResource Surface1Color}" />
   <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource BorderColor}" />
-  <SolidColorBrush x:Key="InteractiveHoverBrush" Color="#E2E8F0" />
-  <SolidColorBrush x:Key="InteractivePressedBrush" Color="#CBD5E0" />
-  <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#CBD5E0" Opacity="0.6" />
+  <SolidColorBrush x:Key="InteractiveHoverBrush" Color="#EFEEFF" />
+  <SolidColorBrush x:Key="InteractivePressedBrush" Color="#E5E4F5" />
+  <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#D1D1EB" Opacity="0.6" />
   <SolidColorBrush x:Key="ScrollBarHoverBrush" Color="{StaticResource AccentBrush}" />
 
   <LinearGradientBrush x:Key="PrimaryGradientBrush" StartPoint="0,0" EndPoint="1,1">
@@ -66,7 +66,7 @@
     <GradientStop Color="#FFFFFF" Offset="0.0" />
     <GradientStop Color="#F7F6FF" Offset="0.4" />
     <GradientStop Color="#F0EBFF" Offset="0.7" />
-    <GradientStop Color="#F1F5F9" Offset="1.0" />
+    <GradientStop Color="#EBEBFF" Offset="1.0" />
   </LinearGradientBrush>
 
   <LinearGradientBrush x:Key="HeaderGradientBrush" StartPoint="0,0" EndPoint="1,0">
@@ -81,8 +81,8 @@
 
   <LinearGradientBrush x:Key="HeroOverlayBrush" StartPoint="0,0" EndPoint="0,1">
     <GradientStop Color="Transparent" Offset="0.0" />
-    <GradientStop Color="#99F5F6FA" Offset="0.5" />
-    <GradientStop Color="#F5F6FA" Offset="1.0" />
+    <GradientStop Color="#99F7F6FF" Offset="0.5" />
+    <GradientStop Color="#F7F6FF" Offset="1.0" />
   </LinearGradientBrush>
 
   <LinearGradientBrush x:Key="IconGradientBrush" StartPoint="0,0" EndPoint="1,1">
@@ -91,8 +91,8 @@
   </LinearGradientBrush>
 
   <LinearGradientBrush x:Key="CardHoverGradientBrush" StartPoint="0,0" EndPoint="1,0">
-    <GradientStop Color="#F8FAFC" Offset="0.0" />
-    <GradientStop Color="#F1F5F9" Offset="1.0" />
+    <GradientStop Color="#F9F8FF" Offset="0.0" />
+    <GradientStop Color="#F0EBFF" Offset="1.0" />
   </LinearGradientBrush>
 
   <LinearGradientBrush x:Key="PremiumCardBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
