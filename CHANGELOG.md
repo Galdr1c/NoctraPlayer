@@ -21,6 +21,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **Kusursuz Görsel Geçiş (No-Flash Update)**: Dizi ve film sayfalarında aşağı kaydırırken yaşanan eski/yeni afiş yanıp sönme (flash) efekti ortadan kaldırıldı; TMDB araması bitene kadar temiz bir "Skeleton Loading" (mor yer tutucu) yapısı kuruldu.
 
 ### 🐛 Hata Düzeltmeleri
+- **Ağ/Kanal Logosu Silinme Hatası**: Bir dizinin detay sayfasına ilk kez girildiğinde görünen yayıncı logosunun (Örn: Netflix), aynı diziye ikinci kez girildiğinde kaybolması sorunu çözüldü. TMDB'den çekilen `NetworkName` ve `NetworkLogoUrl` verilerinin anlık olarak arayüze basıldıktan sonra veritabanına (SQLite) kalıcı olarak yazılmasının unutulduğu tespit edildi ve bu veriler DB'ye mühürlenerek kalıcı hale getirildi.
 - **TMDB Arama Yılı Hataları**: İsminde yıl olan ("Stranger Things (2016)") içeriklerin TMDB'de bulunamaması sorunu, yıl bilgisinin otomatik ayrıştırılıp API'ye özel filtre olarak gönderilmesiyle çözüldü (%100 isabet).
 - **`LastTmdbSync` Tip Dönüşüm Hatası**: `DateTime?` tipindeki alanın `ToString()` üzerinden kontrol edilmesi sonucu oluşan potansiyel hatalar ve gereksiz bellek kullanımı `HasValue` kontrolü ile optimize edildi.
 

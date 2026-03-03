@@ -406,10 +406,11 @@ public partial class PlaylistService : IPlaylistService
             .Where(c => c.PlaylistId == playlistId && c.GroupTitle == groupTitle)
             .ExecuteDeleteAsync();
 
-        // Hayalet Dizileri (Ghost Series) Temizle: Kanallar silindiği için, onlardan üretilmiş olan Diziler tablosundaki kalıntıları da sil.
-        await context.Series
-            .Where(s => s.PlaylistId == playlistId && s.GroupTitle == groupTitle)
-            .ExecuteDeleteAsync();
+        // NOT: s.Series kayıtlarını burada SİLMİYORUZ. 
+        // Çünkü s.Series tablosunda TMDB verileri (poster, konu vb.) tutuluyor.
+        // Silmek yerine MediaService.AggregateContentAsync metoduna bırakıyoruz; 
+        // o metot mevcut serileri isimle eşleştirip TMDB verilerini koruyacak, 
+        // içeriği tamamen boşalan (artık kanalı kalmayan) "hayalet" serileri ise temizleyecektir.
 
         // Eğer eklenecek gerçek kanal varsa ekle
         if (realChannels.Count > 0)

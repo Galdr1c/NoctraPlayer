@@ -5352,7 +5352,15 @@ public partial class MainViewModel : ObservableObject
                 SelectedSeriesBackdropUrl = metadata.BackdropUrl;
 
             if (!string.IsNullOrWhiteSpace(metadata.NetworkLogoUrl))
+            {
                 SelectedSeriesNetworkLogoUrl = metadata.NetworkLogoUrl;
+                series.NetworkLogoUrl = metadata.NetworkLogoUrl;
+            }
+            
+            if (!string.IsNullOrWhiteSpace(metadata.NetworkName))
+            {
+                series.NetworkName = metadata.NetworkName;
+            }
 
             if (!string.IsNullOrWhiteSpace(metadata.Description))
                 SelectedSeriesOverview = metadata.Description;
@@ -5389,6 +5397,8 @@ public partial class MainViewModel : ObservableObject
                     if (!string.IsNullOrWhiteSpace(metadata.ContentRating)) { dbSeries.ContentRating = metadata.ContentRating; changed = true; }
                     if (!string.IsNullOrWhiteSpace(metadata.BackdropUrl)) { dbSeries.BackdropUrl = metadata.BackdropUrl; changed = true; }
                     if (!string.IsNullOrWhiteSpace(metadata.PosterUrl)) { dbSeries.CoverUrl = metadata.PosterUrl; changed = true; }
+                    if (!string.IsNullOrWhiteSpace(metadata.NetworkName)) { dbSeries.NetworkName = metadata.NetworkName; changed = true; }
+                    if (!string.IsNullOrWhiteSpace(metadata.NetworkLogoUrl)) { dbSeries.NetworkLogoUrl = metadata.NetworkLogoUrl; changed = true; }
                     if (metadata.ReleaseYear.HasValue) { dbSeries.ReleaseYear = metadata.ReleaseYear; changed = true; }
                     if (metadata.Rating.HasValue) { dbSeries.Rating = metadata.Rating; changed = true; }
                     if (!dbSeries.LastTmdbSync.HasValue) { dbSeries.LastTmdbSync = DateTime.UtcNow; changed = true; }
