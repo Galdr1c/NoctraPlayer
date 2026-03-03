@@ -679,30 +679,12 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         // VOD / Dizi için TMDB metadata'yı doğrudan zenginleştir.
         if (!IsLiveContent)
         {
-            _ = EnrichCurrentChannelMetadataAsync(channel, requestVersion);
+            // VOD content TMDB Enrichment is intentionally disabled to save API limits.
+            // Using provider logo exclusively.
         }
 
         // Oynatma sağlık kontrolü: 5sn içinde başlamadıysa otomatik yeniden dene.
         _ = EnsurePlaybackHealthAsync(channel, requestVersion);
-    }
-
-    private async Task EnrichCurrentChannelMetadataAsync(Channel channel, int requestVersion)
-    {
-        try
-        {
-            await _metadataService.EnrichChannelAsync(channel);
-
-            if (requestVersion != _playRequestVersion || CurrentChannel?.Id != channel.Id)
-            {
-                return;
-            }
-
-            _dispatcherService.Invoke(UpdateOverlaySecondaryText);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[PlayerViewModel] Metadata enrich failed: {ex.Message}");
-        }
     }
 
     private void UpdateOverlaySecondaryText()
