@@ -5,16 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## v29.9 – Poster Yükleme Deneyimi (Skeleton Loading) (2026-03-03)
+## v29.9 – Poster Yükleme Deneyimi ve API Optimizasyonu (2026-03-03)
 
 ### ⚡ Performans ve Mimari İyileştirmeler
+- **Gizli API İsteği (Fallback) Temizliği**: Dizi detaylarına girildiğinde, bölümlerin özet bilgileri (plot) Türkçe kaynağında boş gelirse, sistem otomatik olarak İngilizce (en-US) dilde aynı sezon için tekrar istek atıp verileri doldurmaya çalışıyordu. Bu durum, Türkçe verisi az olan içeriklerde sezon başına garantili 2 istek (Örn: 5 sezonluk bir dizi için 10 istek) atılmasına neden olup TMDB API'sini yoruyordu. Performans ve rate-limit optimizasyonu amacıyla bu fallback mantığı tamamen kaldırılarak her sezon için **kesin olarak 1 istek** atılması sağlandı.
 - **Kusursuz Görsel Geçiş (No-Flash Update)**: Dizi ve film sayfalarında aşağı kaydırırken (scroll) eski "sağlayıcı (provider)" afişinin görünüp sonra aniden "TMDB" afişiyle değişmesi sonucu oluşan kötü görüntü kirliliği (flicker/flash efekti) tamamen ortadan kaldırıldı.
 - **Skeleton Loading Mantığı**: Kartlar ekrana geldiğinde, eğer o içerik için arka plandaki TMDB araması henüz sonuçlanmamışsa, kullanıcıya önce sağlayıcı resmi yerine **temiz bir Placeholder (mor yer tutucu)** gösterilir. Arama sonuçlanıp en kaliteli afiş bulunduğunda (veya bulunamayıp mevcuda dönüldüğünde) afiş, yeri tutulan boşluğa anında ve yumuşak bir şekilde yerleşir.
 - **Thread-Safe UI Senkronizasyonu**: Arka plan TMDB servisinden gelen poster güncellemelerinin Avalonia arayüzünü kilitlemesini veya görselleri boşta bırakmasını engellemek için tüm özellik güncellemeleri `IDispatcherService` üzerinden doğrudan ana UI kanalına bağlandı.
 
+### 🐛 Hata Düzeltmeleri
+- **`LastTmdbSync` Tip Dönüşüm Hatası**: `DateTime?` tipindeki alanın boş olup olmadığını kontrol etmek için kullanılan riskli `string.IsNullOrWhiteSpace(dbSeries.LastTmdbSync?.ToString())` metodu, bellek ayırmasını engelleyen ve güvenli olan `!dbSeries.LastTmdbSync.HasValue` native tip kontrolü ile düzeltildi.
+
 ### 📁 Değişen Dosyalar
 | Dosya | Değişiklik |
 |-------|------------|
+| `MainViewModel.cs` | `LoadSeriesWithProfileProgressAsync` içindeki `en-US` fallback döngüsü silindi; `LastTmdbSync` tip kontrolü düzeltildi. |
 | `SeriesCard.axaml` & `VodCard.axaml` | Placeholder mantığı `LastTmdbSync` durumuna göre koşullandırıldı (MultiBinding/BoolOrMultiConverter eklendi). |
 | `RemoteImage.cs` | Yeni URL geldiğinde eski resmi hemen silip boşluğa düşüren hatalı mantık kaldırılarak, yumuşak geçiş sağlandı. |
 | `TmdbSyncService.cs` | Özellik güncellemeleri `IDispatcherService.Invoke` içine alındı. |

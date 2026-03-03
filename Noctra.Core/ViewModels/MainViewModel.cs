@@ -5392,7 +5392,7 @@ public partial class MainViewModel : ObservableObject
                     if (!string.IsNullOrWhiteSpace(metadata.PosterUrl)) { dbSeries.CoverUrl = metadata.PosterUrl; changed = true; }
                     if (metadata.ReleaseYear.HasValue) { dbSeries.ReleaseYear = metadata.ReleaseYear; changed = true; }
                     if (metadata.Rating.HasValue) { dbSeries.Rating = metadata.Rating; changed = true; }
-                    if (string.IsNullOrWhiteSpace(dbSeries.LastTmdbSync?.ToString())) { dbSeries.LastTmdbSync = DateTime.UtcNow; changed = true; }
+                    if (!dbSeries.LastTmdbSync.HasValue) { dbSeries.LastTmdbSync = DateTime.UtcNow; changed = true; }
                     if (metadata.Genres != null && metadata.Genres.Count > 0)
                     {
                         dbSeries.Genre = string.Join(", ", metadata.Genres);
@@ -5622,33 +5622,6 @@ public partial class MainViewModel : ObservableObject
                                     if (DateTime.TryParse(tmdbEp.AirDate, out var airDate))
                                         episode.AirDate = airDate;
                                 }
-                            }
-                        }
-
-                        // en-US fallback: if any episodes still have empty Plot/Overview after Turkish fetch,
-                        // fetch the same season once in English and fill only the gaps (1 extra request per season max)
-                        var missingPlots = season.Episodes.Where(e => string.IsNullOrEmpty(e.Plot)).ToList();
-                        if (missingPlots.Count > 0 && languageCode != "en-US")
-                        {
-                            var enSeason = await _metadataService.FetchSeasonDetailsAsync(source.TmdbId.Value, season.SeasonNumber, "en-US");
-                            if (enSeason != null)
-                            {
-                                foreach (var episode in missingPlots)
-                                {
-                                    var enEp = enSeason.Episodes.FirstOrDefault(e => e.EpisodeNumber == episode.EpisodeNumber);
-                                    if (enEp != null)
-                                    {
-                                        if (!string.IsNullOrEmpty(enEp.Overview))
-                                            episode.Plot = enEp.Overview;
-                                        if (string.IsNullOrEmpty(episode.TmdbEpisodeName) && !string.IsNullOrEmpty(enEp.Name))
-                                            episode.TmdbEpisodeName = enEp.Name;
-                                        if (string.IsNullOrEmpty(episode.CoverUrl) && !string.IsNullOrEmpty(enEp.StillPath))
-                                            episode.CoverUrl = $"https://image.tmdb.org/t/p/w500{enEp.StillPath}";
-                                    }
-                                }
-                                // Also fill season overview if missing
-                                if (string.IsNullOrEmpty(season.Plot) && !string.IsNullOrEmpty(enSeason.Overview))
-                                    season.Plot = enSeason.Overview;
                             }
                         }
 
