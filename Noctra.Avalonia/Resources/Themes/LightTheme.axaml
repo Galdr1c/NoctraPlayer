@@ -41,6 +41,7 @@
   <SolidColorBrush x:Key="TextDisabledBrush" Color="{StaticResource TextDisabledColor}" />
 
   <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
+  <SolidColorBrush x:Key="SuccessBackgroundBrush" Color="{StaticResource SuccessColor}" Opacity="0.15" />
   <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />
   <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}" />
   <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource InfoColor}" />

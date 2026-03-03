@@ -549,12 +549,10 @@
                                                                                                                                                                                                 <ProgressBar Height="4" HorizontalAlignment="Left" Width="100" CornerRadius="0" Minimum="0" Maximum="100" Value="{Binding WatchedPercentage}"
                                                                                                                                                                                                              Foreground="{DynamicResource AccentBrush}" Background="#4D000000" BorderThickness="0"
                                                                                                                                                                                                              IsVisible="{Binding ., Converter={StaticResource EpisodeWatchedProgressVisibilityConverter}}"/>                                                                                                                            </StackPanel>
-                                                            <!-- Check Badge -->
+                                                            <!-- Check Badge (Verified Style) -->
                                                             <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
-                                                                <Border Width="28" Height="28" CornerRadius="14" Background="{DynamicResource AccentBrush}"
-                                                                        IsVisible="{Binding ., Converter={StaticResource EpisodeCompletionBadgeVisibilityConverter}}"
-                                                                        BoxShadow="0 2 8 0 #4C000000">
-                                                                    <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="White"/>
+                                                                <Border IsVisible="{Binding ., Converter={StaticResource EpisodeCompletionBadgeVisibilityConverter}}" VerticalAlignment="Center" ToolTip.Tip="İzlendi" Background="Transparent">
+                                                                    <materialIcons:MaterialIcon Kind="CheckCircleOutline" Width="22" Height="22" Foreground="{DynamicResource AccentBrush}"/>
                                                                 </Border>
                                                             </StackPanel>
                                                         </Grid>

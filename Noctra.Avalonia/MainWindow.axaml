@@ -697,12 +697,10 @@
                                                   <TextBlock Text="{Binding EpisodeMetaText}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"
                                                              IsVisible="{Binding EpisodeMetaText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
                                                   
-                                                  <!-- Status Badge -->
-                                                  <Border Background="#3346D369" CornerRadius="4" Padding="6,2" VerticalAlignment="Center"
-                                                          IsVisible="{Binding IsCompleted}">
-                                                      <TextBlock Text="İZLENDİ" FontSize="9" FontWeight="Bold" Foreground="#46D369"/>
-                                                  </Border>
-                                              </StackPanel>
+                                                  <!-- Status Badge (Verified Style) -->
+                                                  <Border IsVisible="{Binding IsCompleted}" VerticalAlignment="Center" ToolTip.Tip="İzlendi" Background="Transparent">
+                                                      <materialIcons:MaterialIcon Kind="CheckCircleOutline" Width="22" Height="22" Foreground="{DynamicResource AccentBrush}"/>
+                                                  </Border>                                              </StackPanel>
                                               <TextBlock Text="{Binding TmdbEpisodeName}" 
                                                          FontSize="14" Foreground="{DynamicResource AccentBrush}" FontStyle="Italic" Opacity="0.85"
                                                          IsVisible="{Binding TmdbEpisodeName, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
