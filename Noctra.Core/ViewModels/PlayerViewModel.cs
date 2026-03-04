@@ -71,7 +71,28 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsPiPControlsVisible))]
     private bool _isPiPMode;
 
-    public bool IsPiPControlsVisible => IsVisible && IsPiPMode;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPiPControlsVisible))]
+    private bool _isPiPControlsForceVisible;
+
+    public bool IsPiPControlsVisible => IsPiPMode && _isPiPControlsForceVisible;
+
+    partial void OnIsPiPModeChanged(bool value)
+    {
+        if (value)
+        {
+            IsPiPControlsForceVisible = true;
+            IsVisible = true;
+            RestartAutoHideTimer();
+        }
+        else
+        {
+            IsPiPControlsForceVisible = false;
+            IsVisible = true;
+            RestartAutoHideTimer();
+        }
+        OnPropertyChanged(nameof(IsPiPControlsVisible));
+    }
 
     [ObservableProperty]
     private string _currentTimeStr = "00:00";
@@ -315,6 +336,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 if (CanAutoHideOverlay())
                 {
                     IsVisible = false;
+                    if (IsPiPMode)
+                        IsPiPControlsForceVisible = false;
                 }
             });
         _autoHideTimer.AutoReset = false;
@@ -442,6 +465,13 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                     PlayerLoadingWarningMessage = string.Empty;
 
                     IsVisible = true;
+                    
+                    if (IsPiPMode)
+                    {
+                        IsPiPControlsForceVisible = true;
+                        OnPropertyChanged(nameof(IsPiPControlsVisible));
+                    }
+                    
                     RestartAutoHideTimer();
                 }
             });
@@ -654,6 +684,15 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         // Force previous media to stop so stale position events do not leak into the next item.
         _videoPlayerService.Stop();
+
+        _isContentTransitioning = true;
+        IsBuffering = true;
+
+        if (IsPiPMode)
+        {
+            IsPiPControlsForceVisible = true;
+            OnPropertyChanged(nameof(IsPiPControlsVisible));
+        }
 
         CurrentChannel = channel;
         CurrentProgram = GetFallbackProgram();
@@ -2699,7 +2738,12 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    private void UserInteraction() => RestartAutoHideTimer();
+    private void UserInteraction()
+    {
+        if (IsPiPMode)
+            IsPiPControlsForceVisible = true;
+        RestartAutoHideTimer();
+    }
 
     partial void OnIsLockedChanged(bool value)
     {

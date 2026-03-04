@@ -52,6 +52,7 @@ public partial class MainWindow : Window
         // MiniVideoSurface.MediaPlayer = null;
 
         AddHandler(KeyDownEvent, MainWindow_KeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
+        PositionChanged += MainWindow_PositionChanged;
         Closed += OnClosed;
         _mainViewModel.OnMediaSelected += MainViewModel_OnMediaSelected;
         _mainViewModel.PropertyChanged += MainViewModel_PropertyChanged;
@@ -64,6 +65,15 @@ public partial class MainWindow : Window
         _playerViewModel.NextLiveChannelRequested += PlayerViewModel_NextLiveChannelRequested;
         _playerViewModel.PreviousLiveChannelRequested += PlayerViewModel_PreviousLiveChannelRequested;
         _playerViewModel.PiPRequested += PlayerViewModel_PiPRequested;
+    }
+
+    private void MainWindow_PositionChanged(object? sender, PixelPointEventArgs e)
+    {
+        // Pencere hareket ettiğinde (sürükleme dahil) PiP kontrollerini yenile
+        if (_isPiPMode && _playerViewModel != null)
+        {
+            _playerViewModel.UserInteractionCommand.Execute(null);
+        }
     }
 
     private void OnClosed(object? sender, EventArgs e)
@@ -464,8 +474,6 @@ public partial class MainWindow : Window
         }
 
         // 6. PiP Kontrollerini ve Çerçeveyi göster
-        PiPCentralControls.IsVisible = true;
-        PiPBottomControls.IsVisible = true;
         PiPContainer.CornerRadius = new CornerRadius(0);
         PlayerOverlayLayer.IsVisible = false; // Tüm overlay katmanını gizle (pip'te sadece pip kontrolleri)
 
@@ -498,8 +506,6 @@ public partial class MainWindow : Window
         Grid.SetRowSpan(PlayerArea, 3);
 
         // 3. Görünürlüğü GÜVENLİ bir şekilde geri al (Layout bozulmasını önlemek için gecikmeli)
-        PiPCentralControls.IsVisible = false;
-        PiPBottomControls.IsVisible = false;
         PiPContainer.CornerRadius = new CornerRadius(0);
         
         // Dispatcher ile bir sonraki frame'e atarsak pencere boyutları tam oturmuş olur
@@ -511,6 +517,7 @@ public partial class MainWindow : Window
             MouseCaptureLayer.IsHitTestVisible = true;
             PlayerOverlayLayer.IsVisible = true;
             
+            _playerViewModel.UserInteractionCommand.Execute(null); // Timer'ı 2.5s sıfırla
             // Layout geçişini zorla tazele
             InvalidateVisual();
         }, DispatcherPriority.Background);
