@@ -236,6 +236,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private double _pendingResumeSeekPosition;
     private int _pendingResumeSeekAttempts;
     private double _lastKnownValidPosition;
+    private int _prematureEndRecoveryCount;
+    private DateTime _lastPrematureEndRecoveryUtc = DateTime.MinValue;
+    private const int MaxPrematureEndRecoveries = 5;
+    private static readonly TimeSpan PrematureEndRecoveryCooldown = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan PrematureEndRecoveryWindowReset = TimeSpan.FromMinutes(2);
     private int _isPlayPauseInProgress;
     private bool _livePauseRequiresHardRestart;
     private double _lastLiveObservedPosition = -1;
@@ -373,8 +378,30 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
                 if (isPrematureEnd)
                 {
+                    var now = DateTime.UtcNow;
+                    // Reset counter if enough time has passed since last issue
+                    if (now - _lastPrematureEndRecoveryUtc > PrematureEndRecoveryWindowReset)
+                        _prematureEndRecoveryCount = 0;
+
+                    // Check if we've exceeded max attempts
+                    if (_prematureEndRecoveryCount >= MaxPrematureEndRecoveries)
+                    {
+                        LogDebug($"VM: PREMATURE END recovery limit reached ({MaxPrematureEndRecoveries}). Giving up.");
+                        ConnectionStatus = "Yayın kararsız — bağlantı sorunlu.";
+                        return;
+                    }
+
+                    // Cooldown check — prevent rapid-fire recovery
+                    if (now - _lastPrematureEndRecoveryUtc < PrematureEndRecoveryCooldown)
+                    {
+                        LogDebug("VM: PREMATURE END cooldown active, skipping recovery.");
+                        return;
+                    }
+
+                    _prematureEndRecoveryCount++;
+                    _lastPrematureEndRecoveryUtc = now;
                     var lastValid = _lastKnownValidPosition > 1 ? _lastKnownValidPosition : currentPos;
-                    LogDebug($"VM: PREMATURE END DETECTED. Live: {IsLiveContent}, Pos/Dur: {currentPos}/{duration}s (Valid: {lastValid}). Suspected server truncation.");
+                    LogDebug($"VM: PREMATURE END DETECTED. Live: {IsLiveContent}, Pos/Dur: {currentPos}/{duration}s (Valid: {lastValid}). Suspected server truncation. Attempt {_prematureEndRecoveryCount}/{MaxPrematureEndRecoveries}");
                     
                     _ = AutoRecoverPrematureEndAsync(lastValid);
                     return; // Auto-recovering, do not show next episode prompt
@@ -2230,6 +2257,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _pendingResumeSeekAttempts = 0;
         _lastPausedPosition = 0;
         _lastPausedTimeMs = 0;
+        _prematureEndRecoveryCount = 0;
+        _lastPrematureEndRecoveryUtc = DateTime.MinValue;
         Interlocked.Increment(ref _seekShieldSuppressionToken);
         _suppressBufferShieldForSeek = false;
         ResetSeekInteractionState();

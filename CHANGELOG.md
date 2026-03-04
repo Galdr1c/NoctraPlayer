@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v30.1 – Video Oynatıcı, Format Tanıma ve Kesinti Kurtarma (2026-03-04)
+
+### 🐛 Hata Düzeltmeleri ve Video İyileştirmeleri
+- **Video Kontrollerinin Sürüklerken Kaybolması**: Uygulama penceresini başlığından tutup sürükleyince video üstü kontrollerin (overlay) kaybolup tekrar gelmemesine neden olan odaklanma sorunu çözüldü. Bu sorun, sürükleme esnasında kontrollerin gereksiz yere gizlenip (Hide) geri açılmasındaki `debounceTimer` mantığından kaynaklanıyordu; artık sürükleme esnasında sadece pozisyon senkronu yapılıyor.
+- **Uzantısız URL (LiveTs) Zorlaması Kaldırıldı**: Sağlayıcılardan gelen uzantısız/belirsiz yayın linkleri otomatik olarak `LiveTs` olarak dayatılıyordu; bu da VLC'nin yanlış ayarlarıyla (`drop-late-frames`, `clock-synchro=0`) yayını açmaya çalışıp 10 saniyede bir kopmasına (`EndReached`) sebep oluyordu. Uzantısız yayınlar artık yeni `Unknown` profili üzerinden `:http-continuous` ile VLC'nin kendi özgür format tespitine (auto-detect) bırakıldı.
+- **Sonsuz "Premature End" Döngüsü Giderildi**: `PlayerViewModel` içindeki sunucu kaynaklı erken kesinti (premature end) kurtarma mekanizmasına **Limit ve Cooldown** eklendi. Önceden sunucu yayıncı her düşürdüğünde sistem defalarca anında tekrar bağlanıp sonsuz recovery döngüsüne giriyordu. Yeni sistemde: Art arda maksimum 5 deneme yapılır, peş peşe kopmalara karşı 3 saniye bekleme süresi uygulanır ve 2 dakika sorunsuz oynatıldığında ceza puanı (sayaç) sıfırlanır. Limite ulaşılırsa bağlantı güvenli şekilde sonlandırılır ("Yayın kararsız — bağlantı sorunlu").
+- **MKV Seek Kararlılığı ve Hızı**: MKV (VOD) içeriklerde HTTP üzerinden ileri/geri sarma yapıldığında yaşanan kopma sorunu ve yavaşlık için `HardSeekAsync` bekleme (delay) süresi 1200ms'den **500ms**'ye düşürülerek seek işlemi 2.4x hızlandırıldı. Ayrıca MKV profiline özel `:demux=mkv,avformat` dayatması kaldırılarak donanımsal okuma iyileştirildi ve ağ önbelleği 8000ms'ten **10000ms**'ye çıkarılarak sunucu darboğazı esnetildi.
+
+### 📁 Değişen Dosyalar
+| Dosya | Değişiklik |
+|-------|------------|
+| `VideoPlayerService.cs` | `Unknown` profili eklendi, uzantısız url dayatması kaldırıldı, MKV buffer artırıldı, HardSeek delay düşürüldü. |
+| `PlayerViewModel.cs` | Erken kesinti kurtarma limitleri (Max 5, 3s cooldown) ve sıfırlama mekanizması eklendi. |
+
+---
+
 ## v30.0 – TMDB Servis Altyapısı Bug Düzeltmeleri (2026-03-04)
 
 ### 🐛 Kritik Bug Düzeltmeleri

@@ -276,7 +276,7 @@ public class VideoPlayerService : IVideoPlayerService
         {
             System.Diagnostics.Debug.WriteLine("[VideoPlayerService] Stopping active player stream for HardSeek...");
             _mediaPlayer.Stop();
-            await Task.Delay(1200); // Allow TCP FIN to reach server and connection registry to clear
+            await Task.Delay(500); // Seek için 500ms yeterli (kanal değişimi 1200ms kullanır)
         }
 
         _retryCount = 0; // İstenirse retry devrede kalabilir
@@ -327,8 +327,8 @@ public class VideoPlayerService : IVideoPlayerService
                         break;
 
                     case StreamProfile.VodMkv:
-                        media.AddOption(":network-caching=8000");
-                        media.AddOption(":demux=mkv,avformat");
+                        media.AddOption(":network-caching=10000");
+                        media.AddOption(":live-caching=10000");
                         media.AddOption(":avcodec-hw=d3d11va");
                         media.AddOption(":no-drop-late-frames");
                         media.AddOption(":no-skip-frames");
@@ -343,6 +343,15 @@ public class VideoPlayerService : IVideoPlayerService
                     case StreamProfile.LiveM3u8:
                         media.AddOption(":network-caching=6000");
                         media.AddOption(":adaptive-logic=highest");
+                        break;
+
+                    case StreamProfile.Unknown:
+                        // Uzantısız/belirsiz stream — VLC kendi demuxer'ı ile otomatik algılasın
+                        media.AddOption($":network-caching={NetworkCachingMs}");
+                        media.AddOption(":no-drop-late-frames");
+                        media.AddOption(":no-skip-frames");
+                        media.AddOption(":http-continuous");
+                        media.AddOption(":http-reconnect");
                         break;
 
                     default:
@@ -815,7 +824,8 @@ public class VideoPlayerService : IVideoPlayerService
             if (lower.Contains(".mkv")) return StreamProfile.VodMkv;
             return StreamProfile.VodMp4;
         }
-        return StreamProfile.LiveTs;
+        // Uzantısız URL — demuxer zorlaması yapma, VLC kendi algılasın
+        return StreamProfile.Unknown;
     }
 
     private enum StreamProfile

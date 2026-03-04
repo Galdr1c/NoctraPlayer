@@ -42,7 +42,6 @@ public class MemoryVideoView : NativeControlHost
     private Window? _rootWindow;
     private bool _isAttached;
     private bool _isRootActive = true;
-    private DispatcherTimer? _debounceTimer;
     private DispatcherTimer? _focusCheckTimer;
     private readonly uint _currentProcessId = (uint)Environment.ProcessId;
 
@@ -191,11 +190,6 @@ public class MemoryVideoView : NativeControlHost
     private void InitializeOverlay()
     {
         LayoutUpdated += OnLayoutUpdated;
-        
-        // Initialize debounce timer for resize/move operations
-        _debounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
-        _debounceTimer.Tick += DebounceTimer_Tick;
-
         // Foreground window polling — reliable focus detection on Windows
         _focusCheckTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
         _focusCheckTimer.Tick += FocusCheckTimer_Tick;
@@ -223,13 +217,6 @@ public class MemoryVideoView : NativeControlHost
             _focusCheckTimer = null;
         }
 
-        if (_debounceTimer != null)
-        {
-            _debounceTimer.Stop();
-            _debounceTimer.Tick -= DebounceTimer_Tick;
-            _debounceTimer = null;
-        }
-
         if (_rootWindow != null)
         {
             _rootWindow.PositionChanged -= Root_PositionChanged;
@@ -254,9 +241,6 @@ public class MemoryVideoView : NativeControlHost
 
     private void OnLayoutUpdated(object? sender, EventArgs e)
     {
-        // Don't update if we are currently debouncing (resizing/moving)
-        if (_debounceTimer != null && _debounceTimer.IsEnabled) return;
-
         // Check visibility and update overlay
         UpdateOverlayState(this.IsEffectivelyVisible);
     }
@@ -268,9 +252,7 @@ public class MemoryVideoView : NativeControlHost
     private void FocusCheckTimer_Tick(object? sender, EventArgs e)
     {
         if (_overlayWindow == null || _rootWindow == null) return;
-        // Don't interfere during resize/move debounce
-        if (_debounceTimer != null && _debounceTimer.IsEnabled) return;
-
+        
         try
         {
             var fg = GetForegroundWindow();
@@ -321,22 +303,12 @@ public class MemoryVideoView : NativeControlHost
     {
         if (_overlayWindow == null) return;
         
-        // Hide overlay to avoid "laggy follower" effect
-        if (_overlayWindow.IsVisible) 
-            _overlayWindow.Hide();
-            
-        // Restart timer
-        _debounceTimer?.Stop();
-        _debounceTimer?.Start();
+        // Instantly update the position to keep the overlay attached
+        // We used to Hide() it here to avoid a laggy follower effect, 
+        // but hiding a Window dynamically causes major focus/visibility glitches when moving.
+        UpdateOverlayPosition();
     }
 
-    private void DebounceTimer_Tick(object? sender, EventArgs e)
-    {
-        _debounceTimer?.Stop();
-        
-        // Window movement finished, reshow overlay or hide it if effectively hidden
-        UpdateOverlayState(this.IsEffectivelyVisible);
-    }
 
     private void UpdateOverlayState(bool visible)
     {
