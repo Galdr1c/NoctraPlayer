@@ -1664,7 +1664,7 @@ public partial class MainViewModel : ObservableObject
             }
 
             // On-demand TMDB enrichment for newly visible series
-            var enrichPage = page.Where(s => s.TmdbId == null && s.LastTmdbSync == null).ToList();
+            var enrichPage = page.Where(s => (s.TmdbId == null && s.LastTmdbSync == null) || s.MetadataFetchedAt == null).ToList();
             if (enrichPage.Count > 0)
             {
                 _ = Task.Run(async () =>

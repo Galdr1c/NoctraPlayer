@@ -18,7 +18,7 @@ public class TmdbSyncService : ITmdbSyncService
     private readonly ILogger<TmdbSyncService>? _logger;
 
     // Rate limit: TMDB allows ~40 req / 10s
-    private const int REQUEST_DELAY_MS = 300;
+    private const int REQUEST_DELAY_MS = 750; // 3 slots × (1000/750) = 4 req/s = TMDB limit (40/10s)
     private const int MAX_CONCURRENT = 3;
 
     public TmdbSyncService(
@@ -127,7 +127,7 @@ public class TmdbSyncService : ITmdbSyncService
             dbSeries.ContentRating = meta.ContentRating;
 
             // Update in-memory for immediate UI refresh
-            _dispatcherService.Invoke(() =>
+            _dispatcherService.BeginInvoke(() =>
             {
                 series.TmdbId = meta.TmdbId;
                 series.TmdbTitle = meta.Title;
@@ -212,7 +212,7 @@ public class TmdbSyncService : ITmdbSyncService
                 dbSeries.TrailerUrl = $"https://www.youtube.com/watch?v={trailer.Key}";
 
             // Update in-memory for immediate UI refresh
-            _dispatcherService.Invoke(() =>
+            _dispatcherService.BeginInvoke(() =>
             {
                 series.TmdbTitle = dbSeries.TmdbTitle;
                 series.Plot = dbSeries.Plot;

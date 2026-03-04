@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -25,7 +26,7 @@ public partial class MetadataService : IMetadataService
     private string _apiKey = string.Empty;
     
     // Genre cache: LanguageCode -> (GenreID -> GenreName)
-    private Dictionary<string, Dictionary<int, string>> _genreCache = new();
+    private readonly ConcurrentDictionary<string, Dictionary<int, string>> _genreCache = new();
     private readonly SemaphoreSlim _genreLock = new(1, 1);
     
     public MetadataService(
@@ -498,7 +499,7 @@ public partial class MetadataService : IMetadataService
                     langGenres[g.Id] = g.Name;
             }
 
-            _genreCache[languageCode] = langGenres;
+            _genreCache.TryAdd(languageCode, langGenres);
         }
         catch (Exception ex)
         {

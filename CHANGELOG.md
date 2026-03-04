@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v30.0 – TMDB Servis Altyapısı Bug Düzeltmeleri (2026-03-04)
+
+### 🐛 Kritik Bug Düzeltmeleri
+- **Scroll Enrichment Filtresi Düzeltildi** (`MainViewModel.cs`): `LoadMoreSeriesItemsAsync` içindeki TMDB zenginleştirme filtresi, `TmdbId`'si dolu ama `MetadataFetchedAt`'ı boş olan dizileri atlıyordu. Filtre `TmdbSyncService` ile uyumlu hale getirildi: `|| s.MetadataFetchedAt == null` koşulu eklendi.
+- **TMDB Rate Limit Aşımı Düzeltildi** (`TmdbSyncService.cs`): `REQUEST_DELAY_MS` 300ms'den **750ms**'ye çıkarıldı. Önceki konfigürasyonda 3 concurrent slot ile ~6 req/s'e ulaşılıyordu; TMDB limiti 4 req/s (40/10s). Yeni hesap: `3 / 0.75 = 4 req/s` — tam limit sınırında.
+- **Dispatcher Deadlock Riski Giderildi** (`TmdbSyncService.cs`): `EnrichWithSearchOnlyAsync` ve `EnrichWithFullDetailsAsync` içindeki `_dispatcherService.Invoke()` çağrıları `BeginInvoke()` ile değiştirildi. Background thread'den senkron UI thread çağrısı deadlock oluşturabiliyordu.
+- **Genre Cache Thread Safety** (`MetadataService.cs`): `_genreCache` alanı `Dictionary` yerine `ConcurrentDictionary` olarak değiştirildi. 3 paralel enrichment thread'in aynı anda okuma/yazma yapması race condition oluşturabiliyordu.
+
+### 📁 Değişen Dosyalar
+| Dosya | Değişiklik |
+|-------|------------|
+| `MainViewModel.cs` | Enrichment filtresi `MetadataFetchedAt == null` koşuluyla güncellendi |
+| `TmdbSyncService.cs` | Rate limit 300→750ms, `Invoke`→`BeginInvoke` |
+| `MetadataService.cs` | `_genreCache` → `ConcurrentDictionary` |
+
+---
+
 ## v29.9 – Poster Yükleme Deneyimi ve API Optimizasyonu (2026-03-03)
 
 ### 🎨 Görsel ve Arayüz İyileştirmeleri
