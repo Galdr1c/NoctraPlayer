@@ -270,7 +270,7 @@
                     <!-- Left: Playback & Time -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="16">
                         <Button Command="{Binding SkipBackwardCommand}" CommandParameter="10" Classes="iconBtn" IsVisible="{Binding !IsLiveContent}">
-                            <materialIcons:MaterialIcon Kind="SkipPrevious" Width="20" Height="20" Foreground="#E6FFFFFF"/>
+                            <materialIcons:MaterialIcon Kind="Rewind10" Width="24" Height="24" Foreground="#E6FFFFFF"/>
                         </Button>
                         <Button x:Name="PlayPreviousLiveChannelBtn" Click="PlayPreviousLiveChannel_Click" Classes="iconBtn" IsVisible="{Binding IsLiveContent}">
                             <materialIcons:MaterialIcon Kind="SkipPrevious" Width="20" Height="20" Foreground="#E6FFFFFF"/>
@@ -284,7 +284,7 @@
                         </Button>
 
                         <Button Command="{Binding SkipForwardCommand}" CommandParameter="10" Classes="iconBtn" IsVisible="{Binding !IsLiveContent}">
-                            <materialIcons:MaterialIcon Kind="SkipNext" Width="20" Height="20" Foreground="#E6FFFFFF"/>
+                            <materialIcons:MaterialIcon Kind="FastForward10" Width="24" Height="24" Foreground="#E6FFFFFF"/>
                         </Button>
                         <Button x:Name="PlayNextLiveChannelBtn" Click="PlayNextLiveChannel_Click" Classes="iconBtn" IsVisible="{Binding IsLiveContent}">
                             <materialIcons:MaterialIcon Kind="SkipNext" Width="20" Height="20" Foreground="#E6FFFFFF"/>
