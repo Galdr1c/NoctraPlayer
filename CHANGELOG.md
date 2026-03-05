@@ -5,21 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## v30.3 – Bölüm Paneli Optimizasyonu ve İzleme Takibi (2026-03-05)
+## v30.3 – Bölüm Paneli Optimizasyonu ve Meta Veri Entegrasyonu (2026-03-05)
 
 ### 🎨 Görsel ve Arayüz İyileştirmeleri
-- **Kompakt Bölüm Kartları**: Video oynatıcı üzerindeki bölümler paneli daraltılarak daha ferah bir görünüme kavuşturuldu. Thumbnail boyutları (128x72 → 106x60) küçültülerek bölüm isimleri ve ikonlar için %25 daha fazla yatay alan açıldı.
-- **Entegre İzlendi (Watched) Rozeti**: Bölüm kartlarına, ana ekran tasarımıyla uyumlu "CheckCircleOutline" rozeti eklendi. `DockPanel` mimarisi sayesinde uzun bölüm isimlerinde dahi rozetin sağ kenarda her zaman görünür olması ve metnin düzgünce kırpılması sağlandı.
-- **İzleme Çubuğu (Progress Bar) Netliği**: Bölüm görselleri altındaki ilerleme çubuğu kalınlaştırıldı (3px → 5px) ve arkaplan kontrastı artırılarak her türlü thumbnail üzerinde belirgin görünmesi sağlandı.
+- **Bölüm Listesi Modernizasyonu**: Video oynatıcı üzerindeki bölümler paneli daraltılarak (128x72 → 106x60) yer kazanıldı. Gri "Bölüm X" yazıları kaldırılarak yerine TMDB'den gelen gerçek bölüm isimleri mor ve italik stilde eklendi.
+- **Zengin "Hakkında" Paneli**: Bilgi panelindeki sabit kanal açıklaması yerine, serilerde o an oynatılan bölüme özel **TMDB Bölüm İsmi, Yayın Tarihi (örn: 17 Eyl 2021)** ve **Bölüm Özeti** eklendi.
+- **Dinamik İçerik Mantığı**: Panel, oynatılan içeriğin türüne göre (Canlı TV, Film, Dizi) en alakalı meta veriyi (Program/Kanal/Bölüm) gösterecek şekilde akıllandırıldı.
+- **İzle Çubuğu (Progress Bar) Belirginliği**: Çubuk kalınlığı 5px'e çıkarıldı ve açık renkli görsellerde de seçilebilmesi için kontrastı artırıldı.
 
 ### 🐛 Hata Düzeltmeleri
-- **Bölüm Paneli Yükleme Hatası**: Bazı serilerde bölümler panelinin açılmamasına neden olan veri bağlamı (Series context) çakışması `PlayerViewModel` tarafında giderildi. Zengin metadata içeren serilerin üzerine boş veritabanı kayıtlarının yazılması engellenerek panelin her zaman dolu gelmesi sağlandı.
+- **Bölüm Paneli Yükleme Hatası**: Bazı serilerde metadata senkronizasyonu sırasında panelin boş açılmasına neden olan `PlayerViewModel` veri çakışması giderildi.
 
 ### 📁 Değişen Dosyalar
 | Dosya | Değişiklik |
 |-------|------------|
-| `VideoOverlayView.axaml` | Bölüm kartları küçültüldü, rozet alanı optimize edildi ve progress bar belirginleştirildi. |
-| `PlayerViewModel.cs` | Seri içeriğinin (Sezon/Bölüm listesi) yükleme sırasında kaybolması engellendi. |
+| `VideoOverlayView.axaml` | Bölüm listesi ve Hakkında paneli meta veri bağlamlarıyla güncellendi. |
+| `PlayerViewModel.cs` | Seri metadata yükleme ve panel veri tutarlılığı iyileştirildi. |
 
 ---
 
