@@ -1,10 +1,10 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <Color x:Key="Bg0Color">#F7F6FF</Color>
-  <Color x:Key="Bg1Color">#F0EBFF</Color>
+  <Color x:Key="Bg0Color">#FAFAFA</Color>
+  <Color x:Key="Bg1Color">#F5F5F5</Color>
   <Color x:Key="Surface0Color">#FFFFFF</Color>
-  <Color x:Key="Surface1Color">#F9F8FF</Color>
-  <Color x:Key="BorderColor">#E0DDF0</Color>
+  <Color x:Key="Surface1Color">#F0F0F0</Color>
+  <Color x:Key="BorderColor">#E5E5E5</Color>
 
   <Color x:Key="Accent300Color">#DDD6FE</Color>
   <Color x:Key="Accent500Color">#8B5CF6</Color>
@@ -53,9 +53,9 @@
   <SolidColorBrush x:Key="CardBackgroundBrush" Color="{StaticResource Surface0Color}" />
   <SolidColorBrush x:Key="InputBackgroundBrush" Color="{StaticResource Surface1Color}" />
   <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource BorderColor}" />
-  <SolidColorBrush x:Key="InteractiveHoverBrush" Color="#EFEEFF" />
-  <SolidColorBrush x:Key="InteractivePressedBrush" Color="#E5E4F5" />
-  <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#D1D1EB" Opacity="0.6" />
+  <SolidColorBrush x:Key="InteractiveHoverBrush" Color="#ECECEC" />
+  <SolidColorBrush x:Key="InteractivePressedBrush" Color="#E0E0E0" />
+  <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#CCCCCC" Opacity="0.6" />
   <SolidColorBrush x:Key="ScrollBarHoverBrush" Color="{StaticResource AccentBrush}" />
 
   <LinearGradientBrush x:Key="PrimaryGradientBrush" StartPoint="0,0" EndPoint="1,1">
@@ -65,14 +65,14 @@
 
   <LinearGradientBrush x:Key="BackgroundGradientBrush" StartPoint="0%,0%" EndPoint="100%,100%">
     <GradientStop Color="#FFFFFF" Offset="0.0" />
-    <GradientStop Color="#F7F6FF" Offset="0.4" />
-    <GradientStop Color="#F0EBFF" Offset="0.7" />
-    <GradientStop Color="#EBEBFF" Offset="1.0" />
+    <GradientStop Color="#FAFAFA" Offset="0.4" />
+    <GradientStop Color="#F5F5F5" Offset="0.7" />
+    <GradientStop Color="#F0F0F0" Offset="1.0" />
   </LinearGradientBrush>
 
   <LinearGradientBrush x:Key="HeaderGradientBrush" StartPoint="0,0" EndPoint="1,0">
-    <GradientStop Color="#F8F9FF" Offset="0.0" />
-    <GradientStop Color="#F0EBFF" Offset="1.0" />
+    <GradientStop Color="#FFFFFF" Offset="0.0" />
+    <GradientStop Color="#F5F5F5" Offset="1.0" />
   </LinearGradientBrush>
 
   <LinearGradientBrush x:Key="GlowGradientBrush" StartPoint="0,0" EndPoint="1,0">

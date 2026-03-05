@@ -19,7 +19,6 @@
              PointerWheelChanged="OverlayRoot_PointerWheelChanged">
 
     <UserControl.Styles>
-        <!-- Transparent Icon Buttons (Play/Pause, Seek, Settings, etc.) -->
         <Style Selector="Button.iconBtn">
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -41,7 +40,6 @@
             <Setter Property="RenderTransform" Value="scale(0.95)"/>
         </Style>
         
-        <!-- Outline Buttons (Episodes, Next Episode) -->
         <Style Selector="Button.outlineBtn">
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -53,24 +51,8 @@
             <Setter Property="BorderBrush" Value="#4DFFFFFF"/>
             <Setter Property="Padding" Value="12,6"/>
             <Setter Property="Opacity" Value="0.9"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
-                    <BrushTransition Property="BorderBrush" Duration="0:0:0.2"/>
-                    <BrushTransition Property="Background" Duration="0:0:0.2"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Button.outlineBtn:pointerover">
-            <Setter Property="Opacity" Value="1"/>
-            <Setter Property="BorderBrush" Value="#80FFFFFF"/>
-            <Setter Property="Background" Value="#1AFFFFFF"/>
-        </Style>
-        <Style Selector="Button.outlineBtn:pressed">
-            <Setter Property="Background" Value="#33FFFFFF"/>
         </Style>
 
-        <!-- Close buttons for side panels -->
         <Style Selector="Button.panelCloseBtn">
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -78,20 +60,11 @@
             <Setter Property="CornerRadius" Value="24"/>
             <Setter Property="Width" Value="36"/>
             <Setter Property="Height" Value="36"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
         </Style>
         <Style Selector="Button.panelCloseBtn:pointerover">
-            <Setter Property="Background" Value="{DynamicResource SurfaceLightBrush}"/>
-        </Style>
-        <Style Selector="Button.panelCloseBtn:pressed">
             <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
         </Style>
 
-        <!-- List Item Buttons inside Panels (Audio, Subs) -->
         <Style Selector="Button.listItemBtn">
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -101,20 +74,11 @@
             <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
         </Style>
         <Style Selector="Button.listItemBtn:pointerover">
-            <Setter Property="Background" Value="{DynamicResource SurfaceLightBrush}"/>
-        </Style>
-        <Style Selector="Button.listItemBtn:pressed">
             <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
         </Style>
 
-        <!-- Episode Card Buttons inside Panel -->
         <Style Selector="Button.episodeCardBtn">
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -122,17 +86,9 @@
             <Setter Property="Padding" Value="0"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
         </Style>
         <Style Selector="Button.episodeCardBtn:pointerover">
             <Setter Property="Opacity" Value="0.85"/>
-        </Style>
-        <Style Selector="Button.episodeCardBtn:pressed">
-            <Setter Property="RenderTransform" Value="scale(0.98)"/>
         </Style>
 
         <Style Selector="Slider">
@@ -142,9 +98,7 @@
 
     <Grid Background="Transparent">
 
-        <!-- ==========================================
-             OVERLAY CONTENT (Visible when interacting)
-             ========================================== -->
+        <!-- OVERLAY CONTENT -->
         <Grid x:Name="OverlayContent"
               IsHitTestVisible="{Binding IsVisible}"
               Opacity="{Binding IsVisible, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=OpacityOnly}">
@@ -154,15 +108,9 @@
                 </Transitions>
             </Grid.Transitions>
 
-            <!-- 1. Gradient Scrims (Readability Layer) -->
-            <Grid IsHitTestVisible="False">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="140"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <!-- Top Gradient -->
-                <Border Grid.Row="0">
+            <!-- 1. Top Gradient -->
+            <Grid IsHitTestVisible="False" VerticalAlignment="Top">
+                <Border Height="140">
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
                             <GradientStop Color="#CC000000" Offset="0"/>
@@ -172,31 +120,27 @@
                 </Border>
             </Grid>
 
-            <!-- 2. Top Bar (Back, Title, Time) -->
-            <Grid VerticalAlignment="Top" Margin="24,24">
+            <!-- 2. Top Bar -->
+            <Grid VerticalAlignment="Top" Margin="32,32,32,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Back Action -->
-                <Button Command="{Binding ClosePlayerCommand}" Classes="iconBtn" Margin="0,0,16,0">
-                    <materialIcons:MaterialIcon Kind="ArrowLeft" Width="28" Height="28" Foreground="White"/>
-                </Button>
-
-                <!-- Content Info -->
-                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding CurrentChannel.Name}" FontSize="20" FontWeight="SemiBold" Foreground="White"/>
+                <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="16">
+                    <Button Command="{Binding ClosePlayerCommand}" Classes="iconBtn">
+                        <materialIcons:MaterialIcon Kind="ArrowLeft" Width="24" Height="24" Foreground="White"/>
+                    </Button>
+                    <TextBlock Text="{Binding CurrentChannel.Name}" FontSize="20" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" LetterSpacing="0.2"/>
                 </StackPanel>
 
-                <!-- System Info (Clock/Network) -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal" Margin="0,0,16,0" VerticalAlignment="Center" Opacity="0.8">
-                        <materialIcons:MaterialIcon Kind="{Binding NetworkIcon}" Width="18" Height="18" Foreground="White" Margin="0,0,6,0"/>
-                        <TextBlock Text="{Binding NetworkStatus}" FontSize="13" Foreground="White" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="16">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="6" Opacity="0.8">
+                        <materialIcons:MaterialIcon Kind="{Binding NetworkIcon}" Width="16" Height="16" Foreground="White"/>
+                        <TextBlock Text="{Binding NetworkStatus}" FontSize="13" FontWeight="Medium" Foreground="White" VerticalAlignment="Center"/>
                     </StackPanel>
-                    <TextBlock Text="{Binding CurrentTimeStr}" FontSize="18" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding CurrentTimeStr}" FontSize="18" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
                 </StackPanel>
             </Grid>
 
@@ -210,681 +154,213 @@
                         <GradientStop Color="#FF000000" Offset="1.0"/>
                     </LinearGradientBrush>
                 </Border.Background>
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/> <!-- Timeline -->
-                        <RowDefinition Height="Auto"/> <!-- Controls -->
-                    </Grid.RowDefinitions>
+                <Grid RowDefinitions="Auto,Auto">
+                    <!-- Timeline Slider -->
+                    <Slider x:Name="TimelineSlider" Grid.Row="0" Margin="0,0,0,12"
+                            Minimum="0" Maximum="{Binding Duration}" Value="{Binding Position}"
+                            IsVisible="{Binding !IsLiveContent}" Foreground="{DynamicResource AccentBrush}" Focusable="False"/>
 
-                <!-- Timeline Slider -->
-                <Slider x:Name="TimelineSlider"
-                        Grid.Row="0"
-                        Margin="0,0,0,12"
-                        Minimum="0" Maximum="{Binding Duration}"
-                        Value="{Binding Position}"
-                        IsVisible="{Binding !IsLiveContent}"
-                        Foreground="{DynamicResource AccentBrush}"
-                        Focusable="False"/>
-
-                <!-- Live Stream EPG Info (Replaces Slider area for Live) -->
-                <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,16"
-                            IsVisible="{Binding IsLiveContent}">
-                    
-                    <!-- Premium Animated Live Badge -->
-                    <Border Background="#E50914" CornerRadius="4" Padding="8,2" Margin="0,0,12,0" VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Ellipse Width="6" Height="6" Fill="White" VerticalAlignment="Center">
-                                <Ellipse.Styles>
-                                    <Style Selector="Ellipse">
-                                        <Style.Animations>
-                                            <Animation Duration="0:0:1" IterationCount="INFINITE" PlaybackDirection="Alternate">
-                                                <KeyFrame Cue="0%">
-                                                    <Setter Property="Opacity" Value="1"/>
-                                                </KeyFrame>
-                                                <KeyFrame Cue="100%">
-                                                    <Setter Property="Opacity" Value="0.2"/>
-                                                </KeyFrame>
-                                            </Animation>
-                                        </Style.Animations>
-                                    </Style>
-                                </Ellipse.Styles>
-                            </Ellipse>
-                            <TextBlock Text="CANLI" FontSize="11" FontWeight="Black" Foreground="White" VerticalAlignment="Center" LetterSpacing="0.5"/>
-                        </StackPanel>
-                    </Border>
-                    
-                    <TextBlock Text="{Binding CurrentProgram.Title}" Foreground="#E6FFFFFF" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"
-                               IsVisible="{Binding CurrentProgram.Title, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
-                    <TextBlock Text="{Binding CurrentProgram.TimeRange, StringFormat='{} &#8226; {0}'}" Foreground="#B3FFFFFF" FontSize="14" Margin="8,0,0,0" VerticalAlignment="Center"
-                               IsVisible="{Binding HasCurrentProgramInfo}"/>
-                </StackPanel>
-
-                <!-- Transport Controls -->
-                <Grid Grid.Row="1">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/> <!-- Left: Controls & Time -->
-                        <ColumnDefinition Width="*"/>    <!-- Center: Empty -->
-                        <ColumnDefinition Width="Auto"/> <!-- Right: Settings/Fullscreen -->
-                    </Grid.ColumnDefinitions>
-
-                    <!-- Left: Playback & Time -->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="16">
-                        <Button Command="{Binding SkipBackwardCommand}" CommandParameter="10" Classes="iconBtn" IsVisible="{Binding !IsLiveContent}">
-                            <materialIcons:MaterialIcon Kind="Rewind10" Width="24" Height="24" Foreground="#E6FFFFFF"/>
-                        </Button>
-                        <Button x:Name="PlayPreviousLiveChannelBtn" Click="PlayPreviousLiveChannel_Click" Classes="iconBtn" IsVisible="{Binding IsLiveContent}">
-                            <materialIcons:MaterialIcon Kind="SkipPrevious" Width="20" Height="20" Foreground="#E6FFFFFF"/>
-                        </Button>
-
-                        <Button Command="{Binding PlayPauseCommand}" Classes="iconBtn">
-                            <Grid>
-                                <materialIcons:MaterialIcon Kind="Pause" Width="24" Height="24" Foreground="White" IsVisible="{Binding IsPlaying}"/>
-                                <materialIcons:MaterialIcon Kind="Play" Width="24" Height="24" Foreground="White" IsVisible="{Binding IsPlaying, Converter={StaticResource InverseBoolConverter}}"/>
-                            </Grid>
-                        </Button>
-
-                        <Button Command="{Binding SkipForwardCommand}" CommandParameter="10" Classes="iconBtn" IsVisible="{Binding !IsLiveContent}">
-                            <materialIcons:MaterialIcon Kind="FastForward10" Width="24" Height="24" Foreground="#E6FFFFFF"/>
-                        </Button>
-                        <Button x:Name="PlayNextLiveChannelBtn" Click="PlayNextLiveChannel_Click" Classes="iconBtn" IsVisible="{Binding IsLiveContent}">
-                            <materialIcons:MaterialIcon Kind="SkipNext" Width="20" Height="20" Foreground="#E6FFFFFF"/>
-                        </Button>
-
-                        <!-- Volume -->
-                        <Button Command="{Binding ToggleMuteCommand}" Classes="iconBtn" Margin="4,0,0,0">
-                            <Grid>
-                                <materialIcons:MaterialIcon Kind="VolumeOff" Width="20" Height="20" Foreground="#E6FFFFFF" IsVisible="{Binding IsMuted}"/>
-                                <materialIcons:MaterialIcon Kind="VolumeHigh" Width="20" Height="20" Foreground="#E6FFFFFF" IsVisible="{Binding IsMuted, Converter={StaticResource InverseBoolConverter}}"/>
-                            </Grid>
-                        </Button>
-                        <Slider x:Name="VolumeSlider" Width="80" Margin="8,0,0,0" VerticalAlignment="Center"
-                                Minimum="0" Maximum="100" Value="{Binding Volume}" Foreground="{DynamicResource AccentBrush}"
-                                Focusable="False"/>
-
-                        <!-- Time (VOD) -->
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0" IsVisible="{Binding !IsLiveContent}">
-                            <TextBlock Text="{Binding PositionText}" Foreground="#E6FFFFFF" FontSize="13" FontWeight="Medium"/>
-                            <TextBlock Text=" / " Foreground="#80FFFFFF" FontSize="13" FontWeight="Medium" Margin="4,0"/>
-                            <TextBlock Text="{Binding DurationText}" Foreground="#B3FFFFFF" FontSize="13" FontWeight="Medium"/>
-                        </StackPanel>
+                    <!-- Live Stream EPG Info -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,16"
+                                IsVisible="{Binding IsLiveContent}">
+                        <Border Background="#E50914" CornerRadius="4" Padding="8,2" Margin="0,0,12,0" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Ellipse Width="6" Height="6" Fill="White" VerticalAlignment="Center">
+                                    <Ellipse.Styles>
+                                        <Style Selector="Ellipse">
+                                            <Style.Animations>
+                                                <Animation Duration="0:0:1" IterationCount="INFINITE" PlaybackDirection="Alternate">
+                                                    <KeyFrame Cue="0%"><Setter Property="Opacity" Value="1"/></KeyFrame>
+                                                    <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.2"/></KeyFrame>
+                                                </Animation>
+                                            </Style.Animations>
+                                        </Style>
+                                    </Ellipse.Styles>
+                                </Ellipse>
+                                <TextBlock Text="CANLI" FontSize="11" FontWeight="Black" Foreground="White" VerticalAlignment="Center" LetterSpacing="0.5"/>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock Text="{Binding CurrentProgram.Title}" Foreground="#E6FFFFFF" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"
+                                   IsVisible="{Binding CurrentProgram.Title, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+                        <TextBlock Text="{Binding CurrentProgram.TimeRange, StringFormat='{} &#8226; {0}'}" Foreground="#B3FFFFFF" FontSize="14" Margin="8,0,0,0" VerticalAlignment="Center"
+                                   IsVisible="{Binding HasCurrentProgramInfo}"/>
                     </StackPanel>
 
-                    <!-- Right: Options (CC, Settings, Fullscreen) -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="12">
-                        
-                        <Button Command="{Binding OpenEpisodesCommand}" Classes="iconBtn" IsVisible="{Binding IsSeriesContent}" ToolTip.Tip="Bölümler">
-                            <materialIcons:MaterialIcon Kind="FormatListBulleted" Width="20" Height="20" Foreground="#E6FFFFFF"/>
-                        </Button>
-                        <Button Command="{Binding PlayNextEpisodeCommand}" Classes="iconBtn" IsVisible="{Binding IsSeriesContent}" ToolTip.Tip="Sıradaki Bölüm">
-                            <materialIcons:MaterialIcon Kind="StepForward" Width="20" Height="20" Foreground="#E6FFFFFF"/>
-                        </Button>
-                        <Button Command="{Binding DownloadCurrentContentCommand}" Classes="iconBtn" IsVisible="{Binding CanShowDownloadButton}" IsEnabled="{Binding CanDownloadCurrentContent}" ToolTip.Tip="İndir">
-                            <materialIcons:MaterialIcon Kind="Download" Width="20" Height="20" Foreground="#E6FFFFFF"/>
-                        </Button>
-                        <Button Command="{Binding OpenInfoPanelCommand}" Classes="iconBtn" IsVisible="{Binding CanShowInfoButton}">
-                            <materialIcons:MaterialIcon Kind="InformationOutline" Width="20" Height="20" Foreground="#E6FFFFFF"/>
-                        </Button>
+                    <!-- Transport Controls -->
+                    <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto">
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="16">
+                            <Button Command="{Binding SkipBackwardCommand}" CommandParameter="10" Classes="iconBtn" IsVisible="{Binding !IsLiveContent}">
+                                <materialIcons:MaterialIcon Kind="Rewind10" Width="24" Height="24" Foreground="#E6FFFFFF"/>
+                            </Button>
+                            <Button Click="PlayPreviousLiveChannel_Click" Classes="iconBtn" IsVisible="{Binding IsLiveContent}">
+                                <materialIcons:MaterialIcon Kind="SkipPrevious" Width="20" Height="20" Foreground="#E6FFFFFF"/>
+                            </Button>
+                            <Button Command="{Binding PlayPauseCommand}" Classes="iconBtn">
+                                <Grid>
+                                    <materialIcons:MaterialIcon Kind="Pause" Width="24" Height="24" Foreground="White" IsVisible="{Binding IsPlaying}"/>
+                                    <materialIcons:MaterialIcon Kind="Play" Width="24" Height="24" Foreground="White" IsVisible="{Binding IsPlaying, Converter={StaticResource InverseBoolConverter}}"/>
+                                </Grid>
+                            </Button>
+                            <Button Command="{Binding SkipForwardCommand}" CommandParameter="10" Classes="iconBtn" IsVisible="{Binding !IsLiveContent}">
+                                <materialIcons:MaterialIcon Kind="FastForward10" Width="24" Height="24" Foreground="#E6FFFFFF"/>
+                            </Button>
+                            <Button Click="PlayNextLiveChannel_Click" Classes="iconBtn" IsVisible="{Binding IsLiveContent}">
+                                <materialIcons:MaterialIcon Kind="SkipNext" Width="20" Height="20" Foreground="#E6FFFFFF"/>
+                            </Button>
+                            <Button Command="{Binding ToggleMuteCommand}" Classes="iconBtn" Margin="4,0,0,0">
+                                <Grid>
+                                    <materialIcons:MaterialIcon Kind="VolumeOff" Width="20" Height="20" Foreground="#E6FFFFFF" IsVisible="{Binding IsMuted}"/>
+                                    <materialIcons:MaterialIcon Kind="VolumeHigh" Width="20" Height="20" Foreground="#E6FFFFFF" IsVisible="{Binding IsMuted, Converter={StaticResource InverseBoolConverter}}"/>
+                                </Grid>
+                            </Button>
+                            <Slider x:Name="VolumeSlider" Width="80" Margin="8,0,0,0" VerticalAlignment="Center"
+                                    Minimum="0" Maximum="100" Value="{Binding Volume}" Foreground="{DynamicResource AccentBrush}" Focusable="False"/>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0" IsVisible="{Binding !IsLiveContent}">
+                                <TextBlock Text="{Binding PositionText}" Foreground="#E6FFFFFF" FontSize="13" FontWeight="Medium"/>
+                                <TextBlock Text=" / " Foreground="#80FFFFFF" FontSize="13" FontWeight="Medium" Margin="4,0"/>
+                                <TextBlock Text="{Binding DurationText}" Foreground="#B3FFFFFF" FontSize="13" FontWeight="Medium"/>
+                            </StackPanel>
+                        </StackPanel>
 
-                        <!-- Audio / Subtitles -> "CC" -->
-                        <Button Command="{Binding OpenAudioSettingsCommand}" Classes="iconBtn">
-                             <TextBlock Text="CC" FontWeight="Bold" FontSize="14" Foreground="#E6FFFFFF" VerticalAlignment="Center"/>
-                        </Button>
-
-                        <Button Command="{Binding OpenQualitySettingsCommand}" Classes="iconBtn">
-                            <materialIcons:MaterialIcon Kind="Cog" Width="20" Height="20" Foreground="#E6FFFFFF"/>
-                        </Button>
-
-                        <Button Command="{Binding EnterPiPCommand}" Classes="iconBtn" ToolTip.Tip="Pencere İçi Pencere">
-                            <materialIcons:MaterialIcon Kind="PictureInPictureBottomRight" Width="20" Height="20" Foreground="#E6FFFFFF"/>
-                        </Button>
-
-                        <Button Command="{Binding ToggleFullScreenCommand}" Classes="iconBtn">
-                            <Grid>
-                                <materialIcons:MaterialIcon Kind="Fullscreen" Width="22" Height="22" Foreground="#E6FFFFFF" IsVisible="{Binding IsFullScreen, Converter={StaticResource InverseBoolConverter}}"/>
-                                <materialIcons:MaterialIcon Kind="FullscreenExit" Width="22" Height="22" Foreground="#E6FFFFFF" IsVisible="{Binding IsFullScreen}"/>
-                            </Grid>
-                        </Button>
-                    </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="12">
+                            <Button Command="{Binding OpenEpisodesCommand}" Classes="iconBtn" IsVisible="{Binding IsSeriesContent}"><materialIcons:MaterialIcon Kind="FormatListBulleted" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
+                            <Button Command="{Binding PlayNextEpisodeCommand}" Classes="iconBtn" IsVisible="{Binding IsSeriesContent}"><materialIcons:MaterialIcon Kind="StepForward" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
+                            <Button Command="{Binding DownloadCurrentContentCommand}" Classes="iconBtn" IsVisible="{Binding CanShowDownloadButton}" IsEnabled="{Binding CanDownloadCurrentContent}"><materialIcons:MaterialIcon Kind="Download" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
+                            <Button Command="{Binding OpenInfoPanelCommand}" Classes="iconBtn" IsVisible="{Binding CanShowInfoButton}"><materialIcons:MaterialIcon Kind="InformationOutline" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
+                            <Button Command="{Binding OpenAudioSettingsCommand}" Classes="iconBtn"><TextBlock Text="CC" FontWeight="Bold" FontSize="14" Foreground="#E6FFFFFF" VerticalAlignment="Center"/></Button>
+                            <Button Command="{Binding OpenQualitySettingsCommand}" Classes="iconBtn"><materialIcons:MaterialIcon Kind="Cog" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
+                            <Button Command="{Binding EnterPiPCommand}" Classes="iconBtn"><materialIcons:MaterialIcon Kind="PictureInPictureBottomRight" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
+                            <Button Command="{Binding ToggleFullScreenCommand}" Classes="iconBtn">
+                                <Grid>
+                                    <materialIcons:MaterialIcon Kind="Fullscreen" Width="22" Height="22" Foreground="#E6FFFFFF" IsVisible="{Binding IsFullScreen, Converter={StaticResource InverseBoolConverter}}"/>
+                                    <materialIcons:MaterialIcon Kind="FullscreenExit" Width="22" Height="22" Foreground="#E6FFFFFF" IsVisible="{Binding IsFullScreen}"/>
+                                </Grid>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
                 </Grid>
-            </Grid>
             </Border>
 
-            <!-- 4. Side Sheets (Info) -->
-            <Grid x:Name="InfoPanel"
-                  Width="360" HorizontalAlignment="Right" VerticalAlignment="Stretch"
-                  IsVisible="{Binding IsInfoPanelOpen}">
-                <Grid.RenderTransform>
-                    <TranslateTransform X="0"/>
-                </Grid.RenderTransform>
-                <Grid.Transitions>
-                    <Transitions>
-                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CubicEaseOut"/>
-                    </Transitions>
-                </Grid.Transitions>
-                
-                <Border Background="{DynamicResource SurfaceBrush}"
-                        BorderBrush="{DynamicResource BorderBrush}"
-                        BorderThickness="1,0,0,0">
-                    
+            <!-- Info Panel -->
+            <Grid x:Name="InfoPanel" Width="420" HorizontalAlignment="Right" IsVisible="{Binding IsInfoPanelOpen}">
+                <Grid.Transitions><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" Easing="CubicEaseOut"/></Transitions></Grid.Transitions>
+                <Border Background="{DynamicResource SurfaceBrush}" BorderThickness="0" ClipToBounds="True">
+                    <Border.BoxShadow><BoxShadows>0 0 40 0 #A6000000</BoxShadows></Border.BoxShadow>
                     <Grid RowDefinitions="Auto,*">
-                        <Grid Grid.Row="0" Margin="24,24,24,16">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
+                        <Grid Grid.Row="0" Margin="32,40,32,24" ColumnDefinitions="*,Auto">
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="Hakk&#305;nda" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock Text="HAKKINDA" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1.5" Margin="0,0,0,16"/>
+                                <Border Height="1" Background="{DynamicResource Surface1Brush}" Margin="0,0,0,8" Opacity="0.5"/>
                             </StackPanel>
-                            <Button Grid.Column="1"
-                                    Command="{Binding OpenInfoPanelCommand}"
-                                    Classes="panelCloseBtn">
-                                <materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            </Button>
+                            <Button Grid.Column="1" Command="{Binding OpenInfoPanelCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0"><materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}"/></Button>
                         </Grid>
-
-                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24,0,24,32">
-                            <StackPanel>
-                                <!-- Title & Year -->
-                                <TextBlock Text="{Binding CurrentChannel.Name}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,8,0,20">
-                                    <Border Background="{DynamicResource SurfaceLightBrush}" CornerRadius="4" Padding="6,2" Margin="0,0,8,0"
-                                            IsVisible="{Binding CurrentChannel.ReleaseYear, Converter={StaticResource NullToVisibilityConverter}}">
-                                        <TextBlock Text="{Binding CurrentChannel.ReleaseYear}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12"/>
-                                    </Border>
-                                    <Border Background="#E50914" CornerRadius="4" Padding="6,2" Margin="0,0,8,0"
-                                            IsVisible="{Binding CurrentChannel.Rating, Converter={StaticResource NullToVisibilityConverter}}">
-                                        <TextBlock Text="{Binding CurrentChannel.Rating, StringFormat='&#10084; {0:F1}'}" Foreground="White" FontSize="12" FontWeight="Bold"/>
-                                    </Border>
-                                    <TextBlock Text="{Binding DurationText}" Foreground="{DynamicResource TextMutedBrush}" FontSize="13" VerticalAlignment="Center"/>
-                                </StackPanel>
-
-                                <!-- Current Program -->
-                                <Border Background="{DynamicResource SurfaceLightBrush}" BorderThickness="0" CornerRadius="8" Padding="16" Margin="0,0,0,20"
-                                        IsVisible="{Binding IsLiveContent}">
-                                    <StackPanel>
-                                        <TextBlock Text="&#350;U AN YAYINDA" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" LetterSpacing="1"/>
-                                        <TextBlock Text="{Binding CurrentProgram.Title}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,6,0,0"
-                                                   IsVisible="{Binding CurrentProgram.Title, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
-                                        <TextBlock Text="{Binding CurrentProgram.TimeRange}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" Margin="0,4,0,0"
-                                                   IsVisible="{Binding HasCurrentProgramInfo}"/>
-                                        <TextBlock Text="{Binding CurrentProgram.Description}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" TextWrapping="Wrap" LineHeight="18" Margin="0,8,0,0"
-                                                   IsVisible="{Binding CurrentProgram.Description, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
-                                    </StackPanel>
-                                </Border>
-
-                                <!-- Plot -->
-                                <TextBlock Text="{Binding CurrentChannel.Plot}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="14" TextWrapping="Wrap" LineHeight="20" Margin="0,0,0,24"
-                                           IsVisible="{Binding CurrentChannel.Plot, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
-
-                                <!-- Cast & Crew -->
-                                <StackPanel IsVisible="{Binding CurrentChannel.Director, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
-                                    <TextBlock Text="Y&#214;NETMEN" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,4"/>
-                                    <TextBlock Text="{Binding CurrentChannel.Director}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" Margin="0,0,0,16"/>
-                                </StackPanel>
-
-                                <StackPanel IsVisible="{Binding CurrentChannel.Cast, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
-                                    <TextBlock Text="OYUNCULAR" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,4"/>
-                                    <TextBlock Text="{Binding CurrentChannel.Cast}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" TextWrapping="Wrap" LineHeight="20" Margin="0,0,0,16"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </Grid>
-                </Border>
-            </Grid>
-
-            <!-- 5. Side Sheets (Audio/Subtitles) -->
-            <Grid x:Name="AudioSettingsPanel"
-                  ZIndex="10"
-                  Width="360" HorizontalAlignment="Right" VerticalAlignment="Stretch"
-                  IsVisible="{Binding IsAudioSettingsOpen}">
-                <Grid.RenderTransform>
-                    <TranslateTransform X="0"/>
-                </Grid.RenderTransform>
-                <Grid.Transitions>
-                    <Transitions>
-                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CubicEaseOut"/>
-                    </Transitions>
-                </Grid.Transitions>
-                
-                <Border Background="{DynamicResource SurfaceBrush}"
-                        BorderBrush="{DynamicResource BorderBrush}"
-                        BorderThickness="1,0,0,0">
-                    
-                    <Grid RowDefinitions="Auto,*">
-                        <Grid Grid.Row="0" Margin="24,24,24,16">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="Ses ve Altyaz&#305;" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            </StackPanel>
-                            <Button Grid.Column="1"
-                                    Command="{Binding ClosePanelsCommand}"
-                                    Classes="panelCloseBtn">
-                                <materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            </Button>
-                        </Grid>
-
-                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Visible" Padding="24,0,24,32">
-                            <StackPanel>
-                                <!-- Audio Tracks -->
-                                <TextBlock Text="SES" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,8"/>
-                                <ItemsControl ItemsSource="{Binding AudioTracks}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Button Tag="{Binding Id}" Click="AudioTrack_Click"
-                                                    Classes="listItemBtn"
-                                                    Margin="0,0,0,4"
-                                                    Content="{Binding Name}"/>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-
-                                <!-- Subtitle Tracks -->
-                                <TextBlock Text="ALTYAZI" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,24,0,8"/>
-                                <ItemsControl ItemsSource="{Binding SubtitleTracks}" Margin="0,0,0,24">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Button Tag="{Binding Id}" Click="SubtitleTrack_Click"
-                                                    Classes="listItemBtn"
-                                                    Margin="0,0,0,4"
-                                                    Content="{Binding Name}"/>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </Grid>
-                </Border>
-            </Grid>
-
-            <!-- 5a. Side Sheets (Episodes) -->
-            <Grid x:Name="EpisodesPanel"
-                  Width="400" HorizontalAlignment="Right" VerticalAlignment="Stretch"
-                  IsVisible="{Binding IsEpisodesPanelOpen}">
-                <Grid.RenderTransform>
-                    <TranslateTransform X="0"/>
-                </Grid.RenderTransform>
-                <Grid.Transitions>
-                    <Transitions>
-                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CubicEaseOut"/>
-                    </Transitions>
-                </Grid.Transitions>
-                
-                <Border Background="{DynamicResource SurfaceBrush}"
-                        BorderBrush="{DynamicResource BorderBrush}"
-                        BorderThickness="1,0,0,0">
-                    
-                    <Grid RowDefinitions="Auto,*">
-                        <Grid Grid.Row="0" Margin="24,24,24,16">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="B&#246;l&#252;mler" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                <TextBlock Text="{Binding EpisodesPanelTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="13" Margin="0,2,0,0"
-                                           IsVisible="{Binding EpisodesPanelTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
-                            </StackPanel>
-                            <Button Grid.Column="1"
-                                    Command="{Binding ClosePanelsCommand}"
-                                    Classes="panelCloseBtn">
-                                <materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            </Button>
-                        </Grid>
-
-                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="16,0,16,32">
-                            <ItemsControl ItemsSource="{Binding EpisodeSeasons}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="models:Season">
-                                        <Expander Margin="0,0,0,8">
-                                            <Expander.Header>
-                                                <Grid ColumnDefinitions="*,Auto">
-                                                    <TextBlock Text="{Binding SeasonNumber, StringFormat='Sezon {0}'}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                                    <Border Grid.Column="1" Background="{DynamicResource SurfaceLightBrush}" CornerRadius="4" Padding="6,2">
-                                                        <TextBlock Text="{Binding Episodes.Count, StringFormat='{}{0} b&#246;l&#252;m'}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11"/>
-                                                    </Border>
-                                                </Grid>
-                                            </Expander.Header>
-                                            <ItemsControl ItemsSource="{Binding Episodes}" Margin="0,8,0,0">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate x:DataType="models:Episode">
-                                                        <Button Margin="0,0,0,8"
-                                                                Classes="episodeCardBtn"
-                                                                Command="{Binding #OverlayRoot.DataContext.PlayEpisodeFromOverlayCommand}"
-                                                                CommandParameter="{Binding}">
-                                                            <Panel>
-                                                                <Border Name="CardBackground" 
-                                                                        Background="{DynamicResource SurfaceLightBrush}" 
-                                                                        BorderBrush="{DynamicResource BorderBrush}" 
-                                                                        BorderThickness="1" 
-                                                                        CornerRadius="8"
-                                                                        ClipToBounds="True"/>
-                                                                        
-                                                                <Grid ColumnDefinitions="110,*,Auto" Margin="8">
-                                                                    <!-- Thumbnail -->
-                                                                    <Border Width="110" Height="62" ClipToBounds="True" CornerRadius="6" Background="{DynamicResource Bg1Brush}">
-                                                                        <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
-                                                                    </Border>
-                                                                    
-                                                                    <!-- Text Info -->
-                                                                    <StackPanel Grid.Column="1" Margin="12,0,12,0" VerticalAlignment="Center" Spacing="2">
-                                                                        <TextBlock Text="{Binding EpisodeNumber, StringFormat='Bölüm {0}'}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
-                                                                        <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
-                                                                        
-                                                                        <!-- Progress Bar -->
-                                                                        <ProgressBar Height="3" HorizontalAlignment="Left" Width="80" CornerRadius="1" Minimum="0" Maximum="100" Value="{Binding WatchedPercentage}"
-                                                                                     Foreground="{DynamicResource AccentBrush}" Background="#20000000" BorderThickness="0" Margin="0,4,0,0"
-                                                                                     IsVisible="{Binding ., Converter={StaticResource EpisodeWatchedProgressVisibilityConverter}}"/>
-                                                                    </StackPanel>
-                                                                    <!-- Check Badge -->
-                                                                    <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
-                                                                        <Border IsVisible="{Binding ., Converter={StaticResource EpisodeCompletionBadgeVisibilityConverter}}" VerticalAlignment="Center" ToolTip.Tip="İzlendi" Background="Transparent">
-                                                                            <materialIcons:MaterialIcon Kind="CheckCircleOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}"/>
-                                                                        </Border>
-                                                                    </StackPanel>
-                                                                </Grid>
-
-                                                                <!-- Active Selection Border -->
-                                                                <Border IsHitTestVisible="False"
-                                                                        BorderBrush="{DynamicResource AccentBrush}"
-                                                                        BorderThickness="2"
-                                                                        CornerRadius="8"
-                                                                        Background="Transparent">
-                                                                    <Border.IsVisible>
-                                                                        <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
-                                                                            <Binding Path="." Converter="{StaticResource EpisodeIdentityConverter}"/>
-                                                                            <Binding Path="#OverlayRoot.DataContext.CurrentEpisodeIdentity"/>
-                                                                        </MultiBinding>
-                                                                    </Border.IsVisible>
-                                                                </Border>
-                                                            </Panel>
-                                                        </Button>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </Expander>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-                    </Grid>
-                </Border>
-            </Grid>
-
-            <!-- 5b. Side Sheets (Quality) -->
-            <Grid x:Name="QualitySettingsPanel"
-                  Width="360" HorizontalAlignment="Right" VerticalAlignment="Stretch"
-                  IsVisible="{Binding IsQualitySettingsOpen}">
-                <Grid.RenderTransform>
-                    <TranslateTransform X="0"/>
-                </Grid.RenderTransform>
-                <Grid.Transitions>
-                    <Transitions>
-                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CubicEaseOut"/>
-                    </Transitions>
-                </Grid.Transitions>
-                
-                <Border Background="{DynamicResource SurfaceBrush}"
-                        BorderBrush="{DynamicResource BorderBrush}"
-                        BorderThickness="1,0,0,0">
-                    
-                    <Grid RowDefinitions="Auto,*">
-                        <Grid Grid.Row="0" Margin="24,24,24,16">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="Kalite" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            </StackPanel>
-                            <Button Grid.Column="1"
-                                    Command="{Binding ClosePanelsCommand}"
-                                    Classes="panelCloseBtn">
-                                <materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            </Button>
-                        </Grid>
-
-                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24,0,24,32">
-                            <StackPanel>
-                                <!-- Detected Quality -->
-                                <TextBlock Text="MEVCUT KAL&#304;TE" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,12"/>
-
-                                <!-- Resolution Badge -->
-                                <Border Background="{DynamicResource SurfaceLightBrush}" CornerRadius="8" Padding="16,12" Margin="0,0,0,20">
-                                    <StackPanel>
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4" Spacing="8">
-                                            <TextBlock Text="{Binding StreamQuality.ResolutionLabel, FallbackValue='Tespit ediliyor...'}"
-                                                       FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                            <Border Background="{DynamicResource AccentBrush}" CornerRadius="4" Padding="6,2" VerticalAlignment="Center"
-                                                    IsVisible="{Binding StreamQuality.QualityTier, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
-                                                <TextBlock Text="{Binding StreamQuality.QualityTier}" FontSize="11" FontWeight="Bold" Foreground="White"/>
-                                            </Border>
+                        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                            <Grid Margin="32,0,32,40">
+                                <StackPanel HorizontalAlignment="Stretch">
+                                    <TextBlock Text="{Binding CurrentChannel.Name}" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                    <TextBlock Text="{Binding DurationText}" Foreground="{DynamicResource TextMutedBrush}" FontSize="14" Margin="0,0,0,24" IsVisible="{Binding DurationText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+                                    
+                                    <!-- Live Only -->
+                                    <Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20" Margin="0,0,0,24">
+                                        <Border.IsVisible>
+                                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                                <Binding Path="IsLiveContent"/>
+                                                <Binding Path="CurrentProgram.Title" Converter="{StaticResource StringNotEmptyToBoolConverter}"/>
+                                            </MultiBinding>
+                                        </Border.IsVisible>
+                                        <StackPanel>
+                                            <TextBlock Text="ŞU AN YAYINDA" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" LetterSpacing="1" Margin="0,0,0,12"/>
+                                            <TextBlock Text="{Binding CurrentProgram.Title}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                                            <TextBlock Text="{Binding CurrentProgram.TimeRange}" Foreground="{DynamicResource TextMutedBrush}" FontSize="13" Margin="0,0,0,12" IsVisible="{Binding HasCurrentProgramInfo}"/>
+                                            <TextBlock Text="{Binding CurrentProgram.Description}" Foreground="{DynamicResource TextPrimaryBrush}" Opacity="0.8" FontSize="14" TextWrapping="Wrap" LineHeight="22" IsVisible="{Binding CurrentProgram.Description, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
                                         </StackPanel>
-                                        <TextBlock Text="{Binding StreamQuality.DetailLabel, FallbackValue=''}"
-                                                   FontSize="13" Foreground="{DynamicResource TextMutedBrush}"
-                                                   IsVisible="{Binding IsLiveContent}"/>
-                                        <TextBlock Text="{Binding StreamQuality.VideoCodec, FallbackValue=''}"
-                                                   FontSize="13" Foreground="{DynamicResource TextMutedBrush}"
-                                                   IsVisible="{Binding !IsLiveContent}"/>
+                                    </Border>
+
+                                    <!-- VOD Plot -->
+                                    <Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20" Margin="0,0,0,24" IsVisible="{Binding CurrentChannel.Plot, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+                                        <TextBlock Text="{Binding CurrentChannel.Plot}" Foreground="{DynamicResource TextPrimaryBrush}" Opacity="0.8" FontSize="14" TextWrapping="Wrap" LineHeight="22"/>
+                                    </Border>
+
+                                    <StackPanel Margin="0,0,0,24" IsVisible="{Binding CurrentChannel.Director, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+                                        <TextBlock Text="YÖNETMEN" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,8"/>
+                                        <TextBlock Text="{Binding CurrentChannel.Director}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" TextWrapping="Wrap"/>
                                     </StackPanel>
-                                </Border>
 
-                                <!-- Video Info -->
-                                <TextBlock Text="V&#304;DEO DETAYLARI" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,12"/>
-                                <Grid Margin="0,0,0,12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition/>
-                                        <RowDefinition/>
-                                        <RowDefinition/>
-                                        <RowDefinition/>
-                                    </Grid.RowDefinitions>
-                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="&#199;&#246;z&#252;n&#252;rl&#252;k" Foreground="{DynamicResource TextMutedBrush}" FontSize="13" Margin="0,0,16,8"/>
-                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding StreamQuality.ResolutionLabel, FallbackValue='-'}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                                    
-                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="FPS" Foreground="{DynamicResource TextMutedBrush}" FontSize="13" Margin="0,0,16,8"/>
-                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding StreamQuality.Fps, StringFormat='{}{0} fps', FallbackValue='-'}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                                    
-                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Codec" Foreground="{DynamicResource TextMutedBrush}" FontSize="13" Margin="0,0,16,8"/>
-                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding StreamQuality.VideoCodec, FallbackValue='-'}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                                    
-                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Bit Rate" Foreground="{DynamicResource TextMutedBrush}" FontSize="13" Margin="0,0,16,8"
-                                               IsVisible="{Binding IsLiveContent}"/>
-                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding StreamQuality.VideoBitrate, Converter={StaticResource BitrateDisplayConverter}}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" FontWeight="SemiBold"
-                                               IsVisible="{Binding IsLiveContent}"/>
-                                </Grid>
-
-                                <!-- Audio Info -->
-                                <TextBlock Text="SES DETAYLARI" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,12,0,8"/>
-                                <Border Background="{DynamicResource SurfaceLightBrush}" CornerRadius="8" Padding="16,12">
-                                    <TextBlock Text="{Binding StreamQuality.AudioDetailLabel, FallbackValue='Tespit ediliyor...'}"
-                                               FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                </Border>
-
-                                <!-- Playback Speed (Only for VOD/Series) -->
-                                <StackPanel IsVisible="{Binding !IsLiveContent}">
-                                    <TextBlock Text="OYNATMA HIZI" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,24,0,12"/>
-                                    <UniformGrid Columns="3">
-                                        <Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=0.5}"
-                                                Content="0.5x" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="0,0,4,4"/>
-                                        <Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=0.75}"
-                                                Content="0.75x" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,4,4"/>
-                                        <Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=1.0}"
-                                                Content="Normal" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,0,4"/>
-                                        <Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=1.25}"
-                                                Content="1.25x" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="0,0,4,0"/>
-                                        <Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=1.5}"
-                                                Content="1.5x" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,4,0"/>
-                                        <Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=2.0}"
-                                                Content="2.0x" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,0,0"/>
-                                    </UniformGrid>
+                                    <StackPanel Margin="0,0,0,24" IsVisible="{Binding CurrentChannel.Cast, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+                                        <TextBlock Text="OYUNCULAR" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,8"/>
+                                        <TextBlock Text="{Binding CurrentChannel.Cast}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" TextWrapping="Wrap" LineHeight="22"/>
+                                    </StackPanel>
                                 </StackPanel>
-                            </StackPanel>
+                            </Grid>
                         </ScrollViewer>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Audio Settings -->
+            <Grid x:Name="AudioSettingsPanel" Width="400" HorizontalAlignment="Right" IsVisible="{Binding IsAudioSettingsOpen}">
+                <Grid.Transitions><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" Easing="CubicEaseOut"/></Transitions></Grid.Transitions>
+                <Border Background="{DynamicResource SurfaceBrush}" BorderThickness="0"><Border.BoxShadow><BoxShadows>0 0 40 0 #A6000000</BoxShadows></Border.BoxShadow>
+                    <Grid RowDefinitions="Auto,*">
+                        <Grid Grid.Row="0" Margin="32,40,32,24" ColumnDefinitions="*,Auto">
+                            <StackPanel VerticalAlignment="Center"><TextBlock Text="SES VE ALTYAZI" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1.5" Margin="0,0,0,16"/><Border Height="1" Background="{DynamicResource Surface1Brush}" Margin="0,0,0,8" Opacity="0.5"/></StackPanel>
+                            <Button Grid.Column="1" Command="{Binding ClosePanelsCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0"><materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}"/></Button>
+                        </Grid>
+                        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Visible"><StackPanel Margin="32,0,32,40"><TextBlock Text="SES" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,12"/><ItemsControl ItemsSource="{Binding AudioTracks}"><ItemsControl.ItemTemplate><DataTemplate><Button Tag="{Binding Id}" Click="AudioTrack_Click" Classes="listItemBtn" Margin="0,0,0,8" Content="{Binding Name}"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl><TextBlock Text="ALTYAZI" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,32,0,12"/><ItemsControl ItemsSource="{Binding SubtitleTracks}" Margin="0,0,0,24"><ItemsControl.ItemTemplate><DataTemplate><Button Tag="{Binding Id}" Click="SubtitleTrack_Click" Classes="listItemBtn" Margin="0,0,0,8" Content="{Binding Name}"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></ScrollViewer>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Episodes Panel -->
+            <Grid x:Name="EpisodesPanel" Width="400" HorizontalAlignment="Right" IsVisible="{Binding IsEpisodesPanelOpen}">
+                <Grid.Transitions><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" Easing="CubicEaseOut"/></Transitions></Grid.Transitions>
+                <Border Background="{DynamicResource SurfaceBrush}" BorderThickness="0"><Border.BoxShadow><BoxShadows>0 0 40 0 #A6000000</BoxShadows></Border.BoxShadow>
+                    <Grid RowDefinitions="Auto,*">
+                        <Grid Grid.Row="0" Margin="32,40,32,24" ColumnDefinitions="*,Auto">
+                            <StackPanel VerticalAlignment="Center"><TextBlock Text="BÖLÜMLER" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1.5" Margin="0,0,0,8"/><TextBlock Text="{Binding EpisodesPanelTitle}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="16" FontWeight="Bold" Margin="0,0,0,16" IsVisible="{Binding EpisodesPanelTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/><Border Height="1" Background="{DynamicResource Surface1Brush}" Margin="0,0,0,8" Opacity="0.5"/></StackPanel>
+                            <Button Grid.Column="1" Command="{Binding ClosePanelsCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0"><materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}"/></Button>
+                        </Grid>
+                        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Padding="24,0,24,40">
+                            <ItemsControl ItemsSource="{Binding EpisodeSeasons}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="models:Season"><Expander Margin="0,0,0,8"><Expander.Header><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding SeasonNumber, StringFormat='Sezon {0}'}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/><Border Grid.Column="1" Background="{DynamicResource Surface1Brush}" CornerRadius="4" Padding="6,2"><TextBlock Text="{Binding Episodes.Count, StringFormat='{}{0} b&#246;l&#252;m'}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11"/></Border></Grid></Expander.Header><ItemsControl ItemsSource="{Binding Episodes}" Margin="0,8,0,0"><ItemsControl.ItemTemplate><DataTemplate x:DataType="models:Episode"><Button Margin="0,0,0,8" Classes="episodeCardBtn" Command="{Binding #OverlayRoot.DataContext.PlayEpisodeFromOverlayCommand}" CommandParameter="{Binding}"><Panel><Border Name="CardBackground" Background="{DynamicResource Surface1Brush}" BorderThickness="0" CornerRadius="8" ClipToBounds="True"/><Grid ColumnDefinitions="110,*,Auto" Margin="8"><Border Width="110" Height="62" ClipToBounds="True" CornerRadius="6" Background="{DynamicResource Bg1Brush}"><controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/></Border><StackPanel Grid.Column="1" Margin="12,0,12,0" VerticalAlignment="Center" Spacing="4"><TextBlock Text="{Binding EpisodeNumber, StringFormat='Bölüm {0}'}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}"/><TextBlock Text="{Binding Name}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/><ProgressBar Height="4" HorizontalAlignment="Left" Width="80" CornerRadius="2" Minimum="0" Maximum="100" Value="{Binding WatchedPercentage}" Foreground="{DynamicResource AccentBrush}" Background="#20000000" BorderThickness="0" Margin="0,4,0,0" IsVisible="{Binding ., Converter={StaticResource EpisodeWatchedProgressVisibilityConverter}}"/></StackPanel><StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right"><Border IsVisible="{Binding ., Converter={StaticResource EpisodeCompletionBadgeVisibilityConverter}}" VerticalAlignment="Center" ToolTip.Tip="İzlendi" Background="Transparent"><materialIcons:MaterialIcon Kind="CheckCircleOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}"/></Border></StackPanel></Grid><Border IsHitTestVisible="False" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="2" CornerRadius="8" Background="Transparent" IsVisible="{Binding IsSelected}"/></Panel></Button></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></Expander></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Quality Panel -->
+            <Grid x:Name="QualitySettingsPanel" Width="400" HorizontalAlignment="Right" IsVisible="{Binding IsQualitySettingsOpen}">
+                <Grid.Transitions><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" Easing="CubicEaseOut"/></Transitions></Grid.Transitions>
+                <Border Background="{DynamicResource SurfaceBrush}" BorderThickness="0"><Border.BoxShadow><BoxShadows>0 0 40 0 #A6000000</BoxShadows></Border.BoxShadow>
+                    <Grid RowDefinitions="Auto,*">
+                        <Grid Grid.Row="0" Margin="32,40,32,24" ColumnDefinitions="*,Auto">
+                            <StackPanel VerticalAlignment="Center"><TextBlock Text="YAYIN BİLGİSİ" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1.5" Margin="0,0,0,16"/><Border Height="1" Background="{DynamicResource Surface1Brush}" Margin="0,0,0,8" Opacity="0.5"/></StackPanel>
+                            <Button Grid.Column="1" Command="{Binding ClosePanelsCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0"><materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}"/></Button>
+                        </Grid>
+                        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Padding="32,0,32,40"><StackPanel><TextBlock Text="VİDEO" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1.5" Margin="0,0,0,12"/><Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20" Margin="0,0,0,24"><Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto"><TextBlock Grid.Row="0" Text="Çözünürlük" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Margin="0,0,40,12"/><TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding StreamQuality.ResolutionLabel, FallbackValue='-'}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" FontWeight="Bold" Margin="0,0,0,12"/><TextBlock Grid.Row="1" Text="Kare hızı" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Margin="0,0,40,12"/><TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding StreamQuality.Fps, StringFormat='{}{0} FPS', FallbackValue='-'}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" FontWeight="Bold" Margin="0,0,0,12"/><TextBlock Grid.Row="2" Text="Codec" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Margin="0,0,40,12"/><TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding StreamQuality.VideoCodec, FallbackValue='-'}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" FontWeight="Bold" Margin="0,0,0,12"/><TextBlock Grid.Row="3" Text="Bit hızı" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Margin="0,0,40,0"/><TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding StreamQuality.VideoBitrate, Converter={StaticResource BitrateDisplayConverter}, FallbackValue='Bilinmiyor'}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" FontWeight="Bold"/></Grid></Border><TextBlock Text="SES" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1.5" Margin="0,0,0,12"/><Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20"><TextBlock Text="{Binding StreamQuality.AudioDetailLabel, FallbackValue='Bilinmiyor'}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/></Border><StackPanel IsVisible="{Binding !IsLiveContent}"><TextBlock Text="OYNATMA HIZI" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1.5" Margin="0,32,0,12"/><UniformGrid Columns="3"><Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=0.5}" Content="0.5x" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="0,0,8,8"/><Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=0.75}" Content="0.75x" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,4,8"/><Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=1.0}" Content="Normal" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="8,0,0,8"/><Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=1.25}" Content="1.25x" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="0,0,8,0"/><Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=1.5}" Content="1.5x" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,4,0"/><Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=2.0}" Content="2.0x" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="8,0,0,0"/></UniformGrid></StackPanel></StackPanel></ScrollViewer>
                     </Grid>
                 </Border>
             </Grid>
 
         </Grid>
 
-        <!-- Buffer Shield -->
-        <Border Background="Black"
-                IsHitTestVisible="True"
-                ZIndex="900"
-                IsVisible="{Binding IsBufferShieldVisible}"/>
-
-        <!-- Loading state back button -->
-        <Button Command="{Binding ClosePlayerCommand}"
-                Classes="iconBtn"
-                Background="#33000000"
-                CornerRadius="8"
-                ZIndex="1001"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Top"
-                Margin="24,24,0,0"
-                IsVisible="{Binding IsBuffering}">
-            <materialIcons:MaterialIcon Kind="ArrowLeft" Width="28" Height="28" Foreground="White"/>
-        </Button>
-
-        <!-- 6. Volume Toast Indicator -->
-        <Border x:Name="VolumeToast"
-                Background="#99000000"
-                CornerRadius="8"
-                Padding="16,8"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Top"
-                Margin="0,40,0,0"
-                IsHitTestVisible="False"
-                ZIndex="1000"
-                IsVisible="{Binding $parent[UserControl].IsVolumeToastVisible}"
-                Opacity="{Binding $parent[UserControl].IsVolumeToastVisible, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=OpacityOnly}">
-            <Border.Transitions>
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
-                </Transitions>
-            </Border.Transitions>
-            <StackPanel Orientation="Horizontal" Spacing="8">
-                <materialIcons:MaterialIcon Kind="VolumeOff" Width="18" Height="18" Foreground="White" IsVisible="{Binding IsMuted}"/>
-                <materialIcons:MaterialIcon Kind="VolumeHigh" Width="18" Height="18" Foreground="White" IsVisible="{Binding IsMuted, Converter={StaticResource InverseBoolConverter}}"/>
-                
-                <TextBlock Text="SESSIZ" FontSize="14" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center" IsVisible="{Binding IsMuted}"/>
-                <TextBlock Text="{Binding Volume, StringFormat='{}{0}%'}" FontSize="14" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" IsVisible="{Binding IsMuted, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
-            </StackPanel>
+        <!-- Overlays -->
+        <Border Background="Black" IsHitTestVisible="True" ZIndex="900" IsVisible="{Binding IsBufferShieldVisible}"/>
+        <Button Command="{Binding ClosePlayerCommand}" Classes="iconBtn" Background="#33000000" CornerRadius="8" ZIndex="1001" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="24,24,0,0" IsVisible="{Binding IsBuffering}"><materialIcons:MaterialIcon Kind="ArrowLeft" Width="28" Height="28" Foreground="White"/></Button>
+        
+        <Border x:Name="VolumeToast" Background="#99000000" CornerRadius="8" Padding="16,8" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,40,0,0" IsHitTestVisible="False" ZIndex="1000" IsVisible="{Binding $parent[UserControl].IsVolumeToastVisible}" Opacity="{Binding $parent[UserControl].IsVolumeToastVisible, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=OpacityOnly}">
+            <Border.Transitions><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.2"/></Transitions></Border.Transitions>
+            <StackPanel Orientation="Horizontal" Spacing="8"><materialIcons:MaterialIcon Kind="VolumeOff" Width="18" Height="18" Foreground="White" IsVisible="{Binding IsMuted}"/><materialIcons:MaterialIcon Kind="VolumeHigh" Width="18" Height="18" Foreground="White" IsVisible="{Binding IsMuted, Converter={StaticResource InverseBoolConverter}}"/><TextBlock Text="SESSIZ" FontSize="14" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center" IsVisible="{Binding IsMuted}"/><TextBlock Text="{Binding Volume, StringFormat='{}{0}%'}" FontSize="14" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" IsVisible="{Binding IsMuted, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/></StackPanel>
         </Border>
 
-        <Border x:Name="SeekToast"
-                Background="#99000000"
-                CornerRadius="8"
-                Padding="16,8"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Top"
-                Margin="0,40,0,0"
-                IsHitTestVisible="False"
-                ZIndex="1000"
-                IsVisible="{Binding $parent[UserControl].IsSeekToastVisible}"
-                Opacity="{Binding $parent[UserControl].IsSeekToastVisible, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=OpacityOnly}">
-            <Border.Transitions>
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
-                </Transitions>
-            </Border.Transitions>
-            <StackPanel Orientation="Horizontal" Spacing="6">
-                <materialIcons:MaterialIcon Kind="ClockFast" Width="18" Height="18" Foreground="White" Opacity="0.8"/>
-                <TextBlock Text="{Binding $parent[UserControl].SeekToastText}"
-                           FontSize="14"
-                           FontWeight="Bold"
-                           Foreground="White"/>
-            </StackPanel>
+        <Border x:Name="SeekToast" Background="#99000000" CornerRadius="8" Padding="16,8" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,40,0,0" IsHitTestVisible="False" ZIndex="1000" IsVisible="{Binding $parent[UserControl].IsSeekToastVisible}" Opacity="{Binding $parent[UserControl].IsSeekToastVisible, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=OpacityOnly}">
+            <Border.Transitions><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.2"/></Transitions></Border.Transitions>
+            <StackPanel Orientation="Horizontal" Spacing="6"><materialIcons:MaterialIcon Kind="ClockFast" Width="18" Height="18" Foreground="White" Opacity="0.8"/><TextBlock Text="{Binding $parent[UserControl].SeekToastText}" FontSize="14" FontWeight="Bold" Foreground="White"/></StackPanel>
         </Border>
 
-        <!-- 5. Ephemeral UI (Buffering Spinner) -->
-        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
-                    ZIndex="950"
-                    IsVisible="{Binding IsBuffering}">
-            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                <Ellipse Width="10" Height="10" Fill="{DynamicResource AccentBrush}" Opacity="0.35">
-                    <Ellipse.Styles>
-                        <Style Selector="Ellipse">
-                            <Style.Animations>
-                                <Animation Duration="0:0:1.0" IterationCount="INFINITE">
-                                    <KeyFrame Cue="0%">
-                                        <Setter Property="Opacity" Value="1"/>
-                                    </KeyFrame>
-                                    <KeyFrame Cue="33%">
-                                        <Setter Property="Opacity" Value="0.35"/>
-                                    </KeyFrame>
-                                    <KeyFrame Cue="66%">
-                                        <Setter Property="Opacity" Value="0.35"/>
-                                    </KeyFrame>
-                                    <KeyFrame Cue="100%">
-                                        <Setter Property="Opacity" Value="1"/>
-                                    </KeyFrame>
-                                </Animation>
-                            </Style.Animations>
-                        </Style>
-                    </Ellipse.Styles>
-                </Ellipse>
-                <Ellipse Width="10" Height="10" Fill="{DynamicResource AccentBrush}" Opacity="0.35">
-                    <Ellipse.Styles>
-                        <Style Selector="Ellipse">
-                            <Style.Animations>
-                                <Animation Duration="0:0:1.0" IterationCount="INFINITE">
-                                    <KeyFrame Cue="0%">
-                                        <Setter Property="Opacity" Value="0.35"/>
-                                    </KeyFrame>
-                                    <KeyFrame Cue="33%">
-                                        <Setter Property="Opacity" Value="1"/>
-                                    </KeyFrame>
-                                    <KeyFrame Cue="66%">
-                                        <Setter Property="Opacity" Value="0.35"/>
-                                    </KeyFrame>
-                                    <KeyFrame Cue="100%">
-                                        <Setter Property="Opacity" Value="0.35"/>
-                                    </KeyFrame>
-                                </Animation>
-                            </Style.Animations>
-                        </Style>
-                    </Ellipse.Styles>
-                </Ellipse>
-                <Ellipse Width="10" Height="10" Fill="{DynamicResource AccentBrush}" Opacity="0.35">
-                    <Ellipse.Styles>
-                        <Style Selector="Ellipse">
-                            <Style.Animations>
-                                <Animation Duration="0:0:1.0" IterationCount="INFINITE">
-                                    <KeyFrame Cue="0%">
-                                        <Setter Property="Opacity" Value="0.35"/>
-                                    </KeyFrame>
-                                    <KeyFrame Cue="33%">
-                                        <Setter Property="Opacity" Value="0.35"/>
-                                    </KeyFrame>
-                                    <KeyFrame Cue="66%">
-                                        <Setter Property="Opacity" Value="1"/>
-                                    </KeyFrame>
-                                    <KeyFrame Cue="100%">
-                                        <Setter Property="Opacity" Value="0.35"/>
-                                    </KeyFrame>
-                                </Animation>
-                            </Style.Animations>
-                        </Style>
-                    </Ellipse.Styles>
-                </Ellipse>
-            </StackPanel>
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" ZIndex="950" IsVisible="{Binding IsBuffering}">
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center"><Ellipse Width="10" Height="10" Fill="{DynamicResource AccentBrush}" Opacity="0.35"><Ellipse.Styles><Style Selector="Ellipse"><Style.Animations><Animation Duration="0:0:1.0" IterationCount="INFINITE"><KeyFrame Cue="0%"><Setter Property="Opacity" Value="1"/></KeyFrame><KeyFrame Cue="33%"><Setter Property="Opacity" Value="0.35"/></KeyFrame><KeyFrame Cue="66%"><Setter Property="Opacity" Value="0.35"/></KeyFrame><KeyFrame Cue="100%"><Setter Property="Opacity" Value="1"/></KeyFrame></Animation></Style.Animations></Style></Ellipse.Styles></Ellipse><Ellipse Width="10" Height="10" Fill="{DynamicResource AccentBrush}" Opacity="0.35"><Ellipse.Styles><Style Selector="Ellipse"><Style.Animations><Animation Duration="0:0:1.0" IterationCount="INFINITE"><KeyFrame Cue="0%"><Setter Property="Opacity" Value="0.35"/></KeyFrame><KeyFrame Cue="33%"><Setter Property="Opacity" Value="1"/></KeyFrame><KeyFrame Cue="66%"><Setter Property="Opacity" Value="0.35"/></KeyFrame><KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.35"/></KeyFrame></Animation></Style.Animations></Style></Ellipse.Styles></Ellipse><Ellipse Width="10" Height="10" Fill="{DynamicResource AccentBrush}" Opacity="0.35"><Ellipse.Styles><Style Selector="Ellipse"><Style.Animations><Animation Duration="0:0:1.0" IterationCount="INFINITE"><KeyFrame Cue="0%"><Setter Property="Opacity" Value="0.35"/></KeyFrame><KeyFrame Cue="33%"><Setter Property="Opacity" Value="0.35"/></KeyFrame><KeyFrame Cue="66%"><Setter Property="Opacity" Value="1"/></KeyFrame><KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.35"/></KeyFrame></Animation></Style.Animations></Style></Ellipse.Styles></Ellipse></StackPanel>
             <TextBlock Text="Y&#252;kleniyor..." Foreground="White" FontSize="13" HorizontalAlignment="Center" Margin="0,12,0,0"/>
-            <TextBlock Text="{Binding PlayerLoadingWarningMessage}"
-                       Foreground="#FFA500"
-                       FontSize="13"
-                       HorizontalAlignment="Center"
-                       TextWrapping="Wrap"
-                       MaxWidth="350"
-                       TextAlignment="Center"
-                       Margin="0,8,0,0"
-                       IsVisible="{Binding PlayerLoadingWarningMessage, 
-                                    Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+            <TextBlock Text="{Binding PlayerLoadingWarningMessage}" Foreground="#FFA500" FontSize="13" HorizontalAlignment="Center" TextWrapping="Wrap" MaxWidth="350" TextAlignment="Center" Margin="0,8,0,0" IsVisible="{Binding PlayerLoadingWarningMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
         </StackPanel>
     </Grid>
 </UserControl>

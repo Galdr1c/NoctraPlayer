@@ -5,21 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## v30.2 – Premium Video Oynatıcı Arayüzü (2026-03-05)
+## v30.2 – Premium Video Oynatıcı ve Global Tema Modernizasyonu (2026-03-05)
 
 ### 🎨 Görsel ve Arayüz İyileştirmeleri
-- **Minimalist Oynatıcı Kontrolleri (Netflix Tarzı)**: Video oynatıcı üzerindeki devasa ve kaba kontrol butonları tamamen kaldırıldı. Yerine, yalnızca saf ikonlardan oluşan, üzerine gelindiğinde (hover) beliren zarif, şeffaf kontroller (`iconBtn`) eklendi.
-- **Kesintisiz Zaman Çizelgesi (Timeline)**: İlerleme çubuğunun yanlarındaki kalın metinler ve arka planlar temizlendi. Slider artık oynatıcı alt barının hemen üstünde incecik, modern bir çizgi halinde boydan boya uzanıyor.
-- **Kusursuz Okunabilirlik (Bottom Gradient)**: Alt kontrol panelinin arkasına, şeffaftan başlayıp en altta tamamen siyaha (`#FF000000`) dönen geniş bir gradyan (gölge) katmanı eklendi. Bu sayede videonun rengi ne olursa olsun (beyaz altyazılar vb.) oynatma tuşları ve süre metinleri %100 okunaklı kalıyor.
-- **Premium "CANLI" Rozeti**: Canlı TV kanallarında oynatma çubuğunun yanında beliren kaba kırmızı buton kaldırıldı. Yerine, EPG program başlığının hemen soluna yerleşen, estetik "yanıp sönen nokta" (Pulse) animasyonuna sahip, TV hissiyatı veren şık bir CANLI rozeti eklendi.
-- **Minimalist Bildirimler (Toasts)**: Ses açma/kısma ve ileri/geri sarma (Seek) eylemlerinde ekranın tam ortasında beliren devasa, dikkat dağıtıcı bildirim kutuları silindi. Yerine, ekranın üst orta kısmında (Top-Center) beliren, ikon destekli çok daha zarif ve küçük hap (pill) bildirimler eklendi.
-- **Estetik Yan Menüler (Side Panels)**: Bölümler, Kalite, Ayarlar ve Hakkında yan menüleri (Side Sheets) ekranın sağından kayarak gelirken artık dümdüz değil, sol kısımları yuvarlatılmış (`CornerRadius="24,0,0,24"`) ve hafif gölgeli (BoxShadow) premium bir katman olarak açılıyor.
-- **Kalıcı Ses Çubuğu**: Ses düzeyi ikonunun sağına her zaman görünür, yatay ve ince bir ses kaydırıcısı (Volume Slider) eklendi.
+- **Minimalist Oynatıcı Kontrolleri (Netflix Tarzı)**: Video oynatıcı üzerindeki devasa kontrol butonları tamamen kaldırıldı. Yerine, yalnızca saf ikonlardan oluşan, üzerine gelindiğinde beliren zarif kontroller (`iconBtn`) eklendi.
+- **Dinamik ve Duyarlı (Responsive) Yan Paneller**: Hakkında, Bölümler, Kalite ve Ses yan menüleri artık pencere boyutuna göre otomatik ölçekleniyor. Küçük pencerelerde daralıp, büyük pencerelerde `MaxWidth` sınırına kadar genişleyen esnek bir yapıya geçildi.
+- **Kusursuz Metin Hizalaması (Overflow Fix)**: Yan panellerdeki uzun film özetleri ve açıklamaların kutu dışına taşması sorunu kökten çözüldü. Tüm içerik alanları `Grid` sistemine taşınarak metinlerin her koşulda kutu içinde kalması ve alt satıra geçmesi (`TextWrapping`) garanti altına alındı.
+- **Koyu Tema Renk Düzeltmesi (Deep Black)**: Koyu temadaki (Dark Theme) mavi/lacivert ağırlıklı arka plan ve panel renkleri (`#161426`) tamamen temizlendi. Yerine çok daha profesyonel ve modern bir "OLED Black" estetiği sağlayan nötr siyah ve koyu gri tonları (`#0A0A0A`, `#1A1A1A`) getirildi.
+- **Açık Tema Renk Düzeltmesi (Studio White)**: Açık temadaki (Light Theme) pembemsi/morumsu kirli beyaz tonlar kaldırıldı. Yerine tam stüdyo beyazı ve yumuşak gri tonları (`#FFFFFF`, `#FAFAFA`) entegre edilerek tertemiz bir görünüm sağlandı.
+- **Premium "CANLI" ve Pulse Animasyonu**: Canlı yayınlarda program başlığının hemen soluna yerleşen, estetik "yanıp sönen nokta" (Pulse) animasyonuna sahip şık bir CANLI rozeti eklendi.
+- **Akıllı İçerik Bilgisi (VOD vs Live)**: Hakkında panelindeki "Şu An Yayında" kutucuğu akıllı mantığa geçirildi; sadece canlı içeriklerde görünür hale getirildi. VOD içeriklerinde bu alan gizlenerek boş kutu görünümü engellendi.
+- **Minimalist Bildirimler (Toasts)**: Ses ve sarma bildirimleri ekranın üst orta kısmına taşındı ve küçük, modern "hap (pill)" tasarımına kavuşturuldu.
+- **VOD Kontrol İyileştirmeleri**: Film ve dizilerde play butonunun yanındaki ikonlar, 10 saniye ileri/geri sarma işlevini daha net belirten `Rewind10` ve `FastForward10` ikonlarıyla güncellendi.
 
 ### 📁 Değişen Dosyalar
 | Dosya | Değişiklik |
 |-------|------------|
-| `VideoOverlayView.axaml` | Ana oynatıcı UI tamamen baştan yazıldı. Buton stilleri, alt gradyan koruması, animasyonlu Canlı rozeti ve minimalist Toast bildirimleri eklendi. |
+| `VideoOverlayView.axaml` | Ana oynatıcı UI ve tüm yan panel mantığı responsive ve minimalist standartlara göre baştan yazıldı. |
+| `DarkTheme.axaml` | Mavi/Lacivert tonlar nötr derin siyah tonlarına dönüştürüldü. |
+| `LightTheme.axaml` | Pembemsi/Morumsu beyazlar saf stüdyo beyazına dönüştürüldü. |
+| `Converters.axaml` | Canlı ve VOD içerik ayrımı için yeni görünürlük dönüştürücüleri entegre edildi. |
 
 ---
 
