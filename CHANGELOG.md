@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v30.2 – Premium Video Oynatıcı Arayüzü (2026-03-05)
+
+### 🎨 Görsel ve Arayüz İyileştirmeleri
+- **Minimalist Oynatıcı Kontrolleri (Netflix Tarzı)**: Video oynatıcı üzerindeki devasa ve kaba kontrol butonları tamamen kaldırıldı. Yerine, yalnızca saf ikonlardan oluşan, üzerine gelindiğinde (hover) beliren zarif, şeffaf kontroller (`iconBtn`) eklendi.
+- **Kesintisiz Zaman Çizelgesi (Timeline)**: İlerleme çubuğunun yanlarındaki kalın metinler ve arka planlar temizlendi. Slider artık oynatıcı alt barının hemen üstünde incecik, modern bir çizgi halinde boydan boya uzanıyor.
+- **Kusursuz Okunabilirlik (Bottom Gradient)**: Alt kontrol panelinin arkasına, şeffaftan başlayıp en altta tamamen siyaha (`#FF000000`) dönen geniş bir gradyan (gölge) katmanı eklendi. Bu sayede videonun rengi ne olursa olsun (beyaz altyazılar vb.) oynatma tuşları ve süre metinleri %100 okunaklı kalıyor.
+- **Premium "CANLI" Rozeti**: Canlı TV kanallarında oynatma çubuğunun yanında beliren kaba kırmızı buton kaldırıldı. Yerine, EPG program başlığının hemen soluna yerleşen, estetik "yanıp sönen nokta" (Pulse) animasyonuna sahip, TV hissiyatı veren şık bir CANLI rozeti eklendi.
+- **Minimalist Bildirimler (Toasts)**: Ses açma/kısma ve ileri/geri sarma (Seek) eylemlerinde ekranın tam ortasında beliren devasa, dikkat dağıtıcı bildirim kutuları silindi. Yerine, ekranın üst orta kısmında (Top-Center) beliren, ikon destekli çok daha zarif ve küçük hap (pill) bildirimler eklendi.
+- **Estetik Yan Menüler (Side Panels)**: Bölümler, Kalite, Ayarlar ve Hakkında yan menüleri (Side Sheets) ekranın sağından kayarak gelirken artık dümdüz değil, sol kısımları yuvarlatılmış (`CornerRadius="24,0,0,24"`) ve hafif gölgeli (BoxShadow) premium bir katman olarak açılıyor.
+- **Kalıcı Ses Çubuğu**: Ses düzeyi ikonunun sağına her zaman görünür, yatay ve ince bir ses kaydırıcısı (Volume Slider) eklendi.
+
+### 📁 Değişen Dosyalar
+| Dosya | Değişiklik |
+|-------|------------|
+| `VideoOverlayView.axaml` | Ana oynatıcı UI tamamen baştan yazıldı. Buton stilleri, alt gradyan koruması, animasyonlu Canlı rozeti ve minimalist Toast bildirimleri eklendi. |
+
+---
+
 ## v30.1 – Video Oynatıcı, Format Tanıma ve Kesinti Kurtarma (2026-03-04)
 
 ### 🐛 Hata Düzeltmeleri ve Video İyileştirmeleri
