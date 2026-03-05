@@ -46,6 +46,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private readonly IVideoPlayerService _videoPlayerService;
     private readonly IEpgService _epgService;
     private readonly IMetadataService _metadataService;
+    private readonly IMediaService _mediaService;
     private readonly IContentDownloadService _contentDownloadService;
     private readonly INetworkService _networkService;
     private readonly ISettingsService _settingsService;
@@ -242,7 +243,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     public string DownloadButtonText => IsDownloadInProgress ? "Indiriliyor..." : "Indir";
 
+    [ObservableProperty]
     private Episode? _currentEpisode;
+
     private bool _creditsTriggered;
     private bool _isUserSeeking;
     private bool _hasPendingSkipSeekTarget;
@@ -306,6 +309,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         IVideoPlayerService videoPlayerService,
         IEpgService epgService,
         IMetadataService metadataService,
+        IMediaService mediaService,
         IContentDownloadService contentDownloadService,
         INetworkService networkService,
         IDispatcherService dispatcherService,
@@ -315,6 +319,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _videoPlayerService = videoPlayerService;
         _epgService = epgService;
         _metadataService = metadataService;
+        _mediaService = mediaService;
         _contentDownloadService = contentDownloadService;
         _networkService = networkService;
         _dispatcherService = dispatcherService;
@@ -743,10 +748,31 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         }
 
         // VOD / Dizi için TMDB metadata'yı doğrudan zenginleştir.
-        if (!IsLiveContent)
+        if (channel.Type == ChannelType.Series)
         {
-            // VOD content TMDB Enrichment is intentionally disabled to save API limits.
-            // Using provider logo exclusively.
+            try
+            {
+                // Sadece caller (MainViewModel.SelectMedia vb.) tarafından zaten zengin bir seri bağlamı 
+                // sağlanmamışsa veya boşsa veritabanından tekrar resolve etmeyi deniyoruz.
+                // Aksi takdirde, içinde Episode'lar olan zengin nesneyi eziyor ve Episodes panelini bozuyordu.
+                if (_currentSeriesContext == null || _currentSeriesContext.Seasons == null || _currentSeriesContext.Seasons.Count == 0)
+                {
+                    var allSeries = await _mediaService.GetSeriesAsync(channel.PlaylistId);
+                    var matchedSeries = allSeries.FirstOrDefault(s => 
+                        s.Name.Equals(channel.Name, StringComparison.OrdinalIgnoreCase) ||
+                        (channel.GroupTitle != null && s.Name.Equals(channel.GroupTitle, StringComparison.OrdinalIgnoreCase)));
+                    
+                    if (matchedSeries != null && requestVersion == _playRequestVersion && CurrentChannel?.Id == channel.Id)
+                    {
+                        _currentSeriesContext = matchedSeries;
+                        RefreshEpisodeBrowserContext(matchedSeries);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogDebug($"Failed to resolve series context: {ex.Message}");
+            }
         }
 
         // Oynatma sağlık kontrolü: 5sn içinde başlamadıysa otomatik yeniden dene.
@@ -816,7 +842,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         try
         {
-            var isEpisodePlayback = CurrentChannel.Type == ChannelType.Series && _currentEpisode?.Id > 0;
+            var isEpisodePlayback = CurrentChannel.Type == ChannelType.Series && CurrentEpisode?.Id > 0;
             var channelId = !isEpisodePlayback && CurrentChannel.Id > 0 ? CurrentChannel.Id : (int?)null;
             var livePosition = Math.Max(0, _videoPlayerService.Position);
             var currentPosition = TimeSpan.FromSeconds(Math.Max(Position, livePosition));
@@ -826,30 +852,30 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             await _watchHistoryService.TrackWatchAsync(
                 CurrentProfileId.Value,
                 channelId,
-                isEpisodePlayback ? _currentEpisode!.Id : null,
+                isEpisodePlayback ? CurrentEpisode!.Id : null,
                 currentPosition,
                 isCompleted,
                 currentDuration,
                 incrementDelta
             );
 
-            if (isEpisodePlayback && _currentEpisode != null)
+            if (isEpisodePlayback && CurrentEpisode != null)
             {
-                var finalCompleted = _currentEpisode.IsCompleted || isCompleted;
+                var finalCompleted = CurrentEpisode.IsCompleted || isCompleted;
                 _dispatcherService.BeginInvoke(() =>
                 {
-                    _currentEpisode.LastWatched = DateTime.UtcNow;
-                    _currentEpisode.WatchedPosition = finalCompleted && currentDuration.HasValue
+                    CurrentEpisode.LastWatched = DateTime.UtcNow;
+                    CurrentEpisode.WatchedPosition = finalCompleted && currentDuration.HasValue
                         ? currentDuration.Value
                         : currentPosition;
-                    _currentEpisode.IsCompleted = finalCompleted;
+                    CurrentEpisode.IsCompleted = finalCompleted;
                     if (currentDuration.HasValue)
                     {
-                        _currentEpisode.Duration = currentDuration.Value;
+                        CurrentEpisode.Duration = currentDuration.Value;
                     }
 
                     RefreshEpisodeBrowserContext(_currentSeriesContext);
-                    EpisodeProgressUpdated?.Invoke(this, _currentEpisode);
+                    EpisodeProgressUpdated?.Invoke(this, CurrentEpisode);
                 });
             }
         }
@@ -1769,7 +1795,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     /// </summary>
     public void SetCurrentEpisode(Episode? episode, Episode? nextEpisode = null, Series? series = null)
     {
-        _currentEpisode = episode;
+        CurrentEpisode = episode;
         CurrentEpisodeIdentity = BuildEpisodeIdentity(episode);
         NextEpisode = nextEpisode;
         _creditsTriggered = false;
@@ -1835,7 +1861,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     /// </summary>
     private void CheckIntroCreditsPosition(double pos)
     {
-        if (_currentEpisode == null || IsLiveContent || NextEpisode == null)
+        if (CurrentEpisode == null || IsLiveContent || NextEpisode == null)
         {
             return;
         }
@@ -1884,7 +1910,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private bool TryGetCreditsTriggerThreshold(out double triggerAt)
     {
         triggerAt = 0;
-        if (_currentEpisode == null)
+        if (CurrentEpisode == null)
         {
             return false;
         }
@@ -1894,7 +1920,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             ? Math.Max(0, Duration - EpisodeCompletedTailSeconds)
             : double.MaxValue;
 
-        if (_currentEpisode.CreditsStartSec is double creditsStartSec && creditsStartSec > 0)
+        if (CurrentEpisode.CreditsStartSec is double creditsStartSec && creditsStartSec > 0)
         {
             triggerAt = hasDuration
                 ? Math.Min(creditsStartSec, fallbackFiveMinuteTrigger)
@@ -2018,12 +2044,12 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             return new DownloadContentRequest(
                 profileId,
                 DownloadItemType.SeriesEpisode,
-                _currentEpisode?.Name ?? channel.Name,
-                _currentEpisode?.StreamUrl ?? channel.StreamUrl,
+                CurrentEpisode?.Name ?? channel.Name,
+                CurrentEpisode?.StreamUrl ?? channel.StreamUrl,
                 poster,
                 playlistId,
                 channel.Id,
-                _currentEpisode?.Id ?? 0,
+                CurrentEpisode?.Id ?? 0,
                 audioTracks,
                 subtitleTracks);
         }
@@ -2322,13 +2348,15 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _currentSeriesContext = series;
         EpisodesPanelTitle = series?.Name ?? CurrentChannel?.Name ?? string.Empty;
 
-        if (series == null || series.Seasons == null || series.Seasons.Count == 0)
+        var sourceSeasons = series?.Seasons;
+
+        if (sourceSeasons == null || sourceSeasons.Count == 0)
         {
             EpisodeSeasons = new List<Season>();
             return;
         }
 
-        EpisodeSeasons = series.Seasons
+        EpisodeSeasons = sourceSeasons
             .Where(s => s.Episodes != null && s.Episodes.Count > 0)
             .OrderBy(s => s.SeasonNumber)
             .ToList();
@@ -2643,7 +2671,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             return;
         }
 
-        _currentEpisode = episode;
+        CurrentEpisode = episode;
         CurrentEpisodeIdentity = BuildEpisodeIdentity(episode);
         NextEpisode = FindNextEpisodeInBrowser(episode);
         _creditsTriggered = false;

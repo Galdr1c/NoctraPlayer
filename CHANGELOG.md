@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v30.3 – Bölüm Paneli Optimizasyonu ve İzleme Takibi (2026-03-05)
+
+### 🎨 Görsel ve Arayüz İyileştirmeleri
+- **Kompakt Bölüm Kartları**: Video oynatıcı üzerindeki bölümler paneli daraltılarak daha ferah bir görünüme kavuşturuldu. Thumbnail boyutları (128x72 → 106x60) küçültülerek bölüm isimleri ve ikonlar için %25 daha fazla yatay alan açıldı.
+- **Entegre İzlendi (Watched) Rozeti**: Bölüm kartlarına, ana ekran tasarımıyla uyumlu "CheckCircleOutline" rozeti eklendi. `DockPanel` mimarisi sayesinde uzun bölüm isimlerinde dahi rozetin sağ kenarda her zaman görünür olması ve metnin düzgünce kırpılması sağlandı.
+- **İzleme Çubuğu (Progress Bar) Netliği**: Bölüm görselleri altındaki ilerleme çubuğu kalınlaştırıldı (3px → 5px) ve arkaplan kontrastı artırılarak her türlü thumbnail üzerinde belirgin görünmesi sağlandı.
+
+### 🐛 Hata Düzeltmeleri
+- **Bölüm Paneli Yükleme Hatası**: Bazı serilerde bölümler panelinin açılmamasına neden olan veri bağlamı (Series context) çakışması `PlayerViewModel` tarafında giderildi. Zengin metadata içeren serilerin üzerine boş veritabanı kayıtlarının yazılması engellenerek panelin her zaman dolu gelmesi sağlandı.
+
+### 📁 Değişen Dosyalar
+| Dosya | Değişiklik |
+|-------|------------|
+| `VideoOverlayView.axaml` | Bölüm kartları küçültüldü, rozet alanı optimize edildi ve progress bar belirginleştirildi. |
+| `PlayerViewModel.cs` | Seri içeriğinin (Sezon/Bölüm listesi) yükleme sırasında kaybolması engellendi. |
+
+---
+
+
 ## v30.2 – Premium Video Oynatıcı ve Global Tema Modernizasyonu (2026-03-05)
 
 ### 🎨 Görsel ve Arayüz İyileştirmeleri

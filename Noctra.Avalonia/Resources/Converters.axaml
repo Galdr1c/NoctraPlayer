@@ -28,6 +28,8 @@
   <converters:AvatarPathConverter x:Key="AvatarPathConverter" />
   <converters:BoolOrMultiConverter x:Key="BoolOrMultiConverter" />
   <converters:EqualityToBoolMultiConverter x:Key="EqualityToBoolMultiConverter" />
+  <converters:EqualityToThicknessMultiConverter x:Key="EqualityToThicknessMultiConverter" />
+  <converters:EqualityToBrushMultiConverter x:Key="EqualityToBrushMultiConverter" />
   <converters:AvatarExpressionConverter x:Key="AvatarExpressionConverter" />
   <converters:StringContainsConverter x:Key="StringContainsConverter" />
   <converters:BoolToPlayPauseIconConverter x:Key="BoolToPlayPauseIconConverter" />

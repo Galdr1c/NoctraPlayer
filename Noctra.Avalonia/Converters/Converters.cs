@@ -534,12 +534,69 @@ public class EqualityToBoolMultiConverter : IMultiValueConverter
 {
     public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (values.Count < 2)
-        {
+        if (values.Count < 2 || values[0] == null || values[1] == null)
             return false;
+
+        string v1 = values[0]?.ToString() ?? string.Empty;
+        string v2 = values[1]?.ToString() ?? string.Empty;
+
+        if (string.IsNullOrEmpty(v1) || string.IsNullOrEmpty(v2))
+            return false;
+
+        return string.Equals(v1, v2, StringComparison.Ordinal);
+    }
+}
+
+public class EqualityToThicknessMultiConverter : IMultiValueConverter
+{
+    public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (values.Count < 2 || values[0] == null || values[1] == null) 
+            return new Thickness(0);
+
+        string v1 = values[0]?.ToString() ?? string.Empty;
+        string v2 = values[1]?.ToString() ?? string.Empty;
+        
+        if (string.IsNullOrEmpty(v1) || string.IsNullOrEmpty(v2))
+            return new Thickness(0);
+
+        var isEqual = string.Equals(v1, v2, StringComparison.Ordinal);
+
+        if (isEqual && parameter is string p && double.TryParse(p, NumberStyles.Any, CultureInfo.InvariantCulture, out var thickness))
+        {
+            return new Thickness(thickness);
         }
 
-        return string.Equals(values[0]?.ToString(), values[1]?.ToString(), StringComparison.Ordinal);
+        return new Thickness(0);
+    }
+}
+
+public class EqualityToBrushMultiConverter : IMultiValueConverter
+{
+    public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (values.Count < 2 || values[0] == null || values[1] == null)
+            return Brushes.Transparent;
+
+        string v1 = values[0]?.ToString() ?? string.Empty;
+        string v2 = values[1]?.ToString() ?? string.Empty;
+
+        if (string.IsNullOrEmpty(v1) || string.IsNullOrEmpty(v2))
+            return Brushes.Transparent;
+
+        var isEqual = string.Equals(v1, v2, StringComparison.Ordinal);
+
+        if (isEqual && parameter is string resourceKey)
+        {
+            if (Application.Current?.TryGetResource(resourceKey, out var resource) == true && resource is IBrush brush)
+            {
+                return brush;
+            }
+
+            if (resourceKey.Equals("AccentBrush", StringComparison.OrdinalIgnoreCase)) return Brushes.MediumPurple;
+        }
+
+        return Brushes.Transparent;
     }
 }
 
