@@ -339,6 +339,17 @@ public partial class MetadataService : IMetadataService
                         metadata.NetworkLogoUrl = $"https://image.tmdb.org/t/p/h50{bestProvider.LogoPath}";
                     return; // Found a specific streaming provider match
                 }
+
+                // NEW: Default to first streaming provider (Flatrate) for the country if no context match
+                // This is better than the production studio for generic categories (e.g. "TR/DIZI")
+                var firstFlatrate = countryProviders.Flatrate?.FirstOrDefault();
+                if (firstFlatrate != null)
+                {
+                    metadata.NetworkName = firstFlatrate.Name;
+                    if (!string.IsNullOrEmpty(firstFlatrate.LogoPath))
+                        metadata.NetworkLogoUrl = $"https://image.tmdb.org/t/p/h50{firstFlatrate.LogoPath}";
+                    return;
+                }
             }
 
             // Priority 3: Origin Country match in Networks

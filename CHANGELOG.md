@@ -12,9 +12,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **Odaklanmış Anasayfa**: "Popüler Filmler" ve "Popüler Diziler" rayları kaldırılarak sadece "İzlemeye Devam Et" rayına odaklanıldı.
 - **Netflix Stili Kartlar**: "İzlemeye Devam Et" kartları için modern, yatay (16:9) ve Netflix tarzı yeni bir tasarım (`ContinueWatchingCard`) sisteme eklendi.
 - **Daha Zarif Görünüm**: Kart boyutları 260x146'ya çekilerek daha kompakt ve dengeli bir yerleşim sağlandı.
-- **İlerleme Çubuğu Düzeltmesi**: Dizi bölümlerinde (örn: Squid Game) izleme yüzdesinin anasayfaya yansımamasını sağlayan veri eşleme hatası giderildi.
-- **Hata Temizliği**: `MainWindow.axaml` üzerindeki yazım hataları (ToolTip, Icon adları) düzeltilerek derleme hataları giderildi.
-- **API Performans Optimizasyonu**: Popüler listeler için yapılan gereksiz API istekleri ve arka plan işlemleri temizlendi.
+- **İlerleme Çubuğu Düzeltmesi**: Dizi bölümlerinde izleme yüzdesinin anasayfaya yansımamasını sağlayan veri eşleme hatası giderildi.
+- **Logo Seçim Mantığı (Heuristic)**: Genel kategorilerde (TR/DIZI vb.) yerel yayıncı (Prime Video, Netflix vb.) logolarına üretim stüdyolarının (WB vb.) önünde öncelik verildi.
+- **Canlı TV Bilgi Paneli**: "Hakkında" panelindeki boş kutular ve gereksiz süre bilgileri temizlenerek daha sade bir görünüm elde edildi.
+- **Hata Temizliği**: `MainWindow.axaml` üzerindeki yazım hataları düzeltilerek derleme hataları giderildi.
 
 ### 📁 Değişen Dosyalar
 | Dosya | Değişiklik |
@@ -22,8 +23,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 | `HomeView.axaml` | Popüler içerik rayları kaldırıldı, yeni kart tasarımı entegre edildi. |
 | `ContinueWatchingCard.axaml` | [YENİ] Netflix stili yatay kart bileşeni. |
 | `MainViewModel.cs` | İzleme verisi eşleme mantığı düzeltildi ve kullanılmayan ray kodları temizlendi. |
-| `MainWindow.axaml` | UI düzeltmeleri ve ToolTip optimizasyonları yapıldı. |
-| `MetadataService.cs` | Artık kullanılmayan TMDB metodları kaldırıldı. |
+| `MetadataService.cs` | Logo seçim mantığı (heuristic) güncellendi. |
+| `VideoOverlayView.axaml` | Bilgi paneli (About) görsel hataları giderildi ve kontroller iyileştirildi. |
+| `SettingsWindow.axaml` | Sekme kontrolleri için görsel ve etkileşim iyileştirmeleri yapıldı. |
+
 
 ---
 
