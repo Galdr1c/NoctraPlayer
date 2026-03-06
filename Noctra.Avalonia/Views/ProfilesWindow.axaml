@@ -127,8 +127,9 @@
                                         </Border>
 
                                         <!-- Manage Mode Overlay -->
-                                        <Border Background="#CC000000" CornerRadius="14"
+                                        <Border Background="#CC000000" Opacity="0.7" CornerRadius="14"
                                                 IsVisible="{Binding DataContext.IsManageMode, RelativeSource={RelativeSource AncestorType=Window}}">
+                                                
                                             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                                                 <!-- Pencil Icon in Circle -->
                                                 <Border Width="48" Height="48"
@@ -136,16 +137,11 @@
                                                         Background="Transparent"
                                                         BorderBrush="White"
                                                         BorderThickness="2">
-                                                    <materialIcons:MaterialIcon Kind="Pencil" Width="20" Height="20"
+                                                    <materialIcons:MaterialIcon Kind="PencilOutline" Width="20" Height="20"
                                                                                  Foreground="White"
                                                                                  HorizontalAlignment="Center"
                                                                                  VerticalAlignment="Center"/>
                                                 </Border>
-                                                <TextBlock Text="Düzenle"
-                                                           FontSize="14"
-                                                           Foreground="White"
-                                                           HorizontalAlignment="Center"
-                                                           Margin="0,8,0,0"/>
                                             </StackPanel>
                                         </Border>
                                     </Grid>

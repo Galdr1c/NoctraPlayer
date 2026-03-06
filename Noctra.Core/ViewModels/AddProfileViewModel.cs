@@ -131,7 +131,6 @@ public partial class AddProfileViewModel : ObservableObject
             Url = baseUrl;
             _isUpdatingUrl = false;
 
-            StatusMessage = "M3U linki Xtream formatına dönüştürüldü";
             HasError = false;
         }
         catch (Exception ex)
@@ -164,7 +163,6 @@ public partial class AddProfileViewModel : ObservableObject
             Url = m3uUrl;
             _isUpdatingUrl = false;
 
-            StatusMessage = "Xtream bilgileri M3U linkine dönüştürüldü";
             HasError = false;
         }
         catch (Exception ex)

@@ -6,20 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## v30.9 – Anasayfa Sadeleştirme ve Performans (2026-03-06)
+## v30.9 – Anasayfa Sadeleştirme ve Netflix Tasarımı (2026-03-06)
 
 ### 🌟 Yeni Özellikler ve İyileştirmeler
-- **Odaklanmış Anasayfa**: Anasayfadaki "Popüler Filmler" ve "Popüler Diziler" rayları tamamen kaldırılarak sadece "İzlemeye Devam Et" rayına odaklanıldı.
-- **API Performans Optimizasyonu**: Anasayfa açılışında TMDB'den popüler listeleri çekmek için yapılan gereksiz API istekleri ve arka plan işlemleri temizlendi.
-- **Kod Temizliği**: Artık kullanılmayan `GetPopularMoviesAsync` ve `GetPopularSeriesAsync` metodları servis katmanından, ilgili özellikler ise ViewModel katmanından tamamen silindi.
+- **Odaklanmış Anasayfa**: "Popüler Filmler" ve "Popüler Diziler" rayları kaldırılarak sadece "İzlemeye Devam Et" rayına odaklanıldı.
+- **Netflix Stili Kartlar**: "İzlemeye Devam Et" kartları için modern, yatay (16:9) ve Netflix tarzı yeni bir tasarım (`ContinueWatchingCard`) sisteme eklendi.
+- **Daha Zarif Görünüm**: Kart boyutları 260x146'ya çekilerek daha kompakt ve dengeli bir yerleşim sağlandı.
+- **İlerleme Çubuğu Düzeltmesi**: Dizi bölümlerinde (örn: Squid Game) izleme yüzdesinin anasayfaya yansımamasını sağlayan veri eşleme hatası giderildi.
+- **Hata Temizliği**: `MainWindow.axaml` üzerindeki yazım hataları (ToolTip, Icon adları) düzeltilerek derleme hataları giderildi.
+- **API Performans Optimizasyonu**: Popüler listeler için yapılan gereksiz API istekleri ve arka plan işlemleri temizlendi.
 
 ### 📁 Değişen Dosyalar
 | Dosya | Değişiklik |
 |-------|------------|
-| `HomeView.axaml` | Popüler içerik rayları UI'dan kaldırıldı. |
-| `MainViewModel.cs` | Ray özellikleri ve içerik yükleme mantığı temizlendi. |
-| `MetadataService.cs` | TMDB popüler liste metodları kaldırıldı. |
-| `MainWindow.axaml.cs` | Görsel önbellekleme (image warmup) mantığı güncellendi. |
+| `HomeView.axaml` | Popüler içerik rayları kaldırıldı, yeni kart tasarımı entegre edildi. |
+| `ContinueWatchingCard.axaml` | [YENİ] Netflix stili yatay kart bileşeni. |
+| `MainViewModel.cs` | İzleme verisi eşleme mantığı düzeltildi ve kullanılmayan ray kodları temizlendi. |
+| `MainWindow.axaml` | UI düzeltmeleri ve ToolTip optimizasyonları yapıldı. |
+| `MetadataService.cs` | Artık kullanılmayan TMDB metodları kaldırıldı. |
 
 ---
 

@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:Noctra.ViewModels"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         mc:Ignorable="d"
         x:DataType="vm:AvatarPickerViewModel"
         x:CompileBindings="False"
@@ -17,19 +18,23 @@
         FontFamily="{StaticResource DefaultFontFamily}">
 
     <Window.Styles>
-        <!-- Close Button -->
-        <Style Selector="Button.AvatarCloseBtn">
+        <Style Selector="Button.CloseBtn">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                    <BrushTransition Property="Foreground" Duration="0:0:0.2"/>
+                </Transitions>
+            </Setter>
         </Style>
-        <Style Selector="Button.AvatarCloseBtn:pointerover">
+        <Style Selector="Button.CloseBtn:pointerover">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-        </Style>
+            <Setter Property="Background" Value="{DynamicResource Surface2Brush}"/> </Style>
 
-        <!-- Avatar Item Button -->
         <Style Selector="Button.AvatarItemBtn">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -60,9 +65,13 @@
             <!-- Header -->
             <Grid Grid.Row="0" Margin="0,0,0,20">
                 <TextBlock Text="Profil Resmi Seç" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                <Button HorizontalAlignment="Right" Content="✕" 
-                        Click="CloseButton_Click"
-                        Classes="AvatarCloseBtn"/>
+                
+                <Button Click="CloseButton_Click" Classes="CloseBtn" 
+                        HorizontalAlignment="Right" VerticalAlignment="Top" 
+                        Margin="16" Width="32" Height="32"
+                        CornerRadius="16" ToolTip.Tip="Kapat">
+                    <materialIcons:MaterialIcon Kind="Close" Width="20" Height="20"/>
+                </Button>
             </Grid>
 
             <!-- Avatar Grid -->

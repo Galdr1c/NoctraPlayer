@@ -129,7 +129,7 @@
                 </StackPanel>
 
                 <Button HorizontalAlignment="Right" Click="CloseButton_Click"
-                        Classes="CloseButtonStyle"/>
+                        Classes="CloseButtonStyle" ToolTip.Tip="Kapat"/>
             </Grid>
 
             <!-- CONTENT -->
@@ -139,7 +139,7 @@
                 <TabItem Classes="SettingsTab">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <materialIcons:MaterialIcon Kind="AccountOutline" Width="20" Height="20" />
+                            <materialIcons:MaterialIcon Kind="AccountBoxOutline" Width="20" Height="20" />
                             <TextBlock Text="Profil" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
@@ -235,7 +235,7 @@
                 <TabItem Classes="SettingsTab">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <materialIcons:MaterialIcon Kind="PlayCircleOutline" Width="20" Height="20" />
+                            <materialIcons:MaterialIcon Kind="PlayBoxOutline" Width="20" Height="20" />
                             <TextBlock Text="Oynatma &amp; İndirme" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
@@ -322,7 +322,7 @@
                 <TabItem Classes="SettingsTab">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <materialIcons:MaterialIcon Kind="FormatListBulleted" Width="20" Height="20" />
+                            <materialIcons:MaterialIcon Kind="FormatListBulletedSquare" Width="20" Height="20" />
                             <TextBlock Text="Kanal Listesi" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
@@ -391,7 +391,7 @@
                 <TabItem Classes="SettingsTab">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <materialIcons:MaterialIcon Kind="CalendarRange" Width="20" Height="20" />
+                            <materialIcons:MaterialIcon Kind="TvGuide" Width="20" Height="20" />
                             <TextBlock Text="EPG" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
@@ -469,7 +469,7 @@
                 <TabItem Classes="SettingsTab">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <materialIcons:MaterialIcon Kind="PaletteOutline" Width="20" Height="20" />
+                            <materialIcons:MaterialIcon Kind="PaletteSwatchOutline" Width="20" Height="20" />
                             <TextBlock Text="Görünüm" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>

@@ -1258,7 +1258,7 @@ public partial class MainViewModel : ObservableObject
                      && e.Duration.HasValue
                      && e.Duration.Value.TotalSeconds > 0
                      && (e.WatchedPosition.Value.TotalSeconds / e.Duration.Value.TotalSeconds) < 0.92)
-            .Select(e => BuildSeriesEpisodeChannel(e));
+            .Select(e => BuildSeriesEpisodeChannel(e, _allSeriesCache.FirstOrDefault(s => s.Seasons.Any(season => season.Episodes.Contains(e)))));
 
         var combinedContinue = vodContinue.Concat(episodeContinue)
             .OrderByDescending(c => c.LastWatched)
@@ -5717,7 +5717,7 @@ public partial class MainViewModel : ObservableObject
         TimeSpan? Duration,
         bool Completed);
 
-    private Channel BuildSeriesEpisodeChannel(Episode episode)
+    private Channel BuildSeriesEpisodeChannel(Episode episode, Series? series = null)
     {
         var matchedChannel = Channels.FirstOrDefault(c =>
             c.Type == ChannelType.Series &&
@@ -5726,6 +5726,16 @@ public partial class MainViewModel : ObservableObject
 
         if (matchedChannel != null)
         {
+            // Update matched channel with latest episode progress
+            matchedChannel.WatchedPosition = episode.WatchedPosition;
+            matchedChannel.Duration = episode.Duration;
+            matchedChannel.LastWatched = episode.LastWatched;
+            
+            if (series != null)
+            {
+                matchedChannel.GroupTitle = series.Name;
+            }
+
             return matchedChannel;
         }
 
@@ -5736,7 +5746,11 @@ public partial class MainViewModel : ObservableObject
             StreamUrl = episode.StreamUrl,
             LogoUrl = episode.CoverUrl,
             Type = ChannelType.Series,
-            PlaylistId = SelectedPlaylist?.Id ?? 0
+            PlaylistId = SelectedPlaylist?.Id ?? 0,
+            WatchedPosition = episode.WatchedPosition,
+            Duration = episode.Duration,
+            LastWatched = episode.LastWatched,
+            GroupTitle = series?.Name
         };
     }
 

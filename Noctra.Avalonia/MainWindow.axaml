@@ -177,7 +177,7 @@
                  Grid.Column="1" HorizontalAlignment="Right"
                  Text="{Binding SearchQuery, Mode=TwoWay}"
                  Margin="0,0,12,0"
-                 KeyDown="SearchInput_KeyDown">
+                 KeyDown="SearchInput_KeyDown" Cursor="Hand" ToolTip.Tip="Ara">
           <TextBox.InnerLeftContent>
             <Border Width="38" Height="34" CornerRadius="8" VerticalAlignment="Center" HorizontalAlignment="Center">
                <materialIcons:MaterialIcon Kind="Magnify" Width="18" Height="18" 
@@ -191,7 +191,7 @@
         <Popup IsOpen="{Binding !!SearchResults.Count}" 
                PlacementTarget="{Binding #HeaderSearchBox}"
                Placement="Bottom"
-               IsLightDismissEnabled="True">
+               IsLightDismissEnabled="True" >
           <Border Width="340" MaxHeight="400" Background="{DynamicResource SurfaceBrush}" 
                   CornerRadius="12" Padding="8" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
             <ScrollViewer>
@@ -308,6 +308,11 @@
             </Panel>
           </Button>
 
+          <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="20,12"/>
+
+          <!-- Nav Section Label 2 -->
+          <TextBlock Text="KÜTÜPHANE" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="24,0,24,8" LetterSpacing="2"/>
+
           <!-- My List -->
           <Button Classes="navItem" Click="NavigateMyList_Click"
                   Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.MyList}}">
@@ -319,11 +324,6 @@
               </StackPanel>
             </Panel>
           </Button>
-
-          <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="20,12"/>
-
-          <!-- Nav Section Label 2 -->
-          <TextBlock Text="KÜTÜPHANE" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="24,0,24,8" LetterSpacing="2"/>
 
           <!-- Favorites -->
           <Button Classes="navItem" Click="NavigateFavorites_Click"
@@ -554,9 +554,9 @@
                         <Button Command="{Binding AddToMyListCommand}" CommandParameter="{Binding SelectedSeries}"
                                 Theme="{StaticResource ActionCircleButtonStyle}" Width="52" Height="52" Padding="0">
                             <Panel>
-                                <materialIcons:MaterialIcon Kind="Minus" Width="24" Height="24" Foreground="{DynamicResource TextPrimaryBrush}"
+                                <materialIcons:MaterialIcon Kind="Minus" Width="24" Height="24" Foreground="{DynamicResource TextPrimaryBrush}" ToolTip.Tip="Listeden Çıkar"
                                                             IsVisible="{Binding SelectedSeries.IsInMyList}"/>
-                                <materialIcons:MaterialIcon Kind="Plus" Width="24" Height="24" Foreground="{DynamicResource TextPrimaryBrush}"
+                                <materialIcons:MaterialIcon Kind="Plus" Width="24" Height="24" Foreground="{DynamicResource TextPrimaryBrush}" ToolTip.Tip="Listeye Ekle"
                                                             IsVisible="{Binding !SelectedSeries.IsInMyList}"/>
                             </Panel>
                         </Button>
@@ -564,9 +564,9 @@
                         <Button Command="{Binding ToggleFavoriteCommand}" CommandParameter="{Binding SelectedSeries}"
                                 Theme="{StaticResource ActionCircleButtonStyle}" Width="52" Height="52" Padding="0">
                             <Panel>
-                                <materialIcons:MaterialIcon Kind="Heart" Width="22" Height="22" Foreground="#E50914" 
+                                <materialIcons:MaterialIcon Kind="Heart" Width="22" Height="22" Foreground="#E50914" ToolTip.Tip="Favorilerden Çıkar"
                                                             IsVisible="{Binding SelectedSeries.IsFavorite}"/>
-                                <materialIcons:MaterialIcon Kind="HeartOutline" Width="22" Height="22" Foreground="{DynamicResource TextPrimaryBrush}" 
+                                <materialIcons:MaterialIcon Kind="HeartOutline" Width="22" Height="22" Foreground="{DynamicResource TextPrimaryBrush}" ToolTip.Tip="Favorilere Ekle"
                                                             IsVisible="{Binding !SelectedSeries.IsFavorite}"/>
                             </Panel>
                         </Button>
@@ -683,7 +683,7 @@
                               Command="{Binding DownloadSelectedSeasonCommand}"
                               ToolTip.Tip="Aktif sezondaki tüm bölümleri indirme kuyruğuna ekle">
                           <StackPanel Orientation="Horizontal" Spacing="8">
-                              <materialIcons:MaterialIcon Kind="Download" Width="18" Height="18" Foreground="{DynamicResource AccentBrush}"/>
+                              <materialIcons:MaterialIcon Kind="DownloadMultipleOutline" Width="18" Height="18" Foreground="{DynamicResource AccentBrush}"/>
                               <TextBlock Text="Sezonu İndir" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
                           </StackPanel>
                       </Button>
@@ -745,7 +745,7 @@
                                                   Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).DownloadEpisodeCommand}"
                                                   CommandParameter="{Binding}"
                                                   ToolTip.Tip="Bölümü İndir">
-                                              <materialIcons:MaterialIcon Kind="Download" Width="22" Height="22" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.6"/>
+                                              <materialIcons:MaterialIcon Kind="DownloadOutline" Width="22" Height="22" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.6"/>
                                           </Button>
                                       </Grid>
                                   </Border>
@@ -823,7 +823,7 @@
                               IsVisible="{Binding !IsLiveContent}"
                               Background="Transparent" BorderThickness="0"
                               Classes="pipButton" ToolTip.Tip="10 sn Geri">
-                          <materialIcons:MaterialIcon Kind="Rewind" Width="36" Height="36" Foreground="White" Opacity="0.9"/>
+                          <materialIcons:MaterialIcon Kind="Rewind10" Width="18" Height="18" Foreground="White" Opacity="0.9"/>
                       </Button>
 
                       <!-- Live TV Previous Channel -->
@@ -833,7 +833,7 @@
                               IsVisible="{Binding IsLiveContent}"
                               Background="Transparent" BorderThickness="0"
                               Classes="pipButton" ToolTip.Tip="Önceki Kanal">
-                          <materialIcons:MaterialIcon Kind="SkipPrevious" Width="36" Height="36" Foreground="White" Opacity="0.9"/>
+                          <materialIcons:MaterialIcon Kind="SkipPrevious" Width="18" Height="18" Foreground="White" Opacity="0.9"/>
                       </Button>
 
                       <!-- Play/Pause (Large Center) -->
@@ -842,11 +842,11 @@
                               Background="Transparent" BorderThickness="0"
                               Classes="pipButton" ToolTip.Tip="Oynat/Duraklat">
                           <Grid>
-                              <materialIcons:MaterialIcon Kind="PauseCircleOutline" 
-                                                          Width="72" Height="72" Foreground="White" 
+                              <materialIcons:MaterialIcon Kind="Pause" 
+                                                          Width="36" Height="36" Foreground="White" 
                                                           IsVisible="{Binding IsPlaying}"/>
-                              <materialIcons:MaterialIcon Kind="PlayCircleOutline" 
-                                                          Width="72" Height="72" Foreground="White" 
+                              <materialIcons:MaterialIcon Kind="Play" 
+                                                          Width="36" Height="36" Foreground="White" 
                                                           IsVisible="{Binding IsPlaying, Converter={StaticResource InverseBoolConverter}}"/>
                           </Grid>
                       </Button>
@@ -857,7 +857,7 @@
                               IsVisible="{Binding !IsLiveContent}"
                               Background="Transparent" BorderThickness="0"
                               Classes="pipButton" ToolTip.Tip="10 sn İleri">
-                          <materialIcons:MaterialIcon Kind="FastForward" Width="36" Height="36" Foreground="White" Opacity="0.9"/>
+                           <materialIcons:MaterialIcon Kind="FastForward10" Width="18" Height="18" Foreground="White" Opacity="0.9"/>
                       </Button>
 
                       <!-- Live TV Next Channel -->
@@ -867,7 +867,7 @@
                               IsVisible="{Binding IsLiveContent}"
                               Background="Transparent" BorderThickness="0"
                               Classes="pipButton" ToolTip.Tip="Sonraki Kanal">
-                          <materialIcons:MaterialIcon Kind="SkipNext" Width="36" Height="36" Foreground="White" Opacity="0.9"/>
+                          <materialIcons:MaterialIcon Kind="SkipNext" Width="18" Height="18" Foreground="White" Opacity="0.9"/>
                       </Button>
                   </StackPanel>
 
@@ -883,7 +883,7 @@
                           ZIndex="6000"
                           Classes="pipButton"
                           ToolTip.Tip="Tam ekrana dön">
-                      <materialIcons:MaterialIcon Kind="ArrowExpand" Width="24" Height="24" Foreground="White" Opacity="0.9"/>
+                      <materialIcons:MaterialIcon Kind="ArrowExpand" Width="18" Height="18" Foreground="White" Opacity="0.9"/>
                   </Button>
 
                   <!-- PiP Resize Grips (Proportional) -->

@@ -1,0 +1,84 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="using:Noctra.Models"
+             xmlns:controls="using:Noctra.Avalonia.Controls"
+             xmlns:vm="using:Noctra.ViewModels"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.Avalonia.Controls.ContinueWatchingCard"
+             x:DataType="models:Channel"
+             Width="260" Height="146"
+             ClipToBounds="False">
+  <UserControl.Styles>
+    <Style Selector="Button.CardContainer:pointerover">
+      <Setter Property="ZIndex" Value="10"/>
+      <Setter Property="RenderTransform" Value="scale(1.03)"/>
+    </Style>
+    <Style Selector="Button.CardContainer:pointerover Border.HoverOverlay">
+      <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Border.HoverOverlay">
+      <Setter Property="Opacity" Value="0"/>
+    </Style>
+    <Style Selector="Button.CardContainer:pointerover materialIcons|MaterialIcon.PlayIcon">
+      <Setter Property="Opacity" Value="1"/>
+      <Setter Property="RenderTransform" Value="scale(1)"/>
+    </Style>
+  </UserControl.Styles>
+
+  <Button Classes="CardContainer" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+    
+    <Border CornerRadius="6" ClipToBounds="True" Background="{DynamicResource Surface0Brush}" BoxShadow="0 2 8 0 #40000000">
+      <Grid>
+        <!-- Poster Area Placeholder -->
+        <Border x:Name="PlaceholderBorder" Background="{DynamicResource SurfaceLightBrush}">
+          <Border.IsVisible>
+            <Binding Path="#BackdropImage.IsImageLoaded" Converter="{StaticResource InverseBoolConverter}"/>
+          </Border.IsVisible>
+          <materialIcons:MaterialIcon Kind="MoviePlay" Width="30" Height="30" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.3"/>
+        </Border>
+
+        <!-- Landscape Image (Backdrop prioritized) -->
+        <controls:RemoteImage x:Name="BackdropImage" Stretch="UniformToFill" Url="{Binding CoverUrl}" RenderOptions.BitmapInterpolationMode="MediumQuality"/>
+        
+        <!-- Hover Overlay -->
+        <Border Classes="HoverOverlay" Background="#80000000" IsHitTestVisible="False">
+            <materialIcons:MaterialIcon Kind="PlayCircle" Classes="PlayIcon" Width="40" Height="40" Foreground="White" 
+                                        Opacity="0" RenderTransform="scale(0.8)">
+                <materialIcons:MaterialIcon.Transitions>
+                    <Transitions>
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2"/>
+                    </Transitions>
+                </materialIcons:MaterialIcon.Transitions>
+            </materialIcons:MaterialIcon>
+        </Border>
+        
+        <!-- Bottom Info -->
+        <Border VerticalAlignment="Bottom" Padding="10,20,10,10">
+          <Border.Background>
+            <LinearGradientBrush StartPoint="0%,100%" EndPoint="0%,0%">
+              <GradientStop Offset="0" Color="#CC000000" />
+              <GradientStop Offset="1" Color="#00000000" />
+            </LinearGradientBrush>
+          </Border.Background>
+          <StackPanel Spacing="1">
+            <TextBlock Text="{Binding Name}" Foreground="White" FontSize="13" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding GroupTitle}" Foreground="#A6FFFFFF" FontSize="10" TextTrimming="CharacterEllipsis" Opacity="0.8"/>
+          </StackPanel>
+        </Border>
+
+        <!-- Progress Bar (Netflix style at the very bottom) -->
+        <ProgressBar VerticalAlignment="Bottom" Height="6" CornerRadius="0" Minimum="0" Maximum="100" Value="{Binding WatchedPercentage}"
+                     Foreground="{DynamicResource AccentBrush}" Background="#4D000000" BorderThickness="0"
+                     IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}" />
+
+        <!-- Top Right Duration/Rating -->
+        <Border VerticalAlignment="Top" HorizontalAlignment="Right" Margin="6" Background="#B3000000" CornerRadius="3" Padding="4,2"
+                IsVisible="{Binding Rating, Converter={x:Static ObjectConverters.IsNotNull}}">
+          <TextBlock Text="{Binding Rating, StringFormat={}{0:F1}}" Foreground="{DynamicResource SuccessBrush}" FontSize="9" FontWeight="Bold"/>
+        </Border>
+      </Grid>
+    </Border>
+  </Button>
+</UserControl>
