@@ -350,20 +350,30 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         // Clock timer
         _clockTimer = new System.Timers.Timer(1000);
-        _clockTimer.Elapsed += async (s, e) => 
+        _clockTimer.Elapsed += async (s, e) =>
         {
             try
             {
                 _dispatcherService.Invoke(() => CurrentTimeStr = DateTime.Now.ToString("HH:mm"));
-                await CheckForEpgUpdateAsync();
-                await MonitorLivePlaybackHealthAsync();
+
+                // Run background health and update tasks concurrently
+                // This prevents a failure in one (e.g. EPG update) from blocking the other (Live health check)
+                await Task.WhenAll(
+                    Task.Run(async () => {
+                        try { await CheckForEpgUpdateAsync(); }
+                        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[PlayerViewModel] EPG update failed: {ex.Message}"); }
+                    }),
+                    Task.Run(async () => {
+                        try { await MonitorLivePlaybackHealthAsync(); }
+                        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[PlayerViewModel] Live monitor failed: {ex.Message}"); }
+                    })
+                );
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[PlayerViewModel] Clock tick failed: {ex.Message}");
             }
-        };
-        _clockTimer.Start();
+        };        _clockTimer.Start();
         CurrentTimeStr = DateTime.Now.ToString("HH:mm");
 
         // Watch history timer (every 5 seconds)
