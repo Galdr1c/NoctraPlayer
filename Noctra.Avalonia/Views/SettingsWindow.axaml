@@ -136,7 +136,7 @@
             <TabControl Grid.Row="1" Margin="32,0,32,0" Background="Transparent">
                 
                 <!-- PROFILE TAB -->
-                <TabItem Classes="SettingsTab">
+                <TabItem Classes="SettingsTab" Cursor="Hand">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <materialIcons:MaterialIcon Kind="AccountBoxOutline" Width="20" Height="20" />
@@ -232,7 +232,7 @@
                 </TabItem>
 
                 <!-- PLAYBACK TAB -->
-                <TabItem Classes="SettingsTab">
+                <TabItem Classes="SettingsTab" Cursor="Hand">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <materialIcons:MaterialIcon Kind="PlayBoxOutline" Width="20" Height="20" />
@@ -319,7 +319,7 @@
                 </TabItem>
 
                 <!-- CHANNEL LIST TAB -->
-                <TabItem Classes="SettingsTab">
+                <TabItem Classes="SettingsTab" Cursor="Hand">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <materialIcons:MaterialIcon Kind="FormatListBulletedSquare" Width="20" Height="20" />
@@ -388,7 +388,7 @@
                 </TabItem>
 
                 <!-- EPG TAB -->
-                <TabItem Classes="SettingsTab">
+                <TabItem Classes="SettingsTab" Cursor="Hand">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <materialIcons:MaterialIcon Kind="TvGuide" Width="20" Height="20" />
@@ -466,7 +466,7 @@
                 </TabItem>
 
                 <!-- APPEARANCE TAB -->
-                <TabItem Classes="SettingsTab">
+                <TabItem Classes="SettingsTab" Cursor="Hand">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <materialIcons:MaterialIcon Kind="PaletteSwatchOutline" Width="20" Height="20" />

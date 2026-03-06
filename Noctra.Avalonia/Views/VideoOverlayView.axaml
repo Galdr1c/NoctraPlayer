@@ -234,10 +234,10 @@
                     <!-- Transport Controls -->
                     <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto">
                         <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="16">
-                            <Button Command="{Binding SkipBackwardCommand}" CommandParameter="10" Classes="iconBtn" IsVisible="{Binding !IsLiveContent}">
+                            <Button Command="{Binding SkipBackwardCommand}" CommandParameter="10" Classes="iconBtn" IsVisible="{Binding !IsLiveContent}" ToolTip.Tip="10 Saniye Geri Sar">
                                 <materialIcons:MaterialIcon Kind="Rewind10" Width="24" Height="24" Foreground="#E6FFFFFF"/>
                             </Button>
-                            <Button Click="PlayPreviousLiveChannel_Click" Classes="iconBtn" IsVisible="{Binding IsLiveContent}">
+                            <Button Click="PlayPreviousLiveChannel_Click" Classes="iconBtn" IsVisible="{Binding IsLiveContent}" ToolTip.Tip="Önceki Kanal">
                                 <materialIcons:MaterialIcon Kind="SkipPrevious" Width="20" Height="20" Foreground="#E6FFFFFF"/>
                             </Button>
                             <Button Command="{Binding PlayPauseCommand}" Classes="iconBtn">
@@ -246,13 +246,13 @@
                                     <materialIcons:MaterialIcon Kind="Play" Width="24" Height="24" Foreground="White" IsVisible="{Binding IsPlaying, Converter={StaticResource InverseBoolConverter}}"/>
                                 </Grid>
                             </Button>
-                            <Button Command="{Binding SkipForwardCommand}" CommandParameter="10" Classes="iconBtn" IsVisible="{Binding !IsLiveContent}">
+                            <Button Command="{Binding SkipForwardCommand}" CommandParameter="10" Classes="iconBtn" IsVisible="{Binding !IsLiveContent}" ToolTip.Tip="10 Saniye İleri Sar">
                                 <materialIcons:MaterialIcon Kind="FastForward10" Width="24" Height="24" Foreground="#E6FFFFFF"/>
                             </Button>
-                            <Button Click="PlayNextLiveChannel_Click" Classes="iconBtn" IsVisible="{Binding IsLiveContent}">
+                            <Button Click="PlayNextLiveChannel_Click" Classes="iconBtn" IsVisible="{Binding IsLiveContent}" ToolTip.Tip="Sonraki Kanal">
                                 <materialIcons:MaterialIcon Kind="SkipNext" Width="20" Height="20" Foreground="#E6FFFFFF"/>
                             </Button>
-                            <Button Command="{Binding ToggleMuteCommand}" Classes="iconBtn" Margin="4,0,0,0">
+                            <Button Command="{Binding ToggleMuteCommand}" Classes="iconBtn" Margin="4,0,0,0" ToolTip.Tip="Sesi Aç/Kapa">
                                 <Grid>
                                     <materialIcons:MaterialIcon Kind="VolumeOff" Width="20" Height="20" Foreground="#E6FFFFFF" IsVisible="{Binding IsMuted}"/>
                                     <materialIcons:MaterialIcon Kind="VolumeHigh" Width="20" Height="20" Foreground="#E6FFFFFF" IsVisible="{Binding IsMuted, Converter={StaticResource InverseBoolConverter}}"/>
@@ -268,14 +268,14 @@
                         </StackPanel>
 
                         <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="12">
-                            <Button Command="{Binding OpenEpisodesCommand}" Classes="iconBtn" IsVisible="{Binding IsSeriesContent}"><materialIcons:MaterialIcon Kind="FormatListBulleted" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
-                            <Button Command="{Binding PlayNextEpisodeCommand}" Classes="iconBtn" IsVisible="{Binding IsSeriesContent}"><materialIcons:MaterialIcon Kind="StepForward" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
-                            <Button Command="{Binding DownloadCurrentContentCommand}" Classes="iconBtn" IsVisible="{Binding CanShowDownloadButton}" IsEnabled="{Binding CanDownloadCurrentContent}"><materialIcons:MaterialIcon Kind="Download" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
-                            <Button Command="{Binding OpenInfoPanelCommand}" Classes="iconBtn" IsVisible="{Binding CanShowInfoButton}"><materialIcons:MaterialIcon Kind="InformationOutline" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
-                            <Button Command="{Binding OpenAudioSettingsCommand}" Classes="iconBtn"><TextBlock Text="CC" FontWeight="Bold" FontSize="14" Foreground="#E6FFFFFF" VerticalAlignment="Center"/></Button>
-                            <Button Command="{Binding OpenQualitySettingsCommand}" Classes="iconBtn"><materialIcons:MaterialIcon Kind="Cog" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
-                            <Button Command="{Binding EnterPiPCommand}" Classes="iconBtn"><materialIcons:MaterialIcon Kind="PictureInPictureBottomRight" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
-                            <Button Command="{Binding ToggleFullScreenCommand}" Classes="iconBtn">
+                            <Button Command="{Binding OpenEpisodesCommand}" Classes="iconBtn" IsVisible="{Binding IsSeriesContent}" ToolTip.Tip="Bölümler"><materialIcons:MaterialIcon Kind="FormatListBulletedSquare" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
+                            <Button Command="{Binding PlayNextEpisodeCommand}" Classes="iconBtn" IsVisible="{Binding IsSeriesContent}" ToolTip.Tip="Sonraki Bölüm"><materialIcons:MaterialIcon Kind="StepForward" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
+                            <Button Command="{Binding DownloadCurrentContentCommand}" Classes="iconBtn" IsVisible="{Binding CanShowDownloadButton}" IsEnabled="{Binding CanDownloadCurrentContent}" ToolTip.Tip="İndir"><materialIcons:MaterialIcon Kind="Download" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
+                            <Button Command="{Binding OpenInfoPanelCommand}" Classes="iconBtn" IsVisible="{Binding CanShowInfoButton}" ToolTip.Tip="Bilgi"><materialIcons:MaterialIcon Kind="InformationBoxOutline" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
+                            <Button Command="{Binding OpenAudioSettingsCommand}" Classes="iconBtn" ToolTip.Tip="Altyazı"><TextBlock Text="CC" FontWeight="Bold" FontSize="14" Foreground="#E6FFFFFF" VerticalAlignment="Center"/></Button>
+                            <Button Command="{Binding OpenQualitySettingsCommand}" Classes="iconBtn" ToolTip.Tip="Ayarlar"><materialIcons:MaterialIcon Kind="Cog" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
+                            <Button Command="{Binding EnterPiPCommand}" Classes="iconBtn" ToolTip.Tip="Resim İçinde Resim"><materialIcons:MaterialIcon Kind="PictureInPictureBottomRight" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
+                            <Button Command="{Binding ToggleFullScreenCommand}" Classes="iconBtn" ToolTip.Tip="Tam Ekran">
                                 <Grid>
                                     <materialIcons:MaterialIcon Kind="Fullscreen" Width="22" Height="22" Foreground="#E6FFFFFF" IsVisible="{Binding IsFullScreen, Converter={StaticResource InverseBoolConverter}}"/>
                                     <materialIcons:MaterialIcon Kind="FullscreenExit" Width="22" Height="22" Foreground="#E6FFFFFF" IsVisible="{Binding IsFullScreen}"/>
@@ -297,7 +297,7 @@
                                 <TextBlock Text="HAKKINDA" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1.5" Margin="0,0,0,16"/>
                                 <Border Height="1" Background="{DynamicResource Surface1Brush}" Margin="0,0,0,8" Opacity="0.5"/>
                             </StackPanel>
-                            <Button Grid.Column="1" Command="{Binding OpenInfoPanelCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0"><materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}"/></Button>
+                            <Button Grid.Column="1" Command="{Binding OpenInfoPanelCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0"><materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}" ToolTip.Tip="Kapat"/></Button>
                         </Grid>
                         <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                             <Grid Margin="32,0,32,40">
@@ -372,7 +372,7 @@
                     <Grid RowDefinitions="Auto,*">
                         <Grid Grid.Row="0" Margin="32,40,32,24" ColumnDefinitions="*,Auto">
                             <StackPanel VerticalAlignment="Center"><TextBlock Text="SES VE ALTYAZI" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1.5" Margin="0,0,0,16"/><Border Height="1" Background="{DynamicResource Surface1Brush}" Margin="0,0,0,8" Opacity="0.5"/></StackPanel>
-                            <Button Grid.Column="1" Command="{Binding ClosePanelsCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0"><materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}"/></Button>
+                            <Button Grid.Column="1" Command="{Binding ClosePanelsCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0"><materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}" ToolTip.Tip="Kapat"/></Button>
                         </Grid>
                         <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Visible"><StackPanel Margin="32,0,32,40"><TextBlock Text="SES" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,12"/><ItemsControl ItemsSource="{Binding AudioTracks}"><ItemsControl.ItemTemplate><DataTemplate><Button Tag="{Binding Id}" Click="AudioTrack_Click" Classes="listItemBtn" Margin="0,0,0,8" Content="{Binding Name}"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl><TextBlock Text="ALTYAZI" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,32,0,12"/><ItemsControl ItemsSource="{Binding SubtitleTracks}" Margin="0,0,0,24"><ItemsControl.ItemTemplate><DataTemplate><Button Tag="{Binding Id}" Click="SubtitleTrack_Click" Classes="listItemBtn" Margin="0,0,0,8" Content="{Binding Name}"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></ScrollViewer>
                     </Grid>
@@ -399,7 +399,7 @@
                             </Grid.RowDefinitions>
                             
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="BÖLÜMLER" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1.5" Margin="0,0,0,16" VerticalAlignment="Center"/>
-                            <Button Grid.Row="0" Grid.Column="1" Command="{Binding ClosePanelsCommand}" Classes="panelCloseBtn" VerticalAlignment="Center" Margin="16,0,0,16">
+                            <Button Grid.Row="0" Grid.Column="1" Command="{Binding ClosePanelsCommand}" Classes="panelCloseBtn" VerticalAlignment="Center" Margin="16,0,0,16" ToolTip.Tip="Kapat">
                                 <materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}"/>
                             </Button>
                             
@@ -511,7 +511,7 @@
                     <Grid RowDefinitions="Auto,*">
                         <Grid Grid.Row="0" Margin="32,40,32,24" ColumnDefinitions="*,Auto">
                             <StackPanel VerticalAlignment="Center"><TextBlock Text="YAYIN BİLGİSİ" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1.5" Margin="0,0,0,16"/><Border Height="1" Background="{DynamicResource Surface1Brush}" Margin="0,0,0,8" Opacity="0.5"/></StackPanel>
-                            <Button Grid.Column="1" Command="{Binding ClosePanelsCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0"><materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}"/></Button>
+                            <Button Grid.Column="1" Command="{Binding ClosePanelsCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0"><materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}" ToolTip.Tip="Kapat"/></Button>
                         </Grid>
                         <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Padding="32,0,32,40"><StackPanel><TextBlock Text="VİDEO" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1.5" Margin="0,0,0,12"/><Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20" Margin="0,0,0,24"><Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto"><TextBlock Grid.Row="0" Text="Çözünürlük" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Margin="0,0,40,12"/><TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding StreamQuality.ResolutionLabel, FallbackValue='-'}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" FontWeight="Bold" Margin="0,0,0,12"/><TextBlock Grid.Row="1" Text="Kare hızı" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Margin="0,0,40,12"/><TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding StreamQuality.Fps, StringFormat='{}{0} FPS', FallbackValue='-'}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" FontWeight="Bold" Margin="0,0,0,12"/><TextBlock Grid.Row="2" Text="Codec" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Margin="0,0,40,12"/><TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding StreamQuality.VideoCodec, FallbackValue='-'}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" FontWeight="Bold" Margin="0,0,0,12"/><TextBlock Grid.Row="3" Text="Bit hızı" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Margin="0,0,40,0"/><TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding StreamQuality.VideoBitrate, Converter={StaticResource BitrateDisplayConverter}, FallbackValue='Bilinmiyor'}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" FontWeight="Bold"/></Grid></Border><TextBlock Text="SES" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1.5" Margin="0,0,0,12"/><Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20"><TextBlock Text="{Binding StreamQuality.AudioDetailLabel, FallbackValue='Bilinmiyor'}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/></Border><StackPanel IsVisible="{Binding !IsLiveContent}"><TextBlock Text="OYNATMA HIZI" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1.5" Margin="0,32,0,12"/><UniformGrid Columns="3"><Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=0.5}" Content="0.5x" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="0,0,8,8"/><Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=0.75}" Content="0.75x" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,4,8"/><Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=1.0}" Content="Normal" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="8,0,0,8"/><Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=1.25}" Content="1.25x" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="0,0,8,0"/><Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=1.5}" Content="1.5x" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,4,0"/><Button Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=2.0}" Content="2.0x" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="8,0,0,0"/></UniformGrid></StackPanel></StackPanel></ScrollViewer>
                     </Grid>
