@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Noctra.Models;
 using System.Net.Http;
@@ -70,24 +70,13 @@ public partial class MainViewModel : ObservableObject
     private AppView _activeView = AppView.Home;
 
     [ObservableProperty]
-    private ObservableCollection<Channel> _trendingChannels = new();
-
-    [ObservableProperty]
     private ObservableCollection<Channel> _continueWatching = new();
-
-    [ObservableProperty]
-    private ObservableCollection<Channel> _latestMovies = new();
-
-    [ObservableProperty]
-    private ObservableCollection<Series> _latestSeries = new();
 
     private List<Series> _allSeriesCache = new();
 
     [ObservableProperty]
     private ObservableCollection<Series> _seriesViewItems = new();
 
-    [ObservableProperty]
-    private Channel? _featuredChannel;
 
     [ObservableProperty]
     private ObservableCollection<Playlist> _playlists = new();
@@ -312,7 +301,6 @@ public partial class MainViewModel : ObservableObject
                 {
                     try
                     {
-                        SetItems(LatestSeries, await _mediaService.GetSeriesAsync(playlistId));
                         UpdateSeriesViewItems();
                         System.Diagnostics.Debug.WriteLine($"[MainViewModel] Series refreshed after background aggregation for playlist {playlistId}");
                     }
@@ -738,7 +726,6 @@ public partial class MainViewModel : ObservableObject
         SelectedChannel = null;
         SelectedSeries = null;
         SelectedGroup = null;
-        FeaturedChannel = null;
         IsSeriesDetailVisible = false;
         SearchText = string.Empty;
         SearchQuery = string.Empty;
@@ -761,10 +748,7 @@ public partial class MainViewModel : ObservableObject
         SetItems(Playlists, Enumerable.Empty<Playlist>());
         SetItems(Channels, Enumerable.Empty<Channel>());
         SetItems(FilteredChannels, Enumerable.Empty<Channel>());
-        SetItems(TrendingChannels, Enumerable.Empty<Channel>());
         SetItems(ContinueWatching, Enumerable.Empty<Channel>());
-        SetItems(LatestMovies, Enumerable.Empty<Channel>());
-        SetItems(LatestSeries, Enumerable.Empty<Series>());
         SetItems(SeriesViewItems, Enumerable.Empty<Series>());
         SetItems(SearchResults, Enumerable.Empty<object>());
         SetItems(Groups, Enumerable.Empty<string>());
@@ -1244,32 +1228,44 @@ public partial class MainViewModel : ObservableObject
 
     private async Task LoadHomeContentAsync()
     {
-        // Rail içeriklerini yükle
-        SetItems(TrendingChannels, Channels
-            .Where(c => c.Type == ChannelType.Live)
-            .OrderByDescending(HasDisplayImage)
-            .ThenBy(c => c.Name)
-            .Take(10));
+        try 
+        {
+            var playlistId = SelectedPlaylist?.Id ?? 0;
+            _allSeriesCache = await _mediaService.GetSeriesAsync(playlistId);
+            UpdateSeriesViewItems();
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error loading series cache for home content");
+        }
 
-        SetItems(LatestMovies, Channels
-            .Where(c => c.Type == ChannelType.VOD)
-            .OrderByDescending(HasDisplayImage)
-            .ThenByDescending(c => c.Id)
-            .Take(10));
+        // Rail: İzlemeye Devam Et (ContinueWatching)
+        var vodContinue = Channels
+            .Where(c => c.Type == ChannelType.VOD
+                     && c.LastWatched.HasValue
+                     && c.WatchedPosition.HasValue
+                     && c.WatchedPosition.Value.TotalSeconds > 30
+                     && c.Duration.HasValue
+                     && c.Duration.Value.TotalSeconds > 0
+                     && (c.WatchedPosition.Value.TotalSeconds / c.Duration.Value.TotalSeconds) < 0.92);
 
-        var playlistId = SelectedPlaylist?.Id ?? 0;
-        _allSeriesCache = await _mediaService.GetSeriesAsync(playlistId);
-        
-        SetItems(LatestSeries, _allSeriesCache.Take(20));
-        UpdateSeriesViewItems();
+        var episodeContinue = _allSeriesCache
+            .SelectMany(s => s.Seasons.SelectMany(season => season.Episodes))
+            .Where(e => e.LastWatched.HasValue
+                     && !e.IsCompleted
+                     && e.WatchedPosition.HasValue
+                     && e.WatchedPosition.Value.TotalSeconds > 30
+                     && e.Duration.HasValue
+                     && e.Duration.Value.TotalSeconds > 0
+                     && (e.WatchedPosition.Value.TotalSeconds / e.Duration.Value.TotalSeconds) < 0.92)
+            .Select(e => BuildSeriesEpisodeChannel(e));
 
-        SetItems(ContinueWatching, Channels
-            .Where(c => c.LastWatched.HasValue)
+        var combinedContinue = vodContinue.Concat(episodeContinue)
             .OrderByDescending(c => c.LastWatched)
-            .Take(10));
+            .Take(10);
 
-        // Hero içeriği
-        FeaturedChannel = TrendingChannels.FirstOrDefault() ?? LatestMovies.FirstOrDefault();
+        SetItems(ContinueWatching, combinedContinue);
+
     }
 
     private static bool HasDisplayImage(Channel channel)
@@ -4613,6 +4609,7 @@ public partial class MainViewModel : ObservableObject
         
         if (media is Channel channel)
         {
+
             if (channel.Type == ChannelType.Live)
             {
                 StatusMessage = "Canlı kanallar listeme eklenemez";
@@ -5013,14 +5010,6 @@ public partial class MainViewModel : ObservableObject
         SelectedSeriesCast = string.Empty;
     }
 
-    [RelayCommand]
-    private async Task PlayFeatured()
-    {
-        if (FeaturedChannel != null)
-        {
-            await SelectMedia(FeaturedChannel);
-        }
-    }
 
     [RelayCommand]
     private void EditChannel(Channel channel)
@@ -5826,7 +5815,6 @@ public partial class MainViewModel : ObservableObject
         }
 
         candidates.AddRange(SeriesViewItems);
-        candidates.AddRange(LatestSeries);
 
         var seenSeries = new HashSet<int>();
         var anyUpdated = false;
@@ -5870,7 +5858,6 @@ public partial class MainViewModel : ObservableObject
         {
             OnPropertyChanged(nameof(SelectedSeries));
             OnPropertyChanged(nameof(SeriesViewItems));
-            OnPropertyChanged(nameof(LatestSeries));
         }
     }
 
@@ -5919,7 +5906,6 @@ public partial class MainViewModel : ObservableObject
         }
 
         candidates.AddRange(SeriesViewItems);
-        candidates.AddRange(LatestSeries);
 
         var seen = new HashSet<int>();
         foreach (var series in candidates)
@@ -5968,7 +5954,6 @@ public partial class MainViewModel : ObservableObject
         }
 
         candidates.AddRange(SeriesViewItems);
-        candidates.AddRange(LatestSeries);
 
         var seen = new HashSet<int>();
         foreach (var series in candidates)

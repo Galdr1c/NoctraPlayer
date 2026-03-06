@@ -227,11 +227,7 @@ public partial class MainWindow : Window
     private void MainViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(MainViewModel.FilteredChannels) or
-            nameof(MainViewModel.TrendingChannels) or
-            nameof(MainViewModel.LatestMovies) or
-            nameof(MainViewModel.LatestSeries) or
-            nameof(MainViewModel.SeriesViewItems) or
-            nameof(MainViewModel.FeaturedChannel))
+            nameof(MainViewModel.SeriesViewItems))
         {
             ScheduleImageWarmup();
         }
@@ -285,16 +281,8 @@ public partial class MainWindow : Window
     {
         var urls = new List<string?>(220);
 
-        if (_mainViewModel.FeaturedChannel != null)
-        {
-            urls.Add(_mainViewModel.FeaturedChannel.CoverUrl);
-            urls.Add(_mainViewModel.FeaturedChannel.LogoUrl);
-        }
 
-        urls.AddRange(_mainViewModel.TrendingChannels.Take(50).Select(c => c.LogoUrl ?? c.CoverUrl));
-        urls.AddRange(_mainViewModel.LatestMovies.Take(50).Select(c => c.CoverUrl ?? c.LogoUrl));
         urls.AddRange(_mainViewModel.FilteredChannels.Take(120).Select(c => c.CoverUrl ?? c.LogoUrl));
-        urls.AddRange(_mainViewModel.LatestSeries.Take(60).Select(s => s.CoverUrl));
         urls.AddRange(_mainViewModel.SeriesViewItems.Take(60).Select(s => s.CoverUrl));
 
         await RemoteImage.PreloadAsync(urls, maxCount: 220, cancellationToken).ConfigureAwait(false);

@@ -5,6 +5,80 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## v30.9 – Anasayfa Sadeleştirme ve Performans (2026-03-06)
+
+### 🌟 Yeni Özellikler ve İyileştirmeler
+- **Odaklanmış Anasayfa**: Anasayfadaki "Popüler Filmler" ve "Popüler Diziler" rayları tamamen kaldırılarak sadece "İzlemeye Devam Et" rayına odaklanıldı.
+- **API Performans Optimizasyonu**: Anasayfa açılışında TMDB'den popüler listeleri çekmek için yapılan gereksiz API istekleri ve arka plan işlemleri temizlendi.
+- **Kod Temizliği**: Artık kullanılmayan `GetPopularMoviesAsync` ve `GetPopularSeriesAsync` metodları servis katmanından, ilgili özellikler ise ViewModel katmanından tamamen silindi.
+
+### 📁 Değişen Dosyalar
+| Dosya | Değişiklik |
+|-------|------------|
+| `HomeView.axaml` | Popüler içerik rayları UI'dan kaldırıldı. |
+| `MainViewModel.cs` | Ray özellikleri ve içerik yükleme mantığı temizlendi. |
+| `MetadataService.cs` | TMDB popüler liste metodları kaldırıldı. |
+| `MainWindow.axaml.cs` | Görsel önbellekleme (image warmup) mantığı güncellendi. |
+
+---
+
+## v30.8 – Akıllı Dil Eşleştirme (2026-03-06)
+
+### 🌟 Yeni Özellikler ve İyileştirmeler
+- **Dil Öncelikli İçerik Seçimi**: TMDB popüler listeleriyle eşleşen içeriklerde, aynı yapımdan birden fazla varsa (farklı diller, alt yazılı/dublajlı vb.) uygulamanın diline (Örn: TR) en uygun olanı otomatik olarak seçilir.
+- **Yabancı Dil Desteği**: Eğer kütüphanede uygulama dilinde içerik yoksa, alternatif olarak İngilizce (EN) sürümlerine öncelik verilir.
+
+### 📁 Değişen Dosyalar
+| Dosya | Değişiklik |
+|-------|------------|
+| `MainViewModel.cs` | `LoadHomeContentAsync` eşleştirme mantığı dil skorlaması ile güçlendirildi. |
+
+---
+
+## v30.7 – TMDB Popüler Listeleri (2026-03-06)
+
+### 🌟 Yeni Özellikler ve İyileştirmeler
+- **TMDB Entegrasyonu**: "Popüler Filmler" ve "Popüler Diziler" rayları artık doğrudan TMDB'nin resmi trend listelerinden (Popular Movies/TV) gelen içeriklerle dolduruluyor.
+- **Dinamik Eşleştirme**: TMDB listelerindeki ID'ler kullanıcının kütüphanesindeki içeriklerle otomatik olarak eşleştirilip popülerlik sırasına göre diziliyor.
+
+### 📁 Değişen Dosyalar
+| Dosya | Değişiklik |
+|-------|------------|
+| `MetadataService.cs` | TMDB popüler listelerini çekmek için yeni API metotları eklendi. |
+| `MainViewModel.cs` | Kütüphane içeriklerini TMDB listeleriyle eşleştiren mantık eklendi. |
+
+---
+
+## v30.6 – Anasayfa Sadeleştirme (2026-03-06)
+
+### 🌟 Yeni Özellikler ve İyileştirmeler
+- **Sadeleştirilmiş Anasayfa**: Anasayfa içeriği daha odaklanmış bir deneyim için sadece 3 raya indirildi: "İzlemeye Devam Et", "Popüler Filmler" ve "Popüler Diziler".
+- **Top 10 Listeleri**: Popüler içerik rayları artık TMDB puanına göre en iyi 10 içeriği gösterecek şekilde optimize edildi.
+
+### 📁 Değişen Dosyalar
+| Dosya | Değişiklik |
+|-------|------------|
+| `MainViewModel.cs` | `LoadHomeContentAsync` metodu 3 ray ve 10 içerik limitiyle güncellendi. |
+| `HomeView.axaml` | Fazladan raylar kaldırıldı ve başlıklar güncellendi. |
+
+---
+
+## v30.5 – Anasayfa İçerik Optimizasyonu (2026-03-06)
+
+### 🌟 Yeni Özellikler ve İyileştirmeler
+- **Dinamik Anasayfa**: Anasayfa içerikleri "En Çok Beğenilen Filmler", "Yeni Eklenen Filmler" ve "En İyi Diziler" olarak TMDB puanlarına göre yeniden düzenlendi.
+- **Akıllı İzlemeye Devam Et**: "İzlemeye Devam Et" bölümüne izleme süresi mantığı eklendi (yarım bırakılan ve henüz %92'si izlenmemiş diziler/filmler daha doğru filtreleniyor).
+- **Arayüz Temizliği (Hero Banner)**: Kullanıcı isteği doğrultusunda anasayfadaki büyük Hero Banner (vitrin) bölümü hem arayüzden hem de arkadaki mantıksal katmandan tamamen kaldırıldı.
+
+### 📁 Değişen Dosyalar
+| Dosya | Değişiklik |
+|-------|------------|
+| `MainViewModel.cs` | `FeaturedChannel` özelliği, `PlayFeatured` komutu ve hero seçim mantığı temizlendi. |
+| `HomeView.axaml` | Hero banner UI blokları kaldırıldı. |
+
+---
+
 ## v30.4 – İzleme Çubuğu Senkronizasyonu ve Tasarım Bütünlüğü (2026-03-06)
 
 ### 🎨 Görsel ve Arayüz İyileştirmeleri
@@ -138,7 +212,22 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ---
 
-## v29.8 – Tema Optimizasyonu ve Anlık TMDB Posterleri (2026-03-03)
+## Changelog - Noctra IPTV Player
+
+## v30.8 – Akıllı Dil Eşleştirme (2026-03-06)
+
+### 🌟 Yeni Özellikler ve İyileştirmeler
+- **Dil Öncelikli İçerik Seçimi**:TMDB popüler listeleriyle eşleşen içeriklerde, aynı yapımdan birden fazla varsa (farklı diller, alt yazılı/dublajlı vb.) uygulamanın diline (Örn: TR) en uygun olanı otomatik olarak seçilir.
+- **Yabancı Dil Desteği**: Eğer kütüphanede uygulama dilinde içerik yoksa, alternatif olarak İngilizce (EN) sürümlerine öncelik verilir.
+
+### 📁 Değişen Dosyalar
+| Dosya | Değişiklik |
+|-------|------------|
+| `MainViewModel.cs` | `LoadHomeContentAsync` eşleştirme mantığı dil skorlaması ile güçlendirildi. |
+
+---
+
+## v30.7 – TMDB Popüler Listeleri (2026-03-06)
 
 ### 🎨 Görsel ve Arayüz İyileştirmeleri
 - **Mor Tema Optimizasyonu**: Hem Açık (Light) hem de Koyu (Dark) temalarda bulunan ve uygulamanın konseptine uymayan mavi ve indigo tonları (Gradients, InfoColor, Profil seçim ekranı) tamamen kaldırılarak yerine uygulamanın ana kimliği olan estetik mor tonları entegre edildi.
@@ -977,8 +1066,6 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - **GlobalSettingsWindow GC Kilitlenmesi**: Genel Ayarlar ve Tema penceresinde anonim metotlar (lambda) kullanılarak GlobalSettingsViewModel'a yapılan bağlamalar isimli metotlara dönüştürüldü. Pencere kapanırken `OnClosed` metodu üzerinden tüm event aboneliklerinin silinmesi garanti altına alındı, böylece uygulamanın bellekte sızıntı yapması (Ghost Window Leak) engellendi.
 - **Video Player Görüntü ve Arayüz Düzeltmeleri** (2026-02-19):
   - **Artifact Çözümü**: VLC `vmem` modülü kaynaklı görüntü bozulmaları (dikdörtgen artifact) giderildi.
-    - Render motoru `NativeControlHost` (doğrudan HWND) altyapısına geçirildi.
-    - Bu sayede buffer kopyalama ve chroma dönüşüm işlemleri aradan çıkarılarak saf, donanım hızlandırmalı ve artifact'siz görüntü sağlandı.
   - **Overlay İyileştirmesi**: Native pencere üzerinde arayüz çizimi (Airspace sorunu) çözüldü.
     - Kontroller (Play/Pause, Seek, vb.) için video penceresi ile senkronize çalışan **Floating Transparent Window** teknolojisi eklendi.
     - Pencere boyutu değişimi ve Fullscreen geçişlerinde kontrollerin kaybolmaması için Z-Order (`Topmost`) yönetim mekanizması geliştirildi.

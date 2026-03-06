@@ -19,33 +19,7 @@ public partial class HomeView : UserControl
         if (ViewModel != null) ViewModel.SelectedGroup = null;
     }
 
-    private void HomeView_ScrollChanged(object? sender, ScrollChangedEventArgs e)
-    {
-        if (sender is not ScrollViewer scrollViewer)
-        {
-            return;
-        }
 
-        var verticalOffset = scrollViewer.Offset.Y;
-        HeroGrid.Opacity = System.Math.Max(0.2, 1.0 - (verticalOffset / 800.0));
-
-        if (HeroGrid.RenderTransform is not global::Avalonia.Media.TransformGroup transforms)
-        {
-            return;
-        }
-
-        if (transforms.Children.Count > 0 && transforms.Children[0] is global::Avalonia.Media.TranslateTransform parallax)
-        {
-            parallax.Y = verticalOffset * 0.3;
-        }
-
-        if (transforms.Children.Count > 1 && transforms.Children[1] is global::Avalonia.Media.ScaleTransform zoom)
-        {
-            var zoomFactor = System.Math.Clamp(1.0 + (verticalOffset / 2500.0), 1.0, 1.16);
-            zoom.ScaleX = zoomFactor;
-            zoom.ScaleY = zoomFactor;
-        }
-    }
 
     
     private async void Context_AddToMyList_Click(object? sender, RoutedEventArgs e)
