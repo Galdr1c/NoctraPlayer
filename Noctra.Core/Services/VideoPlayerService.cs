@@ -296,161 +296,169 @@ public class VideoPlayerService : IVideoPlayerService
 
     private async Task PlayWithRetryAsync(string url, CancellationToken cancellationToken, long generation, double startSeconds)
     {
-        try
+        while (_retryCount <= MaxRetries)
         {
-            if (_libVLC == null) return;
-            
-            Media media;
-            
-            // Gelen URL'nin bir internet yayını mı yoksa yerel dosya mı olduğunu anla
-            bool isNetworkStream = url.StartsWith("http", StringComparison.OrdinalIgnoreCase) || 
-                                url.StartsWith("rtmp", StringComparison.OrdinalIgnoreCase) || 
-                                url.StartsWith("rtsp", StringComparison.OrdinalIgnoreCase);
-
-            if (isNetworkStream)
-            {
-                // 🌐 İNTERNET YAYINI (IPTV / VOD) - Akıllı profiller
-                media = new Media(_libVLC, url, FromType.FromLocation);
-                
-                media.AddOption(":http-user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-                media.AddOption(":http-reconnect=true");
-
-                var streamProfile = DetectStreamProfile(url);
-                switch (streamProfile)
-                {
-                    case StreamProfile.LiveTs:
-                        media.AddOption($":network-caching={LiveCachingMs}");
-                        media.AddOption(":clock-synchro=0");
-                        media.AddOption(":clock-jitter=500");
-                        media.AddOption(":ts-seek-percent");
-                        media.AddOption(":drop-late-frames");
-                        break;
-
-                    case StreamProfile.VodMkv:
-                        media.AddOption(":network-caching=10000");
-                        media.AddOption(":live-caching=10000");
-                        media.AddOption(":avcodec-hw=d3d11va");
-                        media.AddOption(":no-drop-late-frames");
-                        media.AddOption(":no-skip-frames");
-                        media.AddOption(":http-forward-cookies");
-                        break;
-
-                    case StreamProfile.VodMp4:
-                        media.AddOption($":network-caching={NetworkCachingMs}");
-                        media.AddOption(":demux=mp4,avformat");
-                        break;
-
-                    case StreamProfile.LiveM3u8:
-                        media.AddOption(":network-caching=6000");
-                        media.AddOption(":adaptive-logic=highest");
-                        break;
-
-                    case StreamProfile.Unknown:
-                        // Uzantısız/belirsiz stream — VLC kendi demuxer'ı ile otomatik algılasın
-                        media.AddOption($":network-caching={NetworkCachingMs}");
-                        media.AddOption(":no-drop-late-frames");
-                        media.AddOption(":no-skip-frames");
-                        media.AddOption(":http-continuous");
-                        media.AddOption(":http-reconnect");
-                        break;
-
-                    default:
-                        media.AddOption($":network-caching={NetworkCachingMs}");
-                        media.AddOption(":no-drop-late-frames");
-                        media.AddOption(":no-skip-frames");
-                        break;
-                }
-            }
-            else
-            {
-                // 💾 YEREL DOSYA (İndirilen İçerik)
-                string localPath = url;
-                if (Uri.TryCreate(url, UriKind.Absolute, out var fileUri) && fileUri.IsFile)
-                {
-                    localPath = fileUri.LocalPath;
-                }
-                
-                media = new Media(_libVLC, localPath, FromType.FromPath);
-                media.AddOption($":file-caching={FileCachingMs}");
-                media.AddOption(":no-drop-late-frames");
-                media.AddOption(":no-skip-frames");
-            }
-
-            if (startSeconds > 0)
-            {
-                media.AddOption($":start-time={Math.Floor(startSeconds).ToString(System.Globalization.CultureInfo.InvariantCulture)}");
-            }
-
-            if (_mediaPlayer == null) return;
-            _mediaPlayer.Media = media;
-            
-            // Hata event'ini dinle
-            bool errorOccurred = false;
-            void OnError(object? s, EventArgs e)
-            {
-                errorOccurred = true;
-            }
-            
-            _mediaPlayer.EncounteredError += OnError;
-            _mediaPlayer.Play();
-            
-            // 5 saniye bekle - başarılı başladı mı? Veya hata verirse hemen kır
             try
             {
-                for (int i = 0; i < 50; i++)
-                {
-                    if (errorOccurred) break;
-                    await Task.Delay(100, cancellationToken);
-                }
-            }
-            catch (TaskCanceledException)
-            {
-                _mediaPlayer.EncounteredError -= OnError;
-                return;
-            }
-            
-            _mediaPlayer.EncounteredError -= OnError;
+                if (_libVLC == null) return;
 
-            if (cancellationToken.IsCancellationRequested || generation != Interlocked.Read(ref _playGeneration))
-            {
-                return;
-            }
-            
-            if (errorOccurred && _retryCount < MaxRetries)
-            {
-                _retryCount++;
+                Media media;
+
+                // Gelen URL'nin bir internet yayını mı yoksa yerel dosya mı olduğunu anla
+                bool isNetworkStream = url.StartsWith("http", StringComparison.OrdinalIgnoreCase) ||
+                                    url.StartsWith("rtmp", StringComparison.OrdinalIgnoreCase) ||
+                                    url.StartsWith("rtsp", StringComparison.OrdinalIgnoreCase);
+
+                if (isNetworkStream)
+                {
+                    // 🌐 İNTERNET YAYINI (IPTV / VOD) - Akıllı profiller
+                    media = new Media(_libVLC, url, FromType.FromLocation);
+
+                    media.AddOption(":http-user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+                    media.AddOption(":http-reconnect=true");
+
+                    var streamProfile = DetectStreamProfile(url);
+                    switch (streamProfile)
+                    {
+                        case StreamProfile.LiveTs:
+                            media.AddOption($":network-caching={LiveCachingMs}");
+                            media.AddOption(":clock-synchro=0");
+                            media.AddOption(":clock-jitter=500");
+                            media.AddOption(":ts-seek-percent");
+                            media.AddOption(":drop-late-frames");
+                            break;
+
+                        case StreamProfile.VodMkv:
+                            media.AddOption(":network-caching=10000");
+                            media.AddOption(":live-caching=10000");
+                            media.AddOption(":avcodec-hw=d3d11va");
+                            media.AddOption(":no-drop-late-frames");
+                            media.AddOption(":no-skip-frames");
+                            media.AddOption(":http-forward-cookies");
+                            break;
+
+                        case StreamProfile.VodMp4:
+                            media.AddOption($":network-caching={NetworkCachingMs}");
+                            media.AddOption(":demux=mp4,avformat");
+                            break;
+
+                        case StreamProfile.LiveM3u8:
+                            media.AddOption(":network-caching=6000");
+                            media.AddOption(":adaptive-logic=highest");
+                            break;
+
+                        case StreamProfile.Unknown:
+                            // Uzantısız/belirsiz stream — VLC kendi demuxer'ı ile otomatik algılasın
+                            media.AddOption($":network-caching={NetworkCachingMs}");
+                            media.AddOption(":no-drop-late-frames");
+                            media.AddOption(":no-skip-frames");
+                            media.AddOption(":http-continuous");
+                            media.AddOption(":http-reconnect");
+                            break;
+
+                        default:
+                            media.AddOption($":network-caching={NetworkCachingMs}");
+                            media.AddOption(":no-drop-late-frames");
+                            media.AddOption(":no-skip-frames");
+                            break;
+                    }
+                }
+                else
+                {
+                    // 💾 YEREL DOSYA (İndirilen İçerik)
+                    string localPath = url;
+                    if (Uri.TryCreate(url, UriKind.Absolute, out var fileUri) && fileUri.IsFile)
+                    {
+                        localPath = fileUri.LocalPath;
+                    }
+
+                    media = new Media(_libVLC, localPath, FromType.FromPath);
+                    media.AddOption($":file-caching={FileCachingMs}");
+                    media.AddOption(":no-drop-late-frames");
+                    media.AddOption(":no-skip-frames");
+                }
+
+                if (startSeconds > 0)
+                {
+                    media.AddOption($":start-time={Math.Floor(startSeconds).ToString(System.Globalization.CultureInfo.InvariantCulture)}");
+                }
+
+                if (_mediaPlayer == null) return;
+                _mediaPlayer.Media = media;
+
+                // Hata event'ini dinle
+                bool errorOccurred = false;
+                void OnError(object? s, EventArgs e)
+                {
+                    errorOccurred = true;
+                }
+
+                _mediaPlayer.EncounteredError += OnError;
+                _mediaPlayer.Play();
+
+                // 5 saniye bekle - başarılı başladı mı? Veya hata verirse hemen kır
                 try
                 {
-                    await Task.Delay(1500, cancellationToken); // 1.5 saniye bekle
+                    for (int i = 0; i < 50; i++)
+                    {
+                        if (errorOccurred) break;
+                        await Task.Delay(100, cancellationToken);
+                    }
                 }
                 catch (TaskCanceledException)
                 {
+                    _mediaPlayer.EncounteredError -= OnError;
                     return;
                 }
+
+                _mediaPlayer.EncounteredError -= OnError;
 
                 if (cancellationToken.IsCancellationRequested || generation != Interlocked.Read(ref _playGeneration))
                 {
                     return;
                 }
 
-                await PlayWithRetryAsync(url, cancellationToken, generation, startSeconds);
+                if (errorOccurred && _retryCount < MaxRetries)
+                {
+                    _retryCount++;
+                    try
+                    {
+                        await Task.Delay(1500, cancellationToken); // 1.5 saniye bekle
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        return;
+                    }
+
+                    if (cancellationToken.IsCancellationRequested || generation != Interlocked.Read(ref _playGeneration))
+                    {
+                        return;
+                    }
+
+                    continue; // Loop tekrar dönecek ve yeniden play deneyecek.
+                }
+                else if (errorOccurred)
+                {
+                    _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, "Stream bağlantısı kurulamadı. URL'yi kontrol edin."));
+                    return;
+                }
+
+                // Hata yoksa döngüden çık
+                break;
             }
-            else if (errorOccurred)
+            catch (UriFormatException)
             {
-                _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, "Stream bağlantısı kurulamadı. URL'yi kontrol edin."));
+                _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, "Geçersiz stream URL'si."));
+                return;
             }
-        }
-        catch (UriFormatException)
-        {
-            _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, "Geçersiz stream URL'si."));
-        }
-        catch (Exception ex)
-        {
-            var message = UserFriendlyErrorMessage.WithPrefix("Oynatma baslatilamadi", ex);
-            _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, message));
+            catch (Exception ex)
+            {
+                var message = UserFriendlyErrorMessage.WithPrefix("Oynatma baslatilamadi", ex);
+                _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, message));
+                return;
+            }
         }
     }
-
     public void Pause()
     {
         if (_mediaPlayer != null)
