@@ -5,6 +5,7 @@ using Noctra.Services;
 using Noctra.Services.Interfaces;
 using System.Text.RegularExpressions;
 using System.IO;
+using System.Threading;
 
 namespace Noctra.ViewModels;
 
@@ -293,7 +294,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private readonly IDispatcherService _dispatcherService;
     private DateTime _lastWatchHistoryUpdateUtc = DateTime.MinValue;
     private readonly IWatchHistoryService? _watchHistoryService;
-    private readonly System.Timers.Timer _autoHideTimer;
+    private readonly System.Threading.Timer _autoHideTimer;
     private readonly System.Timers.Timer _clockTimer;
     private readonly System.Timers.Timer _watchHistoryTimer;
 
@@ -336,9 +337,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _settingsService.SettingsChanged += OnSettingsChanged;
 
         // Auto-hide timer
-        _autoHideTimer = new System.Timers.Timer(OverlayAutoHideDelayMs);
-        _autoHideTimer.Elapsed += (s, e) =>
-            _dispatcherService.Invoke(() =>
+        _autoHideTimer = new System.Threading.Timer(_ =>
+            _dispatcherService.BeginInvoke(() =>
             {
                 if (CanAutoHideOverlay())
                 {
@@ -346,8 +346,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                     if (IsPiPMode)
                         IsPiPControlsForceVisible = false;
                 }
-            });
-        _autoHideTimer.AutoReset = false;
+            }), null, Timeout.Infinite, Timeout.Infinite);
 
         // Clock timer
         _clockTimer = new System.Timers.Timer(1000);
@@ -415,6 +414,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         {
             _dispatcherService.Invoke(() =>
             {
+                if (_isContentTransitioning) return;
+
                 _isPlaybackEnded = true;
 
                 // Erken bitiş tespiti (Premature End Analysis) & Canlı Yayın Kopması
@@ -1098,11 +1099,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     private void RestartAutoHideTimer()
     {
-        _autoHideTimer.Stop();
+        _autoHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
         IsVisible = true;
         if (CanAutoHideOverlay())
         {
-            _autoHideTimer.Start();
+            _autoHideTimer.Change((int)OverlayAutoHideDelayMs, Timeout.Infinite);
         }
     }
 
@@ -2816,7 +2817,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     {
         if (value)
         {
-            _autoHideTimer.Stop();
+            _autoHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
             IsVisible = true;
             return;
         }
@@ -2828,7 +2829,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     {
         if (value)
         {
-            _autoHideTimer.Stop();
+            _autoHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
             IsVisible = true;
             return;
         }
@@ -2840,7 +2841,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     {
         if (value)
         {
-            _autoHideTimer.Stop();
+            _autoHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
             IsVisible = true;
             return;
         }
@@ -2852,7 +2853,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     {
         if (value)
         {
-            _autoHideTimer.Stop();
+            _autoHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
             IsVisible = true;
             return;
         }
@@ -2866,7 +2867,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         if (value)
         {
-            _autoHideTimer.Stop();
+            _autoHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
             IsVisible = true;
             return;
         }
@@ -2879,7 +2880,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     {
         if (value)
         {
-            _autoHideTimer.Stop();
+            _autoHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
             IsVisible = true;
             return;
         }
@@ -2891,7 +2892,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     {
         if (value)
         {
-            _autoHideTimer.Stop();
+            _autoHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
             IsVisible = true;
             return;
         }
