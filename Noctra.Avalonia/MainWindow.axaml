@@ -715,10 +715,10 @@
                                                   <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
                                                   <materialIcons:MaterialIcon Kind="Play" Width="24" Height="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.7"/>
                                                   
-                                                  <!-- Progress Bar (Internal) -->
-                                                  <ProgressBar VerticalAlignment="Bottom" Height="3" Minimum="0" Maximum="100" 
-                                                               Value="{Binding WatchedPercentage}" Foreground="{DynamicResource AccentBrush}" Background="#4D000000" BorderThickness="0"
-                                                               IsVisible="{Binding WatchedPercentage, Converter={StaticResource CountToVisibilityConverter}}"/>
+                                                   <!-- Progress Bar (Internal Sync with Overlay) -->
+                                                   <Border VerticalAlignment="Bottom" Height="5" Background="#66000000" CornerRadius="0,0,6,6" IsVisible="{Binding WatchedPercentage, Converter={StaticResource CountToVisibilityConverter}}">
+                                                       <Border HorizontalAlignment="Left" Background="{DynamicResource AccentBrush}" CornerRadius="0,0,0,6" Width="{Binding WatchedPercentage, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=200}"/>
+                                                   </Border>
                                               </Grid>
                                           </Border>
 
@@ -1023,3 +1023,4 @@
 
   </Grid>
 </Window>
+

@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v30.4 – İzleme Çubuğu Senkronizasyonu ve Tasarım Bütünlüğü (2026-03-06)
+
+### 🎨 Görsel ve Arayüz İyileştirmeleri
+- **İzle Çubuğu (Progress Bar) Senkronizasyonu**: Video oynatıcı üzerindeki geliştirilmiş izleme çubuğu tasarımı (5px yükseklik, yüksek kontrast, kavisli köşeler) ana dizi detay sayfasına (`MainWindow.axaml`) da uygulanarak görsel bütünlük sağlandı.
+- **Dinamik Tasarım Uyumu**: Farklı thumbnail boyutlarına (106px vs 200px) göre otomatik genişlik hesaplaması (`PercentToWidthConverter`) optimize edilerek her iki görünümde de kusursuz bir deneyim sağlandı.
+
+### 📁 Değişen Dosyalar
+| Dosya | Değişiklik |
+|-------|------------|
+| `MainWindow.axaml` | Dizi detay listesindeki progress bar tasarımı oynatıcı paneliyle senkronize edildi. |
+
+---
+
 ## v30.3 – Bölüm Paneli Optimizasyonu ve Meta Veri Entegrasyonu (2026-03-05)
 
 ### 🎨 Görsel ve Arayüz İyileştirmeleri
@@ -17,6 +30,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **Bölüm Paneli (Accordion) Kapanma Hatası**: Video oynatıcı üzerindeki bölümler (episodes) listesinde bir bölüme tıklandığında Accordion panelinin (Expander) kendi kendine kapanmasına neden olan olay (event) yönlendirme (bubbling) hatası çözüldü.
 - **Aktif Sezon Paneli Odaklanması**: Bölümler listesi (Episodes) açıldığında varsayılan olarak tüm sezonların açık gelmesi yerine, **sadece o an izlenmekte olan bölümün (current episode) bulunduğu sezonun otomatik olarak açık (expanded)** gelmesi sağlandı.
 - **Bölüm Paneli Yükleme Hatası**: Bazı serilerde metadata senkronizasyonu sırasında panelin boş açılmasına neden olan `PlayerViewModel` veri çakışması giderildi.
+- **Bölüm Listesi Tasarım Düzeltmesi**: Bölüm paneli içerisindeki sezon (Expander) başlıkları ve bölüm kartlarının (Episode Cards) ekranın en sağındaki kaydırma çubuğuyla (scrollbar) çarpışmasını engellemek adına gerekli kenar boşlukları (margin/padding) eklendi ve liste tasarımı daha ferah hale getirildi.
 
 ### 📁 Değişen Dosyalar
 | Dosya | Değişiklik |

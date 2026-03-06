@@ -414,7 +414,7 @@
                                             <Expander.Header>
                                                 <Grid ColumnDefinitions="*,Auto" Margin="4,0,0,8">
                                                     <TextBlock Text="{Binding SeasonNumber, StringFormat='Sezon {0}'}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-                                                    <Border Grid.Column="1" Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="12,4" Margin="0,0,0,0">
+                                                    <Border Grid.Column="1" Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="12,4" Margin="0,0,16,0">
                                                         <TextBlock Text="{Binding Episodes.Count, StringFormat='{}{0} BÖLÜM'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" FontWeight="Bold" LetterSpacing="0.5"/>
                                                     </Border>
                                                 </Grid>
@@ -423,7 +423,7 @@
                                             <ItemsControl ItemsSource="{Binding Episodes}" Margin="0,4,0,0">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate x:DataType="models:Episode">
-                                                        <Button Margin="4,0,4,12" Classes="episodeCardBtn" Command="{Binding #OverlayRoot.DataContext.PlayEpisodeFromOverlayCommand}" CommandParameter="{Binding}" PointerPressed="EpisodeCardBtn_PointerPressed">
+                                                        <Button Margin="8,0,24,12" Classes="episodeCardBtn" Command="{Binding #OverlayRoot.DataContext.PlayEpisodeFromOverlayCommand}" CommandParameter="{Binding}" PointerPressed="EpisodeCardBtn_PointerPressed">
                                                             <Panel>
                                                                 <Border Name="CardBackground" Background="{DynamicResource Surface1Brush}" CornerRadius="10" ClipToBounds="True" BorderThickness="1.5">
                                                                     <Border.BorderBrush>
