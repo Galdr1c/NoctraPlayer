@@ -1165,7 +1165,6 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private void UpdateMediaInfo()
     {
         UpdateDurationFromService(force: true);
-        TryApplyPendingResumeSeek();
 
         var audioTracks = _videoPlayerService.AudioTracks
             .Where(t => t.Id >= 0 && !IsDisabledTrackLabel(t.Name))

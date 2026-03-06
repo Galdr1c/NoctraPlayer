@@ -31,6 +31,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **Aktif Sezon Paneli Odaklanması**: Bölümler listesi (Episodes) açıldığında varsayılan olarak tüm sezonların açık gelmesi yerine, **sadece o an izlenmekte olan bölümün (current episode) bulunduğu sezonun otomatik olarak açık (expanded)** gelmesi sağlandı.
 - **Bölüm Paneli Yükleme Hatası**: Bazı serilerde metadata senkronizasyonu sırasında panelin boş açılmasına neden olan `PlayerViewModel` veri çakışması giderildi.
 - **Bölüm Listesi Tasarım Düzeltmesi**: Bölüm paneli içerisindeki sezon (Expander) başlıkları ve bölüm kartlarının (Episode Cards) ekranın en sağındaki kaydırma çubuğuyla (scrollbar) çarpışmasını engellemek adına gerekli kenar boşlukları (margin/padding) eklendi ve liste tasarımı daha ferah hale getirildi.
+- **Panel Geçişlerinde Yayının Yeniden Başlaması**: Kullanıcı Ses ayarları veya diğer paneller arasında geçiş yaptığında arka planda yanlışlıkla arama (seek) işleminin tetiklenerek VLC altyapısının yayını baştan başlatıyormuş gibi davranıp (loading ekranı) duraksamaya sebep olması sorunu çözüldü.
 
 ### 📁 Değişen Dosyalar
 | Dosya | Değişiklik |
