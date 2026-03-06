@@ -403,4 +403,12 @@ public partial class VideoOverlayView : UserControl
             e.Handled = true;
         }
     }
+
+    private void EpisodeCardBtn_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        // Stop pointer pressed from bubbling up to the Expander,
+        // which prevents the Expander header from incorrectly toggling
+        // when an episode card is clicked.
+        e.Handled = true;
+    }
 }

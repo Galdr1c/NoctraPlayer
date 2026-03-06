@@ -423,7 +423,7 @@
                                             <ItemsControl ItemsSource="{Binding Episodes}" Margin="0,4,0,0">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate x:DataType="models:Episode">
-                                                        <Button Margin="4,0,4,12" Classes="episodeCardBtn" Command="{Binding #OverlayRoot.DataContext.PlayEpisodeFromOverlayCommand}" CommandParameter="{Binding}">
+                                                        <Button Margin="4,0,4,12" Classes="episodeCardBtn" Command="{Binding #OverlayRoot.DataContext.PlayEpisodeFromOverlayCommand}" CommandParameter="{Binding}" PointerPressed="EpisodeCardBtn_PointerPressed">
                                                             <Panel>
                                                                 <Border Name="CardBackground" Background="{DynamicResource Surface1Brush}" CornerRadius="10" ClipToBounds="True" BorderThickness="1.5">
                                                                     <Border.BorderBrush>

@@ -14,6 +14,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **İzle Çubuğu (Progress Bar) Belirginliği**: Çubuk kalınlığı 5px'e çıkarıldı ve açık renkli görsellerde de seçilebilmesi için kontrastı artırıldı.
 
 ### 🐛 Hata Düzeltmeleri
+- **Bölüm Paneli (Accordion) Kapanma Hatası**: Video oynatıcı üzerindeki bölümler (episodes) listesinde bir bölüme tıklandığında Accordion panelinin (Expander) kendi kendine kapanmasına neden olan olay (event) yönlendirme (bubbling) hatası çözüldü.
 - **Bölüm Paneli Yükleme Hatası**: Bazı serilerde metadata senkronizasyonu sırasında panelin boş açılmasına neden olan `PlayerViewModel` veri çakışması giderildi.
 
 ### 📁 Değişen Dosyalar
