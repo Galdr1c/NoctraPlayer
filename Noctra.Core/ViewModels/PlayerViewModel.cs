@@ -266,6 +266,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private static readonly TimeSpan PrematureEndRecoveryCooldown = TimeSpan.FromSeconds(3);
     private static readonly TimeSpan PrematureEndRecoveryWindowReset = TimeSpan.FromMinutes(2);
     private int _isPlayPauseInProgress;
+    private int _isClockProcessing;
     private bool _isIntentionallyPaused;
     private bool _livePauseRequiresHardRestart;
     private double _lastLiveObservedPosition = -1;
@@ -352,9 +353,14 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _clockTimer = new System.Timers.Timer(1000);
         _clockTimer.Elapsed += async (s, e) =>
         {
+            if (Interlocked.Exchange(ref _isClockProcessing, 1) == 1)
+            {
+                return;
+            }
+
             try
             {
-                _dispatcherService.Invoke(() => CurrentTimeStr = DateTime.Now.ToString("HH:mm"));
+                _dispatcherService.BeginInvoke(() => CurrentTimeStr = DateTime.Now.ToString("HH:mm"));
 
                 // Run background health and update tasks concurrently
                 // This prevents a failure in one (e.g. EPG update) from blocking the other (Live health check)
@@ -372,6 +378,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[PlayerViewModel] Clock tick failed: {ex.Message}");
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _isClockProcessing, 0);
             }
         };        _clockTimer.Start();
         CurrentTimeStr = DateTime.Now.ToString("HH:mm");
@@ -678,13 +688,14 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     {
         LogDebug($"AutoRecoverPrematureEnd: Reconnecting silently to let proxy clear...");
         IsBuffering = true;
+
+        var requestVersion = _playRequestVersion;
         await Task.Delay(500);
-        
+
         // If user hasn't clicked Stop or changed channel
-        if (CurrentChannel == null || _isContentTransitioning) return;
-        
-        LogDebug($"AutoRecoverPrematureEnd: Executing ResumePlaybackAsync from {lastPos}s");
-        _lastPausedPosition = lastPos;
+        if (CurrentChannel == null || _isContentTransitioning || requestVersion != _playRequestVersion) return;
+
+        LogDebug($"AutoRecoverPrematureEnd: Executing ResumePlaybackAsync from {lastPos}s");        _lastPausedPosition = lastPos;
         _isPlaybackEnded = false;
         await ResumePlaybackAsync(CurrentChannel.StreamUrl, false);
     }
