@@ -906,21 +906,20 @@
                   <Grid x:Name="PlayerOverlayLayer" ZIndex="2600">
                     <views:VideoOverlayView x:Name="OverlayControl" ZIndex="2"/>
                     <!-- Next Episode Prompt (binds to PlayerViewModel via OverlayControl's DataContext) -->
-                    <Border x:Name="NextEpisodePrompt" Background="{DynamicResource SurfaceBrush}" CornerRadius="12" Padding="24"
-                            HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,40,180" Width="350"
+                    <Border x:Name="NextEpisodePrompt" Background="{DynamicResource SurfaceBrush}" CornerRadius="12" Padding="16"
+                            HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,40,140" Width="260"
                             DataContext="{Binding #OverlayControl.DataContext}" x:DataType="vm:PlayerViewModel"
                             IsVisible="{Binding IsNextEpisodePromptVisible}" ZIndex="3000">
                       <Grid RowDefinitions="Auto,Auto,Auto">
-                        <TextBlock Text="Sonraki B&#246;l&#252;m" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
-                        <StackPanel Grid.Row="1" Margin="0,0,0,16">
-                          <TextBlock Text="{Binding NextEpisode.Name}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
-                          <TextBlock Text="{Binding NextEpisode.Plot}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextTrimming="CharacterEllipsis" MaxHeight="40" Margin="0,4,0,0"/>
+                        <TextBlock Text="Sonraki B&#246;l&#252;m" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                        <StackPanel Grid.Row="1" Margin="0,0,0,12">
+                          <TextBlock Text="{Binding NextEpisode.Name}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
                         <Button Grid.Row="2" Command="{Binding PlayNextEpisodeCommand}"
-                                Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="16" FontWeight="Bold" Padding="20,12" BorderThickness="0" HorizontalAlignment="Stretch" Cursor="Hand">
+                                Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" FontWeight="Bold" Padding="16,10" BorderThickness="0" HorizontalAlignment="Stretch" Cursor="Hand">
                           <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
-                            <materialIcons:MaterialIcon Kind="Play" Width="16" Height="16" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="&#350;imdi &#304;zle" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <materialIcons:MaterialIcon Kind="Play" Width="14" Height="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Text="&#350;imdi &#304;zle" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                           </StackPanel>
                         </Button>
                       </Grid>

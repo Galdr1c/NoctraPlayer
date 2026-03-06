@@ -15,6 +15,8 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **İlerleme Çubuğu Düzeltmesi**: Dizi bölümlerinde izleme yüzdesinin anasayfaya yansımamasını sağlayan veri eşleme hatası giderildi.
 - **Logo Seçim Mantığı (Heuristic)**: Genel kategorilerde (TR/DIZI vb.) yerel yayıncı (Prime Video, Netflix vb.) logolarına üretim stüdyolarının (WB vb.) önünde öncelik verildi.
 - **Canlı TV Bilgi Paneli**: "Hakkında" panelindeki boş kutular ve gereksiz süre bilgileri temizlenerek daha sade bir görünüm elde edildi.
+- **Sonraki Bölüm Uyarısı İyileştirmesi**: Uyarı paneli daha küçük ve sade hale getirildi (açıklama metni kaldırıldı, boyutlar optimize edildi).
+- **İzlemeye Devam Et Eşiği**: İçeriklerin anasayfada görünmesi için gereken minimum izleme süresi 30 saniyeden **2 dakikaya** çıkarıldı.
 - **Hata Temizliği**: `MainWindow.axaml` üzerindeki yazım hataları düzeltilerek derleme hataları giderildi.
 
 ### 📁 Değişen Dosyalar

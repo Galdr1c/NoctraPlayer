@@ -1244,7 +1244,7 @@ public partial class MainViewModel : ObservableObject
             .Where(c => c.Type == ChannelType.VOD
                      && c.LastWatched.HasValue
                      && c.WatchedPosition.HasValue
-                     && c.WatchedPosition.Value.TotalSeconds > 30
+                     && c.WatchedPosition.Value.TotalSeconds > 120
                      && c.Duration.HasValue
                      && c.Duration.Value.TotalSeconds > 0
                      && (c.WatchedPosition.Value.TotalSeconds / c.Duration.Value.TotalSeconds) < 0.92);
@@ -1254,7 +1254,7 @@ public partial class MainViewModel : ObservableObject
             .Where(e => e.LastWatched.HasValue
                      && !e.IsCompleted
                      && e.WatchedPosition.HasValue
-                     && e.WatchedPosition.Value.TotalSeconds > 30
+                     && e.WatchedPosition.Value.TotalSeconds > 120
                      && e.Duration.HasValue
                      && e.Duration.Value.TotalSeconds > 0
                      && (e.WatchedPosition.Value.TotalSeconds / e.Duration.Value.TotalSeconds) < 0.92)
