@@ -2556,7 +2556,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                     _dispatcherService.Invoke(() => PlayerLoadingWarningMessage = string.Empty);
                     return;
                 }
-                if (_isIntentionallyPaused)
+                if (_isIntentionallyPaused || Interlocked.CompareExchange(ref _isPlayPauseInProgress, 0, 0) == 1)
                     return;
                 if (_livePauseRequiresHardRestart)
                     return;
