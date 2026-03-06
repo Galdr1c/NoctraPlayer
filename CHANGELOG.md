@@ -32,6 +32,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **Bölüm Paneli Yükleme Hatası**: Bazı serilerde metadata senkronizasyonu sırasında panelin boş açılmasına neden olan `PlayerViewModel` veri çakışması giderildi.
 - **Bölüm Listesi Tasarım Düzeltmesi**: Bölüm paneli içerisindeki sezon (Expander) başlıkları ve bölüm kartlarının (Episode Cards) ekranın en sağındaki kaydırma çubuğuyla (scrollbar) çarpışmasını engellemek adına gerekli kenar boşlukları (margin/padding) eklendi ve liste tasarımı daha ferah hale getirildi.
 - **Panel Geçişlerinde Yayının Yeniden Başlaması**: Kullanıcı Ses ayarları veya diğer paneller arasında geçiş yaptığında arka planda yanlışlıkla arama (seek) işleminin tetiklenerek VLC altyapısının yayını baştan başlatıyormuş gibi davranıp (loading ekranı) duraksamaya sebep olması sorunu çözüldü.
+- **Duraklatma (Pause) Hatası ve İstenmeyen Yeniden Başlama**: Oynatıcı bilerek duraklatıldığında (Pause) ekranda gereksiz yere "Yükleniyor (Buffer)" animasyonunun çıkması engellendi. Ayrıca uygulamanın arka plan sağlık kontrolü, kullanıcı tarafından yapılan duraklatmaları "yayın koptu" zannedip kendi kendine tekrar oynatmaya başlama sorunu (_auto-resume bug_) tamamen giderildi. Artık duraklatılan yayınlar siz yeniden başlatana kadar kapalı kalır ve yükleme ekranı göstermez.
 
 ### 📁 Değişen Dosyalar
 | Dosya | Değişiklik |

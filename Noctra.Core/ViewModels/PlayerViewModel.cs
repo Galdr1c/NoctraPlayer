@@ -266,6 +266,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private static readonly TimeSpan PrematureEndRecoveryCooldown = TimeSpan.FromSeconds(3);
     private static readonly TimeSpan PrematureEndRecoveryWindowReset = TimeSpan.FromMinutes(2);
     private int _isPlayPauseInProgress;
+    private bool _isIntentionallyPaused;
     private bool _livePauseRequiresHardRestart;
     private double _lastLiveObservedPosition = -1;
     private DateTime _lastLiveProgressAtUtc = DateTime.MinValue;
@@ -462,7 +463,14 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 }
 
                 // Keep loading active until playback truly starts and buffering reaches 100.
-                IsBuffering = !IsPlaying || progress < 100f;
+                if (_isIntentionallyPaused || IsDownloadedPlayback)
+                {
+                    IsBuffering = false;
+                }
+                else
+                {
+                    IsBuffering = !IsPlaying || progress < 100f;
+                }
 
                 // Buffering bittiğinde kontrol katmanını mutlaka geri getir.
                 if (!IsBuffering)
@@ -595,6 +603,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             // Canlı TV kontrolü
             IsLiveContent = value.Type == ChannelType.Live;
             _livePauseRequiresHardRestart = false;
+            _isIntentionallyPaused = false;
             _lastLiveObservedPosition = -1;
             _lastLiveProgressAtUtc = DateTime.UtcNow;
             _lastLivePositionEventAtUtc = DateTime.UtcNow;
@@ -1353,6 +1362,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         if (IsPlaying)
         {
+            _isIntentionallyPaused = true;
             if (treatAsLivePlayback)
             {
                 // Live içeriği duraklatınca son kare ekranda kalsın (beyaz ekran olmasın).
@@ -1369,6 +1379,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         }
         else if (CurrentChannel != null)
         {
+            _isIntentionallyPaused = false;
             var mediaPlayer = _videoPlayerService.GetMediaPlayer();
             var state = mediaPlayer?.State ?? LibVLCSharp.Shared.VLCState.NothingSpecial;
             var isStreamDead = state == LibVLCSharp.Shared.VLCState.Stopped || 
@@ -2322,6 +2333,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _lastPausedPosition = 0;
         _lastPausedTimeMs = 0;
         _prematureEndRecoveryCount = 0;
+        _isIntentionallyPaused = false;
         _lastPrematureEndRecoveryUtc = DateTime.MinValue;
         Interlocked.Increment(ref _seekShieldSuppressionToken);
         _suppressBufferShieldForSeek = false;
@@ -2550,6 +2562,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                     _dispatcherService.Invoke(() => PlayerLoadingWarningMessage = string.Empty);
                     return;
                 }
+                if (_isIntentionallyPaused)
+                    return;
                 if (_livePauseRequiresHardRestart)
                     return;
 
@@ -2572,6 +2586,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 _dispatcherService.Invoke(() => PlayerLoadingWarningMessage = string.Empty);
                 return;
             }
+            if (_isIntentionallyPaused)
+                return;
             if (_livePauseRequiresHardRestart)
                 return;
             // Seek sonrası buffer bekliyorsa restart yapma
