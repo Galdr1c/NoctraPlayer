@@ -475,7 +475,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 // Keep loading active until playback truly starts and buffering reaches 100.
                 if (_isIntentionallyPaused || IsDownloadedPlayback)
                 {
-                    IsBuffering = false;
+                    // For offline files and intentional pauses, VLC still sends Buffering(0) which causes IsBuffering to stuck at true
+                    // if we check !IsPlaying. Thus, only depend on progress < 100f for these cases.
+                    IsBuffering = progress < 100f;
                 }
                 else
                 {
