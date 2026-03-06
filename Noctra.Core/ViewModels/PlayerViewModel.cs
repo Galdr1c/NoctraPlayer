@@ -526,17 +526,19 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 {
                     Position = pos;
                     PositionText = TimeSpan.FromSeconds(pos).ToString(@"hh\:mm\:ss");
-                    
+
                     if (pos > 1 && !IsBuffering && !_isContentTransitioning)
                     {
                         _lastKnownValidPosition = pos;
                     }
-                    
+
                     if (!IsLiveContent && Duration > 0)
                     {
-                        RemainingTime = "-" + TimeSpan.FromSeconds(Math.Max(0, Duration - pos)).ToString(@"hh\:mm\:ss");
+                        var remaining = Math.Max(0, Duration - pos);
+                        RemainingTime = "-" + TimeSpan.FromSeconds(remaining).ToString(@"hh\:mm\:ss");
+                        CheckIntroCreditsPosition(pos);
                     }
-                    
+
                     TryApplyPendingResumeSeek();
                 }
 
@@ -545,7 +547,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 {
                     var mediaPlayer = _videoPlayerService.GetMediaPlayer();
                     var currentTimeMs = mediaPlayer?.Time ?? 0;
-                    
+
                     if (currentTimeMs > 0 && currentTimeMs == _lastStallCheckTimeMs)
                     {
                         _stallCounter++;
@@ -562,15 +564,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 }
 
                 ReleaseSkipSeekCarryIfSettled(nowUtc, pos);
-
-                if (Duration > 0)
-                {
-                    var remaining = Math.Max(0, Duration - pos);
-                    RemainingTime = "-" + TimeSpan.FromSeconds(remaining).ToString(@"hh\:mm\:ss");
-                    CheckIntroCreditsPosition(pos);
-                }
-            });
-        };
+                });        };
 
         // Initialize volume from service
         _volume = _videoPlayerService.Volume;
