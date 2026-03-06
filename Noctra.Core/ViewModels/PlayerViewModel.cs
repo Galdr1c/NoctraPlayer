@@ -2356,10 +2356,17 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             return;
         }
 
-        EpisodeSeasons = sourceSeasons
+        var newSeasons = sourceSeasons
             .Where(s => s.Episodes != null && s.Episodes.Count > 0)
             .OrderBy(s => s.SeasonNumber)
             .ToList();
+
+        foreach (var season in newSeasons)
+        {
+            season.IsExpanded = season.Episodes.Any(e => BuildEpisodeIdentity(e) == CurrentEpisodeIdentity);
+        }
+
+        EpisodeSeasons = newSeasons;
     }
 
     private Episode? FindNextEpisodeInBrowser(Episode episode)

@@ -15,6 +15,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ### 🐛 Hata Düzeltmeleri
 - **Bölüm Paneli (Accordion) Kapanma Hatası**: Video oynatıcı üzerindeki bölümler (episodes) listesinde bir bölüme tıklandığında Accordion panelinin (Expander) kendi kendine kapanmasına neden olan olay (event) yönlendirme (bubbling) hatası çözüldü.
+- **Aktif Sezon Paneli Odaklanması**: Bölümler listesi (Episodes) açıldığında varsayılan olarak tüm sezonların açık gelmesi yerine, **sadece o an izlenmekte olan bölümün (current episode) bulunduğu sezonun otomatik olarak açık (expanded)** gelmesi sağlandı.
 - **Bölüm Paneli Yükleme Hatası**: Bazı serilerde metadata senkronizasyonu sırasında panelin boş açılmasına neden olan `PlayerViewModel` veri çakışması giderildi.
 
 ### 📁 Değişen Dosyalar

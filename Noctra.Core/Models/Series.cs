@@ -109,7 +109,10 @@ public class Season
     public string? Plot { get; set; }
     public int SeriesId { get; set; }
     public int? TmdbSeasonId { get; set; }
-    
+
+    [NotMapped]
+    public bool IsExpanded { get; set; }
+
     // Navigation properties
     public Series? Series { get; set; }
     public ICollection<Episode> Episodes { get; set; } = new List<Episode>();
