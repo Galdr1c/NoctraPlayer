@@ -50,15 +50,16 @@
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Padding" Value="0"/>
-        <Setter Property="Margin" Value="10,1"/>
+        <Setter Property="Margin" Value="8,2"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="ClipToBounds" Value="True"/>
+        <Setter Property="Height" Value="44"/>
       </Style>
   
       <Style Selector="Button.navItem StackPanel.ItemContent">
-        <Setter Property="Margin" Value="20,11"/>
+        <Setter Property="Margin" Value="14,0"/>
       </Style>          
       <Style Selector="Button.navItem:pointerover">
         <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
@@ -252,13 +253,28 @@
     </Border>
 
     <!-- ========== MAIN CONTENT AREA ========== -->
-    <Grid x:Name="MainContentArea" Grid.Row="1" ColumnDefinitions="280,*">
-
+    <Grid x:Name="MainContentArea" Grid.Row="1">
       <!-- SIDEBAR -->
-      <Border x:Name="SideBar" Grid.Column="0" Background="{DynamicResource Bg1Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
-        <StackPanel Margin="0,24,0,24">
+      <Border x:Name="SideBar" Width="60" HorizontalAlignment="Left" ZIndex="200" Background="{DynamicResource Bg1Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
+        <Border.Transitions>
+          <Transitions>
+            <DoubleTransition Property="Width" Duration="0:0:0.22" Easing="CubicEaseOut"/>
+          </Transitions>
+        </Border.Transitions>
+
+        <StackPanel Margin="0,16,0,24">
+          <!-- Hamburger Button -->
+          <Button x:Name="HamburgerBtn" Click="HamburgerBtn_Click"
+                  Background="Transparent" BorderThickness="0"
+                  Width="44" Height="44" Padding="0"
+                  HorizontalAlignment="Left" Margin="8,0,0,16"
+                  Cursor="Hand" ToolTip.Tip="Menü">
+            <materialIcons:MaterialIcon Kind="Menu" Width="22" Height="22"
+                                        Foreground="{DynamicResource TextPrimaryBrush}"/>
+          </Button>
+
           <!-- Nav Section Label -->
-          <TextBlock Text="ANA MENÜ" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="24,0,24,8" LetterSpacing="2"/>
+          <TextBlock x:Name="NavLabel1" Text="ANA MENÜ" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="24,0,24,8" LetterSpacing="2" IsVisible="False"/>
 
           <!-- Home -->
           <Button Classes="navItem" Click="NavigateHome_Click"
@@ -267,7 +283,7 @@
               <Border Classes="ActiveIndicator" />
               <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
                 <materialIcons:MaterialIcon Kind="HomeVariantOutline" />
-                <TextBlock Text="Ana Sayfa" VerticalAlignment="Center"/>
+                <TextBlock x:Name="NavHomeText" Text="Ana Sayfa" VerticalAlignment="Center" IsVisible="False"/>
               </StackPanel>
             </Panel>
           </Button>
@@ -279,7 +295,7 @@
               <Border Classes="ActiveIndicator" />
               <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
                 <materialIcons:MaterialIcon Kind="Television" />
-                <TextBlock Text="Canlı TV" VerticalAlignment="Center"/>
+                <TextBlock x:Name="NavLiveText" Text="Canlı TV" VerticalAlignment="Center" IsVisible="False"/>
               </StackPanel>
             </Panel>
           </Button>
@@ -291,7 +307,7 @@
               <Border Classes="ActiveIndicator" />
               <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
                 <materialIcons:MaterialIcon Kind="MovieOpenOutline" />
-                <TextBlock Text="Filmler" VerticalAlignment="Center"/>
+                <TextBlock x:Name="NavMoviesText" Text="Filmler" VerticalAlignment="Center" IsVisible="False"/>
               </StackPanel>
             </Panel>
           </Button>
@@ -303,15 +319,15 @@
               <Border Classes="ActiveIndicator" />
               <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
                 <materialIcons:MaterialIcon Kind="TelevisionPlay" />
-                <TextBlock Text="Diziler" VerticalAlignment="Center"/>
+                <TextBlock x:Name="NavSeriesText" Text="Diziler" VerticalAlignment="Center" IsVisible="False"/>
               </StackPanel>
             </Panel>
           </Button>
 
-          <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="20,12"/>
+          <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="8,12"/>
 
           <!-- Nav Section Label 2 -->
-          <TextBlock Text="KÜTÜPHANE" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="24,0,24,8" LetterSpacing="2"/>
+          <TextBlock x:Name="NavLabel2" Text="KÜTÜPHANE" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="24,0,24,8" LetterSpacing="2" IsVisible="False"/>
 
           <!-- My List -->
           <Button Classes="navItem" Click="NavigateMyList_Click"
@@ -320,7 +336,7 @@
               <Border Classes="ActiveIndicator" />
               <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
                 <materialIcons:MaterialIcon Kind="PlaylistPlus" />
-                <TextBlock Text="Listem" VerticalAlignment="Center"/>
+                <TextBlock x:Name="NavMyListText" Text="Listem" VerticalAlignment="Center" IsVisible="False"/>
               </StackPanel>
             </Panel>
           </Button>
@@ -332,7 +348,7 @@
               <Border Classes="ActiveIndicator" />
               <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
                 <materialIcons:MaterialIcon Kind="HeartOutline" />
-                <TextBlock Text="Favoriler" VerticalAlignment="Center"/>
+                <TextBlock x:Name="NavFavText" Text="Favoriler" VerticalAlignment="Center" IsVisible="False"/>
               </StackPanel>
             </Panel>
           </Button>
@@ -344,7 +360,7 @@
               <Border Classes="ActiveIndicator" />
               <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
                 <materialIcons:MaterialIcon Kind="History" />
-                <TextBlock Text="Geçmiş" VerticalAlignment="Center"/>
+                <TextBlock x:Name="NavHistoryText" Text="Geçmiş" VerticalAlignment="Center" IsVisible="False"/>
               </StackPanel>
             </Panel>
           </Button>
@@ -354,10 +370,10 @@
                   Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Downloads}}">
             <Panel>
               <Border Classes="ActiveIndicator" />
-              <Grid ColumnDefinitions="*,Auto" Margin="20,11">
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+              <Grid ColumnDefinitions="*,Auto" Margin="0,0,12,0">
+                <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
                   <materialIcons:MaterialIcon Kind="DownloadOutline" />
-                  <TextBlock Text="İndirilenler" VerticalAlignment="Center"/>
+                  <TextBlock x:Name="NavDownloadsText" Text="İndirilenler" VerticalAlignment="Center" IsVisible="False"/>
                 </StackPanel>
                 
                 <!-- Badge -->
@@ -372,8 +388,16 @@
         </StackPanel>
       </Border>
 
-      <!-- MAIN CONTENT -->
-      <Grid Grid.Column="1">
+      <!-- Sidebar dışına tıklayınca kapatan şeffaf overlay -->
+      <Border x:Name="SidebarDismissOverlay"
+              Background="Transparent"
+              ZIndex="199"
+              IsVisible="False"
+              IsHitTestVisible="True"
+              PointerPressed="SidebarDismissOverlay_PointerPressed"/>
+
+      <!-- MAIN CONTENT (Has 60px left margin to avoid overlap with closed sidebar) -->
+      <Grid Margin="60,0,0,0">
 
         <!-- 1. HOME VIEW -->
                 <views:HomeView IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Home}}" />
@@ -412,10 +436,10 @@
 
 
         <!-- Series Detail Overlay (Modern Netflix Style) -->
-        <Grid x:Name="SeriesDetailOverlay" 
+        <!-- Will be placed inside Main Content Area so that sidebar can overlay over it -->
+        <Grid x:Name="SeriesDetailOverlay"
               Background="{DynamicResource BackgroundGradientBrush}"
-              IsVisible="{Binding IsSeriesDetailVisible}" ZIndex="998">
-          
+              IsVisible="{Binding IsSeriesDetailVisible}" ZIndex="998">          
           <Grid>
             <!-- Background Backdrop with Blur -->
             <Grid IsHitTestVisible="False" Opacity="0.3">

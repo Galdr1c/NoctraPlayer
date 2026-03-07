@@ -9,9 +9,16 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Genişletilebilir Sol Menü (Sidebar)**: Ana menü modernize edilerek açılır/kapanır "Hamburger Menü" yapısına geçirildi.
+  - Menü, açıldığında ana içeriği kaydırmak yerine Netflix tarzı "Overlay" (üzerine bindirme) animasyonu ile açılıyor.
+  - Menü kapalıyken ikonların daha nizami ve dengeli görünmesi için `Padding` ve `Margin` oranları revize edildi.
+  - "İndirilenler" sayfasındaki ikon kayma/hizalanma hatası düzeltildi.
 - **Geçmiş Sayfası Dizi Görünümü**: Geçmiş (History) sekmesinde yer alan dizi içerikleri, izlenen bölümlerin (episode) listelenmesi yerine ana dizi kartları (`SeriesCard`) olarak listelenecek şekilde güncellendi. Artık karta tıklandığında doğrudan dizinin detay sayfası açılıyor.
 
 ### 🛠️ Düzeltmeler ve Optimizasyonlar
+- **Dizi Detay Sayfası İyileştirmeleri**:
+  - Dizi detay sayfası açıkken, üst bardan arama yapıldığında (Enter) veya sol menüden farklı bir sayfaya geçildiğinde dizi sayfasının açık kalmaya devam edip altta birikmesi sorunu giderildi; artık yeni bir aksiyonda otomatik kapanıyor.
+  - Sayfanın sol menünün altında kalmasını önlemek amacıyla Z-Index ve Grid yapılandırmaları düzeltildi.
 - **VOD İzleme Geçmişi**: Tamamlanmış (sonuna kadar izlenmiş) VOD içeriklerinin "İzlemeye Devam Et" listesinde belirmeye devam etmesi sorunu düzeltildi (`Channel` modeline `IsCompleted` özelliği eklendi).
 - **Performans İyileştirmesi**: Anasayfa yüklenirken, her bir dizi bölümü (episode) için yapılan $O(n^2)$ karmaşıklığındaki dizi (series) arama işlemi, $O(1)$ sözlük haritalaması ile optimize edilerek arayüz tepkiselliği artırıldı.
 

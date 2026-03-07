@@ -141,6 +141,7 @@ public partial class MainWindow : Window
     {
         if (e.Key == Key.Enter)
         {
+            _mainViewModel.CloseSeriesDetailCommand.Execute(null);
             _mainViewModel.CommitSearchCommand.Execute(null);
         }
         else if (e.Key == Key.Escape)
@@ -373,15 +374,60 @@ public partial class MainWindow : Window
     }
 
     // === Navigation ===
-    private void NavigateHome_Click(object? sender, RoutedEventArgs e) => _mainViewModel.NavigateCommand.Execute(AppView.Home);
-    private void NavigateLive_Click(object? sender, RoutedEventArgs e) => _mainViewModel.NavigateCommand.Execute(AppView.Live);
-    private void NavigateMovies_Click(object? sender, RoutedEventArgs e) => _mainViewModel.NavigateCommand.Execute(AppView.Movies);
-    private void NavigateSeries_Click(object? sender, RoutedEventArgs e) => _mainViewModel.NavigateCommand.Execute(AppView.Series);
-    private void NavigateSearch_Click(object? sender, RoutedEventArgs e) => _mainViewModel.NavigateCommand.Execute(AppView.Search);
-    private void NavigateMyList_Click(object? sender, RoutedEventArgs e) => _mainViewModel.NavigateCommand.Execute(AppView.MyList);
-    private void NavigateFavorites_Click(object? sender, RoutedEventArgs e) => _mainViewModel.NavigateCommand.Execute(AppView.Favorites);
-    private void NavigateHistory_Click(object? sender, RoutedEventArgs e) => _mainViewModel.NavigateCommand.Execute(AppView.History);
-    private void NavigateDownloads_Click(object? sender, RoutedEventArgs e) => _mainViewModel.NavigateCommand.Execute(AppView.Downloads);
+    private bool _isSidebarOpen = false;
+
+    private void HamburgerBtn_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_isSidebarOpen)
+            CloseSidebar();
+        else
+            OpenSidebar();
+    }
+
+    private void SidebarDismissOverlay_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        CloseSidebar();
+    }
+
+    private void OpenSidebar()
+    {
+        _isSidebarOpen = true;
+        SideBar.Width = 280;
+        SidebarDismissOverlay.IsVisible = true;
+        SetNavTextVisibility(true);
+    }
+
+    private void CloseSidebar()
+    {
+        _isSidebarOpen = false;
+        SideBar.Width = 60;
+        SidebarDismissOverlay.IsVisible = false;
+        SetNavTextVisibility(false);
+    }
+
+    private void SetNavTextVisibility(bool visible)
+    {
+        NavLabel1.IsVisible = visible;
+        NavLabel2.IsVisible = visible;
+        NavHomeText.IsVisible = visible;
+        NavLiveText.IsVisible = visible;
+        NavMoviesText.IsVisible = visible;
+        NavSeriesText.IsVisible = visible;
+        NavMyListText.IsVisible = visible;
+        NavFavText.IsVisible = visible;
+        NavHistoryText.IsVisible = visible;
+        NavDownloadsText.IsVisible = visible;
+    }
+
+    private void NavigateHome_Click(object? sender, RoutedEventArgs e) { CloseSidebar(); _mainViewModel.CloseSeriesDetailCommand.Execute(null); _mainViewModel.NavigateCommand.Execute(AppView.Home); }
+    private void NavigateLive_Click(object? sender, RoutedEventArgs e) { CloseSidebar(); _mainViewModel.CloseSeriesDetailCommand.Execute(null); _mainViewModel.NavigateCommand.Execute(AppView.Live); }
+    private void NavigateMovies_Click(object? sender, RoutedEventArgs e) { CloseSidebar(); _mainViewModel.CloseSeriesDetailCommand.Execute(null); _mainViewModel.NavigateCommand.Execute(AppView.Movies); }
+    private void NavigateSeries_Click(object? sender, RoutedEventArgs e) { CloseSidebar(); _mainViewModel.CloseSeriesDetailCommand.Execute(null); _mainViewModel.NavigateCommand.Execute(AppView.Series); }
+    private void NavigateSearch_Click(object? sender, RoutedEventArgs e) { CloseSidebar(); _mainViewModel.CloseSeriesDetailCommand.Execute(null); _mainViewModel.NavigateCommand.Execute(AppView.Search); }
+    private void NavigateMyList_Click(object? sender, RoutedEventArgs e) { CloseSidebar(); _mainViewModel.CloseSeriesDetailCommand.Execute(null); _mainViewModel.NavigateCommand.Execute(AppView.MyList); }
+    private void NavigateFavorites_Click(object? sender, RoutedEventArgs e) { CloseSidebar(); _mainViewModel.CloseSeriesDetailCommand.Execute(null); _mainViewModel.NavigateCommand.Execute(AppView.Favorites); }
+    private void NavigateHistory_Click(object? sender, RoutedEventArgs e) { CloseSidebar(); _mainViewModel.CloseSeriesDetailCommand.Execute(null); _mainViewModel.NavigateCommand.Execute(AppView.History); }
+    private void NavigateDownloads_Click(object? sender, RoutedEventArgs e) { CloseSidebar(); _mainViewModel.CloseSeriesDetailCommand.Execute(null); _mainViewModel.NavigateCommand.Execute(AppView.Downloads); }
 
     public void OpenProfileSelection()
     {
