@@ -759,6 +759,7 @@ public partial class MainViewModel : ObservableObject
         SetItems(HistoryChannels, Enumerable.Empty<Channel>());
         SetItems(HistoryLiveChannels, Enumerable.Empty<Channel>());
         SetItems(HistorySeriesChannels, Enumerable.Empty<Channel>());
+        SetItems(HistorySeriesItems, Enumerable.Empty<Series>());
         SetItems(HistoryVodChannels, Enumerable.Empty<Channel>());
 
         // Downloads
@@ -2839,6 +2840,9 @@ public partial class MainViewModel : ObservableObject
     private ObservableCollection<Channel> _historySeriesChannels = new();
 
     [ObservableProperty]
+    private ObservableCollection<Series> _historySeriesItems = new();
+
+    [ObservableProperty]
     private ObservableCollection<Channel> _historyVodChannels = new();
 
     [ObservableProperty]
@@ -3145,9 +3149,24 @@ public partial class MainViewModel : ObservableObject
     private void UpdateHistoryBuckets()
     {
         SetItems(HistoryLiveChannels, HistoryChannels.Where(c => c.Type == ChannelType.Live));
-        SetItems(HistorySeriesChannels, HistoryChannels.Where(c => c.Type == ChannelType.Series));
         SetItems(HistoryVodChannels, HistoryChannels.Where(c => c.Type == ChannelType.VOD));
-        ShowHistoryEmptyState = HistoryChannels.Count == 0;
+
+        // Dizi geçmişi: izlenmiş episode'ların parent Series'ini bul, tekrarsız
+        var watchedSeries = _allSeriesCache
+            .Where(s => s.Seasons
+                .SelectMany(season => season.Episodes)
+                .Any(e => e.LastWatched.HasValue))
+            .OrderByDescending(s => s.Seasons
+                .SelectMany(season => season.Episodes)
+                .Where(e => e.LastWatched.HasValue)
+                .Max(e => e.LastWatched))
+            .ToList();
+
+        SetItems(HistorySeriesItems, watchedSeries);
+
+        ShowHistoryEmptyState = HistoryLiveChannels.Count == 0
+                             && HistoryVodChannels.Count == 0
+                             && HistorySeriesItems.Count == 0;
     }
 
     private void UpdateDownloadedItems()

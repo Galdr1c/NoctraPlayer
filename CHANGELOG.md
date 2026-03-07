@@ -8,6 +8,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### ✨ Yeni Özellikler ve Geliştirmeler
+- **Geçmiş Sayfası Dizi Görünümü**: Geçmiş (History) sekmesinde yer alan dizi içerikleri, izlenen bölümlerin (episode) listelenmesi yerine ana dizi kartları (`SeriesCard`) olarak listelenecek şekilde güncellendi. Artık karta tıklandığında doğrudan dizinin detay sayfası açılıyor.
+
 ### 🛠️ Düzeltmeler ve Optimizasyonlar
 - **VOD İzleme Geçmişi**: Tamamlanmış (sonuna kadar izlenmiş) VOD içeriklerinin "İzlemeye Devam Et" listesinde belirmeye devam etmesi sorunu düzeltildi (`Channel` modeline `IsCompleted` özelliği eklendi).
 - **Performans İyileştirmesi**: Anasayfa yüklenirken, her bir dizi bölümü (episode) için yapılan $O(n^2)$ karmaşıklığındaki dizi (series) arama işlemi, $O(1)$ sözlük haritalaması ile optimize edilerek arayüz tepkiselliği artırıldı.

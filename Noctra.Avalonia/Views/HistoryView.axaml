@@ -24,12 +24,12 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
             <TextBlock Text="Diziler" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,12"
-                       IsVisible="{Binding HistorySeriesChannels.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
-            <ItemsControl ItemsSource="{Binding HistorySeriesChannels}" IsVisible="{Binding HistorySeriesChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                       IsVisible="{Binding HistorySeriesItems.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
+            <ItemsControl ItemsSource="{Binding HistorySeriesItems}" IsVisible="{Binding HistorySeriesItems.Count, Converter={StaticResource CountToVisibilityConverter}}">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="models:Channel">
-                  <controls:VodCard Margin="0,0,16,16" />
+                <DataTemplate x:DataType="models:Series">
+                  <controls:SeriesCard Margin="0,0,16,16" />
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
