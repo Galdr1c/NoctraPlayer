@@ -29,7 +29,7 @@
                 </DataTemplate>
               </ItemsControl.DataTemplates>
             </ItemsControl>
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0" IsVisible="{Binding MyList, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=invert}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0" IsVisible="{Binding ShowMyListEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
               <Image Source="avares://Noctra.Avalonia/Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>
               <TextBlock Text="Listeniz bo&#351;" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" Margin="0,14,0,6"/>
               <TextBlock Text="&#304;&#231;erik ekledi&#287;inizde burada g&#246;r&#252;necek." FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>

@@ -3079,8 +3079,8 @@ public partial class MainViewModel : ObservableObject
 
             list.AddRange(seriesMap.Values.Where(s => s.IsInMyList).Cast<object>());
             SetItems(MyList, list
-                .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty));
-            ShowMyListEmptyState = MyList.Count == 0;
+                .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty),
+                () => ShowMyListEmptyState = MyList.Count == 0);
         }
         catch (Exception ex)
         {
@@ -3139,8 +3139,8 @@ public partial class MainViewModel : ObservableObject
 
             list.AddRange(seriesMap.Values.Where(s => s.IsFavorite).Cast<object>());
             SetItems(FavoriteChannels, list
-                .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty));
-            ShowFavoritesEmptyState = FavoriteChannels.Count == 0;
+                .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty),
+                () => ShowFavoritesEmptyState = FavoriteChannels.Count == 0);
         }
         catch (Exception ex)
         {
@@ -3176,11 +3176,11 @@ public partial class MainViewModel : ObservableObject
                 .Max(e => e.LastWatched))
             .ToList();
 
-        SetItems(HistorySeriesItems, watchedSeries);
-
-        ShowHistoryEmptyState = HistoryLiveChannels.Count == 0
-                             && HistoryVodChannels.Count == 0
-                             && HistorySeriesItems.Count == 0;
+        SetItems(HistorySeriesItems, watchedSeries, () => {
+            ShowHistoryEmptyState = HistoryLiveChannels.Count == 0
+                                 && HistoryVodChannels.Count == 0
+                                 && HistorySeriesItems.Count == 0;
+        });
     }
 
     private void UpdateDownloadedItems()
@@ -4012,7 +4012,8 @@ public partial class MainViewModel : ObservableObject
             SetItems(MyList, myListChannels
                 .Cast<object>()
                 .Concat(myListSeries.Cast<object>())
-                .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty));
+                .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty),
+                () => ShowMyListEmptyState = MyList.Count == 0);
 
             var favoriteChannels = await db.Channels
                 .AsNoTracking()
@@ -4029,13 +4030,13 @@ public partial class MainViewModel : ObservableObject
             SetItems(FavoriteChannels, favoriteChannels
                 .Cast<object>()
                 .Concat(favoriteSeries.Cast<object>())
-                .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty));
+                .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty),
+                () => ShowFavoritesEmptyState = FavoriteChannels.Count == 0);
 
-            SetItems(HistoryChannels, await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds));
-            UpdateHistoryBuckets();
+            SetItems(HistoryChannels, await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds), () => {
+                UpdateHistoryBuckets();
+            });
 
-            ShowMyListEmptyState = MyList.Count == 0;
-            ShowFavoritesEmptyState = FavoriteChannels.Count == 0;
             if (ActiveView == AppView.Downloads)
             {
                 await RefreshDownloadedItemsFromDatabaseAsync();
@@ -6141,7 +6142,7 @@ public partial class MainViewModel : ObservableObject
         return null;
     }
 
-    private void SetItems<T>(ObservableCollection<T> collection, IEnumerable<T> items)
+    private void SetItems<T>(ObservableCollection<T> collection, IEnumerable<T> items, Action? onComplete = null)
     {
         if (items == null) return;
         var list = items.ToList();
@@ -6152,6 +6153,7 @@ public partial class MainViewModel : ObservableObject
             {
                 collection.Add(item);
             }
+            onComplete?.Invoke();
         });
     }
 }
