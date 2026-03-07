@@ -46,7 +46,21 @@ public class WatchHistoryService : IWatchHistoryService
         }
 
         var isCompletedNow = history.Completed || completed;
-        history.StoppedAt = isCompletedNow && duration.HasValue ? duration.Value : position;
+        // Eğer zaten tamamlanmışsa ve bu oturumda henüz süre tespit edilememişse (fail load), 
+        // eski duruş noktasını (tüm süreyi) koru. 0'a çekme.
+        if (isCompletedNow)
+        {
+            if (duration.HasValue)
+            {
+                history.StoppedAt = duration.Value;
+            }
+            // else: history.StoppedAt'i olduğu gibi bırak (genelde eski duration'dır)
+        }
+        else
+        {
+            history.StoppedAt = position;
+        }
+
         history.WatchedAt = watchedAt;
         history.Completed = isCompletedNow;
         
@@ -63,6 +77,7 @@ public class WatchHistoryService : IWatchHistoryService
             {
                 episode.LastWatched = history.WatchedAt;
                 episode.WatchedPosition = history.StoppedAt;
+                episode.IsCompleted = history.Completed;
                 if (duration.HasValue && duration.Value.TotalSeconds > 0)
                 {
                     episode.Duration = duration.Value;

@@ -701,9 +701,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         await ResumePlaybackAsync(CurrentChannel.StreamUrl, false);
     }
 
-    public async Task PlayChannelAsync(Channel channel)
+    public async Task PlayChannelAsync(Channel channel, double? startPosition = null)
     {
-        LogDebug($"PlayChannelAsync: Id={channel.Id}, Name={channel.Name}, Type={channel.Type}, StreamUrl={channel.StreamUrl}");
+        LogDebug($"PlayChannelAsync: Id={channel.Id}, Name={channel.Name}, Type={channel.Type}, StreamUrl={channel.StreamUrl}, StartPos={startPosition}");
 
         // Stalker Dizileri için özel kontrol: Stalker dizilerinin ana linki (cmd) yoktur, oynatılamazlar.
         // Kullanıcıya bölümlere gitmesi gerektiğini belirten bir hata fırlatıyoruz.
@@ -732,12 +732,36 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         IsSeriesContent = channel.Type == ChannelType.Series;
         UpdateOverlaySecondaryText();
         PrepareForContentLoading();
+        
+        if (startPosition.HasValue && startPosition.Value > 0)
+        {
+            _lastPausedPosition = startPosition.Value;
+            _lastPausedTimeMs = (long)(startPosition.Value * 1000);
+            _pendingResumeSeekPosition = startPosition.Value;
+        }
+        else
+        {
+            _lastPausedPosition = 0;
+            _lastPausedTimeMs = 0;
+            _pendingResumeSeekPosition = 0;
+        }
+
         StreamQuality = null;
         StreamInfo = "Kalite tespit ediliyor...";
         try
         {
             var resolvedStreamUrl = await _contentDownloadService.ResolvePlayableUrlAsync(channel.StreamUrl);
-            await _videoPlayerService.PlayAsync(resolvedStreamUrl);
+            
+            if (startPosition.HasValue && startPosition.Value > 0 && !IsDownloadedPlayback && resolvedStreamUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                // HTTP stream'ler için baştan `startTime` argümanı ile oynat
+                LogDebug($"PlayChannelAsync: Starting HTTP stream with start-time={startPosition.Value}");
+                await _videoPlayerService.PlayAsync(resolvedStreamUrl, startPosition.Value);
+            }
+            else
+            {
+                await _videoPlayerService.PlayAsync(resolvedStreamUrl);
+            }
         }
         catch
         {
@@ -2341,8 +2365,54 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             || (durationSeconds > EpisodeCompletedTailSeconds && remainingSeconds <= EpisodeCompletedTailSeconds);
     }
 
+    private TaskCompletionSource<bool>? _resumeDialogTcs;
+
+    [ObservableProperty] private bool _isResumeDialogVisible;
+    [ObservableProperty] private string _resumePositionText = string.Empty;
+
+    public Task<bool> ShowResumeDialogAsync(double positionSeconds)
+    {
+        ResumePositionText = TimeSpan.FromSeconds(positionSeconds).ToString(@"hh\:mm\:ss");
+        IsResumeDialogVisible = true;
+        _resumeDialogTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        return _resumeDialogTcs.Task;
+    }
+
+    public void SetResumePosition(double seconds)
+    {
+        _lastPausedPosition = seconds;
+        _lastPausedTimeMs = (long)(seconds * 1000);
+    }
+
+    public void CancelResumeDialog()
+    {
+        if (IsResumeDialogVisible)
+        {
+            IsResumeDialogVisible = false;
+            _resumeDialogTcs?.TrySetCanceled();
+            _resumeDialogTcs = null;
+        }
+    }
+
+    [RelayCommand]
+    private void ResumeFromPosition()
+    {
+        IsResumeDialogVisible = false;
+        _resumeDialogTcs?.TrySetResult(true);
+        _resumeDialogTcs = null;
+    }
+
+    [RelayCommand]
+    private void StartFromBeginning()
+    {
+        IsResumeDialogVisible = false;
+        _resumeDialogTcs?.TrySetResult(false);
+        _resumeDialogTcs = null;
+    }
+
     private void PrepareForContentLoading()
     {
+        CancelResumeDialog();
         _isContentTransitioning = true;
         _isPlaybackEnded = false;
         _isUserSeeking = false;

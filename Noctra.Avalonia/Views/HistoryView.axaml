@@ -13,6 +13,8 @@
     <ScrollViewer x:Name="HistoryScrollViewer" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.History}}">
           <StackPanel Margin="24">
             <TextBlock Text="Ge&#231;mi&#351;" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
+            
+            <!-- Canlı TV Bölümü -->
             <TextBlock Text="Canl&#305; TV" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"
                        IsVisible="{Binding HistoryLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
             <ItemsControl ItemsSource="{Binding HistoryLiveChannels}" IsVisible="{Binding HistoryLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
@@ -23,6 +25,8 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
+
+            <!-- Diziler Bölümü (SeriesCard ile) -->
             <TextBlock Text="Diziler" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,12"
                        IsVisible="{Binding HistorySeriesItems.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
             <ItemsControl ItemsSource="{Binding HistorySeriesItems}" IsVisible="{Binding HistorySeriesItems.Count, Converter={StaticResource CountToVisibilityConverter}}">
@@ -33,6 +37,8 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
+
+            <!-- Filmler Bölümü -->
             <TextBlock Text="Filmler" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,12"
                        IsVisible="{Binding HistoryVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
             <ItemsControl ItemsSource="{Binding HistoryVodChannels}" IsVisible="{Binding HistoryVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
@@ -43,7 +49,10 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0" IsVisible="{Binding ShowHistoryEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
+
+            <!-- Boş Durum (Empty State) -->
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0"
+                        IsVisible="{Binding ShowHistoryEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
               <Image Source="avares://Noctra.Avalonia/Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>
               <TextBlock Text="Ge&#231;mi&#351; bo&#351;" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" Margin="0,14,0,6"/>
               <TextBlock Text="&#304;zledi&#287;iniz i&#231;erikler burada listelenecek." FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>

@@ -121,7 +121,7 @@ public class Season
 /// <summary>
 /// Bölüm bilgilerini tutar
 /// </summary>
-public class Episode
+public partial class Episode : ObservableObject
 {
     public int Id { get; set; }
     public int EpisodeNumber { get; set; }
@@ -130,9 +130,17 @@ public class Episode
     public string? Plot { get; set; }
     public string? TmdbEpisodeName { get; set; }
     public string? CoverUrl { get; set; }
-    public TimeSpan? Duration { get; set; }
-    public DateTime? LastWatched { get; set; }
-    public TimeSpan? WatchedPosition { get; set; }
+    
+    [ObservableProperty]
+    private TimeSpan? _duration;
+    
+    [ObservableProperty]
+    private DateTime? _lastWatched;
+    
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(WatchedPercentage))]
+    private TimeSpan? _watchedPosition;
+    
     public DateTime? AirDate { get; set; }
     public int SeasonId { get; set; }
 
@@ -179,8 +187,9 @@ public class Episode
         }
     }
 
-    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
-    public bool IsCompleted { get; set; }
+    [ObservableProperty]
+    [property: NotMapped]
+    private bool _isCompleted;
 
     [NotMapped]
     public string BaseDisplayName

@@ -189,7 +189,33 @@ public partial class MainWindow : Window
             await Task.WhenAny(readyTask, timeoutTask);
             
             _playerViewModel.UserInteractionCommand.Execute(null);
-            await _playerViewModel.PlayChannelAsync(channel);
+
+            double? finalStartPos = null;
+
+            // --- RESUME DIALOG KONTROLÜ ---
+            var resumePosition = ResolveResumePosition(channel);
+            if (resumePosition > 120)
+            {
+                bool shouldResume;
+                try
+                {
+                    shouldResume = await _playerViewModel.ShowResumeDialogAsync(resumePosition);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Kullanıcı dialog'u kapatmadan kanal değiştirdi
+                    return;
+                }
+
+                if (shouldResume)
+                {
+                    finalStartPos = resumePosition;
+                    _playerViewModel.SetResumePosition(resumePosition);
+                }
+            }
+            // --- RESUME DIALOG KONTROLÜ SONU ---
+
+            await _playerViewModel.PlayChannelAsync(channel, finalStartPos);
             Dispatcher.UIThread.Post(() => OverlayControl.Focus(), DispatcherPriority.Input);
         }
         catch (Exception ex)
@@ -198,6 +224,40 @@ public partial class MainWindow : Window
             PlayerArea.IsVisible = false;
             _mainViewModel.StatusMessage = UserFriendlyErrorMessage.WithPrefix("Icerik oynatilamadi", ex);
         }
+    }
+
+    private double ResolveResumePosition(Channel channel)
+    {
+        // Episode oynatılıyorsa episode'un progress'i
+        var episode = _mainViewModel.CurrentEpisodePlaybackContext;
+        if (episode != null &&
+            episode.WatchedPosition.HasValue &&
+            episode.WatchedPosition.Value.TotalSeconds > 120 &&
+            !episode.IsCompleted)
+        {
+            return episode.WatchedPosition.Value.TotalSeconds;
+        }
+
+        // Eğer Dizi içeriği açılıyorsa fakat CurrentEpisodePlaybackContext boş/yeniyse,
+        // (örneğin Home sayfasındaki Continue Watching bölümünden BuildSeriesEpisodeChannel ile üretilmiş sanal kanal)
+        if (channel.Type == ChannelType.Series && 
+            channel.WatchedPosition.HasValue && 
+            channel.WatchedPosition.Value.TotalSeconds > 120 &&
+            !channel.IsCompleted)
+        {
+            return channel.WatchedPosition.Value.TotalSeconds;
+        }
+
+        // VOD için channel'ın progress'i
+        if (channel.Type == ChannelType.VOD &&
+            channel.WatchedPosition.HasValue &&
+            channel.WatchedPosition.Value.TotalSeconds > 120 &&
+            !channel.IsCompleted)
+        {
+            return channel.WatchedPosition.Value.TotalSeconds;
+        }
+
+        return 0;
     }
 
     private void PlayerViewModel_NextEpisodeRequested(object? sender, Episode episode)

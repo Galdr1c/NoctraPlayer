@@ -927,8 +927,8 @@
                           PointerMoved="PiPCornerResize_PointerMoved" PointerReleased="PiPCornerResize_PointerReleased"
                           Tag="Right" ZIndex="7000" IsVisible="{Binding #PiPBottomControls.IsVisible}"/>
 
-                  <Grid x:Name="PlayerOverlayLayer" ZIndex="2600">
-                    <views:VideoOverlayView x:Name="OverlayControl" ZIndex="2"/>
+                  <Grid x:Name="PlayerOverlayLayer" ZIndex="2600" x:DataType="vm:PlayerViewModel">
+                    <views:VideoOverlayView x:Name="OverlayControl" ZIndex="2" IsVisible="{Binding IsResumeDialogVisible, Converter={StaticResource InverseBoolConverter}}"/>
                     <!-- Next Episode Prompt (binds to PlayerViewModel via OverlayControl's DataContext) -->
                     <Border x:Name="NextEpisodePrompt" Background="{DynamicResource SurfaceBrush}" CornerRadius="12" Padding="16"
                             HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,40,140" Width="260"
@@ -949,6 +949,91 @@
                       </Grid>
                     </Border>
                   </Grid>
+
+                  <!-- Resume Dialog -->
+                  <Border IsVisible="{Binding IsResumeDialogVisible}"
+                          DataContext="{Binding #OverlayControl.DataContext}"
+                          x:DataType="vm:PlayerViewModel"
+                          Background="#B3000000"
+                          ZIndex="6000"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch">
+
+                    <Border Background="{DynamicResource SurfaceBrush}"
+                            CornerRadius="16"
+                            Padding="40,32"
+                            Width="380"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                      <Border.BoxShadow>
+                        <BoxShadows>0 24 64 0 #88000000</BoxShadows>
+                      </Border.BoxShadow>
+
+                      <StackPanel Spacing="24">
+
+                        <!-- İkon + Başlık -->
+                        <StackPanel Spacing="8" HorizontalAlignment="Center">
+                          <materialIcons:MaterialIcon Kind="PlayCircleOutline"
+                                                      Width="48" Height="48"
+                                                      Foreground="{DynamicResource AccentBrush}"
+                                                      HorizontalAlignment="Center"/>
+                          <TextBlock Text="Kaldığın Yerden Devam Et?"
+                                     FontSize="20" FontWeight="Bold"
+                                     Foreground="{DynamicResource TextPrimaryBrush}"
+                                     HorizontalAlignment="Center"/>
+                        </StackPanel>
+
+                        <!-- Progress bilgisi -->
+                        <Border Background="{DynamicResource Surface1Brush}"
+                                CornerRadius="8" Padding="16,10">
+                          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                            <materialIcons:MaterialIcon Kind="ClockOutline" Width="16" Height="16"
+                                                        Foreground="{DynamicResource TextMutedBrush}"
+                                                        VerticalAlignment="Center"/>
+                            <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="14"
+                                       VerticalAlignment="Center">
+                              <Run Text="İzleme noktası: "/>
+                              <Run Text="{Binding ResumePositionText}"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                   FontWeight="SemiBold"/>
+                            </TextBlock>
+                          </StackPanel>
+                        </Border>
+
+                        <!-- Butonlar -->
+                        <StackPanel Spacing="12">
+                          <!-- Kaldığım Yerden -->
+                          <Button Command="{Binding ResumeFromPositionCommand}"
+                                  HorizontalAlignment="Stretch"
+                                  Padding="0,14"
+                                  Background="{DynamicResource AccentBrush}"
+                                  Foreground="White"
+                                  FontSize="15" FontWeight="SemiBold"
+                                  BorderThickness="0" CornerRadius="8" Cursor="Hand">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                              <materialIcons:MaterialIcon Kind="Play" Width="18" Height="18"/>
+                              <TextBlock Text="Kaldığım Yerden Devam Et" VerticalAlignment="Center"/>
+                            </StackPanel>
+                          </Button>
+
+                          <!-- Baştan Başla -->
+                          <Button Command="{Binding StartFromBeginningCommand}"
+                                  HorizontalAlignment="Stretch"
+                                  Padding="0,14"
+                                  Background="{DynamicResource Surface1Brush}"
+                                  Foreground="{DynamicResource TextPrimaryBrush}"
+                                  FontSize="15"
+                                  BorderThickness="0" CornerRadius="8" Cursor="Hand">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                              <materialIcons:MaterialIcon Kind="SkipBackward" Width="18" Height="18"/>
+                              <TextBlock Text="Baştan Başla" VerticalAlignment="Center"/>
+                            </StackPanel>
+                          </Button>
+                        </StackPanel>
+
+                      </StackPanel>
+                    </Border>
+                  </Border>
               </Grid>
           </controls:MemoryVideoView.OverlayContent>
       </controls:MemoryVideoView>

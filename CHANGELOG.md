@@ -14,8 +14,19 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - Menü kapalıyken ikonların daha nizami ve dengeli görünmesi için `Padding` ve `Margin` oranları revize edildi.
   - "İndirilenler" sayfasındaki ikon kayma/hizalanma hatası düzeltildi.
 - **Geçmiş Sayfası Dizi Görünümü**: Geçmiş (History) sekmesinde yer alan dizi içerikleri, izlenen bölümlerin (episode) listelenmesi yerine ana dizi kartları (`SeriesCard`) olarak listelenecek şekilde güncellendi. Artık karta tıklandığında doğrudan dizinin detay sayfası açılıyor.
+- **Kaldığın Yerden Devam Et (Resume Dialog)**: VOD ve Dizi içerikleri için akıllı izleme hafızası eklendi.
+  - 2 dakikadan fazla izlenen ve henüz tamamlanmamış içerikler açıldığında, kullanıcıya "Kaldığın Yerden Devam Et" veya "Baştan Başla" seçeneklerini sunan modern bir diyalog penceresi gösterilir.
+  - Diyalog açıkken diğer oynatıcı kontrolleri otomatik olarak gizlenerek odaklanmış bir kullanıcı deneyimi sağlanır.
+  - Tamamlanmış (izlendi işareti olan) bölümler tıklandığında diyalog gösterilmeden doğrudan en baştan başlatılır.
 
 ### 🛠️ Düzeltmeler ve Optimizasyonlar
+- **Performans ve Kararlılık Optimizasyonu**: 
+  - Anasayfa yüklenirken binlerce dizi için yapılan ağır veritabanı sorguları, **Bulk Sync (Toplu Senkronizasyon)** mimarisine geçirilerek optimize edildi. Uygulama açılış hızı ve tepkiselliği önemli ölçüde artırıldı.
+  - Veritabanı şemasında karşılığı olmayan `IsCompleted` özelliğinin SQL hatalarına ve dizi listelerinin boş görünmesine neden olan hatası giderildi.
+  - `Episode` nesneleri `ObservableObject` yapısına geçirilerek izleme ilerlemelerinin arayüzde anlık ve pürüzsüz güncellenmesi sağlandı.
+- **Kişisel Listeler Görünüm Hatası (Fix)**: "Listem" ve "Favoriler" sekmelerinde içerik olmasına rağmen "Liste boş" uyarısının da aynı anda görünmesine neden olan senkronizasyon hatası giderildi. Boş durum kontrolleri artık doğrudan veri koleksiyonu üzerinden dinamik olarak yapılıyor.
+- **Geçmiş Sayfası Senkronizasyonu**: Uygulama açılışında dizi verileri yüklenirken geçmiş sayfasının bazen boş görünmesi sorunu düzeltildi. İzleme geçmişi artık dizi önbelleği tamamen hazır olduğunda otomatik olarak tetiklenerek güncelleniyor.
+- **Kalıcı İzleme Statüsü Koruması**: Tamamlanmış içeriklerin, hatalı veya eksik yükleme durumlarında (video açılmaması, loading'de kalması vb.) "tamamlandı" bilgisinin kaybolmasına neden olan senaryolar engellendi. İzleme statüsü artık hem veritabanında hem de uygulama önbelleğinde güvenli bir şekilde korunuyor.
 - **Dizi Detay Sayfası İyileştirmeleri**:
   - Dizi detay sayfası açıkken, üst bardan arama yapıldığında (Enter) veya sol menüden farklı bir sayfaya geçildiğinde dizi sayfasının açık kalmaya devam edip altta birikmesi sorunu giderildi; artık yeni bir aksiyonda otomatik kapanıyor.
   - Sayfanın sol menünün altında kalmasını önlemek amacıyla Z-Index ve Grid yapılandırmaları düzeltildi.
