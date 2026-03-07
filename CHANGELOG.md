@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+
+### 🛠️ Düzeltmeler ve Optimizasyonlar
+- **VOD İzleme Geçmişi**: Tamamlanmış (sonuna kadar izlenmiş) VOD içeriklerinin "İzlemeye Devam Et" listesinde belirmeye devam etmesi sorunu düzeltildi (`Channel` modeline `IsCompleted` özelliği eklendi).
+- **Performans İyileştirmesi**: Anasayfa yüklenirken, her bir dizi bölümü (episode) için yapılan $O(n^2)$ karmaşıklığındaki dizi (series) arama işlemi, $O(1)$ sözlük haritalaması ile optimize edilerek arayüz tepkiselliği artırıldı.
+
 ## v30.9 – Anasayfa Sadeleştirme ve Netflix Tasarımı (2026-03-06)
 
 ### 🌟 Yeni Özellikler ve İyileştirmeler

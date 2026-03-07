@@ -85,6 +85,7 @@ public class WatchHistoryService : IWatchHistoryService
             {
                 channel.LastWatched = history.WatchedAt;
                 channel.WatchedPosition = history.StoppedAt;
+                channel.IsCompleted = history.Completed;
                 if (duration.HasValue && duration.Value.TotalSeconds > 0)
                 {
                     channel.Duration = duration.Value;

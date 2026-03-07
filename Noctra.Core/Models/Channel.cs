@@ -62,6 +62,7 @@ public partial class Channel : ObservableObject
     
     public TimeSpan? Duration { get; set; }
     public TimeSpan? WatchedPosition { get; set; }
+    public bool IsCompleted { get; set; }
     
     [NotMapped]
     public double WatchedPercentage

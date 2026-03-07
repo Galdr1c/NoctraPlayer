@@ -1243,11 +1243,24 @@ public partial class MainViewModel : ObservableObject
         var vodContinue = Channels
             .Where(c => c.Type == ChannelType.VOD
                      && c.LastWatched.HasValue
+                     && !c.IsCompleted
                      && c.WatchedPosition.HasValue
                      && c.WatchedPosition.Value.TotalSeconds > 120
                      && c.Duration.HasValue
                      && c.Duration.Value.TotalSeconds > 0
                      && (c.WatchedPosition.Value.TotalSeconds / c.Duration.Value.TotalSeconds) < 0.92);
+
+        var episodeToSeriesMap = new Dictionary<Episode, Series>();
+        foreach (var series in _allSeriesCache)
+        {
+            foreach (var season in series.Seasons)
+            {
+                foreach (var ep in season.Episodes)
+                {
+                    episodeToSeriesMap[ep] = series;
+                }
+            }
+        }
 
         var episodeContinue = _allSeriesCache
             .SelectMany(s => s.Seasons.SelectMany(season => season.Episodes))
@@ -1258,7 +1271,7 @@ public partial class MainViewModel : ObservableObject
                      && e.Duration.HasValue
                      && e.Duration.Value.TotalSeconds > 0
                      && (e.WatchedPosition.Value.TotalSeconds / e.Duration.Value.TotalSeconds) < 0.92)
-            .Select(e => BuildSeriesEpisodeChannel(e, _allSeriesCache.FirstOrDefault(s => s.Seasons.Any(season => season.Episodes.Contains(e)))));
+            .Select(e => BuildSeriesEpisodeChannel(e, episodeToSeriesMap.GetValueOrDefault(e)));
 
         var combinedContinue = vodContinue.Concat(episodeContinue)
             .OrderByDescending(c => c.LastWatched)
