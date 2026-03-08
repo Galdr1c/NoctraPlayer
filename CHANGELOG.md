@@ -9,6 +9,8 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **İndirme Sistemi Kapsamlı Test Paketi**: İndirme kuyruğu mantığı, dizi/sezon klasör organizasyonu, depolama kotası hesaplamaları ve indirilen içeriklerin yerel oynatma (offline mode) önceliklendirmesini doğrulayan yeni test senaryoları (`DownloadSystemComprehensiveTests`) eklendi.
+- **Oynatıcı Kontrolleri ve Overlay Birim Testleri**: Ses/Mute yönetimi, Seek (atlama) mantığı, Skip (ileri/geri) carry penceresi ve overlay görünürlük durumlarını doğrulayan 90 yeni test senaryosu (`PlayerViewModelControlsTests`) eklendi.
 - **Kalıcı İzleme Statüsü Koruması**: Bir içerik (VOD veya Dizi) bir kez tamamlandı olarak işaretlendiğinde, sonraki yükleme hataları veya eksik süre (duration) bilgilerinin bu statüyü bozması engellendi. `Episode.IsCompleted` alanı veritabanında kalıcı hale getirildi.
 - **İzleme Statüsü Koruması Test Paketi**: Video yükleme hataları, hızlı ardışık kayıt çağrıları ve provider değişimleri gibi 19 farklı senaryoyu doğrulayan kapsamlı bir test seti (`CompletedStatusProtectionTests`) eklendi.
 - **Lisans Servisi Genişletilmiş Testleri**: Bilinmeyen özellik kontrolleri, limit sınır değer analizi, abonelik iptali ve çoklu abonelik bildirimlerini doğrulayan 18 yeni test senaryosu (`LicenseServiceExtendedTests`) eklendi.

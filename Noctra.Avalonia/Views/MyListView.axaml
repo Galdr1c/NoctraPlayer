@@ -30,7 +30,7 @@
               </ItemsControl.DataTemplates>
             </ItemsControl>
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0" IsVisible="{Binding ShowMyListEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
-              <materialIcons:MaterialIcon Kind="FormatListBulleted" Width="64" Height="64" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5"/>
+              <materialIcons:MaterialIcon Kind="BookmarkOutline" Width="64" Height="64" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5"/>
               <TextBlock Text="Listeniz boş" FontSize="20" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" Margin="0,16,0,4"/>
               <TextBlock Text="İçerik eklediğinizde burada görünecek." FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
             </StackPanel>
