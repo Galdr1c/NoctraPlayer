@@ -3,6 +3,28 @@
                     xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
 
     <!-- ==========================================
+         PREMIUM LOCK BADGE (Reusable)
+         Kullanım: Classes="PremiumLockBadge"
+         ========================================== -->
+    <ControlTheme x:Key="PremiumLockBadgeStyle" TargetType="Border">
+        <Setter Property="Background">
+            <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                <GradientStop Color="#1A8B5CF6" Offset="0"/>
+                <GradientStop Color="#1AA855F7" Offset="1"/>
+            </LinearGradientBrush>
+        </Setter>
+        <Setter Property="BorderBrush">
+            <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                <GradientStop Color="#608B5CF6" Offset="0"/>
+                <GradientStop Color="#60A855F7" Offset="1"/>
+            </LinearGradientBrush>
+        </Setter>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="Padding" Value="8,4"/>
+    </ControlTheme>
+
+    <!-- ==========================================
          UI SCALING & RATIOS
          ========================================== -->
     <x:Double x:Key="RatioPortraitWidth">160</x:Double>

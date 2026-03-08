@@ -51,6 +51,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private readonly IContentDownloadService _contentDownloadService;
     private readonly INetworkService _networkService;
     private readonly ISettingsService _settingsService;
+    private readonly ILicenseService _licenseService;
     private int _playRequestVersion;
 
     [ObservableProperty]
@@ -317,6 +318,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         INetworkService networkService,
         IDispatcherService dispatcherService,
         ISettingsService settingsService,
+        ILicenseService licenseService,
         IWatchHistoryService? watchHistoryService = null)
     {
         _videoPlayerService = videoPlayerService;
@@ -327,6 +329,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _networkService = networkService;
         _dispatcherService = dispatcherService;
         _settingsService = settingsService;
+        _licenseService = licenseService;
         _watchHistoryService = watchHistoryService;
 
         // Initialize Network Status
@@ -2369,10 +2372,20 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     [ObservableProperty] private bool _isResumeDialogVisible;
     [ObservableProperty] private string _resumePositionText = string.Empty;
+    [ObservableProperty] private bool _isPremiumResume;
+
+    public event EventHandler? PremiumUpsellRequested;
+
+    [RelayCommand]
+    private void OpenPremiumUpsell()
+    {
+        PremiumUpsellRequested?.Invoke(this, EventArgs.Empty);
+    }
 
     public Task<bool> ShowResumeDialogAsync(double positionSeconds)
     {
         ResumePositionText = TimeSpan.FromSeconds(positionSeconds).ToString(@"hh\:mm\:ss");
+        IsPremiumResume = _licenseService.IsFeatureAvailable(LicenseService.Features.ResumePlayback);
         IsResumeDialogVisible = true;
         _resumeDialogTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         return _resumeDialogTcs.Task;

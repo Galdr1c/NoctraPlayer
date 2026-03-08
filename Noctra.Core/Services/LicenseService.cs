@@ -31,6 +31,7 @@ public class LicenseService : ObservableObject, ILicenseService
         public const string CustomShortcuts = "custom_shortcuts";
         public const string AdFree = "ad_free";
         public const string FullEpg = "full_epg";
+        public const string ResumePlayback = "resume_playback";
     }
 
     // ==========================================
@@ -95,6 +96,7 @@ public class LicenseService : ObservableObject, ILicenseService
             Features.Timeshift => tier == SubscriptionTier.Premium,
             Features.Recording => tier == SubscriptionTier.Premium,
             Features.CustomShortcuts => tier == SubscriptionTier.Premium,
+            Features.ResumePlayback => tier == SubscriptionTier.Premium,
             
             _ => true // Unknown features default to available
         };

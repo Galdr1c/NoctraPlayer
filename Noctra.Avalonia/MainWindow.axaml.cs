@@ -65,6 +65,12 @@ public partial class MainWindow : Window
         _playerViewModel.NextLiveChannelRequested += PlayerViewModel_NextLiveChannelRequested;
         _playerViewModel.PreviousLiveChannelRequested += PlayerViewModel_PreviousLiveChannelRequested;
         _playerViewModel.PiPRequested += PlayerViewModel_PiPRequested;
+        
+        _playerViewModel.PremiumUpsellRequested += async (_, _) =>
+        {
+            var upsell = ((App)Application.Current!).Services.GetRequiredService<Views.UpsellWindow>();
+            await upsell.ShowDialog(this);
+        };
     }
 
     private void MainWindow_PositionChanged(object? sender, PixelPointEventArgs e)

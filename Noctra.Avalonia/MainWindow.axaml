@@ -962,7 +962,7 @@
                     <Border Background="{DynamicResource SurfaceBrush}"
                             CornerRadius="16"
                             Padding="40,32"
-                            Width="380"
+                            Width="400"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center">
                       <Border.BoxShadow>
@@ -977,8 +977,8 @@
                                                       Width="48" Height="48"
                                                       Foreground="{DynamicResource AccentBrush}"
                                                       HorizontalAlignment="Center"/>
-                          <TextBlock Text="Kaldığın Yerden Devam Et?"
-                                     FontSize="20" FontWeight="Bold"
+                          <TextBlock Text="Nereden Devam Etmek İstersin?"
+                                     FontSize="19" FontWeight="Bold"
                                      Foreground="{DynamicResource TextPrimaryBrush}"
                                      HorizontalAlignment="Center"/>
                         </StackPanel>
@@ -992,7 +992,7 @@
                                                         VerticalAlignment="Center"/>
                             <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="14"
                                        VerticalAlignment="Center">
-                              <Run Text="İzleme noktası: "/>
+                              <Run Text="Bıraktığın yer: "/>
                               <Run Text="{Binding ResumePositionText}"
                                    Foreground="{DynamicResource TextPrimaryBrush}"
                                    FontWeight="SemiBold"/>
@@ -1002,34 +1002,109 @@
 
                         <!-- Butonlar -->
                         <StackPanel Spacing="12">
-                          <!-- Kaldığım Yerden -->
-                          <Button Command="{Binding ResumeFromPositionCommand}"
-                                  HorizontalAlignment="Stretch"
-                                  Padding="0,14"
-                                  Background="{DynamicResource AccentBrush}"
-                                  Foreground="White"
-                                  FontSize="15" FontWeight="SemiBold"
-                                  BorderThickness="0" CornerRadius="8" Cursor="Hand">
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
-                              <materialIcons:MaterialIcon Kind="Play" Width="18" Height="18"/>
-                              <TextBlock Text="Kaldığım Yerden Devam Et" VerticalAlignment="Center"/>
-                            </StackPanel>
-                          </Button>
 
-                          <!-- Baştan Başla -->
+                          <!-- ── PREMIUM: Kaldığım Yerden ── -->
+                          <Panel>
+                            <!-- Premium kullanıcı: normal buton -->
+                            <Button Command="{Binding ResumeFromPositionCommand}"
+                                    IsVisible="{Binding IsPremiumResume}"
+                                    HorizontalAlignment="Stretch"
+                                    Padding="0,15"
+                                    BorderThickness="0" CornerRadius="8" Cursor="Hand">
+                              <Button.Background>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                                  <GradientStop Color="#8B5CF6" Offset="0"/>
+                                  <GradientStop Color="#A855F7" Offset="1"/>
+                                </LinearGradientBrush>
+                              </Button.Background>
+                              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
+                                <materialIcons:MaterialIcon Kind="Play" Width="18" Height="18" Foreground="White"/>
+                                <TextBlock Text="Kaldığım Yerden Devam Et"
+                                           Foreground="White" FontSize="15" FontWeight="SemiBold"
+                                           VerticalAlignment="Center"/>
+                              </StackPanel>
+                            </Button>
+
+                            <!-- Ücretsiz kullanıcı: kilitli görünüm -->
+                            <Button Command="{Binding OpenPremiumUpsellCommand}"
+                                    IsVisible="{Binding !IsPremiumResume}"
+                                    HorizontalAlignment="Stretch"
+                                    Padding="0,15"
+                                    BorderThickness="1" CornerRadius="8" Cursor="Hand"
+                                    Background="{DynamicResource Surface1Brush}">
+                              <Button.BorderBrush>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                                  <GradientStop Color="#508B5CF6" Offset="0"/>
+                                  <GradientStop Color="#50A855F7" Offset="1"/>
+                                </LinearGradientBrush>
+                              </Button.BorderBrush>
+                              <Grid ColumnDefinitions="*,Auto">
+
+                                <!-- Sol: içerik -->
+                                <StackPanel Grid.Column="0" Orientation="Horizontal"
+                                            HorizontalAlignment="Center" Spacing="10">
+                                  <materialIcons:MaterialIcon Kind="Play" Width="18" Height="18"
+                                                              Foreground="{DynamicResource TextMutedBrush}"
+                                                              VerticalAlignment="Center"/>
+                                  <TextBlock Text="Kaldığım Yerden Devam Et"
+                                             Foreground="{DynamicResource TextMutedBrush}"
+                                             FontSize="15" FontWeight="SemiBold"
+                                             VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- Sağ: Premium Badge -->
+                                <Border Grid.Column="1" Theme="{StaticResource PremiumLockBadgeStyle}"
+                                        Margin="0,0,12,0" VerticalAlignment="Center">
+                                  <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <materialIcons:MaterialIcon Kind="LockOutline"
+                                                                Width="13" Height="13"
+                                                                Foreground="{DynamicResource AccentLightBrush}"/>
+                                    <TextBlock Text="PRO"
+                                               FontSize="10" FontWeight="Bold"
+                                               Foreground="{DynamicResource AccentLightBrush}"
+                                               VerticalAlignment="Center"/>
+                                  </StackPanel>
+                                </Border>
+
+                              </Grid>
+                            </Button>
+                          </Panel>
+
+                          <!-- Baştan Başla (her zaman aktif) -->
                           <Button Command="{Binding StartFromBeginningCommand}"
                                   HorizontalAlignment="Stretch"
-                                  Padding="0,14"
-                                  Background="{DynamicResource Surface1Brush}"
+                                  Padding="0,15"
+                                  Background="{DynamicResource Surface0Brush}"
                                   Foreground="{DynamicResource TextPrimaryBrush}"
                                   FontSize="15"
-                                  BorderThickness="0" CornerRadius="8" Cursor="Hand">
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                                  BorderThickness="1"
+                                  BorderBrush="{DynamicResource BorderBrush}"
+                                  CornerRadius="8" Cursor="Hand">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
                               <materialIcons:MaterialIcon Kind="SkipBackward" Width="18" Height="18"/>
                               <TextBlock Text="Baştan Başla" VerticalAlignment="Center"/>
                             </StackPanel>
                           </Button>
+
                         </StackPanel>
+
+                        <!-- Ücretsiz kullanıcıya küçük upsell notu -->
+                        <Border IsVisible="{Binding !IsPremiumResume}"
+                                Background="Transparent" Padding="0">
+                          <Button Command="{Binding OpenPremiumUpsellCommand}"
+                                  Background="Transparent" BorderThickness="0"
+                                  HorizontalAlignment="Center" Cursor="Hand" Padding="4">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                              <materialIcons:MaterialIcon Kind="Crown" Width="14" Height="14"
+                                                          Foreground="{DynamicResource AccentLightBrush}"/>
+                              <TextBlock FontSize="12" Foreground="{DynamicResource AccentLightBrush}">
+                                <Run Text="Premium"/>
+                                <Run Text="'a geç, kaldığın yerden devam et."
+                                     Foreground="{DynamicResource TextMutedBrush}"/>
+                              </TextBlock>
+                            </StackPanel>
+                          </Button>
+                        </Border>
 
                       </StackPanel>
                     </Border>

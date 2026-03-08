@@ -16,6 +16,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **Geçmiş Sayfası Dizi Görünümü**: Geçmiş (History) sekmesinde yer alan dizi içerikleri, izlenen bölümlerin (episode) listelenmesi yerine ana dizi kartları (`SeriesCard`) olarak listelenecek şekilde güncellendi. Artık karta tıklandığında doğrudan dizinin detay sayfası açılıyor.
 - **Kaldığın Yerden Devam Et (Resume Dialog)**: VOD ve Dizi içerikleri için akıllı izleme hafızası eklendi.
   - 2 dakikadan fazla izlenen ve henüz tamamlanmamış içerikler açıldığında, kullanıcıya "Kaldığın Yerden Devam Et" veya "Baştan Başla" seçeneklerini sunan modern bir diyalog penceresi gösterilir.
+  - **Premium Kilit Sistemi**: "Kaldığım Yerden Devam Et" özelliği Premium kullanıcılara özel hale getirildi. Ücretsiz kullanıcılar diyalog üzerinde "Baştan Başla" seçeneğini kullanabilir veya kilitli (🔒 PRO) butona tıklayarak yükseltme (Upsell) ekranına ulaşabilir. Yeni, tutarlı ve şık bir `PremiumLockBadge` stili eklendi.
   - Diyalog açıkken diğer oynatıcı kontrolleri otomatik olarak gizlenerek odaklanmış bir kullanıcı deneyimi sağlanır.
   - Tamamlanmış (izlendi işareti olan) bölümler tıklandığında diyalog gösterilmeden doğrudan en baştan başlatılır.
 
