@@ -52,7 +52,6 @@ public class AppDbContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // Series yapılandırması
         modelBuilder.Entity<Series>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -61,6 +60,11 @@ public class AppDbContext : DbContext
             entity.HasMany(e => e.Seasons)
                   .WithOne(e => e.Series)
                   .HasForeignKey(e => e.SeriesId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Playlist)
+                  .WithMany()
+                  .HasForeignKey(e => e.PlaylistId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -110,6 +114,11 @@ public class AppDbContext : DbContext
                   .WithMany(p => p.Profiles)
                   .HasForeignKey(e => e.ProviderAccountId)
                   .OnDelete(DeleteBehavior.Cascade); // Delete account -> delete profiles
+
+            entity.HasMany<Playlist>()
+                  .WithOne(e => e.Profile)
+                  .HasForeignKey(e => e.ProfileId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         // WatchHistory Configuration

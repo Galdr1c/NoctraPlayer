@@ -72,6 +72,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **Dizi Listesi Anlık Yenileme**: Yeni playlist eklendiğinde veya kanal listsesi yenilendiğinde dizilerin görünmemesi (ancak yeniden başlatınca gelmesi) sorunu çözüldü. Arka plan düzenleme işlemi bittiğinde arayüz artık dizileri ve ana sayfa raylarını otomatik olarak günceller.
 - **Gelişmiş Durum Mesajları**: Alt status barda "M3U Hazır" yerine, arka plandaki "Diziler Düzenleniyor..." gibi gerçek süreçleri gösteren bilgilendirmeler eklendi.
 - **Çocuk Filtresi Test Paketi**: TMDB reyting önceliklendirmesi, anahtar kelime eşleşmeleri ve otomatik silme mantığını doğrulayan 18 yeni test senaryosu (`ChildSafetyFilteringTests`) eklendi.
+- **Kritik Oynatma Senaryoları Doğrulaması**: 52 farklı oynatma senaryosu (Hata yakalama, otomatik kurtarma, jenerik atlama, izleme geçmişi tutarlılığı) `CriticalScenarioTests.cs` ile doğrulandı.
+- **Veritabanı İlişkisel Bütünlük Sistemi**: Profil ve playlist silindiğinde bağlı tüm verilerin (kanal, dizi, geçmiş) temizlenmesini sağlayan "Cascade Delete" konfigürasyonları `AppDbContext` düzeyinde yapılandırıldı.
+- **İzleme Geçmişi ve Pozisyon Hassasiyeti**: VOD içeriklerde son 10 saniye içinde biten yayınların "erken kesilme" (premature end) olarak algılanıp kurtarma döngüsüne girmesi engellendi. `CriticalApplicationScenariosTests.cs` (37 test) ile veri izolasyonu ve bütünlüğü doğrulandı.
 
 ### 📁 Değişen Dosyalar
 | Dosya | Değişiklik |
@@ -80,6 +83,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 | `PlaylistService.cs` | TMDB öncelikli filtreleme ve merkezi helper entegrasyonu. |
 | `TmdbSyncService.cs` | Senkronizasyon sonrası otomatik çocuk profili temizleme (Purge) mantığı. |
 | `MainViewModel.cs` | Arka plan aggregation sonrası otomatik UI yenileme ve status mesaj iyileştirmeleri. |
+| `AppDbContext.cs` | `Profile -> Playlist` ve `Playlist -> Series` için cascade deletion yapılandırması. |
+| `CriticalScenarioTests.cs` | [YENİ] 52 kritik oynatma senaryosu doğrulama seti. |
+| `CriticalApplicationScenariosTests.cs` | [YENİ] 37 veri bütünlüğü ve izolasyon testi. |
 | `ChildSafetyFilteringTests.cs` | [YENİ] Filtreleme mantığını doğrulayan kapsamlı test seti. |
 
 ---
