@@ -57,6 +57,30 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **VOD İzleme Geçmişi**: Tamamlanmış (sonuna kadar izlenmiş) VOD içeriklerinin "İzlemeye Devam Et" listesinde belirmeye devam etmesi sorunu düzeltildi (`Channel` modeline `IsCompleted` özelliği eklendi).
 - **Performans İyileştirmesi**: Anasayfa yüklenirken, her bir dizi bölümü (episode) için yapılan $O(n^2)$ karmaşıklığındaki dizi (series) arama işlemi, $O(1)$ sözlük haritalaması ile optimize edilerek arayüz tepkiselliği artırıldı.
 
+## v31.0 – TMDB Destekli Çocuk Filtresi ve Dizi Arayüz İyileştirmesi (2026-03-08)
+
+### ✨ Yeni Özellikler ve İyileştirmeler
+- **TMDB Destekli Çocuk Profili Filtrelemesi**: Çocuk profilleri için kanal ve dizi filtreleme mantığı TMDB (The Movie Database) verileriyle güçlendirildi.
+  - İçeriklerin yaş sınırları (Content Rating) artık sadece anahtar kelimelere değil, TMDB'nin resmi verilerine (US, DE, TR ve global standartlar) göre kontrol ediliyor.
+  - TMDB verisi bulunamayan içerikler için gelişmiş anahtar kelime filtresi yedek (fallback) olarak çalışmaya devam eder.
+- **Otomatik İçerik Temizleme (Post-Sync Purge)**: TMDB senkronizasyonu tamamlandığında, eğer bir içeriğin yaş sınırı çocuk profil kurallarına uymuyorsa (`TV-MA`, `R`, `18+`, `PG-13` vb.), bu içerik çocuk profillerinden otomatik olarak silinir.
+- **Merkezi Güvenlik Yardımı (`ChildSafetyHelper`)**: Tüm filtreleme kuralları, güvenli/tehlikeli kategoriler ve reyting kontrolleri tek bir merkezde toplanarak uygulama genelinde tutarlılık sağlandı.
+- **Kritik Kara Liste Genişletmesi**: `XXX`, `Adult` gibi evrensel yetişkin terimleri kritik kara listeye eklenerek koruma seviyesi artırıldı.
+- **Dizi Listesi Anlık Yenileme**: Yeni playlist eklendiğinde veya kanal listsesi yenilendiğinde dizilerin görünmemesi (ancak yeniden başlatınca gelmesi) sorunu çözüldü. Arka plan düzenleme işlemi bittiğinde arayüz artık dizileri ve ana sayfa raylarını otomatik olarak günceller.
+- **Gelişmiş Durum Mesajları**: Alt status barda "M3U Hazır" yerine, arka plandaki "Diziler Düzenleniyor..." gibi gerçek süreçleri gösteren bilgilendirmeler eklendi.
+- **Çocuk Filtresi Test Paketi**: TMDB reyting önceliklendirmesi, anahtar kelime eşleşmeleri ve otomatik silme mantığını doğrulayan 18 yeni test senaryosu (`ChildSafetyFilteringTests`) eklendi.
+
+### 📁 Değişen Dosyalar
+| Dosya | Değişiklik |
+|-------|------------|
+| `ChildSafetyHelper.cs` | [YENİ] Merkezi güvenlik mantığı ve evrensel reyting kontrolleri. |
+| `PlaylistService.cs` | TMDB öncelikli filtreleme ve merkezi helper entegrasyonu. |
+| `TmdbSyncService.cs` | Senkronizasyon sonrası otomatik çocuk profili temizleme (Purge) mantığı. |
+| `MainViewModel.cs` | Arka plan aggregation sonrası otomatik UI yenileme ve status mesaj iyileştirmeleri. |
+| `ChildSafetyFilteringTests.cs` | [YENİ] Filtreleme mantığını doğrulayan kapsamlı test seti. |
+
+---
+
 ## v30.9 – Anasayfa Sadeleştirme ve Netflix Tasarımı (2026-03-06)
 
 ### 🌟 Yeni Özellikler ve İyileştirmeler

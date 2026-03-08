@@ -301,7 +301,9 @@ public partial class MainViewModel : ObservableObject
                 {
                     try
                     {
-                        UpdateSeriesViewItems();
+                        // Refresh content from DB (Aggregation finished)
+                        await LoadHomeContentAsync();
+                        StatusMessage = "Kanal Listesi Hazır ✓"; 
                         System.Diagnostics.Debug.WriteLine($"[MainViewModel] Series refreshed after background aggregation for playlist {playlistId}");
                     }
                     catch (Exception ex)
@@ -479,7 +481,7 @@ public partial class MainViewModel : ObservableObject
                                                             _dispatcherService.BeginInvoke(async () =>
                                                             {
                                                                 await LoadPlaylistsAsync();
-                                                                StatusMessage = "M3U Listesi Hazır ✓";
+                                                                StatusMessage = "Kanal Listesi Tamamlandı. Diziler Düzenleniyor...";
                                                             });
                                                         }
                                                         catch (Exception ex)
