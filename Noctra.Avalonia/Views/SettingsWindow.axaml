@@ -246,31 +246,13 @@
                                 <StackPanel>
                                     <TextBlock Text="Otomatik Oynatma" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
                                     
-                                    <Grid Margin="0,0,0,16">
+                                    <Grid>
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                         <StackPanel>
                                             <TextBlock Text="Sonraki bölümü otomatik oynat" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                             <TextBlock Text="Bir bölüm bittiğinde seriyi otomatik devam ettirir" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
                                         </StackPanel>
                                         <ToggleSwitch Grid.Column="1" IsChecked="{Binding AutoPlayNext}"/>
-                                    </Grid>
-
-                                    <Grid Margin="0,0,0,16">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                        <StackPanel>
-                                            <TextBlock Text="Jenerik bitince sonraki bölüme geç" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                            <TextBlock Text="Kapanış jeneriğinde otomatik olarak sonraki bölümü başlatır" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
-                                        </StackPanel>
-                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding AutoSkipCredits}"/>
-                                    </Grid>
-
-                                    <Grid>
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                        <StackPanel>
-                                            <TextBlock Text="Son kanalı hatırla" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                            <TextBlock Text="Uygulama açıldığında son izlenen kanalı yükler" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
-                                        </StackPanel>
-                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding RememberLastChannel}"/>
                                     </Grid>
                                 </StackPanel>
                             </Border>

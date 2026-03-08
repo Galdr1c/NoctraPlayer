@@ -33,11 +33,6 @@ public class AppSettings
     public bool AutoPlayNext { get; set; } = true;
     
     /// <summary>
-    /// Jenerik bittiğinde sonraki bölüme otomatik geç
-    /// </summary>
-    public bool AutoSkipCredits { get; set; } = false;
-    
-    /// <summary>
     /// Veri kullanımı / video kalitesi
     /// </summary>
     public DataUsageLevel DataUsage { get; set; } = DataUsageLevel.Auto;
@@ -46,11 +41,6 @@ public class AppSettings
     /// Varsayılan ses seviyesi (0-100)
     /// </summary>
     public int DefaultVolume { get; set; } = 100;
-    
-    /// <summary>
-    /// Son kanalı hatırla
-    /// </summary>
-    public bool RememberLastChannel { get; set; } = true;
 
     /// <summary>
     /// Son kullanilan profili acilista otomatik sec

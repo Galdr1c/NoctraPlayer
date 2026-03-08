@@ -9,6 +9,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Gelişmiş Otomatik Oynatma**: Dizi bölümleri bittiğinde bir sonraki bölüme (sezon bittiyse bir sonraki sezonun ilk bölümüne) geçiş mantığı doğrulandı ve optimize edildi.
+- **Ayarlar Sadeleştirmesi**: "Jenerik bitince sonraki bölüme geç" ve "Son kanalı hatırla" seçenekleri ayarlardan ve kullanıcı arayüzünden kaldırıldı.
+- **Empty State Tutarlılığı**: Tüm ana görünümlerde (History, Search, Favorites, My List, Downloads) boş durum (empty state) tasarımları tek bir standart yapıda (MaterialIcon + Başlık + Alt Yazı) birleştirilerek görsel bütünlük sağlandı.
 - **Genişletilebilir Sol Menü (Sidebar)**: Ana menü modernize edilerek açılır/kapanır "Hamburger Menü" yapısına geçirildi.
   - Menü, açıldığında ana içeriği kaydırmak yerine Netflix tarzı "Overlay" (üzerine bindirme) animasyonu ile açılıyor.
   - Menü kapalıyken ikonların daha nizami ve dengeli görünmesi için `Padding` ve `Margin` oranları revize edildi.

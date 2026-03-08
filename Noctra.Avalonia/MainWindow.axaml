@@ -306,7 +306,7 @@
             <Panel>
               <Border Classes="ActiveIndicator" />
               <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
-                <materialIcons:MaterialIcon Kind="MovieOpenOutline" />
+                <materialIcons:MaterialIcon Kind="Filmstrip"/>
                 <TextBlock x:Name="NavMoviesText" Text="Filmler" VerticalAlignment="Center" IsVisible="False"/>
               </StackPanel>
             </Panel>

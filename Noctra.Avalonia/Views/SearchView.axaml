@@ -89,8 +89,11 @@
             </StackPanel>
 
             <!-- Empty search -->
-            <StackPanel HorizontalAlignment="Center" Margin="0,100,0,0" IsVisible="{Binding ShowSearchEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
-              <TextBlock Text="Sonuç bulunamadı." FontSize="16" LetterSpacing="1"  FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}"/>
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0"
+                        IsVisible="{Binding ShowSearchEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
+              <materialIcons:MaterialIcon Kind="Magnify" Width="64" Height="64" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5"/>
+              <TextBlock Text="Sonuç bulunamadı" FontSize="20" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,16,0,4" TextAlignment="Center"/>
+              <TextBlock Text="Aramanızla eşleşen bir içerik bulamadık." FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
             </StackPanel>
           </StackPanel>
         </ScrollViewer>

@@ -1905,7 +1905,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         IsCreditsZone = true;
         IsNextEpisodePromptVisible = true;
 
-        if (GetAutoSkipCreditsSetting())
+        if (_settingsService.Settings.AutoPlayNext)
         {
             _ = PlayNextEpisodeCommand.ExecuteAsync(null);
         }
@@ -1956,7 +1956,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         IsCreditsZone = true;
         IsNextEpisodePromptVisible = true;
 
-        if (GetAutoSkipCreditsSetting())
+        if (_settingsService.Settings.AutoPlayNext)
         {
             _ = PlayNextEpisodeCommand.ExecuteAsync(null);
         }
@@ -1996,24 +1996,6 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             Math.Max(0, Duration - tailThreshold),
             fallbackFiveMinuteTrigger);
         return true;
-    }
-
-    private bool GetAutoSkipCreditsSetting()
-    {
-        try
-        {
-            var settingsPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "Noctra", "settings.json");
-            if (File.Exists(settingsPath))
-            {
-                var json = File.ReadAllText(settingsPath);
-                var settings = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(json);
-                return settings?.AutoSkipCredits ?? false;
-            }
-        }
-        catch { /* ignore */ }
-        return false;
     }
 
     [RelayCommand]

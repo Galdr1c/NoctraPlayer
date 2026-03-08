@@ -29,13 +29,7 @@ public partial class SettingsViewModel : ObservableObject
     private bool _autoPlayNext;
     
     [ObservableProperty]
-    private bool _autoSkipCredits;
-    
-    [ObservableProperty]
     private int _selectedDataUsage;
-    
-    [ObservableProperty]
-    private bool _rememberLastChannel;
     
     // ============ İndirme Ayarları ============
     
@@ -277,9 +271,7 @@ public partial class SettingsViewModel : ObservableObject
         
         // Playback
         AutoPlayNext = s.AutoPlayNext;
-        AutoSkipCredits = s.AutoSkipCredits;
         SelectedDataUsage = (int)s.DataUsage;
-        RememberLastChannel = s.RememberLastChannel;
         
         // Downloads
         SelectedDownloadQuality = (int)s.DownloadQuality;
@@ -323,9 +315,7 @@ public partial class SettingsViewModel : ObservableObject
         
         // Playback
         s.AutoPlayNext = AutoPlayNext;
-        s.AutoSkipCredits = AutoSkipCredits;
         s.DataUsage = (DataUsageLevel)SelectedDataUsage;
-        s.RememberLastChannel = RememberLastChannel;
         
         // Downloads
         s.DownloadQuality = (DownloadQuality)SelectedDownloadQuality;
