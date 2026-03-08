@@ -14,10 +14,10 @@
                       ScrollChanged="LiveView_ScrollChanged">
           <StackPanel Margin="24">
             <Grid Margin="0,0,0,24" ColumnDefinitions="*,Auto">
-              <TextBlock Text="Canl&#305; TV" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+              <TextBlock Text="Canlı TV" FontSize="24" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
               <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
                 <ComboBox Width="260" ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}"/>
-                <Button Content="T&#252;m&#252;" Width="64" Click="ClearGroupSelection_Click"/>
+                <Button Content="Tümü" Width="64" Click="ClearGroupSelection_Click"/>
                 <ComboBox Width="240" ItemsSource="{Binding SortOptions}" SelectedValue="{Binding SelectedSortOrder}" SelectedValueBinding="{Binding Key}" DisplayMemberBinding="{Binding Value}"/>
               </StackPanel>
             </Grid>
@@ -32,8 +32,8 @@
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0"
                         IsVisible="{Binding FilteredChannels.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=invert}">
               <Image Source="avares://Noctra.Avalonia/Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>
-              <TextBlock Text="Kanal bulunamad&#305;" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" Margin="0,14,0,6"/>
-              <TextBlock Text="Bu filtrede g&#246;sterilecek canl&#305; kanal yok." FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
+              <TextBlock Text="Kanal bulunamadı" FontSize="20" LetterSpacing="1" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" Margin="0,14,0,6"/>
+              <TextBlock Text="Bu filtrede gösterilecek canlı kanal yok." FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
             </StackPanel>
           </StackPanel>
         </ScrollViewer>

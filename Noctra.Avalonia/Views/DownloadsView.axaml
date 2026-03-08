@@ -276,13 +276,13 @@
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,60"
                     IsVisible="{Binding ShowDownloadsEmptyState}">
           <materialIcons:MaterialIcon Kind="DownloadOffOutline" Width="64" Height="64" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5"/>
-          <TextBlock Text="İndirilen içerik yok" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,16,0,4" TextAlignment="Center"/>
+          <TextBlock Text="İndirilen içerik yok" FontSize="20" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,16,0,4" TextAlignment="Center"/>
           <TextBlock Text="İndirdiğiniz dizi ve filmler burada görünecek." FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
         </StackPanel>
 
         <!-- Series Section -->
         <StackPanel Spacing="8" Margin="0,0,0,32" IsVisible="{Binding DownloadedSeriesItems.Count, Converter={StaticResource CountToVisibilityConverter}}">
-          <TextBlock Text="DİZİLER" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,8"/>
+          <TextBlock Text="Diziler" FontSize="20" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
           <ItemsControl ItemsSource="{Binding DownloadedSeriesItems}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:Series">
@@ -322,7 +322,7 @@
 
         <!-- Movies Section -->
         <StackPanel Spacing="8" IsVisible="{Binding DownloadedVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-          <TextBlock Text="FİLMLER" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,8"/>
+          <TextBlock Text="Filmler" FontSize="20" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
           <ItemsControl ItemsSource="{Binding DownloadedVodChannels}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:Channel">
@@ -418,7 +418,7 @@
                            <TextBlock Text="{Binding SizeText}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                            <TextBlock Grid.Column="1" Text="{Binding SpeedText}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" FontWeight="SemiBold"/>
                          </Grid>
-                         <ProgressBar Height="4" Minimum="0" Maximum="100" Value="{Binding ProgressPercent}" 
+                         <ProgressBar Height="5" Minimum="0" Maximum="100" Value="{Binding ProgressPercent}" 
                                       Foreground="{Binding Status, Converter={StaticResource DownloadStatusToBrushConverter}}" 
                                       CornerRadius="2"/>
                       </StackPanel>

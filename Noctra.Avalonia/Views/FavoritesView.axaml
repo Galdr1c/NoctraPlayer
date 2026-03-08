@@ -12,7 +12,7 @@
              x:DataType="vm:MainViewModel">
     <ScrollViewer x:Name="FavoritesScrollViewer" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Favorites}}">
           <StackPanel Margin="24">
-            <TextBlock Text="Favoriler" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
+            <TextBlock Text="Favoriler" FontSize="24" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
             <ItemsControl ItemsSource="{Binding FavoriteChannels}">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.DataTemplates>
@@ -31,8 +31,8 @@
             </ItemsControl>
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0" IsVisible="{Binding ShowFavoritesEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
               <Image Source="avares://Noctra.Avalonia/Assets/Logo.png" Width="88" Height="88" Stretch="Uniform" Opacity="0.75"/>
-              <TextBlock Text="Favoriler bo&#351;" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" Margin="0,14,0,6"/>
-              <TextBlock Text="Be&#287;endi&#287;iniz i&#231;erikleri favorilere ekleyin." FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
+              <TextBlock Text="Favoriler boş" FontSize="20" LetterSpacing="1" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" Margin="0,14,0,6"/>
+              <TextBlock Text="Beğendiğiniz içerikleri favorilere ekleyin." FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
             </StackPanel>
           </StackPanel>
         </ScrollViewer>

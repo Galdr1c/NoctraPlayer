@@ -2963,6 +2963,7 @@ public partial class MainViewModel : ObservableObject
         if (view != AppView.Search && !string.IsNullOrWhiteSpace(SearchText))
         {
             SearchText = string.Empty;
+            SearchQuery = string.Empty;
         }
 
         ActiveView = view;
@@ -4369,23 +4370,14 @@ public partial class MainViewModel : ObservableObject
             if (string.IsNullOrWhiteSpace(normalizedCandidate) || normalizedCandidate == normalizedQuery)
                 continue;
 
-            // Reject if lengths are too different
-            if (Math.Abs(normalizedCandidate.Length - normalizedQuery.Length) > 3)
-                continue;
+            double similarity = GetFuzzySimilarity(normalizedQuery, normalizedCandidate);
 
-            var maxAllowedDist = GetDistanceThreshold(Math.Max(normalizedQuery.Length, normalizedCandidate.Length));
-            var distance = LevenshteinDistance(normalizedQuery, normalizedCandidate, maxAllowedDist);
-            
-            if (distance < 0) continue;
-
-            // Calculate similarity score (0.0 to 1.0)
-            double similarity = 1.0 - ((double)distance / Math.Max(normalizedQuery.Length, normalizedCandidate.Length));
-            
-            // Bonus for starting with the same letters
             if (normalizedCandidate.StartsWith(normalizedQuery[..Math.Min(2, normalizedQuery.Length)], StringComparison.OrdinalIgnoreCase))
-                similarity += 0.1;
+            {
+                similarity += 0.05;
+            }
 
-            if (similarity > bestScore && similarity > 0.7)
+            if (similarity > bestScore && similarity > 0.70)
             {
                 bestScore = similarity;
                 best = candidate;
@@ -4399,6 +4391,7 @@ public partial class MainViewModel : ObservableObject
     {
         var normalizedQuery = NormalizeFuzzyText(query);
         var normalizedCandidate = NormalizeFuzzyText(candidate);
+        
         if (string.IsNullOrWhiteSpace(normalizedQuery) || string.IsNullOrWhiteSpace(normalizedCandidate))
         {
             return false;
@@ -4410,21 +4403,64 @@ public partial class MainViewModel : ObservableObject
             return true;
         }
 
-        var maxDistance = GetDistanceThreshold(Math.Max(normalizedQuery.Length, normalizedCandidate.Length));
-        var distance = LevenshteinDistance(normalizedQuery, normalizedCandidate, maxDistance);
-        
-        if (distance < 0) return false;
+        return GetFuzzySimilarity(normalizedQuery, normalizedCandidate) >= 0.70;
+    }
 
-        double similarity = 1.0 - ((double)distance / Math.Max(normalizedQuery.Length, normalizedCandidate.Length));
-        return similarity >= 0.75;
+    private static double GetFuzzySimilarity(string normalizedQuery, string normalizedCandidate)
+    {
+        var qWords = normalizedQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var cWords = normalizedCandidate.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        if (qWords.Length == 0 || cWords.Length == 0) return 0;
+
+        double totalScore = 0;
+
+        foreach (var qw in qWords)
+        {
+            double bestWordScore = 0;
+            foreach (var cw in cWords)
+            {
+                if (cw == qw || cw.Contains(qw, StringComparison.OrdinalIgnoreCase))
+                {
+                    bestWordScore = 1.0;
+                    break;
+                }
+
+                int maxDist = GetDistanceThreshold(Math.Max(qw.Length, cw.Length));
+                
+                // Daha esnek uzunluk kontrolü
+                if (Math.Abs(qw.Length - cw.Length) > maxDist + 1) continue;
+
+                int dist = LevenshteinDistance(qw, cw, maxDist);
+                if (dist >= 0)
+                {
+                    double score = 1.0 - ((double)dist / Math.Max(qw.Length, cw.Length));
+                    if (score > bestWordScore)
+                    {
+                        bestWordScore = score;
+                    }
+                }
+            }
+            totalScore += bestWordScore;
+        }
+
+        // Adayda çok fazla ekstra kelime varsa ufak bir ceza (aşırı eşleşmeyi önler)
+        double penalty = 0;
+        if (cWords.Length > qWords.Length + 2) 
+        {
+            penalty = (cWords.Length - qWords.Length - 2) * 0.05;
+        }
+
+        return Math.Max(0, (totalScore / qWords.Length) - penalty);
     }
 
     private static int GetDistanceThreshold(int length)
     {
-        if (length <= 5) return 1;
-        if (length <= 10) return 2;
-        if (length <= 16) return 3;
-        return 4;
+        if (length <= 4) return 1;
+        if (length <= 7) return 2;
+        if (length <= 11) return 3;
+        if (length <= 15) return 4;
+        return 5;
     }
 
     private static string NormalizeFuzzyText(string? value)
@@ -4435,6 +4471,15 @@ public partial class MainViewModel : ObservableObject
         }
 
         var normalized = value.Trim().ToLowerInvariant();
+
+        normalized = normalized
+            .Replace('ı', 'i').Replace('i', 'i')
+            .Replace('ş', 's')
+            .Replace('ğ', 'g')
+            .Replace('ü', 'u')
+            .Replace('ö', 'o')
+            .Replace('ç', 'c');
+
         normalized = Regex.Replace(normalized, @"[^\p{L}\p{Nd}\s]", " ");
         normalized = Regex.Replace(normalized, @"\s+", " ").Trim();
         return normalized;
@@ -4568,6 +4613,7 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
+        SearchQuery = SearchSuggestion;
         SearchText = SearchSuggestion;
         Navigate(AppView.Search);
     }

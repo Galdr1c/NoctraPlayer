@@ -24,7 +24,7 @@
           </ScrollViewer.Resources>
 
           <StackPanel Margin="24">
-            <TextBlock Text="Arama Sonu&#231;lar&#305;" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
+            <TextBlock Text="Arama Sonuçları" FontSize="24" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
             <!-- Search Suggestion -->
             <Border Margin="0,0,0,20" Padding="12,10" Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusSmall}"
                     IsVisible="{Binding SearchSuggestion, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
@@ -37,7 +37,7 @@
 
             <!-- Live results -->
             <StackPanel Margin="0,0,0,24" IsVisible="{Binding SearchLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-              <TextBlock Text="Canl&#305; TV" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+              <TextBlock Text="Canlı TV" FontSize="20" LetterSpacing="1" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
               <ItemsControl ItemsSource="{Binding SearchLiveChannels}" ItemTemplate="{StaticResource SearchLiveCardTemplate}">
                 <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               </ItemsControl>
@@ -45,7 +45,7 @@
 
             <!-- Series results -->
             <StackPanel Margin="0,0,0,24" IsVisible="{Binding SearchSeriesChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-              <TextBlock Text="Dizi" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+              <TextBlock Text="Diziler" FontSize="20" LetterSpacing="1" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
               <ItemsControl ItemsSource="{Binding SearchSeriesChannels}" ItemTemplate="{StaticResource SearchSeriesCardTemplate}">
                 <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               </ItemsControl>
@@ -53,7 +53,7 @@
 
             <!-- VOD results -->
             <StackPanel Margin="0,0,0,24" IsVisible="{Binding SearchVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-              <TextBlock Text="VOD" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+              <TextBlock Text="Filmler" FontSize="20" LetterSpacing="1"  FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
               <ItemsControl ItemsSource="{Binding SearchVodChannels}" ItemTemplate="{StaticResource SearchVodCardTemplate}">
                 <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               </ItemsControl>
@@ -61,11 +61,11 @@
 
             <!-- Similar Results -->
             <StackPanel Margin="0,8,0,24" IsVisible="{Binding ShowSearchSimilarSection}">
-              <TextBlock Text="Yak&#305;n Sonu&#231;lar" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+              <TextBlock Text="Benzer Sonuçlar" FontSize="20" LetterSpacing="1"  FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
 
               <!-- Similar Live -->
               <StackPanel Margin="0,0,0,20" IsVisible="{Binding SearchSimilarLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-                <TextBlock Text="Canl&#305; TV" FontSize="16" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                <TextBlock Text="Canlı TV" FontSize="16" LetterSpacing="1"  FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
                 <ItemsControl ItemsSource="{Binding SearchSimilarLiveChannels}" ItemTemplate="{StaticResource SearchLiveCardTemplate}">
                   <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 </ItemsControl>
@@ -73,7 +73,7 @@
 
               <!-- Similar Series -->
               <StackPanel Margin="0,0,0,20" IsVisible="{Binding SearchSimilarSeriesChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-                <TextBlock Text="Dizi" FontSize="16" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                <TextBlock Text="Diziler" FontSize="16" LetterSpacing="1"  FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
                 <ItemsControl ItemsSource="{Binding SearchSimilarSeriesChannels}" ItemTemplate="{StaticResource SearchSeriesCardTemplate}">
                   <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 </ItemsControl>
@@ -81,7 +81,7 @@
 
               <!-- Similar VOD -->
               <StackPanel Margin="0,0,0,8" IsVisible="{Binding SearchSimilarVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-                <TextBlock Text="VOD" FontSize="16" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                <TextBlock Text="Filmler" FontSize="16" LetterSpacing="1"  FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
                 <ItemsControl ItemsSource="{Binding SearchSimilarVodChannels}" ItemTemplate="{StaticResource SearchVodCardTemplate}">
                   <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                 </ItemsControl>
@@ -90,7 +90,7 @@
 
             <!-- Empty search -->
             <StackPanel HorizontalAlignment="Center" Margin="0,100,0,0" IsVisible="{Binding ShowSearchEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
-              <TextBlock Text="Sonu&#231; bulunamad&#305;." FontSize="16" Foreground="{DynamicResource TextMutedBrush}"/>
+              <TextBlock Text="Sonuç bulunamadı." FontSize="16" LetterSpacing="1"  FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}"/>
             </StackPanel>
           </StackPanel>
         </ScrollViewer>
