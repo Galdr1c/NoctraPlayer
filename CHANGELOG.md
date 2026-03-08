@@ -9,7 +9,15 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
-- **Gelişmiş Otomatik Oynatma**: Dizi bölümleri bittiğinde bir sonraki bölüme (sezon bittiyse bir sonraki sezonun ilk bölümüne) geçiş mantığı doğrulandı ve optimize edildi.
+- **Kalıcı İzleme Statüsü Koruması**: Bir içerik (VOD veya Dizi) bir kez tamamlandı olarak işaretlendiğinde, sonraki yükleme hataları veya eksik süre (duration) bilgilerinin bu statüyü bozması engellendi. `Episode.IsCompleted` alanı veritabanında kalıcı hale getirildi.
+- **İzleme Statüsü Koruması Test Paketi**: Video yükleme hataları, hızlı ardışık kayıt çağrıları ve provider değişimleri gibi 19 farklı senaryoyu doğrulayan kapsamlı bir test seti (`CompletedStatusProtectionTests`) eklendi.
+- **Lisans Servisi Genişletilmiş Testleri**: Bilinmeyen özellik kontrolleri, limit sınır değer analizi, abonelik iptali ve çoklu abonelik bildirimlerini doğrulayan 18 yeni test senaryosu (`LicenseServiceExtendedTests`) eklendi.
+- **Lisans Servisi İyileştirmeleri**: Premium kullanıcılar için tüm limitler sınırsız hale getirildi, `DeactivatePremium` metodu eklendi ve test yardımcı metodları sessizleştirildi.
+- **İzleme Geçmişi Edge Case Testleri**: `WatchHistoryService` için null guardlar, tamamlanan içeriklerin korunması, profil bazlı geçmiş temizleme ve birikimli izlenme süresi hesaplamalarını doğrulayan 12 yeni test senaryosu (`WatchHistoryServiceEdgeCaseTests`) eklendi.
+- **Oynatıcı Mantığı Birim Testleri**: Bölüm tamamlanma kriterleri (%90 eşiği veya son 3 dakika), Resume (kaldığın yerden devam et) pozisyonu önceliklendirme ve zaman formatlama mantığını doğrulayan 24 yeni test senaryosu (`PlayerCompletionLogicTests`) eklendi.
+- **Gelişmiş Bulanık Arama (Fuzzy Search)**: `MainViewModel` içindeki arama algoritması Türkçe karakter normalizasyonu (ı→i, ş→s vb.) ve harf yer değişimi (transposition) hatalarını destekleyen Damerau-Levenshtein mesafesi ile güçlendirildi.
+- **Kanal ve EPG Birim Testleri**: `Channel` ve `EpgProgram` modelleri için izleme yüzdesi, progress bar hesaplamaları ve görsel (poster/logo) öncelik mantığını doğrulayan 20+ yeni test senaryosu eklendi.
+- **Fuzzy Search Birim Testleri**: Arama algoritmasının doğruluğunu, normalizasyon kurallarını ve hata toleransını test eden 30 yeni test senaryosu (`FuzzySearchTests`) eklendi.
 - **Ayarlar Sadeleştirmesi**: "Jenerik bitince sonraki bölüme geç" ve "Son kanalı hatırla" seçenekleri ayarlardan ve kullanıcı arayüzünden kaldırıldı.
 - **Empty State Tutarlılığı**: Tüm ana görünümlerde (History, Search, Favorites, My List, Downloads) boş durum (empty state) tasarımları tek bir standart yapıda (MaterialIcon + Başlık + Alt Yazı) birleştirilerek görsel bütünlük sağlandı.
 - **Genişletilebilir Sol Menü (Sidebar)**: Ana menü modernize edilerek açılır/kapanır "Hamburger Menü" yapısına geçirildi.
@@ -27,6 +35,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - Tamamlanmış (izlendi işareti olan) bölümler tıklandığında diyalog gösterilmeden doğrudan en baştan başlatılır.
 
 ### 🛠️ Düzeltmeler ve Optimizasyonlar
+- **Veritabanı Şeması ve Toplu İşlem İyileştirmeleri**: 
+  - `Episodes` tablosu için eksik olan `IsCompleted` sütunu çalışma zamanında otomatik eklenecek şekilde (Schema Fixup) güncellendi.
+  - `PlaylistService` içindeki yüksek performanslı toplu ekleme (**Bulk Insert**) mantığı `IsCompleted`, `WatchedPosition` ve `Duration` alanlarını destekleyecek şekilde revize edilerek `NOT NULL` kısıtlama hataları giderildi.
 - **Performans ve Kararlılık Optimizasyonu**: 
   - Anasayfa yüklenirken binlerce dizi için yapılan ağır veritabanı sorguları, **Bulk Sync (Toplu Senkronizasyon)** mimarisine geçirilerek optimize edildi. Uygulama açılış hızı ve tepkiselliği önemli ölçüde artırıldı.
   - Veritabanı şemasında karşılığı olmayan `IsCompleted` özelliğinin SQL hatalarına ve dizi listelerinin boş görünmesine neden olan hatası giderildi.

@@ -1449,8 +1449,8 @@ public partial class PlaylistService : IPlaylistService
         
         command.Transaction = transaction;
         command.CommandText = 
-            @"INSERT INTO Channels (Name, StreamUrl, LogoUrl, GroupTitle, TvgId, TvgName, Type, PlaylistId, IsFavorite, IsInMyList) 
-              VALUES ($name, $streamUrl, $logoUrl, $groupTitle, $tvgId, $tvgName, $type, $playlistId, 0, 0);";
+            @"INSERT INTO Channels (Name, StreamUrl, LogoUrl, GroupTitle, TvgId, TvgName, Type, PlaylistId, IsFavorite, IsInMyList, IsCompleted, WatchedPosition, Duration) 
+              VALUES ($name, $streamUrl, $logoUrl, $groupTitle, $tvgId, $tvgName, $type, $playlistId, 0, 0, $isCompleted, $watchedPosition, $duration);";
 
         var pName = command.CreateParameter(); pName.ParameterName = "$name"; command.Parameters.Add(pName);
         var pStream = command.CreateParameter(); pStream.ParameterName = "$streamUrl"; command.Parameters.Add(pStream);
@@ -1460,6 +1460,9 @@ public partial class PlaylistService : IPlaylistService
         var pTvgName = command.CreateParameter(); pTvgName.ParameterName = "$tvgName"; command.Parameters.Add(pTvgName);
         var pType = command.CreateParameter(); pType.ParameterName = "$type"; command.Parameters.Add(pType);
         var pPlaylistId = command.CreateParameter(); pPlaylistId.ParameterName = "$playlistId"; command.Parameters.Add(pPlaylistId);
+        var pIsCompleted = command.CreateParameter(); pIsCompleted.ParameterName = "$isCompleted"; command.Parameters.Add(pIsCompleted);
+        var pWatchedPosition = command.CreateParameter(); pWatchedPosition.ParameterName = "$watchedPosition"; command.Parameters.Add(pWatchedPosition);
+        var pDuration = command.CreateParameter(); pDuration.ParameterName = "$duration"; command.Parameters.Add(pDuration);
 
         foreach (var channel in channels)
         {
@@ -1471,6 +1474,9 @@ public partial class PlaylistService : IPlaylistService
             pTvgName.Value = channel.TvgName ?? (object)DBNull.Value;
             pType.Value = (int)channel.Type;
             pPlaylistId.Value = channel.PlaylistId;
+            pIsCompleted.Value = channel.IsCompleted ? 1 : 0;
+            pWatchedPosition.Value = channel.WatchedPosition?.ToString() ?? (object)DBNull.Value;
+            pDuration.Value = channel.Duration?.ToString() ?? (object)DBNull.Value;
 
             await command.ExecuteNonQueryAsync();
         }

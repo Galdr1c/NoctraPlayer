@@ -4470,75 +4470,78 @@ public partial class MainViewModel : ObservableObject
             return string.Empty;
         }
 
+        // Normalize Turkish characters to ASCII and lowercase
         var normalized = value.Trim().ToLowerInvariant();
 
         normalized = normalized
-            .Replace('ı', 'i').Replace('i', 'i')
+            .Replace('ı', 'i')
             .Replace('ş', 's')
             .Replace('ğ', 'g')
             .Replace('ü', 'u')
             .Replace('ö', 'o')
-            .Replace('ç', 'c');
+            .Replace('ç', 'c')
+            .Replace('İ', 'i')
+            .Replace('I', 'i');
 
+        // Remove special characters, keep letters and digits
         normalized = Regex.Replace(normalized, @"[^\p{L}\p{Nd}\s]", " ");
+        // Collapse multiple spaces
         normalized = Regex.Replace(normalized, @"\s+", " ").Trim();
         return normalized;
     }
 
     private static int LevenshteinDistance(string source, string target, int maxDistance)
     {
-        if (source == target)
-        {
-            return 0;
-        }
+        if (source == target) return 0;
 
-        if (Math.Abs(source.Length - target.Length) > maxDistance)
-        {
-            return -1;
-        }
+        int n = source.Length;
+        int m = target.Length;
 
+        if (Math.Abs(n - m) > maxDistance) return -1;
+
+        // Damerau-Levenshtein (Optimal String Alignment) variant
         var pool = System.Buffers.ArrayPool<int>.Shared;
-        var previous = pool.Rent(target.Length + 1);
-        var current = pool.Rent(target.Length + 1);
+        var pprev = pool.Rent(m + 1);
+        var prev = pool.Rent(m + 1);
+        var curr = pool.Rent(m + 1);
 
         try
         {
-            for (var j = 0; j <= target.Length; j++)
-            {
-                previous[j] = j;
-            }
+            for (int j = 0; j <= m; j++) prev[j] = j;
 
-            for (var i = 1; i <= source.Length; i++)
+            for (int i = 1; i <= n; i++)
             {
-                current[0] = i;
-                var rowMin = current[0];
+                curr[0] = i;
+                int rowMin = curr[0];
 
-                for (var j = 1; j <= target.Length; j++)
+                for (int j = 1; j <= m; j++)
                 {
-                    var cost = source[i - 1] == target[j - 1] ? 0 : 1;
-                    current[j] = Math.Min(
-                        Math.Min(current[j - 1] + 1, previous[j] + 1),
-                        previous[j - 1] + cost);
-                    if (current[j] < rowMin)
+                    int cost = source[i - 1] == target[j - 1] ? 0 : 1;
+                    curr[j] = Math.Min(Math.Min(curr[j - 1] + 1, prev[j] + 1), prev[j - 1] + cost);
+
+                    // Transposition check (Damerau-Levenshtein)
+                    if (i > 1 && j > 1 && source[i - 1] == target[j - 2] && source[i - 2] == target[j - 1])
                     {
-                        rowMin = current[j];
+                        curr[j] = Math.Min(curr[j], pprev[j - 2] + 1);
                     }
+
+                    if (curr[j] < rowMin) rowMin = curr[j];
                 }
 
-                if (rowMin > maxDistance)
-                {
-                    return -1;
-                }
+                if (rowMin > maxDistance) return -1;
 
-                (previous, current) = (current, previous);
+                // Rotate rows: pprev = prev; prev = curr;
+                Array.Copy(prev, pprev, m + 1);
+                Array.Copy(curr, prev, m + 1);
             }
 
-            return previous[target.Length] <= maxDistance ? previous[target.Length] : -1;
+            return prev[m] <= maxDistance ? prev[m] : -1;
         }
         finally
         {
-            pool.Return(previous);
-            pool.Return(current);
+            pool.Return(pprev);
+            pool.Return(prev);
+            pool.Return(curr);
         }
     }
 

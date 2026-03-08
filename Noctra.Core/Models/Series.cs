@@ -188,7 +188,6 @@ public partial class Episode : ObservableObject
     }
 
     [ObservableProperty]
-    [property: NotMapped]
     private bool _isCompleted;
 
     [NotMapped]

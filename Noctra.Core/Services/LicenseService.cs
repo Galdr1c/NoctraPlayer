@@ -59,6 +59,16 @@ public class LicenseService : ObservableObject, ILicenseService
         SubscriptionChanged?.Invoke();
     }
 
+    public void DeactivatePremium()
+    {
+        if (_currentSubscription.Tier == SubscriptionTier.Free) return;
+        
+        _currentSubscription.Tier = SubscriptionTier.Free;
+        OnPropertyChanged(nameof(IsPremium));
+        OnPropertyChanged(nameof(CurrentTier));
+        SubscriptionChanged?.Invoke();
+    }
+
     public string GetPriceText()
     {
         return "499.95 TL (Tek Sefer)"; 
@@ -98,46 +108,22 @@ public class LicenseService : ObservableObject, ILicenseService
             Features.CustomShortcuts => tier == SubscriptionTier.Premium,
             Features.ResumePlayback => tier == SubscriptionTier.Premium,
             
-            _ => true // Unknown features default to available
+            _ => false // Unknown features default to unavailable
         };
     }
 
     public bool IsWithinLimit(string limitName, int currentCount)
     {
         var tier = _currentSubscription.Tier;
+        if (tier == SubscriptionTier.Premium) return true;
         
         int maxAllowed = limitName switch
         {
-            Limits.Profiles => tier switch
-            {
-                SubscriptionTier.Free => TierLimits.Free.MaxProfiles,
-                SubscriptionTier.Premium => TierLimits.Premium.MaxProfiles,
-                _ => 1
-            },
-            Limits.M3UAccounts => tier switch
-            {
-                SubscriptionTier.Free => TierLimits.Free.MaxM3UAccounts,
-                SubscriptionTier.Premium => TierLimits.Premium.MaxM3UAccounts,
-                _ => 1
-            },
-            Limits.Favorites => tier switch
-            {
-                SubscriptionTier.Free => TierLimits.Free.MaxFavorites,
-                SubscriptionTier.Premium => TierLimits.Premium.MaxFavorites,
-                _ => 50
-            },
-            Limits.FavoriteGroups => tier switch
-            {
-                SubscriptionTier.Free => TierLimits.Free.MaxFavoriteGroups,
-                SubscriptionTier.Premium => TierLimits.Premium.MaxFavoriteGroups,
-                _ => 2
-            },
-            Limits.Themes => tier switch
-            {
-                SubscriptionTier.Free => TierLimits.Free.ThemeCount,
-                SubscriptionTier.Premium => TierLimits.Premium.ThemeCount,
-                _ => 1
-            },
+            Limits.Profiles => TierLimits.Free.MaxProfiles,
+            Limits.M3UAccounts => TierLimits.Free.MaxM3UAccounts,
+            Limits.Favorites => TierLimits.Free.MaxFavorites,
+            Limits.FavoriteGroups => TierLimits.Free.MaxFavoriteGroups,
+            Limits.Themes => TierLimits.Free.ThemeCount,
             _ => int.MaxValue
         };
 
@@ -147,27 +133,13 @@ public class LicenseService : ObservableObject, ILicenseService
     public int GetLimit(string limitName)
     {
         var tier = _currentSubscription.Tier;
+        if (tier == SubscriptionTier.Premium) return int.MaxValue;
         
         return limitName switch
         {
-            Limits.Profiles => tier switch
-            {
-                SubscriptionTier.Free => TierLimits.Free.MaxProfiles,
-                SubscriptionTier.Premium => TierLimits.Premium.MaxProfiles,
-                _ => 1
-            },
-            Limits.M3UAccounts => tier switch
-            {
-                SubscriptionTier.Free => TierLimits.Free.MaxM3UAccounts,
-                SubscriptionTier.Premium => TierLimits.Premium.MaxM3UAccounts,
-                _ => 1
-            },
-            Limits.Favorites => tier switch
-            {
-                SubscriptionTier.Free => TierLimits.Free.MaxFavorites,
-                SubscriptionTier.Premium => TierLimits.Premium.MaxFavorites,
-                _ => 50
-            },
+            Limits.Profiles => TierLimits.Free.MaxProfiles,
+            Limits.M3UAccounts => TierLimits.Free.MaxM3UAccounts,
+            Limits.Favorites => TierLimits.Free.MaxFavorites,
             _ => int.MaxValue
         };
     }
@@ -190,14 +162,13 @@ public class LicenseService : ObservableObject, ILicenseService
     }
 
     /// <summary>
-    /// Debug/test için tier'ı manuel ayarla
+    /// Debug/test için tier'ı manuel ayarla (Event fırlatmaz)
     /// </summary>
     public void SetTierForTesting(SubscriptionTier tier)
     {
         _currentSubscription.Tier = tier;
         OnPropertyChanged(nameof(IsPremium));
         OnPropertyChanged(nameof(CurrentTier));
-        SubscriptionChanged?.Invoke();
     }
 }
 
