@@ -269,7 +269,7 @@
                   Width="44" Height="44" Padding="0"
                   HorizontalAlignment="Left" Margin="8,0,0,16"
                   Cursor="Hand" ToolTip.Tip="Menü">
-            <materialIcons:MaterialIcon Kind="Menu" Width="22" Height="22"
+            <materialIcons:MaterialIcon x:Name="HamburgerIcon" Kind="Menu" Width="22" Height="22"
                                         Foreground="{DynamicResource TextPrimaryBrush}"/>
           </Button>
 
@@ -277,7 +277,7 @@
           <TextBlock x:Name="NavLabel1" Text="ANA MENÜ" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="24,0,24,8" LetterSpacing="2" IsVisible="False"/>
 
           <!-- Home -->
-          <Button Classes="navItem" Click="NavigateHome_Click"
+          <Button x:Name="NavHomeBtn" Classes="navItem" Click="NavigateHome_Click" ToolTip.Tip="Ana Sayfa"
                   Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Home}}">
             <Panel>
               <Border Classes="ActiveIndicator" />
@@ -289,7 +289,7 @@
           </Button>
 
           <!-- Live TV -->
-          <Button Classes="navItem" Click="NavigateLive_Click"
+          <Button x:Name="NavLiveBtn" Classes="navItem" Click="NavigateLive_Click" ToolTip.Tip="Canlı TV"
                   Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Live}}">
             <Panel>
               <Border Classes="ActiveIndicator" />
@@ -301,7 +301,7 @@
           </Button>
 
           <!-- Movies -->
-          <Button Classes="navItem" Click="NavigateMovies_Click"
+          <Button x:Name="NavMoviesBtn" Classes="navItem" Click="NavigateMovies_Click" ToolTip.Tip="Filmler"
                   Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Movies}}">
             <Panel>
               <Border Classes="ActiveIndicator" />
@@ -313,7 +313,7 @@
           </Button>
 
           <!-- Series -->
-          <Button Classes="navItem" Click="NavigateSeries_Click"
+          <Button x:Name="NavSeriesBtn" Classes="navItem" Click="NavigateSeries_Click" ToolTip.Tip="Diziler"
                   Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Series}}">
             <Panel>
               <Border Classes="ActiveIndicator" />
@@ -330,19 +330,19 @@
           <TextBlock x:Name="NavLabel2" Text="KÜTÜPHANE" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="24,0,24,8" LetterSpacing="2" IsVisible="False"/>
 
           <!-- My List -->
-          <Button Classes="navItem" Click="NavigateMyList_Click"
+          <Button x:Name="NavMyListBtn" Classes="navItem" Click="NavigateMyList_Click" ToolTip.Tip="Listem"
                   Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.MyList}}">
             <Panel>
               <Border Classes="ActiveIndicator" />
               <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
-                <materialIcons:MaterialIcon Kind="PlaylistPlus" />
+                <materialIcons:MaterialIcon Kind="BookmarkOutline" />
                 <TextBlock x:Name="NavMyListText" Text="Listem" VerticalAlignment="Center" IsVisible="False"/>
               </StackPanel>
             </Panel>
           </Button>
 
           <!-- Favorites -->
-          <Button Classes="navItem" Click="NavigateFavorites_Click"
+          <Button x:Name="NavFavBtn" Classes="navItem" Click="NavigateFavorites_Click" ToolTip.Tip="Favoriler"
                   Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Favorites}}">
             <Panel>
               <Border Classes="ActiveIndicator" />
@@ -354,7 +354,7 @@
           </Button>
 
           <!-- History -->
-          <Button Classes="navItem" Click="NavigateHistory_Click"
+          <Button x:Name="NavHistoryBtn" Classes="navItem" Click="NavigateHistory_Click" ToolTip.Tip="Geçmiş"
                   Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.History}}">
             <Panel>
               <Border Classes="ActiveIndicator" />
@@ -366,7 +366,7 @@
           </Button>
 
           <!-- Downloads -->
-          <Button Classes="navItem" Click="NavigateDownloads_Click"
+          <Button x:Name="NavDownloadsBtn" Classes="navItem" Click="NavigateDownloads_Click" ToolTip.Tip="İndirilenler"
                   Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Downloads}}">
             <Panel>
               <Border Classes="ActiveIndicator" />
@@ -578,9 +578,9 @@
                         <Button Command="{Binding AddToMyListCommand}" CommandParameter="{Binding SelectedSeries}"
                                 Theme="{StaticResource ActionCircleButtonStyle}" Width="52" Height="52" Padding="0">
                             <Panel>
-                                <materialIcons:MaterialIcon Kind="Minus" Width="24" Height="24" Foreground="{DynamicResource TextPrimaryBrush}"
+                                <materialIcons:MaterialIcon Kind="Bookmark" Width="24" Height="24" Foreground="{DynamicResource AccentBrush}"
                                                             IsVisible="{Binding SelectedSeries.IsInMyList}"/>
-                                <materialIcons:MaterialIcon Kind="Plus" Width="24" Height="24" Foreground="{DynamicResource TextPrimaryBrush}"
+                                <materialIcons:MaterialIcon Kind="BookmarkOutline" Width="24" Height="24" Foreground="{DynamicResource TextPrimaryBrush}"
                                                             IsVisible="{Binding !SelectedSeries.IsInMyList}"/>
                             </Panel>
                         </Button>

@@ -268,11 +268,11 @@
                         </StackPanel>
 
                         <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="12">
-                            <Button Command="{Binding OpenEpisodesCommand}" Classes="iconBtn" IsVisible="{Binding IsSeriesContent}" ToolTip.Tip="Bölümler"><materialIcons:MaterialIcon Kind="FormatListBulletedSquare" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
+                            <Button Command="{Binding OpenEpisodesCommand}" Classes="iconBtn" IsVisible="{Binding IsSeriesContent}" ToolTip.Tip="Bölümler"><materialIcons:MaterialIcon Kind="Animation" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
                             <Button Command="{Binding PlayNextEpisodeCommand}" Classes="iconBtn" IsVisible="{Binding IsSeriesContent}" ToolTip.Tip="Sonraki Bölüm"><materialIcons:MaterialIcon Kind="StepForward" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
                             <Button Command="{Binding DownloadCurrentContentCommand}" Classes="iconBtn" IsVisible="{Binding CanShowDownloadButton}" IsEnabled="{Binding CanDownloadCurrentContent}" ToolTip.Tip="İndir"><materialIcons:MaterialIcon Kind="Download" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
                             <Button Command="{Binding OpenInfoPanelCommand}" Classes="iconBtn" IsVisible="{Binding CanShowInfoButton}" ToolTip.Tip="Bilgi"><materialIcons:MaterialIcon Kind="InformationBoxOutline" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
-                            <Button Command="{Binding OpenAudioSettingsCommand}" Classes="iconBtn" ToolTip.Tip="Altyazı"><TextBlock Text="CC" FontWeight="Bold" FontSize="14" Foreground="#E6FFFFFF" VerticalAlignment="Center"/></Button>
+                            <Button Command="{Binding OpenAudioSettingsCommand}" Classes="iconBtn" ToolTip.Tip="Altyazı"><materialIcons:MaterialIcon Kind="Subtitles" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
                             <Button Command="{Binding OpenQualitySettingsCommand}" Classes="iconBtn" ToolTip.Tip="Ayarlar"><materialIcons:MaterialIcon Kind="Cog" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
                             <Button Command="{Binding EnterPiPCommand}" Classes="iconBtn" ToolTip.Tip="Resim İçinde Resim"><materialIcons:MaterialIcon Kind="PictureInPictureBottomRight" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
                             <Button Command="{Binding ToggleFullScreenCommand}" Classes="iconBtn" ToolTip.Tip="Tam Ekran">

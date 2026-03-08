@@ -13,6 +13,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - Menü, açıldığında ana içeriği kaydırmak yerine Netflix tarzı "Overlay" (üzerine bindirme) animasyonu ile açılıyor.
   - Menü kapalıyken ikonların daha nizami ve dengeli görünmesi için `Padding` ve `Margin` oranları revize edildi.
   - "İndirilenler" sayfasındaki ikon kayma/hizalanma hatası düzeltildi.
+  - **Akıllı Navigasyon İpuçları (Tooltips)**: Menü öğeleri üzerindeki ipuçları (Tooltips), menü açıkken (yazılar okunabildiğinden) otomatik gizlenecek, sadece kapalıyken (ikon modunda) görünecek şekilde geliştirildi.
+  - **Dinamik Hamburger İkonu**: Sol üstteki menü butonu ikonunun (`Menu`), yan menü açıkken çarpı (`MenuOpen`) olarak değişmesi sağlandı.
+  - Header alanında bulunan ve hizalamayı bozan eski 1px'lik `Border` alanı (ölü kod) temizlendi.
 - **Geçmiş Sayfası Dizi Görünümü**: Geçmiş (History) sekmesinde yer alan dizi içerikleri, izlenen bölümlerin (episode) listelenmesi yerine ana dizi kartları (`SeriesCard`) olarak listelenecek şekilde güncellendi. Artık karta tıklandığında doğrudan dizinin detay sayfası açılıyor.
 - **Kaldığın Yerden Devam Et (Resume Dialog)**: VOD ve Dizi içerikleri için akıllı izleme hafızası eklendi.
   - 2 dakikadan fazla izlenen ve henüz tamamlanmamış içerikler açıldığında, kullanıcıya "Kaldığın Yerden Devam Et" veya "Baştan Başla" seçeneklerini sunan modern bir diyalog penceresi gösterilir.

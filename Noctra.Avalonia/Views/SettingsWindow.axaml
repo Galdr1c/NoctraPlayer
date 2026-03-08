@@ -469,7 +469,7 @@
                 <TabItem Classes="SettingsTab" Cursor="Hand">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <materialIcons:MaterialIcon Kind="PaletteSwatchOutline" Width="20" Height="20" />
+                            <materialIcons:MaterialIcon Kind="BrushVariant" Width="20" Height="20" />
                             <TextBlock Text="Görünüm" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>

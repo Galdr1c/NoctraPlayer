@@ -483,6 +483,19 @@ public partial class MainWindow : Window
         NavFavText.IsVisible = visible;
         NavHistoryText.IsVisible = visible;
         NavDownloadsText.IsVisible = visible;
+
+        // Hamburger ikonunu duruma göre değiştir
+        HamburgerIcon.Kind = visible ? Material.Icons.MaterialIconKind.MenuOpen : Material.Icons.MaterialIconKind.Menu;
+
+        // Navigasyon tooltiplerini menü kapalıyken göster, açıkken gizle
+        NavHomeBtn.SetValue(ToolTip.TipProperty, visible ? null : "Ana Sayfa");
+        NavLiveBtn.SetValue(ToolTip.TipProperty, visible ? null : "Canlı TV");
+        NavMoviesBtn.SetValue(ToolTip.TipProperty, visible ? null : "Filmler");
+        NavSeriesBtn.SetValue(ToolTip.TipProperty, visible ? null : "Diziler");
+        NavMyListBtn.SetValue(ToolTip.TipProperty, visible ? null : "Listem");
+        NavFavBtn.SetValue(ToolTip.TipProperty, visible ? null : "Favoriler");
+        NavHistoryBtn.SetValue(ToolTip.TipProperty, visible ? null : "Geçmiş");
+        NavDownloadsBtn.SetValue(ToolTip.TipProperty, visible ? null : "İndirilenler");
     }
 
     private void NavigateHome_Click(object? sender, RoutedEventArgs e) { CloseSidebar(); _mainViewModel.CloseSeriesDetailCommand.Execute(null); _mainViewModel.NavigateCommand.Execute(AppView.Home); }
