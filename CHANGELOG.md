@@ -9,6 +9,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Gelişmiş Ülke ve Dil Tespiti**: Kategori isimlerindeki "şekilli" karakterler (Örn: `ⓣⓥ`, `ⓣⓡ`) otomatik olarak ASCII formatına normalize edilecek şekilde geliştirildi. Tam ülke isimleri (FRANCE, TURKIYE vb.) artık doğrudan tanınarak akıllı sıralama ve EPG eşleştirme başarımı artırıldı.
 - **İndirme Sistemi Kapsamlı Test Paketi**: İndirme kuyruğu mantığı, dizi/sezon klasör organizasyonu, depolama kotası hesaplamaları ve indirilen içeriklerin yerel oynatma (offline mode) önceliklendirmesini doğrulayan yeni test senaryoları (`DownloadSystemComprehensiveTests`) eklendi.
 - **Oynatıcı Kontrolleri ve Overlay Birim Testleri**: Ses/Mute yönetimi, Seek (atlama) mantığı, Skip (ileri/geri) carry penceresi ve overlay görünürlük durumlarını doğrulayan 90 yeni test senaryosu (`PlayerViewModelControlsTests`) eklendi.
 - **Kalıcı İzleme Statüsü Koruması**: Bir içerik (VOD veya Dizi) bir kez tamamlandı olarak işaretlendiğinde, sonraki yükleme hataları veya eksik süre (duration) bilgilerinin bu statüyü bozması engellendi. `Episode.IsCompleted` alanı veritabanında kalıcı hale getirildi.

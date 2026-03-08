@@ -9,23 +9,35 @@ public class LanguageDetectionService
     {
         ["TR"] = "TR",
         ["TUR"] = "TR",
+        ["TURKIYE"] = "TR",
+        ["TURKEY"] = "TR",
         ["GB"] = "GB",
         ["UK"] = "GB",
         ["EN"] = "GB",
+        ["ENGLAND"] = "GB",
         ["US"] = "US",
         ["USA"] = "US",
         ["DE"] = "DE",
         ["GER"] = "DE",
+        ["GERMANY"] = "DE",
+        ["DEUTSCHLAND"] = "DE",
         ["FR"] = "FR",
         ["FRA"] = "FR",
+        ["FRANCE"] = "FR",
         ["IT"] = "IT",
         ["ITA"] = "IT",
+        ["ITALY"] = "IT",
+        ["ITALIA"] = "IT",
         ["ES"] = "ES",
         ["ESP"] = "ES",
+        ["SPAIN"] = "ES",
+        ["ESPANA"] = "ES",
         ["NL"] = "NL",
         ["NLD"] = "NL",
+        ["NETHERLANDS"] = "NL",
         ["RU"] = "RU",
         ["RUS"] = "RU",
+        ["RUSSIA"] = "RU",
         ["AR"] = "AR"
     };
 
@@ -200,8 +212,21 @@ public class LanguageDetectionService
         if (string.IsNullOrWhiteSpace(name))
             return Array.Empty<string>();
 
+        // Normalize circled letters (e.g. ⓣⓥ -> tv)
+        var normalized = new System.Text.StringBuilder();
+        foreach (var ch in name)
+        {
+            if (ch >= '\u24B6' && ch <= '\u24CF') // Uppercase A-Z
+                normalized.Append((char)(ch - '\u24B6' + 'A'));
+            else if (ch >= '\u24D0' && ch <= '\u24E9') // Lowercase a-z
+                normalized.Append((char)(ch - '\u24D0' + 'a'));
+            else
+                normalized.Append(ch);
+        }
+        var processedName = normalized.ToString();
+
         // Find country codes directly inside common brackets/pipes like |TR| or [TR]
-        var matches = System.Text.RegularExpressions.Regex.Matches(name, @"[\|\[\(\{]([a-zA-Z]{2,3})[\|\]\)\}]");
+        var matches = System.Text.RegularExpressions.Regex.Matches(processedName, @"[\|\[\(\{]([a-zA-Z]{2,3})[\|\]\)\}]");
         if (matches.Count > 0)
         {
             var results = new List<string>();
@@ -215,7 +240,7 @@ public class LanguageDetectionService
             return results;
         }
 
-        var chars = name.Select(ch => char.IsLetterOrDigit(ch) ? ch : ' ').ToArray();
+        var chars = processedName.Select(ch => char.IsLetterOrDigit(ch) ? ch : ' ').ToArray();
         return new string(chars)
             .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(t => t.ToUpperInvariant());
