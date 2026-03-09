@@ -11,7 +11,7 @@ namespace Noctra.Tests
 {
     public class MetadataServiceTests
     {
-        [Fact]
+        [Fact(Skip = "Requires real API key")]
         public async Task TMDB_API_Works_With_Env_Key()
         {
             // Traverse up to find .env file

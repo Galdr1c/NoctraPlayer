@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Linq;
+using Noctra.Models;
 using Noctra.Services;
 using Xunit;
 
@@ -10,9 +12,9 @@ namespace Noctra.Tests
         public void DetectCountry_WithFullCountryName_ReturnsCorrectCode()
         {
             var service = new LanguageDetectionService();
-            var names = new List<string> { "ⓣⓥ | FRANCE ULTRA HD", "FRANCE 2", "FRANCE 3" };
+            var channels = new List<string> { "ⓣⓥ | FRANCE ULTRA HD", "FRANCE 2", "FRANCE 3" }.Select(n => new Channel { Name = n }).ToList();
             
-            var result = service.DetectCountry(names);
+            var result = service.DetectCountry(channels);
             
             Assert.Equal("FR", result);
         }
@@ -22,9 +24,9 @@ namespace Noctra.Tests
         {
             var service = new LanguageDetectionService();
             // ⓣⓡ -> TR
-            var names = new List<string> { "ⓣⓡ | KANAL D", "ⓣⓡ | STAR TV" };
+            var channels = new List<string> { "ⓣⓡ | KANAL D", "ⓣⓡ | STAR TV" }.Select(n => new Channel { Name = n }).ToList();
             
-            var result = service.DetectCountry(names);
+            var result = service.DetectCountry(channels);
             
             Assert.Equal("TR", result);
         }
@@ -33,9 +35,9 @@ namespace Noctra.Tests
         public void DetectCountry_WithBrackets_ReturnsCorrectCode()
         {
             var service = new LanguageDetectionService();
-            var names = new List<string> { "[DE] RTL", "[DE] PROSIEBEN" };
+            var channels = new List<string> { "[DE] RTL", "[DE] PROSIEBEN" }.Select(n => new Channel { Name = n }).ToList();
             
-            var result = service.DetectCountry(names);
+            var result = service.DetectCountry(channels);
             
             Assert.Equal("DE", result);
         }
@@ -51,7 +53,8 @@ namespace Noctra.Tests
                 "BBC ONE", "BBC TWO"
             };
             
-            var results = service.DetectCountries(names);
+            var channels = names.Select(n => new Channel { Name = n }).ToList();
+            var results = service.DetectCountries(channels);
             
             // TR (3), FR (2), GB (2)
             Assert.Equal("TR", results[0].CountryCode);
