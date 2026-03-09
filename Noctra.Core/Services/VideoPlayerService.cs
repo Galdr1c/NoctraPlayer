@@ -135,7 +135,7 @@ public class VideoPlayerService : IVideoPlayerService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[VideoPlayerService] VLC Init failed: {ex.Message}");
+            LogDebug($"VLC Init failed: {ex.Message}");
         }
         finally
         {
@@ -210,7 +210,7 @@ public class VideoPlayerService : IVideoPlayerService
 
     public async Task PlayAsync(string url, double startTimeSeconds = 0)
     {
-        System.Diagnostics.Debug.WriteLine($"PlayAsync Called -> URL: {url}, StartTime: {startTimeSeconds}s");
+        LogDebug($"PlayAsync Called -> URL: {url}, StartTime: {startTimeSeconds}s");
         CurrentUrl = url;
         
 
@@ -221,7 +221,7 @@ public class VideoPlayerService : IVideoPlayerService
 
         if (_mediaPlayer == null)
         {
-            System.Diagnostics.Debug.WriteLine("[VideoPlayerService] ERROR: _mediaPlayer is null!");
+            LogDebug("ERROR: _mediaPlayer is null!");
             return;
         }
         
@@ -229,12 +229,12 @@ public class VideoPlayerService : IVideoPlayerService
         // Xtream Codes servers will ban or drop streams if 2 connections overlap.
         if (_mediaPlayer.State == VLCState.Playing || _mediaPlayer.State == VLCState.Buffering || _mediaPlayer.State == VLCState.Opening || _mediaPlayer.State == VLCState.Paused)
         {
-            System.Diagnostics.Debug.WriteLine("[VideoPlayerService] Stopping active player stream...");
+            LogDebug("Stopping active player stream...");
             _mediaPlayer.Stop();
             await Task.Delay(1200); // Allow TCP FIN to reach server
         }
         
-        _retryCount = 0;
+        Interlocked.Exchange(ref _retryCount, 0);
         var generation = Interlocked.Increment(ref _playGeneration);
         _playCts?.Cancel();
         _playCts?.Dispose();
@@ -253,7 +253,7 @@ public class VideoPlayerService : IVideoPlayerService
         var url = CurrentUrl;
         if (string.IsNullOrEmpty(url)) return;
 
-        System.Diagnostics.Debug.WriteLine($"HardSeekAsync Called -> URL: {url}, StartTime: {seconds}s");
+        LogDebug($"HardSeekAsync Called -> URL: {url}, StartTime: {seconds}s");
 
         if (!_isInitialized) await InitializeAsync();
         if (_mediaPlayer == null) return;
@@ -262,12 +262,12 @@ public class VideoPlayerService : IVideoPlayerService
         // Extremely important for HardSeek because we inject a new Media into the running player.
         if (_mediaPlayer.State == VLCState.Playing || _mediaPlayer.State == VLCState.Buffering || _mediaPlayer.State == VLCState.Opening || _mediaPlayer.State == VLCState.Paused)
         {
-            System.Diagnostics.Debug.WriteLine("[VideoPlayerService] Stopping active player stream for HardSeek...");
+            LogDebug("Stopping active player stream for HardSeek...");
             _mediaPlayer.Stop();
             await Task.Delay(500); // Seek için 500ms yeterli (kanal değişimi 1200ms kullanır)
         }
 
-        _retryCount = 0; // İstenirse retry devrede kalabilir
+        Interlocked.Exchange(ref _retryCount, 0); // İstenirse retry devrede kalabilir
         var generation = Interlocked.Increment(ref _playGeneration);
         _playCts?.Cancel();
         _playCts?.Dispose();
@@ -284,7 +284,7 @@ public class VideoPlayerService : IVideoPlayerService
 
     private async Task PlayWithRetryAsync(string url, CancellationToken cancellationToken, long generation, double startSeconds)
     {
-        while (_retryCount <= MaxRetries)
+        while (Interlocked.CompareExchange(ref _retryCount, 0, 0) <= MaxRetries)
         {
             try
             {
@@ -313,7 +313,7 @@ public class VideoPlayerService : IVideoPlayerService
                             media.AddOption(":clock-synchro=0");
                             media.AddOption(":clock-jitter=500");
                             media.AddOption(":ts-seek-percent");
-                            media.AddOption(":drop-late-frames");
+                            media.AddOption(":no-drop-late-frames");
                             break;
 
                         case StreamProfile.VodMkv:
@@ -332,7 +332,7 @@ public class VideoPlayerService : IVideoPlayerService
 
                         case StreamProfile.LiveM3u8:
                             media.AddOption(":network-caching=6000");
-                            media.AddOption(":adaptive-logic=highest");
+                            media.AddOption(":adaptive-logic=rate");
                             break;
 
                         case StreamProfile.Unknown:
@@ -372,7 +372,9 @@ public class VideoPlayerService : IVideoPlayerService
                 }
 
                 if (_mediaPlayer == null) return;
+        var oldMedia = _mediaPlayer.Media;
                 _mediaPlayer.Media = media;
+        oldMedia?.Dispose();
 
                 // Hata event'ini dinle
                 bool errorOccurred = false;
@@ -406,9 +408,9 @@ public class VideoPlayerService : IVideoPlayerService
                     return;
                 }
 
-                if (errorOccurred && _retryCount < MaxRetries)
+                if (errorOccurred && Interlocked.CompareExchange(ref _retryCount, 0, 0) < MaxRetries)
                 {
-                    _retryCount++;
+                    Interlocked.Increment(ref _retryCount);
                     try
                     {
                         await Task.Delay(1500, cancellationToken); // 1.5 saniye bekle
@@ -507,15 +509,24 @@ public class VideoPlayerService : IVideoPlayerService
                     _volumeSaveCts = new CancellationTokenSource();
                     
                     var token = _volumeSaveCts.Token;
-                    _ = Task.Delay(1000, token).ContinueWith(async t => 
+                    _ = Task.Run(async () =>
                     {
-                        if (!t.IsCanceled)
+                        try
                         {
-                            await _settingsService.SaveAsync();
-                            // Log only once when saved to verify
-                            // System.Diagnostics.Debug.WriteLine($"Volume persisted: {_currentVolume}");
+                            await Task.Delay(1000, token);
+                            if (!token.IsCancellationRequested)
+                            {
+                                await _settingsService.SaveAsync();
+                                // Log only once when saved to verify
+                                // LogDebug($"Volume persisted: {_currentVolume}");
+                            }
                         }
-                    }, TaskScheduler.Default);
+                        catch (TaskCanceledException) { }
+                        catch (Exception ex)
+                        {
+                            LogDebug($"Volume save error: {ex.Message}");
+                        }
+                    }, token);
                 }
             }
         }
@@ -747,8 +758,8 @@ public class VideoPlayerService : IVideoPlayerService
                 StreamQuality = merged;
             }
 
-            System.Diagnostics.Debug.WriteLine(
-                $"[VideoPlayerService] Quality detected: {merged.Width}x{merged.Height} " +
+            LogDebug(
+                $"Quality detected: {merged.Width}x{merged.Height} " +
                 $"@{merged.Fps}fps, {merged.VideoCodec}, {merged.VideoBitrate}bps | " +
                 $"Audio: {merged.AudioCodec} {merged.AudioChannels}ch {merged.AudioBitrate}kbps");
 
@@ -756,7 +767,7 @@ public class VideoPlayerService : IVideoPlayerService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[VideoPlayerService] Quality detection error: {ex.Message}");
+            LogDebug($"Quality detection error: {ex.Message}");
         }
     }
 
