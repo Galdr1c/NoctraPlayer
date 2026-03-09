@@ -983,6 +983,8 @@ public partial class AddProfileViewModel : ObservableObject
                     : ProfileType.M3U;
 
             bool credentialsChanged = false;
+            var encryptedPassword = _securityService.Encrypt(Password) ?? string.Empty;
+
             if (EditingProfile?.ProviderAccount != null)
             {
                 var originalUrl = EditingProfile.ProviderAccount.Url;
@@ -996,6 +998,21 @@ public partial class AddProfileViewModel : ObservableObject
                                      originalType != newAccountType;
             }
 
+            // Check for duplicate account before saving
+            var excludeAccountId = EditingProfile?.ProviderAccountId ?? 0;
+            var isDuplicate = await _profileService.CheckDuplicateAccountAsync(
+                excludeAccountId, newAccountType, Url, Username, encryptedPassword);
+
+            if (isDuplicate)
+            {
+                HasError = true;
+                StatusMessage = newAccountType == ProfileType.M3U
+                    ? "Bu M3U adresi zaten başka bir profilde kullanılıyor"
+                    : "Bu sunucu ve kullanıcı adı zaten başka bir profilde kayıtlı";
+                UrlError = StatusMessage;
+                return;
+            }
+
             var request = new ProfileSaveRequest
             {
                 ProfileName = ProfileName,
@@ -1003,7 +1020,7 @@ public partial class AddProfileViewModel : ObservableObject
                 IsChild = IsChild,
                 Url = Url,
                 Username = Username,
-                EncryptedPassword = _securityService.Encrypt(Password) ?? string.Empty,
+                EncryptedPassword = encryptedPassword,
                 AccountType = newAccountType,
                 CredentialsChanged = credentialsChanged,
                 ExistingIds = EditingProfile != null

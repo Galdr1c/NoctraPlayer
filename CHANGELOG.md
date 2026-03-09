@@ -9,6 +9,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Mükerrer Profil Kontrolü**: Aynı sağlayıcıdan (M3U URL, Xtream veya Stalker) mükerrer profil oluşturulmasını engelleyen doğrulama mekanizması eklendi. Kullanıcıya net hata mesajları sunularak veri bütünlüğü sağlandı.
 - **Gelişmiş Ülke ve Dil Tespiti**: Kategori isimlerindeki "şekilli" karakterler (Örn: `ⓣⓥ`, `ⓣⓡ`) otomatik olarak ASCII formatına normalize edilecek şekilde geliştirildi. Tam ülke isimleri (FRANCE, TURKIYE vb.) artık doğrudan tanınarak akıllı sıralama ve EPG eşleştirme başarımı artırıldı.
 - **İndirme Sistemi Kapsamlı Test Paketi**: İndirme kuyruğu mantığı, dizi/sezon klasör organizasyonu, depolama kotası hesaplamaları ve indirilen içeriklerin yerel oynatma (offline mode) önceliklendirmesini doğrulayan yeni test senaryoları (`DownloadSystemComprehensiveTests`) eklendi.
 - **Oynatıcı Kontrolleri ve Overlay Birim Testleri**: Ses/Mute yönetimi, Seek (atlama) mantığı, Skip (ileri/geri) carry penceresi ve overlay görünürlük durumlarını doğrulayan 90 yeni test senaryosu (`PlayerViewModelControlsTests`) eklendi.
@@ -38,6 +39,8 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - Tamamlanmış (izlendi işareti olan) bölümler tıklandığında diyalog gösterilmeden doğrudan en baştan başlatılır.
 
 ### 🛠️ Düzeltmeler ve Optimizasyonlar
+- **Mükerrer Kontrolü ve Şifreleme Bug Fix**: Non-deterministic (DPAPI) şifreleme nedeniyle mükerrer kayıtların veritabanında tespit edilememesi sorunu, karşılaştırma mantığı `Type`, `Url` ve `Username` alanlarına odaklanarak çözüldü. M3U listelerindeki boş kullanıcı adı/şifre karşılaştırma hataları giderildi.
+- **UI Geri Bildirim İyileştirmesi**: Kayıt sırasında oluşan hatalarda (örn: mükerrer kayıt) ekranın "Kaydediliyor..." durumunda asılı kalması sorunu düzeltilerek kullanıcıya reel-time hata bildirimi sağlandı.
 - **Veritabanı Şeması ve Toplu İşlem İyileştirmeleri**: 
   - `Episodes` tablosu için eksik olan `IsCompleted` sütunu çalışma zamanında otomatik eklenecek şekilde (Schema Fixup) güncellendi.
   - `PlaylistService` içindeki yüksek performanslı toplu ekleme (**Bulk Insert**) mantığı `IsCompleted`, `WatchedPosition` ve `Duration` alanlarını destekleyecek şekilde revize edilerek `NOT NULL` kısıtlama hataları giderildi.
