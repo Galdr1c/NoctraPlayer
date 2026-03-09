@@ -7,7 +7,7 @@
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Avalonia.Controls.LiveTvCard"
              x:DataType="models:Channel"
-             Width="320" Height="56"
+             Width="300" Height="56"
              ClipToBounds="False">
   <UserControl.Styles>
     <Style Selector="Button.CardContainer">

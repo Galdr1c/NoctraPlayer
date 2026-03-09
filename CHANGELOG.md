@@ -9,14 +9,20 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **"Güvenli Sıfırlama" (Safe Reset) ve Veri Bütünlüğü** (2026-03-09):
+    - **Tam Liste Yenileme**: Kanal listesi yenilendiğinde (Refresh) artık mevcut tüm kanallar silinip baştan ekleniyor. Bu sayede playlist üzerindeki tüm isimlendirme, kategori ve grup değişiklikleri %100 temiz bir şekilde arayüze yansıtılıyor.
+    - **Kullanıcı Veri Restorasyonu**: Liste sıfırlansa dahi kullanıcıların "Favoriler", "İzleme Geçmişi" (WatchedPosition), "İzleme Süresi" (Duration) ve "İzleme Listem" (IsInMyList) verileri akıllı parmak izi (fingerprint) teknolojisiyle yedeklenip yeni listeye saniyeler içinde otomatik olarak aktarılıyor.
+    - **Diziler Sekmesi Senkronizasyonu**: Playlist yenilendikten sonra Diziler sekmesindeki içeriklerin boş görünmesine neden olan senkronizasyon hatası giderildi. Arka plandaki dizi önbelleği artık yenileme biter bitmez otomatik olarak tazeleniyor.
+    - **Dinamik Grup İsmi Uyumu**: Playlist sağlayıcısı kategori isimlerine emoji veya özel karakter eklediğinde (Örn: `TR/DIZI` -> `TR/DIZI ✨`), sistem mevcut dizilerin gruplarını bu yeni isimlerle anlık olarak güncelleyerek kategori-içerik eşleşmesini kusursuz hale getiriyor.
+    - **"Hayalet" Veri Temizliği (Ghost Data Purging)**: Tipi değişen (örneğin Dizi -> Canlı) kanallardan arta kalan yetim dizi bölümleri ve boşta kalan dizi başlıkları artık her yenileme sonrası veritabanından otomatik olarak temizleniyor.
+
 - **Kusursuz Filtreleme ve Evrensel Playlist Uyumluluğu** (2026-03-09):
     - **"Kusursuz Filtre" Motoru**: M3U ve Stalker listeleri için sınıflandırma mantığı baştan sona yenilendi. Artık kanal adı ne olursa olsun, URL yapısı (`/live/`, `/movie/`, `/series/`, `pluto.tv`, `/radio/`) en güçlü sinyal olarak kullanılarak içerikler %100 doğrulukla ayrıştırılıyor.
-    - **7/24 Döngü Kanal Koruması**: Pluto TV ve diğer sağlayıcılardaki 7/24 döngü yayınları (adında Series/Movie geçse bile) akış (stream) oldukları otomatik algılanarak Canlı TV sekmesinde tutuluyor.
-    - **Gelişmiş Platform ve VOD Tanıma**: `netflix`, `amazon`, `disney`, `hulu`, `apple tv`, `blutv`, `gain`, `exxen` gibi 15+ dijital platform kategorisi otomatik olarak VOD (Film) sekmesine yönlendiriliyor.
+    - **7/24 Döngü ve Spor Kanal Koruması**: Pluto TV yayınları, `Exxen Spor`, `7/24 Netflix` gibi içerikler; isimlerinde "Series" veya "Movie" geçse dahi, bunların birer canlı akış (stream) olduğu algılanarak doğruca **Canlı TV** sekmesinde tutuluyor.
+    - **Gelişmiş Platform ve VOD Tanıma**: `netflix`, `amazon`, `disney`, `hulu`, `apple tv`, `blutv`, `gain`, `exxen`, `sinevizyon` gibi 15+ dijital platform kategorisi otomatik olarak VOD (Film) sekmesine yönlendiriliyor.
     - **Akıllı Yıl ve İsim Analizi**: `Past Lives 2023` veya `Thirteen Lives (2022)` gibi hem parantezli hem parantezsiz yıl formatları film belirticisi olarak sisteme eklendi.
     - **Stalker Dinamik API Keşfi**: Stalker portalları için girilen URL ne olursa olsun (`/c/`, `/stalker_portal/c/` vb.), sistem asıl API uç noktasını (`/server/load.php`) otomatik olarak keşfediyor ve bağlantı kuruyor.
     - **Çoklu Kategori (Semicolon) Desteği**: `iptv-org` gibi listelerde bulunan `News;Public` tarzı noktalı virgüllü çoklu kategoriler artık doğru şekilde parçalanıp işleniyor.
-    - **tvg-id Bazlı Ülke Tespiti**: `tvg-country` etiketi olmayan listelerde, `kanal.tr`, `kanal.es`, `kanal.ar` gibi ülke uzantılı ID'lerden otomatik ülke ve dil tespiti yapılıyor.
 
 - **Gelişmiş Ülke Algılama ve tvg-country Desteği** (2026-03-09):
     - **tvg-country Desteği**: M3U listelerindeki `#EXTINF` satırlarında bulunan `tvg-country` etiketi artık otomatik olarak ayrıştırılıyor ve kanalların ait olduğu ülke bilgisi veritabanına kaydediliyor.

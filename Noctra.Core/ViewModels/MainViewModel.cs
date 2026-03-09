@@ -1157,13 +1157,15 @@ public partial class MainViewModel : ObservableObject
             _liveGroupsCache = OrderGroupsByLanguagePreference(meta.LiveGroups);
             _vodGroupsCache = OrderGroupsByLanguagePreference(meta.VodGroups);
             _seriesGroupsCache = OrderGroupsByLanguagePreference(meta.SeriesGroups);
-            
+
             UpdateGroupsForSelectedType();
             ResetIncrementalState();
-            await LoadMoreChannelsAsync();
- 
-            StatusMessage = $"{meta.TotalCount:N0} içerik keyfinize hazır";
 
+            await Task.WhenAll(
+                LoadMoreChannelsAsync(),
+                LoadHomeContentAsync());
+
+            StatusMessage = $"{meta.TotalCount:N0} içerik keyfinize hazır";
             // Fire-and-forget tasks are wrapped to avoid unobserved failures and task races.
             StartPostChannelLoadBackgroundTasks();
             EnsureChannelBackgroundRefresh();
@@ -2309,29 +2311,21 @@ public partial class MainViewModel : ObservableObject
             var beforeCount = await _playlistService.GetChannelCountAsync(playlistId);
             await _playlistService.RefreshAsync(playlistId);
             var afterCount = await _playlistService.GetChannelCountAsync(playlistId);
-            var addedCount = Math.Max(0, afterCount - beforeCount);
-
-            if (addedCount > 0)
-            {
-                await LoadChannelsAsync(playlistId);
-            }
+            
+            // "Güvenli Sıfırlama" sonrası tüm kanallar silinip baştan eklendiği için
+            // eklenen/silinen farkı 0 olsa dahi kategoriler değişmiş olabilir. 
+            // Bu yüzden LoadChannelsAsync her zaman çağrılmalı.
+            await LoadChannelsAsync(playlistId);
 
             if (!isBackground)
             {
-                StatusMessage = addedCount == 0
-                    ? "Kanal listesi zaten guncel"
-                    : $"Kanal listesi guncellendi ({addedCount} yeni kanal eklendi)";
+                var delta = afterCount - beforeCount;
+                StatusMessage = delta == 0
+                    ? "Kanal listesi ve kategoriler güncellendi"
+                    : $"Kanal listesi yenilendi ({Math.Abs(delta)} değişiklik)";
                     
                 ChannelListLastError = null;
-
-                if (addedCount == 0)
-                {
-                    _playlistNoChangeUntilUtc[playlistId] = DateTime.UtcNow.AddMinutes(2);
-                }
-                else
-                {
-                    _playlistNoChangeUntilUtc.Remove(playlistId);
-                }
+                _playlistNoChangeUntilUtc.Remove(playlistId);
             }
         }
         catch (Exception ex)

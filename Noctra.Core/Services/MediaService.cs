@@ -90,6 +90,9 @@ public partial class MediaService : IMediaService
                 }
             }
 
+            // Track which episodes were actually mapped to channels in this run
+            var mappedEpisodeIds = new HashSet<int>();
+
             foreach (var channel in channels)
             {
                 var parsed = ParseSeriesEpisodeInfo(channel.Name);
@@ -130,7 +133,8 @@ public partial class MediaService : IMediaService
                         series.CoverUrl = channel.LogoUrl;
                     }
 
-                    if (string.IsNullOrEmpty(series.GroupTitle) && !string.IsNullOrEmpty(channel.GroupTitle))
+                    // Her zaman güncel gruptan besle (Emoji veya prefix değişiklikleri için)
+                    if (!string.IsNullOrEmpty(channel.GroupTitle))
                         series.GroupTitle = channel.GroupTitle;
 
                     if (!series.TmdbId.HasValue && channel.TmdbId.HasValue)
@@ -183,6 +187,8 @@ public partial class MediaService : IMediaService
                     {
                         existingEpisode.Plot = channel.Plot;
                     }
+                    
+                    if (existingEpisode.Id > 0) mappedEpisodeIds.Add(existingEpisode.Id);
                     continue;
                 }
 
@@ -205,6 +211,45 @@ public partial class MediaService : IMediaService
 
             context.ChangeTracker.DetectChanges();
             await context.SaveChangesAsync(cancellationToken);
+
+            // Track IDs of newly created episodes
+            foreach (var series in seriesGroups.Values)
+            {
+                foreach (var season in series.Seasons)
+                {
+                    foreach (var ep in season.Episodes)
+                    {
+                        if (ep.Id > 0) mappedEpisodeIds.Add(ep.Id);
+                    }
+                }
+            }
+
+            // Phase 2: Cleanup orphan data (episodes/series that no longer have channels)
+            var allEpisodesInPlaylist = await context.Episodes
+                .Where(e => e.Season.Series.PlaylistId == playlistId)
+                .Select(e => e.Id)
+                .ToListAsync(cancellationToken);
+
+            var toDeleteEpisodeIds = allEpisodesInPlaylist.Except(mappedEpisodeIds).ToList();
+            if (toDeleteEpisodeIds.Count > 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MediaService] Purging {toDeleteEpisodeIds.Count} orphan episodes.");
+                await context.Episodes
+                    .Where(e => toDeleteEpisodeIds.Contains(e.Id))
+                    .ExecuteDeleteAsync(cancellationToken);
+            }
+
+            // Cleanup empty series (ghost series)
+            var emptySeries = await context.Series
+                .Where(s => s.PlaylistId == playlistId && !s.Seasons.Any(sn => sn.Episodes.Any()))
+                .ToListAsync(cancellationToken);
+
+            if (emptySeries.Count > 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MediaService] Purging {emptySeries.Count} ghost series.");
+                context.Series.RemoveRange(emptySeries);
+                await context.SaveChangesAsync(cancellationToken);
+            }
         }
         finally
         {

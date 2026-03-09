@@ -632,55 +632,51 @@ public partial class PlaylistService : IPlaylistService
             await EnsureChildProfileCleanedAsync(context, playlist);
         }
 
-        // Lightweight fingerprint query — only fetch needed columns instead of 50K full entities
+        // 1. MEVCUT KULLANICI VERİLERİNİ YEDEKLE (Favori, İzleme Geçmişi vb.)
+        // Fingerprint -> (IsFavorite, IsInMyList, WatchedPosition, Duration, IsCompleted)
         var existingChannelData = await context.Channels
             .Where(c => c.PlaylistId == playlistId)
-            .Select(c => new { c.Name, c.StreamUrl, c.GroupTitle, c.TvgId, c.TvgName, c.Type })
+            .Select(c => new { c.Name, c.StreamUrl, c.GroupTitle, c.TvgId, c.TvgName, c.Type, c.IsFavorite, c.IsInMyList, c.WatchedPosition, c.Duration, c.IsCompleted })
             .ToListAsync();
 
-        var isChild = playlist.Profile?.IsChild == true;
-        var existingFingerprints = new HashSet<string>(
-            existingChannelData
-                .Select(c => {
-                    var ch = new Channel { Name = c.Name, StreamUrl = c.StreamUrl, GroupTitle = c.GroupTitle, TvgId = c.TvgId, TvgName = c.TvgName, Type = c.Type };
-                    if (isChild && !ApplyChildFilter(new[] { ch }).Any()) return null;
-                    return BuildChannelFingerprint(ch);
-                })
-                .Where(f => f != null)!,
-            StringComparer.OrdinalIgnoreCase);
-        
-        var channelsToAdd = organizedChannels
-            .Where(c => !existingFingerprints.Contains(BuildChannelFingerprint(c)))
-            .ToList();
-
-        if (channelsToAdd.Count == 0)
+        var userDataMap = new Dictionary<string, (bool Fav, bool List, TimeSpan? Pos, TimeSpan? Dur, bool Comp)>(StringComparer.OrdinalIgnoreCase);
+        foreach (var c in existingChannelData)
         {
-            playlist.LastUpdated = DateTime.UtcNow;
-            if (latestRemoteMetadata != null)
+            var chStub = new Channel { Name = c.Name, StreamUrl = c.StreamUrl, GroupTitle = c.GroupTitle, TvgId = c.TvgId, TvgName = c.TvgName };
+            var fingerprint = BuildChannelFingerprint(chStub);
+            if (!userDataMap.ContainsKey(fingerprint))
             {
-                UpdatePlaylistSourceMetadata(playlist, latestRemoteMetadata);
+                userDataMap[fingerprint] = (c.IsFavorite, c.IsInMyList, c.WatchedPosition, c.Duration, c.IsCompleted);
             }
-            context.Playlists.Update(playlist);
-            await context.SaveChangesAsync();
-            
-            // Eğer temizlik yapıldıysa kanal sayısını güncellemek gerekebilir
-            var currentCount = await context.Channels.CountAsync(c => c.PlaylistId == playlist.Id);
-            if (currentCount != playlist.ChannelCount)
-            {
-                playlist.ChannelCount = currentCount;
-                context.Playlists.Update(playlist);
-                await context.SaveChangesAsync();
-            }
-            
-            return playlist;
         }
 
-        foreach (var channel in channelsToAdd)
+        // 2. TÜM KANALLARI SİL (Temiz bir başlangıç için)
+        // Cascade silme kuralları gereği WatchHistory.ChannelId null'a çekilecek (SetNull), veri kaybı yaşanmayacak.
+        await context.Channels
+            .Where(c => c.PlaylistId == playlistId)
+            .ExecuteDeleteAsync();
+
+        // 3. YENİ KANALLARA YEDEK VERİLERİ UYGULA
+        foreach (var nc in organizedChannels)
         {
-            channel.PlaylistId = playlist.Id;
+            var fingerprint = BuildChannelFingerprint(nc);
+            if (userDataMap.TryGetValue(fingerprint, out var data))
+            {
+                nc.IsFavorite = data.Fav;
+                nc.IsInMyList = data.List;
+                nc.WatchedPosition = data.Pos;
+                nc.Duration = data.Dur;
+                nc.IsCompleted = data.Comp;
+            }
+            nc.PlaylistId = playlist.Id;
         }
 
-        await FastSqliteBulkInsertAsync(context, channelsToAdd);
+        // 4. TOPLU EKLEME
+        if (organizedChannels.Count > 0)
+        {
+            await FastSqliteBulkInsertAsync(context, organizedChannels);
+        }
+
         var finalCount = await context.Channels.CountAsync(c => c.PlaylistId == playlist.Id);
         playlist.ChannelCount = finalCount;
         playlist.LastUpdated = DateTime.UtcNow;
@@ -691,7 +687,7 @@ public partial class PlaylistService : IPlaylistService
         context.Playlists.Update(playlist);
         await context.SaveChangesAsync();
 
-        // Fire-and-forget: re-aggregate in background only when there is a real delta.
+        // Fire-and-forget: re-aggregate in background
         var refreshAggregationPlaylistId = playlist.Id;
         _ = Task.Run(async () =>
         {
@@ -918,11 +914,10 @@ public partial class PlaylistService : IPlaylistService
 
     private static string BuildChannelFingerprint(Channel channel)
     {
-        var typeKey = ((int)channel.Type).ToString();
         var tvgId = NormalizeIdentityToken(channel.TvgId);
         if (!string.IsNullOrWhiteSpace(tvgId))
         {
-            return $"tvgid|{typeKey}|{tvgId}";
+            return $"tvgid|{tvgId}";
         }
 
         var tvgName = NormalizeIdentityToken(channel.TvgName);
@@ -931,16 +926,16 @@ public partial class PlaylistService : IPlaylistService
 
         if (!string.IsNullOrWhiteSpace(tvgName))
         {
-            return $"tvgname|{typeKey}|{tvgName}|{group}";
+            return $"tvgname|{tvgName}|{group}";
         }
 
         if (!string.IsNullOrWhiteSpace(name))
         {
-            return $"name|{typeKey}|{name}|{group}";
+            return $"name|{name}|{group}";
         }
 
         var streamPath = NormalizeStreamIdentity(channel.StreamUrl);
-        return $"stream|{typeKey}|{streamPath}";
+        return $"stream|{streamPath}";
     }
 
     private static string NormalizeIdentityToken(string? raw)

@@ -259,7 +259,17 @@ public partial class M3UParser : IM3UParser
         if (lowerUrl.Contains("/movie/") || lowerUrl.Contains("/vod/") || lowerUrl.Contains("type=vod") || lowerUrl.Contains("type=movie"))
             return ChannelType.VOD;
 
-        // 2. Grup Başlığı Analizi
+        // 2. KESİN CANLI / DÖNGÜ KONTROLÜ (Grup ve İsim bazlı)
+        // Eğer grupta veya isimde 7/24, Canlı, Spor belirtileri varsa VOD/Series kontrollerinden ÖNCE ele alalım.
+        if (SeriesInfoParser.IsLiveSeries(name) || SeriesInfoParser.IsLiveSeries(groupTitle) ||
+            lowerGroup.Contains("spor") || lowerGroup.Contains("sport") || 
+            lowerGroup.Contains("7/24") || lowerGroup.Contains("24/7") ||
+            lowerName.Contains("7/24") || lowerName.Contains("24/7"))
+        {
+            return ChannelType.Live;
+        }
+
+        // 3. Grup Başlığı Analizi
         // Önce Radio (Canlı) kontrolü
         if (lowerGroup.Contains("radio") || lowerName.Contains(" radio"))
         {
@@ -272,7 +282,9 @@ public partial class M3UParser : IM3UParser
             lowerGroup.Contains("tv show") || 
             lowerGroup.Contains("belgesel serisi") ||
             lowerGroup.EndsWith(" diz") || 
-            lowerGroup.Contains(" diz "))
+            lowerGroup.Contains(" diz ") ||
+            lowerGroup.Contains("staffel") ||
+            lowerGroup.Contains("saison"))
         {
             return ChannelType.Series;
         }
@@ -299,7 +311,7 @@ public partial class M3UParser : IM3UParser
             return ChannelType.VOD;
         }
 
-        // 3. Başlık ve İsim Analizi
+        // 4. Başlık ve İsim Analizi
         // Dizi: S01E01, 1x01, Sezon 1, Bölüm 1
         if (SeriesInfoParser.IsSeries(name) ||
             lowerName.Contains("bolum") ||
@@ -314,7 +326,7 @@ public partial class M3UParser : IM3UParser
             return ChannelType.VOD;
         }
 
-        // 4. Uzantı ve Diğer Karakteristikler
+        // 5. Uzantı ve Diğer Karakteristikler
         if (lowerUrl.EndsWith(".mp4") || lowerUrl.EndsWith(".mkv") || lowerUrl.EndsWith(".avi") || lowerUrl.EndsWith(".mov"))
         {
             return ChannelType.VOD;
