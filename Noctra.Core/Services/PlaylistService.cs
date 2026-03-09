@@ -212,8 +212,7 @@ public partial class PlaylistService : IPlaylistService
             {
                 try
                 {
-                    var channelNames = channelSnapshot.Select(c => c.Name ?? "").ToList();
-                    var countryCandidates = _languageDetection.DetectCountries(channelNames)
+                    var countryCandidates = _languageDetection.DetectCountries(channelSnapshot)
                         .Where(c => c.Percentage > 20 || c.ChannelCount > 20)
                         .Select(c => c.CountryCode)
                         .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -1284,7 +1283,7 @@ public partial class PlaylistService : IPlaylistService
             countryCandidates.Add(playlist.DetectedCountry);
         }
 
-        foreach (var country in _languageDetection.DetectCountries(channelNames)
+        foreach (var country in _languageDetection.DetectCountries(channels)
             .Where(c => c.Percentage > 20 || c.ChannelCount > 20)
             .Select(c => c.CountryCode))
         {
@@ -1382,8 +1381,8 @@ public partial class PlaylistService : IPlaylistService
         
         command.Transaction = transaction;
         command.CommandText = 
-            @"INSERT INTO Channels (Name, StreamUrl, LogoUrl, GroupTitle, TvgId, TvgName, Type, PlaylistId, IsFavorite, IsInMyList, IsCompleted, WatchedPosition, Duration) 
-              VALUES ($name, $streamUrl, $logoUrl, $groupTitle, $tvgId, $tvgName, $type, $playlistId, 0, 0, $isCompleted, $watchedPosition, $duration);";
+            @"INSERT INTO Channels (Name, StreamUrl, LogoUrl, GroupTitle, TvgId, TvgName, Type, PlaylistId, IsFavorite, IsInMyList, IsCompleted, WatchedPosition, Duration, Country) 
+              VALUES ($name, $streamUrl, $logoUrl, $groupTitle, $tvgId, $tvgName, $type, $playlistId, 0, 0, $isCompleted, $watchedPosition, $duration, $country);";
 
         var pName = command.CreateParameter(); pName.ParameterName = "$name"; command.Parameters.Add(pName);
         var pStream = command.CreateParameter(); pStream.ParameterName = "$streamUrl"; command.Parameters.Add(pStream);
@@ -1396,6 +1395,7 @@ public partial class PlaylistService : IPlaylistService
         var pIsCompleted = command.CreateParameter(); pIsCompleted.ParameterName = "$isCompleted"; command.Parameters.Add(pIsCompleted);
         var pWatchedPosition = command.CreateParameter(); pWatchedPosition.ParameterName = "$watchedPosition"; command.Parameters.Add(pWatchedPosition);
         var pDuration = command.CreateParameter(); pDuration.ParameterName = "$duration"; command.Parameters.Add(pDuration);
+        var pCountry = command.CreateParameter(); pCountry.ParameterName = "$country"; command.Parameters.Add(pCountry);
 
         foreach (var channel in channels)
         {
@@ -1410,6 +1410,7 @@ public partial class PlaylistService : IPlaylistService
             pIsCompleted.Value = channel.IsCompleted ? 1 : 0;
             pWatchedPosition.Value = channel.WatchedPosition?.ToString() ?? (object)DBNull.Value;
             pDuration.Value = channel.Duration?.ToString() ?? (object)DBNull.Value;
+            pCountry.Value = channel.Country ?? (object)DBNull.Value;
 
             await command.ExecuteNonQueryAsync();
         }

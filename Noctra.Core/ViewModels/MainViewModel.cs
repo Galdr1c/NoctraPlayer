@@ -2517,7 +2517,7 @@ public partial class MainViewModel : ObservableObject
             var appLanguage = (_settingsService.Settings.Language ?? "tr").ToUpperInvariant();
 
             // Detect top countries (limit to top 2 other major countries to save data)
-            var majorCountries = _languageDetectionService.DetectCountries(channelNames)
+            var majorCountries = _languageDetectionService.DetectCountries(channelsForMapping)
                 .Where(c => c.Percentage > 20 || c.ChannelCount > 50) // Daha sıkı eşik: %20 pay veya 50+ kanal
                 .OrderByDescending(c => c.Percentage)
                 .Take(2)

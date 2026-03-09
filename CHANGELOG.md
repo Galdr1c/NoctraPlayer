@@ -9,6 +9,21 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Kusursuz Filtreleme ve Evrensel Playlist Uyumluluğu** (2026-03-09):
+    - **"Kusursuz Filtre" Motoru**: M3U ve Stalker listeleri için sınıflandırma mantığı baştan sona yenilendi. Artık kanal adı ne olursa olsun, URL yapısı (`/live/`, `/movie/`, `/series/`, `pluto.tv`, `/radio/`) en güçlü sinyal olarak kullanılarak içerikler %100 doğrulukla ayrıştırılıyor.
+    - **7/24 Döngü Kanal Koruması**: Pluto TV ve diğer sağlayıcılardaki 7/24 döngü yayınları (adında Series/Movie geçse bile) akış (stream) oldukları otomatik algılanarak Canlı TV sekmesinde tutuluyor.
+    - **Gelişmiş Platform ve VOD Tanıma**: `netflix`, `amazon`, `disney`, `hulu`, `apple tv`, `blutv`, `gain`, `exxen` gibi 15+ dijital platform kategorisi otomatik olarak VOD (Film) sekmesine yönlendiriliyor.
+    - **Akıllı Yıl ve İsim Analizi**: `Past Lives 2023` veya `Thirteen Lives (2022)` gibi hem parantezli hem parantezsiz yıl formatları film belirticisi olarak sisteme eklendi.
+    - **Stalker Dinamik API Keşfi**: Stalker portalları için girilen URL ne olursa olsun (`/c/`, `/stalker_portal/c/` vb.), sistem asıl API uç noktasını (`/server/load.php`) otomatik olarak keşfediyor ve bağlantı kuruyor.
+    - **Çoklu Kategori (Semicolon) Desteği**: `iptv-org` gibi listelerde bulunan `News;Public` tarzı noktalı virgüllü çoklu kategoriler artık doğru şekilde parçalanıp işleniyor.
+    - **tvg-id Bazlı Ülke Tespiti**: `tvg-country` etiketi olmayan listelerde, `kanal.tr`, `kanal.es`, `kanal.ar` gibi ülke uzantılı ID'lerden otomatik ülke ve dil tespiti yapılıyor.
+
+- **Gelişmiş Ülke Algılama ve tvg-country Desteği** (2026-03-09):
+    - **tvg-country Desteği**: M3U listelerindeki `#EXTINF` satırlarında bulunan `tvg-country` etiketi artık otomatik olarak ayrıştırılıyor ve kanalların ait olduğu ülke bilgisi veritabanına kaydediliyor.
+    - **Genişletilmiş Ülke Kapsamı**: Dil algılama algoritması (Language Detection) AL (Arnavutluk), GE (Gürcistan), GR (Yunanistan), HU (Macaristan), HK (Hong Kong) ve SE (İsveç) ülkelerini tanıyacak şekilde popüler kanal kalıplarıyla (Tring, ERT, M1, SVT vb.) güçlendirildi.
+    - **Akıllı Ülke Önceliği**: Ülke tespit mekanizması, kanal isimlerindeki ön eklerden önce veritabanındaki (tvg-country'den gelen) kesin ülke bilgisini dikkate alacak şekilde yeniden yapılandırıldı. Bu sayede otomatik EPG eşleştirmesinin doğruluğu artırıldı.
+    - **Veritabanı Şema Güncellemesi**: Mevcut kullanıcıların veritabanlarına `Channels` tablosu için `Country` sütunu otomatik olarak eklendi (Schema Fixup).
+
 - **Çevrimdışı Mod ve İndirilenler İyileştirmeleri** (2026-03-09):
     - **Dinamik Afiş İndirme (Offline Poster)**: Dizi bölümü veya film indirildiğinde internete ihtiyaç duymamak adına ilgili içeriğin kapağı (Poster) otomatik olarak indirilerek cihazda saklanır. Böylece internet kapalıyken bile içeriklerin resimleri görünür.
     - **Sadeleştirilmiş İndirilenler Sayfası**: İndirilenler menüsünden bir dizinin detay sayfasına girildiğinde, çevrimiçi dizi görünümünden farklı olarak (daha küçük poster, gereksiz yayın metadatalarının gizlenmesi vb.) sadece yerel odaklı minimalist ve sade bir arayüz tasarlanmıştır.

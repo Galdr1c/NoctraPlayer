@@ -31,8 +31,8 @@ public class StalkerPortalService : IStalkerPortalService
     private static readonly string[] KnownPortalPaths =
     [
         "/stalker_portal/server/load.php",
-        "/server/load.php",
         "/stalker_portal/c/",
+        "/server/load.php",
         "/c/",
         "/portal.php",
     ];

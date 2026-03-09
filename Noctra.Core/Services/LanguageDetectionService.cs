@@ -49,7 +49,26 @@ public class LanguageDetectionService
         ["RU"] = "RU",
         ["RUS"] = "RU",
         ["RUSSIA"] = "RU",
-        ["AR"] = "AR"
+        ["AL"] = "AL",
+        ["ALB"] = "AL",
+        ["ALBANIA"] = "AL",
+        ["GE"] = "GE",
+        ["GEO"] = "GE",
+        ["GEORGIA"] = "GE",
+        ["GR"] = "GR",
+        ["GRE"] = "GR",
+        ["GREECE"] = "GR",
+        ["HU"] = "HU",
+        ["HUN"] = "HU",
+        ["HUNGARY"] = "HU",
+        ["HK"] = "HK",
+        ["HONG KONG"] = "HK",
+        ["SE"] = "SE",
+        ["SWE"] = "SE",
+        ["SWEDEN"] = "SE",
+        ["CH"] = "CH",
+        ["CHE"] = "CH",
+        ["SWITZERLAND"] = "CH"
     };
 
     /// <summary>
@@ -115,7 +134,13 @@ public class LanguageDetectionService
         {
             "Al Jazeera", "MBC", "OSN", "Abu Dhabi", "Dubai TV",
             "Rotana", "LBC", "Al Arabiya", "beIN AR"
-        }
+        },
+        ["AL"] = new[] { "Tring", "Top Channel", "Klan", "Vizion", "RTSH" },
+        ["GE"] = new[] { "1TV", "2TV", "Imedi", "Rustavi", "Mtavari", "Postv" },
+        ["GR"] = new[] { "ERT", "Mega Channel", "Ant1", "Star Channel", "Alpha TV", "Skai TV", "Open TV" },
+        ["HU"] = new[] { "M1", "M2", "M4", "M5", "Duna", "RTL Klub", "TV2", "Hír TV", "ATV" },
+        ["HK"] = new[] { "RTHK", "TVB", "ViuTV", "HOY TV" },
+        ["SE"] = new[] { "SVT", "TV4", "Kanal 5", "Kanal 9", "Kanal 11", "Kunskapskanalen" }
     };
 
     /// <summary>
@@ -123,59 +148,38 @@ public class LanguageDetectionService
     /// </summary>
     /// <param name="channelNames">Kanal adları listesi</param>
     /// <returns>ISO 3166-1 alpha-2 ülke kodu (varsayılan: "TR")</returns>
-    public string DetectCountry(IEnumerable<string> channelNames)
+    public string DetectCountry(IEnumerable<Noctra.Models.Channel> channels)
     {
-        if (channelNames == null || !channelNames.Any())
-            return "TR"; // Default
-
-        var names = channelNames.Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
-        if (names.Count == 0)
+        if (channels == null || !channels.Any())
             return "TR";
 
-        // 1) Try explicit country code markers in channel names first.
-        var codeScores = DetectCountryCodeScores(names);
-        if (codeScores.Count > 0)
-        {
-            return codeScores.OrderByDescending(kv => kv.Value).First().Key;
-        }
-
-        // 2) Fallback to language/channel-pattern scoring.
-        var scores = new Dictionary<string, int>();
-
-        foreach (var name in names)
-        {
-            foreach (var (country, patterns) in CountryPatterns)
-            {
-                foreach (var pattern in patterns)
-                {
-                    if (name.Contains(pattern, StringComparison.OrdinalIgnoreCase))
-                    {
-                        scores[country] = scores.GetValueOrDefault(country) + 1;
-                        break; // Bir kanal sadece bir kez sayılır (per ülke)
-                    }
-                }
-            }
-        }
-
-        if (scores.Count == 0)
-            return "TR"; // Default
-
-        return scores.OrderByDescending(kv => kv.Value).First().Key;
+        var countries = DetectCountries(channels);
+        return countries.Count > 0 ? countries[0].CountryCode : "TR";
     }
 
     /// <summary>
     /// Birden fazla ülke tespiti yapar (multi-country playlists)
     /// </summary>
-    public List<(string CountryCode, int ChannelCount, double Percentage)> DetectCountries(IEnumerable<string> channelNames)
+    public List<(string CountryCode, int ChannelCount, double Percentage)> DetectCountries(IEnumerable<Noctra.Models.Channel> channels)
     {
-        var names = channelNames.ToList();
-        if (names.Count == 0)
+        var channelList = channels.ToList();
+        if (channelList.Count == 0)
             return new List<(string, int, double)> { ("TR", 0, 100) };
 
         var scores = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var name in names)
+        foreach (var channel in channelList)
         {
+            if (channel == null) continue;
+
+            // 0) Priority: If channel already has Country metadata (e.g. from tvg-country)
+            if (!string.IsNullOrWhiteSpace(channel.Country) && CountryCodeAliases.TryGetValue(channel.Country, out var countryFromMeta))
+            {
+                scores[countryFromMeta] = scores.GetValueOrDefault(countryFromMeta) + 1;
+                continue;
+            }
+
+            var name = channel.Name;
             if (string.IsNullOrWhiteSpace(name)) continue;
 
             // 1) Try tokens first (prefix markers like TR |, [DE], etc.)

@@ -37,6 +37,7 @@ public partial class Channel : ObservableObject
     public string? TvgId { get; set; }
     public string? TvgName { get; set; }
     public string? Language { get; set; }
+    public string? Country { get; set; }
     public ChannelType Type { get; set; } = ChannelType.Live;
     
     public int? TmdbId { get; set; }
