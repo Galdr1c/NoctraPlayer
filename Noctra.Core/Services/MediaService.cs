@@ -51,7 +51,7 @@ public partial class MediaService : IMediaService
             var seriesGroups = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
             foreach (var existing in existingSeries.OrderBy(s => s.Id))
             {
-                var key = BuildSeriesGroupingKey(existing.Name);
+                var key = BuildSeriesGroupingKey(existing.Name, existing.GroupTitle);
                 if (!seriesGroups.ContainsKey(key))
                 {
                     seriesGroups[key] = existing;
@@ -106,7 +106,7 @@ public partial class MediaService : IMediaService
                     episodeNum = Math.Max(1, episodeNum);
                 }
 
-                var seriesKey = BuildSeriesGroupingKey(seriesName);
+                var seriesKey = BuildSeriesGroupingKey(seriesName, channel.GroupTitle);
 
                 if (!seriesGroups.TryGetValue(seriesKey, out var series))
                 {
@@ -362,7 +362,7 @@ public partial class MediaService : IMediaService
         var mergedByKey = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
         foreach (var series in allSeries.OrderBy(s => s.Id))
         {
-            var key = BuildSeriesGroupingKey(series.Name);
+            var key = BuildSeriesGroupingKey(series.Name, series.GroupTitle);
             if (!mergedByKey.TryGetValue(key, out var target))
             {
                 mergedByKey[key] = series;
@@ -394,7 +394,7 @@ public partial class MediaService : IMediaService
     }
     public async Task UpdateSeriesAsync(Series series, CancellationToken cancellationToken = default)
     {
-        var normalizedTargetKey = BuildSeriesGroupingKey(series.Name);
+        var normalizedTargetKey = BuildSeriesGroupingKey(series.Name, series.GroupTitle);
         if (string.IsNullOrWhiteSpace(normalizedTargetKey))
         {
             return;
@@ -406,7 +406,7 @@ public partial class MediaService : IMediaService
             .ToListAsync(cancellationToken);
 
         var toUpdate = candidates
-            .Where(s => string.Equals(BuildSeriesGroupingKey(s.Name), normalizedTargetKey, StringComparison.OrdinalIgnoreCase))
+            .Where(s => string.Equals(BuildSeriesGroupingKey(s.Name, s.GroupTitle), normalizedTargetKey, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         if (toUpdate.Count == 0 && series.Id > 0)
@@ -432,15 +432,20 @@ public partial class MediaService : IMediaService
         await context.SaveChangesAsync(cancellationToken);
     }
 
-    private static string BuildSeriesGroupingKey(string? seriesName)
+    private static string BuildSeriesGroupingKey(string? seriesName, string? groupTitle = null)
     {
         var normalized = SeriesProgressIdentity.NormalizeSeriesKey(seriesName);
-        if (!string.IsNullOrWhiteSpace(normalized))
+        if (string.IsNullOrWhiteSpace(normalized))
         {
-            return normalized;
+            normalized = NormalizeEpisodeName(seriesName);
         }
 
-        return NormalizeEpisodeName(seriesName);
+        if (!string.IsNullOrWhiteSpace(groupTitle))
+        {
+            normalized += $"_G_{groupTitle.Trim().ToLowerInvariant()}";
+        }
+
+        return normalized;
     }
 
     private static void MergeSeriesInMemory(Series target, Series source)

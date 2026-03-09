@@ -417,6 +417,20 @@ public partial class PlaylistService : IPlaylistService
             foreach (var channel in realChannels)
                 channel.PlaylistId = playlistId;
 
+            // Ek olarak, sağlayıcı bu kanalları farklı bir gruptan buraya taşımışsa,
+            // o eski gruptaki eski kayıtlarını da silmeliyiz ki DB'de dublör olmasın.
+            // Güvenilir olması için Name (veya TvgName) veya StreamUrl üzerinden arayabiliriz.
+            // SQLite'da binlerce in() ile sorgu yapmamak adına chunking kullanabiliriz ya da
+            // sadece StreamUrl'i bilinenlerin eski kayıtlarını silebiliriz.
+            var streamUrls = realChannels.Select(c => c.StreamUrl).Where(url => !string.IsNullOrEmpty(url)).Distinct().ToList();
+            for (int i = 0; i < streamUrls.Count; i += 900) // SQLite limits parameters
+            {
+                var chunk = streamUrls.Skip(i).Take(900).ToList();
+                await context.Channels
+                    .Where(c => c.PlaylistId == playlistId && chunk.Contains(c.StreamUrl))
+                    .ExecuteDeleteAsync();
+            }
+
             await FastSqliteBulkInsertAsync(context, realChannels);
         }
 
@@ -644,9 +658,19 @@ public partial class PlaylistService : IPlaylistService
         {
             var chStub = new Channel { Name = c.Name, StreamUrl = c.StreamUrl, GroupTitle = c.GroupTitle, TvgId = c.TvgId, TvgName = c.TvgName };
             var fingerprint = BuildChannelFingerprint(chStub);
-            if (!userDataMap.ContainsKey(fingerprint))
+            if (!userDataMap.TryGetValue(fingerprint, out var existingData))
             {
                 userDataMap[fingerprint] = (c.IsFavorite, c.IsInMyList, c.WatchedPosition, c.Duration, c.IsCompleted);
+            }
+            else
+            {
+                userDataMap[fingerprint] = (
+                    existingData.Fav || c.IsFavorite,
+                    existingData.List || c.IsInMyList,
+                    existingData.Pos ?? c.WatchedPosition,
+                    existingData.Dur ?? c.Duration,
+                    existingData.Comp || c.IsCompleted
+                );
             }
         }
 
@@ -1376,8 +1400,8 @@ public partial class PlaylistService : IPlaylistService
         
         command.Transaction = transaction;
         command.CommandText = 
-            @"INSERT INTO Channels (Name, StreamUrl, LogoUrl, GroupTitle, TvgId, TvgName, Type, PlaylistId, IsFavorite, IsInMyList, IsCompleted, WatchedPosition, Duration, Country) 
-              VALUES ($name, $streamUrl, $logoUrl, $groupTitle, $tvgId, $tvgName, $type, $playlistId, 0, 0, $isCompleted, $watchedPosition, $duration, $country);";
+            @"INSERT INTO Channels (Name, StreamUrl, LogoUrl, GroupTitle, TvgId, TvgName, Type, PlaylistId, IsFavorite, IsInMyList, IsCompleted, WatchedPosition, Duration, Country, Rating, Plot, ReleaseYear, TmdbId, ContentRating)
+              VALUES ($name, $streamUrl, $logoUrl, $groupTitle, $tvgId, $tvgName, $type, $playlistId, 0, 0, $isCompleted, $watchedPosition, $duration, $country, $rating, $plot, $releaseYear, $tmdbId, $contentRating);";
 
         var pName = command.CreateParameter(); pName.ParameterName = "$name"; command.Parameters.Add(pName);
         var pStream = command.CreateParameter(); pStream.ParameterName = "$streamUrl"; command.Parameters.Add(pStream);
@@ -1391,6 +1415,11 @@ public partial class PlaylistService : IPlaylistService
         var pWatchedPosition = command.CreateParameter(); pWatchedPosition.ParameterName = "$watchedPosition"; command.Parameters.Add(pWatchedPosition);
         var pDuration = command.CreateParameter(); pDuration.ParameterName = "$duration"; command.Parameters.Add(pDuration);
         var pCountry = command.CreateParameter(); pCountry.ParameterName = "$country"; command.Parameters.Add(pCountry);
+        var pRating = command.CreateParameter(); pRating.ParameterName = "$rating"; command.Parameters.Add(pRating);
+        var pPlot = command.CreateParameter(); pPlot.ParameterName = "$plot"; command.Parameters.Add(pPlot);
+        var pReleaseYear = command.CreateParameter(); pReleaseYear.ParameterName = "$releaseYear"; command.Parameters.Add(pReleaseYear);
+        var pTmdbId = command.CreateParameter(); pTmdbId.ParameterName = "$tmdbId"; command.Parameters.Add(pTmdbId);
+        var pContentRating = command.CreateParameter(); pContentRating.ParameterName = "$contentRating"; command.Parameters.Add(pContentRating);
 
         foreach (var channel in channels)
         {
@@ -1406,6 +1435,11 @@ public partial class PlaylistService : IPlaylistService
             pWatchedPosition.Value = channel.WatchedPosition?.ToString() ?? (object)DBNull.Value;
             pDuration.Value = channel.Duration?.ToString() ?? (object)DBNull.Value;
             pCountry.Value = channel.Country ?? (object)DBNull.Value;
+            pRating.Value = channel.Rating ?? (object)DBNull.Value;
+            pPlot.Value = channel.Plot ?? (object)DBNull.Value;
+            pReleaseYear.Value = channel.ReleaseYear ?? (object)DBNull.Value;
+            pTmdbId.Value = channel.TmdbId ?? (object)DBNull.Value;
+            pContentRating.Value = channel.ContentRating ?? (object)DBNull.Value;
 
             await command.ExecuteNonQueryAsync();
         }

@@ -46,9 +46,13 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
 
         ["Movies"] = "Filmler",
         ["MOVIES"] = "Filmler",
+        ["Movie"] = "Filmler",
         ["Film"] = "Filmler",
+        ["film"] = "Filmler",
         ["FILM"] = "Filmler",
         ["FİLM"] = "Filmler",
+        ["Films"] = "Filmler",
+        ["films"] = "Filmler",
         ["Sinema"] = "Filmler",
         ["SINEMA"] = "Filmler",
 
@@ -57,7 +61,9 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
         ["TV SHOWS"] = "Diziler",
         ["Tv Shows"] = "Diziler",
         ["Dizi"] = "Diziler",
+        ["dizi"] = "Diziler",
         ["DİZİ"] = "Diziler",
+        ["DIZI"] = "Diziler",
 
         ["Documentary"] = "Belgesel",
         ["DOCUMENTARY"] = "Belgesel",
@@ -197,12 +203,13 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
     }
 
     /// <summary>
-    /// Grup → Kanal numarası → Alfabetik sıralama
+    /// Tip → Grup → Kanal numarası → Alfabetik sıralama
     /// </summary>
     public List<Channel> SmartSort(List<Channel> channels)
     {
         return channels
-            .OrderBy(c => c.GroupTitle ?? "zzz") // Uncategorized last
+            .OrderBy(c => c.Type)
+            .ThenBy(c => c.GroupTitle ?? "zzz") // Uncategorized last
             .ThenBy(c => GetChannelNumber(c.Name) ?? int.MaxValue) // Numbered channels first
             .ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase) // Alphabetical
             .ToList();
@@ -237,6 +244,10 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
         {
             var parsed = SeriesInfoParser.Parse(channel.Name);
             key += $" s{parsed.Season:00}e{parsed.Episode:00}";
+            if (!string.IsNullOrWhiteSpace(channel.GroupTitle))
+            {
+                key += $"_g_{channel.GroupTitle.Trim().ToLowerInvariant()}";
+            }
         }
         return key;
     }
