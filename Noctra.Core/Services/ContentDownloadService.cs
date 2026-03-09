@@ -957,6 +957,32 @@ public class ContentDownloadService : IContentDownloadService
             return;
         }
 
+        // --- Poster Downloading Logic ---
+        if (item.ChannelType == ChannelType.Series && !string.IsNullOrWhiteSpace(item.PosterUrl) && item.PosterUrl.StartsWith("http"))
+        {
+            try
+            {
+                var seriesDir = Path.GetDirectoryName(Path.GetDirectoryName(filePath));
+                if (seriesDir != null)
+                {
+                    var posterPath = Path.Combine(seriesDir, "poster.jpg");
+                    if (!File.Exists(posterPath))
+                    {
+                        var posterBytes = await _httpClient.GetByteArrayAsync(item.PosterUrl);
+                        await File.WriteAllBytesAsync(posterPath, posterBytes);
+                    }
+                    
+                    // Replace URL with local file path
+                    item.PosterUrl = posterPath;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Failed to download poster for downloaded series: {Url}", item.PosterUrl);
+            }
+        }
+        // --------------------------------
+
         item.Status = DownloadStatus.Completed;
         item.LocalFilePath = filePath;
         item.TempFilePath = null;
@@ -1012,6 +1038,10 @@ public class ContentDownloadService : IContentDownloadService
 
     private static async Task UpdateMappedEntitiesToLocalPathAsync(AppDbContext db, DownloadItem item, string localPath)
     {
+        var localPoster = !string.IsNullOrWhiteSpace(item.PosterUrl) && item.PosterUrl.StartsWith("file://") 
+            ? item.PosterUrl 
+            : (!string.IsNullOrWhiteSpace(item.PosterUrl) && Path.IsPathRooted(item.PosterUrl) ? $"file://{item.PosterUrl}" : null);
+
         if (item.ChannelType == ChannelType.VOD)
         {
             if (item.ChannelId.HasValue)
@@ -1020,6 +1050,7 @@ public class ContentDownloadService : IContentDownloadService
                 if (channel != null)
                 {
                     channel.StreamUrl = localPath;
+                    if (localPoster != null) channel.LogoUrl = localPoster;
                 }
             }
             else
@@ -1031,6 +1062,7 @@ public class ContentDownloadService : IContentDownloadService
                 if (channel != null)
                 {
                     channel.StreamUrl = localPath;
+                    if (localPoster != null) channel.LogoUrl = localPoster;
                 }
             }
 
@@ -1039,18 +1071,50 @@ public class ContentDownloadService : IContentDownloadService
 
         if (item.EpisodeId.HasValue)
         {
-            var episode = await db.Episodes.FirstOrDefaultAsync(e => e.Id == item.EpisodeId.Value);
+            var episode = await db.Episodes
+                .Include(e => e.Season)
+                .ThenInclude(s => s.Series)
+                .FirstOrDefaultAsync(e => e.Id == item.EpisodeId.Value);
+                
             if (episode != null)
             {
                 episode.StreamUrl = localPath;
+                if (localPoster != null) 
+                {
+                    episode.CoverUrl = localPoster;
+                    if (episode.Season != null)
+                    {
+                        episode.Season.CoverUrl = localPoster;
+                        if (episode.Season.Series != null)
+                        {
+                            episode.Season.Series.CoverUrl = localPoster;
+                        }
+                    }
+                }
             }
         }
         else
         {
-            var episode = await db.Episodes.FirstOrDefaultAsync(e => e.StreamUrl == item.SourceUrl);
+            var episode = await db.Episodes
+                .Include(e => e.Season)
+                .ThenInclude(s => s.Series)
+                .FirstOrDefaultAsync(e => e.StreamUrl == item.SourceUrl);
+                
             if (episode != null)
             {
                 episode.StreamUrl = localPath;
+                if (localPoster != null) 
+                {
+                    episode.CoverUrl = localPoster;
+                    if (episode.Season != null)
+                    {
+                        episode.Season.CoverUrl = localPoster;
+                        if (episode.Season.Series != null)
+                        {
+                            episode.Season.Series.CoverUrl = localPoster;
+                        }
+                    }
+                }
             }
         }
 
@@ -1060,6 +1124,7 @@ public class ContentDownloadService : IContentDownloadService
         foreach (var channel in seriesChannels)
         {
             channel.StreamUrl = localPath;
+            if (localPoster != null) channel.LogoUrl = localPoster;
         }
     }
 

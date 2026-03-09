@@ -2,11 +2,12 @@
         xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="using:Noctra.Avalonia.Views"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         x:Name="DialogWindowRoot"
         x:DataType="views:DialogWindow"
         x:CompileBindings="False"
         Title="{Binding TitleText}"
-        Width="450" Height="220"
+        Width="460" Height="240"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
         Topmost="True"
@@ -17,76 +18,101 @@
         FontFamily="{StaticResource DefaultFontFamily}">
 
     <Window.Styles>
-        <!-- Primary Button -->
+        <!-- Primary Button (Action) -->
         <Style Selector="Button.DialogPrimary">
             <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="24,10"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+                </Transitions>
+            </Setter>
         </Style>
         <Style Selector="Button.DialogPrimary:pointerover">
-            <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource AccentLightBrush}"/>
+            <Setter Property="RenderTransform" Value="scale(1.02)"/>
+        </Style>
+        <Style Selector="Button.DialogPrimary:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.98)"/>
         </Style>
 
-        <!-- Secondary Button -->
+        <!-- Secondary Button (Cancel/No) -->
         <Style Selector="Button.DialogSecondary">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="BorderThickness" Value="1.5"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="24,10"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Foreground" Duration="0:0:0.2"/>
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.2"/>
+                    <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                </Transitions>
+            </Setter>
         </Style>
         <Style Selector="Button.DialogSecondary:pointerover">
-            <Setter Property="BorderBrush" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource TextSecondaryBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
     </Window.Styles>
 
     <Border Background="{DynamicResource BackgroundGradientBrush}"
-            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-            CornerRadius="{DynamicResource RadiusMedium}" ClipToBounds="True"
-            BoxShadow="0 0 20 0 #80000000">
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1.5"
+            CornerRadius="16" ClipToBounds="True"
+            BoxShadow="0 12 32 0 #90000000">
 
-        <Grid Margin="24">
+        <Grid Margin="32">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Title -->
-            <TextBlock Text="{Binding TitleText}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="18" FontWeight="Bold" Margin="0,0,0,16"/>
+            <!-- Header Row -->
+            <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,0,0,20">
+                <materialIcons:MaterialIcon x:Name="DialogIcon" 
+                                             Width="32" Height="32" 
+                                             VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding TitleText}" 
+                           Foreground="{DynamicResource TextPrimaryBrush}" 
+                           FontSize="22" FontWeight="Bold" 
+                           VerticalAlignment="Center"/>
+            </StackPanel>
 
             <!-- Content Area -->
-            <Grid Grid.Row="1">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- Icon -->
-                <Path x:Name="IconPath"
-                      Width="32" Height="32"
-                      Stretch="Uniform"
-                      Fill="{DynamicResource TextPrimaryBrush}"
-                      VerticalAlignment="Center"
-                      Margin="0,0,20,0"/>
-
-                <!-- Message -->
-                <TextBlock Grid.Column="1" Text="{Binding MessageText}" Foreground="{DynamicResource TextMutedBrush}"
-                           FontSize="15" VerticalAlignment="Center" TextWrapping="Wrap"/>
-            </Grid>
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <TextBlock Text="{Binding MessageText}" 
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           FontSize="16" 
+                           LineHeight="24"
+                           TextWrapping="Wrap"
+                           VerticalAlignment="Top"
+                           Margin="0,0,0,16"/>
+            </ScrollViewer>
 
             <!-- Actions -->
-            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
-                <Button Content="{Binding SecondaryButtonText}" Width="100" Height="40"
-                        Classes="DialogSecondary" Margin="0,0,12,0"
-                        Click="Secondary_Click" IsVisible="{Binding ShowSecondary}"/>
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12" Margin="0,8,0,0">
+                <Button x:Name="SecondaryBtn"
+                        Content="{Binding SecondaryButtonText}" 
+                        Classes="DialogSecondary"
+                        Click="Secondary_Click" 
+                        IsVisible="{Binding ShowSecondary}"/>
 
-                <Button Content="{Binding PrimaryButtonText}" Width="120" Height="40"
+                <Button x:Name="PrimaryBtn"
+                        Content="{Binding PrimaryButtonText}" 
                         Classes="DialogPrimary"
                         Click="Primary_Click"/>
             </StackPanel>

@@ -442,7 +442,7 @@
               IsVisible="{Binding IsSeriesDetailVisible}" ZIndex="998">          
           <Grid>
             <!-- Background Backdrop with Blur -->
-            <Grid IsHitTestVisible="False" Opacity="0.3">
+            <Grid IsHitTestVisible="False" Opacity="0.3" IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
                 <controls:RemoteImage Stretch="UniformToFill" Url="{Binding SelectedSeriesPosterUrl}">
                     <controls:RemoteImage.Effect>
                         <BlurEffect Radius="60"/>
@@ -453,20 +453,34 @@
 
             <ScrollViewer VerticalScrollBarVisibility="Auto">
               <Grid Margin="60,40" RowDefinitions="Auto,Auto">
-                
+
                 <!-- Header Section -->
-                <Grid ColumnDefinitions="300,*" Grid.Row="0">
-                  <!-- Large Poster -->
-                  <Border Grid.Column="0" Height="450" CornerRadius="12" ClipToBounds="True" Background="{DynamicResource Surface0Brush}">
-                    <Border.BoxShadow>
-                      <BoxShadows>0 15 50 5 #88000000</BoxShadows>
-                    </Border.BoxShadow>
-                    <controls:RemoteImage Stretch="UniformToFill" Url="{Binding SelectedSeriesPosterUrl}"/>
-                  </Border>
+                <Grid Grid.Row="0">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="300"/>
+                    <ColumnDefinition Width="*"/>
+                  </Grid.ColumnDefinitions>
+                  <!-- Reduce width to 200 in Downloaded Mode using a Panel/Border trick -->
+                  <Panel Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top">
+                     <Border Height="450" Width="300" CornerRadius="12" ClipToBounds="True" Background="{DynamicResource Surface0Brush}"
+                             IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
+                        <Border.BoxShadow>
+                          <BoxShadows>0 15 50 5 #88000000</BoxShadows>
+                        </Border.BoxShadow>
+                        <controls:RemoteImage Stretch="UniformToFill" Url="{Binding SelectedSeriesPosterUrl}"/>
+                     </Border>
+                     <Border Height="300" Width="200" CornerRadius="12" ClipToBounds="True" Background="{DynamicResource Surface0Brush}"
+                             IsVisible="{Binding IsDownloadedSeriesDetailMode}">
+                        <Border.BoxShadow>
+                          <BoxShadows>0 15 50 5 #88000000</BoxShadows>
+                        </Border.BoxShadow>
+                        <controls:RemoteImage Stretch="UniformToFill" Url="{Binding SelectedSeriesPosterUrl}"/>
+                     </Border>
+                  </Panel>
 
                   <!-- Metadata & Info -->
-                  <Grid Grid.Column="1" Margin="48,0,0,0" Height="450" RowDefinitions="Auto,*,Auto">
-                    
+                  <Grid Grid.Column="1" Margin="48,0,0,0" RowDefinitions="Auto,*,Auto">
+
                     <!-- Title and Meta -->
                     <StackPanel Grid.Row="0" VerticalAlignment="Top">
                       <!-- Back button -->
@@ -474,17 +488,19 @@
                               Theme="{StaticResource ActionCircleButtonStyle}" Width="48" Height="48" Padding="0">
                         <materialIcons:MaterialIcon Kind="ArrowLeft" Width="24" Height="24" Foreground="{DynamicResource TextPrimaryBrush}"/>
                       </Button>
- 
+
                       <StackPanel Spacing="8">
                           <TextBlock Text="{Binding SelectedSeries.Name}" FontSize="52" FontWeight="Black" 
                                     Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" LineHeight="58" LetterSpacing="-1"/>
+                          <TextBlock Text="İndirilen Bölümler" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"
+                                     IsVisible="{Binding IsDownloadedSeriesDetailMode}"/>
                       </StackPanel>
 
                       <!-- Badges & Stats (Netflix Style Meta) -->
-                      <WrapPanel Orientation="Horizontal" Margin="0,18,0,0" VerticalAlignment="Center">
+                      <WrapPanel Orientation="Horizontal" Margin="0,18,0,0" VerticalAlignment="Center" IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
                         <TextBlock Text="{Binding SelectedSeriesYears}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="SemiBold"
                                   IsVisible="{Binding SelectedSeriesYears, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
-                        
+
                         <TextBlock Text="•" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" VerticalAlignment="Center" Margin="8,0">
                           <TextBlock.IsVisible>
                             <MultiBinding Converter="{x:Static BoolConverters.And}">
@@ -496,7 +512,7 @@
                             </MultiBinding>
                           </TextBlock.IsVisible>
                         </TextBlock>
-                        
+
                         <TextBlock Text="{Binding SelectedSeriesGenres}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="Medium"
                                   IsVisible="{Binding SelectedSeriesGenres, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
 
@@ -508,7 +524,7 @@
                             </MultiBinding>
                           </TextBlock.IsVisible>
                         </TextBlock>
-                        
+
                         <Border BorderBrush="{DynamicResource TextMutedBrush}" BorderThickness="1.5" CornerRadius="3" Padding="6,1" VerticalAlignment="Center" Margin="4,0,0,0"
                                 IsVisible="{Binding SelectedSeriesAgeRating, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
                             <TextBlock Text="{Binding SelectedSeriesAgeRating}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" FontWeight="Black"/>
@@ -523,20 +539,20 @@
                       </WrapPanel>
 
                       <!-- Seasons & Episodes Stats -->
-                      <StackPanel Orientation="Horizontal" Margin="0,12,0,0" Spacing="16">
+                      <StackPanel Orientation="Horizontal" Margin="0,12,0,0" Spacing="16" IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
                         <TextBlock Text="{Binding SelectedSeriesTotalSeasonsCount, StringFormat='{}{0} Sezon'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="Medium"/>
                         <TextBlock Text="{Binding SelectedSeriesTotalEpisodesCount, StringFormat='{}{0} Bölüm'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="Medium"/>
                       </StackPanel>
                     </StackPanel>
 
                     <!-- Scrollable Description & Cast -->
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,24,0,0">
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,24,0,0" IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
                       <StackPanel>
                         <!-- Description -->
                         <TextBlock Text="{Binding SelectedSeriesOverview}" FontSize="16" Foreground="{DynamicResource TextPrimaryBrush}" 
                                   TextWrapping="Wrap" Opacity="0.4" LineHeight="22"
                                   IsVisible="{Binding SelectedSeriesOverview, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
-                        
+
                         <!-- Cast -->
                         <TextBlock Text="{Binding SelectedSeriesCast, StringFormat='Oyuncular: {0}'}" FontSize="14" 
                                   Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,16,0,0"
@@ -545,7 +561,7 @@
                     </ScrollViewer>
 
                     <!-- Action Buttons -->
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,24,0,0" Spacing="10">
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,24,0,0" Spacing="10" IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
                         <Button Command="{Binding PlayEpisodeCommand}" CommandParameter="{Binding SelectedSeriesContinueEpisode}"
                                 Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource TextPrimaryBrush}"
                                 Padding="16,8" CornerRadius="8" Focusable="False">
@@ -678,7 +694,7 @@
                                       </Transitions>
                                   </Setter>
                               </Style>
-                              
+
                               <!-- PointerOver State -->
                               <Style Selector="ListBoxItem:pointerover">
                                   <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
@@ -705,6 +721,7 @@
                       <Button Grid.Column="1" VerticalAlignment="Center" Padding="12,8" CornerRadius="8"
                               Background="{DynamicResource Surface1Brush}" BorderThickness="0" Margin="0,0,0,12"
                               Command="{Binding DownloadSelectedSeasonCommand}"
+                              IsVisible="{Binding !IsDownloadedSeriesDetailMode}"
                               ToolTip.Tip="Aktif sezondaki tüm bölümleri indirme kuyruğuna ekle">
                           <StackPanel Orientation="Horizontal" Spacing="8">
                               <materialIcons:MaterialIcon Kind="DownloadMultipleOutline" Width="18" Height="18" Foreground="{DynamicResource AccentBrush}"/>
@@ -726,19 +743,19 @@
                                   <Panel>
                                       <!-- Separate background layer for independent transparency -->
                                       <Border Background="{DynamicResource Surface1Brush}" Opacity="0.4" CornerRadius="8" x:Name="EpBgLayer" />
-                                      
+
                                       <Border CornerRadius="8" Padding="12,8" BorderThickness="0" BorderBrush="Transparent">
                                       <Grid ColumnDefinitions="60, 200, *, Auto">
                                           <!-- Index -->
                                           <TextBlock Text="{Binding EpisodeNumber}" FontSize="22" FontWeight="Bold" 
                                                      Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.5"/>
-                                          
+
                                           <!-- Thumbnail -->
                                           <Border Grid.Column="1" Height="80" CornerRadius="6" ClipToBounds="True" Margin="12,0" Background="{DynamicResource Surface1Brush}">
                                               <Grid>
                                                   <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
                                                   <materialIcons:MaterialIcon Kind="Play" Width="24" Height="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.7"/>
-                                                  
+
                                                    <!-- Progress Bar (Internal Sync with Overlay) -->
                                                    <Border VerticalAlignment="Bottom" Height="5" Background="#66000000" CornerRadius="0,0,6,6" IsVisible="{Binding WatchedPercentage, Converter={StaticResource CountToVisibilityConverter}}">
                                                        <Border HorizontalAlignment="Left" Background="{DynamicResource AccentBrush}" CornerRadius="0,0,0,6" Width="{Binding WatchedPercentage, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=200}"/>
@@ -752,7 +769,7 @@
                                                   <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                                   <TextBlock Text="{Binding EpisodeMetaText}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"
                                                              IsVisible="{Binding EpisodeMetaText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
-                                                  
+
                                                   <!-- Status Badge (Verified Style) -->
                                                   <Border IsVisible="{Binding IsCompleted}" VerticalAlignment="Center" ToolTip.Tip="İzlendi" Background="Transparent">
                                                       <materialIcons:MaterialIcon Kind="CheckCircleOutline" Width="22" Height="22" Foreground="{DynamicResource AccentBrush}"/>
@@ -763,11 +780,12 @@
                                               <TextBlock Text="{Binding Plot}" 
                                                          FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" MaxHeight="40" Opacity="0.9" LineHeight="18"/>
                                           </StackPanel>
-                                          
+
                                           <!-- Action -->
                                           <Button Grid.Column="3" VerticalAlignment="Center" Margin="0,0,8,0" Padding="8" Background="Transparent" BorderThickness="0" CornerRadius="6"
                                                   Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).DownloadEpisodeCommand}"
                                                   CommandParameter="{Binding}"
+                                                  IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).IsDownloadedSeriesDetailMode, Converter={StaticResource InverseBoolConverter}}"
                                                   ToolTip.Tip="Bölümü İndir">
                                               <materialIcons:MaterialIcon Kind="DownloadOutline" Width="22" Height="22" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.6"/>
                                           </Button>

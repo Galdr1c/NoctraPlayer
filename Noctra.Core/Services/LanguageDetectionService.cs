@@ -32,6 +32,17 @@ public class LanguageDetectionService
         ["ESP"] = "ES",
         ["SPAIN"] = "ES",
         ["ESPANA"] = "ES",
+        ["MX"] = "MX",
+        ["MEX"] = "MX",
+        ["MEXICO"] = "MX",
+        ["AR"] = "AR",
+        ["ARG"] = "AR",
+        ["ARGENTINA"] = "AR",
+        ["BR"] = "BR",
+        ["BRA"] = "BR",
+        ["BRAZIL"] = "BR",
+        ["PORTUGAL"] = "PT",
+        ["PT"] = "PT",
         ["NL"] = "NL",
         ["NLD"] = "NL",
         ["NETHERLANDS"] = "NL",
@@ -161,22 +172,41 @@ public class LanguageDetectionService
         if (names.Count == 0)
             return new List<(string, int, double)> { ("TR", 0, 100) };
 
-        var scores = new Dictionary<string, int>();
+        var scores = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var name in names)
         {
             if (string.IsNullOrWhiteSpace(name)) continue;
 
+            // 1) Try tokens first (prefix markers like TR |, [DE], etc.)
+            var tokens = Tokenize(name);
+            bool foundViaToken = false;
+            foreach (var token in tokens)
+            {
+                if (CountryCodeAliases.TryGetValue(token, out var country))
+                {
+                    scores[country] = scores.GetValueOrDefault(country) + 1;
+                    foundViaToken = true;
+                    break; 
+                }
+            }
+
+            if (foundViaToken) continue;
+
+            // 2) Fallback to patterns
             foreach (var (country, patterns) in CountryPatterns)
             {
+                bool foundPattern = false;
                 foreach (var pattern in patterns)
                 {
                     if (name.Contains(pattern, StringComparison.OrdinalIgnoreCase))
                     {
                         scores[country] = scores.GetValueOrDefault(country) + 1;
+                        foundPattern = true;
                         break;
                     }
                 }
+                if (foundPattern) break;
             }
         }
 

@@ -243,13 +243,7 @@ public partial class M3UParser : IM3UParser
         var lowerGroup = groupTitle?.ToLowerInvariant() ?? "";
         var lowerName = name.ToLowerInvariant();
 
-        // 1. En Güçlü Belirteç: 7/24 veya 24/7 Kanalları (Canlı Döngü)
-        if (SeriesInfoParser.IsLiveSeries(name) || SeriesInfoParser.IsLiveSeries(groupTitle))
-        {
-            return ChannelType.Live;
-        }
-
-        // 2. URL Pattern Analizi (Kesin Belirteçler)
+        // 1. URL Pattern Analizi (Xtream Codes ve benzeri API'ler için kesin belirteçler)
         if (lowerUrl.Contains("/series/") || lowerUrl.Contains("/tv_show/") || lowerUrl.Contains("type=series"))
             return ChannelType.Series;
 
@@ -259,29 +253,13 @@ public partial class M3UParser : IM3UParser
         if (lowerUrl.Contains("/live/") || lowerUrl.Contains("type=live"))
             return ChannelType.Live;
 
-        // 3. Başlık ve İsim Analizi (Regex + Keywords)
-        // Dizi: S01E01, 1x01, Sezon 1, Bölüm 1
-        if (SeriesInfoParser.IsSeries(name) || 
-            lowerName.Contains("bolum") ||
-            lowerName.Contains("episode"))
-        {
-            return ChannelType.Series;
-        }
-
-        // Film: Yıl (1990-2030), Çözünürlük ve Kaynak (BluRay vs)
-        // Not: Live TV kanallarında da bazen 1080p yazabilir, o yüzden diğer sinyallerle birleştirmek gerekebilir.
-        // Ancak genellikle VOD isimlendirmesi "Film Adı (2023) 1080p" şeklindedir.
-        if (VodPatternYear().IsMatch(name) && 
-            (lowerName.Contains("bluray") || lowerName.Contains("web-dl") || lowerName.Contains("webrip") || lowerName.Contains("dvdrip")))
-        {
-            return ChannelType.VOD;
-        }
-
-        // 4. Grup Başlığı Analizi (En Güçlü İkinci Sinyal)
+        // 2. Grup Başlığı Analizi (Çok Güçlü Sinyal)
         if (lowerGroup.Contains("series") || 
             lowerGroup.Contains("dizi") || 
             lowerGroup.Contains("tv show") || 
-            lowerGroup.Contains("belgesel serisi")) // Belgesel serileri de dizi mantığında olabilir
+            lowerGroup.Contains("belgesel serisi") ||
+            lowerGroup.EndsWith(" diz") || 
+            lowerGroup.Contains(" diz ")) // DIZ veya DIZI varyasyonları için
         {
             return ChannelType.Series;
         }
@@ -297,33 +275,42 @@ public partial class M3UParser : IM3UParser
             return ChannelType.VOD;
         }
 
-        if (lowerGroup.Contains("live") || 
-            lowerGroup.Contains("canli") || 
-            lowerGroup.Contains("tv") ||
-            lowerGroup.Contains("ulusal") ||
-            lowerGroup.Contains("spor") ||
-            lowerGroup.Contains("belgesel")) // Tekil belgesel kanalları Live kabul edilir
+        // 3. 7/24 veya Canlı Döngü Kanalları (URL veya gruptan VOD/Series onayı alınamadıysa)
+        if (SeriesInfoParser.IsLiveSeries(name) || SeriesInfoParser.IsLiveSeries(groupTitle))
         {
             return ChannelType.Live;
         }
 
-        // 4. Uzantı ve Diğer Karakteristikler (Son Çare)
-        if (lowerUrl.EndsWith(".mp4") || lowerUrl.EndsWith(".mkv") || lowerUrl.EndsWith(".avi") || lowerUrl.EndsWith(".mov"))
+        // 4. Başlık ve İsim Analizi (Regex + Keywords)
+        // Dizi: S01E01, 1x01, Sezon 1, Bölüm 1
+        if (SeriesInfoParser.IsSeries(name) ||
+            lowerName.Contains("bolum") ||
+            lowerName.Contains("episode"))
         {
-            // Uzantı video dosyası ise ve Live/Noctra sinyali yoksa VOD varsay
+            return ChannelType.Series;
+        }
+
+        // Film: Yıl (1990-2030), Çözünürlük ve Kaynak (BluRay vs)
+        if (VodPatternYear().IsMatch(name) && 
+            (lowerName.Contains("bluray") || lowerName.Contains("web-dl") || lowerName.Contains("webrip") || lowerName.Contains("dvdrip")))
+        {
             return ChannelType.VOD;
         }
-        
+
+        // 5. Uzantı ve Diğer Karakteristikler (Son Çare)
+        if (lowerUrl.EndsWith(".mp4") || lowerUrl.EndsWith(".mkv") || lowerUrl.EndsWith(".avi") || lowerUrl.EndsWith(".mov"))
+        {
+            return ChannelType.VOD;
+        }
+
         if (lowerUrl.EndsWith(".m3u8") || lowerUrl.EndsWith(".ts"))
         {
-            // Genellikle stream, ama VOD da olabilir. Varsayılan Live.
             return ChannelType.Live;
         }
 
         // Varsayılan
         return ChannelType.Live;
     }
-
     [GeneratedRegex(@"\((19|20)\d{2}\)", RegexOptions.IgnoreCase)]
     private static partial Regex VodPatternYear(); // (1990) - (2099) arası yıllar
 

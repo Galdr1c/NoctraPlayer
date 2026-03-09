@@ -84,16 +84,10 @@ public static partial class SeriesInfoParser
     {
         if (string.IsNullOrWhiteSpace(title)) return false;
 
-        // Common sports and live channel indicators that should never be treated as series
-        // even if they contain numbers or suffixes that look like episode indicators.
-        // Also handling obfuscated versions like "be*IN" or "be-IN"
-        if (title.Contains("beIN", StringComparison.OrdinalIgnoreCase) || 
-            title.Contains("be*IN", StringComparison.OrdinalIgnoreCase) ||
-            title.Contains("be-IN", StringComparison.OrdinalIgnoreCase) ||
-            title.Contains("SPOR", StringComparison.OrdinalIgnoreCase) ||
-            title.Contains("EUROSPORT", StringComparison.OrdinalIgnoreCase) ||
-            title.Contains("TIVIBU", StringComparison.OrdinalIgnoreCase) ||
-            title.Contains("EXXENSPOR", StringComparison.OrdinalIgnoreCase))
+        // Use Regex with word boundaries to prevent matching inside words (e.g., "being" matching "beIN", "alive" matching "LIVE")
+        var liveSportsRegex = new Regex(@"\b(beIN|be\*IN|be-IN|SPOR|EUROSPORT|TIVIBU|EXXENSPOR)\b", RegexOptions.IgnoreCase);
+
+        if (liveSportsRegex.IsMatch(title))
         {
             // Exception: If it explicitly has S01E01 style patterns, it might be a sports documentary series
             if (!SxeRegex().IsMatch(title) && !XRegex().IsMatch(title))
@@ -110,9 +104,8 @@ public static partial class SeriesInfoParser
             return true;
         }
 
-        if ((title.Contains("CANLI", StringComparison.OrdinalIgnoreCase) || 
-             title.Contains("LIVE", StringComparison.OrdinalIgnoreCase)) &&
-            !EpisodeTokenRegex().IsMatch(title))
+        var liveRegex = new Regex(@"\b(CANLI|LIVE)\b", RegexOptions.IgnoreCase);
+        if (liveRegex.IsMatch(title) && !EpisodeTokenRegex().IsMatch(title))
         {
             return true;
         }
@@ -170,22 +163,47 @@ public static partial class SeriesInfoParser
 
         var trimmed = titleOrCategory.Trim().ToUpperInvariant();
         
+        // 0. Check for explicit Full Country / Global Group names first
+        if (trimmed.Contains("TURKEY") || trimmed.Contains("TÜRKİYE") || trimmed.Contains("TURKIYE")) return "tr-TR";
+        if (trimmed.Contains("USA") || trimmed.Contains("UNITED STATES") || trimmed.Contains("UK") || trimmed.Contains("UNITED KINGDOM") || trimmed.Contains("CANADA") || trimmed.Contains("AUSTRALIA") || trimmed.Contains("NEW ZEALAND")) return "en-US";
+        if (trimmed.Contains("FRANCE") || trimmed.Contains("FRENCH")) return "fr-FR";
+        if (trimmed.Contains("GERMANY") || trimmed.Contains("GERMAN") || trimmed.Contains("AUSTRIA") || trimmed.Contains("SWITZERLAND")) return "de-DE";
+        if (trimmed.Contains("SPAIN") || trimmed.Contains("SPANISH") || trimmed.Contains("MEXICO") || trimmed.Contains("ARGENTINA") || trimmed.Contains("CHILE") || trimmed.Contains("COLOMBIA") || trimmed.Contains("PERU")) return "es-ES";
+        if (trimmed.Contains("ITALY") || trimmed.Contains("ITALIAN")) return "it-IT";
+        if (trimmed.Contains("RUSSIA") || trimmed.Contains("RUSSIAN")) return "ru-RU";
+        if (trimmed.Contains("PORTUGAL") || trimmed.Contains("PORTUGUESE") || trimmed.Contains("BRAZIL")) return "pt-PT";
+        if (trimmed.Contains("NETHERLANDS") || trimmed.Contains("DUTCH") || trimmed.Contains("BELGIUM")) return "nl-NL";
+        if (trimmed.Contains("ALBANIA") || trimmed.Contains("ALBANIAN")) return "sq-AL";
+        if (trimmed.Contains("GREECE") || trimmed.Contains("GREEK")) return "el-GR";
+        if (trimmed.Contains("SWEDEN") || trimmed.Contains("SWEDISH")) return "sv-SE";
+        if (trimmed.Contains("DENMARK") || trimmed.Contains("DANISH")) return "da-DK";
+        if (trimmed.Contains("ARABIC") || trimmed.Contains("SAUDI ARABIA") || trimmed.Contains("EGYPT") || trimmed.Contains("UAE")) return "ar-SA";
+
         // 1. Check for strong English/International indicators anywhere as tags
         if (trimmed.Contains("MULTI") || 
             trimmed.Contains("ENG") ||
             trimmed.Contains("EN-US") ||
             trimmed.StartsWith("EU ") || 
             trimmed.StartsWith("EU|") ||
-            trimmed.StartsWith("EU/"))
+            trimmed.StartsWith("EU/") ||
+            trimmed.StartsWith("UK ") ||
+            trimmed.StartsWith("UK:") ||
+            trimmed.StartsWith("US ") ||
+            trimmed.StartsWith("US:") ||
+            trimmed.StartsWith("CA ") ||
+            trimmed.StartsWith("CA:") ||
+            trimmed.StartsWith("AU ") ||
+            trimmed.StartsWith("AU:"))
         {
             return "en-US";
         }
 
-        // 2. Check for Turkish prefixes with various delimiters (TR/, TR|, TR-, [TR], etc.)
+        // 2. Check for Turkish prefixes with various delimiters (TR/, TR|, TR-, [TR], vb.)
         if (trimmed.StartsWith("TR/") || 
             trimmed.StartsWith("TR|") || 
             trimmed.StartsWith("TR-") ||
             trimmed.StartsWith("TR ") ||
+            trimmed.StartsWith("TR:") ||
             trimmed.Contains("[TR]") ||
             trimmed.Contains("(TR)") ||
             trimmed.Contains("|TR|"))
@@ -193,11 +211,19 @@ public static partial class SeriesInfoParser
             return "tr-TR";
         }
 
-        // 3. Check for other common country prefixes
-        if (trimmed.StartsWith("DE/") || trimmed.StartsWith("DE|") || trimmed.StartsWith("DE-")) return "de-DE";
-        if (trimmed.StartsWith("FR/") || trimmed.StartsWith("FR|") || trimmed.StartsWith("FR-")) return "fr-FR";
+        // 3. Check for other common country prefixes (Tolerant matching)
+        if (trimmed.StartsWith("DE/") || trimmed.StartsWith("DE|") || trimmed.StartsWith("DE-") || trimmed.StartsWith("DE:") || trimmed.StartsWith("DE ")) return "de-DE";
+        if (trimmed.StartsWith("FR/") || trimmed.StartsWith("FR|") || trimmed.StartsWith("FR-") || trimmed.StartsWith("FR:") || trimmed.StartsWith("FR ")) return "fr-FR";
+        if (trimmed.StartsWith("ES/") || trimmed.StartsWith("ES|") || trimmed.StartsWith("ES-") || trimmed.StartsWith("ES:") || trimmed.StartsWith("ES ")) return "es-ES";
+        if (trimmed.StartsWith("IT/") || trimmed.StartsWith("IT|") || trimmed.StartsWith("IT-") || trimmed.StartsWith("IT:") || trimmed.StartsWith("IT ")) return "it-IT";
+        if (trimmed.StartsWith("PT/") || trimmed.StartsWith("PT|") || trimmed.StartsWith("PT-") || trimmed.StartsWith("PT:") || trimmed.StartsWith("PT ")) return "pt-PT";
+        if (trimmed.StartsWith("NL/") || trimmed.StartsWith("NL|") || trimmed.StartsWith("NL-") || trimmed.StartsWith("NL:") || trimmed.StartsWith("NL ")) return "nl-NL";
+        if (trimmed.StartsWith("AL/") || trimmed.StartsWith("AL|") || trimmed.StartsWith("AL-") || trimmed.StartsWith("AL:") || trimmed.StartsWith("AL ")) return "sq-AL";
+        if (trimmed.StartsWith("CL/") || trimmed.StartsWith("CL|") || trimmed.StartsWith("CL-") || trimmed.StartsWith("CL:") || trimmed.StartsWith("CL ")) return "es-CL";
+        if (trimmed.StartsWith("AR/") || trimmed.StartsWith("AR|") || trimmed.StartsWith("AR-") || trimmed.StartsWith("AR:") || trimmed.StartsWith("AR ")) return "ar-SA";
+        if (trimmed.StartsWith("RU/") || trimmed.StartsWith("RU|") || trimmed.StartsWith("RU-") || trimmed.StartsWith("RU:") || trimmed.StartsWith("RU ")) return "ru-RU";
 
-        // 4. Strict tag matching: [TR], (EN), |DE|, {FR}, etc.
+        // 4. Strict tag matching: [TR], (EN), |DE|, {FR}, vs.
         var matches = StrictLanguageCodeRegex().Matches(trimmed);
         if (matches.Count > 0)
         {
@@ -209,10 +235,10 @@ public static partial class SeriesInfoParser
                     switch (code)
                     {
                         case "TR": return "tr-TR";
-                        case "EN": case "UK": case "US": case "EU": case "MULTI": return "en-US";
+                        case "EN": case "UK": case "US": case "EU": case "CA": case "AU": case "MULTI": return "en-US";
                         case "DE": return "de-DE";
                         case "FR": return "fr-FR";
-                        case "ES": case "SP": return "es-ES";
+                        case "ES": case "SP": case "CL": case "MX": return "es-ES";
                         case "IT": return "it-IT";
                         case "RU": return "ru-RU";
                         case "AR": return "ar-SA";
@@ -221,15 +247,14 @@ public static partial class SeriesInfoParser
                         case "PL": return "pl-PL";
                         case "GR": return "el-GR";
                         case "SE": return "sv-SE";
-                        case "DK": return "sv-SE"; // Sometimes DK/SE grouped, ideally da-DK
-                        case "DA": return "da-DK";
+                        case "DK": return "da-DK";
+                        case "AL": return "sq-AL";
                     }
                 }
             }
         }
 
         // Fallback checks for common tags that might not be tightly wrapped 
-        // e.g., "TR Dual", "EN Sub", which our LanguageTokenRegex handles.
         var langMatch = LanguageTokenRegex().Match(titleOrCategory);
         if (langMatch.Success)
         {

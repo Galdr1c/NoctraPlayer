@@ -9,6 +9,17 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Çevrimdışı Mod ve İndirilenler İyileştirmeleri** (2026-03-09):
+    - **Dinamik Afiş İndirme (Offline Poster)**: Dizi bölümü veya film indirildiğinde internete ihtiyaç duymamak adına ilgili içeriğin kapağı (Poster) otomatik olarak indirilerek cihazda saklanır. Böylece internet kapalıyken bile içeriklerin resimleri görünür.
+    - **Sadeleştirilmiş İndirilenler Sayfası**: İndirilenler menüsünden bir dizinin detay sayfasına girildiğinde, çevrimiçi dizi görünümünden farklı olarak (daha küçük poster, gereksiz yayın metadatalarının gizlenmesi vb.) sadece yerel odaklı minimalist ve sade bir arayüz tasarlanmıştır.
+    - **Gereksiz İndirme Tuşlarının Gizlenmesi**: İndirilenler ekranında zaten cihazda olan içerikler için kafa karışıklığını önlemek adına "Bölüm İndir" ve "Sezonu İndir" tuşları tamamen kaldırılmıştır.
+
+- **Akıllı Kategorizasyon ve Dil Tespiti İyileştirmeleri** (2026-03-09):
+    - **Kategori Önceliklendirmesi**: M3U listelerinde VOD (Film) ve Series (Dizi) içeriklerinin yanlışlıkla Canlı TV (Live) kategorisine düşmesi sorunu giderildi. Kategori belirlemede grup ismi yerine öncelikle URL yapısı (`/series/`, `/movie/`) dikkate alınacak şekilde ayrıştırma motoru (`M3UParser`) yeniden yapılandırıldı.
+    - **Kelime Sınırı Koruması**: Kanal isimlerindeki 'Alive', 'being', 'liver' gibi kelimelerin içindeki 'Live' veya 'beIN' gibi ifadelerin Canlı TV tetikleyicisi olarak algılanması sorunu Regex kelime sınırları (`\b`) kullanılarak tamamen çözüldü.
+    - **Gelişmiş Yabancı Dil Tespiti**: Dil algılama algoritması (Language Detection), dünya çapındaki açık kaynak listelerle (Örn: Free-TV/IPTV) tam uyumlu hale getirildi. Arnavutluk (sq-AL), İspanya/Latin Amerika (es-ES, es-CL), İngiltere/ABD (en-US) gibi çok sayıda ülkenin kanalları ve dizi grupları artık doğrudan doğru TMDB dil kodlarıyla eşleşiyor.
+    - **Tam Ülke İsmi Algılama**: Grup adlarında `TR|`, `EN:` gibi kısa kodların yanı sıra `TURKEY`, `UNITED STATES`, `ALBANIA`, `FRANCE`, `GERMANY` gibi tam ülke isimleri de algılanarak doğru dil atamaları (tr-TR, en-US, sq-AL, fr-FR, de-DE) yapılıyor.
+
 - **Mükerrer Profil Kontrolü**: Aynı sağlayıcıdan (M3U URL, Xtream veya Stalker) mükerrer profil oluşturulmasını engelleyen doğrulama mekanizması eklendi. Kullanıcıya net hata mesajları sunularak veri bütünlüğü sağlandı.
 - **Gelişmiş Ülke ve Dil Tespiti**: Kategori isimlerindeki "şekilli" karakterler (Örn: `ⓣⓥ`, `ⓣⓡ`) otomatik olarak ASCII formatına normalize edilecek şekilde geliştirildi. Tam ülke isimleri (FRANCE, TURKIYE vb.) artık doğrudan tanınarak akıllı sıralama ve EPG eşleştirme başarımı artırıldı.
 - **İndirme Sistemi Kapsamlı Test Paketi**: İndirme kuyruğu mantığı, dizi/sezon klasör organizasyonu, depolama kotası hesaplamaları ve indirilen içeriklerin yerel oynatma (offline mode) önceliklendirmesini doğrulayan yeni test senaryoları (`DownloadSystemComprehensiveTests`) eklendi.
@@ -1261,3 +1272,6 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
       - URL geçerliliği ve sunucu yanıt süresi (Ping) kontrolü eklendi.
       - Hata durumlarında detaylı bilgi (404 Bulunamadı, 401 Yetkisiz vb.) gösterimi eklendi.
       - Bağlantı kalitesine göre renkli ikonlar (Yeşil/Sarı/Kırmızı) entegre edildi.
+
+
+
