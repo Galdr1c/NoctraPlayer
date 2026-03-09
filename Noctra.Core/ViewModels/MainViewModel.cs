@@ -712,7 +712,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = UserFriendlyErrorMessage.WithPrefix("Profil yuklenirken hata olustu", ex);
+            StatusMessage = UserFriendlyErrorMessage.WithPrefix("Profil yüklenirken hata oluştu", ex);
             _logger?.LogDebug($"LoadProfile Error: {ex}");
         }
         finally
@@ -1173,7 +1173,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger?.LogDebug($"LoadChannels error: {ex}");
-            StatusMessage = UserFriendlyErrorMessage.WithPrefix("Kanallar yuklenemedi", ex);
+            StatusMessage = UserFriendlyErrorMessage.WithPrefix("Kanallar yüklenemedi", ex);
         }
         finally
         {
@@ -1477,7 +1477,6 @@ public partial class MainViewModel : ObservableObject
     private int _isManualEpgRefreshRunning;
     private int _isRefreshingPlaylist;
     private int _isAddingPlaylist;
-    private int _isManualRefreshRunning;
     private readonly Dictionary<int, DateTime> _playlistNoChangeUntilUtc = new();
     private bool _suppressFilterRefresh;
     private Action<string>? _prioritizeStalkerCategoryAction;
@@ -1497,7 +1496,8 @@ public partial class MainViewModel : ObservableObject
             // 500ms bekle (Aynı anda biten diğer kategorilerin de veritabanına yazılmasına izin ver)
             await Task.Delay(500);
             
-            _dispatcherService.BeginInvoke(async () =>
+            // Veritabanı işlemleri için arka plan görevinde çalıştır, LoadChannelsAsync zaten BeginInvoke kullanıyor veya güvenlidir
+            await Task.Run(async () =>
             {
                 try
                 {
@@ -2223,7 +2223,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = UserFriendlyErrorMessage.WithPrefix("Islem basarisiz", ex);
+            StatusMessage = UserFriendlyErrorMessage.WithPrefix("İşlem başarısız", ex);
         }
         finally
         {
@@ -2254,8 +2254,13 @@ public partial class MainViewModel : ObservableObject
             _playlistNoChangeUntilUtc.TryGetValue(SelectedPlaylist.Id, out var noChangeUntil) &&
             noChangeUntil > DateTime.UtcNow)
         {
-            StatusMessage = "Kanal listesi zaten guncel";
+            StatusMessage = "Kanal listesi zaten güncel";
             await TouchPlaylistLastUpdatedAsync(SelectedPlaylist.Id);
+
+            // To notify observers like SettingsViewModel that LastUpdated changed
+            var playlist = SelectedPlaylist;
+            SelectedPlaylist = null;
+            SelectedPlaylist = playlist;
             return;
         }
 
@@ -2266,16 +2271,6 @@ public partial class MainViewModel : ObservableObject
                 StatusMessage = "Playlist zaten yenileniyor...";
             }
             return;
-        }
-
-        if (!isBackground)
-        {
-            if (Interlocked.Exchange(ref _isManualRefreshRunning, 1) == 1)
-            {
-                StatusMessage = "Baska bir yenileme islemi zaten devam ediyor...";
-                Interlocked.Exchange(ref _isRefreshingPlaylist, 0);
-                return;
-            }
         }
 
         try
@@ -2294,15 +2289,31 @@ public partial class MainViewModel : ObservableObject
                 if (profile.ProviderAccount.Type == ProfileType.StalkerPortal)
                 {
                     // Stalker için tam yenileme başlat
-                    _ = Task.Run(() => ResumeStalkerProgressiveLoadingAsync(profile, SelectedPlaylist, isFullRefresh: true));
-                    if (!isBackground) StatusMessage = "Stalker listesi arka planda yenileniyor...";
+                    if (isBackground)
+                    {
+                        _ = Task.Run(() => ResumeStalkerProgressiveLoadingAsync(profile, SelectedPlaylist, isFullRefresh: true));
+                    }
+                    else
+                    {
+                        StatusMessage = "Stalker listesi yenileniyor...";
+                        await ResumeStalkerProgressiveLoadingAsync(profile, SelectedPlaylist, isFullRefresh: true);
+                        _playlistNoChangeUntilUtc[playlistId] = DateTime.UtcNow.AddMinutes(5);
+                    }
                     return;
                 }
                 else if (profile.ProviderAccount.Type == ProfileType.XtreamCodes)
                 {
                     // Xtream için tam yenileme başlat
-                    _ = Task.Run(() => ResumeXtreamProgressiveLoadingAsync(profile, SelectedPlaylist, isFullRefresh: true));
-                    if (!isBackground) StatusMessage = "Xtream listesi arka planda yenileniyor...";
+                    if (isBackground)
+                    {
+                        _ = Task.Run(() => ResumeXtreamProgressiveLoadingAsync(profile, SelectedPlaylist, isFullRefresh: true));
+                    }
+                    else
+                    {
+                        StatusMessage = "Xtream listesi yenileniyor...";
+                        await ResumeXtreamProgressiveLoadingAsync(profile, SelectedPlaylist, isFullRefresh: true);
+                        _playlistNoChangeUntilUtc[playlistId] = DateTime.UtcNow.AddMinutes(5);
+                    }
                     return;
                 }
             }
@@ -2325,14 +2336,14 @@ public partial class MainViewModel : ObservableObject
                     : $"Kanal listesi yenilendi ({Math.Abs(delta)} değişiklik)";
                     
                 ChannelListLastError = null;
-                _playlistNoChangeUntilUtc.Remove(playlistId);
+                _playlistNoChangeUntilUtc[playlistId] = DateTime.UtcNow.AddMinutes(5);
             }
         }
         catch (Exception ex)
         {
             if (!isBackground)
             {
-                StatusMessage = UserFriendlyErrorMessage.WithPrefix("Kanal listesi guncelleme hatasi", ex);
+                StatusMessage = UserFriendlyErrorMessage.WithPrefix("Kanal listesi güncelleme hatası", ex);
                 ChannelListLastError = UserFriendlyErrorMessage.FromException(ex);
             }
         }
@@ -2341,7 +2352,6 @@ public partial class MainViewModel : ObservableObject
             if (!isBackground)
             {
                 IsLoading = false;
-                Interlocked.Exchange(ref _isManualRefreshRunning, 0);
             }
 
             Interlocked.Exchange(ref _isRefreshingPlaylist, 0);
@@ -2396,10 +2406,10 @@ public partial class MainViewModel : ObservableObject
 
     public bool ForceRefreshEpgInBackground()
     {
-        if (Volatile.Read(ref _isManualRefreshRunning) == 1 ||
+        if (Volatile.Read(ref _isRefreshingPlaylist) == 1 ||
             Volatile.Read(ref _isManualEpgRefreshRunning) == 1)
         {
-            StatusMessage = "Baska bir yenileme islemi zaten devam ediyor...";
+            StatusMessage = "Başka bir yenileme işlemi zaten devam ediyor...";
             return false;
         }
 
@@ -2433,9 +2443,9 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
 
-            if (Interlocked.Exchange(ref _isManualRefreshRunning, 1) == 1)
+            if (Volatile.Read(ref _isRefreshingPlaylist) == 1)
             {
-                StatusMessage = "Baska bir yenileme islemi zaten devam ediyor...";
+                StatusMessage = "Başka bir yenileme işlemi zaten devam ediyor...";
                 Interlocked.Exchange(ref _isManualEpgRefreshRunning, 0);
                 return;
             }
@@ -2674,7 +2684,7 @@ public partial class MainViewModel : ObservableObject
             await PersistSelectedPlaylistEpgErrorAsync($"LoadEpgInternal: {UserFriendlyErrorMessage.FromException(ex)}");
             if (!isBackgroundSync)
             {
-                StatusMessage = UserFriendlyErrorMessage.WithPrefix("EPG hatasi", ex);
+                StatusMessage = UserFriendlyErrorMessage.WithPrefix("EPG hatası", ex);
             }
             else
             {
@@ -2691,7 +2701,6 @@ public partial class MainViewModel : ObservableObject
             if (!isBackgroundSync)
             {
                 Interlocked.Exchange(ref _isManualEpgRefreshRunning, 0);
-                Interlocked.Exchange(ref _isManualRefreshRunning, 0);
             }
         }
     }

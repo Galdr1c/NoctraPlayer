@@ -443,27 +443,28 @@ public partial class SettingsViewModel : ObservableObject
                     .Where(p => p.Id == _mainViewModel.SelectedPlaylist.Id)
                     .Select(p => p.LastUpdated)
                     .FirstOrDefaultAsync();
-                return;
-            }
-
-            var profileId = _mainViewModel.CurrentProfile?.Id;
-            if (profileId.HasValue)
-            {
-                ChannelListLastUpdated = await db.Playlists
-                    .AsNoTracking()
-                    .Where(p => p.IsActive && p.ProfileId == profileId.Value)
-                    .OrderByDescending(p => p.LastUpdated)
-                    .Select(p => p.LastUpdated)
-                    .FirstOrDefaultAsync();
             }
             else
             {
-                ChannelListLastUpdated = null;
+                var profileId = _mainViewModel.CurrentProfile?.Id;
+                if (profileId.HasValue)
+                {
+                    ChannelListLastUpdated = await db.Playlists
+                        .AsNoTracking()
+                        .Where(p => p.IsActive && p.ProfileId == profileId.Value)
+                        .OrderByDescending(p => p.LastUpdated)
+                        .Select(p => p.LastUpdated)
+                        .FirstOrDefaultAsync();
+                }
+                else
+                {
+                    ChannelListLastUpdated = null;
+                }
             }
 
             if (updateStatusMessage)
             {
-                StatusMessage = "[Istatistik] Kanal listesi istatistikleri guncellendi";
+                StatusMessage = "[İstatistik] Kanal listesi istatistikleri güncellendi";
             }
         }
         catch
@@ -471,7 +472,7 @@ public partial class SettingsViewModel : ObservableObject
             ChannelListLastUpdated = null;
             if (updateStatusMessage)
             {
-                StatusMessage = "[Istatistik] Kanal listesi istatistikleri okunamadi";
+                StatusMessage = "[İstatistik] Kanal listesi istatistikleri okunamadı";
             }
         }
     }
@@ -486,18 +487,22 @@ public partial class SettingsViewModel : ObservableObject
 
         try
         {
+            _mainViewModel.ChannelListLastError = null;
             _mainViewModel.IsGlobalLoading = true;
             _mainViewModel.GlobalLoadingMessage = "Kanal listesi yenileniyor...";
 
-            SetProgressStatus("Kanal", 12, "Kanal listesi yenileniyor...");
+            SetProgressStatus("Kanal", 0, "Kanal listesi yenileniyor...");
+
+            // Xtream/Stalker can take minutes.
+            // Setting a generic status without hardcoded steps jumping to 60 immediately.
             await _mainViewModel.RefreshSelectedPlaylistAsync();
 
-            SetProgressStatus("Kanal", 60, "Kanal listesi verileri guncelleniyor...");
+            SetProgressStatus("Kanal", 90, "Kanal listesi verileri güncelleniyor...");
             _mainViewModel.GlobalLoadingMessage = "Kanal listesi verileri güncelleniyor...";
             await ScanChannelListStatsCoreAsync(updateStatusMessage: false);
 
             // Kanal listesi yenilenirken bitiş süresini de güncelle
-            SetProgressStatus("Kanal", 80, "Hesap bilgileri kontrol ediliyor...");
+            SetProgressStatus("Kanal", 95, "Hesap bilgileri kontrol ediliyor...");
             _mainViewModel.GlobalLoadingMessage = "Hesap bilgileri kontrol ediliyor...";
             await _mainViewModel.RefreshCurrentProfileExpirationAsync();
             LoadProfileInfo();
@@ -516,14 +521,14 @@ public partial class SettingsViewModel : ObservableObject
                 }
                 else
                 {
-                    SetProgressStatus("Kanal", 100, "Kanal listesi yenileme tamamlandi");
+                    SetProgressStatus("Kanal", 100, "Kanal listesi yenileme tamamlandı");
                 }
             }
         }
         catch (Exception ex)
         {
             ChannelListLastError = UserFriendlyErrorMessage.FromException(ex);
-            SetProgressStatus("Kanal", RefreshProgressPercent, UserFriendlyErrorMessage.WithPrefix("Kanal listesi yenileme hatasi", ex));
+            SetProgressStatus("Kanal", RefreshProgressPercent, UserFriendlyErrorMessage.WithPrefix("Kanal listesi yenileme hatası", ex));
         }
         finally
         {
@@ -638,7 +643,7 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (Interlocked.Exchange(ref _isRefreshOperationRunning, 1) == 1)
         {
-            StatusMessage = $"[Yenileme] Baska bir islem devam ediyor. Once mevcut yenilemenin bitmesini bekleyin.";
+            StatusMessage = $"[Yenileme] Başka bir işlem devam ediyor. Önce mevcut yenilemenin bitmesini bekleyin.";
             return false;
         }
 
