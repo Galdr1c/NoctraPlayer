@@ -25,7 +25,7 @@ public class EpgProgressInfo
 /// <summary>
 /// EPG (Electronic Program Guide) servis interface'i
 /// </summary>
-public interface IEpgService
+public interface IEpgService : IDisposable
 {
     /// <summary>
     /// EPG URL'sinden program bilgilerini yükler

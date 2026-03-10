@@ -1,6 +1,5 @@
 ﻿using System.IO.Compression;
 using System.Net.Http;
-using System.Xml.Linq;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Noctra.Data;
@@ -18,10 +17,28 @@ public class EpgService : IEpgService
     private readonly HttpClient _httpClient;
     private readonly ILogger<EpgService>? _logger;
     private readonly SemaphoreSlim _loadSemaphore = new(1, 1);
-    
-    public bool IsLoaded { get; private set; }
-    public DateTime? LastUpdated { get; private set; }
-    public string? LastError { get; private set; }
+    private readonly object _stateLock = new();
+
+    private bool _isLoaded;
+    public bool IsLoaded
+    {
+        get { lock (_stateLock) return _isLoaded; }
+        private set { lock (_stateLock) _isLoaded = value; }
+    }
+
+    private DateTime? _lastUpdated;
+    public DateTime? LastUpdated
+    {
+        get { lock (_stateLock) return _lastUpdated; }
+        private set { lock (_stateLock) _lastUpdated = value; }
+    }
+
+    private string? _lastError;
+    public string? LastError
+    {
+        get { lock (_stateLock) return _lastError; }
+        private set { lock (_stateLock) _lastError = value; }
+    }
 
     public EpgService(IDbContextFactory<AppDbContext> contextFactory, HttpClient httpClient, ILogger<EpgService>? logger = null)
     {
@@ -40,7 +57,7 @@ public class EpgService : IEpgService
         if (!await _loadSemaphore.WaitAsync(0).ConfigureAwait(false))
         {
             _logger?.LogWarning("Another EPG load is in progress, skipping new request.");
-            return 0;
+            return -1;
         }
 
         int totalLoaded = 0;
@@ -58,17 +75,16 @@ public class EpgService : IEpgService
                 cancellationToken: cts.Token).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            var totalBytes = response.Content.Headers.ContentLength;
             using var stream = await response.Content.ReadAsStreamAsync(cts.Token).ConfigureAwait(false);
 
             // GZip decompression support (.gz URLs)
-            Stream dataStream = stream;
-            if (epgUrl.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) ||
-                response.Content.Headers.ContentEncoding.Contains("gzip"))
+            bool isGzip = epgUrl.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) || response.Content.Headers.ContentEncoding.Contains("gzip");
+            if (isGzip)
             {
                 progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Decompressing, Message = "Sıkıştırılmış dosya açılıyor...", ProgressPercent = 15 });
-                dataStream = new GZipStream(stream, CompressionMode.Decompress);
             }
+
+            await using var dataStream = isGzip ? new GZipStream(stream, CompressionMode.Decompress) : stream;
 
             progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Parsing, Message = "EPG içeriği analiz ediliyor...", ProgressPercent = 20 });
 
@@ -122,6 +138,7 @@ public class EpgService : IEpgService
 
             using var context = await _contextFactory.CreateDbContextAsync();
             context.ChangeTracker.AutoDetectChangesEnabled = false;
+            await using var transaction = await context.Database.BeginTransactionAsync().ConfigureAwait(false);
             try
             {
                 while (await reader.ReadAsync().ConfigureAwait(false))
@@ -273,6 +290,13 @@ public class EpgService : IEpgService
                     await context.EpgPrograms.AddRangeAsync(programs).ConfigureAwait(false);
                     await context.SaveChangesAsync().ConfigureAwait(false);
                 }
+
+                await transaction.CommitAsync().ConfigureAwait(false);
+            }
+            catch
+            {
+                await transaction.RollbackAsync().ConfigureAwait(false);
+                throw;
             }
             finally
             {
@@ -359,7 +383,7 @@ public class EpgService : IEpgService
         }
 
         // 6. Strip trailing country names
-        var trailingCountries = new[] { "turkey", "turkiye", "türkiye", "tr", "de", "uk", "us", "fr", "it", "es", "nl", "ru" };
+        var trailingCountries = new[] { "turkey", "turkiye", "türkiye", "de", "uk", "us", "fr", "it", "es", "nl", "ru" };
         var lowerName = name.Trim().ToLowerInvariant();
         foreach (var country in trailingCountries)
         {
@@ -476,16 +500,13 @@ public class EpgService : IEpgService
 
         // Dynamic threshold: shorter names need less strict matching
         var maxLen = Math.Max(normalizedDisplayName.Length, 3);
-        var threshold = maxLen <= 6 ? 0.70 : maxLen <= 10 ? 0.75 : 0.82; // Thresholds tightened
+        var threshold = maxLen <= 6 ? 0.65 : maxLen <= 10 ? 0.72 : 0.78; // Thresholds tightened
 
         string? bestId = null;
         double bestScore = 0;
 
         foreach (var kvp in channelMap)
         {
-            // Preliminary check: if first characters don't match, similarity is likely low
-            if (kvp.Key[0] != normalizedDisplayName[0]) continue;
-
             var score = Similarity(normalizedDisplayName, kvp.Key);
             if (score > bestScore)
             {
@@ -546,33 +567,39 @@ public class EpgService : IEpgService
         var now = DateTime.UtcNow;
         using var context = await _contextFactory.CreateDbContextAsync();
         
-        // Level 1: Try Primary TvgId
-        if (!string.IsNullOrEmpty(channel.TvgId))
-        {
-            var program = await context.EpgPrograms
-                .AsNoTracking()
-                .Where(p => p.ChannelId == channel.TvgId && p.StartTime <= now && p.EndTime > now)
-                .FirstOrDefaultAsync();
+        var internalId = channel.Id.ToString();
+        var hasTvgId = !string.IsNullOrEmpty(channel.TvgId);
 
-            if (program != null) return program;
+        var query = context.EpgPrograms.AsNoTracking();
+
+        if (hasTvgId)
+        {
+            query = query.Where(p => (p.ChannelId == channel.TvgId || p.ChannelId == internalId) && p.StartTime <= now && p.EndTime > now);
+        }
+        else
+        {
+            query = query.Where(p => p.ChannelId == internalId && p.StartTime <= now && p.EndTime > now);
         }
 
-        // Level 2: Try Internal Id (Secondary EPG mapped by Name)
-        var internalId = channel.Id.ToString();
-        var programByInternalId = await context.EpgPrograms
-            .AsNoTracking()
-            .Where(p => p.ChannelId == internalId && p.StartTime <= now && p.EndTime > now)
-            .FirstOrDefaultAsync();
+        var programs = await query.ToListAsync();
 
-        if (programByInternalId != null) return programByInternalId;
+        if (programs.Count == 0) return null;
 
-        return null; 
+        if (hasTvgId)
+        {
+            var primaryMatch = programs.FirstOrDefault(p => p.ChannelId == channel.TvgId);
+            if (primaryMatch != null) return primaryMatch;
+        }
+
+        return programs.FirstOrDefault(p => p.ChannelId == internalId);
     }
 
     public async Task ClearEpgAsync()
     {
         using var context = await _contextFactory.CreateDbContextAsync();
         await context.Database.ExecuteSqlRawAsync("DELETE FROM EpgPrograms");
+        IsLoaded = false;
+        LastUpdated = null;
     }
 
     public async Task<List<EpgProgram>> GetProgramsAsync(string channelId, DateTime from, DateTime to)
@@ -706,6 +733,12 @@ public class EpgService : IEpgService
     private static string datePart(string fullDate)
     {
         return fullDate.Split(' ')[0];
+    }
+
+    public void Dispose()
+    {
+        _loadSemaphore.Dispose();
+        GC.SuppressFinalize(this);
     }
 }
 

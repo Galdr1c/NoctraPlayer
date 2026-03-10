@@ -247,6 +247,13 @@ public partial class PlaylistService : IPlaylistService
                         {
                             System.Diagnostics.Debug.WriteLine($"[AutoEPG] Loading from {source.Url}");
                             var loadedPrograms = await _epgService.LoadEpgAsync(source.Url, source.IsPrimary, channelSnapshot, clearBeforeSave: source.ClearBeforeLoad);
+
+                            if (loadedPrograms == -1)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[PlaylistService] EPG load skipped, already in progress.");
+                                break;
+                            }
+
                             if (loadedPrograms > 0)
                             {
                                 usedEpgUrl = source.Url;
@@ -1360,6 +1367,12 @@ public partial class PlaylistService : IPlaylistService
                 var loaded = await _epgService.LoadEpgAsync(source.Url, source.IsPrimary, channels, clearBeforeSave: source.ClearBeforeLoad);
                 var afterCount = await _epgService.GetTotalProgramCountAsync();
                 
+                if (loaded == -1)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PlaylistService] RefreshEpg skipped, load already in progress.");
+                    break;
+                }
+
                 if (loaded == 0)
                 {
                     System.Diagnostics.Debug.WriteLine($"[PlaylistService] RefreshEpg no program loaded: {source.Type}");
