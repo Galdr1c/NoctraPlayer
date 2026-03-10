@@ -71,6 +71,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - Tamamlanmış (izlendi işareti olan) bölümler tıklandığında diyalog gösterilmeden doğrudan en baştan başlatılır.
 
 ### 🛠️ Düzeltmeler ve Optimizasyonlar
+- **Ses Seviyesi ve Oynatıcı Kararlılığı**:
+    - **Agresif Ses Zorlama Kaldırıldı**: Oynatma başladığında ses seviyesinin defalarca (5 kez) üst üste yazılmasına neden olan mantık temizlendi. Bu sayede gereksiz `VolumeChanged` olay spami ve arayüzdeki ses çubuğu titremeleri engellendi.
+    - **Ses Seviyesi Koruma**: Kanal değişimlerinde veya otomatik yayın kurtarma (Auto-Recovery) sırasında ses seviyesinin her seferinde %80'e sıfırlanması sorunu giderildi. Kullanıcının ayarladığı son ses seviyesi artık tüm geçişlerde kararlı bir şekilde korunuyor.
+    - **Başlangıç Senkronizasyonu**: Oynatıcı başlatıldığında ses seviyesi artık doğrudan `VideoPlayerService` üzerinden okunarak `PlayerViewModel` ile tam senkronize bir şekilde başlatılıyor.
 - **Mükerrer Kontrolü ve Şifreleme Bug Fix**: Non-deterministic (DPAPI) şifreleme nedeniyle mükerrer kayıtların veritabanında tespit edilememesi sorunu, karşılaştırma mantığı `Type`, `Url` ve `Username` alanlarına odaklanarak çözüldü. M3U listelerindeki boş kullanıcı adı/şifre karşılaştırma hataları giderildi.
 - **UI Geri Bildirim İyileştirmesi**: Kayıt sırasında oluşan hatalarda (örn: mükerrer kayıt) ekranın "Kaydediliyor..." durumunda asılı kalması sorunu düzeltilerek kullanıcıya reel-time hata bildirimi sağlandı.
 - **Veritabanı Şeması ve Toplu İşlem İyileştirmeleri**: 

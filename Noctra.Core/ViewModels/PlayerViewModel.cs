@@ -593,8 +593,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 });        };
 
         // Initialize volume from service
-        _volume = _videoPlayerService.Volume;
-        _volumeBeforeMute = _volume > 0 ? _volume : 50;
+        Volume = _videoPlayerService.Volume;
+        _volumeBeforeMute = Volume > 0 ? Volume : 50;
 
         _videoPlayerService.VolumeChanged += (s, vol) =>
         {

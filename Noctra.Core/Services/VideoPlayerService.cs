@@ -157,18 +157,10 @@ public class VideoPlayerService : IVideoPlayerService
         _mediaPlayer.Playing += (s, e) =>
         {
             LogDebug("Event: Playing");
-            // Aggressive Volume Enforcement Pattern:
-            var refreshDelays = new[] { 50, 200, 500, 1000, 2000 };
-            foreach (var delay in refreshDelays)
-            {
-                Task.Delay(delay).ContinueWith(_ => _dispatcherService.BeginInvoke(() => {
-                    if (_mediaPlayer != null && _mediaPlayer.IsPlaying)
-                    {
-                        _mediaPlayer.Volume = _currentVolume;
-                    }
-                }));
-            }
             
+            // Aggressive enforcement kaldırıldı.
+            // Opening event'i zaten volume'u doğru ayarlıyor; burada tekrar yazmak
+            // hem gereksiz hem de VolumeChanged event spam'ine yol açıyor.
             _dispatcherService.BeginInvoke(() => PlayingChanged?.Invoke(this, true));
             StartQualityMonitoring();
         };
