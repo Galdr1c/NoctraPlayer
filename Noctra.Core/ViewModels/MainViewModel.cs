@@ -1297,6 +1297,8 @@ public partial class MainViewModel : ObservableObject
             .Select(e => BuildSeriesEpisodeChannel(e, episodeToSeriesMap.GetValueOrDefault(e)));
 
         var combinedContinue = vodContinue.Concat(episodeContinue)
+            .GroupBy(c => c.Id > 0 ? $"id:{c.Id}" : $"url:{c.StreamUrl}")
+            .Select(g => g.First())
             .OrderByDescending(c => c.LastWatched)
             .Take(10);
 
@@ -3152,11 +3154,8 @@ public partial class MainViewModel : ObservableObject
 
     private void UpdateHistoryChannels()
     {
-        SetItems(HistoryChannels, Channels
-            .Where(c => c.LastWatched.HasValue)
-            .OrderByDescending(c => c.LastWatched));
-        UpdateHistoryBuckets();
-
+        // Don't overwrite the global history with just the current memory list.
+        // Doing so hides items (like live tv channels) that aren't loaded in the current FilteredChannels.
         _ = RefreshHistoryChannelsOnlyAsync();
     }
 
@@ -4120,7 +4119,8 @@ public partial class MainViewModel : ObservableObject
 
             if (history.Channel != null)
             {
-                var channelItem = history.Channel;
+                // Retrieve the latest channel object if it's currently loaded
+                var channelItem = Channels.FirstOrDefault(c => c.Id == history.ChannelId) ?? history.Channel;
                 channelItem.LastWatched = history.WatchedAt;
                 if (resolvedPosition.HasValue && resolvedPosition.Value > TimeSpan.Zero)
                 {
