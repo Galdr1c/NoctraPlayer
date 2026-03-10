@@ -79,6 +79,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - Tamamlanmış (izlendi işareti olan) bölümler tıklandığında diyalog gösterilmeden doğrudan en baştan başlatılır.
 
 ### 🛠️ Düzeltmeler ve Optimizasyonlar
+- **Dizi ve İçerik Agregasyonu (MediaService)**:
+    - **Kullanıcı Verisi Koruması**: Geçici kanal kayıpları veya yenileme sırasında serilerin yeniden oluşturulması durumunda `IsFavorite` ve `IsInMyList` flag'lerinin sıfırlanması sorunu giderildi (UserData Backup & Restore).
+    - **Bellek ve Veritabanı Temizliği**: Artık sadece öksüz bölümler değil, boş kalan sezonlar (`Ghost Seasons`) da otomatik olarak temizleniyor. Kullanıcı verisi içeren (Favori/Liste) seriler boş kalsa dahi veri kaybını önlemek için silinmiyor.
+    - **Performans ve Ölçeklenebilirlik**: Global kilit mekanizması yerine playlist bazlı kilit (`Per-Playlist Lock`) sistemine geçilerek, birden fazla playlist yenilemesinin birbirini engellemesi önlendi.
+    - **Thread Safety**: Agregasyon tamamlanma olayları (`OnAggregationCompleted`) artık güvenli bir şekilde Dispatcher üzerinden UI thread'ine iletiliyor.
+    - **Bölüm Eşleşme Mantığı**: Bölüm numarası parse edilemeyen kanalların gerçek S01E01 verilerini bozması engellendi (Robust fallback).
+    - **Veri Tamlığı**: Yeni eklenen bölümlerin `Plot` (konu) ve `Duration` (süre) bilgileri artık ilk ekleme anında kaydediliyor.
+    - **Bellek Yönetimi**: `UpdateSeriesAsync` sırasında tüm playlist içeriğinin belleğe yüklenmesi engellendi, aramalar isim bazlı filtrelenerek optimize edildi.
 - **Veri Kaybı ve Kaynak Yönetimi (PlaylistService)**:
     - **Favori ve Liste Verisi Koruması**: `FastSqliteBulkInsertAsync` metodunda `IsFavorite` ve `IsInMyList` alanlarının sıfırlanmasına neden olan hata giderildi. Artık kanal yenilemelerinde kullanıcı seçimleri kaybolmuyor.
     - **Metadata Bütünlüğü**: Toplu kanal ekleme işlemine `Rating`, `Plot`, `ReleaseYear`, `ContentRating`, `BackdropUrl`, `Cast`, `Director`, `Language` ve `TmdbId` alanları dahil edildi.
