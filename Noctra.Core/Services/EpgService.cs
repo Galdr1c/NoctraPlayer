@@ -1,6 +1,5 @@
 ﻿using System.IO.Compression;
 using System.Net.Http;
-using System.Xml.Linq;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Noctra.Data;
@@ -18,7 +17,8 @@ public class EpgService : IEpgService
     private readonly HttpClient _httpClient;
     private readonly ILogger<EpgService>? _logger;
     private readonly SemaphoreSlim _loadSemaphore = new(1, 1);
-    
+    private readonly object _stateLock = new();
+
     public bool IsLoaded { get; private set; }
     public DateTime? LastUpdated { get; private set; }
     public string? LastError { get; private set; }
@@ -32,7 +32,10 @@ public class EpgService : IEpgService
 
     public void ClearLastError()
     {
-        LastError = null;
+        lock (_stateLock)
+        {
+            LastError = null;
+        }
     }
 
     public async Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1, IProgress<EpgProgressInfo>? progress = null, bool clearBeforeSave = false)
@@ -40,14 +43,17 @@ public class EpgService : IEpgService
         if (!await _loadSemaphore.WaitAsync(0).ConfigureAwait(false))
         {
             _logger?.LogWarning("Another EPG load is in progress, skipping new request.");
-            return 0;
+            throw new InvalidOperationException("EPG is already updating in the background.");
         }
 
         int totalLoaded = 0;
         bool hasCleared = false;
         try
         {
-            LastError = null; // Clear previous error
+            lock (_stateLock)
+            {
+                LastError = null; // Clear previous error
+            }
             if (string.IsNullOrEmpty(epgUrl)) return 0;
 
             progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Downloading, Message = "EPG dosyası indiriliyor...", ProgressPercent = 5 });
@@ -58,17 +64,20 @@ public class EpgService : IEpgService
                 cancellationToken: cts.Token).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            var totalBytes = response.Content.Headers.ContentLength;
             using var stream = await response.Content.ReadAsStreamAsync(cts.Token).ConfigureAwait(false);
 
             // GZip decompression support (.gz URLs)
-            Stream dataStream = stream;
-            if (epgUrl.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) ||
-                response.Content.Headers.ContentEncoding.Contains("gzip"))
+            using var gzipStream = epgUrl.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) ||
+                                   response.Content.Headers.ContentEncoding.Contains("gzip")
+                ? new GZipStream(stream, CompressionMode.Decompress)
+                : null;
+
+            if (gzipStream != null)
             {
                 progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Decompressing, Message = "Sıkıştırılmış dosya açılıyor...", ProgressPercent = 15 });
-                dataStream = new GZipStream(stream, CompressionMode.Decompress);
             }
+
+            Stream dataStream = gzipStream ?? stream;
 
             progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Parsing, Message = "EPG içeriği analiz ediliyor...", ProgressPercent = 20 });
 
@@ -121,9 +130,17 @@ public class EpgService : IEpgService
             var windowEndUtc = windowStartUtc.AddDays(Math.Max(1, daysAhead) + 1);
 
             using var context = await _contextFactory.CreateDbContextAsync();
+            await using var transaction = await context.Database.BeginTransactionAsync(cts.Token).ConfigureAwait(false);
             context.ChangeTracker.AutoDetectChangesEnabled = false;
             try
             {
+                if (clearBeforeSave)
+                {
+                    await context.Database.ExecuteSqlRawAsync("DELETE FROM EpgPrograms").ConfigureAwait(false);
+                    hasCleared = true;
+                    _logger?.LogDebug("[EpgService] EPG data cleared before parsing starts (Atomic via Transaction).");
+                }
+
                 while (await reader.ReadAsync().ConfigureAwait(false))
                 {
                     if (reader.NodeType == System.Xml.XmlNodeType.Element)
@@ -231,15 +248,6 @@ public class EpgService : IEpgService
                                 }
                             }
 
-                            // If this is the FIRST program we are about to save, and clearBeforeSave is true,
-                            // we clear the database NOW. This ensures we don't clear if download fails.
-                            if (clearBeforeSave && !hasCleared)
-                            {
-                                await context.Database.ExecuteSqlRawAsync("DELETE FROM EpgPrograms").ConfigureAwait(false);
-                                hasCleared = true;
-                                _logger?.LogDebug("[EpgService] EPG data cleared just before saving new records (Atomic).");
-                            }
-
                             programs.Add(program);
                             totalLoaded++;
 
@@ -263,16 +271,16 @@ public class EpgService : IEpgService
 
                 if (programs.Any())
                 {
-                    // Handle case where we have small EPG and never reached batchSize
-                    if (clearBeforeSave && !hasCleared)
-                    {
-                        await context.Database.ExecuteSqlRawAsync("DELETE FROM EpgPrograms").ConfigureAwait(false);
-                        hasCleared = true;
-                    }
-
                     await context.EpgPrograms.AddRangeAsync(programs).ConfigureAwait(false);
                     await context.SaveChangesAsync().ConfigureAwait(false);
                 }
+
+                await transaction.CommitAsync(cts.Token).ConfigureAwait(false);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cts.Token).ConfigureAwait(false);
+                throw;
             }
             finally
             {
@@ -280,14 +288,20 @@ public class EpgService : IEpgService
             }
 
 
-            IsLoaded = true;
-            LastUpdated = DateTime.UtcNow;
+            lock (_stateLock)
+            {
+                IsLoaded = true;
+                LastUpdated = DateTime.UtcNow;
+            }
             progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Completed, Message = "Tamamlandı", ProgressPercent = 100, LoadedCount = totalLoaded });
             return totalLoaded;
         }
         catch (Exception ex)
         {
-            LastError = UserFriendlyErrorMessage.FromException(ex);
+            lock (_stateLock)
+            {
+                LastError = UserFriendlyErrorMessage.FromException(ex);
+            }
             _logger?.LogError(ex, "EPG load failed for URL {EpgUrl}", epgUrl);
             progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Failed, Message = LastError, ProgressPercent = 100 });
             if (isPrimary) throw;
@@ -359,7 +373,7 @@ public class EpgService : IEpgService
         }
 
         // 6. Strip trailing country names
-        var trailingCountries = new[] { "turkey", "turkiye", "türkiye", "tr", "de", "uk", "us", "fr", "it", "es", "nl", "ru" };
+        var trailingCountries = new[] { "de", "uk", "us", "fr", "it", "es", "nl", "ru" };
         var lowerName = name.Trim().ToLowerInvariant();
         foreach (var country in trailingCountries)
         {
@@ -476,16 +490,13 @@ public class EpgService : IEpgService
 
         // Dynamic threshold: shorter names need less strict matching
         var maxLen = Math.Max(normalizedDisplayName.Length, 3);
-        var threshold = maxLen <= 6 ? 0.70 : maxLen <= 10 ? 0.75 : 0.82; // Thresholds tightened
+        var threshold = maxLen <= 6 ? 0.65 : maxLen <= 10 ? 0.72 : 0.78; // Thresholds tightened
 
         string? bestId = null;
         double bestScore = 0;
 
         foreach (var kvp in channelMap)
         {
-            // Preliminary check: if first characters don't match, similarity is likely low
-            if (kvp.Key[0] != normalizedDisplayName[0]) continue;
-
             var score = Similarity(normalizedDisplayName, kvp.Key);
             if (score > bestScore)
             {
@@ -546,33 +557,25 @@ public class EpgService : IEpgService
         var now = DateTime.UtcNow;
         using var context = await _contextFactory.CreateDbContextAsync();
         
-        // Level 1: Try Primary TvgId
-        if (!string.IsNullOrEmpty(channel.TvgId))
-        {
-            var program = await context.EpgPrograms
-                .AsNoTracking()
-                .Where(p => p.ChannelId == channel.TvgId && p.StartTime <= now && p.EndTime > now)
-                .FirstOrDefaultAsync();
-
-            if (program != null) return program;
-        }
-
-        // Level 2: Try Internal Id (Secondary EPG mapped by Name)
         var internalId = channel.Id.ToString();
-        var programByInternalId = await context.EpgPrograms
+        var program = await context.EpgPrograms
             .AsNoTracking()
-            .Where(p => p.ChannelId == internalId && p.StartTime <= now && p.EndTime > now)
+            .Where(p => (p.ChannelId == channel.TvgId || p.ChannelId == internalId) && p.StartTime <= now && p.EndTime > now)
             .FirstOrDefaultAsync();
 
-        if (programByInternalId != null) return programByInternalId;
-
-        return null; 
+        return program;
     }
 
     public async Task ClearEpgAsync()
     {
         using var context = await _contextFactory.CreateDbContextAsync();
         await context.Database.ExecuteSqlRawAsync("DELETE FROM EpgPrograms");
+
+        lock (_stateLock)
+        {
+            IsLoaded = false;
+            LastUpdated = null;
+        }
     }
 
     public async Task<List<EpgProgram>> GetProgramsAsync(string channelId, DateTime from, DateTime to)
@@ -706,6 +709,12 @@ public class EpgService : IEpgService
     private static string datePart(string fullDate)
     {
         return fullDate.Split(' ')[0];
+    }
+
+    public void Dispose()
+    {
+        _loadSemaphore.Dispose();
+        GC.SuppressFinalize(this);
     }
 }
 
