@@ -36,6 +36,16 @@ public class AppSettings
     /// Veri kullanımı / video kalitesi
     /// </summary>
     public DataUsageLevel DataUsage { get; set; } = DataUsageLevel.Auto;
+
+    /// <summary>
+    /// Varsayılan altyazı aktifliği
+    /// </summary>
+    public bool SubtitleEnabled { get; set; } = false;
+
+    /// <summary>
+    /// Tercih edilen altyazı dili
+    /// </summary>
+    public string SubtitleLanguage { get; set; } = "tr";
     
     /// <summary>
     /// Varsayılan ses seviyesi (0-100)

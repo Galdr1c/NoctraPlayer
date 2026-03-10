@@ -271,7 +271,29 @@
                             </Border>
 
                         
-                            <!-- Subtitle Section Removed -->
+                            <Border Classes="SettingsCard">
+                                <StackPanel>
+                                    <TextBlock Text="Altyazı Ayarları" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
+
+                                    <Grid Margin="0,0,0,18">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="Varsayılan altyazıyı etkinleştir" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="Videolarda altyazıyı otomatik olarak açar" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding SubtitleEnabled}"/>
+                                    </Grid>
+
+                                    <TextBlock Text="Tercih edilen dil" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,12"/>
+                                    <ComboBox Theme="{StaticResource ModernComboBox}" SelectedValue="{Binding SubtitleLanguage}" SelectedValueBinding="{Binding Content}" Width="250" HorizontalAlignment="Left">
+                                        <ComboBoxItem Content="tr">Türkçe</ComboBoxItem>
+                                        <ComboBoxItem Content="en">İngilizce</ComboBoxItem>
+                                        <ComboBoxItem Content="de">Almanca</ComboBoxItem>
+                                        <ComboBoxItem Content="fr">Fransızca</ComboBoxItem>
+                                    </ComboBox>
+                                </StackPanel>
+                            </Border>
+
                             <Border Classes="SettingsCard">
                                 <StackPanel>
                                     <TextBlock Text="İndirme" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
