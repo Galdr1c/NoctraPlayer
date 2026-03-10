@@ -9,6 +9,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Veritabanı ve Playlist Organizasyon İyileştirmeleri** (2026-03-10):
+    - **Toplu Veri Yazma (Bulk Insert)**: `FastSqliteBulkInsertAsync` içerisine Rating, Plot, ReleaseYear ve ContentRating gibi VOD/Dizi metadataları dahil edildi. `IsFavorite` ve `IsInMyList` varsayılan değerleri dinamik hale getirilerek her yenilemede sıfırlanmaları engellendi.
+    - **Kullanıcı Verisi Koruma Mantığı**: Parmak izi (fingerprint) çakışması olan kanallarda verilerin kaybolmasını engellemek için, birleştirme (merge) stratejisi uygulandı; favori ve izleme bilgileri her zaman en kapsamlı olanda tutuluyor.
+    - **Mükerrer Kanal Önleme**: Xtream/Stalker profillerinde sağlayıcının bir kanalı başka bir gruba taşıması sonucunda oluşan "dublör" kanallar (aynı StreamUrl'e sahip kopyalar) otomatik olarak siliniyor.
+    - **Dizi Gruplandırma (Series Grouping) Çözümü**: Farklı dil ve gruplardaki aynı isimli dizilerin (Örn: "TR | Dizi" ile "EN | Dizi") birbirine karışması, gruplama anahtarına `GroupTitle` eklenerek çözüldü.
+    - **Gelişmiş Grup İsmi Normalizasyonu**: "FİLM", "DİZİ" gibi Türkçe karakterli gruplar ile "Sports", "Kids" gibi İngilizce kategori isimleri standartlaştırılarak eşleştirme oranı artırıldı.
+    - **SmartSort Tip Öncelikli Sıralama**: Kanallar artık listeye eklenmeden önce Canlı -> VOD -> Dizi şeklinde tipine göre, ardından kategori ve alfabetik olarak daha düzenli sıralanıyor.
+
 - **"Güvenli Sıfırlama" (Safe Reset) ve Veri Bütünlüğü** (2026-03-09):
     - **Tam Liste Yenileme**: Kanal listesi yenilendiğinde (Refresh) artık mevcut tüm kanallar silinip baştan ekleniyor. Bu sayede playlist üzerindeki tüm isimlendirme, kategori ve grup değişiklikleri %100 temiz bir şekilde arayüze yansıtılıyor.
     - **Kullanıcı Veri Restorasyonu**: Liste sıfırlansa dahi kullanıcıların "Favoriler", "İzleme Geçmişi" (WatchedPosition), "İzleme Süresi" (Duration) ve "İzleme Listem" (IsInMyList) verileri akıllı parmak izi (fingerprint) teknolojisiyle yedeklenip yeni listeye saniyeler içinde otomatik olarak aktarılıyor.

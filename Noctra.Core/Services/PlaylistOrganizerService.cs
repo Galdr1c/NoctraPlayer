@@ -34,42 +34,54 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
         ["Sports"] = "Spor",
         ["SPORTS"] = "Spor",
         ["Sport"] = "Spor",
+        ["sport"] = "Spor",
 
         ["HABER"] = "Haber",
         ["News"] = "Haber",
         ["NEWS"] = "Haber",
+        ["news"] = "Haber",
 
         ["ÇOCUK"] = "Çocuk",
         ["Kids"] = "Çocuk",
         ["KIDS"] = "Çocuk",
         ["Children"] = "Çocuk",
+        ["kids"] = "Çocuk",
 
         ["Movies"] = "Filmler",
         ["MOVIES"] = "Filmler",
+        ["movies"] = "Filmler",
         ["Film"] = "Filmler",
         ["FILM"] = "Filmler",
+        ["film"] = "Filmler",
         ["FİLM"] = "Filmler",
         ["Sinema"] = "Filmler",
         ["SINEMA"] = "Filmler",
+        ["sinema"] = "Filmler",
+        ["Films"] = "Filmler",
 
         ["Series"] = "Diziler",
         ["SERIES"] = "Diziler",
+        ["series"] = "Diziler",
         ["TV SHOWS"] = "Diziler",
         ["Tv Shows"] = "Diziler",
         ["Dizi"] = "Diziler",
         ["DİZİ"] = "Diziler",
+        ["dizi"] = "Diziler",
 
         ["Documentary"] = "Belgesel",
         ["DOCUMENTARY"] = "Belgesel",
         ["BELGESEL"] = "Belgesel",
+        ["documentary"] = "Belgesel",
 
         ["Music"] = "Müzik",
         ["MUSIC"] = "Müzik",
         ["MÜZİK"] = "Müzik",
+        ["music"] = "Müzik",
 
         ["Entertainment"] = "Eğlence",
         ["ENTERTAINMENT"] = "Eğlence",
         ["EĞLENCE"] = "Eğlence",
+        ["entertainment"] = "Eğlence",
 
         ["General"] = "Genel",
         ["GENERAL"] = "Genel",
@@ -197,12 +209,13 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
     }
 
     /// <summary>
-    /// Grup → Kanal numarası → Alfabetik sıralama
+    /// Tip → Grup → Kanal numarası → Alfabetik sıralama
     /// </summary>
     public List<Channel> SmartSort(List<Channel> channels)
     {
         return channels
-            .OrderBy(c => c.GroupTitle ?? "zzz") // Uncategorized last
+            .OrderBy(c => c.Type) // Live -> VOD -> Series (or based on enum order)
+            .ThenBy(c => c.GroupTitle ?? "zzz") // Uncategorized last
             .ThenBy(c => GetChannelNumber(c.Name) ?? int.MaxValue) // Numbered channels first
             .ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase) // Alphabetical
             .ToList();
@@ -227,18 +240,30 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
     // ────────────────────────────────────────────────
 
     /// <summary>
-    /// Kanal adından benzerlik anahtarı üretir
-    /// "TRT 1 HD FHD 1080p" → "trt1"
+    /// Kanal adından ve grubundan benzerlik anahtarı üretir
     /// </summary>
     private static string GenerateSimilarityKey(Channel channel)
     {
         var key = SeriesInfoParser.NormalizeKey(channel.Name);
+        
+        // Grup bilgisini de ekleyerek farklı dillerdeki aynı isimli yayınları koru
+        if (!string.IsNullOrEmpty(channel.GroupTitle))
+        {
+            key += $"|{NormalizeIdentityToken(channel.GroupTitle)}";
+        }
+
         if (channel.Type == ChannelType.Series)
         {
             var parsed = SeriesInfoParser.Parse(channel.Name);
             key += $" s{parsed.Season:00}e{parsed.Episode:00}";
         }
         return key;
+    }
+
+    private static string NormalizeIdentityToken(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return string.Empty;
+        return string.Join(" ", raw.Trim().ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
     }
 
     /// <summary>
