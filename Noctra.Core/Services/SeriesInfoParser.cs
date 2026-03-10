@@ -15,6 +15,12 @@ public static partial class SeriesInfoParser
         }
 
         var trimmedTitle = title.Trim();
+
+        // If it's a live series channel, we don't want to assign it a fake episode number
+        if (IsLiveSeries(trimmedTitle))
+        {
+            return new SeriesInfo(CleanSeriesName(trimmedTitle), 0, 0); 
+        }
         
         foreach (var regex in GetParsingRegexes())
         {
@@ -39,12 +45,6 @@ public static partial class SeriesInfoParser
             var seriesName = CleanSeriesName(rawName);
             var season = ParseSafeInt(seasonOnly.Groups["season"].Value, 1);
             return new SeriesInfo(seriesName, season, 1);
-        }
-
-        // If it's a live series channel, we don't want to assign it a fake episode number
-        if (IsLiveSeries(trimmedTitle))
-        {
-            return new SeriesInfo(CleanSeriesName(trimmedTitle), 0, 0); 
         }
 
         // Phase 23: Better fallback for "1. Bölüm" if TurkishEpisodeOnlyRegex missed it for some reason
@@ -75,19 +75,17 @@ public static partial class SeriesInfoParser
                EnglishRegex().IsMatch(title) ||
                SeriesPatternHyphen().IsMatch(title) ||
                SeasonOnlyRegex().IsMatch(title) ||
-               title.Contains("Saison ", StringComparison.OrdinalIgnoreCase) ||
-               title.Contains("Staffel ", StringComparison.OrdinalIgnoreCase) ||
-               title.Contains("Temporada ", StringComparison.OrdinalIgnoreCase);
+               SpanishRegex().IsMatch(title) ||
+               PortugueseRegex().IsMatch(title) ||
+               FrenchRegex().IsMatch(title) ||
+               GermanRegex().IsMatch(title);
     }
 
     public static bool IsLiveSeries(string? title)
     {
         if (string.IsNullOrWhiteSpace(title)) return false;
 
-        // Use Regex with word boundaries to prevent matching inside words (e.g., "being" matching "beIN", "alive" matching "LIVE")
-        var liveSportsRegex = new Regex(@"\b(beIN|be\*IN|be-IN|SPOR|EUROSPORT|TIVIBU|EXXENSPOR)\b", RegexOptions.IgnoreCase);
-
-        if (liveSportsRegex.IsMatch(title))
+        if (LiveSportsRegex().IsMatch(title))
         {
             // Exception: If it explicitly has S01E01 style patterns, it might be a sports documentary series
             if (!SxeRegex().IsMatch(title) && !XRegex().IsMatch(title))
@@ -104,8 +102,7 @@ public static partial class SeriesInfoParser
             return true;
         }
 
-        var liveRegex = new Regex(@"\b(CANLI|LIVE)\b", RegexOptions.IgnoreCase);
-        if (liveRegex.IsMatch(title) && !EpisodeTokenRegex().IsMatch(title))
+        if (LiveKeywordRegex().IsMatch(title) && !EpisodeTokenRegex().IsMatch(title))
         {
             return true;
         }
@@ -117,7 +114,10 @@ public static partial class SeriesInfoParser
     {
         if (string.IsNullOrWhiteSpace(value)) return string.Empty;
         
-        var normalized = value.Trim().ToLowerInvariant();
+        var normalized = value.Trim().ToLowerInvariant()
+            .Replace('ş', 's').Replace('ç', 'c').Replace('ğ', 'g')
+            .Replace('ü', 'u').Replace('ö', 'o').Replace('ı', 'i').Replace('İ', 'i');
+            
         normalized = StripIptvPrefixes(normalized);
         normalized = EpisodeTokenRegex().Replace(normalized, " ");
         
@@ -165,7 +165,10 @@ public static partial class SeriesInfoParser
         
         // 0. Check for explicit Full Country / Global Group names first
         if (trimmed.Contains("TURKEY") || trimmed.Contains("TÜRKİYE") || trimmed.Contains("TURKIYE")) return "tr-TR";
-        if (trimmed.Contains("USA") || trimmed.Contains("UNITED STATES") || trimmed.Contains("UK") || trimmed.Contains("UNITED KINGDOM") || trimmed.Contains("CANADA") || trimmed.Contains("AUSTRALIA") || trimmed.Contains("NEW ZEALAND")) return "en-US";
+
+        var words = trimmed.Split(new[] { ' ', '|', '/', ':', '[', ']', '(', ')' }, StringSplitOptions.RemoveEmptyEntries);
+        if (words.Any(w => w == "UK" || w == "USA" || w == "US" || w == "UNITED STATES" || w == "UNITED KINGDOM" || w == "CANADA" || w == "AUSTRALIA" || w == "NEW ZEALAND")) return "en-US";
+
         if (trimmed.Contains("FRANCE") || trimmed.Contains("FRENCH")) return "fr-FR";
         if (trimmed.Contains("GERMANY") || trimmed.Contains("GERMAN") || trimmed.Contains("AUSTRIA") || trimmed.Contains("SWITZERLAND")) return "de-DE";
         if (trimmed.Contains("SPAIN") || trimmed.Contains("SPANISH") || trimmed.Contains("MEXICO") || trimmed.Contains("ARGENTINA") || trimmed.Contains("CHILE") || trimmed.Contains("COLOMBIA") || trimmed.Contains("PERU")) return "es-ES";
@@ -179,7 +182,20 @@ public static partial class SeriesInfoParser
         if (trimmed.Contains("DENMARK") || trimmed.Contains("DANISH")) return "da-DK";
         if (trimmed.Contains("ARABIC") || trimmed.Contains("SAUDI ARABIA") || trimmed.Contains("EGYPT") || trimmed.Contains("UAE")) return "ar-SA";
 
-        // 1. Check for strong English/International indicators anywhere as tags
+        // 1. Check for Turkish prefixes with various delimiters (TR/, TR|, TR-, [TR], vb.)
+        if (trimmed.StartsWith("TR/") || 
+            trimmed.StartsWith("TR|") || 
+            trimmed.StartsWith("TR-") ||
+            trimmed.StartsWith("TR ") ||
+            trimmed.StartsWith("TR:") ||
+            trimmed.Contains("[TR]") ||
+            trimmed.Contains("(TR)") ||
+            trimmed.Contains("|TR|"))
+        {
+            return "tr-TR";
+        }
+
+        // 2. Check for strong English/International indicators anywhere as tags
         if (trimmed.Contains("MULTI") || 
             trimmed.Contains("ENG") ||
             trimmed.Contains("EN-US") ||
@@ -196,19 +212,6 @@ public static partial class SeriesInfoParser
             trimmed.StartsWith("AU:"))
         {
             return "en-US";
-        }
-
-        // 2. Check for Turkish prefixes with various delimiters (TR/, TR|, TR-, [TR], vb.)
-        if (trimmed.StartsWith("TR/") || 
-            trimmed.StartsWith("TR|") || 
-            trimmed.StartsWith("TR-") ||
-            trimmed.StartsWith("TR ") ||
-            trimmed.StartsWith("TR:") ||
-            trimmed.Contains("[TR]") ||
-            trimmed.Contains("(TR)") ||
-            trimmed.Contains("|TR|"))
-        {
-            return "tr-TR";
         }
 
         // 3. Check for other common country prefixes (Tolerant matching)
@@ -413,8 +416,34 @@ public static partial class SeriesInfoParser
             }
         }
 
-        // Check for larger patterns like "A B A B"
-        if (uniqueWords.Count % 2 == 0)
+        // Fix non-symmetric repeats (e.g. "Bad Breaking Bad" -> "Breaking Bad")
+        if (uniqueWords.Count >= 3)
+        {
+            for (int size = 1; size <= uniqueWords.Count / 2; size++)
+            {
+                for (int start = 0; start <= uniqueWords.Count - (size * 2); start++)
+                {
+                    bool isMatch = true;
+                    for (int i = 0; i < size; i++)
+                    {
+                        if (!string.Equals(uniqueWords[start + i], uniqueWords[start + size + i], StringComparison.OrdinalIgnoreCase))
+                        {
+                            isMatch = false;
+                            break;
+                        }
+                    }
+
+                    if (isMatch)
+                    {
+                        uniqueWords.RemoveRange(start + size, size);
+                        // Reset search after removal
+                        size = 0; 
+                        break; 
+                    }
+                }
+            }
+        }
+        else if (uniqueWords.Count % 2 == 0) // Legacy check for exact halves just in case
         {
             int half = uniqueWords.Count / 2;
             bool isRepeat = true;
@@ -454,13 +483,14 @@ public static partial class SeriesInfoParser
         if (text.Contains('|') || text.Contains('>') || text.Contains('»'))
         {
             bool changed;
+            int maxIterations = 10;
             do
             {
                 changed = false;
                 var before = text;
                 text = PipeTagRegex().Replace(text, " ").Trim();
                 if (text != before) changed = true;
-            } while (changed && (text.Contains('|') || text.Contains('>') || text.Contains('»')));
+            } while (changed && maxIterations-- > 0 && (text.Contains('|') || text.Contains('>') || text.Contains('»')));
         }
 
         return text;
@@ -504,7 +534,7 @@ public static partial class SeriesInfoParser
     [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)\b[Ss](?<season>\d{1,2})\s*[-._ ]*\s*[Ee](?<episode>\d{1,3})(?:\s*[-._ ]*\s*\d{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m)?\b", RegexOptions.IgnoreCase)]
     private static partial Regex SxeRegex();
 
-    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)\b(?<season>\d{1,2})\s*[Xx]\s*(?<episode>\d{1,3})(?:\s*[-._ ]*\s*\d{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m)?\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)\b(?<season>\d{1,2})[Xx](?<episode>\d{1,3})(?:\s*[-._ ]*\s*\d{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m)?\b", RegexOptions.IgnoreCase)]
     private static partial Regex XRegex();
 
     [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)\b[Ss](?<season>\d{1,2})\s*-\s*[Ee](?<episode>\d{1,3})(?:\s*[-._ ]*\s*\d{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m)?\b", RegexOptions.IgnoreCase)]
@@ -537,7 +567,7 @@ public static partial class SeriesInfoParser
     [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)\b(?:[Ss]eason|[Ss]ezon|[Tt]emporada|[Ss]aison|[Ss]taffel|[Ss])\s*(?<season>\d{1,2})\b", RegexOptions.IgnoreCase)]
     private static partial Regex SeasonOnlyRegex();
 
-    [GeneratedRegex(@"\b(?:[Ss]\d{1,2}\s*[Ee]\d{1,3}|\d{1,2}\s*[Xx]\s*\d{1,3}|\d{1,2}\.?\s*[Ss]ezon.*?[\d]{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m|[Ss]ezon\s*\d{1,2}\s*[Bb](?:o|ö)l(?:u|ü)m\s*\d{1,3}|[Ss]eason\s*\d{1,2}\s*[Ee]pisode\s*\d{1,3}|[Tt]emporada\s*\d{1,2}\s*(?:[Ee]pisodio|epis(?:o|ó)dio|cap(?:i|í)tulo)\s*\d{1,3}|[Ss]aison\s*\d{1,2}\s*(?:[Ee]pisode|épisode)\s*\d{1,3}|[Ss]taffel\s*\d{1,2}\s*[Ff]olge\s*\d{1,3}|[Ee]p(?:isode)?\s*\d{1,3}|\d{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m|[Bb](?:o|ö)l(?:u|ü)m\s*\d{1,3}|[Ff]olge\s*\d{1,3}|[Cc]ap(?:i|í)tulo\s*\d{1,3}|[Ss]eason\s*\d{1,2}|[Ss]ezon\s*\d{1,2}|[Tt]emporada\s*\d{1,2}|[Ss]aison\s*\d{1,2}|[Ss]taffel\s*\d{1,2}|[Ss]\s*\d{1,2}|[Ss]\d{1,2})\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\b(?:[Ss]\d{1,2}\s*[Ee]\d{1,3}|\d{1,2}[Xx]\d{1,3}|\d{1,2}\.?\s*[Ss]ezon.*?[\d]{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m|[Ss]ezon\s*\d{1,2}\s*[Bb](?:o|ö)l(?:u|ü)m\s*\d{1,3}|[Ss]eason\s*\d{1,2}\s*[Ee]pisode\s*\d{1,3}|[Tt]emporada\s*\d{1,2}\s*(?:[Ee]pisodio|epis(?:o|ó)dio|cap(?:i|í)tulo)\s*\d{1,3}|[Ss]aison\s*\d{1,2}\s*(?:[Ee]pisode|épisode)\s*\d{1,3}|[Ss]taffel\s*\d{1,2}\s*[Ff]olge\s*\d{1,3}|[Ee]p(?:isode)?\s*\d{1,3}|\d{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m|[Bb](?:o|ö)l(?:u|ü)m\s*\d{1,3}|[Ff]olge\s*\d{1,3}|[Cc]ap(?:i|í)tulo\s*\d{1,3}|[Ss]eason\s*\d{1,2}|[Ss]ezon\s*\d{1,2}|[Tt]emporada\s*\d{1,2}|[Ss]aison\s*\d{1,2}|[Ss]taffel\s*\d{1,2}|[Ss]\s*\d{1,2}|[Ss]\d{1,2})\b", RegexOptions.IgnoreCase)]
     private static partial Regex EpisodeTokenRegex();
 
     [GeneratedRegex(@"\b(?:4k|2160p|1080p|720p|480p|x264|x265|h264|h265|hevc|webrip|webdl|web-dl|bluray|brrip|bdrip|hdrip|camrip|hdcam|telesync|ts|remux|vip|vod|fhd|uhd|hd|sd|8k)\b", RegexOptions.IgnoreCase)]
@@ -564,4 +594,10 @@ public static partial class SeriesInfoParser
 
     [GeneratedRegex(@"\s+")]
     private static partial Regex MultiSpaceRegex();
+
+    [GeneratedRegex(@"\b(beIN|be\*IN|be-IN|SPOR|EUROSPORT|TIVIBU|EXXENSPOR)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex LiveSportsRegex();
+
+    [GeneratedRegex(@"\b(CANLI|LIVE)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex LiveKeywordRegex();
 }

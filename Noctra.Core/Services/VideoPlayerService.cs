@@ -188,7 +188,13 @@ public class VideoPlayerService : IVideoPlayerService
         };
         
         _mediaPlayer.PositionChanged += (s, e) => 
-            _dispatcherService.BeginInvoke(() => PositionChanged?.Invoke(this, e.Position * Duration));
+        {
+            var currentDuration = Duration;
+            if (currentDuration > 0)
+            {
+                _dispatcherService.BeginInvoke(() => PositionChanged?.Invoke(this, e.Position * currentDuration));
+            }
+        };
         
         _mediaPlayer.EncounteredError += (s, e) => 
         {
@@ -815,13 +821,24 @@ public class VideoPlayerService : IVideoPlayerService
     {
         if (_disposed) return;
         
+        if (_settingsService != null)
+        {
+            _settingsService.SettingsChanged -= OnSettingsChanged;
+        }
+
         _playCts?.Cancel();
         _playCts?.Dispose();
         _playCts = null;
+        
+        _volumeSaveCts?.Cancel();
+        _volumeSaveCts?.Dispose();
+        _volumeSaveCts = null;
+
         StopQualityMonitoring();
         _mediaPlayer?.Stop();
         _mediaPlayer?.Dispose();
         _libVLC?.Dispose();
+        _initLock.Dispose();
         
         _disposed = true;
         GC.SuppressFinalize(this);

@@ -19,8 +19,8 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
         ["Spor"] = ["sport", "futbol", "basketbol", "bein", "espn", "eurosport", "s sport", "tivibu spor", "nba", "premier league"],
         ["Haber"] = ["news", "haber", "cnn", "bbc news", "nbc", "fox news", "ntv", "haberturk", "tgrt haber", "a haber"],
         ["Çocuk"] = ["kids", "çocuk", "cartoon", "disney", "nickelodeon", "baby", "minika", "trt çocuk"],
-        ["Film"] = ["movie", "film", "sinema", "cinema", "box office"],
-        ["Dizi"] = ["series", "dizi", "tv show", "kanal d", "show tv", "star tv", "atv"],
+        ["Filmler"] = ["movie", "film", "sinema", "cinema", "box office"],
+        ["Diziler"] = ["series", "dizi", "tv show", "kanal d", "show tv", "star tv", "atv"],
         ["Belgesel"] = ["documentary", "belgesel", "discovery", "nat geo", "national geographic", "animal planet", "history"],
         ["Müzik"] = ["music", "müzik", "mtv", "vevo", "kral", "power"],
         ["Eğlence"] = ["entertainment", "eğlence", "show", "komedi", "comedy"]
@@ -30,63 +30,38 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
     private static readonly Dictionary<string, string> GroupMapping = new(StringComparer.OrdinalIgnoreCase)
     {
         // Turkish variations
-        ["SPOR"] = "Spor",
+        ["Spor"] = "Spor",
         ["Sports"] = "Spor",
-        ["SPORTS"] = "Spor",
         ["Sport"] = "Spor",
-        ["sport"] = "Spor",
 
-        ["HABER"] = "Haber",
+        ["Haber"] = "Haber",
         ["News"] = "Haber",
-        ["NEWS"] = "Haber",
-        ["news"] = "Haber",
 
-        ["ÇOCUK"] = "Çocuk",
+        ["Çocuk"] = "Çocuk",
         ["Kids"] = "Çocuk",
-        ["KIDS"] = "Çocuk",
         ["Children"] = "Çocuk",
-        ["kids"] = "Çocuk",
 
         ["Movies"] = "Filmler",
-        ["MOVIES"] = "Filmler",
-        ["movies"] = "Filmler",
         ["Film"] = "Filmler",
-        ["FILM"] = "Filmler",
-        ["film"] = "Filmler",
-        ["FİLM"] = "Filmler",
         ["Sinema"] = "Filmler",
-        ["SINEMA"] = "Filmler",
-        ["sinema"] = "Filmler",
         ["Films"] = "Filmler",
 
         ["Series"] = "Diziler",
-        ["SERIES"] = "Diziler",
-        ["series"] = "Diziler",
-        ["TV SHOWS"] = "Diziler",
         ["Tv Shows"] = "Diziler",
         ["Dizi"] = "Diziler",
-        ["DİZİ"] = "Diziler",
-        ["dizi"] = "Diziler",
 
         ["Documentary"] = "Belgesel",
-        ["DOCUMENTARY"] = "Belgesel",
-        ["BELGESEL"] = "Belgesel",
-        ["documentary"] = "Belgesel",
+        ["Belgesel"] = "Belgesel",
 
         ["Music"] = "Müzik",
-        ["MUSIC"] = "Müzik",
-        ["MÜZİK"] = "Müzik",
-        ["music"] = "Müzik",
+        ["Müzik"] = "Müzik",
 
         ["Entertainment"] = "Eğlence",
-        ["ENTERTAINMENT"] = "Eğlence",
-        ["EĞLENCE"] = "Eğlence",
-        ["entertainment"] = "Eğlence",
+        ["Eğlence"] = "Eğlence",
 
         ["General"] = "Genel",
-        ["GENERAL"] = "Genel",
+        ["Genel"] = "Genel",
         ["Uncategorized"] = "Genel",
-        ["UNCATEGORIZED"] = "Genel",
         ["undefined"] = "Genel",
         [""] = "Genel"
     };
@@ -172,7 +147,7 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
                 continue; // Already categorized
             }
 
-            var nameLower = channel.Name.ToLowerInvariant();
+            var nameLower = channel.Name?.ToLowerInvariant() ?? string.Empty;
 
             var matched = false;
             foreach (var (category, keywords) in CategoryRules)
@@ -224,7 +199,7 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
     /// <summary>
     /// Eksik TvgId'leri kanal adından türetir
     /// </summary>
-    private static void EnrichMetadata(List<Channel> channels)
+    public void EnrichMetadata(List<Channel> channels)
     {
         foreach (var channel in channels)
         {
@@ -255,7 +230,15 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
         if (channel.Type == ChannelType.Series)
         {
             var parsed = SeriesInfoParser.Parse(channel.Name);
-            key += $" s{parsed.Season:00}e{parsed.Episode:00}";
+            if (parsed.Season > 0 || parsed.Episode > 0)
+            {
+                key += $" s{parsed.Season:00}e{parsed.Episode:00}";
+            }
+            else
+            {
+                // Fallback for unparseable series channels: ensure uniqueness so we don't lose episodes
+                key += $"|fallback|{channel.StreamUrl}";
+            }
         }
         return key;
     }
@@ -278,11 +261,20 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
 
     private static int GetQualityIndex(string name)
     {
-        var lower = name.ToLowerInvariant();
-        for (int i = 0; i < QualityOrder.Length; i++)
+        var matches = QualityTagRegex().Matches(name);
+        if (matches.Count > 0)
         {
-            if (lower.Contains(QualityOrder[i]))
-                return i;
+            int bestIndex = QualityOrder.Length;
+            foreach (System.Text.RegularExpressions.Match match in matches)
+            {
+                var tag = match.Value.ToLowerInvariant();
+                int idx = Array.IndexOf(QualityOrder, tag);
+                if (idx != -1 && idx < bestIndex)
+                {
+                    bestIndex = idx;
+                }
+            }
+            return bestIndex;
         }
         return QualityOrder.Length; // No quality tag = lowest priority
     }
@@ -290,8 +282,19 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
     /// <summary>
     /// Kanal adından numara çıkarır (TRT 1 → 1, CNN → null)
     /// </summary>
-    private static int? GetChannelNumber(string name)
+    private static int? GetChannelNumber(string? name)
     {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return null;
+        }
+
+        // Avoid extracting numbers from URLs or IPs (e.g. http://192.168.1.1)
+        if (name.Contains("://"))
+        {
+            return null;
+        }
+
         var match = ChannelNumberRegex().Match(name);
         if (!match.Success)
         {
@@ -301,12 +304,18 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
         var raw = match.Groups[1].Value;
         if (int.TryParse(raw, out var parsed))
         {
-            return parsed;
-        }
-
-        if (long.TryParse(raw, out var parsedLong))
-        {
-            return parsedLong > int.MaxValue ? int.MaxValue : (int)parsedLong;
+            // Avoid large numbers that are likely years (e.g. 2024) or garbage, cap at 9999
+            if (parsed > 0 && parsed <= 9999)
+            {
+                // Optional: check if the number is part of a year (e.g. 1990 - 2030)
+                // If it is a year and not at the end of the string, it's likely not a channel number.
+                if (parsed >= 1900 && parsed <= 2030 && !name.EndsWith(raw))
+                {
+                    return null;
+                }
+                
+                return parsed;
+            }
         }
 
         return null;
@@ -326,6 +335,9 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
     }
 
     // Source-generated regexes for performance
-    [GeneratedRegex(@"\b(\d+)\b")]
+    [GeneratedRegex(@"(?<!\S)(\d{1,4})(?!\S)")]
     private static partial Regex ChannelNumberRegex();
+
+    [GeneratedRegex(@"\b(4k|uhd|2160p|1080p|fhd|hd|720p|sd|480p)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex QualityTagRegex();
 }

@@ -32,6 +32,11 @@ public interface IPlaylistOrganizerService
     /// Akıllı sıralama: Grup → Numara → Alfabe
     /// </summary>
     List<Channel> SmartSort(List<Channel> channels);
+
+    /// <summary>
+    /// Eksik TvgId'leri kanal adından türetir
+    /// </summary>
+    void EnrichMetadata(List<Channel> channels);
 }
 
 
