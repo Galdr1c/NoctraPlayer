@@ -1286,15 +1286,19 @@ public partial class MainViewModel : ObservableObject
         }
 
         var episodeContinue = _allSeriesCache
-            .SelectMany(s => s.Seasons.SelectMany(season => season.Episodes))
-            .Where(e => e.LastWatched.HasValue
-                     && !e.IsCompleted
-                     && e.WatchedPosition.HasValue
-                     && e.WatchedPosition.Value.TotalSeconds > 120
-                     && e.Duration.HasValue
-                     && e.Duration.Value.TotalSeconds > 0
-                     && (e.WatchedPosition.Value.TotalSeconds / e.Duration.Value.TotalSeconds) < 0.92)
-            .Select(e => BuildSeriesEpisodeChannel(e, episodeToSeriesMap.GetValueOrDefault(e)));
+            .Select(s => s.Seasons
+                .SelectMany(season => season.Episodes)
+                .Where(e => e.LastWatched.HasValue
+                         && !e.IsCompleted
+                         && e.WatchedPosition.HasValue
+                         && e.WatchedPosition.Value.TotalSeconds > 120
+                         && e.Duration.HasValue
+                         && e.Duration.Value.TotalSeconds > 0
+                         && (e.WatchedPosition.Value.TotalSeconds / e.Duration.Value.TotalSeconds) < 0.92)
+                .OrderByDescending(e => e.LastWatched)
+                .FirstOrDefault())
+            .Where(e => e != null)
+            .Select(e => BuildSeriesEpisodeChannel(e!, episodeToSeriesMap.GetValueOrDefault(e!)));
 
         var combinedContinue = vodContinue.Concat(episodeContinue)
             .GroupBy(c => c.Id > 0 ? $"id:{c.Id}" : $"url:{c.StreamUrl}")
