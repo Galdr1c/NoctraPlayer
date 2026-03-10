@@ -1772,9 +1772,19 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         IsCreditsZone = true;
         IsNextEpisodePromptVisible = true;
 
-        if (_settingsService.Settings.AutoPlayNext)
+        if (_settingsService.Settings.AutoPlayNext && !_isUserSeeking)
         {
-            _ = PlayNextEpisodeCommand.ExecuteAsync(null);
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(3000);
+                if (IsNextEpisodePromptVisible && !_isUserSeeking)
+                {
+                    _dispatcherService.Invoke(() =>
+                    {
+                        _ = PlayNextEpisodeCommand.ExecuteAsync(null);
+                    });
+                }
+            });
         }
     }
 
@@ -1823,9 +1833,19 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         IsCreditsZone = true;
         IsNextEpisodePromptVisible = true;
 
-        if (_settingsService.Settings.AutoPlayNext)
+        if (_settingsService.Settings.AutoPlayNext && !_isUserSeeking)
         {
-            _ = PlayNextEpisodeCommand.ExecuteAsync(null);
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(3000);
+                if (IsNextEpisodePromptVisible && !_isUserSeeking)
+                {
+                    _dispatcherService.Invoke(() =>
+                    {
+                        _ = PlayNextEpisodeCommand.ExecuteAsync(null);
+                    });
+                }
+            });
         }
     }
 
