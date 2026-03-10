@@ -46,6 +46,11 @@ public class AppSettings
     /// Tercih edilen altyazı dili
     /// </summary>
     public string SubtitleLanguage { get; set; } = "tr";
+
+    /// <summary>
+    /// Tercih edilen ses dili (TR/EN/DE...)
+    /// </summary>
+    public string PreferredAudioLanguage { get; set; } = "tr";
     
     /// <summary>
     /// Varsayılan ses seviyesi (0-100)

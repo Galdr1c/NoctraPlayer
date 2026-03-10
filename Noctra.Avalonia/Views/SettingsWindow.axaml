@@ -273,7 +273,7 @@
                         
                             <Border Classes="SettingsCard">
                                 <StackPanel>
-                                    <TextBlock Text="Altyazı Ayarları" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
+                                    <TextBlock Text="Ses ve Altyazı Ayarları" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
 
                                     <Grid Margin="0,0,0,18">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -284,13 +284,30 @@
                                         <ToggleSwitch Grid.Column="1" IsChecked="{Binding SubtitleEnabled}"/>
                                     </Grid>
 
-                                    <TextBlock Text="Tercih edilen dil" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,12"/>
-                                    <ComboBox Theme="{StaticResource ModernComboBox}" SelectedValue="{Binding SubtitleLanguage}" SelectedValueBinding="{Binding Content}" Width="250" HorizontalAlignment="Left">
-                                        <ComboBoxItem Content="tr">Türkçe</ComboBoxItem>
-                                        <ComboBoxItem Content="en">İngilizce</ComboBoxItem>
-                                        <ComboBoxItem Content="de">Almanca</ComboBoxItem>
-                                        <ComboBoxItem Content="fr">Fransızca</ComboBoxItem>
-                                    </ComboBox>
+                                    <Grid Margin="0,0,0,18">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                            <TextBlock Text="Tercih edilen altyazı dili" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,12"/>
+                                            <ComboBox Theme="{StaticResource ModernComboBox}" SelectedValue="{Binding SubtitleLanguage}" SelectedValueBinding="{Binding Content}" HorizontalAlignment="Stretch">
+                                                <ComboBoxItem Content="tr">Türkçe</ComboBoxItem>
+                                                <ComboBoxItem Content="en">İngilizce</ComboBoxItem>
+                                                <ComboBoxItem Content="de">Almanca</ComboBoxItem>
+                                                <ComboBoxItem Content="fr">Fransızca</ComboBoxItem>
+                                            </ComboBox>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                            <TextBlock Text="Tercih edilen ses dili" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,12"/>
+                                            <ComboBox Theme="{StaticResource ModernComboBox}" SelectedValue="{Binding PreferredAudioLanguage}" SelectedValueBinding="{Binding Content}" HorizontalAlignment="Stretch">
+                                                <ComboBoxItem Content="tr">Türkçe</ComboBoxItem>
+                                                <ComboBoxItem Content="en">İngilizce</ComboBoxItem>
+                                                <ComboBoxItem Content="de">Almanca</ComboBoxItem>
+                                                <ComboBoxItem Content="fr">Fransızca</ComboBoxItem>
+                                            </ComboBox>
+                                        </StackPanel>
+                                    </Grid>
                                 </StackPanel>
                             </Border>
 
