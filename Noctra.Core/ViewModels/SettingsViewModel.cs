@@ -431,7 +431,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             if (updateStatusMessage)
             {
-                StatusMessage = "[Istatistik] Kanal listesi verileri okunuyor...";
+                StatusMessage = "[İstatistik] Kanal listesi verileri okunuyor...";
             }
 
             using var db = await _contextFactory.CreateDbContextAsync();
@@ -443,27 +443,28 @@ public partial class SettingsViewModel : ObservableObject
                     .Where(p => p.Id == _mainViewModel.SelectedPlaylist.Id)
                     .Select(p => p.LastUpdated)
                     .FirstOrDefaultAsync();
-                return;
-            }
-
-            var profileId = _mainViewModel.CurrentProfile?.Id;
-            if (profileId.HasValue)
-            {
-                ChannelListLastUpdated = await db.Playlists
-                    .AsNoTracking()
-                    .Where(p => p.IsActive && p.ProfileId == profileId.Value)
-                    .OrderByDescending(p => p.LastUpdated)
-                    .Select(p => p.LastUpdated)
-                    .FirstOrDefaultAsync();
             }
             else
             {
-                ChannelListLastUpdated = null;
+                var profileId = _mainViewModel.CurrentProfile?.Id;
+                if (profileId.HasValue)
+                {
+                    ChannelListLastUpdated = await db.Playlists
+                        .AsNoTracking()
+                        .Where(p => p.IsActive && p.ProfileId == profileId.Value)
+                        .OrderByDescending(p => p.LastUpdated)
+                        .Select(p => p.LastUpdated)
+                        .FirstOrDefaultAsync();
+                }
+                else
+                {
+                    ChannelListLastUpdated = null;
+                }
             }
 
             if (updateStatusMessage)
             {
-                StatusMessage = "[Istatistik] Kanal listesi istatistikleri guncellendi";
+                StatusMessage = "[İstatistik] Kanal listesi istatistikleri güncellendi";
             }
         }
         catch
@@ -471,7 +472,7 @@ public partial class SettingsViewModel : ObservableObject
             ChannelListLastUpdated = null;
             if (updateStatusMessage)
             {
-                StatusMessage = "[Istatistik] Kanal listesi istatistikleri okunamadi";
+                StatusMessage = "[İstatistik] Kanal listesi istatistikleri okunamadı";
             }
         }
     }
@@ -492,7 +493,7 @@ public partial class SettingsViewModel : ObservableObject
             SetProgressStatus("Kanal", 12, "Kanal listesi yenileniyor...");
             await _mainViewModel.RefreshSelectedPlaylistAsync();
 
-            SetProgressStatus("Kanal", 60, "Kanal listesi verileri guncelleniyor...");
+            SetProgressStatus("Kanal", 60, "Kanal listesi verileri güncelleniyor...");
             _mainViewModel.GlobalLoadingMessage = "Kanal listesi verileri güncelleniyor...";
             await ScanChannelListStatsCoreAsync(updateStatusMessage: false);
 
@@ -516,14 +517,14 @@ public partial class SettingsViewModel : ObservableObject
                 }
                 else
                 {
-                    SetProgressStatus("Kanal", 100, "Kanal listesi yenileme tamamlandi");
+                    SetProgressStatus("Kanal", 100, "Kanal listesi yenileme tamamlandı");
                 }
             }
         }
         catch (Exception ex)
         {
             ChannelListLastError = UserFriendlyErrorMessage.FromException(ex);
-            SetProgressStatus("Kanal", RefreshProgressPercent, UserFriendlyErrorMessage.WithPrefix("Kanal listesi yenileme hatasi", ex));
+            SetProgressStatus("Kanal", RefreshProgressPercent, UserFriendlyErrorMessage.WithPrefix("Kanal listesi yenileme hatası", ex));
         }
         finally
         {
@@ -536,16 +537,16 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task RefreshEpgNowAsync()
     {
-        if (!TryBeginRefreshOperation("EPG yenileme baslatiliyor"))
+        if (!TryBeginRefreshOperation("EPG yenileme başlatılıyor"))
         {
             return;
         }
 
-        SetProgressStatus("EPG", 8, "EPG yenileme arka planda baslatildi...");
+        SetProgressStatus("EPG", 8, "EPG yenileme arka planda başlatıldı...");
         var started = _mainViewModel.ForceRefreshEpgInBackground();
         if (!started)
         {
-            SetProgressStatus("EPG", 8, "Baska bir yenileme islemi zaten devam ediyor...");
+            SetProgressStatus("EPG", 8, "Başka bir yenileme işlemi zaten devam ediyor...");
             EndRefreshOperation();
             return;
         }
@@ -608,7 +609,7 @@ public partial class SettingsViewModel : ObservableObject
                         SetProgressStatus(
                             "EPG",
                             RefreshProgressPercent,
-                            $"EPG yenileme hatasi: {EpgLastError}");
+                            $"EPG yenileme hatası: {EpgLastError}");
                         return;
                     }
                 }
@@ -618,14 +619,14 @@ public partial class SettingsViewModel : ObservableObject
                 }
                 catch (Exception ex)
                 {
-                    SetProgressStatus("EPG", RefreshProgressPercent, UserFriendlyErrorMessage.WithPrefix("EPG izleme hatasi", ex));
+                    SetProgressStatus("EPG", RefreshProgressPercent, UserFriendlyErrorMessage.WithPrefix("EPG izleme hatası", ex));
                     return;
                 }
             }
 
             if (DateTime.UtcNow >= timeoutAt)
             {
-                SetProgressStatus("EPG", RefreshProgressPercent, "EPG yenileme zaman asimina ugradi (10 dk)");
+                SetProgressStatus("EPG", RefreshProgressPercent, "EPG yenileme zaman aşımına uğradı (10 dk)");
             }
         }
         finally
@@ -638,11 +639,12 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (Interlocked.Exchange(ref _isRefreshOperationRunning, 1) == 1)
         {
-            StatusMessage = $"[Yenileme] Baska bir islem devam ediyor. Once mevcut yenilemenin bitmesini bekleyin.";
+            StatusMessage = $"[Yenileme] Başka bir işlem devam ediyor. Önce mevcut yenilemenin bitmesini bekleyin.";
             return false;
         }
 
         RefreshProgressPercent = 0;
+        ChannelListLastError = null;
         StatusMessage = $"[Yenileme] {operationLabel}";
         return true;
     }

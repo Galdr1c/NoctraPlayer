@@ -1497,19 +1497,15 @@ public partial class MainViewModel : ObservableObject
             // 500ms bekle (Aynı anda biten diğer kategorilerin de veritabanına yazılmasına izin ver)
             await Task.Delay(500);
             
-            _dispatcherService.BeginInvoke(async () =>
-            {
-                try
-                {
-                    await LoadChannelsAsync(playlistId);
-                }
-                finally
-                {
-                    Interlocked.Exchange(ref _isThrottledLoadPending, 0);
-                }
-            });
+            // Veri yükleme işlemini arka planda yap, LoadChannelsAsync kendi içinde 
+            // DB awaitleri sayesinde UI thread'i zaten serbest bırakır.
+            await LoadChannelsAsync(playlistId);
         }
         catch
+        {
+            // Hata durumunda loglanabilir
+        }
+        finally
         {
             Interlocked.Exchange(ref _isThrottledLoadPending, 0);
         }
@@ -1612,14 +1608,17 @@ public partial class MainViewModel : ObservableObject
             _currentPage++;
             _hasMoreChannels = page.Count == IncrementalPageSize;
 
-            foreach (var item in page)
+            _dispatcherService.Invoke(() =>
             {
-                FilteredChannels.Add(item);
-                if (!ReferenceEquals(Channels, FilteredChannels))
+                foreach (var item in page)
                 {
-                    Channels.Add(item);
+                    FilteredChannels.Add(item);
+                    if (!ReferenceEquals(Channels, FilteredChannels))
+                    {
+                        Channels.Add(item);
+                    }
                 }
-            }
+            });
 
             var isPersonalView = ActiveView == AppView.MyList || ActiveView == AppView.Favorites;
             if (!isPersonalView)
@@ -2293,16 +2292,20 @@ public partial class MainViewModel : ObservableObject
             {
                 if (profile.ProviderAccount.Type == ProfileType.StalkerPortal)
                 {
-                    // Stalker için tam yenileme başlat
-                    _ = Task.Run(() => ResumeStalkerProgressiveLoadingAsync(profile, SelectedPlaylist, isFullRefresh: true));
-                    if (!isBackground) StatusMessage = "Stalker listesi arka planda yenileniyor...";
+                    await ResumeStalkerProgressiveLoadingAsync(profile, SelectedPlaylist, isFullRefresh: true);
+                    if (!isBackground)
+                    {
+                        _playlistNoChangeUntilUtc[playlistId] = DateTime.UtcNow.AddMinutes(5);
+                    }
                     return;
                 }
                 else if (profile.ProviderAccount.Type == ProfileType.XtreamCodes)
                 {
-                    // Xtream için tam yenileme başlat
-                    _ = Task.Run(() => ResumeXtreamProgressiveLoadingAsync(profile, SelectedPlaylist, isFullRefresh: true));
-                    if (!isBackground) StatusMessage = "Xtream listesi arka planda yenileniyor...";
+                    await ResumeXtreamProgressiveLoadingAsync(profile, SelectedPlaylist, isFullRefresh: true);
+                    if (!isBackground)
+                    {
+                        _playlistNoChangeUntilUtc[playlistId] = DateTime.UtcNow.AddMinutes(5);
+                    }
                     return;
                 }
             }
@@ -2325,7 +2328,7 @@ public partial class MainViewModel : ObservableObject
                     : $"Kanal listesi yenilendi ({Math.Abs(delta)} değişiklik)";
                     
                 ChannelListLastError = null;
-                _playlistNoChangeUntilUtc.Remove(playlistId);
+                _playlistNoChangeUntilUtc[playlistId] = DateTime.UtcNow.AddMinutes(5);
             }
         }
         catch (Exception ex)
@@ -2340,7 +2343,7 @@ public partial class MainViewModel : ObservableObject
         {
             if (!isBackground)
             {
-                IsLoading = false;
+                EndLoading();
                 Interlocked.Exchange(ref _isManualRefreshRunning, 0);
             }
 

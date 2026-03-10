@@ -71,6 +71,15 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - Tamamlanmış (izlendi işareti olan) bölümler tıklandığında diyalog gösterilmeden doğrudan en baştan başlatılır.
 
 ### 🛠️ Düzeltmeler ve Optimizasyonlar
+- **Kanal Listesi ve Yenileme Mantığı (Settings/MainViewModel) İyileştirmeleri**:
+    - **Xtream/Stalker Senkronizasyonu**: Arka planda "ateşle-unut" (fire-and-forget) şeklinde çalışan yenileme mantığı `await` yapısına geçirilerek, tüm kanallar inmeden "tamamlandı" sinyali verilmesi engellendi.
+    - **Cooldown (Bekleme Süresi) Sistemi**: `_playlistNoChangeUntilUtc` mantığı aktive edilerek, başarılı yenileme sonrası 5 dakikalık koruma süresi getirildi; böylece sunucu spam'i önlendi.
+    - **UI Thread Performansı**: `ThrottledLoadChannelsAsync` içindeki veritabanı operasyonları UI thread'inden arındırıldı. Koleksiyon güncellemeleri (`FilteredChannels.Add`) güvenli bir şekilde Dispatcher üzerinden sarmalandı.
+    - **Hata ve Durum Yönetimi**: 
+        - Yeni bir yenileme başladığında eski hata kutusunun (`ChannelListLastError`) temizlenmemesi sorunu giderildi.
+        - `ScanChannelListStatsCoreAsync` metodundaki erken `return` hatası düzeltilerek istatistiklerin her zaman güncellenmesi sağlandı.
+        - Durum mesajlarındaki yazım hataları (Türkçe karakter uyumu) standartlaştırıldı.
+    - **Arayüz Etkileşimi**: Ayarlar penceresindeki "Şimdi Yenile" butonlarına `IsEnabled` binding'i eklenerek, aktif bir işlem sırasında mükerrer tıklamalar engellendi.
 - **Video Oynatıcı (VideoPlayerService) İyileştirmeleri**:
     - **Bellek Yönetimi**: Her yeni medya yüklemesinde eski `Media` nesnesinin native handle'larının sızması engellendi (Explicit Dispose eklendi).
     - **Yayın Kalitesi ve Kararlılık**: 
