@@ -3760,12 +3760,18 @@ public partial class MainViewModel : ObservableObject
 
             // 2. Delete from DB
             using var db = await _contextFactory.CreateDbContextAsync();
-            foreach (var file in filesToDelete)
+            if (filesToDelete.Count > 0)
             {
-                var record = await db.DownloadItems.FirstOrDefaultAsync(d => d.LocalFilePath == file);
-                if (record != null) db.DownloadItems.Remove(record);
+                var records = await db.DownloadItems
+                    .Where(d => d.LocalFilePath != null && filesToDelete.Contains(d.LocalFilePath))
+                    .ToListAsync();
+
+                if (records.Count > 0)
+                {
+                    db.DownloadItems.RemoveRange(records);
+                    await db.SaveChangesAsync();
+                }
             }
-            await db.SaveChangesAsync();
 
             // 3. Refresh
             await RefreshDownloadedItemsFromDatabaseAsync();
