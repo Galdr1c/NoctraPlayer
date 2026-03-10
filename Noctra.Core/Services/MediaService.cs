@@ -6,10 +6,12 @@ using Noctra.Services.Interfaces;
 
 namespace Noctra.Services;
 
+using System.Collections.Concurrent;
+
 public partial class MediaService : IMediaService
 {
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
-    private static readonly SemaphoreSlim _aggregateLock = new(1, 1);
+    private static readonly ConcurrentDictionary<int, SemaphoreSlim> _aggregateLocks = new();
 
     public event Action<int>? OnAggregationCompleted;
 
@@ -25,7 +27,8 @@ public partial class MediaService : IMediaService
 
     public async Task AggregateContentAsync(int playlistId, CancellationToken cancellationToken = default)
     {
-        await _aggregateLock.WaitAsync(cancellationToken);
+        var gate = _aggregateLocks.GetOrAdd(playlistId, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(cancellationToken);
         try
         {
             using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
@@ -100,10 +103,12 @@ public partial class MediaService : IMediaService
                 var seasonNum = parsed.Season;
                 var episodeNum = parsed.Episode;
 
-                if (seasonNum == 0 || episodeNum == 0)
+                if (seasonNum == 0) seasonNum = 1;
+
+                // If episode cannot be parsed, use channel Id to prevent collisions with actual E01
+                if (episodeNum == 0)
                 {
-                    seasonNum = Math.Max(1, seasonNum);
-                    episodeNum = Math.Max(1, episodeNum);
+                    episodeNum = 10000 + channel.Id;
                 }
 
                 var seriesKey = BuildSeriesGroupingKey(seriesName, channel.GroupTitle);
@@ -198,6 +203,8 @@ public partial class MediaService : IMediaService
                     EpisodeNumber = episodeNum,
                     StreamUrl = channel.StreamUrl,
                     CoverUrl = channel.LogoUrl,
+                    Plot = channel.Plot,
+                    Duration = channel.Duration ?? TimeSpan.Zero,
                     Season = season
                 };
                 season.Episodes.Add(episode);
@@ -239,16 +246,25 @@ public partial class MediaService : IMediaService
                     .ExecuteDeleteAsync(cancellationToken);
             }
 
-            // Cleanup empty series (ghost series)
-            var emptySeries = await context.Series
-                .Where(s => s.PlaylistId == playlistId && !s.Seasons.Any(sn => sn.Episodes.Any()))
-                .ToListAsync(cancellationToken);
+            // Cleanup empty seasons (ghost seasons)
+            var deletedSeasonsCount = await context.Seasons
+                .Where(s => s.Series.PlaylistId == playlistId && !s.Episodes.Any())
+                .ExecuteDeleteAsync(cancellationToken);
 
-            if (emptySeries.Count > 0)
+            if (deletedSeasonsCount > 0)
             {
-                System.Diagnostics.Debug.WriteLine($"[MediaService] Purging {emptySeries.Count} ghost series.");
-                context.Series.RemoveRange(emptySeries);
-                await context.SaveChangesAsync(cancellationToken);
+                System.Diagnostics.Debug.WriteLine($"[MediaService] Purging {deletedSeasonsCount} ghost seasons.");
+            }
+
+            // Cleanup empty series (ghost series) but ONLY IF they are not favorited or in user's list
+            // This prevents user data loss when a provider temporarily removes series channels
+            var deletedSeriesCount = await context.Series
+                .Where(s => s.PlaylistId == playlistId && !s.IsFavorite && !s.IsInMyList && !s.Seasons.Any(sn => sn.Episodes.Any()))
+                .ExecuteDeleteAsync(cancellationToken);
+
+            if (deletedSeriesCount > 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MediaService] Purging {deletedSeriesCount} ghost series.");
             }
         }
         finally
@@ -258,7 +274,10 @@ public partial class MediaService : IMediaService
         }
         finally
         {
-            _aggregateLock.Release();
+            gate.Release();
+            // Same rationale as in PlaylistService:
+            // Disposing it here indiscriminately causes ObjectDisposedExceptions for waiting threads.
+            // Leaving the Semaphore in the dictionary provides bounded growth and avoids crashes.
         }
     }
 
@@ -360,6 +379,9 @@ public partial class MediaService : IMediaService
         }
 
         var mergedByKey = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
+        var duplicatesToRemove = new List<Series>();
+        var needsSave = false;
+
         foreach (var series in allSeries.OrderBy(s => s.Id))
         {
             var key = BuildSeriesGroupingKey(series.Name, series.GroupTitle);
@@ -370,6 +392,32 @@ public partial class MediaService : IMediaService
             }
 
             MergeSeriesInMemory(target, series);
+            duplicatesToRemove.Add(series);
+            needsSave = true;
+        }
+
+        if (needsSave)
+        {
+            // Execute background deduplication write without blocking the read path
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var writeContext = await _contextFactory.CreateDbContextAsync();
+                    var idsToRemove = duplicatesToRemove.Select(x => x.Id).ToList();
+
+                    if (idsToRemove.Count > 0)
+                    {
+                        await writeContext.Series
+                            .Where(s => idsToRemove.Contains(s.Id))
+                            .ExecuteDeleteAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[MediaService] Background deduplication save failed: {ex.Message}");
+                }
+            });
         }
 
         return mergedByKey.Values
@@ -401,8 +449,11 @@ public partial class MediaService : IMediaService
         }
 
         using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        // Optimistically filter by name in DB first to avoid loading thousands of Series to RAM
+        var rawName = series.Name?.Trim() ?? string.Empty;
         var candidates = await context.Series
-            .Where(s => s.PlaylistId == series.PlaylistId)
+            .Where(s => s.PlaylistId == series.PlaylistId && s.Name != null && s.Name.Contains(rawName))
             .ToListAsync(cancellationToken);
 
         var toUpdate = candidates
@@ -464,8 +515,11 @@ public partial class MediaService : IMediaService
         {
             target.Genre = source.Genre;
         }
-        if (!string.IsNullOrEmpty(source.GroupTitle))
+
+        if (string.IsNullOrWhiteSpace(target.GroupTitle) && !string.IsNullOrWhiteSpace(source.GroupTitle))
+        {
             target.GroupTitle = source.GroupTitle;
+        }
 
         foreach (var sourceSeason in source.Seasons)
         {
