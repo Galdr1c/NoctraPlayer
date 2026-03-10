@@ -118,16 +118,16 @@ namespace Noctra.Tests
 
         public Task TrackWatchAsync(int profileId, int? channelId, int? episodeId,
             TimeSpan position, bool completed = false, TimeSpan? duration = null,
-            TimeSpan? incrementDelta = null)
+            TimeSpan? incrementDelta = null, CancellationToken ct = default)
         {
             Calls.Add(new Call(profileId, channelId, episodeId, position, completed, duration));
             return Task.CompletedTask;
         }
 
-        public Task<List<WatchHistory>> GetHistoryAsync(int profileId) => Task.FromResult(new List<WatchHistory>());
-        public Task ClearHistoryAsync(int profileId) => Task.CompletedTask;
-        public Task<WatchHistory?> GetLatestForMediaAsync(int profileId, int? channelId, int? episodeId) => Task.FromResult<WatchHistory?>(null);
-        public Task CleanupOlderThanDaysAsync(int profileId, int days) => Task.CompletedTask;
+        public Task<List<WatchHistory>> GetHistoryAsync(int profileId, CancellationToken ct = default) => Task.FromResult(new List<WatchHistory>());
+        public Task ClearHistoryAsync(int profileId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task<WatchHistory?> GetLatestForMediaAsync(int profileId, int? channelId, int? episodeId, CancellationToken ct = default) => Task.FromResult<WatchHistory?>(null);
+        public Task CleanupOlderThanDaysAsync(int profileId, int days, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     // ─── Kritik Senaryo Test Bağlamı ─────────────────────────────────────────────

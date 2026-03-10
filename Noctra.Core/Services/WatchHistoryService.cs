@@ -12,103 +12,116 @@ namespace Noctra.Services;
 public class WatchHistoryService : IWatchHistoryService
 {
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
+    private static readonly SemaphoreSlim _syncLock = new(1, 1);
 
     public WatchHistoryService(IDbContextFactory<AppDbContext> contextFactory)
     {
         _contextFactory = contextFactory;
     }
 
-    public async Task TrackWatchAsync(int profileId, int? channelId, int? episodeId, TimeSpan position, bool completed = false, TimeSpan? duration = null, TimeSpan? incrementDelta = null)
+    public async Task TrackWatchAsync(int profileId, int? channelId, int? episodeId, TimeSpan position, bool completed = false, TimeSpan? duration = null, TimeSpan? incrementDelta = null, CancellationToken ct = default)
     {
-        if (!channelId.HasValue && !episodeId.HasValue)
+        // Guard: At least one ID must be provided, but not both simultaneously (data integrity)
+        if ((!channelId.HasValue && !episodeId.HasValue) || (channelId.HasValue && episodeId.HasValue))
         {
             return;
         }
 
         var watchedAt = DateTime.UtcNow;
 
-        using var context = await _contextFactory.CreateDbContextAsync();
+        // Ensure negative deltas (due to system clock shifts) don't corrupt duration
+        var safeIncrementDelta = incrementDelta.HasValue && incrementDelta.Value > TimeSpan.Zero 
+            ? incrementDelta.Value 
+            : TimeSpan.Zero;
 
-        var history = await context.WatchHistories
-            .FirstOrDefaultAsync(w => w.ProfileId == profileId && 
-                                     (channelId.HasValue ? w.ChannelId == channelId : w.EpisodeId == episodeId));
-
-        if (history == null)
+        // Use a lock to prevent concurrent upserts from creating duplicate records (Race Condition #1)
+        await _syncLock.WaitAsync(ct);
+        try
         {
-            history = new WatchHistory
+            using var context = await _contextFactory.CreateDbContextAsync(ct);
+
+            var history = await context.WatchHistories
+                .FirstOrDefaultAsync(w => w.ProfileId == profileId && 
+                                         (channelId.HasValue ? w.ChannelId == channelId : w.EpisodeId == episodeId), ct);
+
+            if (history == null)
             {
-                ProfileId = profileId,
-                ChannelId = channelId,
-                EpisodeId = episodeId,
-                WatchedAt = watchedAt
-            };
-            context.WatchHistories.Add(history);
-        }
-
-        var isCompletedNow = history.Completed || completed;
-        // Eğer zaten tamamlanmışsa ve bu oturumda henüz süre tespit edilememişse (fail load), 
-        // eski duruş noktasını (tüm süreyi) koru. 0'a çekme.
-        if (isCompletedNow)
-        {
-            if (duration.HasValue)
-            {
-                history.StoppedAt = duration.Value;
-            }
-            // else: history.StoppedAt'i olduğu gibi bırak (genelde eski duration'dır)
-        }
-        else
-        {
-            history.StoppedAt = position;
-        }
-
-        history.WatchedAt = watchedAt;
-        history.Completed = isCompletedNow;
-        
-        // Update total watched duration using the provided delta
-        history.WatchedDuration += incrementDelta ?? TimeSpan.Zero;
-
-        if (episodeId.HasValue)
-        {
-            var episode = await context.Episodes
-                .Include(e => e.Season)
-                .ThenInclude(s => s!.Series)
-                .FirstOrDefaultAsync(e => e.Id == episodeId.Value);
-            if (episode != null)
-            {
-                episode.LastWatched = history.WatchedAt;
-                episode.WatchedPosition = history.StoppedAt;
-                episode.IsCompleted = history.Completed;
-                if (duration.HasValue && duration.Value.TotalSeconds > 0)
+                history = new WatchHistory
                 {
-                    episode.Duration = duration.Value;
-                }
-
-                await UpsertSeriesProgressAsync(
-                    context,
-                    profileId,
-                    episode,
-                    history.StoppedAt,
-                    history.Completed,
-                    duration,
-                    watchedAt);
+                    ProfileId = profileId,
+                    ChannelId = channelId,
+                    EpisodeId = episodeId,
+                    WatchedAt = watchedAt
+                };
+                context.WatchHistories.Add(history);
             }
-        }
-        else if (channelId.HasValue)
-        {
-            var channel = await context.Channels.FindAsync(channelId.Value);
-            if (channel != null)
+
+            var isCompletedNow = history.Completed || completed;
+            
+            if (isCompletedNow)
             {
-                channel.LastWatched = history.WatchedAt;
-                channel.WatchedPosition = history.StoppedAt;
-                channel.IsCompleted = history.Completed;
-                if (duration.HasValue && duration.Value.TotalSeconds > 0)
+                if (duration.HasValue)
                 {
-                    channel.Duration = duration.Value;
+                    history.StoppedAt = duration.Value;
                 }
             }
-        }
+            else
+            {
+                history.StoppedAt = position;
+            }
 
-        await context.SaveChangesAsync();
+            history.WatchedAt = watchedAt;
+            history.Completed = isCompletedNow;
+            history.WatchedDuration += safeIncrementDelta;
+
+            if (episodeId.HasValue)
+            {
+                var episode = await context.Episodes
+                    .Include(e => e.Season)
+                    .ThenInclude(s => s.Series)
+                    .FirstOrDefaultAsync(e => e.Id == episodeId.Value, ct);
+                if (episode != null)
+                {
+                    episode.LastWatched = history.WatchedAt;
+                    episode.WatchedPosition = history.StoppedAt;
+                    episode.IsCompleted = history.Completed;
+                    if (duration.HasValue && duration.Value.TotalSeconds > 0)
+                    {
+                        episode.Duration = duration.Value;
+                    }
+
+                    await UpsertSeriesProgressAsync(
+                        context,
+                        profileId,
+                        episode,
+                        history.StoppedAt,
+                        history.Completed,
+                        duration,
+                        watchedAt,
+                        ct);
+                }
+            }
+            else if (channelId.HasValue)
+            {
+                var channel = await context.Channels.FindAsync(new object[] { channelId.Value }, ct);
+                if (channel != null)
+                {
+                    channel.LastWatched = history.WatchedAt;
+                    channel.WatchedPosition = history.StoppedAt;
+                    channel.IsCompleted = history.Completed;
+                    if (duration.HasValue && duration.Value.TotalSeconds > 0)
+                    {
+                        channel.Duration = duration.Value;
+                    }
+                }
+            }
+
+            await context.SaveChangesAsync(ct);
+        }
+        finally
+        {
+            _syncLock.Release();
+        }
     }
 
     private async Task UpsertSeriesProgressAsync(
@@ -118,13 +131,15 @@ public class WatchHistoryService : IWatchHistoryService
         TimeSpan stoppedAt,
         bool completed,
         TimeSpan? duration,
-        DateTime watchedAt)
+        DateTime watchedAt,
+        CancellationToken ct)
     {
         var series = episode.Season?.Series;
-        var seriesTitle = series?.Name;
+        var seriesTitle = series?.Name ?? episode.BaseDisplayName; 
+        
         if (string.IsNullOrWhiteSpace(seriesTitle))
         {
-            seriesTitle = episode.Name;
+            return; 
         }
 
         var seriesKey = SeriesProgressIdentity.NormalizeSeriesKey(seriesTitle);
@@ -136,15 +151,15 @@ public class WatchHistoryService : IWatchHistoryService
         var (seasonNumber, episodeNumber) = SeriesProgressIdentity.ResolveSeasonEpisode(episode);
         var tmdbId = series?.TmdbId;
 
-        // Try to find by TmdbId first (Absolute match), fallback to SeriesKey if TmdbId is null or no record found
+        // Try to find existing record. Unique index protects DB, logic here prevents double-inserts in same transaction.
         var existing = await context.SeriesEpisodeProgresses
             .FirstOrDefaultAsync(p =>
                 p.ProfileId == profileId &&
                 p.SeasonNumber == seasonNumber &&
                 p.EpisodeNumber == episodeNumber &&
-                ((tmdbId.HasValue && p.TmdbId == tmdbId.Value) || p.SeriesKey == seriesKey));
+                ((tmdbId.HasValue && p.TmdbId == tmdbId.Value) || p.SeriesKey == seriesKey), ct);
 
-        var isCompletedNow = existing?.Completed == true || completed;
+        var isCompletedNow = (existing?.Completed ?? false) || completed;
         var finalStoppedAt = isCompletedNow && duration.HasValue
             ? duration.Value
             : stoppedAt;
@@ -155,8 +170,8 @@ public class WatchHistoryService : IWatchHistoryService
             {
                 ProfileId = profileId,
                 SeriesKey = seriesKey,
-                SeriesTitle = seriesTitle ?? string.Empty,
-                TmdbId = tmdbId, // Save the TMDB ID!
+                SeriesTitle = seriesTitle,
+                TmdbId = tmdbId,
                 SeasonNumber = seasonNumber,
                 EpisodeNumber = episodeNumber,
                 LastWatchedAt = watchedAt,
@@ -167,14 +182,11 @@ public class WatchHistoryService : IWatchHistoryService
             return;
         }
 
-        existing.SeriesTitle = string.IsNullOrWhiteSpace(existing.SeriesTitle)
-            ? seriesTitle ?? string.Empty
-            : existing.SeriesTitle;
+        existing.SeriesTitle = string.IsNullOrWhiteSpace(existing.SeriesTitle) ? seriesTitle : existing.SeriesTitle;
         existing.LastWatchedAt = watchedAt;
         existing.StoppedAt = finalStoppedAt;
         existing.Completed = isCompletedNow;
 
-        // Upgrade legacy SeriesKey progress to absolute TmdbId progress if available
         if (!existing.TmdbId.HasValue && tmdbId.HasValue)
         {
             existing.TmdbId = tmdbId;
@@ -186,34 +198,44 @@ public class WatchHistoryService : IWatchHistoryService
         }
     }
 
-    public async Task<List<WatchHistory>> GetHistoryAsync(int profileId)
+    public async Task<List<WatchHistory>> GetHistoryAsync(int profileId, CancellationToken ct = default)
     {
-        using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync(ct);
         return await context.WatchHistories
+            .AsNoTracking() // Performance improvement (#10)
             .Include(h => h.Channel)
             .Include(h => h.Episode)
+                .ThenInclude(e => e!.Season)
+                .ThenInclude(s => s!.Series) // Support deep displays in HistoryView (#12)
             .Where(h => h.ProfileId == profileId)
             .OrderByDescending(h => h.WatchedAt)
-            .ToListAsync();
+            .Take(100) // Paging/Limit protection (#11)
+            .ToListAsync(ct);
     }
 
-    public async Task ClearHistoryAsync(int profileId)
+    public async Task ClearHistoryAsync(int profileId, CancellationToken ct = default)
     {
-        using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync(ct);
         await context.WatchHistories
             .Where(h => h.ProfileId == profileId)
-            .ExecuteDeleteAsync();
+            .ExecuteDeleteAsync(ct);
     }
 
-    public async Task<WatchHistory?> GetLatestForMediaAsync(int profileId, int? channelId, int? episodeId)
+    public async Task<WatchHistory?> GetLatestForMediaAsync(int profileId, int? channelId, int? episodeId, CancellationToken ct = default)
     {
-        using var context = await _contextFactory.CreateDbContextAsync();
+        if ((!channelId.HasValue && !episodeId.HasValue) || (channelId.HasValue && episodeId.HasValue))
+        {
+            return null;
+        }
+
+        using var context = await _contextFactory.CreateDbContextAsync(ct);
         return await context.WatchHistories
+            .AsNoTracking()
             .FirstOrDefaultAsync(w => w.ProfileId == profileId && 
-                                     (channelId != null ? w.ChannelId == channelId : w.EpisodeId == episodeId));
+                                     (channelId.HasValue ? w.ChannelId == channelId : w.EpisodeId == episodeId), ct);
     }
 
-    public async Task CleanupOlderThanDaysAsync(int profileId, int days)
+    public async Task CleanupOlderThanDaysAsync(int profileId, int days, CancellationToken ct = default)
     {
         if (days <= 0)
         {
@@ -222,10 +244,17 @@ public class WatchHistoryService : IWatchHistoryService
 
         var cutoff = DateTime.UtcNow.AddDays(-days);
 
-        using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync(ct);
+        
+        // Fix: Do not delete completed content (Resume point preservation) (#3)
         await context.WatchHistories
-            .Where(h => h.ProfileId == profileId && h.WatchedAt < cutoff)
-            .ExecuteDeleteAsync();
+            .Where(h => h.ProfileId == profileId && h.WatchedAt < cutoff && !h.Completed)
+            .ExecuteDeleteAsync(ct);
+
+        // Fix: Also cleanup old series progress to prevent table bloat (#4)
+        await context.SeriesEpisodeProgresses
+            .Where(p => p.ProfileId == profileId && p.LastWatchedAt < cutoff && !p.Completed)
+            .ExecuteDeleteAsync(ct);
     }
 }
 

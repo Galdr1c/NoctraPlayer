@@ -9,6 +9,19 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **İzleme Geçmişi ve Dizi İlerleme Güvenliği** (2026-03-10):
+    - **Race Condition Önleme**: `WatchHistoryService` içerisinde `SemaphoreSlim` kullanılarak eş zamanlı kayıtlarda oluşan mükerrer (duplicate) geçmiş verileri engellendi.
+    - **CancellationToken Desteği**: Tüm izleme geçmişi ve temizlik metodlarına iptal desteği eklenerek uzun süren veritabanı işlemlerinin güvenle sonlandırılması sağlandı.
+    - **Gelişmiş Veri Temizliği (Cleanup)**: Tamamlanmış (Completed) içeriklerin yanlışlıkla silinmesi engellendi; böylece izleme noktaları ve "izlendi" statüleri koruma altına alındı. Ayrıca `SeriesEpisodeProgresses` tablosu da temizlik döngüsüne dahil edilerek veritabanı şişmesi önlendi.
+    - **Akıllı Dizi İsim Fallback**: `seriesTitle` tespiti için `BaseDisplayName` kullanılarak, orphan episode durumlarında bile dizi ilerlemelerinin doğru eşleşmesi (normalization) sağlandı.
+    - **Performans Optimizasyonu**: `GetHistoryAsync` sorgusuna `AsNoTracking()` ve derin `Include` yapıları eklenerek hem bellek kullanımı azaltıldı hem de geçmiş ekranında dizi isimlerinin tam görünmesi sağlandı. Sorgu 100 kayıt ile sınırlandırıldı.
+    - **Veri Bütünlüğü Koruması**: Negatif zaman delta (saat kayması) durumlarında izleme süresinin bozulması engellendi. Aynı anda hem kanal hem bölüm ID'si set edilen hatalı kayıt girişlerine karşı koruma eklendi.
+
+### 🛠️ Düzeltmeler ve Optimizasyonlar
+- **Dizi ve İçerik Agregasyonu (MediaService)**:
+    - **KRİTİK: Veri Kaybı Çözüldü**: Yeni eklenen dizi bölümlerinin agregasyon sonunda yanlışlıkla "yetim" (orphan) sanılarak silinmesine neden olan mantık hatası giderildi. İlk kez eklenen bölümler artık güvenle kaydediliyor.
+- **Birim Testleri (Unit Testing)**:
+    - **LanguageDetectionTests**: Metot imzalarındaki değişikliklere uyum sağlamak için ülke algılama testleri güncellendi ve doğrulandı.
 - **Veritabanı ve Playlist Organizasyon İyileştirmeleri** (2026-03-10):
     - **Toplu Veri Yazma (Bulk Insert)**: `FastSqliteBulkInsertAsync` içerisine Rating, Plot, ReleaseYear ve ContentRating gibi VOD/Dizi metadataları dahil edildi. `IsFavorite` ve `IsInMyList` varsayılan değerleri dinamik hale getirilerek her yenilemede sıfırlanmaları engellendi.
     - **Kullanıcı Verisi Koruma Mantığı**: Parmak izi (fingerprint) çakışması olan kanallarda verilerin kaybolmasını engellemek için, birleştirme (merge) stratejisi uygulandı; favori ve izleme bilgileri her zaman en kapsamlı olanda tutuluyor.
