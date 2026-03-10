@@ -964,140 +964,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         // INTENTIONAL KILLSWITCH: VLC does not reliable fire PositionChanged for live streams,
         // causing this monitor to falsely detect a stall and restart exactly every 5 seconds.
         // We now rely on EndReached/EncounteredError combined with AutoRecoverPrematureEndAsync.
-        return;
-
-        var channel = CurrentChannel;
-        if (channel == null)
-        {
-            return;
-        }
-
-        var isLivePlayback =
-            IsLiveContent ||
-            channel.Type == ChannelType.Live ||
-            LooksLikeLiveStreamUrl(channel.StreamUrl);
-        if (!isLivePlayback)
-        {
-            return;
-        }
-
-        // Kullanıcı canlı yayını manuel pause etmişse auto-recover devreye girmez.
-        if (_livePauseRequiresHardRestart)
-        {
-            return;
-        }
-
-        var nowUtc = DateTime.UtcNow;
-        var currentPos = Position;
-
-        if (_lastLiveObservedPosition < 0)
-        {
-            _lastLiveObservedPosition = currentPos;
-            _lastLiveProgressAtUtc = nowUtc;
-            _lastLivePositionEventAtUtc = nowUtc;
-            return;
-        }
-
-        var hasProgress = Math.Abs(currentPos - _lastLiveObservedPosition) > 0.35;
-        if (hasProgress)
-        {
-            _lastLiveObservedPosition = currentPos;
-            _lastLiveProgressAtUtc = nowUtc;
-            _liveStallScore = 0;
-            if (nowUtc - _lastLiveAutoRecoverAttemptAtUtc > TimeSpan.FromSeconds(30))
-            {
-                _liveRecoveryAttemptsInWindow = 0;
-            }
-            return;
-        }
-
-        // Donma sinyali:
-        // 1) Position ilerlemiyor
-        // 2) PositionChanged olayı kesilmiş
-        var stalledFor = nowUtc - _lastLiveProgressAtUtc;
-        var noEventFor = nowUtc - _lastLivePositionEventAtUtc;
-        var isStalled =
-            noEventFor >= TimeSpan.FromSeconds(5) ||
-            (stalledFor >= TimeSpan.FromSeconds(5) && noEventFor >= TimeSpan.FromSeconds(3));
-        if (!isStalled)
-        {
-            _liveStallScore = 0;
-            return;
-        }
-
-        // Tek örneklem hatalarına karşı kısa doğrulama.
-        _liveStallScore = Math.Min(_liveStallScore + 1, 3);
-        if (_liveStallScore < 2)
-        {
-            return;
-        }
-
-        if (IsBuffering && stalledFor < TimeSpan.FromSeconds(10))
-        {
-            return;
-        }
-
-        // Flapping önleme: reconnect denemeleri arasında cooldown.
-        if (nowUtc - _lastLiveAutoRecoverAttemptAtUtc < TimeSpan.FromSeconds(15))
-        {
-            return;
-        }
-
-        // Flapping önleme: 2 dakikalık pencerede en fazla 3 auto-reconnect.
-        if (_liveRecoveryWindowStartUtc == DateTime.MinValue || nowUtc - _liveRecoveryWindowStartUtc > TimeSpan.FromMinutes(2))
-        {
-            _liveRecoveryWindowStartUtc = nowUtc;
-            _liveRecoveryAttemptsInWindow = 0;
-        }
-
-        if (_liveRecoveryAttemptsInWindow >= 3)
-        {
-            ConnectionStatus = "Yayın kararsız, bağlantı bekleniyor...";
-            return;
-        }
-
-        if (Interlocked.CompareExchange(ref _recoveryState, (int)PlaybackRecoveryState.LiveAutoRecovering, (int)PlaybackRecoveryState.None) != (int)PlaybackRecoveryState.None)
-        {
-            return;
-        }
-
-        try
-        {
-            if (CurrentChannel == null || CurrentChannel.Id != channel.Id)
-            {
-                return;
-            }
-
-            _lastLiveAutoRecoverAttemptAtUtc = nowUtc;
-            _liveRecoveryAttemptsInWindow++;
-            IsBuffering = true;
-            BufferingProgress = 0;
-            ConnectionStatus = "Yayın tekrar bağlanıyor...";
-            IsVisible = true;
-            RestartAutoHideTimer();
-
-            _videoPlayerService.Stop();
-            await Task.Delay(220);
-
-            if (CurrentChannel == null || CurrentChannel.Id != channel.Id)
-            {
-                return;
-            }
-
-            await _videoPlayerService.PlayAsync(channel.StreamUrl);
-            _lastLiveObservedPosition = -1;
-            _lastLiveProgressAtUtc = DateTime.UtcNow;
-            _lastLivePositionEventAtUtc = DateTime.UtcNow;
-            _liveStallScore = 0;
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[PlayerViewModel] Live auto-recover failed: {ex.Message}");
-        }
-        finally
-        {
-            Interlocked.Exchange(ref _recoveryState, (int)PlaybackRecoveryState.None);
-        }
+        await Task.CompletedTask;
     }
 
     private EpgProgram GetFallbackProgram()
@@ -2591,8 +2458,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         {
             LogDebug($"SetPlaybackPosition: HTTP stream detected, executing HardSeekAsync to {clamped}s");
             _ = _videoPlayerService.HardSeekAsync(clamped);
-            // Volume is reset by VideoPlayerService, which triggers Toast
-            // We suppress volume toasts globally by ensuring UI ignores slider focus
+            // HardSeekAsync explicitly stops and restarts the stream to avoid freezes on HTTP servers.
+            // Volume is preserved by VideoPlayerService through the restart.
             return;
         }
 
@@ -2623,9 +2490,6 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     }
 
 
-    /// <summary>
-    /// PlayChannelAsync sonrası sağlık kontrolü: oynatma başlamadıysa geri sayım ile otomatik yeniden dener.
-    /// </summary>
     private async Task EnsurePlaybackHealthAsync(Channel channel, int requestVersion)
     {
         const int retryCountdownSeconds = 5;
@@ -2638,17 +2502,14 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             {
                 await Task.Delay(1000);
 
-                if (requestVersion != _playRequestVersion || CurrentChannel?.Id != channel.Id)
+                if (IsHealthCheckCancelled(channel, requestVersion))
                     return;
+
                 if (IsPlaying)
                 {
                     _dispatcherService.Invoke(() => PlayerLoadingWarningMessage = string.Empty);
                     return;
                 }
-                if (_isIntentionallyPaused || Interlocked.CompareExchange(ref _isPlayPauseInProgress, 0, 0) == 1)
-                    return;
-                if (_livePauseRequiresHardRestart)
-                    return;
 
                 // Seek buffer shield aktifse restart yapma - normal buffer bekle
                 if (_suppressBufferShieldForSeek)
@@ -2661,20 +2522,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 _dispatcherService.Invoke(() => PlayerLoadingWarningMessage = msg);
             }
 
-            // Kanal değiştiyse veya çoktan oynuyorsa devam etme
-            if (requestVersion != _playRequestVersion || CurrentChannel?.Id != channel.Id)
-                return;
-            if (IsPlaying)
-            {
-                _dispatcherService.Invoke(() => PlayerLoadingWarningMessage = string.Empty);
-                return;
-            }
-            if (_isIntentionallyPaused)
-                return;
-            if (_livePauseRequiresHardRestart)
-                return;
-            // Seek sonrası buffer bekliyorsa restart yapma
-            if (_suppressBufferShieldForSeek)
+            // Yeniden deneme öncesi son kontroller
+            if (IsHealthCheckCancelled(channel, requestVersion) || IsPlaying || _suppressBufferShieldForSeek)
                 return;
 
             // Yeniden deneniyor
@@ -2689,7 +2538,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             _videoPlayerService.Stop();
             await Task.Delay(200);
 
-            if (requestVersion != _playRequestVersion || CurrentChannel?.Id != channel.Id)
+            if (IsHealthCheckCancelled(channel, requestVersion))
                 return;
 
             try
@@ -2706,9 +2555,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         }
 
         // Tüm denemeler başarısız olduysa uyarı mesajlarını göster
-        if (requestVersion != _playRequestVersion || CurrentChannel?.Id != channel.Id)
-            return;
-        if (IsPlaying)
+        if (IsHealthCheckCancelled(channel, requestVersion) || IsPlaying)
             return;
 
         _dispatcherService.Invoke(() =>
@@ -2716,13 +2563,23 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         await Task.Delay(7_000);
 
-        if (requestVersion != _playRequestVersion || CurrentChannel?.Id != channel.Id)
-            return;
-        if (IsPlaying)
+        if (IsHealthCheckCancelled(channel, requestVersion) || IsPlaying)
             return;
 
         _dispatcherService.Invoke(() =>
             PlayerLoadingWarningMessage = "Yayına erişilemiyor olabilir. Başka bir kanal deneyin.");
+    }
+
+    private bool IsHealthCheckCancelled(Channel channel, int requestVersion)
+    {
+        if (requestVersion != _playRequestVersion || CurrentChannel?.Id != channel.Id)
+            return true;
+        if (_isIntentionallyPaused || Interlocked.CompareExchange(ref _isPlayPauseInProgress, 0, 0) == 1)
+            return true;
+        if (_livePauseRequiresHardRestart)
+            return true;
+        
+        return false;
     }
 
     private double ClampSeekPosition(double position)

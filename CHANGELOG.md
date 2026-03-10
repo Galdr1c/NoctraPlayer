@@ -71,10 +71,21 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - Tamamlanmış (izlendi işareti olan) bölümler tıklandığında diyalog gösterilmeden doğrudan en baştan başlatılır.
 
 ### 🛠️ Düzeltmeler ve Optimizasyonlar
+- **Video Oynatıcı (VideoPlayerService) İyileştirmeleri**:
+    - **Bellek Yönetimi**: Her yeni medya yüklemesinde eski `Media` nesnesinin native handle'larının sızması engellendi (Explicit Dispose eklendi).
+    - **Yayın Kalitesi ve Kararlılık**: 
+        - `LiveM3u8` profili için donmaları önleyen `:adaptive-logic=rate` ayarına geçildi.
+        - `LiveTs` profilindeki görüntü bozulmalarına yol açan `:drop-late-frames` kaldırıldı.
+    - **Thread-Safety**: `_retryCount` ve `_playGeneration` gibi kritik sayaçlar `Interlocked` ile thread-safe hale getirildi.
+    - **Hata Yönetimi**: `ContinueWith` anti-pattern'i `Task.Run` ve `await` ile değiştirilerek ses seviyesinin diske kaydedilme güvenilirliği artırıldı.
+    - **Loglama**: `System.Diagnostics.Debug` ve `LogDebug` karışık kullanımı standartlaştırılarak hata ayıklama süreçleri iyileştirildi.
+- **PlayerViewModel Temizliği**:
+    - **Ölü Kod Temizliği**: `MonitorLivePlaybackHealthAsync` içindeki çalışmayan 60+ satırlık mantık temizlendi.
+    - **Guard Koşulları Optimizasyonu**: `EnsurePlaybackHealthAsync` içindeki mükerrer kontrol blokları merkezi `IsHealthCheckCancelled` metoduna taşınarak kod okunabilirliği artırıldı.
+    - **Belgelendirme**: `SetPlaybackPosition` ve ses seviyesi yönetimi hakkındaki yanlış/eskimiş yorum satırları düzeltildi.
 - **Ses Seviyesi ve Oynatıcı Kararlılığı**:
-    - **Agresif Ses Zorlama Kaldırıldı**: Oynatma başladığında ses seviyesinin defalarca (5 kez) üst üste yazılmasına neden olan mantık temizlendi. Bu sayede gereksiz `VolumeChanged` olay spami ve arayüzdeki ses çubuğu titremeleri engellendi.
-    - **Ses Seviyesi Koruma**: Kanal değişimlerinde veya otomatik yayın kurtarma (Auto-Recovery) sırasında ses seviyesinin her seferinde %80'e sıfırlanması sorunu giderildi. Kullanıcının ayarladığı son ses seviyesi artık tüm geçişlerde kararlı bir şekilde korunuyor.
-    - **Başlangıç Senkronizasyonu**: Oynatıcı başlatıldığında ses seviyesi artık doğrudan `VideoPlayerService` üzerinden okunarak `PlayerViewModel` ile tam senkronize bir şekilde başlatılıyor.
+    - **Agresif Ses Zorlama Kaldırıldı**: Oynatma başladığında ses seviyesinin defalarca (5 kez) üst üste yazılmasına neden olan mantık temizlendi.
+    - **Ses Seviyesi Koruma**: Kanal değişimlerinde veya otomatik yayın kurtarma sırasında sesin sıfırlanması sorunu giderildi.
 - **Mükerrer Kontrolü ve Şifreleme Bug Fix**: Non-deterministic (DPAPI) şifreleme nedeniyle mükerrer kayıtların veritabanında tespit edilememesi sorunu, karşılaştırma mantığı `Type`, `Url` ve `Username` alanlarına odaklanarak çözüldü. M3U listelerindeki boş kullanıcı adı/şifre karşılaştırma hataları giderildi.
 - **UI Geri Bildirim İyileştirmesi**: Kayıt sırasında oluşan hatalarda (örn: mükerrer kayıt) ekranın "Kaydediliyor..." durumunda asılı kalması sorunu düzeltilerek kullanıcıya reel-time hata bildirimi sağlandı.
 - **Veritabanı Şeması ve Toplu İşlem İyileştirmeleri**: 
