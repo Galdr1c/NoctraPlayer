@@ -121,6 +121,11 @@ public partial class PlaylistService : IPlaylistService
             var detectedEpgUrl = NormalizeEpgUrl(_parser.LastDetectedEpgUrl);
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] Parsed {channels.Count} channels from M3U");
 
+            if (channels.Count == 0)
+            {
+                throw new InvalidOperationException("Playlist parse sonucu boş. İndirme başarısız veya liste geçersiz.");
+            }
+
             // Otomatik organizasyon: dedup, kategorize, sıralama
             var organized = _organizer.Organize(channels);
             
@@ -148,6 +153,13 @@ public partial class PlaylistService : IPlaylistService
         finally
         {
             gate.Release();
+            if (gate.CurrentCount == 1)
+            {
+                if (AddPlaylistLocks.TryRemove(lockKey, out _))
+                {
+                    gate.Dispose();
+                }
+            }
         }
     }
 
@@ -322,45 +334,59 @@ public partial class PlaylistService : IPlaylistService
     public async Task<Playlist> CreateEmptyPlaylistAsync(
         string name, string sourceUrl, int? profileId = null, string? epgUrl = null)
     {
-        using var context = await _contextFactory.CreateDbContextAsync();
+        var lockKey = $"empty|{profileId?.ToString() ?? "null"}|{sourceUrl}";
+        var gate = AddPlaylistLocks.GetOrAdd(lockKey, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync();
 
-        // Var olan aktif playlist'i kontrol et
-        var existing = await context.Playlists
-            .FirstOrDefaultAsync(p =>
-                p.Url == sourceUrl &&
-                p.IsActive &&
-                p.ProfileId == profileId);
-
-        if (existing != null)
+        try
         {
-            if (string.IsNullOrWhiteSpace(existing.EpgUrl) && !string.IsNullOrWhiteSpace(epgUrl))
+            using var context = await _contextFactory.CreateDbContextAsync();
+
+            // Var olan aktif playlist'i kontrol et
+            var existing = await context.Playlists
+                .FirstOrDefaultAsync(p =>
+                    p.Url == sourceUrl &&
+                    p.IsActive &&
+                    p.ProfileId == profileId);
+
+            if (existing != null)
             {
-                existing.EpgUrl = NormalizeEpgUrl(epgUrl);
-                await context.SaveChangesAsync();
+                if (string.IsNullOrWhiteSpace(existing.EpgUrl) && !string.IsNullOrWhiteSpace(epgUrl))
+                {
+                    existing.EpgUrl = NormalizeEpgUrl(epgUrl);
+                    await context.SaveChangesAsync();
+                }
+                return existing;
             }
-            return existing;
+
+            var playlist = new Playlist
+            {
+                Name         = name,
+                Url          = sourceUrl,
+                ProfileId    = profileId,
+                IsActive     = true,
+                ChannelCount = 0,
+                CreatedAt    = DateTime.UtcNow,
+                LastUpdated  = DateTime.UtcNow,
+                EpgUrl       = NormalizeEpgUrl(epgUrl)
+            };
+
+            context.Playlists.Add(playlist);
+            await context.SaveChangesAsync();
+
+            return playlist;
         }
-
-        var playlist = new Playlist
+        finally
         {
-            Name         = name,
-            Url          = sourceUrl,
-            ProfileId    = profileId,
-            IsActive     = true,
-            ChannelCount = 0,
-            CreatedAt    = DateTime.UtcNow,
-            LastUpdated  = DateTime.UtcNow,
-            EpgUrl       = NormalizeEpgUrl(epgUrl)
-        };
-
-        context.Playlists.Add(playlist);
-        await context.SaveChangesAsync();
-
-        // Eğer EPG URL'i varsa, kanallar henüz inmemiş olsa bile (dummy'ler için) EPG çekimini başlatabiliriz.
-        // Ama genelde kanallar indikçe eşleşme yapmak daha iyidir.
-        // Şimdilik sadece URL'i kaydettik. Resume/RefreshEpg bunu kullanacaktır.
-
-        return playlist;
+            gate.Release();
+            if (gate.CurrentCount == 1)
+            {
+                if (AddPlaylistLocks.TryRemove(lockKey, out _))
+                {
+                    gate.Dispose();
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -579,7 +605,8 @@ public partial class PlaylistService : IPlaylistService
         {
             try
             {
-                latestRemoteMetadata = await TryFetchRemoteMetadataAsync(playlist.Url, playlist);
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                latestRemoteMetadata = await TryFetchRemoteMetadataAsync(playlist.Url, playlist, cts.Token);
                 if (latestRemoteMetadata?.IsUnchanged == true)
                 {
                     playlist.LastUpdated = DateTime.UtcNow;
@@ -589,8 +616,7 @@ public partial class PlaylistService : IPlaylistService
 
                     if (playlist.Profile?.IsChild == true)
                     {
-                        // Load channels only for child cleanup
-                        await context.Entry(playlist).Collection(p => p.Channels).LoadAsync();
+                        // Ensure existing content is safe even if metadata hasn't changed
                         await EnsureChildProfileCleanedAsync(context, playlist);
                     }
 
@@ -599,13 +625,8 @@ public partial class PlaylistService : IPlaylistService
             }
             catch (Exception ex)
             {
-                if (playlist.Profile?.IsChild == true)
-                {
-                    await context.Entry(playlist).Collection(p => p.Channels).LoadAsync();
-                    await EnsureChildProfileCleanedAsync(context, playlist);
-                }
-                
-                throw;
+                // Log and continue to attempt regular refresh if HEAD request fails
+                System.Diagnostics.Debug.WriteLine($"[PlaylistService] Remote metadata fetch failed: {ex.Message}");
             }
         }
 
@@ -627,12 +648,18 @@ public partial class PlaylistService : IPlaylistService
         // Organizasyon pipeline'ı uygula
         var organizedChannels = _organizer.Organize(newChannels);
         
+        if (organizedChannels.Count == 0 && newChannels.Count > 0)
+        {
+            // All channels were deduped/filtered out but original list wasn't empty. This is likely a profile filter issue.
+        }
+        else if (organizedChannels.Count == 0)
+        {
+            throw new InvalidOperationException("Playlist parse sonucu boş. Silme işlemi veri güvenliği için iptal edildi.");
+        }
+
         if (playlist.Profile?.IsChild == true)
         {
             organizedChannels = ApplyChildFilter(organizedChannels).ToList();
-            // Load channels for child cleanup
-            await context.Entry(playlist).Collection(p => p.Channels).LoadAsync();
-            await EnsureChildProfileCleanedAsync(context, playlist);
         }
 
         // 1. MEVCUT KULLANICI VERİLERİNİ YEDEKLE (Favori, İzleme Geçmişi vb.)
@@ -1178,7 +1205,7 @@ public partial class PlaylistService : IPlaylistService
         return pathOnly.Trim().ToLowerInvariant();
     }
 
-    private async Task<RemotePlaylistMetadata?> TryFetchRemoteMetadataAsync(string url, Playlist playlist)
+    private async Task<RemotePlaylistMetadata?> TryFetchRemoteMetadataAsync(string url, Playlist playlist, CancellationToken ct = default)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
             (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
@@ -1199,7 +1226,7 @@ public partial class PlaylistService : IPlaylistService
                 request.Headers.IfModifiedSince = playlist.SourceLastModified.Value;
             }
 
-            using var response = await _httpClient.SendAsync(request);
+            using var response = await _httpClient.SendAsync(request, ct);
             if (response.StatusCode == HttpStatusCode.NotModified)
             {
                 return new RemotePlaylistMetadata
@@ -1387,66 +1414,85 @@ public partial class PlaylistService : IPlaylistService
         if (wasClosed) await connection.OpenAsync();
 
         using var transaction = await connection.BeginTransactionAsync();
-        using var command = connection.CreateCommand();
-        
-        command.Transaction = transaction;
-        command.CommandText = 
-            @"INSERT INTO Channels (
-                Name, StreamUrl, LogoUrl, GroupTitle, TvgId, TvgName, Type, PlaylistId, 
-                IsFavorite, IsInMyList, IsCompleted, WatchedPosition, Duration, Country,
-                Rating, Plot, ReleaseYear, ContentRating
-              ) 
-              VALUES (
-                $name, $streamUrl, $logoUrl, $groupTitle, $tvgId, $tvgName, $type, $playlistId, 
-                $isFavorite, $isInMyList, $isCompleted, $watchedPosition, $duration, $country,
-                $rating, $plot, $releaseYear, $contentRating
-              );";
-
-        var pName = command.CreateParameter(); pName.ParameterName = "$name"; command.Parameters.Add(pName);
-        var pStream = command.CreateParameter(); pStream.ParameterName = "$streamUrl"; command.Parameters.Add(pStream);
-        var pLogo = command.CreateParameter(); pLogo.ParameterName = "$logoUrl"; command.Parameters.Add(pLogo);
-        var pGroup = command.CreateParameter(); pGroup.ParameterName = "$groupTitle"; command.Parameters.Add(pGroup);
-        var pTvgId = command.CreateParameter(); pTvgId.ParameterName = "$tvgId"; command.Parameters.Add(pTvgId);
-        var pTvgName = command.CreateParameter(); pTvgName.ParameterName = "$tvgName"; command.Parameters.Add(pTvgName);
-        var pType = command.CreateParameter(); pType.ParameterName = "$type"; command.Parameters.Add(pType);
-        var pPlaylistId = command.CreateParameter(); pPlaylistId.ParameterName = "$playlistId"; command.Parameters.Add(pPlaylistId);
-        var pIsFavorite = command.CreateParameter(); pIsFavorite.ParameterName = "$isFavorite"; command.Parameters.Add(pIsFavorite);
-        var pIsInMyList = command.CreateParameter(); pIsInMyList.ParameterName = "$isInMyList"; command.Parameters.Add(pIsInMyList);
-        var pIsCompleted = command.CreateParameter(); pIsCompleted.ParameterName = "$isCompleted"; command.Parameters.Add(pIsCompleted);
-        var pWatchedPosition = command.CreateParameter(); pWatchedPosition.ParameterName = "$watchedPosition"; command.Parameters.Add(pWatchedPosition);
-        var pDuration = command.CreateParameter(); pDuration.ParameterName = "$duration"; command.Parameters.Add(pDuration);
-        var pCountry = command.CreateParameter(); pCountry.ParameterName = "$country"; command.Parameters.Add(pCountry);
-        var pRating = command.CreateParameter(); pRating.ParameterName = "$rating"; command.Parameters.Add(pRating);
-        var pPlot = command.CreateParameter(); pPlot.ParameterName = "$plot"; command.Parameters.Add(pPlot);
-        var pReleaseYear = command.CreateParameter(); pReleaseYear.ParameterName = "$releaseYear"; command.Parameters.Add(pReleaseYear);
-        var pContentRating = command.CreateParameter(); pContentRating.ParameterName = "$contentRating"; command.Parameters.Add(pContentRating);
-
-        foreach (var channel in channels)
+        try
         {
-            pName.Value = channel.Name ?? "Bilinmeyen Kanal";
-            pStream.Value = channel.StreamUrl ?? "";
-            pLogo.Value = channel.LogoUrl ?? (object)DBNull.Value;
-            pGroup.Value = channel.GroupTitle ?? (object)DBNull.Value;
-            pTvgId.Value = channel.TvgId ?? (object)DBNull.Value;
-            pTvgName.Value = channel.TvgName ?? (object)DBNull.Value;
-            pType.Value = (int)channel.Type;
-            pPlaylistId.Value = channel.PlaylistId;
-            pIsFavorite.Value = channel.IsFavorite ? 1 : 0;
-            pIsInMyList.Value = channel.IsInMyList ? 1 : 0;
-            pIsCompleted.Value = channel.IsCompleted ? 1 : 0;
-            pWatchedPosition.Value = channel.WatchedPosition?.ToString() ?? (object)DBNull.Value;
-            pDuration.Value = channel.Duration?.ToString() ?? (object)DBNull.Value;
-            pCountry.Value = channel.Country ?? (object)DBNull.Value;
-            pRating.Value = channel.Rating ?? (object)DBNull.Value;
-            pPlot.Value = channel.Plot ?? (object)DBNull.Value;
-            pReleaseYear.Value = channel.ReleaseYear ?? (object)DBNull.Value;
-            pContentRating.Value = channel.ContentRating ?? (object)DBNull.Value;
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = 
+                @"INSERT INTO Channels (
+                    Name, StreamUrl, LogoUrl, GroupTitle, TvgId, TvgName, Type, PlaylistId, 
+                    IsFavorite, IsInMyList, IsCompleted, WatchedPosition, Duration, Country,
+                    Rating, Plot, ReleaseYear, ContentRating, BackdropUrl, Cast, Director, Language, TmdbId
+                  ) 
+                  VALUES (
+                    $name, $streamUrl, $logoUrl, $groupTitle, $tvgId, $tvgName, $type, $playlistId, 
+                    $isFavorite, $isInMyList, $isCompleted, $watchedPosition, $duration, $country,
+                    $rating, $plot, $releaseYear, $contentRating, $backdropUrl, $cast, $director, $language, $tmdbId
+                  );";
 
-            await command.ExecuteNonQueryAsync();
+            var pName = command.CreateParameter(); pName.ParameterName = "$name"; command.Parameters.Add(pName);
+            var pStream = command.CreateParameter(); pStream.ParameterName = "$streamUrl"; command.Parameters.Add(pStream);
+            var pLogo = command.CreateParameter(); pLogo.ParameterName = "$logoUrl"; command.Parameters.Add(pLogo);
+            var pGroup = command.CreateParameter(); pGroup.ParameterName = "$groupTitle"; command.Parameters.Add(pGroup);
+            var pTvgId = command.CreateParameter(); pTvgId.ParameterName = "$tvgId"; command.Parameters.Add(pTvgId);
+            var pTvgName = command.CreateParameter(); pTvgName.ParameterName = "$tvgName"; command.Parameters.Add(pTvgName);
+            var pType = command.CreateParameter(); pType.ParameterName = "$type"; command.Parameters.Add(pType);
+            var pPlaylistId = command.CreateParameter(); pPlaylistId.ParameterName = "$playlistId"; command.Parameters.Add(pPlaylistId);
+            var pIsFavorite = command.CreateParameter(); pIsFavorite.ParameterName = "$isFavorite"; command.Parameters.Add(pIsFavorite);
+            var pIsInMyList = command.CreateParameter(); pIsInMyList.ParameterName = "$isInMyList"; command.Parameters.Add(pIsInMyList);
+            var pIsCompleted = command.CreateParameter(); pIsCompleted.ParameterName = "$isCompleted"; command.Parameters.Add(pIsCompleted);
+            var pWatchedPosition = command.CreateParameter(); pWatchedPosition.ParameterName = "$watchedPosition"; command.Parameters.Add(pWatchedPosition);
+            var pDuration = command.CreateParameter(); pDuration.ParameterName = "$duration"; command.Parameters.Add(pDuration);
+            var pCountry = command.CreateParameter(); pCountry.ParameterName = "$country"; command.Parameters.Add(pCountry);
+            var pRating = command.CreateParameter(); pRating.ParameterName = "$rating"; command.Parameters.Add(pRating);
+            var pPlot = command.CreateParameter(); pPlot.ParameterName = "$plot"; command.Parameters.Add(pPlot);
+            var pReleaseYear = command.CreateParameter(); pReleaseYear.ParameterName = "$releaseYear"; command.Parameters.Add(pReleaseYear);
+            var pContentRating = command.CreateParameter(); pContentRating.ParameterName = "$contentRating"; command.Parameters.Add(pContentRating);
+            var pBackdrop = command.CreateParameter(); pBackdrop.ParameterName = "$backdropUrl"; command.Parameters.Add(pBackdrop);
+            var pCast = command.CreateParameter(); pCast.ParameterName = "$cast"; command.Parameters.Add(pCast);
+            var pDirector = command.CreateParameter(); pDirector.ParameterName = "$director"; command.Parameters.Add(pDirector);
+            var pLanguage = command.CreateParameter(); pLanguage.ParameterName = "$language"; command.Parameters.Add(pLanguage);
+            var pTmdbId = command.CreateParameter(); pTmdbId.ParameterName = "$tmdbId"; command.Parameters.Add(pTmdbId);
+
+            foreach (var channel in channels)
+            {
+                pName.Value = channel.Name ?? "Bilinmeyen Kanal";
+                pStream.Value = channel.StreamUrl ?? "";
+                pLogo.Value = channel.LogoUrl ?? (object)DBNull.Value;
+                pGroup.Value = channel.GroupTitle ?? (object)DBNull.Value;
+                pTvgId.Value = channel.TvgId ?? (object)DBNull.Value;
+                pTvgName.Value = channel.TvgName ?? (object)DBNull.Value;
+                pType.Value = (int)channel.Type;
+                pPlaylistId.Value = channel.PlaylistId;
+                pIsFavorite.Value = channel.IsFavorite ? 1 : 0;
+                pIsInMyList.Value = channel.IsInMyList ? 1 : 0;
+                pIsCompleted.Value = channel.IsCompleted ? 1 : 0;
+                pWatchedPosition.Value = channel.WatchedPosition?.ToString() ?? (object)DBNull.Value;
+                pDuration.Value = channel.Duration?.ToString() ?? (object)DBNull.Value;
+                pCountry.Value = channel.Country ?? (object)DBNull.Value;
+                pRating.Value = channel.Rating ?? (object)DBNull.Value;
+                pPlot.Value = channel.Plot ?? (object)DBNull.Value;
+                pReleaseYear.Value = channel.ReleaseYear ?? (object)DBNull.Value;
+                pContentRating.Value = channel.ContentRating ?? (object)DBNull.Value;
+                pBackdrop.Value = channel.BackdropUrl ?? (object)DBNull.Value;
+                pCast.Value = channel.Cast ?? (object)DBNull.Value;
+                pDirector.Value = channel.Director ?? (object)DBNull.Value;
+                pLanguage.Value = channel.Language ?? (object)DBNull.Value;
+                pTmdbId.Value = channel.TmdbId ?? (object)DBNull.Value;
+
+                await command.ExecuteNonQueryAsync();
+            }
+            await transaction.CommitAsync();
         }
-        await transaction.CommitAsync();
-
-        if (wasClosed) await connection.CloseAsync();
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+        finally
+        {
+            if (wasClosed) await connection.CloseAsync();
+        }
     }
 }
 

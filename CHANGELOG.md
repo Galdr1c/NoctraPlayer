@@ -79,6 +79,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - Tamamlanmış (izlendi işareti olan) bölümler tıklandığında diyalog gösterilmeden doğrudan en baştan başlatılır.
 
 ### 🛠️ Düzeltmeler ve Optimizasyonlar
+- **Veri Kaybı ve Kaynak Yönetimi (PlaylistService)**:
+    - **Favori ve Liste Verisi Koruması**: `FastSqliteBulkInsertAsync` metodunda `IsFavorite` ve `IsInMyList` alanlarının sıfırlanmasına neden olan hata giderildi. Artık kanal yenilemelerinde kullanıcı seçimleri kaybolmuyor.
+    - **Metadata Bütünlüğü**: Toplu kanal ekleme işlemine `Rating`, `Plot`, `ReleaseYear`, `ContentRating`, `BackdropUrl`, `Cast`, `Director`, `Language` ve `TmdbId` alanları dahil edildi.
+    - **Boş Liste Koruması**: Playlist indirme veya ayrıştırma sonucu boş döndüğünde mevcut kütüphanenin silinmesini engelleyen güvenlik kontrolü (`Empty Parse Guard`) eklendi.
+    - **Bellek Sızıntısı Giderildi**: `SemaphoreSlim` nesnelerinin işlem bittikten sonra temizlenmemesi sorunu çözüldü (Resource Leak fix).
+    - **Bağlantı Yönetimi**: Veritabanı toplu yazma işlemlerinde hata oluşması durumunda SQLite bağlantısının açık kalması sorunu `finally` bloklarıyla giderildi.
+    - **Eşzamanlılık (Race Condition)**: Stalker/Xtream profil oluşturma sırasında oluşabilecek mükerrer kayıt (TOCTOU) riski kilit mekanizmasıyla engellendi.
+    - **Uzaktan Erişim Optimizasyonu**: Playlist metadata kontrollerine (HEAD isteği) 10 saniyelik zaman aşımı ve iptal desteği (`CancellationToken`) eklendi.
 - **Kanal Listesi ve Yenileme Mantığı (Settings/MainViewModel) İyileştirmeleri**:
     - **Xtream/Stalker Senkronizasyonu**: Arka planda "ateşle-unut" (fire-and-forget) şeklinde çalışan yenileme mantığı `await` yapısına geçirilerek, tüm kanallar inmeden "tamamlandı" sinyali verilmesi engellendi.
     - **Cooldown (Bekleme Süresi) Sistemi**: `_playlistNoChangeUntilUtc` mantığı aktive edilerek, başarılı yenileme sonrası 5 dakikalık koruma süresi getirildi; böylece sunucu spam'i önlendi.
