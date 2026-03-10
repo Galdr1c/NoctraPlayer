@@ -9,6 +9,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Geçmişten Silme Özelliği** (2026-03-10):
+    - Geçmiş sayfasındaki tüm kartlara (Canlı TV, Dizi, Film) sağ tık menüsü üzerinden "Geçmişten Sil" seçeneği eklendi.
+    - Bu özellik hem arayüzden öğeyi anında kaldırır hem de veritabanındaki ilgili izleme geçmişini ve ilerleme (progress) verilerini temizler.
+    - Diziler için "İzlemeye Devam Et" verileri de temizlenerek ana sayfadan da kaldırılması sağlandı.
+    - `VodCard` ve `SeriesCard` bileşenlerine `ShowHistoryMenu` özelliği eklendi, böylece bu menü sadece geçmiş sayfasında görünür.
 - **İzleme Geçmişi ve Dizi İlerleme Güvenliği** (2026-03-10):
     - **Race Condition Önleme**: `WatchHistoryService` içerisinde `SemaphoreSlim` kullanılarak eş zamanlı kayıtlarda oluşan mükerrer (duplicate) geçmiş verileri engellendi.
     - **CancellationToken Desteği**: Tüm izleme geçmişi ve temizlik metodlarına iptal desteği eklenerek uzun süren veritabanı işlemlerinin güvenle sonlandırılması sağlandı.

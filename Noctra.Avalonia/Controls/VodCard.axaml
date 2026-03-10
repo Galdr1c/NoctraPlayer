@@ -6,6 +6,7 @@
              xmlns:converters="using:Noctra.Avalonia.Converters"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Avalonia.Controls.VodCard"
+             x:Name="VodCardControl"
              x:DataType="models:Channel"
              Width="160" Height="240"
              ClipToBounds="False">
@@ -31,6 +32,12 @@
                   IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
         <MenuItem Header="Favorilere Ekle/Çıkar" Click="Context_ToggleFavorite_Click"
                   IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
+        <MenuItem Header="Geçmişten Sil" Click="Context_RemoveFromHistory_Click"
+                  IsVisible="{Binding #VodCardControl.ShowHistoryMenu}">
+          <MenuItem.Icon>
+            <materialIcons:MaterialIcon Kind="DeleteOutline" />
+          </MenuItem.Icon>
+        </MenuItem>
       </MenuFlyout>
     </Button.ContextFlyout>
 

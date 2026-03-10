@@ -21,7 +21,19 @@
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="models:Channel">
-                  <controls:LiveTvCard Margin="0,0,16,16" />
+                  <controls:LiveTvCard Margin="0,0,16,16">
+                    <controls:LiveTvCard.ContextMenu>
+                      <ContextMenu>
+                        <MenuItem Header="Geçmişten Sil" 
+                                  Command="{Binding #HistoryScrollViewer.((vm:MainViewModel)DataContext).RemoveFromHistoryCommand}"
+                                  CommandParameter="{Binding}">
+                          <MenuItem.Icon>
+                            <materialIcons:MaterialIcon Kind="DeleteOutline" />
+                          </MenuItem.Icon>
+                        </MenuItem>
+                      </ContextMenu>
+                    </controls:LiveTvCard.ContextMenu>
+                  </controls:LiveTvCard>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
@@ -33,7 +45,7 @@
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="models:Series">
-                  <controls:SeriesCard Margin="0,0,16,16" />
+                  <controls:SeriesCard Margin="0,0,16,16" ShowHistoryMenu="True" />
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
@@ -45,7 +57,7 @@
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="models:Channel">
-                  <controls:VodCard Margin="0,0,16,16" />
+                  <controls:VodCard Margin="0,0,16,16" ShowHistoryMenu="True" />
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>

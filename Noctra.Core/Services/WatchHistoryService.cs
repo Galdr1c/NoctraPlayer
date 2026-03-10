@@ -256,5 +256,59 @@ public class WatchHistoryService : IWatchHistoryService
             .Where(p => p.ProfileId == profileId && p.LastWatchedAt < cutoff && !p.Completed)
             .ExecuteDeleteAsync(ct);
     }
+
+    public async Task RemoveFromHistoryAsync(int profileId, int? channelId, int? seriesId, CancellationToken ct = default)
+    {
+        using var context = await _contextFactory.CreateDbContextAsync(ct);
+
+        if (channelId.HasValue)
+        {
+            await context.WatchHistories
+                .Where(h => h.ProfileId == profileId && h.ChannelId == channelId.Value)
+                .ExecuteDeleteAsync(ct);
+
+            await context.Channels
+                .Where(c => c.Id == channelId.Value)
+                .ExecuteUpdateAsync(c => c.SetProperty(x => x.LastWatched, (DateTime?)null)
+                                          .SetProperty(x => x.WatchedPosition, TimeSpan.Zero)
+                                          .SetProperty(x => x.IsCompleted, false), ct);
+        }
+        else if (seriesId.HasValue)
+        {
+            var episodeIds = await context.Episodes
+                .Where(e => e.Season != null && e.Season.SeriesId == seriesId.Value)
+                .Select(e => e.Id)
+                .ToListAsync(ct);
+
+            if (episodeIds.Count > 0)
+            {
+                await context.WatchHistories
+                    .Where(h => h.ProfileId == profileId && h.EpisodeId.HasValue && episodeIds.Contains(h.EpisodeId.Value))
+                    .ExecuteDeleteAsync(ct);
+
+                await context.Episodes
+                    .Where(e => episodeIds.Contains(e.Id))
+                    .ExecuteUpdateAsync(e => e.SetProperty(x => x.LastWatched, (DateTime?)null)
+                                              .SetProperty(x => x.WatchedPosition, TimeSpan.Zero)
+                                              .SetProperty(x => x.IsCompleted, false), ct);
+
+                var series = await context.Series.FindAsync(new object[] { seriesId.Value }, ct);
+                if (series != null)
+                {
+                    var title = series.Name;
+                    var tmdbId = series.TmdbId;
+                    
+                    var query = context.SeriesEpisodeProgresses.Where(p => p.ProfileId == profileId);
+                    
+                    var seriesKey = SeriesProgressIdentity.NormalizeSeriesKey(title);
+                    if (!string.IsNullOrEmpty(seriesKey))
+                    {
+                         await query.Where(p => (tmdbId.HasValue && p.TmdbId == tmdbId) || p.SeriesKey == seriesKey)
+                                   .ExecuteDeleteAsync(ct);
+                    }
+                }
+            }
+        }
+    }
 }
 

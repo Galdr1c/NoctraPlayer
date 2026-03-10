@@ -4833,6 +4833,68 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task RemoveFromHistoryAsync(object? media)
+    {
+        if (media == null || !CurrentProfileId.HasValue) return;
+
+        try
+        {
+            int? channelId = null;
+            int? seriesId = null;
+
+            if (media is Channel channel)
+            {
+                channelId = channel.Id;
+                
+                // Update local state to hide it from history lists immediately
+                channel.LastWatched = null;
+                channel.WatchedPosition = TimeSpan.Zero;
+                channel.IsCompleted = false;
+
+                HistoryChannels.Remove(channel);
+                if (channel.Type == ChannelType.Live) HistoryLiveChannels.Remove(channel);
+                else if (channel.Type == ChannelType.VOD) HistoryVodChannels.Remove(channel);
+            }
+            else if (media is Series series)
+            {
+                seriesId = series.Id;
+                
+                // Update local episodes state
+                if (series.Seasons != null)
+                {
+                    foreach (var s in series.Seasons)
+                    {
+                        if (s.Episodes != null)
+                        {
+                            foreach (var e in s.Episodes)
+                            {
+                                e.LastWatched = null;
+                                e.WatchedPosition = TimeSpan.Zero;
+                                e.IsCompleted = false;
+                            }
+                        }
+                    }
+                }
+                HistorySeriesItems.Remove(series);
+            }
+
+            await _watchHistoryService.RemoveFromHistoryAsync(CurrentProfileId.Value, channelId, seriesId);
+            
+            ShowHistoryEmptyState = HistoryLiveChannels.Count == 0 && 
+                                  HistoryVodChannels.Count == 0 && 
+                                  HistorySeriesItems.Count == 0;
+            
+            // Re-update internal buckets for safety and update home rail
+            UpdateHistoryBuckets();
+            UpdateContinueWatchingRail();
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Geçmişten silinirken hata oluştu");
+        }
+    }
+
+    [RelayCommand]
     private async Task RemoveFromFavorites(object media)
     {
         if (!CurrentProfileId.HasValue)
