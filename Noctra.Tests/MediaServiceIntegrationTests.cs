@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using Noctra.Data;
 using Noctra.Models;
 using Noctra.Services;
-using Noctra.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,16 +17,6 @@ namespace Noctra.Tests
         private readonly DbContextOptions<AppDbContext> _options;
         private readonly IDbContextFactory<AppDbContext> _contextFactory;
         private readonly MediaService _service;
-
-        private class TestDispatcherService : IDispatcherService
-        {
-            public void BeginInvoke(Action action) => action();
-            public void Invoke(Action action) => action();
-            public Task InvokeAsync(Action action) { action(); return Task.CompletedTask; }
-            public Task<T> InvokeAsync<T>(Func<T> function) => Task.FromResult(function());
-            public Task InvokeAsync(Func<Task> function) => function();
-            public Task<T> InvokeAsync<T>(Func<Task<T>> function) => function();
-        }
 
         public MediaServiceIntegrationTests()
         {
@@ -44,7 +33,7 @@ namespace Noctra.Tests
             }
 
             _contextFactory = new SimpleDbContextFactory(_options);
-            _service = new MediaService(_contextFactory, new TestDispatcherService());
+            _service = new MediaService(_contextFactory);
         }
 
         public void Dispose()

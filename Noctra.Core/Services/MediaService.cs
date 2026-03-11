@@ -1,75 +1,53 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using Noctra.Models;
 using Noctra.Data;
 using Microsoft.EntityFrameworkCore;
 using Noctra.Services.Interfaces;
-using System.Collections.Concurrent;
 
 namespace Noctra.Services;
 
 public partial class MediaService : IMediaService
 {
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
-    private readonly IDispatcherService _dispatcherService;
-    private static readonly ConcurrentDictionary<int, SemaphoreSlim> _aggregateLocks = new();
+    private static readonly SemaphoreSlim _aggregateLock = new(1, 1);
 
     public event Action<int>? OnAggregationCompleted;
 
     public void RaiseAggregationCompleted(int playlistId)
     {
-        // Thread safety: Ensure the event is raised on the UI thread to prevent UI-bound handlers from crashing
-        _dispatcherService.BeginInvoke(() => OnAggregationCompleted?.Invoke(playlistId));
+        OnAggregationCompleted?.Invoke(playlistId);
     }
 
-    public MediaService(IDbContextFactory<AppDbContext> contextFactory, IDispatcherService dispatcherService)
+    public MediaService(IDbContextFactory<AppDbContext> contextFactory)
     {
         _contextFactory = contextFactory;
-        _dispatcherService = dispatcherService;
     }
 
     public async Task AggregateContentAsync(int playlistId, CancellationToken cancellationToken = default)
     {
-        // Per-playlist lock prevents global bottlenecks while ensuring data integrity for specific playlists
-        var gate = _aggregateLocks.GetOrAdd(playlistId, _ => new SemaphoreSlim(1, 1));
-        await gate.WaitAsync(cancellationToken);
-        
+        await _aggregateLock.WaitAsync(cancellationToken);
         try
         {
             using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
 
-            // Disable change tracker for high-volume initial processing
+            // Disable change tracker for bulk operations — massive speedup on SaveChangesAsync
             context.ChangeTracker.AutoDetectChangesEnabled = false;        
-
+        try
+        {
             var channels = await context.Channels
                 .Where(c => c.PlaylistId == playlistId && c.Type == ChannelType.Series)
                 .ToListAsync(cancellationToken);
 
             if (!channels.Any()) return;
 
-            // Load existing series graph
+            // Load existing series graph — needed for accurate change tracking of existing entities
             var existingSeries = await context.Series
                 .Include(s => s.Seasons)
                 .ThenInclude(se => se.Episodes)
                 .Where(s => s.PlaylistId == playlistId)
                 .ToListAsync(cancellationToken);
 
-            // 1. User Data Backup: Prevent losing Favorite/MyList status if a series is temporarily removed/recreated
-            var seriesUserDataMap = new Dictionary<string, (bool IsFavorite, bool IsInMyList)>(StringComparer.OrdinalIgnoreCase);
-            foreach (var s in existingSeries)
-            {
-                var key = BuildSeriesGroupingKey(s.Name, s.GroupTitle);
-                if (!seriesUserDataMap.TryGetValue(key, out var current))
-                {
-                    seriesUserDataMap[key] = (s.IsFavorite, s.IsInMyList);
-                }
-                else
-                {
-                    // Merge: If any version is favorite, keep it as favorite
-                    seriesUserDataMap[key] = (current.IsFavorite || s.IsFavorite, current.IsInMyList || s.IsInMyList);
-                }
-            }
-
-            // O(1) series lookup by grouping key (Name + GroupTitle)
+            // O(1) series lookup by grouping key
             var seriesGroups = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
             foreach (var existing in existingSeries.OrderBy(s => s.Id))
             {
@@ -90,7 +68,7 @@ public partial class MediaService : IMediaService
                 }
             }
 
-            // O(1) episode lookup: (seasonId, streamIdentity) -> Episode
+            // O(1) episode lookup: (seasonId, streamIdentity) -> Episode — prevents duplicate insertion
             var episodeLookup = new Dictionary<(int seasonId, string streamIdentity), Episode>();
             var episodeByNumber = new Dictionary<(int seasonId, int episodeNum), Episode>();
             foreach (var kvp in seriesGroups)
@@ -112,6 +90,7 @@ public partial class MediaService : IMediaService
                 }
             }
 
+            // Track which episodes were actually mapped to channels in this run
             var mappedEpisodeIds = new HashSet<int>();
 
             foreach (var channel in channels)
@@ -121,44 +100,41 @@ public partial class MediaService : IMediaService
                 var seasonNum = parsed.Season;
                 var episodeNum = parsed.Episode;
 
-                // Robust fallback for parsing failures: Avoid overwriting real S01E01 with unknown content
-                if (seasonNum <= 0 && episodeNum <= 0)
+                if (seasonNum == 0 || episodeNum == 0)
                 {
-                    seasonNum = 99; // 'Unknown' bucket
-                    episodeNum = Math.Abs(channel.Name?.GetHashCode() ?? 0) % 1000 + 1000;
+                    seasonNum = Math.Max(1, seasonNum);
+                    episodeNum = Math.Max(1, episodeNum);
                 }
-                else if (seasonNum <= 0) seasonNum = 1;
-                else if (episodeNum <= 0) episodeNum = 1;
 
                 var seriesKey = BuildSeriesGroupingKey(seriesName, channel.GroupTitle);
 
                 if (!seriesGroups.TryGetValue(seriesKey, out var series))
                 {
-                    seriesUserDataMap.TryGetValue(seriesKey, out var userData);
-                    
                     series = new Series
                     {
                         Name = seriesName,
                         PlaylistId = playlistId,
                         CoverUrl = channel.LogoUrl,
                         GroupTitle = channel.GroupTitle,
-                        Genre = channel.GroupTitle,
+                        Genre = channel.GroupTitle, // Genre should also match GroupTitle for better filtering
                         TmdbId = channel.TmdbId,
                         ReleaseYear = channel.ReleaseYear,
                         Rating = channel.Rating,
                         ContentRating = channel.ContentRating,
-                        IsFavorite = userData.IsFavorite, // Restore from backup
-                        IsInMyList = userData.IsInMyList  // Restore from backup
+                        IsInMyList = false,
+                        IsFavorite = false
                     };
                     seriesGroups[seriesKey] = series;
                     context.Series.Add(series);
                 }
                 else
                 {
-                    // Update metadata if provider version is better/newer
                     if (string.IsNullOrWhiteSpace(series.CoverUrl) && !string.IsNullOrWhiteSpace(channel.LogoUrl))
+                    {
                         series.CoverUrl = channel.LogoUrl;
+                    }
 
+                    // Her zaman güncel gruptan besle (Emoji veya prefix değişiklikleri için)
                     if (!string.IsNullOrEmpty(channel.GroupTitle))
                         series.GroupTitle = channel.GroupTitle;
 
@@ -175,6 +151,7 @@ public partial class MediaService : IMediaService
                         series.ContentRating = channel.ContentRating;
                 }
 
+                // O(1) season lookup instead of FirstOrDefault
                 if (!seasonLookup.TryGetValue((seriesKey, seasonNum), out var season))
                 {
                     season = new Season { SeasonNumber = seasonNum, Series = series };
@@ -182,6 +159,7 @@ public partial class MediaService : IMediaService
                     seasonLookup[(seriesKey, seasonNum)] = season;
                 }
 
+                // O(1) episode existence check
                 var channelStreamId = NormalizeStreamIdentity(channel.StreamUrl);
                 Episode? existingEpisode = null;
                 
@@ -193,6 +171,7 @@ public partial class MediaService : IMediaService
                 {
                     episodeByNumber.TryGetValue((season.Id, episodeNum), out existingEpisode);
                 }
+                // Fallback for new seasons (Id == 0) — linear scan on small in-memory list
                 if (existingEpisode == null && season.Id == 0)
                 {
                     existingEpisode = FindExistingEpisode(season, episodeNum, channel.Name, channel.StreamUrl);
@@ -200,45 +179,53 @@ public partial class MediaService : IMediaService
 
                 if (existingEpisode != null)
                 {
-                    // Existing episode: update metadata
                     if (string.IsNullOrWhiteSpace(existingEpisode.CoverUrl) && !string.IsNullOrWhiteSpace(channel.LogoUrl))
+                    {
                         existingEpisode.CoverUrl = channel.LogoUrl;
+                    }
 
                     if (string.IsNullOrWhiteSpace(existingEpisode.Plot) && !string.IsNullOrWhiteSpace(channel.Plot))
+                    {
                         existingEpisode.Plot = channel.Plot;
+                    }
                     
                     if (existingEpisode.Id > 0) mappedEpisodeIds.Add(existingEpisode.Id);
                     continue;
                 }
 
-                // New episode: ensure all metadata is assigned immediately
                 var episode = new Episode
                 {
                     Name = SeriesInfoParser.CleanEpisodeTitle(channel.Name, seriesName, episodeNum),
                     EpisodeNumber = episodeNum,
                     StreamUrl = channel.StreamUrl,
                     CoverUrl = channel.LogoUrl,
-                    Plot = channel.Plot,
-                    Duration = channel.Duration,
                     Season = season
                 };
                 season.Episodes.Add(episode);
                 
+                // Register in lookup for future iterations
                 if (!string.IsNullOrWhiteSpace(channelStreamId) && season.Id > 0)
                 {
                     episodeLookup[(season.Id, channelStreamId)] = episode;
                 }
             }
 
-            // Sync everything to DB
             context.ChangeTracker.DetectChanges();
             await context.SaveChangesAsync(cancellationToken);
 
-            // 2. Orphan Cleanup Phase
-            // Clear tracker to avoid conflicts between raw SQL deletions and tracked entities
-            context.ChangeTracker.Clear();
+            // Track IDs of newly created episodes
+            foreach (var series in seriesGroups.Values)
+            {
+                foreach (var season in series.Seasons)
+                {
+                    foreach (var ep in season.Episodes)
+                    {
+                        if (ep.Id > 0) mappedEpisodeIds.Add(ep.Id);
+                    }
+                }
+            }
 
-            // A. Purge orphan episodes (no longer in provider list)
+            // Phase 2: Cleanup orphan data (episodes/series that no longer have channels)
             var allEpisodesInPlaylist = await context.Episodes
                 .Where(e => e.Season.Series.PlaylistId == playlistId)
                 .Select(e => e.Id)
@@ -253,19 +240,9 @@ public partial class MediaService : IMediaService
                     .ExecuteDeleteAsync(cancellationToken);
             }
 
-            // B. Purge Ghost Seasons (empty seasons)
-            await context.Seasons
-                .Where(sn => sn.Series.PlaylistId == playlistId && !sn.Episodes.Any())
-                .ExecuteDeleteAsync(cancellationToken);
-
-            // C. Purge Ghost Series (empty series)
-            // IMPORTANT: Series with user data (Favorite/MyList) are KEPT even if empty to prevent data loss 
-            // during temporary provider outages.
+            // Cleanup empty series (ghost series)
             var emptySeries = await context.Series
-                .Where(s => s.PlaylistId == playlistId && 
-                           !s.IsFavorite && 
-                           !s.IsInMyList && 
-                           !s.Seasons.Any(sn => sn.Episodes.Any()))
+                .Where(s => s.PlaylistId == playlistId && !s.Seasons.Any(sn => sn.Episodes.Any()))
                 .ToListAsync(cancellationToken);
 
             if (emptySeries.Count > 0)
@@ -277,7 +254,12 @@ public partial class MediaService : IMediaService
         }
         finally
         {
-            gate.Release();
+            context.ChangeTracker.AutoDetectChangesEnabled = true;
+        }
+        }
+        finally
+        {
+            _aggregateLock.Release();
         }
     }
 
@@ -288,7 +270,10 @@ public partial class MediaService : IMediaService
         {
             var byStream = season.Episodes.FirstOrDefault(e =>
                 string.Equals(NormalizeStreamIdentity(e.StreamUrl), streamIdentity, StringComparison.OrdinalIgnoreCase));
-            if (byStream != null) return byStream;
+            if (byStream != null)
+            {
+                return byStream;
+            }
         }
 
         var nameIdentity = NormalizeEpisodeName(episodeName);
@@ -297,7 +282,10 @@ public partial class MediaService : IMediaService
             var byNumberAndName = season.Episodes.FirstOrDefault(e =>
                 e.EpisodeNumber == episodeNumber &&
                 string.Equals(NormalizeEpisodeName(e.Name), nameIdentity, StringComparison.OrdinalIgnoreCase));
-            if (byNumberAndName != null) return byNumberAndName;
+            if (byNumberAndName != null)
+            {
+                return byNumberAndName;
+            }
         }
 
         return season.Episodes.FirstOrDefault(e => e.EpisodeNumber == episodeNumber);
@@ -305,13 +293,23 @@ public partial class MediaService : IMediaService
 
     private static string NormalizeEpisodeName(string? value)
     {
-        if (string.IsNullOrWhiteSpace(value)) return string.Empty;
-        return string.Join(" ", value.Trim().ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        return string.Join(" ", value
+            .Trim()
+            .ToLowerInvariant()
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries));
     }
 
     private static string NormalizeStreamIdentity(string? streamUrl)
     {
-        if (string.IsNullOrWhiteSpace(streamUrl)) return string.Empty;
+        if (string.IsNullOrWhiteSpace(streamUrl))
+        {
+            return string.Empty;
+        }
 
         var trimmed = streamUrl.Trim();
         if (Uri.TryCreate(trimmed, UriKind.Absolute, out var uri))
@@ -330,6 +328,23 @@ public partial class MediaService : IMediaService
         return (info.SeriesName, info.Season, info.Episode);
     }
 
+    private static string CleanSeriesName(string? value) => SeriesInfoParser.CleanSeriesName(value);
+
+    private static int ParseSafeInt(string? value, int fallback)
+    {
+        if (int.TryParse(value, out var parsed) && parsed > 0)
+        {
+            return parsed;
+        }
+
+        if (long.TryParse(value, out var parsedLong) && parsedLong > 0)
+        {
+            return parsedLong > int.MaxValue ? int.MaxValue : (int)parsedLong;
+        }
+
+        return fallback;
+    }
+
     public async Task<List<Series>> GetSeriesAsync(int playlistId, CancellationToken cancellationToken = default)
     {
         using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
@@ -340,7 +355,10 @@ public partial class MediaService : IMediaService
             .Where(s => s.PlaylistId == playlistId)
             .ToListAsync(cancellationToken);
 
-        if (allSeries.Count <= 1) return allSeries;
+        if (allSeries.Count <= 1)
+        {
+            return allSeries;
+        }
 
         var mergedByKey = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
         foreach (var series in allSeries.OrderBy(s => s.Id))
@@ -364,6 +382,7 @@ public partial class MediaService : IMediaService
     {
         if (string.IsNullOrWhiteSpace(name)) return "zzz";
         
+        // Skip leading symbols/numbers to sort naturally by letters if possible
         var cleaned = name.Trim().ToLowerInvariant();
         var index = 0;
         while (index < cleaned.Length && !char.IsLetterOrDigit(cleaned[index]))
@@ -371,20 +390,20 @@ public partial class MediaService : IMediaService
             index++;
         }
 
-        if (index >= cleaned.Length) return cleaned;
+        if (index >= cleaned.Length) return cleaned; // It's all symbols
         return cleaned.Substring(index);
     }
-
     public async Task UpdateSeriesAsync(Series series, CancellationToken cancellationToken = default)
     {
         var normalizedTargetKey = BuildSeriesGroupingKey(series.Name, series.GroupTitle);
-        if (string.IsNullOrWhiteSpace(normalizedTargetKey)) return;
+        if (string.IsNullOrWhiteSpace(normalizedTargetKey))
+        {
+            return;
+        }
 
         using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
-        
-        // Targeted query using name prefix to avoid loading entire playlist series into memory
         var candidates = await context.Series
-            .Where(s => s.PlaylistId == series.PlaylistId && s.Name.Contains(series.Name.Substring(0, Math.Min(3, series.Name.Length))))
+            .Where(s => s.PlaylistId == series.PlaylistId)
             .ToListAsync(cancellationToken);
 
         var toUpdate = candidates
@@ -394,10 +413,16 @@ public partial class MediaService : IMediaService
         if (toUpdate.Count == 0 && series.Id > 0)
         {
             var byId = await context.Series.FindAsync(new object[] { series.Id }, cancellationToken);
-            if (byId != null) toUpdate.Add(byId);
+            if (byId != null)
+            {
+                toUpdate.Add(byId);
+            }
         }
 
-        if (toUpdate.Count == 0) return;
+        if (toUpdate.Count == 0)
+        {
+            return;
+        }
 
         foreach (var item in toUpdate)
         {
@@ -429,20 +454,23 @@ public partial class MediaService : IMediaService
         if (string.IsNullOrWhiteSpace(raw)) return string.Empty;
         return string.Join(" ", raw.Trim().ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
     }
-
     private static void MergeSeriesInMemory(Series target, Series source)
     {
-        // Only merge if target field is empty
         if (string.IsNullOrWhiteSpace(target.CoverUrl) && !string.IsNullOrWhiteSpace(source.CoverUrl))
+        {
             target.CoverUrl = source.CoverUrl;
+        }
 
         if (string.IsNullOrWhiteSpace(target.Plot) && !string.IsNullOrWhiteSpace(source.Plot))
+        {
             target.Plot = source.Plot;
+        }
 
         if (string.IsNullOrWhiteSpace(target.Genre) && !string.IsNullOrWhiteSpace(source.Genre))
+        {
             target.Genre = source.Genre;
-
-        if (string.IsNullOrWhiteSpace(target.GroupTitle) && !string.IsNullOrWhiteSpace(source.GroupTitle))
+        }
+        if (!string.IsNullOrEmpty(source.GroupTitle))
             target.GroupTitle = source.GroupTitle;
 
         foreach (var sourceSeason in source.Seasons)
@@ -469,19 +497,29 @@ public partial class MediaService : IMediaService
                 }
 
                 if (existingEpisode.LastWatched == null && sourceEpisode.LastWatched != null)
+                {
                     existingEpisode.LastWatched = sourceEpisode.LastWatched;
+                }
 
                 if (existingEpisode.WatchedPosition == null && sourceEpisode.WatchedPosition != null)
+                {
                     existingEpisode.WatchedPosition = sourceEpisode.WatchedPosition;
+                }
 
                 if (existingEpisode.Duration == null && sourceEpisode.Duration != null)
+                {
                     existingEpisode.Duration = sourceEpisode.Duration;
+                }
 
                 if (string.IsNullOrWhiteSpace(existingEpisode.CoverUrl) && !string.IsNullOrWhiteSpace(sourceEpisode.CoverUrl))
+                {
                     existingEpisode.CoverUrl = sourceEpisode.CoverUrl;
+                }
 
                 if (string.IsNullOrWhiteSpace(existingEpisode.Plot) && !string.IsNullOrWhiteSpace(sourceEpisode.Plot))
+                {
                     existingEpisode.Plot = sourceEpisode.Plot;
+                }
             }
 
             targetSeason.Episodes = targetSeason.Episodes
@@ -494,4 +532,7 @@ public partial class MediaService : IMediaService
             .OrderBy(s => s.SeasonNumber)
             .ToList();
     }
+
 }
+
+
