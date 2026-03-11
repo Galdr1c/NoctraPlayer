@@ -139,6 +139,15 @@ public class AppDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.EpisodeId)
                   .OnDelete(DeleteBehavior.SetNull);
+
+            // Prevent duplicate history entries for the same channel/episode per profile
+            entity.HasIndex(e => new { e.ProfileId, e.ChannelId })
+                  .IsUnique()
+                  .HasFilter("\"ChannelId\" IS NOT NULL");
+
+            entity.HasIndex(e => new { e.ProfileId, e.EpisodeId })
+                  .IsUnique()
+                  .HasFilter("\"EpisodeId\" IS NOT NULL");
         });
 
         modelBuilder.Entity<SeriesEpisodeProgress>(entity =>

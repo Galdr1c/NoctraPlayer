@@ -123,7 +123,18 @@ public class WatchHistoryService : IWatchHistoryService
                 }
             }
 
-            await context.SaveChangesAsync(ct);
+            try
+            {
+                await context.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is Microsoft.Data.Sqlite.SqliteException sqliteEx && sqliteEx.SqliteErrorCode == 19)
+            {
+                // Race condition handled: Another thread successfully tracked the history for this media concurrently.
+                // We safely swallow the unique constraint violation exception.
+
+                // Clear the change tracker to avoid polluting subsequent saves on this context
+                context.ChangeTracker.Clear();
+            }
         }
         finally
         {

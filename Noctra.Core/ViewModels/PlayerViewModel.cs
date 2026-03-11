@@ -879,6 +879,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             ? TimeSpan.Zero 
             : nowUtc - _lastWatchHistoryUpdateUtc;
             
+        if (delta < TimeSpan.Zero)
+        {
+            delta = TimeSpan.Zero;
+        }
+
         _lastWatchHistoryUpdateUtc = nowUtc;
 
         await FlushWatchHistoryAsync(force: false, incrementDelta: delta);

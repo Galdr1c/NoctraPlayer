@@ -1007,7 +1007,6 @@ namespace Noctra.Tests
             var channel  = await SeedChannelAsync(playlist.Id);
 
             await WriteHistoryAsync(profile.Id, channelId: channel.Id);
-            await WriteHistoryAsync(profile.Id, channelId: channel.Id); // aynı profile 2. kayıt (farklı olabilir)
             
             // 2 kayıt mevcut olmasın diye sadece 1 yazalım (WatchHistories profil+channel unique değil)
             var count = await _context.WatchHistories.CountAsync();

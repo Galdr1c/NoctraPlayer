@@ -4172,6 +4172,7 @@ public partial class MainViewModel : ObservableObject
                          (h.EpisodeId.HasValue && h.Episode != null && h.Episode.Season != null && h.Episode.Season.Series != null &&
                           profilePlaylistIds.Contains(h.Episode.Season.Series.PlaylistId))))
             .OrderByDescending(h => h.WatchedAt)
+            .Take(100) // Performance improvement: avoid loading full history into memory
             .ToListAsync();
 
         var result = new List<Channel>(histories.Count);
