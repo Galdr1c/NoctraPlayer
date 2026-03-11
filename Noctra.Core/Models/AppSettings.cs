@@ -78,6 +78,11 @@ public class AppSettings
     /// İndirme klasörü yolu
     /// </summary>
     public string DownloadPath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// İndirme tamamlandığında bildirim göster
+    /// </summary>
+    public bool ShowDownloadNotification { get; set; } = true;
     
     /// <summary>
     /// Ufak kesintileri "tamamlanmış" sayma eşiği (varsayılan: %99.98)

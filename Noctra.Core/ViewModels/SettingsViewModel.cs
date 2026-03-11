@@ -50,6 +50,9 @@ public partial class SettingsViewModel : ObservableObject
     
     [ObservableProperty]
     private string _downloadPath = string.Empty;
+
+    [ObservableProperty]
+    private bool _showDownloadNotification;
     
     // ============ Görünüm ============
     
@@ -292,6 +295,7 @@ public partial class SettingsViewModel : ObservableObject
         SelectedDownloadQuality = (int)s.DownloadQuality;
         DownloadWifiOnly = s.DownloadWifiOnly;
         DownloadPath = NormalizeDownloadPath(s.DownloadPath);
+        ShowDownloadNotification = s.ShowDownloadNotification;
         
         // Appearance
         IsDarkTheme = s.IsDarkTheme;
@@ -341,6 +345,7 @@ public partial class SettingsViewModel : ObservableObject
         s.DownloadWifiOnly = DownloadWifiOnly;
         DownloadPath = NormalizeDownloadPath(DownloadPath);
         s.DownloadPath = DownloadPath;
+        s.ShowDownloadNotification = ShowDownloadNotification;
         
         // Appearance
         s.IsDarkTheme = IsDarkTheme;

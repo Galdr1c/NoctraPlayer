@@ -53,5 +53,10 @@ public interface IDialogService
     /// <param name="currentAvatar">Currently selected avatar</param>
     /// <returns>The path/URL of the selected avatar, or null if cancelled</returns>
     Task<string?> ShowAvatarPickerAsync(string? currentAvatar);
+
+    /// <summary>
+    /// Shows a desktop notification (toast)
+    /// </summary>
+    Task ShowNotificationAsync(string title, string message);
 }
 

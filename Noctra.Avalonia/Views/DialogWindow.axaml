@@ -114,7 +114,8 @@
                 <Button x:Name="PrimaryBtn"
                         Content="{Binding PrimaryButtonText}" 
                         Classes="DialogPrimary"
-                        Click="Primary_Click"/>
+                        Click="Primary_Click"
+                        IsVisible="{Binding ShowPrimary}"/>
             </StackPanel>
         </Grid>
     </Border>

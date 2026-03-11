@@ -71,6 +71,8 @@ public partial class MainWindow : Window
             var upsell = ((App)Application.Current!).Services.GetRequiredService<Views.UpsellWindow>();
             await upsell.ShowDialog(this);
         };
+
+        UpdateDownloadBadgeVisibility();
     }
 
     private void MainWindow_PositionChanged(object? sender, PixelPointEventArgs e)
@@ -298,6 +300,26 @@ public partial class MainWindow : Window
         {
             ScheduleImageWarmup();
         }
+        else if (e.PropertyName == nameof(MainViewModel.ActiveDownloadCount))
+        {
+            UpdateDownloadBadgeVisibility();
+        }
+    }
+
+    private void UpdateDownloadBadgeVisibility()
+    {
+        bool hasDownloads = _mainViewModel.ActiveDownloadCount > 0;
+        
+        if (_isSidebarOpen)
+        {
+            NavDownloadsBadgeMini.IsVisible = false;
+            NavDownloadsBadgeFull.IsVisible = hasDownloads;
+        }
+        else
+        {
+            NavDownloadsBadgeFull.IsVisible = false;
+            NavDownloadsBadgeMini.IsVisible = hasDownloads;
+        }
     }
 
     private void PlayerViewModel_CloseRequested(object? sender, EventArgs e)
@@ -496,6 +518,8 @@ public partial class MainWindow : Window
         NavFavBtn.SetValue(ToolTip.TipProperty, visible ? null : "Favoriler");
         NavHistoryBtn.SetValue(ToolTip.TipProperty, visible ? null : "Geçmiş");
         NavDownloadsBtn.SetValue(ToolTip.TipProperty, visible ? null : "İndirilenler");
+
+        UpdateDownloadBadgeVisibility();
     }
 
     private void NavigateHome_Click(object? sender, RoutedEventArgs e) { CloseSidebar(); _mainViewModel.CloseSeriesDetailCommand.Execute(null); _mainViewModel.NavigateCommand.Execute(AppView.Home); }

@@ -2,7 +2,10 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Toolkit.Uwp.Notifications;
 using Noctra.Avalonia.Views;
+using System.Runtime.InteropServices;
+using System.IO;
 using Noctra.Models;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
@@ -104,7 +107,35 @@ public sealed class AvaloniaDialogService : IDialogService
         return await window.ShowDialog<string?>(owner);
     }
 
-    private static Window GetMainWindow()
+    public async Task ShowNotificationAsync(string title, string message)
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            try
+            {
+                // Native Windows Toast
+                new ToastContentBuilder()
+                    .AddText(title)
+                    .AddText(message)
+                    .AddAppLogoOverride(new Uri("file:///" + Path.GetFullPath("Assets/Logo.png")))
+                    .Show();
+                
+                return;
+            }
+            catch
+            {
+                // Fallback to custom window if native fails
+            }
+        }
+
+        var window = new DialogWindow(title, message, DialogMode.Notification);
+
+        // Non-blocking for notifications
+        window.Show();
+        await Task.CompletedTask;
+    }
+
+    private Window GetMainWindow()
     {
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop &&
             desktop.MainWindow != null)

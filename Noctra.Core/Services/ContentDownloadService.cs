@@ -36,6 +36,7 @@ public class ContentDownloadService : IContentDownloadService
     private int _isQueueWorkerStarted;
 
     public event EventHandler? DownloadsChanged;
+    public event EventHandler<DownloadItem>? DownloadCompleted;
 
     public ContentDownloadService(
         ISettingsService settingsService,
@@ -998,6 +999,8 @@ public class ContentDownloadService : IContentDownloadService
 
         await UpdateMappedEntitiesToLocalPathAsync(db, item, filePath);
         await db.SaveChangesAsync();
+        
+        DownloadCompleted?.Invoke(this, item);
         DownloadsChanged?.Invoke(this, EventArgs.Empty);
     }
 

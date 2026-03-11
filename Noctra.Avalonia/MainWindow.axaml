@@ -370,16 +370,28 @@
                   Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Downloads}}">
             <Panel>
               <Border Classes="ActiveIndicator" />
-              <Grid ColumnDefinitions="*,Auto" Margin="0,0,12,0">
+              <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
-                  <materialIcons:MaterialIcon Kind="DownloadOutline" />
+                  <Panel>
+                    <materialIcons:MaterialIcon Kind="DownloadOutline" />
+                    <!-- Mini mode badge (overlay on icon) -->
+                    <Border x:Name="NavDownloadsBadgeMini" 
+                            IsVisible="False"
+                            Background="{DynamicResource AccentBrush}" 
+                            CornerRadius="6" Width="12" Height="12" 
+                            HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-4,0,0"
+                            BorderBrush="{DynamicResource Bg1Brush}" BorderThickness="1.5">
+                       <Ellipse Fill="White" Width="4" Height="4" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False"/>
+                    </Border>
+                  </Panel>
                   <TextBlock x:Name="NavDownloadsText" Text="İndirilenler" VerticalAlignment="Center" IsVisible="False"/>
                 </StackPanel>
                 
-                <!-- Badge -->
-                <Border Grid.Column="1" 
-                        IsVisible="{Binding ActiveDownloadCount, Converter={StaticResource CountToVisibilityConverter}}"
-                        Background="{DynamicResource AccentBrush}" CornerRadius="10" Padding="6,1" VerticalAlignment="Center">
+                <!-- Expanded mode badge -->
+                <Border x:Name="NavDownloadsBadgeFull" Grid.Column="1" 
+                        IsVisible="False"
+                        Background="{DynamicResource AccentBrush}" CornerRadius="10" Padding="6,1" VerticalAlignment="Center"
+                        Margin="0,0,12,0">
                   <TextBlock Text="{Binding ActiveDownloadCount}" Foreground="White" FontSize="10" FontWeight="Bold"/>
                 </Border>
               </Grid>

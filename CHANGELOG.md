@@ -9,6 +9,15 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Sidebar İndirme Rozeti (Badge) İyileştirmesi** (2026-03-11):
+    - Kenar çubuğu kapalıyken (Mini mod) görünmeyen aktif indirme sayısı göstergesi, ikon üzerine yerleşen modern bir "nokta" (dot) rozetiyle değiştirildi.
+    - Kenar çubuğu açıkken sayısal rozetin, kapalıyken ise ikon üzerindeki noktanın dinamik olarak gösterilmesi sağlandı.
+    - Rozetin kenarlarda yarım kalması sorunu giderilerek yerleşimi optimize edildi.
+- **Bildirim Ayarları ve Masaüstü Bildirimleri** (2026-03-11):
+    - İndirmesi tamamlanan içerikler için **Windows İşlem Merkezi (Action Center)** ile entegre çalışan yerli bildirim sistemi hayata geçirildi.
+    - Bildirim içeriğine inen dosyanın adı eklenerek kullanıcının neyin indiğini net bir şekilde görmesi sağlandı.
+    - Ayarlar menüsüne "Bildirimler" sekmesi eklendi; indirme tamamlanma bildirimi buradan açılıp kapatılabilir.
+    - Windows dışı platformlar için modern, otomatik kapanan yedek bildirim penceresi optimize edildi.
 - **Ses ve Altyazı Tercihleri** (2026-03-11):
     - VOD ve Diziler için varsayılan altyazı durumu ve tercih edilen ses/altyazı dili ayarları eklendi.
     - Player, içerik açıldığında ayarlardaki tercihlere göre en uygun kanalları otomatik seçer.

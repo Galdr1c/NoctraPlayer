@@ -31,6 +31,7 @@ public sealed record DownloadContentResult(
 public interface IContentDownloadService
 {
     event EventHandler? DownloadsChanged;
+    event EventHandler<DownloadItem>? DownloadCompleted;
 
     Task<DownloadContentResult> QueueDownloadAsync(
         DownloadContentRequest request,

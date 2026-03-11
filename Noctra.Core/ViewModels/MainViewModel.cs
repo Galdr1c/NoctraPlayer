@@ -292,6 +292,17 @@ public partial class MainViewModel : ObservableObject
             });
         };
 
+        _contentDownloadService.DownloadCompleted += (s, item) =>
+        {
+            _dispatcherService.BeginInvoke(async () =>
+            {
+                if (_settingsService.Settings.ShowDownloadNotification)
+                {
+                    await _dialogService.ShowNotificationAsync("İndirme Tamamlandı", $"{item.DisplayName} başarıyla indirildi.");
+                }
+            });
+        };
+
         // When background aggregation completes, reload series data
         _mediaService.OnAggregationCompleted += (playlistId) =>
         {
