@@ -220,7 +220,13 @@ public partial class App : Application
         services.AddSingleton(_ => CreateOptimizedHttpClient());
 
         services.AddTransient<IM3UParser, M3UParser>();
-        services.AddSingleton<IEpgService, EpgService>();
+        services.AddSingleton<IEpgService, EpgService>(sp => 
+            new EpgService(
+                sp.GetRequiredService<IDbContextFactory<AppDbContext>>(),
+                sp.GetRequiredService<HttpClient>(),
+                sp.GetRequiredService<ISettingsService>(),
+                sp.GetService<ILogger<EpgService>>()
+            ));
         services.AddTransient<IMetadataService, MetadataService>();
         services.AddSingleton<IXtreamCodesService, XtreamCodesService>();
         services.AddTransient<IStalkerPortalService, StalkerPortalService>();

@@ -71,6 +71,9 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private int _epgRefreshFrequencyIndex;
 
+    [ObservableProperty]
+    private bool _epgEnabled;
+
     partial void OnChannelListRefreshFrequencyIndexChanged(int value)
     {
         ChannelListRefreshFrequencyHours = value switch
@@ -295,7 +298,8 @@ public partial class SettingsViewModel : ObservableObject
         AppLanguage = string.IsNullOrWhiteSpace(s.Language) ? "tr" : s.Language;
         ChannelListRefreshFrequencyHours = s.ChannelListRefreshFrequencyHours;
         EpgRefreshFrequencyHours = s.EpgRefreshFrequencyHours;
-        
+        EpgEnabled = s.EpgEnabled;
+
         ChannelListRefreshFrequencyIndex = ChannelListRefreshFrequencyHours switch
         {
             1 => 1,
@@ -344,6 +348,7 @@ public partial class SettingsViewModel : ObservableObject
         s.ChannelListRefreshFrequencyHours = Math.Max(0, ChannelListRefreshFrequencyHours);
         s.EpgRefreshFrequencyHours = Math.Max(0, EpgRefreshFrequencyHours);
         s.CustomEpgUrl = string.IsNullOrWhiteSpace(CustomEpgUrl) ? null : CustomEpgUrl.Trim();
+        s.EpgEnabled = EpgEnabled;
         
         
         await _settingsService.SaveAsync();

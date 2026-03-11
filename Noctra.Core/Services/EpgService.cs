@@ -1,4 +1,4 @@
-﻿using System.IO.Compression;
+using System.IO.Compression;
 using System.Net.Http;
 using System.Xml.Linq;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +16,7 @@ public class EpgService : IEpgService
 {
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly HttpClient _httpClient;
+    private readonly ISettingsService _settingsService;
     private readonly ILogger<EpgService>? _logger;
     private readonly SemaphoreSlim _loadSemaphore = new(1, 1);
     
@@ -23,10 +24,11 @@ public class EpgService : IEpgService
     public DateTime? LastUpdated { get; private set; }
     public string? LastError { get; private set; }
 
-    public EpgService(IDbContextFactory<AppDbContext> contextFactory, HttpClient httpClient, ILogger<EpgService>? logger = null)
+    public EpgService(IDbContextFactory<AppDbContext> contextFactory, HttpClient httpClient, ISettingsService settingsService, ILogger<EpgService>? logger = null)
     {
         _contextFactory = contextFactory;
         _httpClient = httpClient;
+        _settingsService = settingsService;
         _logger = logger;
     }
 
@@ -40,6 +42,13 @@ public class EpgService : IEpgService
         if (!await _loadSemaphore.WaitAsync(0).ConfigureAwait(false))
         {
             _logger?.LogWarning("Another EPG load is in progress, skipping new request.");
+            return 0;
+        }
+
+        // Check if EPG is enabled globally
+        if (!_settingsService.Settings.EpgEnabled)
+        {
+            _logger?.LogInformation("EPG is disabled in settings, skipping load.");
             return 0;
         }
 

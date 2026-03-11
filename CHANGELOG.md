@@ -13,6 +13,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - VOD ve Diziler için varsayılan altyazı durumu ve tercih edilen ses/altyazı dili ayarları eklendi.
     - Player, içerik açıldığında ayarlardaki tercihlere göre en uygun kanalları otomatik seçer.
     - Bu özellik sadece VOD/Dizi için aktiftir, Canlı TV'yi etkilemez.
+- **EPG Ayarları İyileştirmesi** (2026-03-11):
+    - EPG özelliğini tamamen açıp kapatabilmek için `EpgEnabled` ayarı eklendi.
+    - EPG devre dışı bırakıldığında `EpgService` veri indirme ve işleme süreçlerini atlayarak performans sağlar.
+    - `SettingsWindow.axaml` içinde `ToggleSwitch` kontrolünde oluşan çalışma zamanı hatası (StaticResource hatası) giderildi.
 - **Geçmişten Silme Özelliği** (2026-03-10):
     - Geçmiş sayfasındaki tüm kartlara (Canlı TV, Dizi, Film) sağ tık menüsü üzerinden "Geçmişten Sil" seçeneği eklendi.
     - Bu özellik hem arayüzden öğeyi anında kaldırır hem de veritabanındaki ilgili izleme geçmişini ve ilerleme (progress) verilerini temizler.

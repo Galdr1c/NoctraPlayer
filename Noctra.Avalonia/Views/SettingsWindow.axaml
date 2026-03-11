@@ -425,7 +425,14 @@
                         <StackPanel HorizontalAlignment="Stretch" Margin="0,0,0,100">
                             <Border Classes="SettingsCard">
                                 <StackPanel>
-                                    <TextBlock Text="EPG Yenileme" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
+                                    <Grid HorizontalAlignment="Stretch" Margin="0,0,0,20">
+                                        <TextBlock Text="EPG Yenileme" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                        <ToggleSwitch IsChecked="{Binding EpgEnabled}" 
+                                                      Content="Etkinleştirildi" 
+                                                      OnContent="Açık" 
+                                                      OffContent="Kapalı"
+                                                      HorizontalAlignment="Right"/>
+                                    </Grid>
 
                                     <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>

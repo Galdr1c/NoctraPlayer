@@ -111,6 +111,11 @@ public class AppSettings
     public int EpgRefreshFrequencyHours { get; set; } = 24;
 
     /// <summary>
+    /// EPG etkin mi?
+    /// </summary>
+    public bool EpgEnabled { get; set; } = true;
+
+    /// <summary>
     /// EPG icin kullanicinin verdigi ozel URL (opsiyonel)
     /// </summary>
     public string? CustomEpgUrl { get; set; }
