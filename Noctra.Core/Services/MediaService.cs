@@ -113,7 +113,6 @@ public partial class MediaService : IMediaService
             }
 
             var mappedEpisodeIds = new HashSet<int>();
-            var newEpisodes = new List<Episode>();
 
             foreach (var channel in channels)
             {
@@ -224,7 +223,6 @@ public partial class MediaService : IMediaService
                     Season = season
                 };
                 season.Episodes.Add(episode);
-                newEpisodes.Add(episode);
                 
                 if (!string.IsNullOrWhiteSpace(channelStreamId) && season.Id > 0)
                 {
@@ -235,12 +233,6 @@ public partial class MediaService : IMediaService
             // Sync everything to DB
             context.ChangeTracker.DetectChanges();
             await context.SaveChangesAsync(cancellationToken);
-
-            // Add newly created IDs to mapped set so they are not purged in cleanup
-            foreach (var ne in newEpisodes)
-            {
-                if (ne.Id > 0) mappedEpisodeIds.Add(ne.Id);
-            }
 
             // 2. Orphan Cleanup Phase
             // Clear tracker to avoid conflicts between raw SQL deletions and tracked entities
