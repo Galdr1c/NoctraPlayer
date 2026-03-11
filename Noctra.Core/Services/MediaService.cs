@@ -51,7 +51,7 @@ public partial class MediaService : IMediaService
             var seriesGroups = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
             foreach (var existing in existingSeries.OrderBy(s => s.Id))
             {
-                var key = BuildSeriesGroupingKey(existing.Name, existing.GroupTitle);
+                var key = BuildSeriesGroupingKey(existing.Name);
                 if (!seriesGroups.ContainsKey(key))
                 {
                     seriesGroups[key] = existing;
@@ -106,7 +106,7 @@ public partial class MediaService : IMediaService
                     episodeNum = Math.Max(1, episodeNum);
                 }
 
-                var seriesKey = BuildSeriesGroupingKey(seriesName, channel.GroupTitle);
+                var seriesKey = BuildSeriesGroupingKey(seriesName);
 
                 if (!seriesGroups.TryGetValue(seriesKey, out var series))
                 {
@@ -116,7 +116,6 @@ public partial class MediaService : IMediaService
                         PlaylistId = playlistId,
                         CoverUrl = channel.LogoUrl,
                         GroupTitle = channel.GroupTitle,
-                        Genre = channel.GroupTitle, // Genre should also match GroupTitle for better filtering
                         TmdbId = channel.TmdbId,
                         ReleaseYear = channel.ReleaseYear,
                         Rating = channel.Rating,
@@ -363,7 +362,7 @@ public partial class MediaService : IMediaService
         var mergedByKey = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
         foreach (var series in allSeries.OrderBy(s => s.Id))
         {
-            var key = BuildSeriesGroupingKey(series.Name, series.GroupTitle);
+            var key = BuildSeriesGroupingKey(series.Name);
             if (!mergedByKey.TryGetValue(key, out var target))
             {
                 mergedByKey[key] = series;
@@ -395,7 +394,7 @@ public partial class MediaService : IMediaService
     }
     public async Task UpdateSeriesAsync(Series series, CancellationToken cancellationToken = default)
     {
-        var normalizedTargetKey = BuildSeriesGroupingKey(series.Name, series.GroupTitle);
+        var normalizedTargetKey = BuildSeriesGroupingKey(series.Name);
         if (string.IsNullOrWhiteSpace(normalizedTargetKey))
         {
             return;
@@ -407,7 +406,7 @@ public partial class MediaService : IMediaService
             .ToListAsync(cancellationToken);
 
         var toUpdate = candidates
-            .Where(s => string.Equals(BuildSeriesGroupingKey(s.Name, s.GroupTitle), normalizedTargetKey, StringComparison.OrdinalIgnoreCase))
+            .Where(s => string.Equals(BuildSeriesGroupingKey(s.Name), normalizedTargetKey, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         if (toUpdate.Count == 0 && series.Id > 0)
@@ -433,27 +432,17 @@ public partial class MediaService : IMediaService
         await context.SaveChangesAsync(cancellationToken);
     }
 
-    private static string BuildSeriesGroupingKey(string? seriesName, string? groupTitle)
+    private static string BuildSeriesGroupingKey(string? seriesName)
     {
-        var key = SeriesProgressIdentity.NormalizeSeriesKey(seriesName);
-        if (string.IsNullOrWhiteSpace(key))
+        var normalized = SeriesProgressIdentity.NormalizeSeriesKey(seriesName);
+        if (!string.IsNullOrWhiteSpace(normalized))
         {
-            key = NormalizeEpisodeName(seriesName);
+            return normalized;
         }
 
-        if (!string.IsNullOrEmpty(groupTitle))
-        {
-            key += $"|{NormalizeIdentityToken(groupTitle)}";
-        }
-
-        return key;
+        return NormalizeEpisodeName(seriesName);
     }
 
-    private static string NormalizeIdentityToken(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) return string.Empty;
-        return string.Join(" ", raw.Trim().ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
-    }
     private static void MergeSeriesInMemory(Series target, Series source)
     {
         if (string.IsNullOrWhiteSpace(target.CoverUrl) && !string.IsNullOrWhiteSpace(source.CoverUrl))
