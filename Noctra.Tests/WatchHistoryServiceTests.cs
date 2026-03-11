@@ -4,6 +4,7 @@ using Moq;
 using Noctra.Data;
 using Noctra.Models;
 using Noctra.Services;
+using Noctra.Services.Interfaces;
 using System;
 using System.Threading.Tasks;
 using Xunit;
@@ -37,7 +38,7 @@ public class WatchHistoryServiceTests : IDisposable
     public async Task UpsertSeriesProgressAsync_CrossProviderTmdbMatch_StrangerThingsScenario()
     {
         // Arrange
-        var service = new WatchHistoryService(_contextFactory);
+        var service = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
         
         var account = new ProviderAccount { Name = "Test Account", Url = "http://test.com" };
         var profile = new Profile { Name = "Test Profile", ProviderAccount = account };
@@ -94,7 +95,7 @@ public class WatchHistoryServiceTests : IDisposable
     public async Task UpsertSeriesProgressAsync_FallbackMatch_WhenTmdbIdIsNull()
     {
         // Arrange
-        var service = new WatchHistoryService(_contextFactory);
+        var service = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
         
         var account = new ProviderAccount { Name = "Test Account 2", Url = "http://test.com" };
         var profile = new Profile { Name = "Test Profile 2", ProviderAccount = account };

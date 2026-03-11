@@ -1,4 +1,4 @@
-﻿using Xunit;
+using Xunit;
 using Noctra.Services;
 using Noctra.Models;
 using System.Net.Http;

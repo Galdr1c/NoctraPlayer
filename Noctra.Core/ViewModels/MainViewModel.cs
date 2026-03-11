@@ -3166,20 +3166,65 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private void UpdateHistoryChannels()
+    public void ResetWatchHistoryUI()
     {
-        SetItems(HistoryChannels, Channels
-            .Where(c => c.LastWatched.HasValue)
-            .OrderByDescending(c => c.LastWatched));
+        // 1. Reset Channels in memory
+        if (Channels != null)
+        {
+            foreach (var channel in Channels)
+            {
+                channel.LastWatched = null;
+                channel.WatchedPosition = TimeSpan.Zero;
+                channel.IsCompleted = false;
+            }
+        }
+
+        // 2. Reset Episodes in memory (via series cache)
+        if (_allSeriesCache != null)
+        {
+            foreach (var series in _allSeriesCache)
+            {
+                if (series.Seasons == null) continue;
+                foreach (var season in series.Seasons)
+                {
+                    if (season.Episodes == null) continue;
+                    foreach (var episode in season.Episodes)
+                    {
+                        episode.LastWatched = null;
+                        episode.WatchedPosition = TimeSpan.Zero;
+                        episode.IsCompleted = false;
+                    }
+                }
+            }
+        }
+
+        // 3. Update all dependent UI collections
+        UpdateHistoryChannels();
+        _ = RefreshPersonalListsFromDatabaseAsync();
+    }
+
+    public void UpdateHistoryChannels()
+    {
+        // 1. Update Channels history
+        if (Channels != null)
+        {
+            SetItems(HistoryChannels, Channels
+                .Where(c => c.LastWatched.HasValue)
+                .OrderByDescending(c => c.LastWatched));
+        }
+        
+        // 2. Refresh buckets (includes series from cache)
         UpdateHistoryBuckets();
 
+        // 3. Sync from DB if needed
         _ = RefreshHistoryChannelsOnlyAsync();
     }
 
     private void UpdateHistoryBuckets()
     {
-        SetItems(HistoryLiveChannels, HistoryChannels.Where(c => c.Type == ChannelType.Live));
-        SetItems(HistoryVodChannels, HistoryChannels.Where(c => c.Type == ChannelType.VOD));
+        var historySnapshot = HistoryChannels.ToList();
+        SetItems(HistoryLiveChannels, historySnapshot.Where(c => c.Type == ChannelType.Live));
+        SetItems(HistoryVodChannels, historySnapshot.Where(c => c.Type == ChannelType.VOD));
 
         // Dizi geçmişi: izlenmiş episode'ların parent Series'ini bul, tekrarsız
         var watchedSeries = _allSeriesCache
@@ -6100,6 +6145,11 @@ public partial class MainViewModel : ObservableObject
 
         candidates.AddRange(SeriesViewItems);
 
+        if (_allSeriesCache != null)
+        {
+            candidates.AddRange(_allSeriesCache);
+        }
+
         var seenSeries = new HashSet<int>();
         var anyUpdated = false;
 
@@ -6142,6 +6192,7 @@ public partial class MainViewModel : ObservableObject
         {
             OnPropertyChanged(nameof(SelectedSeries));
             OnPropertyChanged(nameof(SeriesViewItems));
+            UpdateHistoryBuckets();
         }
     }
 

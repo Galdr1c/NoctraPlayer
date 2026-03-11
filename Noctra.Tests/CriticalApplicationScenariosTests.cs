@@ -1,9 +1,11 @@
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using Noctra.Data;
 using Noctra.Models;
 using Noctra.Services;
@@ -370,7 +372,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task WatchHistory_TwoProfiles_SameChannel_IsolatedPerProfile()
         {
-            var svc = new WatchHistoryService(_contextFactory);
+            var svc = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var account  = await SeedAccountAsync();
             var profileA = await SeedProfileAsync(account, "A");
             var profileB = await SeedProfileAsync(account, "B");
@@ -394,7 +396,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task SeriesProgress_TwoProfiles_SameEpisode_IndependentProgress()
         {
-            var svc      = new WatchHistoryService(_contextFactory);
+            var svc      = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var account  = await SeedAccountAsync();
             var profileA = await SeedProfileAsync(account, "A");
             var profileB = await SeedProfileAsync(account, "B");
@@ -419,7 +421,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task ClearHistory_OnlyAffectsTargetProfile()
         {
-            var svc      = new WatchHistoryService(_contextFactory);
+            var svc      = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var account  = await SeedAccountAsync();
             var profileA = await SeedProfileAsync(account, "A");
             var profileB = await SeedProfileAsync(account, "B");
@@ -430,7 +432,7 @@ namespace Noctra.Tests
             await svc.TrackWatchAsync(profileA.Id, ch1.Id, null, TimeSpan.FromMinutes(10));
             await svc.TrackWatchAsync(profileB.Id, ch2.Id, null, TimeSpan.FromMinutes(10));
 
-            await svc.ClearHistoryAsync(profileA.Id);
+            await svc.DeleteProfileHistoryAsync(profileA.Id);
 
             var remaining = await _context.WatchHistories.ToListAsync();
             Assert.Single(remaining);
@@ -472,7 +474,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task GetLatestForMedia_ReturnsOnlyCorrectProfileRecord()
         {
-            var svc      = new WatchHistoryService(_contextFactory);
+            var svc      = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var account  = await SeedAccountAsync();
             var profileA = await SeedProfileAsync(account, "A");
             var profileB = await SeedProfileAsync(account, "B");
@@ -612,7 +614,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task ChildProfile_WatchHistory_IsolatedFromAdultProfile()
         {
-            var svc      = new WatchHistoryService(_contextFactory);
+            var svc      = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var account  = await SeedAccountAsync();
             var adultProfile = await SeedProfileAsync(account, "Adult", isChild: false);
             var childProfile = await SeedProfileAsync(account, "Child", isChild: true);
@@ -690,7 +692,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task ChildProfile_SeriesProgress_NotVisibleToAdultProfile()
         {
-            var svc      = new WatchHistoryService(_contextFactory);
+            var svc      = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var account  = await SeedAccountAsync();
             var child    = await SeedProfileAsync(account, "Child", isChild: true);
             var adult    = await SeedProfileAsync(account, "Adult", isChild: false);
@@ -783,7 +785,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task ConcurrentTracking_TwoProfiles_BothRecorded()
         {
-            var svc      = new WatchHistoryService(_contextFactory);
+            var svc      = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var account  = await SeedAccountAsync();
             var profA    = await SeedProfileAsync(account, "A");
             var profB    = await SeedProfileAsync(account, "B");
@@ -805,7 +807,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task RapidFireTracking_CompletedFlagNeverLost()
         {
-            var svc     = new WatchHistoryService(_contextFactory);
+            var svc     = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var account = await SeedAccountAsync();
             var profile = await SeedProfileAsync(account);
             var playlist = await SeedPlaylistAsync(profile.Id);
@@ -830,7 +832,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task WatchedDuration_AccumulatesAcrossMultipleCalls()
         {
-            var svc     = new WatchHistoryService(_contextFactory);
+            var svc     = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var account = await SeedAccountAsync();
             var profile = await SeedProfileAsync(account);
             var playlist = await SeedPlaylistAsync(profile.Id);
@@ -854,7 +856,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task MultipleEpisodes_EachHasOwnHistoryRecord()
         {
-            var svc     = new WatchHistoryService(_contextFactory);
+            var svc     = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var account = await SeedAccountAsync();
             var profile = await SeedProfileAsync(account);
             var ep1     = await SeedEpisodeAsync(0, 1, 1, "Succession");
@@ -878,7 +880,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task CleanupOlderThanDays_PreservesRecentWatching()
         {
-            var svc     = new WatchHistoryService(_contextFactory);
+            var svc     = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var account = await SeedAccountAsync();
             var profile = await SeedProfileAsync(account);
             var playlist = await SeedPlaylistAsync(profile.Id);

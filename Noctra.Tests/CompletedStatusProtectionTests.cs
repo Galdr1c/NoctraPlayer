@@ -8,6 +8,8 @@ using Noctra.Models;
 using Noctra.Services;
 using Xunit;
 
+using Moq;
+
 namespace Noctra.Tests
 {
     public class CompletedStatusProtectionTests : IDisposable
@@ -85,7 +87,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task WatchHistory_Completed_VideoFailsToLoad_CompletedPreserved()
         {
-            var svc = new WatchHistoryService(_contextFactory);
+            var svc = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profileId, playlistId) = await SeedBaseAsync("A");
             var channel = await SeedVodChannelAsync(playlistId);
             var duration = TimeSpan.FromHours(2);
@@ -103,7 +105,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task WatchHistory_Completed_StuckLoading_StoppedAtNotZeroed()
         {
-            var svc = new WatchHistoryService(_contextFactory);
+            var svc = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profileId, playlistId) = await SeedBaseAsync("B");
             var channel = await SeedVodChannelAsync(playlistId);
             var duration = TimeSpan.FromHours(1.5);
@@ -122,7 +124,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task WatchHistory_Completed_ReopenedAndClosedImmediately_CompletedPreserved()
         {
-            var svc = new WatchHistoryService(_contextFactory);
+            var svc = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profileId, playlistId) = await SeedBaseAsync("C");
             var channel = await SeedVodChannelAsync(playlistId);
             var duration = TimeSpan.FromMinutes(90);
@@ -141,7 +143,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task WatchHistory_Completed_NullDurationRepeatedly_StoppedAtPreserved()
         {
-            var svc = new WatchHistoryService(_contextFactory);
+            var svc = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profileId, playlistId) = await SeedBaseAsync("D");
             var channel = await SeedVodChannelAsync(playlistId);
             var knownDuration = TimeSpan.FromMinutes(60);
@@ -163,7 +165,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task WatchHistory_Completed_RapidFireCalls_CompletedAlwaysPreserved()
         {
-            var svc = new WatchHistoryService(_contextFactory);
+            var svc = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profileId, playlistId) = await SeedBaseAsync("E");
             var channel = await SeedVodChannelAsync(playlistId);
             var duration = TimeSpan.FromHours(2);
@@ -186,7 +188,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task ChannelEntity_IsCompleted_FailedReload_NotRevertedToFalse()
         {
-            var svc = new WatchHistoryService(_contextFactory);
+            var svc = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profileId, playlistId) = await SeedBaseAsync("F");
             var channel = await SeedVodChannelAsync(playlistId);
             var duration = TimeSpan.FromMinutes(90);
@@ -204,7 +206,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task ChannelEntity_WatchedPosition_Completed_NotResetToZero()
         {
-            var svc = new WatchHistoryService(_contextFactory);
+            var svc = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profileId, playlistId) = await SeedBaseAsync("G");
             var channel = await SeedVodChannelAsync(playlistId);
             var duration = TimeSpan.FromMinutes(90);
@@ -223,7 +225,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task ChannelEntity_Duration_NullOnReload_KnownDurationPreserved()
         {
-            var svc = new WatchHistoryService(_contextFactory);
+            var svc = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profileId, playlistId) = await SeedBaseAsync("H");
             var channel = await SeedVodChannelAsync(playlistId);
             var knownDuration = TimeSpan.FromHours(2);
@@ -241,7 +243,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task EpisodeEntity_IsCompleted_FailedReload_NotRevertedToFalse()
         {
-            var svc = new WatchHistoryService(_contextFactory);
+            var svc = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profileId, playlistId) = await SeedBaseAsync("I");
             var (episode, _, _) = await SeedEpisodeAsync(playlistId, profileId);
             var duration = TimeSpan.FromMinutes(45);
@@ -259,7 +261,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task EpisodeEntity_WatchedPosition_Completed_NotZeroed()
         {
-            var svc = new WatchHistoryService(_contextFactory);
+            var svc = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profileId, playlistId) = await SeedBaseAsync("J");
             var (episode, _, _) = await SeedEpisodeAsync(playlistId, profileId);
             var duration = TimeSpan.FromMinutes(48);
@@ -277,7 +279,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task EpisodeEntity_Duration_NullOnError_KnownDurationPreserved()
         {
-            var svc = new WatchHistoryService(_contextFactory);
+            var svc = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profileId, playlistId) = await SeedBaseAsync("K");
             var (episode, _, _) = await SeedEpisodeAsync(playlistId, profileId);
             var knownDuration = TimeSpan.FromMinutes(45);
@@ -295,7 +297,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task SeriesProgress_Completed_FailedReload_NotReverted()
         {
-            var svc = new WatchHistoryService(_contextFactory);
+            var svc = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profileId, playlistId) = await SeedBaseAsync("L");
             var (episode, _, _) = await SeedEpisodeAsync(playlistId, profileId, seasonNumber: 1, episodeNumber: 5, tmdbId: 99901);
             var duration = TimeSpan.FromMinutes(52);
@@ -315,7 +317,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task SeriesProgress_StoppedAt_Completed_NullDuration_PreservesOldValue()
         {
-            var svc = new WatchHistoryService(_contextFactory);
+            var svc = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profileId, playlistId) = await SeedBaseAsync("M");
             var (episode, _, _) = await SeedEpisodeAsync(playlistId, profileId, seasonNumber: 2, episodeNumber: 3, tmdbId: 99902);
             var knownDuration = TimeSpan.FromMinutes(58);
@@ -335,7 +337,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task SeriesProgress_ProviderSwitch_TmdbIdMatch_CompletedPreserved()
         {
-            var svc = new WatchHistoryService(_contextFactory);
+            var svc = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profileId, playlistId) = await SeedBaseAsync("N");
 
             var (episodeA, _, _) = await SeedEpisodeAsync(playlistId, profileId, seasonNumber: 1, episodeNumber: 1, tmdbId: 77701);
@@ -360,7 +362,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task AllLayers_Completed_VideoFailsToLoad_AllPreserved()
         {
-            var svc = new WatchHistoryService(_contextFactory);
+            var svc = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profileId, playlistId) = await SeedBaseAsync("O");
             var (episode, _, _) = await SeedEpisodeAsync(playlistId, profileId, seasonNumber: 3, episodeNumber: 7, tmdbId: 55501);
             var duration = TimeSpan.FromMinutes(55);
@@ -396,7 +398,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task AllLayers_Completed_FreshContextRead_DataConsistent()
         {
-            var svc = new WatchHistoryService(_contextFactory);
+            var svc = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profileId, playlistId) = await SeedBaseAsync("P");
             var (episode, _, _) = await SeedEpisodeAsync(playlistId, profileId, seasonNumber: 1, episodeNumber: 1, tmdbId: 12345);
             var duration = TimeSpan.FromMinutes(42);
@@ -424,7 +426,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task WatchHistory_ExtremePosition_DoesNotThrow()
         {
-            var svc = new WatchHistoryService(_contextFactory);
+            var svc = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profileId, playlistId) = await SeedBaseAsync("Q");
             var channel = await SeedVodChannelAsync(playlistId);
 
@@ -438,7 +440,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task WatchHistory_CompletedOnlyWhenExplicitlySet()
         {
-            var svc = new WatchHistoryService(_contextFactory);
+            var svc = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profileId, playlistId) = await SeedBaseAsync("R");
             var channel = await SeedVodChannelAsync(playlistId);
             var duration = TimeSpan.FromHours(1);
@@ -463,7 +465,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task WatchHistory_WatchedAt_Updated_CompletedUnchanged()
         {
-            var svc = new WatchHistoryService(_contextFactory);
+            var svc = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profileId, playlistId) = await SeedBaseAsync("S");
             var channel = await SeedVodChannelAsync(playlistId);
             var duration = TimeSpan.FromMinutes(90);

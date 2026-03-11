@@ -31,6 +31,7 @@ namespace Noctra.Tests
     {
         public List<DownloadItem> MockItems = new();
         public event EventHandler? DownloadsChanged;
+        public event EventHandler<DownloadItem>? DownloadCompleted;
 
         public Task<DownloadContentResult> QueueDownloadAsync(DownloadContentRequest request, CancellationToken ct = default)
         {

@@ -1,11 +1,14 @@
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using Noctra.Data;
 using Noctra.Models;
 using Noctra.Services;
+using Noctra.Services.Interfaces;
 using Xunit;
 
 namespace Noctra.Tests
@@ -16,7 +19,7 @@ namespace Noctra.Tests
     /// - Hem channelId hem episodeId null → sessizce döner
     /// - Tamamlanan içerik bir daha "tamamlanmamış" yazılamaz (idempotent completed flag)
     /// - Duration güncelleme: null duration geldiğinde eski duration korunur
-    /// - ClearHistoryAsync yalnızca o profile'ın verisini siler
+    /// - DeleteProfileHistoryAsync yalnızca o profile'ın verisini siler
     /// - CleanupOlderThanDaysAsync yalnızca eski kayıtları siler
     /// - GetLatestForMediaAsync doğru kaydı getirir
     /// - WatchedDuration delta birikimli artıyor
@@ -77,7 +80,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task TrackWatchAsync_BothIdsNull_DoesNotThrowAndDoesNotWrite()
         {
-            var service = new WatchHistoryService(_contextFactory);
+            var service = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profile, _) = await SeedProfileAndPlaylistAsync();
 
             // İki null → sessizce döner, kayıt oluşturulmaz
@@ -92,7 +95,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task TrackWatchAsync_OnceCompleted_CannotBeMarkedIncomplete()
         {
-            var service = new WatchHistoryService(_contextFactory);
+            var service = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profile, playlist) = await SeedProfileAndPlaylistAsync();
             var channel = await SeedVodChannelAsync(playlist.Id);
 
@@ -122,7 +125,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task TrackWatchAsync_NullDuration_PreservesExistingDuration()
         {
-            var service = new WatchHistoryService(_contextFactory);
+            var service = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profile, playlist) = await SeedProfileAndPlaylistAsync();
             var channel = await SeedVodChannelAsync(playlist.Id);
 
@@ -153,7 +156,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task TrackWatchAsync_WatchedDuration_AccumulatesCorrectly()
         {
-            var service = new WatchHistoryService(_contextFactory);
+            var service = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profile, playlist) = await SeedProfileAndPlaylistAsync();
             var channel = await SeedVodChannelAsync(playlist.Id);
 
@@ -174,12 +177,12 @@ namespace Noctra.Tests
             Assert.Equal(delta1 + delta2, history.WatchedDuration);
         }
 
-        // ─── ClearHistoryAsync ────────────────────────────────────────────────────────
+        // ─── DeleteProfileHistoryAsync ────────────────────────────────────────────────────────
 
         [Fact]
-        public async Task ClearHistoryAsync_OnlyClearsTargetProfile()
+        public async Task DeleteProfileHistoryAsync_OnlyClearsTargetProfile()
         {
-            var service = new WatchHistoryService(_contextFactory);
+            var service = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
 
             // İki farklı profil kur
             var account1 = new ProviderAccount { Name = "A1", Url = "http://a.com" };
@@ -204,7 +207,7 @@ namespace Noctra.Tests
             await service.TrackWatchAsync(profile2.Id, ch2.Id, null, TimeSpan.FromMinutes(20));
 
             // Sadece profile1'in geçmişini temizle
-            await service.ClearHistoryAsync(profile1.Id);
+            await service.DeleteProfileHistoryAsync(profile1.Id);
 
             var remaining = await _context.WatchHistories.ToListAsync();
             Assert.All(remaining, h => Assert.Equal(profile2.Id, h.ProfileId));
@@ -216,7 +219,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task CleanupOlderThanDaysAsync_RemovesOldEntries_KeepsNew()
         {
-            var service = new WatchHistoryService(_contextFactory);
+            var service = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profile, playlist) = await SeedProfileAndPlaylistAsync();
 
             var oldChannel = new Channel { Name = "Old", StreamUrl = "old", Type = ChannelType.VOD, PlaylistId = playlist.Id };
@@ -253,7 +256,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task CleanupOlderThanDaysAsync_WithZeroOrNegativeDays_DoesNothing()
         {
-            var service = new WatchHistoryService(_contextFactory);
+            var service = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profile, playlist) = await SeedProfileAndPlaylistAsync();
             var channel = await SeedVodChannelAsync(playlist.Id);
 
@@ -279,7 +282,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task GetLatestForMediaAsync_ByChannelId_ReturnsCorrectRecord()
         {
-            var service = new WatchHistoryService(_contextFactory);
+            var service = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profile, playlist) = await SeedProfileAndPlaylistAsync();
             var channel = await SeedVodChannelAsync(playlist.Id);
 
@@ -294,7 +297,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task GetLatestForMediaAsync_WhenNotFound_ReturnsNull()
         {
-            var service = new WatchHistoryService(_contextFactory);
+            var service = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profile, _) = await SeedProfileAndPlaylistAsync();
 
             var result = await service.GetLatestForMediaAsync(profile.Id, 9999, null);
@@ -306,7 +309,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task TrackWatchAsync_WhenCompleted_StoppedAtSetToDuration()
         {
-            var service = new WatchHistoryService(_contextFactory);
+            var service = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profile, playlist) = await SeedProfileAndPlaylistAsync();
             var channel = await SeedVodChannelAsync(playlist.Id);
 
@@ -327,7 +330,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task TrackWatchAsync_WhenNotCompleted_StoppedAtSetToPosition()
         {
-            var service = new WatchHistoryService(_contextFactory);
+            var service = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profile, playlist) = await SeedProfileAndPlaylistAsync();
             var channel = await SeedVodChannelAsync(playlist.Id);
 
@@ -347,7 +350,7 @@ namespace Noctra.Tests
         [Fact]
         public async Task GetHistoryAsync_ReturnsDescendingByWatchedAt()
         {
-            var service = new WatchHistoryService(_contextFactory);
+            var service = new WatchHistoryService(_contextFactory, new Moq.Mock<Noctra.Services.ISettingsService>().Object);
             var (profile, playlist) = await SeedProfileAndPlaylistAsync();
 
             var ch1 = new Channel { Name = "First", StreamUrl = "u1", Type = ChannelType.VOD, PlaylistId = playlist.Id };
@@ -384,6 +387,7 @@ namespace Noctra.Tests
             private readonly DbContextOptions<AppDbContext> _options;
             public TestDbContextFactory(DbContextOptions<AppDbContext> options) => _options = options;
             public AppDbContext CreateDbContext() => new AppDbContext(_options);
+            public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) => Task.FromResult(CreateDbContext());
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace Noctra.Tests;
+namespace Noctra.Tests;
 
 public class UnitTest1
 {

@@ -113,6 +113,8 @@ namespace Noctra.Tests
     internal sealed class FakeContentDownloadService : IContentDownloadService
     {
         public event EventHandler? DownloadsChanged;
+        public event EventHandler<DownloadItem>? DownloadCompleted;
+
         public Task<DownloadContentResult> QueueDownloadAsync(DownloadContentRequest request, CancellationToken cancellationToken = default) => Task.FromResult(new DownloadContentResult(false, false, "stub"));
         public Task<string> ResolvePlayableUrlAsync(string streamUrl, CancellationToken cancellationToken = default) => Task.FromResult(streamUrl);
         public Task CleanupPlaybackCacheAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
@@ -168,7 +170,8 @@ namespace Noctra.Tests
         }
 
         public Task<List<WatchHistory>> GetHistoryAsync(int profileId, CancellationToken ct = default) => Task.FromResult(new List<WatchHistory>());
-        public Task ClearHistoryAsync(int profileId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task DeleteProfileHistoryAsync(int profileId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task ClearAllHistoryAsync(CancellationToken ct = default) => Task.CompletedTask;
         public Task<WatchHistory?> GetLatestForMediaAsync(int profileId, int? channelId, int? episodeId, CancellationToken ct = default) => Task.FromResult<WatchHistory?>(null);
         public Task CleanupOlderThanDaysAsync(int profileId, int days, CancellationToken ct = default) => Task.CompletedTask;
         public Task RemoveFromHistoryAsync(int profileId, int? channelId, int? episodeId, CancellationToken ct = default) => Task.CompletedTask;

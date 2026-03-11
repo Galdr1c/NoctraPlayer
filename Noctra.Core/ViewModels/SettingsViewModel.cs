@@ -18,13 +18,14 @@ public partial class SettingsViewModel : ObservableObject
     private readonly ISettingsService _settingsService;
     private readonly IEpgService _epgService;
     private readonly IThemeService _themeService;
+    private readonly IDialogService _dialogService;
+    private readonly IWatchHistoryService _watchHistoryService;
     private readonly MainViewModel _mainViewModel;
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private CancellationTokenSource? _epgRefreshWatchCts;
     private int _isRefreshOperationRunning;
 
     // ============ Oynatma Ayarları ============
-    
     [ObservableProperty]
     private bool _autoPlayNext;
     
@@ -106,6 +107,17 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _customEpgUrl = string.Empty;
 
+    // ============ Gizlilik / Geçmiş ============
+
+    [ObservableProperty]
+    private bool _saveWatchHistory;
+
+    [ObservableProperty]
+    private int _watchHistoryRetentionIndex;
+
+    [ObservableProperty]
+    private bool _clearHistoryOnExit;
+
 
     partial void OnIsDarkThemeChanged(bool value)
     {
@@ -162,6 +174,8 @@ public partial class SettingsViewModel : ObservableObject
         ISettingsService settingsService,
         IEpgService epgService, 
         IThemeService themeService,
+        IDialogService dialogService,
+        IWatchHistoryService watchHistoryService,
         MainViewModel mainViewModel,
         IPlaylistService playlistService,
         IDbContextFactory<AppDbContext> contextFactory)
@@ -169,6 +183,8 @@ public partial class SettingsViewModel : ObservableObject
         _settingsService = settingsService;
         _epgService = epgService;
         _themeService = themeService;
+        _dialogService = dialogService;
+        _watchHistoryService = watchHistoryService;
         _mainViewModel = mainViewModel;
         _playlistService = playlistService;
         _contextFactory = contextFactory;
@@ -296,6 +312,18 @@ public partial class SettingsViewModel : ObservableObject
         DownloadWifiOnly = s.DownloadWifiOnly;
         DownloadPath = NormalizeDownloadPath(s.DownloadPath);
         ShowDownloadNotification = s.ShowDownloadNotification;
+
+        // Privacy
+        SaveWatchHistory = s.SaveWatchHistory;
+        ClearHistoryOnExit = s.ClearHistoryOnExit;
+        WatchHistoryRetentionIndex = s.WatchHistoryRetentionDays switch
+        {
+            3 => 1,
+            7 => 2,
+            14 => 3,
+            30 => 4,
+            _ => 0
+        };
         
         // Appearance
         IsDarkTheme = s.IsDarkTheme;
@@ -354,7 +382,18 @@ public partial class SettingsViewModel : ObservableObject
         s.EpgRefreshFrequencyHours = Math.Max(0, EpgRefreshFrequencyHours);
         s.CustomEpgUrl = string.IsNullOrWhiteSpace(CustomEpgUrl) ? null : CustomEpgUrl.Trim();
         s.EpgEnabled = EpgEnabled;
-        
+
+        // Privacy
+        s.SaveWatchHistory = SaveWatchHistory;
+        s.ClearHistoryOnExit = ClearHistoryOnExit;
+        s.WatchHistoryRetentionDays = WatchHistoryRetentionIndex switch
+        {
+            1 => 3,
+            2 => 7,
+            3 => 14,
+            4 => 30,
+            _ => 0
+        };
         
         await _settingsService.SaveAsync();
         StatusMessage = "Ayarlar kaydedildi";
@@ -739,5 +778,30 @@ public partial class SettingsViewModel : ObservableObject
         _settingsService.ResetToDefaults();
         LoadSettings();
         StatusMessage = "Ayarlar varsayılanına sıfırlandı";
+    }
+
+    [RelayCommand]
+    private async Task ClearHistoryAsync()
+    {
+        var profileId = _mainViewModel.CurrentProfile?.Id;
+        if (!profileId.HasValue) return;
+
+        var confirmed = await _dialogService.ShowConfirmationAsync(
+            "Geçmişi Temizle",
+            "Tüm izleme geçmişiniz silinecek. Bu işlem geri alınamaz. Devam etmek istiyor musunuz?");
+
+        if (confirmed)
+        {
+            try
+            {
+                await _watchHistoryService.DeleteProfileHistoryAsync(profileId.Value);
+                StatusMessage = "İzleme geçmişi temizlendi";
+                _mainViewModel.ResetWatchHistoryUI();
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Hata: {ex.Message}";
+            }
+        }
     }
 }

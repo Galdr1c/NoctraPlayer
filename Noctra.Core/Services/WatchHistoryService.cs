@@ -12,15 +12,22 @@ namespace Noctra.Services;
 public class WatchHistoryService : IWatchHistoryService
 {
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
+    private readonly ISettingsService _settingsService;
     private static readonly SemaphoreSlim _syncLock = new(1, 1);
 
-    public WatchHistoryService(IDbContextFactory<AppDbContext> contextFactory)
+    public WatchHistoryService(IDbContextFactory<AppDbContext> contextFactory, ISettingsService settingsService)
     {
         _contextFactory = contextFactory;
+        _settingsService = settingsService;
     }
 
     public async Task TrackWatchAsync(int profileId, int? channelId, int? episodeId, TimeSpan position, bool completed = false, TimeSpan? duration = null, TimeSpan? incrementDelta = null, CancellationToken ct = default)
     {
+        if (!_settingsService.Settings.SaveWatchHistory)
+        {
+            return;
+        }
+
         // Guard: At least one ID must be provided, but not both simultaneously (data integrity)
         if ((!channelId.HasValue && !episodeId.HasValue) || (channelId.HasValue && episodeId.HasValue))
         {
@@ -213,12 +220,49 @@ public class WatchHistoryService : IWatchHistoryService
             .ToListAsync(ct);
     }
 
-    public async Task ClearHistoryAsync(int profileId, CancellationToken ct = default)
+    public async Task DeleteProfileHistoryAsync(int profileId, CancellationToken ct = default)
     {
         using var context = await _contextFactory.CreateDbContextAsync(ct);
+        
+        // Delete watch history
         await context.WatchHistories
             .Where(h => h.ProfileId == profileId)
             .ExecuteDeleteAsync(ct);
+
+        // Delete series progress
+        await context.SeriesEpisodeProgresses
+            .Where(p => p.ProfileId == profileId)
+            .ExecuteDeleteAsync(ct);
+
+        // Reset channel progress
+        await context.Channels
+            .Where(c => c.Playlist.ProfileId == profileId)
+            .ExecuteUpdateAsync(c => c.SetProperty(x => x.LastWatched, (DateTime?)null)
+                                      .SetProperty(x => x.WatchedPosition, TimeSpan.Zero)
+                                      .SetProperty(x => x.IsCompleted, false), ct);
+
+        // Reset episode progress
+        await context.Episodes
+            .Where(e => e.Season.Series.Playlist.ProfileId == profileId)
+            .ExecuteUpdateAsync(e => e.SetProperty(x => x.LastWatched, (DateTime?)null)
+                                      .SetProperty(x => x.WatchedPosition, TimeSpan.Zero)
+                                      .SetProperty(x => x.IsCompleted, false), ct);
+    }
+
+    public async Task ClearAllHistoryAsync(CancellationToken ct = default)
+    {
+        using var context = await _contextFactory.CreateDbContextAsync(ct);
+        
+        await context.WatchHistories.ExecuteDeleteAsync(ct);
+        await context.SeriesEpisodeProgresses.ExecuteDeleteAsync(ct);
+        
+        await context.Channels.ExecuteUpdateAsync(c => c.SetProperty(x => x.LastWatched, (DateTime?)null)
+                                                        .SetProperty(x => x.WatchedPosition, TimeSpan.Zero)
+                                                        .SetProperty(x => x.IsCompleted, false), ct);
+
+        await context.Episodes.ExecuteUpdateAsync(e => e.SetProperty(x => x.LastWatched, (DateTime?)null)
+                                                        .SetProperty(x => x.WatchedPosition, TimeSpan.Zero)
+                                                        .SetProperty(x => x.IsCompleted, false), ct);
     }
 
     public async Task<WatchHistory?> GetLatestForMediaAsync(int profileId, int? channelId, int? episodeId, CancellationToken ct = default)

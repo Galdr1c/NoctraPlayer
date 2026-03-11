@@ -19,6 +19,8 @@ namespace Noctra.Avalonia;
 public partial class MainWindow : Window
 {
     private readonly IVideoPlayerService _videoPlayerService;
+    private readonly IWatchHistoryService _watchHistoryService;
+    private readonly ISettingsService _settingsService;
     private readonly MainViewModel _mainViewModel;
     private readonly PlayerViewModel _playerViewModel;
     private readonly WindowResizeService _windowResizeService;
@@ -28,17 +30,26 @@ public partial class MainWindow : Window
         : this(
             ((App)Application.Current!).Services.GetRequiredService<MainViewModel>(),
             ((App)Application.Current!).Services.GetRequiredService<PlayerViewModel>(),
-            ((App)Application.Current!).Services.GetRequiredService<IVideoPlayerService>())
+            ((App)Application.Current!).Services.GetRequiredService<IVideoPlayerService>(),
+            ((App)Application.Current!).Services.GetRequiredService<IWatchHistoryService>(),
+            ((App)Application.Current!).Services.GetRequiredService<ISettingsService>())
     {
     }
 
-    public MainWindow(MainViewModel mainViewModel, PlayerViewModel playerViewModel, IVideoPlayerService videoPlayerService)
+    public MainWindow(
+        MainViewModel mainViewModel, 
+        PlayerViewModel playerViewModel, 
+        IVideoPlayerService videoPlayerService,
+        IWatchHistoryService watchHistoryService,
+        ISettingsService settingsService)
     {
         InitializeComponent();
 
         _mainViewModel = mainViewModel;
         _playerViewModel = playerViewModel;
         _videoPlayerService = videoPlayerService;
+        _watchHistoryService = watchHistoryService;
+        _settingsService = settingsService;
         _windowResizeService = new WindowResizeService(this);
         DataContext = _mainViewModel;
 
@@ -73,6 +84,26 @@ public partial class MainWindow : Window
         };
 
         UpdateDownloadBadgeVisibility();
+        
+        // Handle Privacy: Auto cleanup old history on start
+        _ = Task.Run(async () => {
+            try 
+            {
+                // Wait a bit for initialization to settle
+                await Task.Delay(5000);
+                var profileId = _mainViewModel.CurrentProfileId;
+                var retentionDays = _settingsService.Settings.WatchHistoryRetentionDays;
+                
+                if (profileId.HasValue && retentionDays > 0)
+                {
+                    await _watchHistoryService.CleanupOlderThanDaysAsync(profileId.Value, retentionDays);
+                }
+            }
+            catch (Exception ex)
+            {
+                StartupDiagnostics.LogException("Background history cleanup failed.", ex);
+            }
+        });
     }
 
     private void MainWindow_PositionChanged(object? sender, PixelPointEventArgs e)
@@ -99,6 +130,14 @@ public partial class MainWindow : Window
         _playerViewModel.PiPRequested -= PlayerViewModel_PiPRequested;
         _videoPlayerService.MediaPlayerReady -= VideoPlayerService_MediaPlayerReady;
         
+        // Handle privacy: Clear history on exit if enabled
+        if (_settingsService.Settings.ClearHistoryOnExit)
+        {
+            // We use Fire & Forget but the app might close before it finishes.
+            // Since it's a local SQLite operation, it's usually very fast.
+            _ = _watchHistoryService.ClearAllHistoryAsync();
+        }
+
         // VideoSurface.MediaPlayer = null; // Handled in ClosePiP or let it be cleared
         ClosePiP(false); 
         VideoSurface.MediaPlayer = null;

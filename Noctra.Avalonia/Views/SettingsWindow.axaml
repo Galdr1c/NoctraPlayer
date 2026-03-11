@@ -536,6 +536,64 @@
                     </ScrollViewer>
                 </TabItem>
 
+                <!-- PRIVACY TAB -->
+                <TabItem Classes="SettingsTab" Cursor="Hand">
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <materialIcons:MaterialIcon Kind="ShieldAccountOutline" Width="20" Height="20" />
+                            <TextBlock Text="Gizlilik" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,0,0">
+                        <StackPanel HorizontalAlignment="Stretch" Margin="0,0,0,100">
+                            <Border Classes="SettingsCard">
+                                <StackPanel>
+                                    <TextBlock Text="İzleme Geçmişi" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
+                                    
+                                    <Grid Margin="0,0,0,18">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="Geçmişi Kaydet" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="İzlediğiniz içerikleri geçmişe ekler" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding SaveWatchHistory}"/>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,18">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="Çıkışta Geçmişi Temizle" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="Uygulama kapandığında tüm geçmişi siler" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding ClearHistoryOnExit}"/>
+                                    </Grid>
+
+                                    <TextBlock Text="Geçmişi Tutma Süresi" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                    <ComboBox Theme="{StaticResource ModernComboBox}"
+                                              SelectedIndex="{Binding WatchHistoryRetentionIndex}"
+                                              Width="260"
+                                              HorizontalAlignment="Left"
+                                              Margin="0,0,0,20">
+                                        <ComboBoxItem Content="Süresiz (Her zaman tut)"/>
+                                        <ComboBoxItem Content="3 Gün"/>
+                                        <ComboBoxItem Content="7 Gün"/>
+                                        <ComboBoxItem Content="14 Gün"/>
+                                        <ComboBoxItem Content="30 Gün"/>
+                                    </ComboBox>
+
+                                    <Separator Height="1" Background="{DynamicResource BorderBrush}" Margin="0,10,0,20"/>
+
+                                    <TextBlock Text="Tehlikeli Bölge" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource ErrorBrush}" Margin="0,0,0,12"/>
+                                    <Button Content="Tüm İzleme Geçmişini Şimdi Sil" 
+                                            Command="{Binding ClearHistoryCommand}"
+                                            Classes="ErrorButton"
+                                            Padding="16,10"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </TabItem>
+
                 <!-- APPEARANCE TAB -->
                 <TabItem Classes="SettingsTab" Cursor="Hand">
                     <TabItem.Header>

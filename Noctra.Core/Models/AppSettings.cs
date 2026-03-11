@@ -124,6 +124,23 @@ public class AppSettings
     /// EPG icin kullanicinin verdigi ozel URL (opsiyonel)
     /// </summary>
     public string? CustomEpgUrl { get; set; }
+
+    // ============ Gizlilik / Geçmiş ============
+
+    /// <summary>
+    /// İzleme geçmişini kaydet
+    /// </summary>
+    public bool SaveWatchHistory { get; set; } = true;
+
+    /// <summary>
+    /// Geçmişi tutma süresi (gün). 0 = sınırsız.
+    /// </summary>
+    public int WatchHistoryRetentionDays { get; set; } = 30;
+
+    /// <summary>
+    /// Uygulama kapandığında geçmişi temizle
+    /// </summary>
+    public bool ClearHistoryOnExit { get; set; } = false;
 }
 
 

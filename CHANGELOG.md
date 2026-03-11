@@ -9,6 +9,13 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Gizlilik ve İzleme Geçmişi Yönetimi** (2026-03-11):
+    - İzleme geçmişini kaydetme/durdurma seçeneği eklendi (**Ayarlar > Gizlilik**).
+    - Geçmişi otomatik temizleme özelliği hayata geçirildi; kullanıcılar 3, 7, 14 veya 30 gün sonra eski kayıtların silinmesini seçebilir.
+    - "Çıkışta Geçmişi Temizle" seçeneği ile uygulama kapatıldığında tüm izleme verilerinin otomatik silinmesi sağlandı.
+    - Tek tıkla tüm geçmişi ve içerik ilerlemelerini (progress markers) silme butonu eklendi.
+    - Yeni özelliklerin kararlılığı `PrivacyAndHistoryScenariosTests` entegrasyon testleri ile doğrulandı.
+    - `WatchHistoryService` altyapısı veri koruma ve otomatik temizleme süreçleri için modernize edildi.
 - **Sidebar İndirme Rozeti (Badge) İyileştirmesi** (2026-03-11):
     - Kenar çubuğu kapalıyken (Mini mod) görünmeyen aktif indirme sayısı göstergesi, ikon üzerine yerleşen modern bir "nokta" (dot) rozetiyle değiştirildi.
     - Kenar çubuğu açıkken sayısal rozetin, kapalıyken ise ikon üzerindeki noktanın dinamik olarak gösterilmesi sağlandı.
