@@ -33,7 +33,17 @@ namespace Noctra.Tests
             }
 
             _contextFactory = new SimpleDbContextFactory(_options);
-            _service = new MediaService(_contextFactory);
+            var dispatcherMock = new FakeDispatcherService();
+            _service = new MediaService(_contextFactory, dispatcherMock);
+        }
+
+        private class FakeDispatcherService : Noctra.Services.Interfaces.IDispatcherService
+        {
+            public void Invoke(Action action) => action();
+            public void BeginInvoke(Action action) => action();
+            public Task InvokeAsync(Func<Task> function) => function();
+            public Task<T> InvokeAsync<T>(Func<T> function) => Task.FromResult(function());
+            public Task<T> InvokeAsync<T>(Func<Task<T>> function) => function();
         }
 
         public void Dispose()

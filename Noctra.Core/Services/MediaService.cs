@@ -9,18 +9,20 @@ namespace Noctra.Services;
 public partial class MediaService : IMediaService
 {
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
+    private readonly IDispatcherService _dispatcherService;
     private static readonly SemaphoreSlim _aggregateLock = new(1, 1);
 
     public event Action<int>? OnAggregationCompleted;
 
     public void RaiseAggregationCompleted(int playlistId)
     {
-        OnAggregationCompleted?.Invoke(playlistId);
+        _dispatcherService.BeginInvoke(() => OnAggregationCompleted?.Invoke(playlistId));
     }
 
-    public MediaService(IDbContextFactory<AppDbContext> contextFactory)
+    public MediaService(IDbContextFactory<AppDbContext> contextFactory, IDispatcherService dispatcherService)
     {
         _contextFactory = contextFactory;
+        _dispatcherService = dispatcherService;
     }
 
     public async Task AggregateContentAsync(int playlistId, CancellationToken cancellationToken = default)
@@ -93,6 +95,8 @@ public partial class MediaService : IMediaService
             // Track which episodes were actually mapped to channels in this run
             var mappedEpisodeIds = new HashSet<int>();
 
+            var unparsedEpisodeCounts = new Dictionary<string, int>();
+
             foreach (var channel in channels)
             {
                 var parsed = ParseSeriesEpisodeInfo(channel.Name);
@@ -103,7 +107,11 @@ public partial class MediaService : IMediaService
                 if (seasonNum == 0 || episodeNum == 0)
                 {
                     seasonNum = Math.Max(1, seasonNum);
-                    episodeNum = Math.Max(1, episodeNum);
+                    if (!unparsedEpisodeCounts.TryGetValue(seriesName, out var unparsedCount))
+                        unparsedCount = 0;
+                    unparsedCount++;
+                    unparsedEpisodeCounts[seriesName] = unparsedCount;
+                    episodeNum = int.MaxValue - unparsedCount;
                 }
 
                 var seriesKey = BuildSeriesGroupingKey(seriesName);
@@ -238,6 +246,10 @@ public partial class MediaService : IMediaService
                     .Where(e => toDeleteEpisodeIds.Contains(e.Id))
                     .ExecuteDeleteAsync(cancellationToken);
             }
+
+            await context.Seasons
+                .Where(s => s.Series.PlaylistId == playlistId && !s.Episodes.Any())
+                .ExecuteDeleteAsync(cancellationToken);
 
             // Cleanup empty series (ghost series)
             var emptySeries = await context.Series
@@ -401,8 +413,10 @@ public partial class MediaService : IMediaService
         }
 
         using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var firstWord = series.Name?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
         var candidates = await context.Series
-            .Where(s => s.PlaylistId == series.PlaylistId)
+            .Where(s => s.PlaylistId == series.PlaylistId && (string.IsNullOrEmpty(firstWord) || s.Name.Contains(firstWord)))
             .ToListAsync(cancellationToken);
 
         var toUpdate = candidates
