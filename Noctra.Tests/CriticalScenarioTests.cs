@@ -128,6 +128,7 @@ namespace Noctra.Tests
         public Task ClearHistoryAsync(int profileId, CancellationToken ct = default) => Task.CompletedTask;
         public Task<WatchHistory?> GetLatestForMediaAsync(int profileId, int? channelId, int? episodeId, CancellationToken ct = default) => Task.FromResult<WatchHistory?>(null);
         public Task CleanupOlderThanDaysAsync(int profileId, int days, CancellationToken ct = default) => Task.CompletedTask;
+        public Task RemoveFromHistoryAsync(int profileId, int? channelId, int? episodeId, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     // ─── Kritik Senaryo Test Bağlamı ─────────────────────────────────────────────

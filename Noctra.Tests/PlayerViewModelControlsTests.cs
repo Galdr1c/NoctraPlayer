@@ -168,6 +168,7 @@ namespace Noctra.Tests
         public Task ClearHistoryAsync(int profileId, CancellationToken ct = default) => Task.CompletedTask;
         public Task<WatchHistory?> GetLatestForMediaAsync(int profileId, int? channelId, int? episodeId, CancellationToken ct = default) => Task.FromResult<WatchHistory?>(null);
         public Task CleanupOlderThanDaysAsync(int profileId, int days, CancellationToken ct = default) => Task.CompletedTask;
+        public Task RemoveFromHistoryAsync(int profileId, int? channelId, int? episodeId, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     internal sealed class PlayerTestContext
@@ -1052,6 +1053,86 @@ namespace Noctra.Tests
             ctx.VM.Dispose();
             var ex = Record.Exception(() => ctx.VM.Dispose());
             Assert.Null(ex);
+        }
+
+        [Fact]
+        public void NextEpisodePrompt_VisibilityBehavior_OnSeeking()
+        {
+            var ctx = new PlayerTestContext();
+            var ep = new Episode { CreditsStartSec = 3500 };
+            var nextEp = new Episode();
+            ctx.VM.Duration = 3600;
+            ctx.VM.IsLiveContent = false;
+            
+            ctx.VM.SetCurrentEpisode(ep, nextEp);
+
+            // 1. Initial state
+            Assert.False(ctx.VM.IsNextEpisodePromptVisible);
+
+            // 2. Seek to credits zone (trigger)
+            ctx.VM.SeekCommand.Execute(3550.0);
+            
+            // Should be visible
+            Assert.True(ctx.VM.IsNextEpisodePromptVisible);
+
+            // 3. Seek backward out of credits zone
+            ctx.VM.SeekCommand.Execute(3400.0);
+            
+            // Should hide
+            Assert.False(ctx.VM.IsNextEpisodePromptVisible);
+
+            // 4. Seek to credits zone again
+            ctx.VM.SeekCommand.Execute(3580.0);
+
+            // Should show again
+            Assert.True(ctx.VM.IsNextEpisodePromptVisible);
+        }
+
+        [Fact]
+        public void NextEpisodePrompt_NotShown_WhenNoNextEpisode()
+        {
+            var ctx = new PlayerTestContext();
+            var ep = new Episode { CreditsStartSec = 3500 };
+            ctx.VM.Duration = 3600;
+            ctx.VM.IsLiveContent = false;
+            
+            // nextEpisode is passed as null
+            ctx.VM.SetCurrentEpisode(ep, null);
+
+            // Seek to credits zone
+            ctx.VM.SeekCommand.Execute(3550.0);
+            
+            // Should NOT be visible because NextEpisode is null
+            Assert.False(ctx.VM.IsNextEpisodePromptVisible);
+        }
+
+        [Fact]
+        public void NextEpisodePrompt_ClickNextEpisode_TriggersNextEpisodeEvent()
+        {
+            var ctx = new PlayerTestContext();
+            var ep = new Episode { CreditsStartSec = 3500 };
+            var nextEp = new Episode();
+            ctx.VM.Duration = 3600;
+            ctx.VM.IsLiveContent = false;
+            
+            ctx.VM.SetCurrentEpisode(ep, nextEp);
+            
+            bool eventTriggered = false;
+            Episode? triggeredEpisode = null;
+            ctx.VM.NextEpisodeRequested += (s, e) => {
+                eventTriggered = true;
+                triggeredEpisode = e;
+            };
+
+            ctx.VM.SeekCommand.Execute(3550.0);
+            Assert.True(ctx.VM.IsNextEpisodePromptVisible);
+
+            // Click play next episode
+            ctx.VM.PlayNextEpisodeCommand.Execute(null);
+
+            Assert.True(eventTriggered);
+            Assert.Equal(nextEp, triggeredEpisode);
+            Assert.False(ctx.VM.IsNextEpisodePromptVisible); // Should hide after click
         }
     }
 }

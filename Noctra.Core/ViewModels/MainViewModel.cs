@@ -1294,9 +1294,14 @@ public partial class MainViewModel : ObservableObject
                      && e.Duration.HasValue
                      && e.Duration.Value.TotalSeconds > 0
                      && (e.WatchedPosition.Value.TotalSeconds / e.Duration.Value.TotalSeconds) < 0.92)
+            // Aynı dizi için yalnızca en son izlenen bölümü göster
+            .GroupBy(e => episodeToSeriesMap.GetValueOrDefault(e))
+            .Select(g => g.OrderByDescending(e => e.LastWatched).First())
             .Select(e => BuildSeriesEpisodeChannel(e, episodeToSeriesMap.GetValueOrDefault(e)));
 
         var combinedContinue = vodContinue.Concat(episodeContinue)
+            .GroupBy(c => c.StreamUrl, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.OrderByDescending(c => c.LastWatched).First())
             .OrderByDescending(c => c.LastWatched)
             .Take(10);
 

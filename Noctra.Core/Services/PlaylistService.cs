@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Noctra.Data;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
@@ -663,31 +663,33 @@ public partial class PlaylistService : IPlaylistService
         }
 
         // 1. MEVCUT KULLANICI VERİLERİNİ YEDEKLE (Favori, İzleme Geçmişi vb.)
-        // Fingerprint -> (IsFavorite, IsInMyList, WatchedPosition, Duration, IsCompleted)
+        // Fingerprint -> (IsFavorite, IsInMyList, WatchedPosition, Duration, IsCompleted, LastWatched)
         var existingChannelData = await context.Channels
             .Where(c => c.PlaylistId == playlistId)
-            .Select(c => new { c.Name, c.StreamUrl, c.GroupTitle, c.TvgId, c.TvgName, c.Type, c.IsFavorite, c.IsInMyList, c.WatchedPosition, c.Duration, c.IsCompleted })
+            .Select(c => new { c.Name, c.StreamUrl, c.GroupTitle, c.TvgId, c.TvgName, c.Type, c.IsFavorite, c.IsInMyList, c.WatchedPosition, c.Duration, c.IsCompleted, c.LastWatched })
             .ToListAsync();
 
-        var userDataMap = new Dictionary<string, (bool Fav, bool List, TimeSpan? Pos, TimeSpan? Dur, bool Comp)>(StringComparer.OrdinalIgnoreCase);
+        var userDataMap = new Dictionary<string, (bool Fav, bool List, TimeSpan? Pos, TimeSpan? Dur, bool Comp, DateTime? LastW)>(StringComparer.OrdinalIgnoreCase);
         foreach (var c in existingChannelData)
         {
             var chStub = new Channel { Name = c.Name, StreamUrl = c.StreamUrl, GroupTitle = c.GroupTitle, TvgId = c.TvgId, TvgName = c.TvgName };
             var fingerprint = BuildChannelFingerprint(chStub);
             if (!userDataMap.TryGetValue(fingerprint, out var existing))
             {
-                userDataMap[fingerprint] = (c.IsFavorite, c.IsInMyList, c.WatchedPosition, c.Duration, c.IsCompleted);
+                userDataMap[fingerprint] = (c.IsFavorite, c.IsInMyList, c.WatchedPosition, c.Duration, c.IsCompleted, c.LastWatched);
             }
             else
             {
                 // Parmak izi çakışmasında verileri birleştir: Herhangi biri favori ise favori kalsın, 
                 // ilerleme bilgisinde ise en ileride olanı baz al.
+                // LastWatched: en güncel tarihi koru.
                 userDataMap[fingerprint] = (
                     existing.Fav || c.IsFavorite,
                     existing.List || c.IsInMyList,
                     (c.WatchedPosition > existing.Pos) ? c.WatchedPosition : existing.Pos,
                     (c.Duration > existing.Dur) ? c.Duration : existing.Dur,
-                    existing.Comp || c.IsCompleted
+                    existing.Comp || c.IsCompleted,
+                    (c.LastWatched > existing.LastW) ? c.LastWatched : existing.LastW
                 );
             }
         }
@@ -709,6 +711,7 @@ public partial class PlaylistService : IPlaylistService
                 nc.WatchedPosition = data.Pos;
                 nc.Duration = data.Dur;
                 nc.IsCompleted = data.Comp;
+                nc.LastWatched = data.LastW;
             }
             nc.PlaylistId = playlist.Id;
         }

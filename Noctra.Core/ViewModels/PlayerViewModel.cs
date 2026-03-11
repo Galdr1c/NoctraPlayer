@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Noctra.Models;
 using Noctra.Services;
@@ -1823,10 +1823,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         IsCreditsZone = true;
         IsNextEpisodePromptVisible = true;
 
-        if (_settingsService.Settings.AutoPlayNext)
-        {
-            _ = PlayNextEpisodeCommand.ExecuteAsync(null);
-        }
+        // AutoPlayNext now waits for the video to truly end in TryShowNextEpisodePromptAtEnd.
+        // This gives the user time to see the prompt during the credits zone.
     }
 
     private bool TryGetCreditsTriggerThreshold(out double triggerAt)
@@ -2447,6 +2445,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         var targetTimeMs = (long)Math.Max(0, clamped * 1000);
         if (targetTimeMs == _lastSeekTargetMs) return;
         _lastSeekTargetMs = targetTimeMs;
+
+        // Fix: Update the last known valid position to the target seek position.
+        // This prevents the premature-end recovery logic from jumping back to the position before the seek
+        // if the server rejects the seek request and drops the connection near EOF.
+        _lastKnownValidPosition = clamped;
 
         LogDebug($"SetPlaybackPosition: position={position}, clamped={clamped}");
 
