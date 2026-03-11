@@ -6179,6 +6179,7 @@ public partial class MainViewModel : ObservableObject
         }
 
         candidates.AddRange(SeriesViewItems);
+        candidates.AddRange(_allSeriesCache);
 
         var seen = new HashSet<int>();
         foreach (var series in candidates)
@@ -6227,6 +6228,7 @@ public partial class MainViewModel : ObservableObject
         }
 
         candidates.AddRange(SeriesViewItems);
+        candidates.AddRange(_allSeriesCache);
 
         var seen = new HashSet<int>();
         foreach (var series in candidates)
