@@ -23,7 +23,7 @@ public class WatchHistoryService : IWatchHistoryService
 
     public async Task TrackWatchAsync(int profileId, int? channelId, int? episodeId, TimeSpan position, bool completed = false, TimeSpan? duration = null, TimeSpan? incrementDelta = null, CancellationToken ct = default)
     {
-        if (!_settingsService.Settings.SaveWatchHistory)
+        if (_settingsService?.Settings != null && !_settingsService.Settings.SaveWatchHistory)
         {
             return;
         }

@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Linq;
+using Noctra.Models;
 using Noctra.Services;
 using Xunit;
 
@@ -11,8 +13,9 @@ namespace Noctra.Tests
         {
             var service = new LanguageDetectionService();
             var names = new List<string> { "ⓣⓥ | FRANCE ULTRA HD", "FRANCE 2", "FRANCE 3" };
+            var channels = names.Select(n => new Channel { Name = n }).ToList();
             
-            var result = service.DetectCountry(names);
+            var result = service.DetectCountry(channels);
             
             Assert.Equal("FR", result);
         }
@@ -23,8 +26,9 @@ namespace Noctra.Tests
             var service = new LanguageDetectionService();
             // ⓣⓡ -> TR
             var names = new List<string> { "ⓣⓡ | KANAL D", "ⓣⓡ | STAR TV" };
+            var channels = names.Select(n => new Channel { Name = n }).ToList();
             
-            var result = service.DetectCountry(names);
+            var result = service.DetectCountry(channels);
             
             Assert.Equal("TR", result);
         }
@@ -34,8 +38,9 @@ namespace Noctra.Tests
         {
             var service = new LanguageDetectionService();
             var names = new List<string> { "[DE] RTL", "[DE] PROSIEBEN" };
+            var channels = names.Select(n => new Channel { Name = n }).ToList();
             
-            var result = service.DetectCountry(names);
+            var result = service.DetectCountry(channels);
             
             Assert.Equal("DE", result);
         }
@@ -50,13 +55,14 @@ namespace Noctra.Tests
                 "TRT 1", "KANAL D", "ATV",
                 "BBC ONE", "BBC TWO"
             };
+            var channels = names.Select(n => new Channel { Name = n }).ToList();
             
-            var results = service.DetectCountries(names);
+            var results = service.DetectCountries(channels).ToList();
             
             // TR (3), FR (2), GB (2)
             Assert.Equal("TR", results[0].CountryCode);
-            Assert.True(results.Any(r => r.CountryCode == "FR"));
-            Assert.True(results.Any(r => r.CountryCode == "GB"));
+            Assert.Contains(results, r => r.CountryCode == "FR");
+            Assert.Contains(results, r => r.CountryCode == "GB");
         }
     }
 }
