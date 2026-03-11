@@ -9,6 +9,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Ses ve Altyazı Tercihleri** (2026-03-11):
+    - VOD ve Diziler için varsayılan altyazı durumu ve tercih edilen ses/altyazı dili ayarları eklendi.
+    - Player, içerik açıldığında ayarlardaki tercihlere göre en uygun kanalları otomatik seçer.
+    - Bu özellik sadece VOD/Dizi için aktiftir, Canlı TV'yi etkilemez.
 - **Geçmişten Silme Özelliği** (2026-03-10):
     - Geçmiş sayfasındaki tüm kartlara (Canlı TV, Dizi, Film) sağ tık menüsü üzerinden "Geçmişten Sil" seçeneği eklendi.
     - Bu özellik hem arayüzden öğeyi anında kaldırır hem de veritabanındaki ilgili izleme geçmişini ve ilerleme (progress) verilerini temizler.

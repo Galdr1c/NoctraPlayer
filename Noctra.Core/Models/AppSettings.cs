@@ -1,4 +1,4 @@
-﻿namespace Noctra.Models;
+namespace Noctra.Models;
 
 /// <summary>
 /// Veri kullanımı seviyesi (video kalitesi)
@@ -41,6 +41,21 @@ public class AppSettings
     /// Varsayılan ses seviyesi (0-100)
     /// </summary>
     public int DefaultVolume { get; set; } = 100;
+
+    /// <summary>
+    /// Altyazı varsayılan olarak açık mı? (VOD/Dizi için)
+    /// </summary>
+    public bool SubtitleEnabled { get; set; } = false;
+
+    /// <summary>
+    /// Tercih edilen altyazı dili (örn: "tr", "en")
+    /// </summary>
+    public string SubtitleLanguage { get; set; } = "tr";
+
+    /// <summary>
+    /// Tercih edilen ses dili (örn: "tr", "en")
+    /// </summary>
+    public string PreferredAudioLanguage { get; set; } = "tr";
 
     /// <summary>
     /// Son kullanilan profili acilista otomatik sec

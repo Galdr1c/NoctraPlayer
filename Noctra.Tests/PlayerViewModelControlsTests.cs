@@ -57,8 +57,11 @@ namespace Noctra.Tests
         public void Pause() { IsPlaying = false; PlayingChanged?.Invoke(this, false); }
         public void Resume() { IsPlaying = true; PlayingChanged?.Invoke(this, true); }
         public void Stop() { IsPlaying = false; CurrentUrl = null; }
-        public void SetAudioTrack(int trackId) { }
-        public void SetSubtitleTrack(int trackId) { }
+        public int LastAudioTrackId { get; private set; } = -2;
+        public int LastSubtitleTrackId { get; private set; } = -2;
+
+        public void SetAudioTrack(int trackId) { LastAudioTrackId = trackId; }
+        public void SetSubtitleTrack(int trackId) { LastSubtitleTrackId = trackId; }
         public MediaPlayer? GetMediaPlayer() => null;
         public void Dispose() { }
 

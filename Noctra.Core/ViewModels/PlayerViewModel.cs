@@ -53,6 +53,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private readonly ISettingsService _settingsService;
     private readonly ILicenseService _licenseService;
     private int _playRequestVersion;
+    private bool _isPreferenceApplied;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPiPControlsVisible))]
@@ -721,6 +722,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _videoPlayerService.Stop();
 
         _isContentTransitioning = true;
+        _isPreferenceApplied = false;
         IsBuffering = true;
 
         if (IsPiPMode)
@@ -1105,6 +1107,119 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         AudioTracks = audioTracks;
         SubtitleTracks = subtitleTracks;
+
+        if (!IsLiveContent && !_isPreferenceApplied)
+        {
+            ApplyDefaultTracks(_videoPlayerService.AudioTracks, _videoPlayerService.SubtitleTracks);
+        }
+    }
+
+    private void ApplyDefaultTracks(IReadOnlyList<(int Id, string? Name)> audioTracks, IReadOnlyList<(int Id, string? Name)> subtitleTracks)
+    {
+        var settings = _settingsService.Settings;
+        
+        // 1. Audio Preference
+        var targetAudioId = FindBestTrackMatch(audioTracks, settings.PreferredAudioLanguage);
+        if (targetAudioId >= 0)
+        {
+            _videoPlayerService.SetAudioTrack(targetAudioId);
+            SelectedAudioTrack = targetAudioId;
+        }
+
+        // 2. Subtitle Preference
+        if (settings.SubtitleEnabled)
+        {
+            var targetSubtitleId = FindBestTrackMatch(subtitleTracks, settings.SubtitleLanguage);
+            if (targetSubtitleId >= 0)
+            {
+                _videoPlayerService.SetSubtitleTrack(targetSubtitleId);
+                SelectedSubtitleTrack = targetSubtitleId;
+            }
+        }
+        else
+        {
+            // Specifically disable subtitles if they are active by default and preference is false
+            _videoPlayerService.SetSubtitleTrack(-1);
+            SelectedSubtitleTrack = -1;
+        }
+
+        _isPreferenceApplied = true;
+    }
+
+    private static int FindBestTrackMatch(IReadOnlyList<(int Id, string? Name)> tracks, string langCode)
+    {
+        if (tracks == null || tracks.Count == 0 || string.IsNullOrWhiteSpace(langCode)) return -1;
+
+        // Priority 1: Exact match of language code (tr, en, etc.)
+        foreach (var track in tracks)
+        {
+            if (track.Id < 0 || string.IsNullOrWhiteSpace(track.Name)) continue;
+            
+            if (track.Name.Contains($"({langCode})", StringComparison.OrdinalIgnoreCase) || 
+                track.Name.Contains($"[{langCode}]", StringComparison.OrdinalIgnoreCase) ||
+                Regex.IsMatch(track.Name, $@"\b{langCode}\b", RegexOptions.IgnoreCase))
+            {
+                return track.Id;
+            }
+        }
+
+        // Priority 2: Full language name match (Turkish, English, etc.)
+        var fullName = langCode.ToLower() switch
+        {
+            "tr" => "turkish",
+            "en" => "english",
+            "de" => "german",
+            "fr" => "french",
+            "es" => "spanish",
+            "it" => "italian",
+            "pt" => "portuguese",
+            "ru" => "russian",
+            "ar" => "arabic",
+            "nl" => "dutch",
+            _ => null
+        };
+
+        if (fullName != null)
+        {
+            foreach (var track in tracks)
+            {
+                if (track.Id < 0 || string.IsNullOrWhiteSpace(track.Name)) continue;
+                if (track.Name.Contains(fullName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return track.Id;
+                }
+            }
+        }
+
+        // Priority 3: Localized language name match (Türkçe, İngilizce - if applicable)
+        var locName = langCode.ToLower() switch
+        {
+            "tr" => "türkçe",
+            "en" => "ingilizce",
+            "de" => "almanca",
+            "fr" => "fransızca",
+            "es" => "ispanyolca",
+            "it" => "italyanca",
+            "pt" => "portekizce",
+            "ru" => "rusça",
+            "ar" => "arapça",
+            "nl" => "flemenkçe",
+            _ => null
+        };
+
+        if (locName != null)
+        {
+            foreach (var track in tracks)
+            {
+                if (track.Id < 0 || string.IsNullOrWhiteSpace(track.Name)) continue;
+                if (track.Name.Contains(locName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return track.Id;
+                }
+            }
+        }
+
+        return -1;
     }
 
     private void UpdateDurationFromService(bool force = false)
@@ -1724,6 +1839,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         IsCreditsZone = false;
         IsNextEpisodePromptVisible = false;
         IsEpisodesPanelOpen = false;
+        _isPreferenceApplied = false;
 
         if (episode == null)
         {

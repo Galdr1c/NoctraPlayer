@@ -1,4 +1,4 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Noctra.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -266,6 +266,49 @@
                                         <ComboBoxItem Content="Orta (720p)"/>
                                         <ComboBoxItem Content="Yüksek (1080p)"/>
                                         <ComboBoxItem Content="Otomatik"/>
+                                    </ComboBox>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Classes="SettingsCard">
+                                <StackPanel>
+                                    <TextBlock Text="Ses ve Altyazı" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
+                                    
+                                    <Grid Margin="0,0,0,18">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="Altyazıları otomatik aç" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="VOD ve Dizilerde altyazıyı varsayılan olarak etkinleştirir" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding SubtitleEnabled}"/>
+                                    </Grid>
+
+                                    <TextBlock Text="Tercih Edilen Altyazı Dili" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                                    <ComboBox Theme="{StaticResource ModernComboBox}" SelectedValue="{Binding SubtitleLanguage, Mode=TwoWay}" SelectedValueBinding="{Binding Tag}" Width="250" HorizontalAlignment="Left" Margin="0,0,0,18">
+                                        <ComboBoxItem Content="Türkçe" Tag="tr"/>
+                                        <ComboBoxItem Content="English" Tag="en"/>
+                                        <ComboBoxItem Content="Deutsch" Tag="de"/>
+                                        <ComboBoxItem Content="Français" Tag="fr"/>
+                                        <ComboBoxItem Content="Español" Tag="es"/>
+                                        <ComboBoxItem Content="Italiano" Tag="it"/>
+                                        <ComboBoxItem Content="Português" Tag="pt"/>
+                                        <ComboBoxItem Content="Русский" Tag="ru"/>
+                                        <ComboBoxItem Content="العربية" Tag="ar"/>
+                                        <ComboBoxItem Content="Nederlands" Tag="nl"/>
+                                    </ComboBox>
+
+                                    <TextBlock Text="Tercih Edilen Ses Dili" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                                    <ComboBox Theme="{StaticResource ModernComboBox}" SelectedValue="{Binding PreferredAudioLanguage, Mode=TwoWay}" SelectedValueBinding="{Binding Tag}" Width="250" HorizontalAlignment="Left">
+                                        <ComboBoxItem Content="Türkçe" Tag="tr"/>
+                                        <ComboBoxItem Content="English" Tag="en"/>
+                                        <ComboBoxItem Content="Deutsch" Tag="de"/>
+                                        <ComboBoxItem Content="Français" Tag="fr"/>
+                                        <ComboBoxItem Content="Español" Tag="es"/>
+                                        <ComboBoxItem Content="Italiano" Tag="it"/>
+                                        <ComboBoxItem Content="Português" Tag="pt"/>
+                                        <ComboBoxItem Content="Русский" Tag="ru"/>
+                                        <ComboBoxItem Content="العربية" Tag="ar"/>
+                                        <ComboBoxItem Content="Nederlands" Tag="nl"/>
                                     </ComboBox>
                                 </StackPanel>
                             </Border>

@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Noctra.Models;
 using Noctra.Data;
@@ -30,6 +30,15 @@ public partial class SettingsViewModel : ObservableObject
     
     [ObservableProperty]
     private int _selectedDataUsage;
+
+    [ObservableProperty]
+    private bool _subtitleEnabled;
+
+    [ObservableProperty]
+    private string _subtitleLanguage = "tr";
+
+    [ObservableProperty]
+    private string _preferredAudioLanguage = "tr";
     
     // ============ İndirme Ayarları ============
     
@@ -272,6 +281,9 @@ public partial class SettingsViewModel : ObservableObject
         // Playback
         AutoPlayNext = s.AutoPlayNext;
         SelectedDataUsage = (int)s.DataUsage;
+        SubtitleEnabled = s.SubtitleEnabled;
+        SubtitleLanguage = string.IsNullOrWhiteSpace(s.SubtitleLanguage) ? "tr" : s.SubtitleLanguage;
+        PreferredAudioLanguage = string.IsNullOrWhiteSpace(s.PreferredAudioLanguage) ? "tr" : s.PreferredAudioLanguage;
         
         // Downloads
         SelectedDownloadQuality = (int)s.DownloadQuality;
@@ -316,6 +328,9 @@ public partial class SettingsViewModel : ObservableObject
         // Playback
         s.AutoPlayNext = AutoPlayNext;
         s.DataUsage = (DataUsageLevel)SelectedDataUsage;
+        s.SubtitleEnabled = SubtitleEnabled;
+        s.SubtitleLanguage = SubtitleLanguage;
+        s.PreferredAudioLanguage = PreferredAudioLanguage;
         
         // Downloads
         s.DownloadQuality = (DownloadQuality)SelectedDownloadQuality;
