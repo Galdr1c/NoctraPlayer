@@ -17,6 +17,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - EPG özelliğini tamamen açıp kapatabilmek için `EpgEnabled` ayarı eklendi.
     - EPG devre dışı bırakıldığında `EpgService` veri indirme ve işleme süreçlerini atlayarak performans sağlar.
     - `SettingsWindow.axaml` içinde `ToggleSwitch` kontrolünde oluşan çalışma zamanı hatası (StaticResource hatası) giderildi.
+- **Kanal Listesi İyileştirmeleri** (2026-03-11):
+    - Ayarlar -> Kanal Listesi sekmesine toplam kanal sayısını gösteren "Kanal Sayısı" bilgisi eklendi.
+    - Kanal sayısı, aktif profilin veya seçili listenin tüm içeriklerini (Canlı, VOD, Dizi) kapsayacak şekilde güncel olarak hesaplanır.
 - **Geçmişten Silme Özelliği** (2026-03-10):
     - Geçmiş sayfasındaki tüm kartlara (Canlı TV, Dizi, Film) sağ tık menüsü üzerinden "Geçmişten Sil" seçeneği eklendi.
     - Bu özellik hem arayüzden öğeyi anında kaldırır hem de veritabanındaki ilgili izleme geçmişini ve ilerleme (progress) verilerini temizler.

@@ -369,6 +369,15 @@
                                             Padding="20,10"
                                             Margin="0,0,0,20"/>
 
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Kanal Sayısı" Foreground="{DynamicResource TextMutedBrush}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding TotalChannels}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold"/>
+                                    </Grid>
+
                                     <Grid Margin="0,0,0,16">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>

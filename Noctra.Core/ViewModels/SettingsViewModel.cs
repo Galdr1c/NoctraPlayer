@@ -356,6 +356,9 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [ObservableProperty]
+    private int _totalChannels;
+
+    [ObservableProperty]
     private int _totalEpgPrograms;
 
     [ObservableProperty]
@@ -463,6 +466,9 @@ public partial class SettingsViewModel : ObservableObject
                     .Where(p => p.Id == _mainViewModel.SelectedPlaylist.Id)
                     .Select(p => p.LastUpdated)
                     .FirstOrDefaultAsync();
+
+                TotalChannels = await db.Channels
+                    .CountAsync(c => c.PlaylistId == _mainViewModel.SelectedPlaylist.Id);
             }
             else
             {
@@ -475,10 +481,14 @@ public partial class SettingsViewModel : ObservableObject
                         .OrderByDescending(p => p.LastUpdated)
                         .Select(p => p.LastUpdated)
                         .FirstOrDefaultAsync();
+
+                    TotalChannels = await db.Channels
+                        .CountAsync(c => c.Playlist.ProfileId == profileId.Value && c.Playlist.IsActive);
                 }
                 else
                 {
                     ChannelListLastUpdated = null;
+                    TotalChannels = 0;
                 }
             }
 
