@@ -169,7 +169,7 @@ namespace Noctra.Tests
             return Task.CompletedTask;
         }
 
-        public Task<List<WatchHistory>> GetHistoryAsync(int profileId, CancellationToken ct = default) => Task.FromResult(new List<WatchHistory>());
+        public Task<List<WatchHistory>> GetHistoryAsync(int profileId, int skip = 0, int take = 50, CancellationToken ct = default) => Task.FromResult(new List<WatchHistory>());
         public Task DeleteProfileHistoryAsync(int profileId, CancellationToken ct = default) => Task.CompletedTask;
         public Task<WatchHistory?> GetLatestForMediaAsync(int profileId, int? channelId, int? episodeId, CancellationToken ct = default) => Task.FromResult<WatchHistory?>(null);
         public Task CleanupOlderThanDaysAsync(int profileId, int days, CancellationToken ct = default) => Task.CompletedTask;

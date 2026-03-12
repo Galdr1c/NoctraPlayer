@@ -175,5 +175,67 @@ namespace Noctra.Tests
                 Assert.Null(channel.LastWatched);
             }
         }
+
+        [Fact]
+        public async Task DeleteProfileHistory_OnlyAffectsCurrentProfile()
+        {
+            // Arrange
+            var contextFactoryMock = new Mock<IDbContextFactory<AppDbContext>>();
+            contextFactoryMock.Setup(f => f.CreateDbContextAsync(default)).ReturnsAsync(() => new AppDbContext(_options));
+            
+            var settingsServiceMock = new Mock<ISettingsService>();
+            var service = new WatchHistoryService(contextFactoryMock.Object, settingsServiceMock.Object);
+            
+            int profile1Id = 1;
+            int profile2Id = 2;
+
+            using (var context = new AppDbContext(_options))
+            {
+                var account = new ProviderAccount { Name = "Acc", Url = "..." };
+                context.ProviderAccounts.Add(account);
+                
+                var profile1 = new Profile { Id = profile1Id, Name = "User 1", ProviderAccount = account };
+                var profile2 = new Profile { Id = profile2Id, Name = "User 2", ProviderAccount = account };
+                context.Profiles.AddRange(profile1, profile2);
+                
+                var pl1 = new Playlist { Name = "PL1", ProfileId = profile1Id, Url = "http://test.com/1" };
+                var pl2 = new Playlist { Name = "PL2", ProfileId = profile2Id, Url = "http://test.com/2" };
+                context.Playlists.AddRange(pl1, pl2);
+
+                // Profile 1 data
+                context.WatchHistories.Add(new WatchHistory { ProfileId = profile1Id, WatchedAt = DateTime.UtcNow });
+                context.Channels.Add(new Channel { Playlist = pl1, Name = "CH1", StreamUrl = "...", WatchedPosition = TimeSpan.FromMinutes(10) });
+
+                // Profile 2 data (should be preserved)
+                context.WatchHistories.Add(new WatchHistory { ProfileId = profile2Id, WatchedAt = DateTime.UtcNow });
+                context.Channels.Add(new Channel { Playlist = pl2, Name = "CH2", StreamUrl = "...", WatchedPosition = TimeSpan.FromMinutes(20), IsCompleted = true });
+
+                await context.SaveChangesAsync();
+            }
+
+            // Act: Delete history for Profile 1 only
+            await service.DeleteProfileHistoryAsync(profile1Id);
+
+            // Assert
+            using (var context = new AppDbContext(_options))
+            {
+                // Profile 1 history should be gone
+                var p1History = await context.WatchHistories.Where(h => h.ProfileId == profile1Id).ToListAsync();
+                Assert.Empty(p1History);
+
+                // Profile 2 history should STILL EXIST
+                var p2History = await context.WatchHistories.Where(h => h.ProfileId == profile2Id).ToListAsync();
+                Assert.Single(p2History);
+
+                // Profile 1 channel progress should be reset
+                var ch1 = await context.Channels.FirstAsync(c => c.Name == "CH1");
+                Assert.Equal(TimeSpan.Zero, ch1.WatchedPosition);
+
+                // Profile 2 channel progress should be UNTOUCHED
+                var ch2 = await context.Channels.FirstAsync(c => c.Name == "CH2");
+                Assert.Equal(TimeSpan.FromMinutes(20), ch2.WatchedPosition);
+                Assert.True(ch2.IsCompleted);
+            }
+        }
     }
 }
