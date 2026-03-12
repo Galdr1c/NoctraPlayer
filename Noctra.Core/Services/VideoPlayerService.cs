@@ -28,7 +28,6 @@ public class VideoPlayerService : IVideoPlayerService
     private long _playGeneration;
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private bool _isInitialized;
-    private int _lastLogProgress = -1;
     private CancellationTokenSource? _volumeSaveCts;
 
     private void LogDebug(string msg)
@@ -64,20 +63,8 @@ public class VideoPlayerService : IVideoPlayerService
         // Initialize volume from settings
         _currentVolume = _settingsService.Settings.DefaultVolume;
 
-        // Listen for settings changes to update default volume
-        _settingsService.SettingsChanged += OnSettingsChanged;
-
         // Start initialization in the background so we don't block the UI thread
         _ = InitializeAsync();
-    }
-
-    private void OnSettingsChanged()
-    {
-        // INTENTIONAL FIX: We do NOT sync the live volume here.
-        // If we do, then any setting save (e.g. changing Subtitle FontSize) 
-        // will trigger this event and instantly reset the active playback volume 
-        // to DefaultVolume (often 100%).
-        // DefaultVolume is only applied at the beginning of playback.
     }
 
     private async Task InitializeAsync()
@@ -202,14 +189,9 @@ public class VideoPlayerService : IVideoPlayerService
             _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, "Video oynatma hatası oluştu"));
         };
             
-        _mediaPlayer.Buffering += (s, e) =>
+        _mediaPlayer.Buffering += (sender, e) =>
         {
             var progress = (int)e.Cache;
-            if (progress % 10 == 0 && progress != _lastLogProgress)
-            {
-                _lastLogProgress = progress;
-                LogDebug($"Event: Buffering {progress}%");
-            }
             _dispatcherService.BeginInvoke(() => BufferingChanged?.Invoke(this, e.Cache));
         };
     }
@@ -821,11 +803,6 @@ public class VideoPlayerService : IVideoPlayerService
     {
         if (_disposed) return;
         
-        if (_settingsService != null)
-        {
-            _settingsService.SettingsChanged -= OnSettingsChanged;
-        }
-
         _playCts?.Cancel();
         _playCts?.Dispose();
         _playCts = null;
