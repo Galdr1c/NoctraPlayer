@@ -131,11 +131,11 @@ public partial class MainWindow : Window
         _videoPlayerService.MediaPlayerReady -= VideoPlayerService_MediaPlayerReady;
         
         // Handle privacy: Clear history on exit if enabled
-        if (_settingsService.Settings.ClearHistoryOnExit)
+        if (_settingsService.Settings.ClearHistoryOnExit && _mainViewModel.CurrentProfileId.HasValue)
         {
             // We use Fire & Forget but the app might close before it finishes.
             // Since it's a local SQLite operation, it's usually very fast.
-            _ = _watchHistoryService.ClearAllHistoryAsync();
+            _ = _watchHistoryService.DeleteProfileHistoryAsync(_mainViewModel.CurrentProfileId.Value);
         }
 
         // VideoSurface.MediaPlayer = null; // Handled in ClosePiP or let it be cleared

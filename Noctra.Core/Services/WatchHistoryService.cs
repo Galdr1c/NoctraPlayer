@@ -249,22 +249,6 @@ public class WatchHistoryService : IWatchHistoryService
                                       .SetProperty(x => x.IsCompleted, false), ct);
     }
 
-    public async Task ClearAllHistoryAsync(CancellationToken ct = default)
-    {
-        using var context = await _contextFactory.CreateDbContextAsync(ct);
-        
-        await context.WatchHistories.ExecuteDeleteAsync(ct);
-        await context.SeriesEpisodeProgresses.ExecuteDeleteAsync(ct);
-        
-        await context.Channels.ExecuteUpdateAsync(c => c.SetProperty(x => x.LastWatched, (DateTime?)null)
-                                                        .SetProperty(x => x.WatchedPosition, TimeSpan.Zero)
-                                                        .SetProperty(x => x.IsCompleted, false), ct);
-
-        await context.Episodes.ExecuteUpdateAsync(e => e.SetProperty(x => x.LastWatched, (DateTime?)null)
-                                                        .SetProperty(x => x.WatchedPosition, TimeSpan.Zero)
-                                                        .SetProperty(x => x.IsCompleted, false), ct);
-    }
-
     public async Task<WatchHistory?> GetLatestForMediaAsync(int profileId, int? channelId, int? episodeId, CancellationToken ct = default)
     {
         if ((!channelId.HasValue && !episodeId.HasValue) || (channelId.HasValue && episodeId.HasValue))

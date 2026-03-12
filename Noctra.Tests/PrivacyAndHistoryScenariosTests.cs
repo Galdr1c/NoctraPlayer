@@ -162,7 +162,7 @@ namespace Noctra.Tests
             }
 
             // Act
-            await service.ClearAllHistoryAsync();
+            await service.DeleteProfileHistoryAsync(1);
 
             // Assert
             using (var context = new AppDbContext(_options))
