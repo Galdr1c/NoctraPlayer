@@ -154,6 +154,12 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
             {
                 if (keywords.Any(kw => nameLower.Contains(kw)))
                 {
+                    // Prevent Live channels from being categorized as Series/Movies based on name
+                    if (channel.Type == Models.ChannelType.Live && (category == "Diziler" || category == "Filmler"))
+                    {
+                        continue;
+                    }
+
                     channel.GroupTitle = category;
                     matched = true;
                     break;
