@@ -1,6 +1,5 @@
 using System.IO.Compression;
 using System.Net.Http;
-using System.Xml.Linq;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Noctra.Data;
@@ -42,7 +41,7 @@ public class EpgService : IEpgService
         if (!await _loadSemaphore.WaitAsync(0).ConfigureAwait(false))
         {
             _logger?.LogWarning("Another EPG load is in progress, skipping new request.");
-            return 0;
+            return -1; // -1 indicates it was skipped due to concurrency
         }
 
         // Check if EPG is enabled globally
