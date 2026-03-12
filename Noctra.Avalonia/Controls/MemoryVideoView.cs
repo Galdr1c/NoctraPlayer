@@ -34,6 +34,15 @@ public class MemoryVideoView : NativeControlHost
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
 
+    [DllImport("user32.dll")]
+    private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+    [DllImport("user32.dll")]
+    private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+    private const int GWL_EXSTYLE = -20;
+    private const int WS_EX_TOOLWINDOW = 0x00000080;
+
     private MediaPlayer? _mediaPlayer;
     private IPlatformHandle? _platformHandle;
     
@@ -41,9 +50,9 @@ public class MemoryVideoView : NativeControlHost
     private Window? _overlayWindow;
     private Window? _rootWindow;
     private bool _isAttached;
-    private bool _isRootActive = true;
     private DispatcherTimer? _focusCheckTimer;
     private readonly uint _currentProcessId = (uint)Environment.ProcessId;
+    private OverlayFocusController _focusController = null!;
 
     public MediaPlayer? MediaPlayer
     {
@@ -189,6 +198,27 @@ public class MemoryVideoView : NativeControlHost
 
     private void InitializeOverlay()
     {
+        _focusController = new OverlayFocusController(
+            isOurProcessActive:        IsOurProcessActive,
+            isEffectivelyVisible:      () => this.IsEffectivelyVisible,
+            isOverlayCurrentlyVisible: () => _overlayWindow?.IsVisible == true,
+            showOverlay: () =>
+            {
+                if (_overlayWindow == null) CreateOverlayWindow();
+                if (_overlayWindow != null)
+                {
+                    UpdateOverlayPosition();
+                    _overlayWindow.Show();
+                }
+            },
+            hideOverlay: () => _overlayWindow?.Hide(),
+            setTopmost: v =>
+            {
+                if (_overlayWindow != null && _overlayWindow.Topmost != v)
+                    _overlayWindow.Topmost = v;
+            }
+        );
+
         LayoutUpdated += OnLayoutUpdated;
         // Foreground window polling — reliable focus detection on Windows
         _focusCheckTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
@@ -204,6 +234,17 @@ public class MemoryVideoView : NativeControlHost
 
         // Initial update
         OnLayoutUpdated(this, EventArgs.Empty);
+    }
+
+    private bool IsOurProcessActive()
+    {
+        try
+        {
+            var fg = GetForegroundWindow();
+            GetWindowThreadProcessId(fg, out var fgPid);
+            return fgPid == _currentProcessId;
+        }
+        catch { return false; }
     }
 
     private void DestroyOverlay()
@@ -235,57 +276,18 @@ public class MemoryVideoView : NativeControlHost
     {
         if (e.Property == Window.IsVisibleProperty)
         {
-            UpdateOverlayState(this.IsEffectivelyVisible);
+            _focusController?.OnLayoutChanged(this.IsEffectivelyVisible);
         }
     }
 
     private void OnLayoutUpdated(object? sender, EventArgs e)
     {
-        // Check visibility and update overlay
-        UpdateOverlayState(this.IsEffectivelyVisible);
+        _focusController?.OnLayoutChanged(this.IsEffectivelyVisible);
     }
 
-    /// <summary>
-    /// Polls the Win32 foreground window to reliably detect when our app
-    /// loses/gains focus. This replaces the racy Activated/Deactivated approach.
-    /// </summary>
     private void FocusCheckTimer_Tick(object? sender, EventArgs e)
     {
-        if (_overlayWindow == null || _rootWindow == null) return;
-        
-        try
-        {
-            var fg = GetForegroundWindow();
-            GetWindowThreadProcessId(fg, out var fgPid);
-            var isOurProcess = fgPid == _currentProcessId;
-
-            if (isOurProcess)
-            {
-                if (!_isRootActive)
-                {
-                    _isRootActive = true;
-                    if (this.IsEffectivelyVisible)
-                    {
-                        UpdateOverlayPosition();
-                        _overlayWindow.Topmost = true;
-                        _overlayWindow.Show();
-                    }
-                }
-            }
-            else
-            {
-                if (_isRootActive || _overlayWindow.IsVisible)
-                {
-                    _isRootActive = false;
-                    _overlayWindow.Topmost = false;
-                    _overlayWindow.Hide();
-                }
-            }
-        }
-        catch
-        {
-            // Ignore interop errors during shutdown
-        }
+        _focusController?.OnTimerTick();
     }
 
 
@@ -302,34 +304,7 @@ public class MemoryVideoView : NativeControlHost
     private void HandleWindowMovement()
     {
         if (_overlayWindow == null) return;
-        
-        // Instantly update the position to keep the overlay attached
-        // We used to Hide() it here to avoid a laggy follower effect, 
-        // but hiding a Window dynamically causes major focus/visibility glitches when moving.
         UpdateOverlayPosition();
-    }
-
-
-    private void UpdateOverlayState(bool visible)
-    {
-        var shouldShow = visible && _isRootActive; 
-        if (shouldShow)
-        {
-            if (_overlayWindow == null)
-            {
-                CreateOverlayWindow();
-            }
-            
-            if (_overlayWindow != null)
-            {
-                UpdateOverlayPosition();
-                _overlayWindow.Show();
-            }
-        }
-        else
-        {
-            _overlayWindow?.Hide();
-        }
     }
 
     private void CreateOverlayWindow()
@@ -343,17 +318,31 @@ public class MemoryVideoView : NativeControlHost
             Background = Brushes.Transparent,
             ShowInTaskbar = false,
             CanResize = false,
-            Title = "VideoOverlay",
+            Title = "", // Empty title to help hide from Alt-Tab
             SizeToContent = SizeToContent.Manual,
-            Topmost = false,  // Timer will set Topmost when our process is active
-            Focusable = false, 
+            Topmost = false,
+            Focusable = false,
             Content = OverlayContent
         };
 
-        // Overlay activated → mark root as active (user clicked on overlay controls)
-        _overlayWindow.Activated += (_, _) =>
+        // Fix crash: If window is closed (e.g. via Alt+F4 or Task Switcher), reset reference
+        _overlayWindow.Closed += (s, e) =>
         {
-            _isRootActive = true;
+            _overlayWindow = null;
+        };
+
+        // Aggressive Alt-Tab hiding for Windows
+        _overlayWindow.Opened += (s, e) =>
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && _overlayWindow != null)
+            {
+                var handle = _overlayWindow.TryGetPlatformHandle()?.Handle;
+                if (handle.HasValue && handle.Value != IntPtr.Zero)
+                {
+                    int exStyle = GetWindowLong(handle.Value, GWL_EXSTYLE);
+                    SetWindowLong(handle.Value, GWL_EXSTYLE, exStyle | WS_EX_TOOLWINDOW);
+                }
+            }
         };
 
         _overlayWindow.Show(_rootWindow);

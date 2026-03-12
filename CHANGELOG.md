@@ -51,6 +51,13 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ### 🛠️ Düzeltmeler ve Optimizasyonlar
 - **Performans ve Kararlılık Düzeltmeleri** (2026-03-12):
+    - **Video Overlay Odak ve Görünürlük Sorunları Tamamen Çözüldü**: Video oynatıcı üzerindeki kontrol panelinin (overlay) bazı durumlarda kaybolması ve ancak başka pencereye geçip geri gelince düzelmesi sorunu kökten çözüldü. 
+        - State machine mantığı `OverlayFocusController` adında test edilebilir bağımsız bir sınıfa taşındı.
+        - Overlay'in sadece odak değişiminde değil, her timer tick'inde görünürlük durumu kontrol edilerek (idempotent) gerekirse otomatik olarak geri getirilmesi sağlandı.
+        - **Alt-Tab Gizleme**: Overlay penceresinin Alt-Tab (Görev Değiştirici) listesinde ayrı bir pencere olarak görünmesi engellendi (Win32 `WS_EX_TOOLWINDOW` entegrasyonu).
+        - **Kritik Çökme Giderildi**: Overlay penceresinin sistem tarafından veya manuel kapatılması durumunda oluşan `InvalidOperationException: Cannot re-show a closed window` hatası, pencere referanslarının dinamik takibi ile çözüldü.
+        - Uygulama içi sekmeler arası geçişlerde overlay'in diğer pencerelerin üzerinde asılı kalması (ghosting) engellendi.
+        - 50 farklı senaryoyu kapsayan kapsamlı bir test suite (`OverlayFocusControllerTests`) eklenerek çözümün sağlamlığı doğrulandı.
     - **Dizi Güncelleme (UpdateSeriesAsync) Performansı Optimize Edildi**: Favoriye ekleme veya listeye ekleme işlemlerinde bir playlist'teki tüm dizilerin RAM'e yüklenmesi sorunu giderildi. Artık işlem öncesinde `SeriesId` üzerinden doğrudan erişim ve isim ön-filtresi (heuristic) kullanılarak veritabanı sorgusu daraltılıyor, binlerce kaydın belleğe çekilmesi engelleniyor.
     - **Boş Sezonların (Season) Temizlenmesi Sağlandı**: `MediaService` içerisindeki içerik birleştirme (aggregation) mantığına boş kalan sezonları temizleme özelliği eklendi. Artık bir playlist yenilendiğinde, içerisinde bölüm kalmayan sezon nesneleri veritabanından otomatik olarak siliniyor.
     - **Hatalı Bölüm Çakışması (S01E01 Fallback) Düzeltildi**: `SeriesInfoParser` üzerinde başlığı parse edilemeyen dizilerin varsayılan olarak S01E01'e atanıp gerçek ilk bölümün üzerine yazması sorunu çözüldü. Artık unparsed bölümler S00E00 olarak işaretleniyor ve veritabanında yalnızca benzersiz akış adresleri (Stream URL) üzerinden eşleştiriliyor.
