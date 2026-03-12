@@ -161,6 +161,44 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private int _volume = 100;
 
     [ObservableProperty]
+    private int _subtitleFontSize = 40;
+
+    private CancellationTokenSource? _subtitleSaveCts;
+    partial void OnSubtitleFontSizeChanged(int value)
+    {
+        if (_settingsService != null && _settingsService.Settings.SubtitleFontSize != value)
+        {
+            _settingsService.Settings.SubtitleFontSize = value;
+            _subtitleSaveCts?.Cancel();
+            _subtitleSaveCts?.Dispose();
+            _subtitleSaveCts = new CancellationTokenSource();
+            
+            var token = _subtitleSaveCts.Token;
+            _ = Task.Run(async () => 
+            {
+                try
+                {
+                    await Task.Delay(1000, token);
+                    if (!token.IsCancellationRequested)
+                    {
+                        await _settingsService.SaveAsync();
+                    }
+                }
+                catch (TaskCanceledException) { }
+            }, token);
+        }
+    }
+
+    [RelayCommand]
+    private void SetSubtitleSize(string sizeStr)
+    {
+        if (int.TryParse(sizeStr, out int size))
+        {
+            SubtitleFontSize = size;
+        }
+    }
+
+    [ObservableProperty]
     private bool _isMuted;
 
     [ObservableProperty]
@@ -182,10 +220,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private bool _showControls = true;
 
     [ObservableProperty]
-    private List<TrackOption> _audioTracks = new();
+    private System.Collections.ObjectModel.ObservableCollection<TrackOption> _audioTracks = new();
 
     [ObservableProperty]
-    private List<TrackOption> _subtitleTracks = new();
+    private System.Collections.ObjectModel.ObservableCollection<TrackOption> _subtitleTracks = new();
 
     [ObservableProperty]
     private int _selectedAudioTrack = -1;
@@ -1105,12 +1143,34 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             subtitleTracks.Add(new TrackOption(-1, "Kapalı"));
         }
 
-        AudioTracks = audioTracks;
-        SubtitleTracks = subtitleTracks;
-
-        if (!IsLiveContent && !_isPreferenceApplied)
+        _dispatcherService.Invoke(() => 
         {
-            ApplyDefaultTracks(_videoPlayerService.AudioTracks, _videoPlayerService.SubtitleTracks);
+            AudioTracks.Clear();
+            foreach (var t in audioTracks) AudioTracks.Add(t);
+
+            SubtitleTracks.Clear();
+            foreach (var t in subtitleTracks) SubtitleTracks.Add(t);
+        });
+
+        if (!IsLiveContent)
+        {
+            if (!_isPreferenceApplied)
+            {
+                ApplyDefaultTracks(_videoPlayerService.AudioTracks, _videoPlayerService.SubtitleTracks);
+            }
+            else
+            {
+                // Re-apply existing selections after a potential background re-initialization
+                if (SelectedAudioTrack >= 0 && audioTracks.Any(t => t.Id == SelectedAudioTrack))
+                {
+                    _videoPlayerService.SetAudioTrack(SelectedAudioTrack);
+                }
+
+                if (SelectedSubtitleTrack >= -1 && subtitleTracks.Any(t => t.Id == SelectedSubtitleTrack))
+                {
+                    _videoPlayerService.SetSubtitleTrack(SelectedSubtitleTrack);
+                }
+            }
         }
     }
 

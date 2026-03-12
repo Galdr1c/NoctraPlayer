@@ -376,7 +376,69 @@
                             <StackPanel VerticalAlignment="Center"><TextBlock Text="SES VE ALTYAZI" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1.5" Margin="0,0,0,16"/><Border Height="1" Background="{DynamicResource Surface1Brush}" Margin="0,0,0,8" Opacity="0.5"/></StackPanel>
                             <Button Grid.Column="1" Command="{Binding ClosePanelsCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0"><materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}" ToolTip.Tip="Kapat"/></Button>
                         </Grid>
-                        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Visible"><StackPanel Margin="32,0,32,40"><TextBlock Text="SES" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,12"/><ItemsControl ItemsSource="{Binding AudioTracks}"><ItemsControl.ItemTemplate><DataTemplate><Button Tag="{Binding Id}" Click="AudioTrack_Click" Classes="listItemBtn" Margin="0,0,0,8" Content="{Binding Name}"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl><TextBlock Text="ALTYAZI" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,32,0,12"/><ItemsControl ItemsSource="{Binding SubtitleTracks}" Margin="0,0,0,24"><ItemsControl.ItemTemplate><DataTemplate><Button Tag="{Binding Id}" Click="SubtitleTrack_Click" Classes="listItemBtn" Margin="0,0,0,8" Content="{Binding Name}"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></ScrollViewer>
+                        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Visible">
+                            <StackPanel Margin="32,0,32,40">
+                                <TextBlock Text="ALTYAZI BOYUTU" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,12" IsVisible="{Binding !IsLiveContent}"/>
+                                <StackPanel Margin="0,0,0,32" IsVisible="{Binding !IsLiveContent}">
+                                    <UniformGrid Columns="3" Margin="0,0,0,8">
+                                        <Button Command="{Binding SetSubtitleSizeCommand}" CommandParameter="28" Content="Küçük" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="0,0,8,0">
+                                            <Button.Background>
+                                                <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="Surface1Brush">
+                                                    <Binding Path="SubtitleFontSize"/>
+                                                    <Binding>
+                                                        <Binding.Source>
+                                                            <x:Int32>28</x:Int32>
+                                                        </Binding.Source>
+                                                    </Binding>
+                                                </MultiBinding>
+                                            </Button.Background>
+                                        </Button>
+                                        <Button Command="{Binding SetSubtitleSizeCommand}" CommandParameter="40" Content="Standart" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,4,0">
+                                            <Button.Background>
+                                                <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="Surface1Brush">
+                                                    <Binding Path="SubtitleFontSize"/>
+                                                    <Binding>
+                                                        <Binding.Source>
+                                                            <x:Int32>40</x:Int32>
+                                                        </Binding.Source>
+                                                    </Binding>
+                                                </MultiBinding>
+                                            </Button.Background>
+                                        </Button>
+                                        <Button Command="{Binding SetSubtitleSizeCommand}" CommandParameter="60" Content="Büyük" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="8,0,0,0">
+                                            <Button.Background>
+                                                <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="Surface1Brush">
+                                                    <Binding Path="SubtitleFontSize"/>
+                                                    <Binding>
+                                                        <Binding.Source>
+                                                            <x:Int32>60</x:Int32>
+                                                        </Binding.Source>
+                                                    </Binding>
+                                                </MultiBinding>
+                                            </Button.Background>
+                                        </Button>
+                                    </UniformGrid>
+                                    <TextBlock Text="Değişikliklerin uygulanması için video anlık olarak yeniden başlatılır." FontSize="11" Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                </StackPanel>
+
+                                <TextBlock Text="SES" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,12"/>
+                                <ItemsControl ItemsSource="{Binding AudioTracks}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Tag="{Binding Id}" Click="AudioTrack_Click" Classes="listItemBtn" Margin="0,0,0,8" Content="{Binding Name}"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock Text="ALTYAZI" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,32,0,12"/>
+                                <ItemsControl ItemsSource="{Binding SubtitleTracks}" Margin="0,0,0,24">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Tag="{Binding Id}" Click="SubtitleTrack_Click" Classes="listItemBtn" Margin="0,0,0,8" Content="{Binding Name}"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </ScrollViewer>
                     </Grid>
                 </Border>
             </Grid>

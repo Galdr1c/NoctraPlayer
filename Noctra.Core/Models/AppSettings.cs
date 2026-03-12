@@ -53,6 +53,11 @@ public class AppSettings
     public string SubtitleLanguage { get; set; } = "tr";
 
     /// <summary>
+    /// Altyazı yazı tipi boyutu (varsayılan: 40)
+    /// </summary>
+    public int SubtitleFontSize { get; set; } = 40;
+
+    /// <summary>
     /// Tercih edilen ses dili (örn: "tr", "en")
     /// </summary>
     public string PreferredAudioLanguage { get; set; } = "tr";

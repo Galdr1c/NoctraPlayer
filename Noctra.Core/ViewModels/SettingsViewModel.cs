@@ -39,6 +39,9 @@ public partial class SettingsViewModel : ObservableObject
     private string _subtitleLanguage = "tr";
 
     [ObservableProperty]
+    private int _subtitleFontSize = 40;
+
+    [ObservableProperty]
     private string _preferredAudioLanguage = "tr";
     
     // ============ İndirme Ayarları ============
@@ -305,6 +308,7 @@ public partial class SettingsViewModel : ObservableObject
         SelectedDataUsage = (int)s.DataUsage;
         SubtitleEnabled = s.SubtitleEnabled;
         SubtitleLanguage = string.IsNullOrWhiteSpace(s.SubtitleLanguage) ? "tr" : s.SubtitleLanguage;
+        SubtitleFontSize = s.SubtitleFontSize;
         PreferredAudioLanguage = string.IsNullOrWhiteSpace(s.PreferredAudioLanguage) ? "tr" : s.PreferredAudioLanguage;
         
         // Downloads
@@ -366,6 +370,7 @@ public partial class SettingsViewModel : ObservableObject
         s.DataUsage = (DataUsageLevel)SelectedDataUsage;
         s.SubtitleEnabled = SubtitleEnabled;
         s.SubtitleLanguage = SubtitleLanguage;
+        s.SubtitleFontSize = SubtitleFontSize;
         s.PreferredAudioLanguage = PreferredAudioLanguage;
         
         // Downloads

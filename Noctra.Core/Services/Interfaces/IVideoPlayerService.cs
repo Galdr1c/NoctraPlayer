@@ -25,6 +25,12 @@ public interface IVideoPlayerService : IDisposable
     Task HardSeekAsync(double seconds);
     
     /// <summary>
+    /// Oynatıcıyı mevcut ayarları (örn. altyazı boyutu) alarak yeniden başlatır. 
+    /// Oynatılmakta olan bir medya varsa aynı konumdan devam eder.
+    /// </summary>
+    Task ReinitializeAsync();
+
+    /// <summary>
     /// Oynatmayı duraklatır
     /// </summary>
     void Pause();

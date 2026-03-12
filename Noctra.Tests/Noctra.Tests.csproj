@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Noctra.Core\Noctra.Core.csproj" />
+    <ProjectReference Include="..\Noctra.Avalonia\Noctra.Avalonia.csproj" />
   </ItemGroup>
 
 </Project>

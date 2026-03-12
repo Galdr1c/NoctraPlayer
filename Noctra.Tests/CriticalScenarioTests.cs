@@ -59,6 +59,8 @@ namespace Noctra.Tests
             return Task.CompletedTask;
         }
 
+        public Task ReinitializeAsync() => Task.CompletedTask;
+
         public Task HardSeekAsync(double seconds) { Position = seconds; return Task.CompletedTask; }
         public void Pause() { IsPlaying = false; PlayingChanged?.Invoke(this, false); }
         public void Resume() { IsPlaying = true; PlayingChanged?.Invoke(this, true); }

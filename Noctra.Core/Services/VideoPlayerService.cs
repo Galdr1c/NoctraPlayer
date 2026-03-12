@@ -19,6 +19,7 @@ public class VideoPlayerService : IVideoPlayerService
     private readonly ISettingsService _settingsService;
     private bool _disposed;
     private int _currentVolume = 100;
+    private int _lastSubtitleFontSize;
     
     private int _retryCount = 0;
     private const int MaxRetries = 3;
@@ -62,9 +63,22 @@ public class VideoPlayerService : IVideoPlayerService
         
         // Initialize volume from settings
         _currentVolume = _settingsService.Settings.DefaultVolume;
+        _lastSubtitleFontSize = _settingsService.Settings.SubtitleFontSize;
+
+        _settingsService.SettingsChanged += OnSettingsChanged;
 
         // Start initialization in the background so we don't block the UI thread
         _ = InitializeAsync();
+    }
+
+    private void OnSettingsChanged()
+    {
+        var currentFontSize = _settingsService.Settings.SubtitleFontSize;
+        if (_lastSubtitleFontSize != currentFontSize)
+        {
+            _lastSubtitleFontSize = currentFontSize;
+            _ = ReinitializeAsync();
+        }
     }
 
     private async Task InitializeAsync()
@@ -103,6 +117,7 @@ public class VideoPlayerService : IVideoPlayerService
                     "--ts-seek-percent",
                     "--http-reconnect",
                     "--http-user-agent=IPTVSmartersPro",
+                    $"--freetype-fontsize={_lastSubtitleFontSize}", // Altyazı boyutu
                     "--verbose=0",
                     "--quiet"
                 };
@@ -127,6 +142,56 @@ public class VideoPlayerService : IVideoPlayerService
         finally
         {
             _initLock.Release();
+        }
+    }
+
+    public async Task ReinitializeAsync()
+    {
+        // 1. Durumu kaydet
+        var currentUrl = CurrentUrl;
+        var wasPlaying = IsPlaying;
+        var currentPosition = Position;
+        
+        // 2. Oynatmayı durdur
+        Stop();
+
+        // 3. UI üzerindeki MediaPlayer referansını kaldır (crash önlemek için çok kritik)
+        await _dispatcherService.InvokeAsync(() =>
+        {
+            MediaPlayerReady?.Invoke(this, null);
+            return Task.CompletedTask;
+        });
+        
+        // 4. Mevcut nesneleri arka planda temizle
+        await Task.Run(() =>
+        {
+            if (_mediaPlayer != null)
+            {
+                _mediaPlayer.Dispose();
+                _mediaPlayer = null;
+            }
+
+            if (_libVLC != null)
+            {
+                _libVLC.Dispose();
+                _libVLC = null;
+            }
+        });
+
+        _isInitialized = false;
+
+        // 5. Yeni ayarlarla tekrar başlat
+        await InitializeAsync();
+
+        // 6. Eğer bir şey çalıyorsa kaldığı yerden devam ettir
+        if (!string.IsNullOrEmpty(currentUrl))
+        {
+            // Position saniye cinsindendir
+            await PlayAsync(currentUrl, currentPosition);
+            if (!wasPlaying)
+            {
+                Pause();
+            }
         }
     }
 
@@ -803,6 +868,11 @@ public class VideoPlayerService : IVideoPlayerService
     {
         if (_disposed) return;
         
+        if (_settingsService != null)
+        {
+            _settingsService.SettingsChanged -= OnSettingsChanged;
+        }
+
         _playCts?.Cancel();
         _playCts?.Dispose();
         _playCts = null;

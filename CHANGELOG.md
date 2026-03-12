@@ -51,6 +51,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ### 🛠️ Düzeltmeler ve Optimizasyonlar
 - **Performans ve Kararlılık Düzeltmeleri** (2026-03-12):
+    - **Altyazı Ayarı Konumu ve Davranışı Yenilendi**: Altyazı boyutu ayarı, ana "Ayarlar" sayfasından kaldırılarak doğrudan video oynatıcı üzerindeki "Ses ve Altyazı" (Overlay) menüsünün içine taşındı. Artık Küçük (28), Standart (40) ve Büyük (60) profil seçenekleriyle daha kullanıcı dostu hale getirildi. Ayrıca Canlı yayınlarda gereksiz yer kaplamaması için gizlendi.
+    - **Altyazı Boyut Değişimi Çökmesi (Crash) Giderildi**: Kullanıcı altyazı boyutunu değiştirdiğinde eski oynatıcının temizlenmesi (`Dispose`) işlemi ana UI thread'ini kilitleyerek `AccessViolation` çökmesine (fatal exception) yol açıyordu. Temizlik işlemi `Task.Run` ile arkaplana alındı, UI referansları güvenli bir şekilde silindi ve çökme tamamen engellendi.
+    - **Altyazı Seçiminin Sıfırlanması Sorunu Çözüldü**: Boyut değiştirilip video arka planda yeniden başlatıldığında, kullanıcının o an seçtiği mevcut dil/altyazı profilinin kapanması sorunu düzeltildi. Sistem artık kapanmadan önceki seçili profili (`SelectedSubtitleTrack` ve `SelectedAudioTrack`) hafızasında tutup, yeniden başlatma saniyeler içinde tamamlanınca otomatik olarak geri yüklüyor.
+    - **Arayüz Koleksiyonu (CollectionModified) Çökmesi Engellendi**: Uygulama kapanırken veya video güncellenirken nadiren oluşan `Collection was modified; enumeration operation may not execute` hatası, ses ve altyazı listelerinin doğrudan atanması yerine UI-Safe `ObservableCollection` kullanılarak işlenmesiyle kökten çözüldü.
     - **Video Overlay Odak ve Görünürlük Sorunları Tamamen Çözüldü**: Video oynatıcı üzerindeki kontrol panelinin (overlay) bazı durumlarda kaybolması ve ancak başka pencereye geçip geri gelince düzelmesi sorunu kökten çözüldü. 
         - State machine mantığı `OverlayFocusController` adında test edilebilir bağımsız bir sınıfa taşındı.
         - Overlay'in sadece odak değişiminde değil, her timer tick'inde görünürlük durumu kontrol edilerek (idempotent) gerekirse otomatik olarak geri getirilmesi sağlandı.
