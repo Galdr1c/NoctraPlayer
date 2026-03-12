@@ -20,6 +20,8 @@ public class VideoPlayerService : IVideoPlayerService
     private bool _disposed;
     private int _currentVolume = 100;
     private int _lastSubtitleFontSize;
+    private int _lastSubtitleBackgroundOpacity;
+    private int _lastSubtitleMargin;
     
     private int _retryCount = 0;
     private const int MaxRetries = 3;
@@ -64,6 +66,8 @@ public class VideoPlayerService : IVideoPlayerService
         // Initialize volume from settings
         _currentVolume = _settingsService.Settings.DefaultVolume;
         _lastSubtitleFontSize = _settingsService.Settings.SubtitleFontSize;
+        _lastSubtitleBackgroundOpacity = _settingsService.Settings.SubtitleBackgroundOpacity;
+        _lastSubtitleMargin = _settingsService.Settings.SubtitleMargin;
 
         _settingsService.SettingsChanged += OnSettingsChanged;
 
@@ -73,10 +77,29 @@ public class VideoPlayerService : IVideoPlayerService
 
     private void OnSettingsChanged()
     {
-        var currentFontSize = _settingsService.Settings.SubtitleFontSize;
-        if (_lastSubtitleFontSize != currentFontSize)
+        var settings = _settingsService.Settings;
+        bool shouldReinit = false;
+
+        if (_lastSubtitleFontSize != settings.SubtitleFontSize)
         {
-            _lastSubtitleFontSize = currentFontSize;
+            _lastSubtitleFontSize = settings.SubtitleFontSize;
+            shouldReinit = true;
+        }
+
+        if (_lastSubtitleBackgroundOpacity != settings.SubtitleBackgroundOpacity)
+        {
+            _lastSubtitleBackgroundOpacity = settings.SubtitleBackgroundOpacity;
+            shouldReinit = true;
+        }
+
+        if (_lastSubtitleMargin != settings.SubtitleMargin)
+        {
+            _lastSubtitleMargin = settings.SubtitleMargin;
+            shouldReinit = true;
+        }
+
+        if (shouldReinit)
+        {
             _ = ReinitializeAsync();
         }
     }
@@ -118,6 +141,9 @@ public class VideoPlayerService : IVideoPlayerService
                     "--http-reconnect",
                     "--http-user-agent=IPTVSmartersPro",
                     $"--freetype-fontsize={_lastSubtitleFontSize}", // Altyazı boyutu
+                    $"--freetype-background-opacity={_lastSubtitleBackgroundOpacity}", // Arkaplan şeffaflığı
+                    "--freetype-background-color=0x000000",         // Arkaplan rengi siyah
+                    $"--sub-margin={_lastSubtitleMargin}",          // Alttan yukarı doğru marjin
                     "--verbose=0",
                     "--quiet"
                 };

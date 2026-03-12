@@ -58,6 +58,16 @@ public class AppSettings
     public int SubtitleFontSize { get; set; } = 40;
 
     /// <summary>
+    /// Altyazı arka plan şeffaflığı (0: Kapalı, 128: Yarı Saydam, 255: Siyah)
+    /// </summary>
+    public int SubtitleBackgroundOpacity { get; set; } = 0;
+
+    /// <summary>
+    /// Altyazı alttan boşluk (Margin) miktarı
+    /// </summary>
+    public int SubtitleMargin { get; set; } = 40;
+
+    /// <summary>
     /// Tercih edilen ses dili (örn: "tr", "en")
     /// </summary>
     public string PreferredAudioLanguage { get; set; } = "tr";

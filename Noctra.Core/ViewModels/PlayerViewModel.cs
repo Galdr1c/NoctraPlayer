@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Noctra.Models;
 using Noctra.Services;
@@ -163,18 +163,47 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private int _subtitleFontSize = 40;
 
+    [ObservableProperty]
+    private int _subtitleBackgroundOpacity = 0;
+
+    [ObservableProperty]
+    private int _subtitleMargin = 40;
+
     private CancellationTokenSource? _subtitleSaveCts;
-    partial void OnSubtitleFontSizeChanged(int value)
+
+    partial void OnSubtitleFontSizeChanged(int value) => QueueSubtitleSettingsSave();
+    partial void OnSubtitleBackgroundOpacityChanged(int value) => QueueSubtitleSettingsSave();
+    partial void OnSubtitleMarginChanged(int value) => QueueSubtitleSettingsSave();
+
+    private void QueueSubtitleSettingsSave()
     {
-        if (_settingsService != null && _settingsService.Settings.SubtitleFontSize != value)
+        if (_settingsService == null) return;
+
+        bool changed = false;
+        if (_settingsService.Settings.SubtitleFontSize != SubtitleFontSize)
         {
-            _settingsService.Settings.SubtitleFontSize = value;
+            _settingsService.Settings.SubtitleFontSize = SubtitleFontSize;
+            changed = true;
+        }
+        if (_settingsService.Settings.SubtitleBackgroundOpacity != SubtitleBackgroundOpacity)
+        {
+            _settingsService.Settings.SubtitleBackgroundOpacity = SubtitleBackgroundOpacity;
+            changed = true;
+        }
+        if (_settingsService.Settings.SubtitleMargin != SubtitleMargin)
+        {
+            _settingsService.Settings.SubtitleMargin = SubtitleMargin;
+            changed = true;
+        }
+
+        if (changed)
+        {
             _subtitleSaveCts?.Cancel();
             _subtitleSaveCts?.Dispose();
             _subtitleSaveCts = new CancellationTokenSource();
-            
+
             var token = _subtitleSaveCts.Token;
-            _ = Task.Run(async () => 
+            _ = Task.Run(async () =>
             {
                 try
                 {
@@ -188,13 +217,30 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             }, token);
         }
     }
-
     [RelayCommand]
     private void SetSubtitleSize(string sizeStr)
     {
         if (int.TryParse(sizeStr, out int size))
         {
             SubtitleFontSize = size;
+        }
+    }
+
+    [RelayCommand]
+    private void SetSubtitleBackground(string opacityStr)
+    {
+        if (int.TryParse(opacityStr, out int opacity))
+        {
+            SubtitleBackgroundOpacity = opacity;
+        }
+    }
+
+    [RelayCommand]
+    private void SetSubtitlePosition(string marginStr)
+    {
+        if (int.TryParse(marginStr, out int margin))
+        {
+            SubtitleMargin = margin;
         }
     }
 

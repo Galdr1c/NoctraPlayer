@@ -9,6 +9,12 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Gelişmiş Altyazı Özelleştirme Sistemi** (2026-03-12):
+    - **Altyazı Boyut Profilleri**: Altyazılar için Küçük (28), Standart (40) ve Büyük (60) olmak üzere üç farklı boyut profili eklendi.
+    - **Arka Plan Şeffaflığı Kontrolü**: Altyazıların parlak sahnelerde okunabilirliğini artırmak için "Kapalı", "Yarı Saydam" ve "Siyah" arka plan seçenekleri eklendi.
+    - **Akıllı Konumlandırma**: Altyazıların ekranın ne kadar üzerinde duracağını ayarlayan "Normal" ve "Yukarı" (sinema modu için ideal) konum seçenekleri hayata geçirildi.
+    - **Video Üstü (Overlay) Entegrasyonu**: Tüm bu ayarlar video oynatılırken "Ses ve Altyazı" menüsünden anında (real-time) değiştirilebilir hale getirildi. 
+    - **Otomatik Geri Yükleme**: Ayar değişikliği nedeniyle video arka planda yeniden başlatıldığında, o an seçili olan ses ve altyazı dilinin kaybolmaması için otomatik geri yükleme mantığı eklendi.
 - **Gizlilik ve İzleme Geçmişi Yönetimi** (2026-03-11):
     - İzleme geçmişini kaydetme/durdurma seçeneği eklendi (**Ayarlar > Gizlilik**).
     - Geçmişi otomatik temizleme özelliği hayata geçirildi; kullanıcılar 3, 7, 14 veya 30 gün sonra eski kayıtların silinmesini seçebilir.

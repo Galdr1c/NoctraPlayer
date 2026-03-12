@@ -379,7 +379,7 @@
                         <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Visible">
                             <StackPanel Margin="32,0,32,40">
                                 <TextBlock Text="ALTYAZI BOYUTU" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,12" IsVisible="{Binding !IsLiveContent}"/>
-                                <StackPanel Margin="0,0,0,32" IsVisible="{Binding !IsLiveContent}">
+                                <StackPanel Margin="0,0,0,24" IsVisible="{Binding !IsLiveContent}">
                                     <UniformGrid Columns="3" Margin="0,0,0,8">
                                         <Button Command="{Binding SetSubtitleSizeCommand}" CommandParameter="28" Content="Küçük" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="0,0,8,0">
                                             <Button.Background>
@@ -419,6 +419,78 @@
                                         </Button>
                                     </UniformGrid>
                                     <TextBlock Text="Değişikliklerin uygulanması için video anlık olarak yeniden başlatılır." FontSize="11" Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                </StackPanel>
+
+                                <TextBlock Text="ARKAPLAN ŞEFFAFLIĞI" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,12" IsVisible="{Binding !IsLiveContent}"/>
+                                <StackPanel Margin="0,0,0,24" IsVisible="{Binding !IsLiveContent}">
+                                    <UniformGrid Columns="3" Margin="0,0,0,8">
+                                        <Button Command="{Binding SetSubtitleBackgroundCommand}" CommandParameter="0" Content="Kapalı" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="0,0,8,0">
+                                            <Button.Background>
+                                                <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="Surface1Brush">
+                                                    <Binding Path="SubtitleBackgroundOpacity"/>
+                                                    <Binding>
+                                                        <Binding.Source>
+                                                            <x:Int32>0</x:Int32>
+                                                        </Binding.Source>
+                                                    </Binding>
+                                                </MultiBinding>
+                                            </Button.Background>
+                                        </Button>
+                                        <Button Command="{Binding SetSubtitleBackgroundCommand}" CommandParameter="128" Content="Yarı Saydam" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,4,0">
+                                            <Button.Background>
+                                                <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="Surface1Brush">
+                                                    <Binding Path="SubtitleBackgroundOpacity"/>
+                                                    <Binding>
+                                                        <Binding.Source>
+                                                            <x:Int32>128</x:Int32>
+                                                        </Binding.Source>
+                                                    </Binding>
+                                                </MultiBinding>
+                                            </Button.Background>
+                                        </Button>
+                                        <Button Command="{Binding SetSubtitleBackgroundCommand}" CommandParameter="255" Content="Siyah" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="8,0,0,0">
+                                            <Button.Background>
+                                                <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="Surface1Brush">
+                                                    <Binding Path="SubtitleBackgroundOpacity"/>
+                                                    <Binding>
+                                                        <Binding.Source>
+                                                            <x:Int32>255</x:Int32>
+                                                        </Binding.Source>
+                                                    </Binding>
+                                                </MultiBinding>
+                                            </Button.Background>
+                                        </Button>
+                                    </UniformGrid>
+                                </StackPanel>
+
+                                <TextBlock Text="ALTYAZI KONUMU" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,12" IsVisible="{Binding !IsLiveContent}"/>
+                                <StackPanel Margin="0,0,0,32" IsVisible="{Binding !IsLiveContent}">
+                                    <UniformGrid Columns="2" Margin="0,0,0,8">
+                                        <Button Command="{Binding SetSubtitlePositionCommand}" CommandParameter="40" Content="Normal" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="0,0,4,0">
+                                            <Button.Background>
+                                                <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="Surface1Brush">
+                                                    <Binding Path="SubtitleMargin"/>
+                                                    <Binding>
+                                                        <Binding.Source>
+                                                            <x:Int32>40</x:Int32>
+                                                        </Binding.Source>
+                                                    </Binding>
+                                                </MultiBinding>
+                                            </Button.Background>
+                                        </Button>
+                                        <Button Command="{Binding SetSubtitlePositionCommand}" CommandParameter="480" Content="Yukarı" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,0,0">
+                                            <Button.Background>
+                                                <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="Surface1Brush">
+                                                    <Binding Path="SubtitleMargin"/>
+                                                    <Binding>
+                                                        <Binding.Source>
+                                                            <x:Int32>600</x:Int32>
+                                                        </Binding.Source>
+                                                    </Binding>
+                                                </MultiBinding>
+                                            </Button.Background>
+                                        </Button>
+                                    </UniformGrid>
                                 </StackPanel>
 
                                 <TextBlock Text="SES" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,12"/>
