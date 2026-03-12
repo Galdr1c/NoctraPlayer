@@ -4919,6 +4919,7 @@ public partial class MainViewModel : ObservableObject
                 channel.IsCompleted = false;
 
                 HistoryChannels.Remove(channel);
+                ContinueWatching.Remove(channel);
                 if (channel.Type == ChannelType.Live) HistoryLiveChannels.Remove(channel);
                 else if (channel.Type == ChannelType.VOD) HistoryVodChannels.Remove(channel);
             }
