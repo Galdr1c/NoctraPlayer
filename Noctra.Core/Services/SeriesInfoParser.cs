@@ -57,7 +57,7 @@ public static partial class SeriesInfoParser
         }
 
         var fallbackName = CleanSeriesName(EpisodeTokenRegex().Replace(trimmedTitle, " "));
-        return new SeriesInfo(fallbackName, 1, 1);
+        return new SeriesInfo(fallbackName, 0, 0);
     }
 
     public static bool IsSeries(string? title)

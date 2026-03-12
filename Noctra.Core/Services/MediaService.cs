@@ -166,7 +166,7 @@ public partial class MediaService : IMediaService
                 {
                     episodeLookup.TryGetValue((season.Id, channelStreamId), out existingEpisode);
                 }
-                if (existingEpisode == null && season.Id > 0)
+                if (existingEpisode == null && season.Id > 0 && episodeNum > 0)
                 {
                     episodeByNumber.TryGetValue((season.Id, episodeNum), out existingEpisode);
                 }
@@ -224,7 +224,7 @@ public partial class MediaService : IMediaService
                 }
             }
 
-            // Phase 2: Cleanup orphan data (episodes/series that no longer have channels)
+            // Phase 2: Cleanup orphan data (episodes/seasons/series that no longer have channels)
             var allEpisodesInPlaylist = await context.Episodes
                 .Where(e => e.Season.Series.PlaylistId == playlistId)
                 .Select(e => e.Id)
@@ -238,6 +238,11 @@ public partial class MediaService : IMediaService
                     .Where(e => toDeleteEpisodeIds.Contains(e.Id))
                     .ExecuteDeleteAsync(cancellationToken);
             }
+
+            // Cleanup empty seasons (ghost seasons)
+            await context.Seasons
+                .Where(s => s.Series.PlaylistId == playlistId && !s.Episodes.Any())
+                .ExecuteDeleteAsync(cancellationToken);
 
             // Cleanup empty series (ghost series)
             var emptySeries = await context.Series
