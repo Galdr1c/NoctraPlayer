@@ -406,21 +406,34 @@ public partial class MediaService : IMediaService
         }
 
         using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
-        var candidates = await context.Series
-            .Where(s => s.PlaylistId == series.PlaylistId)
-            .ToListAsync(cancellationToken);
+        
+        // 1. Direct ID lookup (fastest path)
+        Series? byId = null;
+        if (series.Id > 0)
+        {
+            byId = await context.Series.FindAsync(new object[] { series.Id }, cancellationToken);
+        }
+
+        // 2. Siblings lookup with pre-filter to avoid loading all series into RAM
+        // Since series.Name in DB is already cleaned, StartsWith is a safe heuristic.
+        var searchPrefix = series.Name.Length >= 3 ? series.Name.Substring(0, 3) : series.Name;
+        
+        var query = context.Series.Where(s => s.PlaylistId == series.PlaylistId);
+        if (!string.IsNullOrEmpty(searchPrefix))
+        {
+            query = query.Where(s => s.Name.StartsWith(searchPrefix));
+        }
+
+        var candidates = await query.ToListAsync(cancellationToken);
 
         var toUpdate = candidates
             .Where(s => string.Equals(BuildSeriesGroupingKey(s.Name), normalizedTargetKey, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        if (toUpdate.Count == 0 && series.Id > 0)
+        // Include the original if it wasn't caught by the heuristic but found by ID
+        if (byId != null && !toUpdate.Any(x => x.Id == byId.Id))
         {
-            var byId = await context.Series.FindAsync(new object[] { series.Id }, cancellationToken);
-            if (byId != null)
-            {
-                toUpdate.Add(byId);
-            }
+            toUpdate.Add(byId);
         }
 
         if (toUpdate.Count == 0)
