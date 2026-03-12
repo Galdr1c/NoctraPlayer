@@ -173,6 +173,20 @@ public partial class App : Application
                 {
                     try
                     {
+                        var settingsService = Services.GetService<ISettingsService>();
+                        var mainViewModel = Services.GetService<MainViewModel>();
+                        var watchHistoryService = Services.GetService<IWatchHistoryService>();
+                        
+                        if (settingsService != null && mainViewModel != null && watchHistoryService != null)
+                        {
+                            if (settingsService.Settings.ClearHistoryOnExit && mainViewModel.CurrentProfileId.HasValue)
+                            {
+                                // Await synchronous wait via Task.Run since Exit is synchronous but we want it done before process death
+                                Task.Run(async () => await watchHistoryService.DeleteProfileHistoryAsync(mainViewModel.CurrentProfileId.Value)).Wait();
+                                StartupDiagnostics.Log("History cleared on exit.");
+                            }
+                        }
+
                         var video = Services.GetService<IVideoPlayerService>();
                         video?.Dispose();
                     }
