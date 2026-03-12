@@ -84,28 +84,7 @@ public partial class MainWindow : Window
         };
 
         UpdateDownloadBadgeVisibility();
-        
-        // Handle Privacy: Auto cleanup old history on start
-        _ = Task.Run(async () => {
-            try 
-            {
-                // Wait a bit for initialization to settle
-                await Task.Delay(5000);
-                var profileId = _mainViewModel.CurrentProfileId;
-                var retentionDays = _settingsService.Settings.WatchHistoryRetentionDays;
-                
-                if (profileId.HasValue && retentionDays > 0)
-                {
-                    await _watchHistoryService.CleanupOlderThanDaysAsync(profileId.Value, retentionDays);
-                }
-            }
-            catch (Exception ex)
-            {
-                StartupDiagnostics.LogException("Background history cleanup failed.", ex);
-            }
-        });
-    }
-
+        }
     private void MainWindow_PositionChanged(object? sender, PixelPointEventArgs e)
     {
         // Pencere hareket ettiğinde (sürükleme dahil) PiP kontrollerini yenile
@@ -334,6 +313,26 @@ public partial class MainWindow : Window
         else if (e.PropertyName == nameof(MainViewModel.ActiveDownloadCount))
         {
             UpdateDownloadBadgeVisibility();
+        }
+        else if (e.PropertyName == nameof(MainViewModel.CurrentProfileId))
+        {
+            var profileId = _mainViewModel.CurrentProfileId;
+            var retentionDays = _settingsService.Settings.WatchHistoryRetentionDays;
+
+            if (profileId.HasValue && retentionDays > 0)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _watchHistoryService.CleanupOlderThanDaysAsync(profileId.Value, retentionDays);
+                    }
+                    catch (Exception ex)
+                    {
+                        StartupDiagnostics.LogException("Event-driven history cleanup failed.", ex);
+                    }
+                });
+            }
         }
     }
 
