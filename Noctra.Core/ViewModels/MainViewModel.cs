@@ -4117,7 +4117,13 @@ public partial class MainViewModel : ObservableObject
         }
 
         using var db = await _contextFactory.CreateDbContextAsync();
-        await _watchHistoryService.CleanupOlderThanDaysAsync(CurrentProfileId.Value, 7);
+        
+        var retentionDays = _settingsService.Settings.WatchHistoryRetentionDays;
+        if (retentionDays > 0)
+        {
+            await _watchHistoryService.CleanupOlderThanDaysAsync(CurrentProfileId.Value, retentionDays);
+        }
+        
         var profilePlaylistIds = await GetProfilePlaylistIdsAsync(db, CurrentProfileId.Value);
 
         if (profilePlaylistIds.Count == 0)
