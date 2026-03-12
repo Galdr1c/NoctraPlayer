@@ -205,7 +205,7 @@ public class WatchHistoryService : IWatchHistoryService
         }
     }
 
-    public async Task<List<WatchHistory>> GetHistoryAsync(int profileId, CancellationToken ct = default)
+    public async Task<List<WatchHistory>> GetHistoryAsync(int profileId, int skip = 0, int take = 50, CancellationToken ct = default)
     {
         using var context = await _contextFactory.CreateDbContextAsync(ct);
         return await context.WatchHistories
@@ -216,7 +216,8 @@ public class WatchHistoryService : IWatchHistoryService
                 .ThenInclude(s => s!.Series) // Support deep displays in HistoryView (#12)
             .Where(h => h.ProfileId == profileId)
             .OrderByDescending(h => h.WatchedAt)
-            .Take(100) // Paging/Limit protection (#11)
+            .Skip(skip)
+            .Take(take)
             .ToListAsync(ct);
     }
 

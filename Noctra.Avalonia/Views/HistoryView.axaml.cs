@@ -18,13 +18,16 @@ public partial class HistoryView : UserControl
     {
         if (ViewModel != null) ViewModel.SelectedGroup = null;
     }
-
-    private void HistoryView_ScrollChanged(object? sender, ScrollChangedEventArgs e)
+    private async void HistoryScrollViewer_ScrollChanged(object? sender, ScrollChangedEventArgs e)
     {
-        // Logic will be moved here
+        if (sender is not ScrollViewer scrollViewer) return;
+        if (DataContext is MainViewModel vm)
+        {
+            var scrollableHeight = System.Math.Max(0, scrollViewer.Extent.Height - scrollViewer.Viewport.Height);
+            await vm.LoadMoreHistoryIfNeededAsync(scrollViewer.Offset.Y, scrollableHeight);
+        }
     }
 
-    
     private async void Context_AddToMyList_Click(object? sender, RoutedEventArgs e)
     {
         try

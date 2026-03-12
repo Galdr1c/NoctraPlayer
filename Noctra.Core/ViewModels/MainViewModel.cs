@@ -90,6 +90,10 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<string> _groups = new();
 
+    private int _historyPage = 0;
+    private bool _hasMoreHistory = true;
+    private bool _isLoadingMoreHistory = false;
+
     [ObservableProperty]
     private Playlist? _selectedPlaylist;
 
@@ -4135,7 +4139,15 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        SetItems(HistoryChannels, await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds));
+        _historyPage = 0;
+        _hasMoreHistory = true;
+        _isLoadingMoreHistory = false;
+
+        var initialChannels = await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds, skip: 0, take: IncrementalPageSize);
+        _historyPage = 1;
+        _hasMoreHistory = initialChannels.Count == IncrementalPageSize;
+
+        SetItems(HistoryChannels, initialChannels);
         UpdateHistoryBuckets();
     }
 
@@ -4159,7 +4171,7 @@ public partial class MainViewModel : ObservableObject
             .ToListAsync();
     }
 
-    private async Task<List<Channel>> GetHistoryChannelsFromWatchHistoryAsync(AppDbContext db, List<int> profilePlaylistIds)
+    private async Task<List<Channel>> GetHistoryChannelsFromWatchHistoryAsync(AppDbContext db, List<int> profilePlaylistIds, int skip = 0, int take = 50)
     {
         if (!CurrentProfileId.HasValue)
         {
@@ -4178,6 +4190,8 @@ public partial class MainViewModel : ObservableObject
                          (h.EpisodeId.HasValue && h.Episode != null && h.Episode.Season != null && h.Episode.Season.Series != null &&
                           profilePlaylistIds.Contains(h.Episode.Season.Series.PlaylistId))))
             .OrderByDescending(h => h.WatchedAt)
+            .Skip(skip)
+            .Take(take)
             .ToListAsync();
 
         var result = new List<Channel>(histories.Count);
@@ -4225,6 +4239,62 @@ public partial class MainViewModel : ObservableObject
         }
 
         return result;
+    }
+
+    [RelayCommand]
+    public async Task LoadMoreHistoryAsync()
+    {
+        if (!_hasMoreHistory || _isLoadingMoreHistory || !CurrentProfileId.HasValue)
+        {
+            return;
+        }
+
+        _isLoadingMoreHistory = true;
+
+        try
+        {
+            using var db = await _contextFactory.CreateDbContextAsync();
+            var profilePlaylistIds = await GetProfilePlaylistIdsAsync(db, CurrentProfileId.Value);
+            
+            var nextPage = await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds, 
+                skip: _historyPage * IncrementalPageSize, 
+                take: IncrementalPageSize);
+
+            if (nextPage.Count == 0)
+            {
+                _hasMoreHistory = false;
+                return;
+            }
+
+            _historyPage++;
+            _hasMoreHistory = nextPage.Count == IncrementalPageSize;
+
+            _dispatcherService.Invoke(() =>
+            {
+                foreach (var item in nextPage)
+                {
+                    HistoryChannels.Add(item);
+                }
+                UpdateHistoryBuckets();
+            });
+        }
+        finally
+        {
+            _isLoadingMoreHistory = false;
+        }
+    }
+
+    public async Task LoadMoreHistoryIfNeededAsync(double verticalOffset, double scrollableHeight)
+    {
+        if (scrollableHeight <= 0)
+        {
+            return;
+        }
+
+        if ((verticalOffset / scrollableHeight) >= LoadMoreThreshold)
+        {
+            await LoadMoreHistoryAsync();
+        }
     }
 
     private static TimeSpan? ResolveHistoryDuration(TimeSpan? duration, TimeSpan? watchedPosition)

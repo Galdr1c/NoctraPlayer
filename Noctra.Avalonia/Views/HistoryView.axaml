@@ -10,7 +10,9 @@
              mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="600"
              x:Class="Noctra.Avalonia.Views.HistoryView"
              x:DataType="vm:MainViewModel">
-    <ScrollViewer x:Name="HistoryScrollViewer" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.History}}">
+    <ScrollViewer x:Name="HistoryScrollViewer" 
+                  ScrollChanged="HistoryScrollViewer_ScrollChanged"
+                  IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.History}}">
           <StackPanel Margin="24">
             <TextBlock Text="Geçmiş" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
             
