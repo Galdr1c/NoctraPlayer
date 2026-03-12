@@ -753,15 +753,16 @@ public partial class PlaylistService : IPlaylistService
 
     private static async Task LogDetailedErrorAsync(string context, Exception ex)
     {
-        try 
+        try
         {
-            var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "refresh_error_log.txt");
+            var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Noctra", "Logs");
+            Directory.CreateDirectory(appDataPath);
+            var logPath = Path.Combine(appDataPath, "refresh_error_log.txt");
             var content = $"\n--- [{DateTime.Now}] {context} ---\n{ex}\n-----------------------------------\n";
             await File.AppendAllTextAsync(logPath, content);
         }
         catch { /* Ignore logging errors */ }
     }
-
     public async Task DeleteAsync(int playlistId)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
