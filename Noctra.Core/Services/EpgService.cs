@@ -71,12 +71,14 @@ public class EpgService : IEpgService
             using var stream = await response.Content.ReadAsStreamAsync(cts.Token).ConfigureAwait(false);
 
             // GZip decompression support (.gz URLs)
-            Stream dataStream = stream;
-            if (epgUrl.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) ||
-                response.Content.Headers.ContentEncoding.Contains("gzip"))
+            await using Stream dataStream = epgUrl.EndsWith(".gz", StringComparison.OrdinalIgnoreCase) ||
+                response.Content.Headers.ContentEncoding.Contains("gzip")
+                ? new GZipStream(stream, CompressionMode.Decompress)
+                : stream;
+
+            if (dataStream is GZipStream)
             {
                 progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Decompressing, Message = "Sıkıştırılmış dosya açılıyor...", ProgressPercent = 15 });
-                dataStream = new GZipStream(stream, CompressionMode.Decompress);
             }
 
             progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Parsing, Message = "EPG içeriği analiz ediliyor...", ProgressPercent = 20 });
@@ -582,6 +584,7 @@ public class EpgService : IEpgService
     {
         using var context = await _contextFactory.CreateDbContextAsync();
         await context.Database.ExecuteSqlRawAsync("DELETE FROM EpgPrograms");
+        IsLoaded = false;
     }
 
     public async Task<List<EpgProgram>> GetProgramsAsync(string channelId, DateTime from, DateTime to)
