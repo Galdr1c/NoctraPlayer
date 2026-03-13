@@ -87,9 +87,11 @@ public partial class SettingsViewModel : ObservableObject
         {
             1 => 1,
             2 => 3,
-            3 => 6,
-            4 => 12,
-            5 => 24,
+            3 => 12,
+            4 => 24,
+            5 => 48,  // 2 gün
+            6 => 72,  // 3 gün
+            7 => 168, // 7 gün
             _ => 0
         };
     }
@@ -100,9 +102,11 @@ public partial class SettingsViewModel : ObservableObject
         {
             1 => 1,
             2 => 3,
-            3 => 6,
-            4 => 12,
-            5 => 24,
+            3 => 12,
+            4 => 24,
+            5 => 48,  // 2 gün
+            6 => 72,  // 3 gün
+            7 => 168, // 7 gün
             _ => 0
         };
     }
@@ -340,9 +344,11 @@ public partial class SettingsViewModel : ObservableObject
         {
             1 => 1,
             3 => 2,
-            6 => 3,
-            12 => 4,
-            24 => 5,
+            12 => 3,
+            24 => 4,
+            48 => 5,
+            72 => 6,
+            168 => 7,
             _ => 0
         };
 
@@ -350,9 +356,11 @@ public partial class SettingsViewModel : ObservableObject
         {
             1 => 1,
             3 => 2,
-            6 => 3,
-            12 => 4,
-            24 => 5,
+            12 => 3,
+            24 => 4,
+            48 => 5,
+            72 => 6,
+            168 => 7,
             _ => 0
         };
 

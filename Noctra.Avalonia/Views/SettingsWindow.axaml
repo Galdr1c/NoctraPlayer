@@ -417,9 +417,11 @@
                                         <ComboBoxItem Content="Kapalı (Sadece manuel)" Tag="0"/>
                                         <ComboBoxItem Content="Her 1 saat" Tag="1"/>
                                         <ComboBoxItem Content="Her 3 saat" Tag="3"/>
-                                        <ComboBoxItem Content="Her 6 saat" Tag="6"/>
                                         <ComboBoxItem Content="Her 12 saat" Tag="12"/>
                                         <ComboBoxItem Content="Her 24 saat" Tag="24"/>
+                                        <ComboBoxItem Content="Her 2 günde" Tag="48"/>
+                                        <ComboBoxItem Content="Her 3 günde" Tag="72"/>
+                                        <ComboBoxItem Content="Her 7 günde" Tag="168"/>
                                     </ComboBox>
                                 </StackPanel>
                             </Border>
@@ -498,9 +500,11 @@
                                         <ComboBoxItem Content="Kapalı (Sadece manuel)" Tag="0"/>
                                         <ComboBoxItem Content="Her 1 saat" Tag="1"/>
                                         <ComboBoxItem Content="Her 3 saat" Tag="3"/>
-                                        <ComboBoxItem Content="Her 6 saat" Tag="6"/>
                                         <ComboBoxItem Content="Her 12 saat" Tag="12"/>
                                         <ComboBoxItem Content="Her 24 saat" Tag="24"/>
+                                        <ComboBoxItem Content="Her 2 günde" Tag="48"/>
+                                        <ComboBoxItem Content="Her 3 günde" Tag="72"/>
+                                        <ComboBoxItem Content="Her 7 günde" Tag="168"/>
                                     </ComboBox>
 
                                     <TextBlock Text="Özel EPG URL (Opsiyonel)" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>

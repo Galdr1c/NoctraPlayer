@@ -59,6 +59,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - ComboBox'lar `ModernComboBox` temasına geçiş yaptı.
   - Tüm öğelerin yükseklik ve hizalamaları (45px) standart hale getirildi.
   - Kategori ve sıralama listelerinin daha fazla öğe gösterebilmesi için açılır pencere boyutu uzatıldı (`MaxDropDownHeight` artırıldı).
+- **Gelişmiş Yenileme Seçenekleri**: EPG ve Kanal Listesi yenileme sıklığı seçeneklerine 2 gün, 3 gün ve 7 gün alternatifleri eklendi. Varsayılan bekleme süresi her iki ayar için de "Kapalı (Sadece Manuel)" (0 saat) olarak ayarlandı.
 - **Arama Önerisi İyileştirmeleri**: "Bunu mu demek istediniz?" mantığı daha isabetli olacak şekilde optimize edildi.
 
 ### 🛠️ Düzeltmeler ve Optimizasyonlar

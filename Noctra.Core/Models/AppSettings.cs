@@ -128,7 +128,7 @@ public class AppSettings
     /// <summary>
     /// EPG otomatik yenileme sikligi (saat). 0 = Kapali (manuel)
     /// </summary>
-    public int EpgRefreshFrequencyHours { get; set; } = 24;
+    public int EpgRefreshFrequencyHours { get; set; } = 0;
 
     /// <summary>
     /// EPG etkin mi?
