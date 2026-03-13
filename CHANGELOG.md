@@ -61,6 +61,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - Kategori ve sıralama listelerinin daha fazla öğe gösterebilmesi için açılır pencere boyutu uzatıldı (`MaxDropDownHeight` artırıldı).
 - **Gelişmiş Yenileme Seçenekleri**: EPG ve Kanal Listesi yenileme sıklığı seçeneklerine 2 gün, 3 gün ve 7 gün alternatifleri eklendi. Varsayılan bekleme süresi her iki ayar için de "Kapalı (Sadece Manuel)" (0 saat) olarak ayarlandı.
 - **Arama Önerisi İyileştirmeleri**: "Bunu mu demek istediniz?" mantığı daha isabetli olacak şekilde optimize edildi.
+- **Ana Sayfa Boş Durum Görünümü**: "İzlemeye Devam Et" listesi boş olduğunda (yeni profil veya içerik izlenmemişse) ekrana hoş geldiniz mesajı ve yönlendirmeler içeren şık bir placeholder eklendi.
 
 ### 🛠️ Düzeltmeler ve Optimizasyonlar
 - **Arama Önerisi Zekası İyileştirildi** (2026-03-13):

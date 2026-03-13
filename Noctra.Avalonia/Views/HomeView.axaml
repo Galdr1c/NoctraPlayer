@@ -31,6 +31,36 @@
               </ItemsControl>
             </StackPanel>
 
+            <!-- Placeholder: Boş Durum -->
+            <StackPanel IsVisible="{Binding ContinueWatching.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=invert}" 
+                        VerticalAlignment="Center" 
+                        HorizontalAlignment="Center" 
+                        Spacing="12"
+                        Margin="0,100,0,0">
+              <Image Source="/Assets/Logo.png" 
+                     Width="120" Height="120" 
+                     Opacity="0.8"
+                     Margin="0,0,0,10"/>
+              <TextBlock Text="Noctra'ya Hoş Geldiniz!" 
+                         FontSize="24" 
+                         FontWeight="Bold" 
+                         HorizontalAlignment="Center"
+                         Foreground="{DynamicResource TextPrimaryBrush}"/>
+              <TextBlock Text="Henüz izlediğiniz bir içerik bulunmuyor." 
+                         FontSize="16" 
+                         Opacity="0.7"
+                         HorizontalAlignment="Center"
+                         Foreground="{DynamicResource TextPrimaryBrush}"/>
+              <TextBlock Text="Canlı yayınlar, filmler veya diziler arasında gezerek keşfetmeye başlayın." 
+                         FontSize="14" 
+                         Opacity="0.5"
+                         HorizontalAlignment="Center"
+                         TextWrapping="Wrap"
+                         TextAlignment="Center"
+                         MaxWidth="400"
+                         Foreground="{DynamicResource TextPrimaryBrush}"/>
+            </StackPanel>
+
           </StackPanel>
         </ScrollViewer>
 </UserControl>
