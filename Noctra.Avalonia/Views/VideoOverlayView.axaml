@@ -458,13 +458,13 @@
                                                 </MultiBinding>
                                             </Button.Background>
                                         </Button>
-                                        <Button Command="{Binding SetSubtitlePositionCommand}" CommandParameter="6000" Content="Yukarı" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,0,0">
+                                        <Button Command="{Binding SetSubtitlePositionCommand}" CommandParameter="900" Content="Yukarı" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,0,0">
                                             <Button.Background>
                                                 <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="Surface1Brush">
                                                     <Binding Path="SubtitleMargin"/>
                                                     <Binding>
                                                         <Binding.Source>
-                                                            <x:Int32>6000</x:Int32>
+                                                            <x:Int32>900</x:Int32>
                                                         </Binding.Source>
                                                     </Binding>
                                                 </MultiBinding>

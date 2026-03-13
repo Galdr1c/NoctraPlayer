@@ -165,6 +165,7 @@ public class VideoPlayerService : IVideoPlayerService
         }
         catch (Exception ex)
         {
+            LogDebug($"VLC Init failed: {ex.Message} - {ex.StackTrace}");
             System.Diagnostics.Debug.WriteLine($"[VideoPlayerService] VLC Init failed: {ex.Message}");
         }
         finally
@@ -454,6 +455,43 @@ public class VideoPlayerService : IVideoPlayerService
                 if (startSeconds > 0)
                 {
                     media.AddOption($":start-time={Math.Floor(startSeconds).ToString(System.Globalization.CultureInfo.InvariantCulture)}");
+                }
+
+                // Dinamik yüzde hesaplaması (Yukarı konumu için, örn >= 900)
+                if (_lastSubtitleMargin >= 900)
+                {
+                    // Video çözünürlüğünü öğrenebilmek için kısa bir parse yap
+                    var tcs = new CancellationTokenSource(2000); // En fazla 2 saniye bekle
+                    try
+                    {
+                        var combinedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, tcs.Token).Token;
+                        await media.Parse(MediaParseOptions.ParseNetwork, timeout: 2000);
+                        
+                        uint videoHeight = 1080; // Default varsayım
+                        var tracks = media.Tracks;
+                        if (tracks != null)
+                        {
+                            var vTrack = tracks.FirstOrDefault(t => t.TrackType == TrackType.Video);
+                            if (vTrack.Data.Video.Height > 0)
+                            {
+                                videoHeight = vTrack.Data.Video.Height;
+                            }
+                        }
+
+                        // Alttan %85 marjin = tepeden %15 boşluk (örneğin 1080p'de 918px)
+                        int calculatedMargin = (int)(videoHeight * 0.85);
+                        media.AddOption($":sub-margin={calculatedMargin}");
+                        LogDebug($"Dynamic Margin: Height={videoHeight}, Margin={calculatedMargin}px (%85)");
+                    }
+                    catch
+                    {
+                        // Hata veya timeout durumunda fallback kullan
+                        media.AddOption($":sub-margin={_lastSubtitleMargin}");
+                    }
+                }
+                else
+                {
+                    media.AddOption($":sub-margin={_lastSubtitleMargin}");
                 }
 
                 if (_mediaPlayer == null) 
