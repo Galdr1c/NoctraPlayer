@@ -54,6 +54,12 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - **Akıllı Dizi İsim Fallback**: `seriesTitle` tespiti için `BaseDisplayName` kullanılarak, orphan episode durumlarında bile dizi ilerlemelerinin doğru eşleşmesi (normalization) sağlandı.
     - **Performans Optimizasyonu**: `GetHistoryAsync` sorgusuna `AsNoTracking()` ve derin `Include` yapıları eklenerek hem bellek kullanımı azaltıldı hem de geçmiş ekranında dizi isimlerinin tam görünmesi sağlandı. Sorgu 100 kayıt ile sınırlandırıldı.
     - **Veri Bütünlüğü Koruması**: Negatif zaman delta (saat kayması) durumlarında izleme süresinin bozulması engellendi. Aynı anda hem kanal hem bölüm ID'si set edilen hatalı kayıt girişlerine karşı koruma eklendi.
+- **Filtreleme Alanı Tasarımı**: Live, Movies ve Series sayfalarındaki filtreleme barı (Kategori, Tümü, Sıralama) daha premium ve uyumlu bir görünüme kavuşturuldu.
+  - Yeni `FilterButtonStyle` oluşturuldu ve tüm butonlara uygulandı.
+  - ComboBox'lar `ModernComboBox` temasına geçiş yaptı.
+  - Tüm öğelerin yükseklik ve hizalamaları (45px) standart hale getirildi.
+  - Kategori ve sıralama listelerinin daha fazla öğe gösterebilmesi için açılır pencere boyutu uzatıldı (`MaxDropDownHeight` artırıldı).
+- **Arama Önerisi İyileştirmeleri**: "Bunu mu demek istediniz?" mantığı daha isabetli olacak şekilde optimize edildi.
 
 ### 🛠️ Düzeltmeler ve Optimizasyonlar
 - **Arama Önerisi Zekası İyileştirildi** (2026-03-13):

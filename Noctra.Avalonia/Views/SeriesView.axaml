@@ -16,9 +16,9 @@
             <Grid Margin="0,0,0,24" ColumnDefinitions="*,Auto">
               <TextBlock Text="Diziler" FontSize="24" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
               <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
-                <ComboBox Width="260" ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}"/>
-                <Button Content="Tümü" Width="64" Click="ClearGroupSelection_Click"/>
-                <ComboBox Width="240" ItemsSource="{Binding SortOptions}" SelectedValue="{Binding SelectedSortOrder}" SelectedValueBinding="{Binding Key}" DisplayMemberBinding="{Binding Value}"/>
+                <ComboBox Width="260" Height="45" ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}" Theme="{StaticResource ModernComboBox}"/>
+                <Button Content="Tümü" Width="80" Height="45" Click="ClearGroupSelection_Click" Theme="{StaticResource FilterButtonStyle}"/>
+                <ComboBox Width="240" Height="45" ItemsSource="{Binding SortOptions}" SelectedValue="{Binding SelectedSortOrder}" SelectedValueBinding="{Binding Key}" DisplayMemberBinding="{Binding Value}" Theme="{StaticResource ModernComboBox}"/>
               </StackPanel>
             </Grid>
             <ItemsControl ItemsSource="{Binding SeriesViewItems}">

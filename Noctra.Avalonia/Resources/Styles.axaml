@@ -163,6 +163,42 @@
         </Style>
     </ControlTheme>
 
+    <!-- Filter Button Style (Matches ModernComboBox) -->
+    <ControlTheme x:Key="FilterButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1.5"/>
+        <Setter Property="Padding" Value="16,0"/>
+        <Setter Property="FontSize" Value="15"/>
+        <Setter Property="FontWeight" Value="Normal"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}"/>
+        <Setter Property="Template">
+            <ControlTemplate TargetType="Button">
+                <Border x:Name="PART_Border"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        Padding="{TemplateBinding Padding}">
+                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                      Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+
+        <Style Selector="^:pointerover /template/ Border#PART_Border">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}"/>
+        </Style>
+        <Style Selector="^:pressed /template/ Border#PART_Border">
+            <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}"/>
+            <Setter Property="Opacity" Value="0.8"/>
+        </Style>
+    </ControlTheme>
+
     <!-- Plain Button (Transparent, opacity on hover) -->
     <ControlTheme x:Key="PlainButton" TargetType="Button">
         <Setter Property="Background" Value="Transparent"/>
@@ -679,6 +715,7 @@
         <Setter Property="Padding" Value="16,12"/>
         <Setter Property="FontSize" Value="15"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="MaxDropDownHeight" Value="600"/>
         <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}"/>
         <Setter Property="Template">
             <ControlTemplate TargetType="ComboBox">
