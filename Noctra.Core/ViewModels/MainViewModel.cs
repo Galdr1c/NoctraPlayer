@@ -4487,7 +4487,7 @@ public partial class MainViewModel : ObservableObject
         ShowSearchSimilarSection = similarLive.Count > 0 || similarSeries.Count > 0 || similarVod.Count > 0;
     }
 
-    private static string ComputeBestSuggestion(string query, IEnumerable<string> candidates)
+    private string ComputeBestSuggestion(string query, IEnumerable<string> candidates)
     {
         var normalizedQuery = NormalizeFuzzyText(query);
         if (string.IsNullOrWhiteSpace(normalizedQuery) || normalizedQuery.Length < 2)
@@ -4508,15 +4508,49 @@ public partial class MainViewModel : ObservableObject
 
             double similarity = GetFuzzySimilarity(normalizedQuery, normalizedCandidate);
 
-            if (normalizedCandidate.StartsWith(normalizedQuery[..Math.Min(2, normalizedQuery.Length)], StringComparison.OrdinalIgnoreCase))
+            // Favor names that start with the query
+            if (normalizedCandidate.StartsWith(normalizedQuery, StringComparison.OrdinalIgnoreCase))
+            {
+                similarity += 0.15;
+            }
+            else if (normalizedCandidate.StartsWith(normalizedQuery[..Math.Min(2, normalizedQuery.Length)], StringComparison.OrdinalIgnoreCase))
             {
                 similarity += 0.05;
             }
 
-            if (similarity > bestScore && similarity > 0.70)
+            // Penalty for extra length (prefer shorter matches when query is short)
+            double lengthDiffPenalty = Math.Abs(normalizedCandidate.Length - normalizedQuery.Length) * 0.01;
+            similarity -= lengthDiffPenalty;
+
+            // CRITICAL: Avoid suggesting a specific episode (Sxx Exx) if the query is just the series name
+            // and we likely already found the series.
+            if (normalizedCandidate.Contains(" s0") || normalizedCandidate.Contains(" s1") || 
+                normalizedCandidate.Contains(" buelum") || normalizedCandidate.Contains(" episode"))
+            {
+                // If the query doesn't contain season/episode info, penalize candidates that do.
+                if (!normalizedQuery.Contains(" s0") && !normalizedQuery.Contains(" s1") && 
+                    !normalizedQuery.Contains(" buelum") && !normalizedQuery.Contains(" episode"))
+                {
+                    similarity -= 0.3;
+                }
+            }
+
+            if (similarity > bestScore && similarity > 0.80)
             {
                 bestScore = similarity;
                 best = candidate;
+            }
+        }
+
+        // If the best suggestion is basically the same as what we already found in exact results, skip it.
+        if (!string.IsNullOrEmpty(best))
+        {
+            var bestLower = best.ToLowerInvariant();
+            if (SearchSeriesChannels.Any(s => s.Name?.ToLowerInvariant() == bestLower) ||
+                SearchLiveChannels.Any(c => c.Name?.ToLowerInvariant() == bestLower) ||
+                SearchVodChannels.Any(c => c.Name?.ToLowerInvariant() == bestLower))
+            {
+                return string.Empty;
             }
         }
 
@@ -4556,10 +4590,19 @@ public partial class MainViewModel : ObservableObject
             double bestWordScore = 0;
             foreach (var cw in cWords)
             {
-                if (cw == qw || cw.Contains(qw, StringComparison.OrdinalIgnoreCase))
+                if (cw == qw)
                 {
                     bestWordScore = 1.0;
                     break;
+                }
+                
+                if (cw.StartsWith(qw, StringComparison.OrdinalIgnoreCase))
+                {
+                    bestWordScore = Math.Max(bestWordScore, 0.9);
+                }
+                else if (cw.Contains(qw, StringComparison.OrdinalIgnoreCase))
+                {
+                    bestWordScore = Math.Max(bestWordScore, 0.6);
                 }
 
                 int maxDist = GetDistanceThreshold(Math.Max(qw.Length, cw.Length));

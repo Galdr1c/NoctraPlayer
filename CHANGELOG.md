@@ -56,6 +56,13 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - **Veri Bütünlüğü Koruması**: Negatif zaman delta (saat kayması) durumlarında izleme süresinin bozulması engellendi. Aynı anda hem kanal hem bölüm ID'si set edilen hatalı kayıt girişlerine karşı koruma eklendi.
 
 ### 🛠️ Düzeltmeler ve Optimizasyonlar
+- **Arama Önerisi Zekası İyileştirildi** (2026-03-13):
+    - "Bunu mu demek istediniz?" mantığı geliştirilerek alakasız substring eşleşmeleri (örn: "Cking" -> "fucking") engellendi.
+    - Dizi aramalarında, eğer dizi ana başlığı zaten bulunmuşsa spesifik bölüm (Sxx Exx) önerilmesi durduruldu.
+    - Kelime benzerlik skoru hesaplanırken uzunluk farkı cezası ve kelime başı önceliği eklendi.
+- **Arayüz Düzenlemeleri ve İyileştirmeler** (2026-03-13):
+    - **Anasayfa**: "İzlemeye Devam Et" bölümü yatay kaydırmalı (rail) yapıdan, pencereye sığacak şekilde alta kayan (wrap) yapıya dönüştürüldü.
+    - **Ayarlar**: Menü sekmelerinin (Profil, Görünüm vb.) alt satıra geçmesi engellendi, tüm öğelerin tek satırda kalması için boşluklar optimize edildi.
 - **Bilgi Paneli Görünürlük ve Mantık İyileştirmesi** (2026-03-13):
     - Canlı TV kanallarında "Hakkında" panelinde oluşan boş ikinci kutucuk sorunu giderildi.
     - VOD ve Dizi içeriklerinde "Plot" (Özet) bilgisinin görünmemesi veya hatalı görünmesi sorunları çözüldü.
