@@ -56,6 +56,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - **Veri Bütünlüğü Koruması**: Negatif zaman delta (saat kayması) durumlarında izleme süresinin bozulması engellendi. Aynı anda hem kanal hem bölüm ID'si set edilen hatalı kayıt girişlerine karşı koruma eklendi.
 
 ### 🛠️ Düzeltmeler ve Optimizasyonlar
+- **Bilgi Paneli Görünürlük ve Mantık İyileştirmesi** (2026-03-13):
+    - Canlı TV kanallarında "Hakkında" panelinde oluşan boş ikinci kutucuk sorunu giderildi.
+    - VOD ve Dizi içeriklerinde "Plot" (Özet) bilgisinin görünmemesi veya hatalı görünmesi sorunları çözüldü.
+    - Karmaşık XAML `MultiBinding` mantığı yerine ViewModel üzerinde `IsLiveInfoVisible`, `IsSeriesPlotVisible` ve `IsVodPlotVisible` özellikleri eklenerek görünürlük kontrolü merkezi hale getirildi.
+    - Boolean AND işlemlerini MultiBinding içinde güvenle yönetmek için `BoolAndMultiConverter` eklendi.
 - **Performans ve Kararlılık Düzeltmeleri** (2026-03-12):
     - **Altyazı Ayarı Konumu ve Davranışı Yenilendi**: Altyazı boyutu ayarı, ana "Ayarlar" sayfasından kaldırılarak doğrudan video oynatıcı üzerindeki "Ses ve Altyazı" (Overlay) menüsünün içine taşındı. Artık Küçük (28), Standart (40) ve Büyük (60) profil seçenekleriyle daha kullanıcı dostu hale getirildi. Ayrıca Canlı yayınlarda gereksiz yer kaplamaması için gizlendi.
     - **Altyazı Boyut Değişimi Çökmesi (Crash) Giderildi**: Kullanıcı altyazı boyutunu değiştirdiğinde eski oynatıcının temizlenmesi (`Dispose`) işlemi ana UI thread'ini kilitleyerek `AccessViolation` çökmesine (fatal exception) yol açıyordu. Temizlik işlemi `Task.Run` ile arkaplana alındı, UI referansları güvenli bir şekilde silindi ve çökme tamamen engellendi.

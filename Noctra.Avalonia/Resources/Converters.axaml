@@ -26,6 +26,7 @@
   <converters:EqualityToVisibilityConverter x:Key="EqualityToVisibilityConverter" />
   <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
   <converters:AvatarPathConverter x:Key="AvatarPathConverter" />
+  <converters:BoolAndMultiConverter x:Key="BoolAndMultiConverter" />
   <converters:BoolOrMultiConverter x:Key="BoolOrMultiConverter" />
   <converters:EqualityToBoolMultiConverter x:Key="EqualityToBoolMultiConverter" />
   <converters:EqualityToThicknessMultiConverter x:Key="EqualityToThicknessMultiConverter" />

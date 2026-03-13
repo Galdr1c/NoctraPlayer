@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="Noctra.Avalonia.Views.VideoOverlayView"
+<UserControl x:Class="Noctra.Avalonia.Views.VideoOverlayView"
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -312,13 +312,7 @@
                                     </StackPanel>
                                     
                                     <!-- Live Only -->
-                                    <Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20" Margin="0,0,0,24">
-                                        <Border.IsVisible>
-                                            <MultiBinding Converter="{x:Static BoolConverters.And}">
-                                                <Binding Path="IsLiveContent"/>
-                                                <Binding Path="CurrentProgram.Title" Converter="{StaticResource StringNotEmptyToBoolConverter}"/>
-                                            </MultiBinding>
-                                        </Border.IsVisible>
+                                    <Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20" Margin="0,0,0,24" IsVisible="{Binding IsLiveInfoVisible}">
                                         <StackPanel>
                                             <TextBlock Text="ŞU AN YAYINDA" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" LetterSpacing="1" Margin="0,0,0,12"/>
                                             <TextBlock Text="{Binding CurrentProgram.Title}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" Margin="0,0,0,4"/>
@@ -328,26 +322,12 @@
                                     </Border>
 
                                     <!-- Episode Plot (Series) -->
-                                    <Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20" Margin="0,0,0,24">
-                                        <Border.IsVisible>
-                                            <MultiBinding Converter="{x:Static BoolConverters.And}">
-                                                <Binding Path="IsSeriesContent"/>
-                                                <Binding Path="!IsLiveContent"/>
-                                                <Binding Path="CurrentEpisode.Plot" Converter="{StaticResource StringNotEmptyToBoolConverter}"/>
-                                            </MultiBinding>
-                                        </Border.IsVisible>
+                                    <Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20" Margin="0,0,0,24" IsVisible="{Binding IsSeriesPlotVisible}">
                                         <TextBlock Text="{Binding CurrentEpisode.Plot}" Foreground="{DynamicResource TextPrimaryBrush}" Opacity="0.8" FontSize="14" TextWrapping="Wrap" LineHeight="22"/>
                                     </Border>
 
                                     <!-- VOD Plot (Movies/Single) -->
-                                    <Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20" Margin="0,0,0,24">
-                                        <Border.IsVisible>
-                                            <MultiBinding Converter="{x:Static BoolConverters.And}">
-                                                <Binding Path="!IsSeriesContent"/>
-                                                <Binding Path="!IsLiveContent"/>
-                                                <Binding Path="CurrentChannel.Plot" Converter="{StaticResource StringNotEmptyToBoolConverter}"/>
-                                            </MultiBinding>
-                                        </Border.IsVisible>
+                                    <Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20" Margin="0,0,0,24" IsVisible="{Binding IsVodPlotVisible}">
                                         <TextBlock Text="{Binding CurrentChannel.Plot}" Foreground="{DynamicResource TextPrimaryBrush}" Opacity="0.8" FontSize="14" TextWrapping="Wrap" LineHeight="22"/>
                                     </Border>
 
@@ -478,13 +458,13 @@
                                                 </MultiBinding>
                                             </Button.Background>
                                         </Button>
-                                        <Button Command="{Binding SetSubtitlePositionCommand}" CommandParameter="480" Content="Yukarı" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,0,0">
+                                        <Button Command="{Binding SetSubtitlePositionCommand}" CommandParameter="6000" Content="Yukarı" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,0,0">
                                             <Button.Background>
                                                 <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="Surface1Brush">
                                                     <Binding Path="SubtitleMargin"/>
                                                     <Binding>
                                                         <Binding.Source>
-                                                            <x:Int32>600</x:Int32>
+                                                            <x:Int32>6000</x:Int32>
                                                         </Binding.Source>
                                                     </Binding>
                                                 </MultiBinding>

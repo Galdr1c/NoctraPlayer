@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Noctra.Models;
 using Noctra.Services;
@@ -60,9 +60,14 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private bool _isVisible = true;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsLiveInfoVisible))]
+    [NotifyPropertyChangedFor(nameof(IsSeriesPlotVisible))]
+    [NotifyPropertyChangedFor(nameof(IsVodPlotVisible))]
     private bool _isLiveContent;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsSeriesPlotVisible))]
+    [NotifyPropertyChangedFor(nameof(IsVodPlotVisible))]
     private bool _isSeriesContent;
 
     [ObservableProperty]
@@ -141,9 +146,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private string _remainingTime = "-00:00:00";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsVodPlotVisible))]
     private Channel? _currentChannel;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsLiveInfoVisible))]
     private EpgProgram? _currentProgram;
 
     public bool HasCurrentProgramInfo =>
@@ -153,6 +160,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     
     [ObservableProperty]
     private string _overlaySecondaryText = string.Empty;
+
+    public bool IsLiveInfoVisible => IsLiveContent && CurrentProgram != null && !string.IsNullOrWhiteSpace(CurrentProgram.Title);
+    public bool IsSeriesPlotVisible => IsSeriesContent && !IsLiveContent && CurrentEpisode != null && !string.IsNullOrWhiteSpace(CurrentEpisode.Plot);
+    public bool IsVodPlotVisible => !IsLiveContent && !IsSeriesContent && CurrentChannel != null && !string.IsNullOrWhiteSpace(CurrentChannel.Plot);
 
     [ObservableProperty]
     private bool _isPlaying;
@@ -331,6 +342,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     public string DownloadButtonText => IsDownloadInProgress ? "Indiriliyor..." : "Indir";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsSeriesPlotVisible))]
     private Episode? _currentEpisode;
 
     private bool _creditsTriggered;

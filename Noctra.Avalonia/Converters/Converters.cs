@@ -600,6 +600,21 @@ public class EqualityToBrushMultiConverter : IMultiValueConverter
     }
 }
 
+public class BoolAndMultiConverter : IMultiValueConverter
+{
+    public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (values == null || values.Count == 0) return false;
+        
+        foreach (var value in values)
+        {
+            if (value is not bool b || !b) return false;
+        }
+        
+        return true;
+    }
+}
+
 public class BoolOrMultiConverter : IMultiValueConverter
 {
     public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)

@@ -140,12 +140,14 @@ public class VideoPlayerService : IVideoPlayerService
                     "--ts-seek-percent",
                     "--http-reconnect",
                     "--http-user-agent=IPTVSmartersPro",
+                    "--verbose=0",
+                    "--quiet",
+                    
+                    //Altyaz ayarlarını buraya ekle
                     $"--freetype-fontsize={_lastSubtitleFontSize}", // Altyazı boyutu
                     $"--freetype-background-opacity={_lastSubtitleBackgroundOpacity}", // Arkaplan şeffaflığı
                     "--freetype-background-color=0x000000",         // Arkaplan rengi siyah
                     $"--sub-margin={_lastSubtitleMargin}",          // Alttan yukarı doğru marjin
-                    "--verbose=0",
-                    "--quiet"
                 };
                 
                 _libVLC = new LibVLC(options);
