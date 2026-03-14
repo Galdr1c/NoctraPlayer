@@ -358,6 +358,13 @@
                         </Grid>
                         <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Visible">
                             <StackPanel Margin="32,0,32,40">
+                                <Border Background="#1AFFFFFF" CornerRadius="6" Padding="12,8" Margin="0,0,0,24" IsVisible="{Binding !IsLiveContent}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <materialIcons:MaterialIcon Kind="InformationOutline" Width="16" Height="16" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Ayarların uygulanabilmesi için oynatıcı anlık olarak yeniden başlatılır." FontSize="11" Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+
                                 <TextBlock Text="ALTYAZI BOYUTU" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,12" IsVisible="{Binding !IsLiveContent}"/>
                                 <StackPanel Margin="0,0,0,24" IsVisible="{Binding !IsLiveContent}">
                                     <UniformGrid Columns="3" Margin="0,0,0,8">
@@ -398,7 +405,6 @@
                                             </Button.Background>
                                         </Button>
                                     </UniformGrid>
-                                    <TextBlock Text="Değişikliklerin uygulanması için video anlık olarak yeniden başlatılır." FontSize="11" Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,4,0,0"/>
                                 </StackPanel>
 
                                 <TextBlock Text="ARKAPLAN ŞEFFAFLIĞI" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,12" IsVisible="{Binding !IsLiveContent}"/>
