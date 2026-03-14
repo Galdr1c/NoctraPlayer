@@ -141,6 +141,8 @@ namespace Noctra.Tests
         public event Action? SettingsChanged;
         public Task SaveAsync() => Task.CompletedTask;
         public Task LoadAsync() => Task.CompletedTask;
+        public Task LoadProfileSettingsAsync(int profileId) => Task.CompletedTask;
+        public Task<AppSettings?> PeekProfileSettingsAsync(int profileId) => Task.FromResult<AppSettings?>(Settings);
         public void ResetToDefaults() { }
     }
 

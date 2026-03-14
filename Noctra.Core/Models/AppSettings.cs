@@ -25,6 +25,11 @@ public enum DownloadQuality
 /// </summary>
 public class AppSettings
 {
+    /// <summary>
+    /// Bu ayarların ait olduğu profil ID'si. 0 ise global ayardır.
+    /// </summary>
+    public int ProfileId { get; set; } = 0;
+
     // ============ Oynatma Ayarları ============
     
     /// <summary>

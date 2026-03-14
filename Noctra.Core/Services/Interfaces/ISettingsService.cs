@@ -16,6 +16,16 @@ public interface ISettingsService
     /// Ayarları dosyadan yükler
     /// </summary>
     Task LoadAsync();
+
+    /// <summary>
+    /// Belirli bir profilin ayarlarını yükler. profileId 0 ise global ayarları yükler.
+    /// </summary>
+    Task LoadProfileSettingsAsync(int profileId);
+
+    /// <summary>
+    /// Bir profilin ayarlarını aktif hale getirmeden okur.
+    /// </summary>
+    Task<AppSettings?> PeekProfileSettingsAsync(int profileId);
     
     /// <summary>
     /// Ayarları dosyaya kaydeder

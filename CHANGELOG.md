@@ -9,6 +9,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### 🐛 Hata Düzeltmeleri
+- **Çoklu Profil Geçmiş Temizliği İyileştirildi** (2026-03-14): "Uygulama çıkışında geçmişi temizle" ayarının yalnızca o an aktif olan profili etkilemesi sorunu çözüldü. Artık uygulama kapanırken bu ayarı aktif etmiş olan **tüm profillerin** geçmişi, o an hangisinin açık olduğundan bağımsız olarak güvenli bir şekilde temizleniyor.
 - **VLC Çift Başlatma (Race Condition) Engellendi** (2026-03-14): Kullanıcı arayüzde altyazı ayarlarını (ör. boyut ve konumu aynı anda) çok hızlı değiştirdiğinde VLC oynatıcısının arka planda üst üste iki kez tam yıkım-kurulum (ReinitializeAsync) döngüsüne girmesine neden olabilen asenkron yarış durumu çözüldü. İşlem için `CancellationTokenSource` tabanlı güvenli bir "Debounce" mekanizması eklendi.
 - **Altyazı Ayarları Yeniden Başlatma Uyarısı Düzeltildi** (2026-03-14): "Oynatıcı anlık olarak yeniden başlatılır" uyarısının sadece Altyazı Boyutu değişikliğinde görünmesi sorunu çözüldü. Uyarı genel bir çerçeveye alınarak Arkaplan Şeffaflığı ve Altyazı Konumu değişikliklerini de kapsayacak şekilde panelin en üstüne taşındı ve daha estetik bir tasarımla (bilgi ikonuyla) yenilendi.
 - **Arayüz Kaydetme (CancellationToken) Güvenliği Düzeltildi** (2026-03-14): Altyazı ayarları hızlıca değiştirildiğinde oluşan bellek yönetim hatası (Dispose edilmiş token okuma) giderildi. Ayarlar kaydedilirken uygulamanın daha stabil çalışması için güvenli bir `CancellationTokenSource` yaşam döngüsü kullanılıyor.
@@ -16,6 +17,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **Altyazı Arayüz Senkronizasyonu Düzeltildi** (2026-03-14): Uygulama yeniden başlatıldığında, oynatıcı kontrol panelindeki altyazı ayar butonlarının (Boyut, Arkaplan Şeffaflığı, Konum) en son kaydedilen ayar yerine varsayılan ("Standart") seçili görünmesi sorunu çözüldü. Arayüz modelinin (`PlayerViewModel`) ayarlardaki gerçek veriyi başlatma anında okuması sağlandı.
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Profile Özel Ayarlar Mimarisi** (2026-03-14):
+    - Uygulama ayarlarının (altyazı dili, geçmiş saklama süresi, otomatik oynatma vb.) her profil için bağımsız olarak saklanması sağlandı.
+    - Tek bir `settings.json` yerine, her profil için `settings_profile_{id}.json` yapısına geçilerek profiller arası ayar çakışmaları tamamen engellendi.
+    - Profil değiştirildiğinde ilgili ayarların anlık olarak yüklenmesi ve arayüze yansıtılması sağlandı.
 - **Altyazı Paneli Tema ve Mimari Optimizasyonu** (2026-03-14):
     - **Açık Tema İyileştirmesi:** Açık temada (Light Theme) altyazı panelindeki okunabilirlik sorunları giderildi. Seçili buton vurguları (`NavActiveBackgroundBrush`) ve bilgi kutusu tasarımı, beyaz arka plan üzerinde yüksek kontrastlı ve estetik görünecek şekilde optimize edildi.
     - **XAML Mimari Temizliği:** Altyazı ayar butonlarındaki 100+ satırlık mükerrer `MultiBinding` kodu temizlendi. Yeni geliştirilen `EqualityToResourceBrushConverter` ile XAML yapısı çok daha hafif ve sürdürülebilir hale getirildi.

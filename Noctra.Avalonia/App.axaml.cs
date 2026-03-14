@@ -174,17 +174,34 @@ public partial class App : Application
                     try
                     {
                         var settingsService = Services.GetService<ISettingsService>();
-                        var mainViewModel = Services.GetService<MainViewModel>();
+                        var profileService = Services.GetService<IProfileService>();
                         var watchHistoryService = Services.GetService<IWatchHistoryService>();
                         
-                        if (settingsService != null && mainViewModel != null && watchHistoryService != null)
+                        if (settingsService != null && profileService != null && watchHistoryService != null)
                         {
-                            if (settingsService.Settings.ClearHistoryOnExit && mainViewModel.CurrentProfileId.HasValue)
+                            // 1. Tüm profilleri al
+                            // 2. Her birinin ayarlarını "dikizle" (peek)
+                            // 3. ClearHistoryOnExit aktifse temizle
+                            Task.Run(async () => 
                             {
-                                // Await synchronous wait via Task.Run since Exit is synchronous but we want it done before process death
-                                Task.Run(async () => await watchHistoryService.DeleteProfileHistoryAsync(mainViewModel.CurrentProfileId.Value)).Wait();
-                                StartupDiagnostics.Log("History cleared on exit.");
-                            }
+                                try 
+                                {
+                                    var profiles = await profileService.GetProfilesAsync();
+                                    foreach (var profile in profiles)
+                                    {
+                                        var profileSettings = await settingsService.PeekProfileSettingsAsync(profile.Id);
+                                        if (profileSettings?.ClearHistoryOnExit == true)
+                                        {
+                                            StartupDiagnostics.Log($"Clearing history for profile {profile.Id} on exit...");
+                                            await watchHistoryService.DeleteProfileHistoryAsync(profile.Id);
+                                        }
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    StartupDiagnostics.LogException("Error during multi-profile history cleanup on exit", ex);
+                                }
+                            }).Wait();
                         }
 
                         var video = Services.GetService<IVideoPlayerService>();

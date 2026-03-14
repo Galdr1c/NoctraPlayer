@@ -10,10 +10,10 @@ namespace Noctra.Services;
 public class SettingsService : ISettingsService
 {
     private readonly ILogger<SettingsService>? _logger;
-    private readonly string _settingsPath;
-    private Lazy<AppSettings> _settings;
+    private readonly string _basePath;
+    private AppSettings _currentSettings;
 
-    public AppSettings Settings => _settings.Value;
+    public AppSettings Settings => _currentSettings;
 
     public event Action? SettingsChanged;
     
@@ -27,79 +27,116 @@ public class SettingsService : ISettingsService
     {
         _logger = logger;
         
-        // Settings dosyası LocalAppData/Noctra/settings.json
-        var appDataPath = Path.Combine(
+        _basePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Noctra");
         
-        Directory.CreateDirectory(appDataPath);
-        _settingsPath = Path.Combine(appDataPath, "settings.json");
+        Directory.CreateDirectory(_basePath);
+        
+        // Initial state
+        _currentSettings = LoadInternalSync(0);
+    }
 
-        _settings = new Lazy<AppSettings>(LoadInternalSync);
+    private string GetSettingsPath(int profileId)
+    {
+        if (profileId == 0)
+            return Path.Combine(_basePath, "settings.json");
+        
+        return Path.Combine(_basePath, $"settings_profile_{profileId}.json");
     }
     
     public async Task LoadAsync()
     {
+        await LoadProfileSettingsAsync(0);
+    }
+
+    public async Task LoadProfileSettingsAsync(int profileId)
+    {
         try
         {
-            if (!File.Exists(_settingsPath))
+            var path = GetSettingsPath(profileId);
+            if (!File.Exists(path))
             {
-                _logger?.LogInformation("Settings file not found, using defaults");
-                _settings = new Lazy<AppSettings>(CreateDefaultSettings);
+                _logger?.LogInformation("Settings file not found for profile {Id}, using defaults", profileId);
+                _currentSettings = CreateDefaultSettings(profileId);
+                SettingsChanged?.Invoke();
                 return;
             }
             
-            var json = await File.ReadAllTextAsync(_settingsPath);
+            var json = await File.ReadAllTextAsync(path);
             var loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
             
             if (loaded != null)
             {
-                _settings = new Lazy<AppSettings>(() => loaded);
-                System.Diagnostics.Debug.WriteLine($"[SettingsService] Settings loaded: IsDarkTheme={Settings.IsDarkTheme}");
-                _logger?.LogInformation("Settings loaded from {Path}", _settingsPath);
+                loaded.ProfileId = profileId; // Ensure correct ID
+                _currentSettings = loaded;
+                System.Diagnostics.Debug.WriteLine($"[SettingsService] Settings loaded for profile {profileId}: IsDarkTheme={Settings.IsDarkTheme}");
+                _logger?.LogInformation("Settings loaded from {Path}", path);
+                SettingsChanged?.Invoke();
             }
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "Failed to load settings");
+            _logger?.LogError(ex, "Failed to load settings for profile {Id}", profileId);
+        }
+    }
+
+    public async Task<AppSettings?> PeekProfileSettingsAsync(int profileId)
+    {
+        try
+        {
+            var path = GetSettingsPath(profileId);
+            if (!File.Exists(path)) return null;
+
+            var json = await File.ReadAllTextAsync(path);
+            var loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
+            if (loaded != null) loaded.ProfileId = profileId;
+            return loaded;
+        }
+        catch
+        {
+            return null;
         }
     }
     
     public void LoadSync()
     {
-        _ = _settings.Value;
+        _currentSettings = LoadInternalSync(0);
     }
 
-    private AppSettings LoadInternalSync()
+    private AppSettings LoadInternalSync(int profileId)
     {
         try
         {
-            if (!File.Exists(_settingsPath))
+            var path = GetSettingsPath(profileId);
+            if (!File.Exists(path))
             {
-                return CreateDefaultSettings();
+                return CreateDefaultSettings(profileId);
             }
 
-            var json = File.ReadAllText(_settingsPath);
+            var json = File.ReadAllText(path);
             var loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
 
             if (loaded != null)
             {
+                loaded.ProfileId = profileId;
                 return loaded;
             }
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "Failed to load settings synchronously");
+            _logger?.LogError(ex, "Failed to load settings synchronously for profile {Id}", profileId);
         }
 
-        return CreateDefaultSettings();
+        return CreateDefaultSettings(profileId);
     }
 
-    private AppSettings CreateDefaultSettings()
+    private AppSettings CreateDefaultSettings(int profileId)
     {
         return new AppSettings
         {
-            DownloadPath = Path.Combine(Path.GetDirectoryName(_settingsPath)!, "Downloads")
+            ProfileId = profileId,
+            DownloadPath = Path.Combine(_basePath, "Downloads")
         };
     }
     
@@ -107,10 +144,12 @@ public class SettingsService : ISettingsService
     {
         try
         {
+            var profileId = Settings.ProfileId;
+            var path = GetSettingsPath(profileId);
             var json = JsonSerializer.Serialize(Settings, JsonOptions);
-            await File.WriteAllTextAsync(_settingsPath, json);
+            await File.WriteAllTextAsync(path, json);
             
-            _logger?.LogInformation("Settings saved to {Path}", _settingsPath);
+            _logger?.LogInformation("Settings saved to {Path}", path);
             SettingsChanged?.Invoke();
         }
         catch (Exception ex)
@@ -121,14 +160,13 @@ public class SettingsService : ISettingsService
     
     public void ResetToDefaults()
     {
+        var profileId = Settings.ProfileId;
         var defaultDownloadPath = Settings.DownloadPath; // Keep download path
-        var newSettings = new AppSettings
+        _currentSettings = new AppSettings
         {
+            ProfileId = profileId,
             DownloadPath = defaultDownloadPath
         };
-
-        // Replace lazy instance with a pre-initialized one
-        _settings = new Lazy<AppSettings>(() => newSettings);
 
         _ = SaveAsync();
     }

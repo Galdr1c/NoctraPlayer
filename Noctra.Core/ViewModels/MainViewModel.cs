@@ -438,6 +438,9 @@ public partial class MainViewModel : ObservableObject
         StatusMessage = "Kanal ve içerik listeleriniz hazırlanıyor...";
         CurrentProfileId = profile.Id;
         CurrentProfile = profile;
+
+        // Load profile-specific settings
+        await _settingsService.LoadProfileSettingsAsync(profile.Id);
         
         try
         {
