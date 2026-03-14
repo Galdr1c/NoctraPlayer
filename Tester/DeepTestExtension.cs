@@ -15,6 +15,7 @@
 // =============================================================================
 
 using Noctra.Diagnostics;
+using Noctra.Models;
 using System.Text;
 using System.Text.Json;
 
@@ -47,7 +48,7 @@ partial class NoctraProviderTester
     // ── Deep test runner (TestResult içindeki kanallarla çalışır) ────────────
 
     async Task<DeepSamplingResult> RunDeepTestAsync(
-        List<ParsedChannel> channels,
+        List<Channel> channels,
         DeepSamplingConfig samplingConfig,
         StreamProbeConfig? probeConfig = null)
     {
@@ -59,22 +60,6 @@ partial class NoctraProviderTester
             ProbeAudio           = false
         };
 
-        // ParsedChannel → tuple dönüşümü
-        var tuples = channels
-            .Where(c => c.StreamUrl != null)
-            .Select(c => (
-                Name:  c.Name ?? "Bilinmiyor",
-                Url:   c.StreamUrl!,
-                Type:  c.Type switch
-                {
-                    ChannelTypeEnum.Live   => "Live",
-                    ChannelTypeEnum.VOD    => "VOD",
-                    ChannelTypeEnum.Series => "Series",
-                    _                      => "Live"
-                },
-                Group: c.GroupTitle ?? ""))
-            .ToList();
-
         Console.WriteLine($"\n🔬 DEEP STREAM TEST başlıyor...");
         Console.WriteLine($"   Örneklem: {samplingConfig.LiveSampleCount} Live, " +
                           $"{samplingConfig.VodSampleCount} VOD, " +
@@ -82,7 +67,7 @@ partial class NoctraProviderTester
         Console.WriteLine($"   Probe süresi: {samplingConfig.ProbeDurationSeconds}s/kanal\n");
 
         return await DeepSampler.RunAsync(
-            tuples,
+            channels,
             samplingConfig,
             probeConfig,
             msg => Console.WriteLine(msg));

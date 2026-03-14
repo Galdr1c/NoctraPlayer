@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
 
@@ -16,7 +16,7 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
     // Category detection rules
     private static readonly Dictionary<string, string[]> CategoryRules = new()
     {
-        ["Spor"] = ["sport", "futbol", "basketbol", "bein", "espn", "eurosport", "s sport", "tivibu spor", "nba", "premier league"],
+        ["Spor"] = ["spor", "sport", "futbol", "basketbol", "bein", "espn", "eurosport", "s sport", "tivibu spor", "nba", "premier league"],
         ["Haber"] = ["news", "haber", "cnn", "bbc news", "nbc", "fox news", "ntv", "haberturk", "tgrt haber", "a haber"],
         ["Çocuk"] = ["kids", "çocuk", "cartoon", "disney", "nickelodeon", "baby", "minika", "trt çocuk"],
         ["Filmler"] = ["movie", "film", "sinema", "cinema", "box office"],
@@ -59,11 +59,11 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
         ["Entertainment"] = "Eğlence",
         ["Eğlence"] = "Eğlence",
 
-        ["General"] = "Genel",
-        ["Genel"] = "Genel",
-        ["Uncategorized"] = "Genel",
-        ["undefined"] = "Genel",
-        [""] = "Genel"
+        ["General"] = "Uncategorized",
+        ["Genel"] = "Uncategorized",
+        ["Uncategorized"] = "Uncategorized",
+        ["undefined"] = "Uncategorized",
+        [""] = "Uncategorized"
     };
 
     /// <summary>
@@ -154,8 +154,9 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
             {
                 if (keywords.Any(kw => nameLower.Contains(kw)))
                 {
-                    // Prevent Live channels from being categorized as Series/Movies based on name
-                    if (channel.Type == Models.ChannelType.Live && (category == "Diziler" || category == "Filmler"))
+                    // Prevent Live channels from being categorized as Filmler based on name
+                    // (Filmler is usually reserved for VOD, while Diziler includes major TV channels)
+                    if (channel.Type == Models.ChannelType.Live && category == "Filmler")
                     {
                         continue;
                     }
@@ -168,7 +169,7 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
 
             if (!matched)
             {
-                channel.GroupTitle = "Genel";
+                channel.GroupTitle = "Uncategorized";
             }
         }
     }

@@ -18,11 +18,12 @@
       macOS   : brew install vlc
   -->
   <ItemGroup>
-    <PackageReference Include="LibVLCSharp" Version="3.*" />
-    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.*"
+    <PackageReference Include="LibVLCSharp" Version="3.9.*" />
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.*"
                       Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
-    <PackageReference Include="VideoLAN.LibVLC.Linux.x64" Version="3.*"
+    <PackageReference Include="VideoLAN.LibVLC.Linux.x64" Version="3.0.*"
                       Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
+    <ProjectReference Include="../Noctra.Core/Noctra.Core.csproj" />
   </ItemGroup>
 
 </Project>

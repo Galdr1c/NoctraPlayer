@@ -19,6 +19,7 @@
 // =============================================================================
 
 using LibVLCSharp.Shared;
+using Noctra.Models;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -137,17 +138,15 @@ namespace Noctra.Diagnostics
         // ── Ana probe metodu ──────────────────────────────────────────────
 
         public static async Task<StreamProbeResult> ProbeAsync(
-            string url,
-            string channelName = "",
-            string channelType = "Live",
+            Channel channel,
             StreamProbeConfig? config = null)
         {
             config ??= new StreamProbeConfig();
             var result = new StreamProbeResult
             {
-                Url               = url,
-                ChannelName       = channelName,
-                ChannelType       = channelType,
+                Url               = channel.StreamUrl ?? "",
+                ChannelName       = channel.Name ?? "Bilinmiyor",
+                ChannelType       = channel.Type.ToString(),
                 ProbeDurationSeconds = config.ProbeDurationSeconds
             };
 
@@ -155,9 +154,9 @@ namespace Noctra.Diagnostics
             try
             {
                 if (config.MeasureHttpLatency)
-                    await MeasureHttpLatencyAsync(url, result);
+                    await MeasureHttpLatencyAsync(channel.StreamUrl ?? "", result);
 
-                await RunVlcProbeAsync(url, config, result);
+                await RunVlcProbeAsync(channel.StreamUrl ?? "", config, result);
 
                 result.QualityScore = CalculateQualityScore(result);
                 result.QualityLabel = BuildQualityLabel(result);
@@ -434,6 +433,15 @@ namespace Noctra.Diagnostics
         }
 
         public void Dispose() { }
+
+        public static void Shutdown()
+        {
+            lock (_initLock)
+            {
+                _sharedLibVLC?.Dispose();
+                _sharedLibVLC = null;
+            }
+        }
     }
 
     // ── Toplu örneklem testi ──────────────────────────────────────────────────
@@ -475,7 +483,7 @@ namespace Noctra.Diagnostics
     public static class DeepSampler
     {
         public static async Task<DeepSamplingResult> RunAsync(
-            IList<(string Name, string Url, string Type, string Group)> channels,
+            IList<Channel> channels,
             DeepSamplingConfig?  samplingConfig  = null,
             StreamProbeConfig?   probeConfig     = null,
             Action<string>?      progressCallback = null)
@@ -489,21 +497,19 @@ namespace Noctra.Diagnostics
 
             var result = new DeepSamplingResult();
 
-            var live   = Sample(channels.Where(c => c.Type == "Live"   && IsHttp(c.Url)).ToList(), samplingConfig.LiveSampleCount, rng);
-            var vod    = Sample(channels.Where(c => c.Type == "VOD"    && IsHttp(c.Url)).ToList(), samplingConfig.VodSampleCount, rng);
-            var series = Sample(channels.Where(c => c.Type == "Series" && IsHttp(c.Url)).ToList(), samplingConfig.SeriesSampleCount, rng);
+            var live   = Sample(channels.Where(c => c.Type == ChannelType.Live   && IsHttp(c.StreamUrl)).ToList(), samplingConfig.LiveSampleCount, rng);
+            var vod    = Sample(channels.Where(c => c.Type == ChannelType.VOD    && IsHttp(c.StreamUrl)).ToList(), samplingConfig.VodSampleCount, rng);
+            var series = Sample(channels.Where(c => c.Type == ChannelType.Series && IsHttp(c.StreamUrl)).ToList(), samplingConfig.SeriesSampleCount, rng);
 
-            var all = live.Select(c => (c, "Live"))
-                .Concat(vod.Select(c => (c, "VOD")))
-                .Concat(series.Select(c => (c, "Series")))
-                .ToList();
+            var all = live.Concat(vod).Concat(series).ToList();
 
             int i = 0;
-            foreach (var (ch, type) in all)
+            foreach (var ch in all)
             {
                 i++;
+                var type = ch.Type.ToString();
                 progressCallback?.Invoke($"  [{i}/{all.Count}] {type}: {ch.Name}");
-                var probe = await StreamAnalyzer.ProbeAsync(ch.Url, ch.Name, type, probeConfig);
+                var probe = await StreamAnalyzer.ProbeAsync(ch, probeConfig);
 
                 switch (type)
                 {

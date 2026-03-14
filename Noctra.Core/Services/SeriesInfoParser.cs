@@ -580,7 +580,7 @@ public static partial class SeriesInfoParser
     private static partial Regex SymbolsRegex();
 
     // Phase 1: Country prefixes like "TR | ", "EN.", "DE:" - but NOT "TR/DIZI"
-    [GeneratedRegex(@"^\s*(?:[a-z]{2,3}\s*[|:\.]\s*)+", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^\s*(?:[\|\[\(]?[a-z]{2,3}\s*[\|\]\)\.\-:]\s*)+", RegexOptions.IgnoreCase)]
     private static partial Regex CountryPrefixRegex();
 
     [GeneratedRegex(@"^\s*(?:[^|]+?\s*\|\s*)", RegexOptions.IgnoreCase)]

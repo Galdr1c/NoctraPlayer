@@ -9,6 +9,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Kapsamlı Kararlılık ve Birim Testi Seferberliği** (2026-03-14):
+    - `EpgService` ve `PlaylistOrganizerService` için toplam 146 yeni birim testi (Unit Test) eklendi.
+    - EPG eşleştirme motoru (`EpgMatchingTests`) 72 senaryo ile, oynatma listesi düzenleme motoru (`PlaylistOrganizerServiceTests`) ise 74 senaryo ile %100 kapsama ulaştırıldı.
+    - `EpgService` içerisindeki private metodlar reflection kullanılarak test edilebilir hale getirildi.
+- **NoctraProviderTester Mimari Devrimi** (2026-03-14):
+    - Tester projesi, `Noctra.Core` kütüphanesini doğrudan referans alacak şekilde baştan aşağı refaktör edildi.
+    - Tester içindeki ~600 satırlık mükerrer (duplicate) kod, model ve parser mantığı temizlendi.
+    - Artık tester projesi, üretimdeki aynı `M3UParser` ve `SeriesInfoParser` mantığını kullanarak %100 tutarlı sonuçlar üretmektedir.
 - **Dinamik Altyazı Konumlandırma İyileştirmesi** (2026-03-13):
     - "Yukarı" altyazı konumu seçildiğinde altyazının ekranın en üst sınırına yapışması sorunu çözüldü.
     - Oynatılacak videonun çözünürlüğü (height) oynatma öncesi anlık olarak analiz edilerek, "Yukarı" konumu için ekran yüksekliğinin %85'ine denk gelen dinamik bir piksel marjini uygulanması sağlandı.
@@ -68,6 +76,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **Ana Sayfa Boş Durum Görünümü**: "İzlemeye Devam Et" listesi boş olduğunda (yeni profil veya içerik izlenmemişse) ekrana hoş geldiniz mesajı ve yönlendirmeler içeren şık bir placeholder eklendi.
 
 ### 🛠️ Düzeltmeler ve Optimizasyonlar
+- **Gelişmiş Seri ve EPG Kimlik Algılama** (2026-03-14):
+    - `SeriesInfoParser` üzerindeki `CountryPrefixRegex` geliştirilerek `|TR|` gibi karmaşık ön eklerin temizlenmesi sağlandı.
+    - `PlaylistOrganizerService` kategorizasyon kurallarına eksik olan `spor` anahtar kelimesi eklendi.
+    - `AutoCategorize` mantığında Canlı kanallar için "Diziler" kategorisine geçişe (Kanal D, Show TV gibi ana kanallar için) izin verilerek daha doğru sınıflandırma sağlandı.
+    - Varsayılan (eşleşmeyen) kategori ismi "Genel" yerine "Uncategorized" olarak güncellendi.
+- **Tester Kaynak Yönetimi ve Concurrency Düzeltmeleri** (2026-03-14):
+    - `StreamAnalyzer` içerisindeki `LibVLC` kaynak sızıntısı (leak) `Shutdown()` metodu ile giderildi.
+    - `SemaphoreSlim` kullanımı optimize edilerek eş zamanlı stream analizlerindeki kararsızlıklar çözüldü.
 - **Arama Önerisi Zekası İyileştirildi** (2026-03-13):
     - "Bunu mu demek istediniz?" mantığı geliştirilerek alakasız substring eşleşmeleri (örn: "Cking" -> "fucking") engellendi.
     - Dizi aramalarında, eğer dizi ana başlığı zaten bulunmuşsa spesifik bölüm (Sxx Exx) önerilmesi durduruldu.

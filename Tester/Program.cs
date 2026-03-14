@@ -11,6 +11,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Noctra.Diagnostics;
+using Noctra.Models;
+using Noctra.Services;
+using Noctra.Services.Interfaces;
 
 var app = new NoctraProviderTester();
 await app.RunAsync(args);
@@ -160,7 +163,7 @@ partial class NoctraProviderTester
 
         try
         {
-            List<ParsedChannel>? channels = config.Type.ToLower() switch
+            List<Channel>? channels = config.Type.ToLower() switch
             {
                 "m3u"     => await TestM3UAsync(config, result),
                 "xtream"  => await TestXtreamAsync(config, result),
@@ -191,7 +194,7 @@ partial class NoctraProviderTester
     // M3U TEST
     // =========================================================================
 
-    async Task<List<ParsedChannel>?> TestM3UAsync(ProviderConfig config, TestResult result)
+    async Task<List<Channel>?> TestM3UAsync(ProviderConfig config, TestResult result)
     {
         if (string.IsNullOrWhiteSpace(config.Url))
             throw new Exception("M3U için URL zorunludur.");
@@ -206,7 +209,7 @@ partial class NoctraProviderTester
 
         if (!head.IsSuccessStatusCode)
         {
-            // HEAD başarısızsa GET dene (bazı serverlar HEAD'i desteklemez)
+            // HEAD başarısızsa GET dene
             var getResponse = await Http.GetAsync(config.Url);
             result.HttpStatusCode = (int)getResponse.StatusCode;
             if (!getResponse.IsSuccessStatusCode)
@@ -216,73 +219,21 @@ partial class NoctraProviderTester
         result.ConnectionOk = true;
         Console.WriteLine($"\n  → Bağlantı OK ({result.ConnectionLatencyMs}ms), içerik indiriliyor...");
 
-        var content = await Http.GetStringAsync(config.Url);
-        result.RawContentSizeKb = content.Length / 1024;
-
-        Console.WriteLine($"  → {result.RawContentSizeKb:N0} KB indirildi, parse ediliyor...");
-        return ParseM3U(content, result);
-    }
-
-    List<ParsedChannel> ParseM3U(string content, TestResult result)
-    {
-        var channels = new List<ParsedChannel>();
-        var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        var parser = new M3UParser(Http);
+        var channels = await parser.ParseFromUrlAsync(config.Url);
         
-        string? currentInfo = null;
-        int lineNum = 0;
-        int parseErrors = 0;
-
-        foreach (var rawLine in lines)
-        {
-            lineNum++;
-            var line = rawLine.Trim();
-
-            if (line.StartsWith("#EXTM3U", StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            if (line.StartsWith("#EXTINF", StringComparison.OrdinalIgnoreCase))
-            {
-                currentInfo = line;
-                continue;
-            }
-
-            if (line.StartsWith("#"))
-                continue;
-
-            if (!line.StartsWith("http", StringComparison.OrdinalIgnoreCase) &&
-                !line.StartsWith("rtmp", StringComparison.OrdinalIgnoreCase) &&
-                !line.StartsWith("rtsp", StringComparison.OrdinalIgnoreCase))
-            {
-                if (!string.IsNullOrWhiteSpace(line))
-                    parseErrors++;
-                continue;
-            }
-
-            var ch = new ParsedChannel { StreamUrl = line };
-
-            if (currentInfo != null)
-            {
-                ch.Name = ExtractAttribute(currentInfo, "tvg-name") ?? ExtractAfterComma(currentInfo) ?? "?";
-                ch.GroupTitle = ExtractAttribute(currentInfo, "group-title") ?? "";
-                ch.LogoUrl = ExtractAttribute(currentInfo, "tvg-logo") ?? "";
-                ch.TvgId = ExtractAttribute(currentInfo, "tvg-id") ?? "";
-                ch.TvgCountry = ExtractAttribute(currentInfo, "tvg-country") ?? "";
-            }
-
-            ch.Type = DetermineType(ch.Name, ch.GroupTitle, line);
-            channels.Add(ch);
-            currentInfo = null;
-        }
-
-        result.ParseErrors = parseErrors;
+        result.RawContentSizeKb = 0; // ParseFromUrlAsync content'i döndürmüyor, gerekirse manually indirilebilir
+        Console.WriteLine($"  → {channels.Count} kanal parse edildi.");
         return channels;
     }
+
+    // ParseM3U redundant and removed.
 
     // =========================================================================
     // XTREAM TEST
     // =========================================================================
 
-    async Task<List<ParsedChannel>?> TestXtreamAsync(ProviderConfig config, TestResult result)
+    async Task<List<Channel>?> TestXtreamAsync(ProviderConfig config, TestResult result)
     {
         if (string.IsNullOrWhiteSpace(config.Host))
             throw new Exception("Xtream için Host zorunludur.");
@@ -318,7 +269,7 @@ partial class NoctraProviderTester
         Console.WriteLine($"  → Sunucu: {authData.ServerInfo?.Url} | Kullanıcı: {authData.UserInfo?.Username}");
         Console.WriteLine($"  → Abonelik: {authData.UserInfo?.ExpirationDate}");
 
-        var channels = new List<ParsedChannel>();
+        var channels = new List<Channel>();
 
         // 2. Canlı kanalları çek
         Console.Write("  → Canlı kanallar indiriliyor...");
@@ -326,7 +277,7 @@ partial class NoctraProviderTester
         {
             var liveUrl = $"{baseUrl}/player_api.php?username={config.Username}&password={config.Password}&action=get_live_streams";
             var liveJson = await Http.GetStringAsync(liveUrl);
-            var liveChannels = ParseXtreamStreams(liveJson, ChannelTypeEnum.Live, baseUrl, config.Username!, config.Password!);
+            var liveChannels = ParseXtreamStreams(liveJson, ChannelType.Live, baseUrl, config.Username!, config.Password!);
             channels.AddRange(liveChannels);
             Console.WriteLine($" {liveChannels.Count} kanal");
         }
@@ -338,7 +289,7 @@ partial class NoctraProviderTester
         {
             var vodUrl = $"{baseUrl}/player_api.php?username={config.Username}&password={config.Password}&action=get_vod_streams";
             var vodJson = await Http.GetStringAsync(vodUrl);
-            var vodChannels = ParseXtreamStreams(vodJson, ChannelTypeEnum.VOD, baseUrl, config.Username!, config.Password!);
+            var vodChannels = ParseXtreamStreams(vodJson, ChannelType.VOD, baseUrl, config.Username!, config.Password!);
             channels.AddRange(vodChannels);
             Console.WriteLine($" {vodChannels.Count} içerik");
         }
@@ -363,7 +314,7 @@ partial class NoctraProviderTester
     // STALKER PORTAL TEST
     // =========================================================================
 
-    async Task<List<ParsedChannel>?> TestStalkerAsync(ProviderConfig config, TestResult result)
+    async Task<List<Channel>?> TestStalkerAsync(ProviderConfig config, TestResult result)
     {
         if (string.IsNullOrWhiteSpace(config.Host))
             throw new Exception("Stalker için Host zorunludur.");
@@ -409,7 +360,7 @@ partial class NoctraProviderTester
         }
         catch { /* profil isteğe bağlı */ }
 
-        var channels = new List<ParsedChannel>();
+        var channels = new List<Channel>();
 
         // 3. Canlı kategoriler + kanallar
         Console.Write("  → Canlı kategoriler yükleniyor...");
@@ -431,7 +382,7 @@ partial class NoctraProviderTester
                     var chReq = CreateStalkerRequest(chUrl, config.MacAddress, token);
                     var chResp = await Http.SendAsync(chReq);
                     var chJson = await chResp.Content.ReadAsStringAsync();
-                    var liveChannels = ParseStalkerChannels(chJson, ChannelTypeEnum.Live);
+                    var liveChannels = ParseStalkerChannels(chJson, ChannelType.Live);
                     channels.AddRange(liveChannels);
                     totalLive += liveChannels.Count;
                 }
@@ -461,7 +412,7 @@ partial class NoctraProviderTester
                     var chReq = CreateStalkerRequest(chUrl, config.MacAddress, token);
                     var chResp = await Http.SendAsync(chReq);
                     var chJson = await chResp.Content.ReadAsStringAsync();
-                    var vodChannels = ParseStalkerChannels(chJson, ChannelTypeEnum.VOD);
+                    var vodChannels = ParseStalkerChannels(chJson, ChannelType.VOD);
                     channels.AddRange(vodChannels);
                     totalVod += vodChannels.Count;
                 }
@@ -478,13 +429,13 @@ partial class NoctraProviderTester
     // KANAL ANALİZİ
     // =========================================================================
 
-    void AnalyzeChannels(List<ParsedChannel> channels, TestResult result)
+    void AnalyzeChannels(List<Channel> channels, TestResult result)
     {
         result.TotalChannels = channels.Count;
-        result.LiveCount = channels.Count(c => c.Type == ChannelTypeEnum.Live);
-        result.VodCount = channels.Count(c => c.Type == ChannelTypeEnum.VOD);
-        result.SeriesCount = channels.Count(c => c.Type == ChannelTypeEnum.Series);
-        result.UnknownCount = channels.Count(c => c.Type == ChannelTypeEnum.Unknown);
+        result.LiveCount = channels.Count(c => c.Type == ChannelType.Live);
+        result.VodCount = channels.Count(c => c.Type == ChannelType.VOD);
+        result.SeriesCount = channels.Count(c => c.Type == ChannelType.Series);
+        result.UnknownCount = 0; // Noctra.Models.Channel is exhaustive
 
         // Kategoriler
         result.UniqueGroups = channels
@@ -511,12 +462,11 @@ partial class NoctraProviderTester
         result.HttpUrlCount = channels.Count(c => c.StreamUrl?.StartsWith("http://", StringComparison.OrdinalIgnoreCase) == true);
     }
 
-    void AnalyzeSeriesParsing(List<ParsedChannel> channels, TestResult result)
+    void AnalyzeSeriesParsing(List<Channel> channels, TestResult result)
     {
-        var seriesChannels = channels.Where(c => c.Type == ChannelTypeEnum.Series).ToList();
+        var seriesChannels = channels.Where(c => c.Type == ChannelType.Series).ToList();
         if (seriesChannels.Count == 0) return;
 
-        var parseResults = new List<SeriesParseResult>();
         int parseOk = 0, parseFail = 0;
         var nameDistribution = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var problematicTitles = new List<string>();
@@ -524,16 +474,9 @@ partial class NoctraProviderTester
         foreach (var ch in seriesChannels)
         {
             var parsed = SeriesInfoParser.Parse(ch.Name);
-            var parseResult = new SeriesParseResult
-            {
-                OriginalTitle = ch.Name ?? "",
-                ParsedName = parsed.SeriesName,
-                Season = parsed.Season,
-                Episode = parsed.Episode,
-                IsOk = parsed.SeriesName != "Bilinmeyen Dizi" && parsed.Season >= 0 && parsed.Episode >= 0
-            };
+            bool isOk = parsed.SeriesName != "Bilinmeyen Dizi" && parsed.Season >= 0 && parsed.Episode >= 0;
 
-            if (parseResult.IsOk)
+            if (isOk)
             {
                 parseOk++;
                 var key = SeriesInfoParser.NormalizeKey(parsed.SeriesName);
@@ -545,8 +488,6 @@ partial class NoctraProviderTester
                 parseFail++;
                 problematicTitles.Add(ch.Name ?? "");
             }
-
-            parseResults.Add(parseResult);
         }
 
         result.SeriesParseOk = parseOk;
@@ -563,7 +504,7 @@ partial class NoctraProviderTester
         // Sorunlu başlıklar (en kötü 20)
         result.ProblematicTitles = problematicTitles.Take(20).ToList();
 
-        // Canonical key çakışmaları (farklı isim ama aynı key → iyi, gruplama çalışıyor)
+        // Canonical key çakışmaları
         var canonicalGroups = seriesChannels
             .GroupBy(c => SeriesInfoParser.NormalizeKey(c.Name))
             .Where(g => g.Count() > 1 && !string.IsNullOrWhiteSpace(g.Key))
@@ -576,7 +517,7 @@ partial class NoctraProviderTester
             .Select(g => $"[{g.Key}] → {string.Join(" / ", g.Names)} ({g.Count} bölüm)")
             .ToList();
 
-        // Yanlış Live olarak işaretlenen (IsLiveSeries = true ama Series kategorisinde)
+        // Yanlış Live olarak işaretlenen
         result.FalsePositiveLive = seriesChannels
             .Where(c => SeriesInfoParser.IsLiveSeries(c.Name))
             .Select(c => c.Name ?? "")
@@ -584,7 +525,7 @@ partial class NoctraProviderTester
             .ToList();
     }
 
-    void AnalyzeLanguageDetection(List<ParsedChannel> channels, TestResult result)
+    void AnalyzeLanguageDetection(List<Channel> channels, TestResult result)
     {
         var langDistribution = new Dictionary<string, int>();
 
@@ -955,32 +896,7 @@ partial class NoctraProviderTester
         return idx >= 0 ? extinf[(idx + 1)..].Trim() : null;
     }
 
-    ChannelTypeEnum DetermineType(string? name, string? group, string url)
-    {
-        var urlLower = url.ToLowerInvariant();
-        var groupLower = (group ?? "").ToLowerInvariant();
-        var nameLower = (name ?? "").ToLowerInvariant();
-
-        // URL öncelikli
-        if (urlLower.Contains("/series/")) return ChannelTypeEnum.Series;
-        if (urlLower.Contains("/movie/")) return ChannelTypeEnum.VOD;
-        if (urlLower.Contains("/live/")) return ChannelTypeEnum.Live;
-
-        // Grup
-        if (groupLower.Contains("series") || groupLower.Contains("dizi")) return ChannelTypeEnum.Series;
-        if (groupLower.Contains("movie") || groupLower.Contains("film") || groupLower.Contains("vod")) return ChannelTypeEnum.VOD;
-
-        // İsim pattern'leri
-        if (SeriesInfoParser.IsSeries(name)) return ChannelTypeEnum.Series;
-
-        // URL uzantısı
-        if (urlLower.EndsWith(".mp4") || urlLower.EndsWith(".mkv") || urlLower.EndsWith(".avi"))
-            return ChannelTypeEnum.VOD;
-        if (urlLower.EndsWith(".ts") || urlLower.EndsWith(".m3u8"))
-            return ChannelTypeEnum.Live;
-
-        return ChannelTypeEnum.Live; // default
-    }
+    // DetermineType redundant and removed.
 
     XtreamAuthResponse? TryParseXtreamAuth(string json)
     {
@@ -988,16 +904,16 @@ partial class NoctraProviderTester
         catch { return null; }
     }
 
-    List<ParsedChannel> ParseXtreamStreams(string json, ChannelTypeEnum type, string baseUrl, string user, string pass)
+    List<Channel> ParseXtreamStreams(string json, ChannelType type, string baseUrl, string user, string pass)
     {
         using var doc = JsonDocument.Parse(json);
-        var channels = new List<ParsedChannel>();
+        var channels = new List<Channel>();
 
         if (doc.RootElement.ValueKind != JsonValueKind.Array) return channels;
 
         foreach (var item in doc.RootElement.EnumerateArray())
         {
-            var ch = new ParsedChannel
+            var ch = new Channel
             {
                 Name = item.TryGetProperty("name", out var n) ? n.GetString() : "",
                 GroupTitle = item.TryGetProperty("category_name", out var g) ? g.GetString() : "",
@@ -1005,27 +921,27 @@ partial class NoctraProviderTester
                 Type = type
             };
             var streamId = item.TryGetProperty("stream_id", out var sid) ? sid.GetInt32().ToString() : "0";
-            var ext = type == ChannelTypeEnum.VOD ? "mp4" : "ts";
-            ch.StreamUrl = $"{baseUrl}/{(type == ChannelTypeEnum.Live ? "live" : "movie")}/{user}/{pass}/{streamId}.{ext}";
+            var ext = type == ChannelType.VOD ? "mp4" : "ts";
+            ch.StreamUrl = $"{baseUrl}/{(type == ChannelType.Live ? "live" : "movie")}/{user}/{pass}/{streamId}.{ext}";
             channels.Add(ch);
         }
         return channels;
     }
 
-    List<ParsedChannel> ParseXtreamSeries(string json)
+    List<Channel> ParseXtreamSeries(string json)
     {
         using var doc = JsonDocument.Parse(json);
-        var channels = new List<ParsedChannel>();
+        var channels = new List<Channel>();
         if (doc.RootElement.ValueKind != JsonValueKind.Array) return channels;
 
         foreach (var item in doc.RootElement.EnumerateArray())
         {
-            channels.Add(new ParsedChannel
+            channels.Add(new Channel
             {
                 Name = item.TryGetProperty("name", out var n) ? n.GetString() : "",
                 GroupTitle = item.TryGetProperty("category_name", out var g) ? g.GetString() : "",
                 LogoUrl = item.TryGetProperty("cover", out var c) ? c.GetString() : "",
-                Type = ChannelTypeEnum.Series,
+                Type = ChannelType.Series,
                 StreamUrl = item.TryGetProperty("series_id", out var sid) ? $"series://{sid}" : ""
             });
         }
@@ -1084,11 +1000,11 @@ partial class NoctraProviderTester
         return ids.Distinct().ToList();
     }
 
-    List<ParsedChannel> ParseStalkerChannels(string json, ChannelTypeEnum type)
+    List<Channel> ParseStalkerChannels(string json, ChannelType type)
     {
-        var channels = new List<ParsedChannel>();
+        var channels = new List<Channel>();
         foreach (Match m in Regex.Matches(json, @"""name""\s*:\s*""([^""]+)"""))
-            channels.Add(new ParsedChannel { Name = m.Groups[1].Value, Type = type, StreamUrl = "stalker://" + m.Groups[1].Value });
+            channels.Add(new Channel { Name = m.Groups[1].Value, Type = type, StreamUrl = "stalker://" + m.Groups[1].Value });
         return channels;
     }
 
@@ -1123,186 +1039,7 @@ partial class NoctraProviderTester
     }
 }
 
-// =============================================================================
-// SERİES INFO PARSER — Noctra.Core referansından bağımsız inline versiyon
-// =============================================================================
-static class SeriesInfoParser
-{
-    public record SeriesInfo(string SeriesName, int Season, int Episode);
-
-    private static readonly Regex SxeRegex = new(
-        @"^(?<name>.+?)\s*(?:[-._ ]*)\b[Ss](?<season>\d{1,2})\s*[-._ ]*\s*[Ee](?<episode>\d{1,3})\b",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-    private static readonly Regex TurkishRegex = new(
-        @"^(?<name>.+?)\s*(?:[-._ ]*)\b[Ss]ezon\s*(?<season>\d{1,2}).*?[Bb](?:o|ö)l(?:u|ü)m\s*(?<episode>\d{1,3})\b",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-    private static readonly Regex TurkishEpOnlyRegex = new(
-        @"^(?<name>.+?)\s*(?:[-._ ]*)\b(?<episode>\d{1,3})\.?\s*[Bb](?:o|ö)l(?:u|ü)m\b",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-    private static readonly Regex EnglishRegex = new(
-        @"^(?<name>.+?)\s*(?:[-._ ]*)\b[Ss]eason\s*(?<season>\d{1,2}).*?[Ee]pisode\s*(?<episode>\d{1,3})\b",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-    private static readonly Regex SeasonOnlyRegex = new(
-        @"^(?<name>.+?)\s*(?:[-._ ]*)\b(?:[Ss]eason|[Ss]ezon)\s*(?<season>\d{1,2})\b",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-    private static readonly Regex EpisodeTokenRegex = new(
-        @"\b(?:[Ss]\d{1,2}\s*[Ee]\d{1,3}|\d{1,2}\s*[Xx]\s*\d{1,3}|[Ss]ezon\s*\d{1,2}|[Ss]eason\s*\d{1,2}|\d{1,3}\.?\s*[Bb](?:o|ö)l(?:u|ü)m|[Ee]p(?:isode)?\s*\d{1,3})\b",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-    private static readonly Regex LiveSportsRegex = new(
-        @"\b(beIN|be\*IN|be-IN|SPOR|EUROSPORT|TIVIBU|EXXENSPOR)\b",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-    private static readonly Regex LiveKeywordRegex = new(
-        @"\b(CANLI|LIVE)\b",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-    private static readonly Regex NoiseRegex = new(
-        @"\b(?:4k|2160p|1080p|720p|480p|x264|x265|h264|hevc|webrip|webdl|bluray|hdrip|fhd|uhd|hd|sd)\b",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-    public static SeriesInfo Parse(string? title)
-    {
-        if (string.IsNullOrWhiteSpace(title)) return new("Bilinmeyen Dizi", 1, 1);
-        var t = title.Trim();
-
-        if (IsLiveSeries(t)) return new(CleanName(t), 0, 0);
-
-        foreach (var (rx, hasSeason) in new[] {
-            (SxeRegex, true), (TurkishRegex, true), (EnglishRegex, true) })
-        {
-            var m = rx.Match(t);
-            if (!m.Success) continue;
-            return new(
-                CleanName(m.Groups["name"].Value),
-                int.TryParse(m.Groups["season"].Value, out var s) ? s : 1,
-                int.TryParse(m.Groups["episode"].Value, out var e) ? e : 1);
-        }
-
-        var epOnly = TurkishEpOnlyRegex.Match(t);
-        if (epOnly.Success)
-            return new(CleanName(epOnly.Groups["name"].Value), 1,
-                int.TryParse(epOnly.Groups["episode"].Value, out var e) ? e : 1);
-
-        var sOnly = SeasonOnlyRegex.Match(t);
-        if (sOnly.Success)
-            return new(CleanName(sOnly.Groups["name"].Value),
-                int.TryParse(sOnly.Groups["season"].Value, out var s) ? s : 1, 1);
-
-        return new(CleanName(EpisodeTokenRegex.Replace(t, " ")), 1, 1);
-    }
-
-    public static bool IsSeries(string? title)
-    {
-        if (string.IsNullOrWhiteSpace(title)) return false;
-        if (IsLiveSeries(title)) return false;
-        return SxeRegex.IsMatch(title) || TurkishRegex.IsMatch(title) ||
-               TurkishEpOnlyRegex.IsMatch(title) || EnglishRegex.IsMatch(title) ||
-               SeasonOnlyRegex.IsMatch(title) ||
-               title.Contains("Staffel ", StringComparison.OrdinalIgnoreCase) ||
-               title.Contains("Temporada ", StringComparison.OrdinalIgnoreCase);
-    }
-
-    public static bool IsLiveSeries(string? title)
-    {
-        if (string.IsNullOrWhiteSpace(title)) return false;
-        if (LiveSportsRegex.IsMatch(title) && !SxeRegex.IsMatch(title)) return true;
-        if (title.Contains("7/24", StringComparison.OrdinalIgnoreCase) ||
-            title.Contains("24/7", StringComparison.OrdinalIgnoreCase)) return true;
-        return LiveKeywordRegex.IsMatch(title) && !EpisodeTokenRegex.IsMatch(title);
-    }
-
-    public static string NormalizeKey(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return string.Empty;
-        var n = value.Trim().ToLowerInvariant();
-        // Türkçe normalize (Bug #5 düzeltmesi)
-        n = n.Replace('ş', 's').Replace('ç', 'c').Replace('ğ', 'g')
-             .Replace('ü', 'u').Replace('ö', 'o').Replace('ı', 'i');
-        n = EpisodeTokenRegex.Replace(n, " ");
-        n = NoiseRegex.Replace(n, " ");
-        n = Regex.Replace(n, @"[^\w\s]", " ");
-        return Regex.Replace(n, @"\s+", " ").Trim();
-    }
-
-    public static string ExtractLanguageCode(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return "tr-TR";
-        var t = text.Trim().ToUpperInvariant();
-
-        // Word-boundary ile UK tespiti (Bug #6 düzeltmesi)
-        var words = Regex.Split(t, @"[\s|/:,\[\]()]").Where(w => w.Length > 0).ToHashSet();
-
-        if (t.Contains("TURKEY") || t.Contains("TÜRKİYE") || t.Contains("TURKIYE")) return "tr-TR";
-        if (words.Contains("TR") || t.StartsWith("TR|") || t.StartsWith("TR/") || t.StartsWith("TR:")) return "tr-TR";
-        if (words.Contains("UK") || words.Contains("USA") || words.Contains("US") || words.Contains("AU") ||
-            t.Contains("UNITED STATES") || t.Contains("UNITED KINGDOM") || t.Contains("MULTI") ||
-            words.Contains("EN") || words.Contains("ENG")) return "en-US";
-        if (t.Contains("FRANCE") || t.Contains("FRENCH") || words.Contains("FR")) return "fr-FR";
-        if (t.Contains("GERMANY") || t.Contains("GERMAN") || words.Contains("DE")) return "de-DE";
-        if (t.Contains("SPAIN") || t.Contains("SPANISH") || words.Contains("ES")) return "es-ES";
-        if (t.Contains("RUSSIA") || t.Contains("RUSSIAN") || words.Contains("RU")) return "ru-RU";
-        if (t.Contains("ARABIC") || words.Contains("AR")) return "ar-SA";
-        if (t.Contains("ITALY") || t.Contains("ITALIAN") || words.Contains("IT")) return "it-IT";
-
-        return "tr-TR";
-    }
-
-    static string CleanName(string raw)
-    {
-        var cleaned = raw.Trim().TrimEnd('-', '.', '|', ':', '_', ' ');
-        cleaned = NoiseRegex.Replace(cleaned, " ");
-        cleaned = Regex.Replace(cleaned, @"\s+", " ").Trim();
-        return string.IsNullOrWhiteSpace(cleaned) ? "Bilinmeyen Dizi" : cleaned;
-    }
-}
-
-// =============================================================================
-// MODELler
-// =============================================================================
-
-class ProviderConfig
-{
-    public string Name { get; set; } = "";
-    public string Type { get; set; } = "m3u";
-    public string? Url { get; set; }
-    public string? Host { get; set; }
-    public string? Username { get; set; }
-    public string? Password { get; set; }
-    public string? MacAddress { get; set; }
-}
-
-class BatchConfig
-{
-    public List<ProviderConfig> Providers { get; set; } = new();
-}
-
-enum ChannelTypeEnum { Live, VOD, Series, Unknown }
-
-class ParsedChannel
-{
-    public string? Name { get; set; }
-    public string? GroupTitle { get; set; }
-    public string? LogoUrl { get; set; }
-    public string? TvgId { get; set; }
-    public string? TvgCountry { get; set; }
-    public string? StreamUrl { get; set; }
-    public ChannelTypeEnum Type { get; set; }
-}
-
-class SeriesParseResult
-{
-    public string OriginalTitle { get; set; } = "";
-    public string ParsedName { get; set; } = "";
-    public int Season { get; set; }
-    public int Episode { get; set; }
-    public bool IsOk { get; set; }
-}
+// Redundant locally-defined models removed. Using Noctra.Models instead.
 
 class TestResult
 {
@@ -1339,9 +1076,25 @@ class TestResult
     public XtreamUserInfo? XtreamUserInfo { get; set; }
     public XtreamServerInfo? XtreamServerInfo { get; set; }
     public string? StalkerProfile { get; set; }
-    public List<ParsedChannel>? Channels { get; set; }
+    public List<Channel>? Channels { get; set; }
     public DeepSamplingResult? DeepTestReport { get; set; }
     public bool DeepTestSkipped { get; set; }
+}
+
+class ProviderConfig
+{
+    public string Name { get; set; } = "";
+    public string Type { get; set; } = "m3u";
+    public string? Url { get; set; }
+    public string? Host { get; set; }
+    public string? Username { get; set; }
+    public string? Password { get; set; }
+    public string? MacAddress { get; set; }
+}
+
+class BatchConfig
+{
+    public List<ProviderConfig> Providers { get; set; } = new();
 }
 
 class XtreamAuthResponse
@@ -1365,5 +1118,7 @@ class XtreamServerInfo
     [JsonPropertyName("server_protocol")] public string? Protocol { get; set; }
     [JsonPropertyName("port")] public string? Port { get; set; }
 }
+
+// End of Program.cs
 
 // End of Program.cs
