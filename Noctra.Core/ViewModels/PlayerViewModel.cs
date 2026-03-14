@@ -209,11 +209,12 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         if (changed)
         {
+            var cts = new CancellationTokenSource();
             _subtitleSaveCts?.Cancel();
             _subtitleSaveCts?.Dispose();
-            _subtitleSaveCts = new CancellationTokenSource();
+            _subtitleSaveCts = cts;
 
-            var token = _subtitleSaveCts.Token;
+            var token = cts.Token;
             _ = Task.Run(async () =>
             {
                 try
