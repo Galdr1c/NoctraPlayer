@@ -358,124 +358,44 @@
                         </Grid>
                         <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Visible">
                             <StackPanel Margin="32,0,32,40">
-                                <Border Background="#1AFFFFFF" CornerRadius="6" Padding="12,8" Margin="0,0,0,24" IsVisible="{Binding !IsLiveContent}">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <materialIcons:MaterialIcon Kind="InformationOutline" Width="16" Height="16" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
-                                        <TextBlock Text="Ayarların uygulanabilmesi için oynatıcı anlık olarak yeniden başlatılır." FontSize="11" Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" VerticalAlignment="Center"/>
-                                    </StackPanel>
+                                <Border Background="{DynamicResource NavActiveBackgroundBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,24" IsVisible="{Binding !IsLiveContent}" Opacity="0.9">
+                                    <Grid ColumnDefinitions="24,*">
+                                        <materialIcons:MaterialIcon Grid.Column="0" Kind="InformationOutline" Width="18" Height="18" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Top" Margin="0,1,0,0"/>
+                                        <TextBlock Grid.Column="1" Text="Ayarların uygulanabilmesi için oynatıcı anlık olarak yeniden başlatılır." FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="8,0,0,0" LineHeight="16"/>
+                                    </Grid>
                                 </Border>
 
                                 <TextBlock Text="ALTYAZI BOYUTU" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,12" IsVisible="{Binding !IsLiveContent}"/>
                                 <StackPanel Margin="0,0,0,24" IsVisible="{Binding !IsLiveContent}">
                                     <UniformGrid Columns="3" Margin="0,0,0,8">
-                                        <Button Command="{Binding SetSubtitleSizeCommand}" CommandParameter="28" Content="Küçük" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="0,0,8,0">
-                                            <Button.Background>
-                                                <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="Surface1Brush">
-                                                    <Binding Path="SubtitleFontSize"/>
-                                                    <Binding>
-                                                        <Binding.Source>
-                                                            <x:Int32>28</x:Int32>
-                                                        </Binding.Source>
-                                                    </Binding>
-                                                </MultiBinding>
-                                            </Button.Background>
-                                        </Button>
-                                        <Button Command="{Binding SetSubtitleSizeCommand}" CommandParameter="40" Content="Standart" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,4,0">
-                                            <Button.Background>
-                                                <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="Surface1Brush">
-                                                    <Binding Path="SubtitleFontSize"/>
-                                                    <Binding>
-                                                        <Binding.Source>
-                                                            <x:Int32>40</x:Int32>
-                                                        </Binding.Source>
-                                                    </Binding>
-                                                </MultiBinding>
-                                            </Button.Background>
-                                        </Button>
-                                        <Button Command="{Binding SetSubtitleSizeCommand}" CommandParameter="60" Content="Büyük" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="8,0,0,0">
-                                            <Button.Background>
-                                                <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="Surface1Brush">
-                                                    <Binding Path="SubtitleFontSize"/>
-                                                    <Binding>
-                                                        <Binding.Source>
-                                                            <x:Int32>60</x:Int32>
-                                                        </Binding.Source>
-                                                    </Binding>
-                                                </MultiBinding>
-                                            </Button.Background>
-                                        </Button>
+                                        <Button Command="{Binding SetSubtitleSizeCommand}" CommandParameter="28" Content="Küçük" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="0,0,8,0"
+                                                Background="{Binding SubtitleFontSize, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=28}"/>
+                                        <Button Command="{Binding SetSubtitleSizeCommand}" CommandParameter="40" Content="Normal" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,4,0"
+                                                Background="{Binding SubtitleFontSize, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=40}"/>
+                                        <Button Command="{Binding SetSubtitleSizeCommand}" CommandParameter="60" Content="Büyük" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="8,0,0,0"
+                                                Background="{Binding SubtitleFontSize, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=60}"/>
                                     </UniformGrid>
                                 </StackPanel>
 
                                 <TextBlock Text="ARKAPLAN ŞEFFAFLIĞI" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,12" IsVisible="{Binding !IsLiveContent}"/>
                                 <StackPanel Margin="0,0,0,24" IsVisible="{Binding !IsLiveContent}">
                                     <UniformGrid Columns="3" Margin="0,0,0,8">
-                                        <Button Command="{Binding SetSubtitleBackgroundCommand}" CommandParameter="0" Content="Kapalı" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="0,0,8,0">
-                                            <Button.Background>
-                                                <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="Surface1Brush">
-                                                    <Binding Path="SubtitleBackgroundOpacity"/>
-                                                    <Binding>
-                                                        <Binding.Source>
-                                                            <x:Int32>0</x:Int32>
-                                                        </Binding.Source>
-                                                    </Binding>
-                                                </MultiBinding>
-                                            </Button.Background>
-                                        </Button>
-                                        <Button Command="{Binding SetSubtitleBackgroundCommand}" CommandParameter="128" Content="Yarı Saydam" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,4,0">
-                                            <Button.Background>
-                                                <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="Surface1Brush">
-                                                    <Binding Path="SubtitleBackgroundOpacity"/>
-                                                    <Binding>
-                                                        <Binding.Source>
-                                                            <x:Int32>128</x:Int32>
-                                                        </Binding.Source>
-                                                    </Binding>
-                                                </MultiBinding>
-                                            </Button.Background>
-                                        </Button>
-                                        <Button Command="{Binding SetSubtitleBackgroundCommand}" CommandParameter="255" Content="Siyah" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="8,0,0,0">
-                                            <Button.Background>
-                                                <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="Surface1Brush">
-                                                    <Binding Path="SubtitleBackgroundOpacity"/>
-                                                    <Binding>
-                                                        <Binding.Source>
-                                                            <x:Int32>255</x:Int32>
-                                                        </Binding.Source>
-                                                    </Binding>
-                                                </MultiBinding>
-                                            </Button.Background>
-                                        </Button>
+                                        <Button Command="{Binding SetSubtitleBackgroundCommand}" CommandParameter="0" Content="Kapalı" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="0,0,8,0"
+                                                Background="{Binding SubtitleBackgroundOpacity, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=0}"/>
+                                        <Button Command="{Binding SetSubtitleBackgroundCommand}" CommandParameter="128" Content="Yarı Saydam" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,4,0"
+                                                Background="{Binding SubtitleBackgroundOpacity, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=128}"/>
+                                        <Button Command="{Binding SetSubtitleBackgroundCommand}" CommandParameter="255" Content="Siyah" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="8,0,0,0"
+                                                Background="{Binding SubtitleBackgroundOpacity, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=255}"/>
                                     </UniformGrid>
                                 </StackPanel>
 
                                 <TextBlock Text="ALTYAZI KONUMU" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1" Margin="0,0,0,12" IsVisible="{Binding !IsLiveContent}"/>
                                 <StackPanel Margin="0,0,0,32" IsVisible="{Binding !IsLiveContent}">
                                     <UniformGrid Columns="2" Margin="0,0,0,8">
-                                        <Button Command="{Binding SetSubtitlePositionCommand}" CommandParameter="40" Content="Normal" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="0,0,4,0">
-                                            <Button.Background>
-                                                <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="Surface1Brush">
-                                                    <Binding Path="SubtitleMargin"/>
-                                                    <Binding>
-                                                        <Binding.Source>
-                                                            <x:Int32>40</x:Int32>
-                                                        </Binding.Source>
-                                                    </Binding>
-                                                </MultiBinding>
-                                            </Button.Background>
-                                        </Button>
-                                        <Button Command="{Binding SetSubtitlePositionCommand}" CommandParameter="900" Content="Yukarı" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,0,0">
-                                            <Button.Background>
-                                                <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="Surface1Brush">
-                                                    <Binding Path="SubtitleMargin"/>
-                                                    <Binding>
-                                                        <Binding.Source>
-                                                            <x:Int32>900</x:Int32>
-                                                        </Binding.Source>
-                                                    </Binding>
-                                                </MultiBinding>
-                                            </Button.Background>
-                                        </Button>
+                                        <Button Command="{Binding SetSubtitlePositionCommand}" CommandParameter="40" Content="Alt" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="0,0,4,0"
+                                                Background="{Binding SubtitleMargin, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=40}"/>
+                                        <Button Command="{Binding SetSubtitlePositionCommand}" CommandParameter="900" Content="Üst" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,0,0"
+                                                Background="{Binding SubtitleMargin, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=900}"/>
                                     </UniformGrid>
                                 </StackPanel>
 

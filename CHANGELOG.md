@@ -9,12 +9,17 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### 🐛 Hata Düzeltmeleri
+- **VLC Çift Başlatma (Race Condition) Engellendi** (2026-03-14): Kullanıcı arayüzde altyazı ayarlarını (ör. boyut ve konumu aynı anda) çok hızlı değiştirdiğinde VLC oynatıcısının arka planda üst üste iki kez tam yıkım-kurulum (ReinitializeAsync) döngüsüne girmesine neden olabilen asenkron yarış durumu çözüldü. İşlem için `CancellationTokenSource` tabanlı güvenli bir "Debounce" mekanizması eklendi.
 - **Altyazı Ayarları Yeniden Başlatma Uyarısı Düzeltildi** (2026-03-14): "Oynatıcı anlık olarak yeniden başlatılır" uyarısının sadece Altyazı Boyutu değişikliğinde görünmesi sorunu çözüldü. Uyarı genel bir çerçeveye alınarak Arkaplan Şeffaflığı ve Altyazı Konumu değişikliklerini de kapsayacak şekilde panelin en üstüne taşındı ve daha estetik bir tasarımla (bilgi ikonuyla) yenilendi.
 - **Arayüz Kaydetme (CancellationToken) Güvenliği Düzeltildi** (2026-03-14): Altyazı ayarları hızlıca değiştirildiğinde oluşan bellek yönetim hatası (Dispose edilmiş token okuma) giderildi. Ayarlar kaydedilirken uygulamanın daha stabil çalışması için güvenli bir `CancellationTokenSource` yaşam döngüsü kullanılıyor.
 - **Canlı Yayın Ses/Altyazı Seçimi Kaybı Giderildi** (2026-03-14): Altyazı veya ses ayarları değiştirildiğinde VLC motorunun yeniden başlatılması (`ReinitializeAsync`) esnasında kullanıcının o an seçtiği aktif Ses ve Altyazı kanallarının (track) sıfırlanıp varsayılana dönmesi sorunu çözüldü. Seçimler yeniden başlatma sırasında hafızada tutulup video tekrar başladığında otomatik geri yükleniyor.
 - **Altyazı Arayüz Senkronizasyonu Düzeltildi** (2026-03-14): Uygulama yeniden başlatıldığında, oynatıcı kontrol panelindeki altyazı ayar butonlarının (Boyut, Arkaplan Şeffaflığı, Konum) en son kaydedilen ayar yerine varsayılan ("Standart") seçili görünmesi sorunu çözüldü. Arayüz modelinin (`PlayerViewModel`) ayarlardaki gerçek veriyi başlatma anında okuması sağlandı.
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Altyazı Paneli Tema ve Mimari Optimizasyonu** (2026-03-14):
+    - **Açık Tema İyileştirmesi:** Açık temada (Light Theme) altyazı panelindeki okunabilirlik sorunları giderildi. Seçili buton vurguları (`NavActiveBackgroundBrush`) ve bilgi kutusu tasarımı, beyaz arka plan üzerinde yüksek kontrastlı ve estetik görünecek şekilde optimize edildi.
+    - **XAML Mimari Temizliği:** Altyazı ayar butonlarındaki 100+ satırlık mükerrer `MultiBinding` kodu temizlendi. Yeni geliştirilen `EqualityToResourceBrushConverter` ile XAML yapısı çok daha hafif ve sürdürülebilir hale getirildi.
+    - **UX İyileştirmesi:** Bilgi kutusundaki metin taşma sorunu (`TextWrapping`) giderilerek, mesajların her ekran boyutunda tam ve düzgün görünmesi sağlandı.
 - **Kapsamlı Kararlılık ve Birim Testi Seferberliği** (2026-03-14):
     - `EpgService` ve `PlaylistOrganizerService` için toplam 146 yeni birim testi (Unit Test) eklendi.
     - EPG eşleştirme motoru (`EpgMatchingTests`) 72 senaryo ile, oynatma listesi düzenleme motoru (`PlaylistOrganizerServiceTests`) ise 74 senaryo ile %100 kapsama ulaştırıldı.

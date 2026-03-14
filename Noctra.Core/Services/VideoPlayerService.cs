@@ -32,6 +32,7 @@ public class VideoPlayerService : IVideoPlayerService
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private bool _isInitialized;
     private CancellationTokenSource? _volumeSaveCts;
+    private CancellationTokenSource? _reinitCts;
     
     // Altyazı ve Ses seçimi durumu reinit sonrası kaybolmasın diye
     private int? _restoredAudioTrack;
@@ -104,7 +105,25 @@ public class VideoPlayerService : IVideoPlayerService
 
         if (shouldReinit)
         {
-            _ = ReinitializeAsync();
+            var cts = new CancellationTokenSource();
+            _reinitCts?.Cancel();
+            _reinitCts?.Dispose();
+            _reinitCts = cts;
+
+            var token = cts.Token;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // Debounce süresi: Çoklu ayar değişikliğinin sonlanmasını bekle
+                    await Task.Delay(500, token);
+                    if (!token.IsCancellationRequested)
+                    {
+                        await ReinitializeAsync();
+                    }
+                }
+                catch (TaskCanceledException) { }
+            }, token);
         }
     }
 

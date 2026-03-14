@@ -230,31 +230,13 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         }
     }
     [RelayCommand]
-    private void SetSubtitleSize(string sizeStr)
-    {
-        if (int.TryParse(sizeStr, out int size))
-        {
-            SubtitleFontSize = size;
-        }
-    }
+    private void SetSubtitleSize(string size) => SubtitleFontSize = int.Parse(size);
 
     [RelayCommand]
-    private void SetSubtitleBackground(string opacityStr)
-    {
-        if (int.TryParse(opacityStr, out int opacity))
-        {
-            SubtitleBackgroundOpacity = opacity;
-        }
-    }
+    private void SetSubtitleBackground(string opacity) => SubtitleBackgroundOpacity = int.Parse(opacity);
 
     [RelayCommand]
-    private void SetSubtitlePosition(string marginStr)
-    {
-        if (int.TryParse(marginStr, out int margin))
-        {
-            SubtitleMargin = margin;
-        }
-    }
+    private void SetSubtitlePosition(string margin) => SubtitleMargin = int.Parse(margin);
 
     [ObservableProperty]
     private bool _isMuted;

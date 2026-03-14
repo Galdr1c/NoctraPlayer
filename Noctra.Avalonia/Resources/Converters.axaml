@@ -20,9 +20,9 @@
   <converters:MediaSupportsMyListConverter x:Key="MediaSupportsMyListConverter" />
   <converters:BoolToStringConverter x:Key="BoolToStringConverter" />
   <converters:EqualityToBoolConverter x:Key="EqualityToBoolConverter" />
-  <converters:EqualityToBrushConverter x:Key="EqualityToBrushConverter"
-                                       TrueBrush="{StaticResource AccentBrush}"
-                                       FalseBrush="Transparent" />
+  <converters:EqualityToResourceBrushConverter x:Key="EqualityToResourceBrushConverter" />
+  <converters:EqualityToResourceBrushConverter x:Key="EqualityToSelectionBrushConverter" ResourceKey="NavActiveBackgroundBrush" />
+  <converters:EqualityToBrushConverter x:Key="EqualityToBrushConverter" TrueBrush="{StaticResource AccentBrush}" FalseBrush="Transparent" />
   <converters:EqualityToVisibilityConverter x:Key="EqualityToVisibilityConverter" />
   <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
   <converters:AvatarPathConverter x:Key="AvatarPathConverter" />

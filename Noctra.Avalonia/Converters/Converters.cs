@@ -1090,6 +1090,28 @@ public class BoolToDoubleConverter : IValueConverter
         => null;
 }
 
+public class EqualityToResourceBrushConverter : IValueConverter
+{
+    public string ResourceKey { get; set; } = "Surface1Brush";
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value == null || parameter == null) return Brushes.Transparent;
+
+        bool isEqual = value.ToString() == parameter.ToString();
+
+        if (isEqual && Application.Current?.TryGetResource(ResourceKey, out var resource) == true && resource is IBrush brush)
+        {
+            return brush;
+        }
+
+        return Brushes.Transparent;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => null;
+}
+
 public class EqualityToBrushConverter : IValueConverter
 {
     public IBrush TrueBrush { get; set; } = Brushes.Transparent;

@@ -3,8 +3,8 @@
   <Color x:Key="Bg0Color">#FAFAFA</Color>
   <Color x:Key="Bg1Color">#F5F5F5</Color>
   <Color x:Key="Surface0Color">#FFFFFF</Color>
-  <Color x:Key="Surface1Color">#F0F0F0</Color>
-  <Color x:Key="BorderColor">#E5E5E5</Color>
+  <Color x:Key="Surface1Color">#EBEBEB</Color>
+  <Color x:Key="BorderColor">#DCDCDC</Color>
 
   <Color x:Key="Accent300Color">#DDD6FE</Color>
   <Color x:Key="Accent500Color">#8B5CF6</Color>
@@ -14,7 +14,7 @@
 
   <Color x:Key="TextPrimaryColor">#1A1535</Color>
   <Color x:Key="TextSecondaryColor">#4A4565</Color>
-  <Color x:Key="TextMutedColor">#7A7595</Color>
+  <Color x:Key="TextMutedColor">#6A6585</Color>
   <Color x:Key="TextDisabledColor">#B0ACD0</Color>
 
   <Color x:Key="SuccessColor">#10B981</Color>
@@ -33,7 +33,7 @@
   <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource Accent600Color}" />
   <SolidColorBrush x:Key="AccentLightBrush" Color="{StaticResource Accent300Color}" />
   <SolidColorBrush x:Key="GlowBrush" Color="{StaticResource GlowColor}" />
-  <SolidColorBrush x:Key="NavActiveBackgroundBrush" Color="#1E8B5CF6" />
+  <SolidColorBrush x:Key="NavActiveBackgroundBrush" Color="#338B5CF6" />
 
   <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}" />
   <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}" />
