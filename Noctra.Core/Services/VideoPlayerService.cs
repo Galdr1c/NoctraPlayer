@@ -32,6 +32,10 @@ public class VideoPlayerService : IVideoPlayerService
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private bool _isInitialized;
     private CancellationTokenSource? _volumeSaveCts;
+    
+    // Altyazı ve Ses seçimi durumu reinit sonrası kaybolmasın diye
+    private int? _restoredAudioTrack;
+    private int? _restoredSpu;
 
     private void LogDebug(string msg)
     {
@@ -181,6 +185,13 @@ public class VideoPlayerService : IVideoPlayerService
         var wasPlaying = IsPlaying;
         var currentPosition = Position;
         
+        // Ses ve altyazı seçimini kaydet
+        if (_mediaPlayer != null)
+        {
+            _restoredAudioTrack = _mediaPlayer.AudioTrack;
+            _restoredSpu = _mediaPlayer.Spu;
+        }
+        
         // 2. Oynatmayı durdur
         Stop();
 
@@ -238,6 +249,33 @@ public class VideoPlayerService : IVideoPlayerService
         _mediaPlayer.Playing += (s, e) =>
         {
             LogDebug("Event: Playing");
+
+            // Kaydedilmiş ses veya altyazı track seçimleri varsa geri yükle
+            if (_restoredAudioTrack.HasValue || _restoredSpu.HasValue)
+            {
+                var audioToRestore = _restoredAudioTrack;
+                var spuToRestore = _restoredSpu;
+                _restoredAudioTrack = null;
+                _restoredSpu = null;
+
+                _ = Task.Run(async () =>
+                {
+                    // Tracklerin VLC tarafından tam yüklenmesi için ufak bir gecikme
+                    await Task.Delay(500); 
+                    if (_mediaPlayer == null || !_mediaPlayer.IsPlaying) return;
+
+                    if (audioToRestore.HasValue && audioToRestore.Value >= 0)
+                    {
+                        LogDebug($"Restoring AudioTrack: {audioToRestore.Value}");
+                        _mediaPlayer.SetAudioTrack(audioToRestore.Value);
+                    }
+                    if (spuToRestore.HasValue)
+                    {
+                        LogDebug($"Restoring SPU: {spuToRestore.Value}");
+                        SetSubtitleTrack(spuToRestore.Value);
+                    }
+                });
+            }
             
             // Aggressive enforcement kaldırıldı.
             // Opening event'i zaten volume'u doğru ayarlıyor; burada tekrar yazmak

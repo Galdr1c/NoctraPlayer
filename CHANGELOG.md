@@ -10,6 +10,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ### 🐛 Hata Düzeltmeleri
 - **Altyazı Arayüz Senkronizasyonu Düzeltildi** (2026-03-14): Uygulama yeniden başlatıldığında, oynatıcı kontrol panelindeki altyazı ayar butonlarının (Boyut, Arkaplan Şeffaflığı, Konum) en son kaydedilen ayar yerine varsayılan ("Standart") seçili görünmesi sorunu çözüldü. Arayüz modelinin (`PlayerViewModel`) ayarlardaki gerçek veriyi başlatma anında okuması sağlandı.
+- **Canlı Yayın Ses/Altyazı Seçimi Kaybı Giderildi** (2026-03-14): Altyazı veya ses ayarları değiştirildiğinde VLC motorunun yeniden başlatılması (`ReinitializeAsync`) esnasında kullanıcının o an seçtiği aktif Ses ve Altyazı kanallarının (track) sıfırlanıp varsayılana dönmesi sorunu çözüldü. Seçimler yeniden başlatma sırasında hafızada tutulup video tekrar başladığında otomatik geri yükleniyor.
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
 - **Kapsamlı Kararlılık ve Birim Testi Seferberliği** (2026-03-14):
