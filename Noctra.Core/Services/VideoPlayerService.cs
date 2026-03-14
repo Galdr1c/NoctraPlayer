@@ -457,8 +457,8 @@ public class VideoPlayerService : IVideoPlayerService
                     media.AddOption($":start-time={Math.Floor(startSeconds).ToString(System.Globalization.CultureInfo.InvariantCulture)}");
                 }
 
-                // Dinamik yüzde hesaplaması (Yukarı konumu için, örn >= 900)
-                if (_lastSubtitleMargin >= 900)
+                // Dinamik Altyazı Konumu ve Boyutu (Yüzde hesaplamaları)
+                if (_lastSubtitleMargin >= 900 || _lastSubtitleFontSize > 0)
                 {
                     // Video çözünürlüğünü öğrenebilmek için kısa bir parse yap
                     var tcs = new CancellationTokenSource(2000); // En fazla 2 saniye bekle
@@ -478,20 +478,39 @@ public class VideoPlayerService : IVideoPlayerService
                             }
                         }
 
-                        // Alttan %85 marjin = tepeden %15 boşluk (örneğin 1080p'de 918px)
-                        int calculatedMargin = (int)(videoHeight * 0.85);
-                        media.AddOption($":sub-margin={calculatedMargin}");
-                        LogDebug($"Dynamic Margin: Height={videoHeight}, Margin={calculatedMargin}px (%85)");
+                        // Marjin Hesaplaması (Yukarı konumu için)
+                        if (_lastSubtitleMargin >= 900)
+                        {
+                            int calculatedMargin = (int)(videoHeight * 0.85);
+                            media.AddOption($":sub-margin={calculatedMargin}");
+                        }
+                        else
+                        {
+                            media.AddOption($":sub-margin={_lastSubtitleMargin}");
+                        }
+
+                        // Font Boyutu Hesaplaması (Netflix standartları)
+                        double fontPercentage = 0.045; // Varsayılan: Orta (~%4.5)
+                        if (_lastSubtitleFontSize <= 28) fontPercentage = 0.03; // Küçük (~%3)
+                        else if (_lastSubtitleFontSize >= 60) fontPercentage = 0.085; // Büyük (~%8.5)
+
+                        int calculatedFontSize = (int)(videoHeight * fontPercentage);
+                        // VLC freetype modülüne parametreyi anlık akış bazlı iletiyoruz
+                        media.AddOption($":freetype-fontsize={calculatedFontSize}");
+
+                        LogDebug($"Dynamic Subtitles: Height={videoHeight}, FontSize={calculatedFontSize}px");
                     }
                     catch
                     {
-                        // Hata veya timeout durumunda fallback kullan
+                        // Hata veya timeout durumunda eski fallbackleri kullan
                         media.AddOption($":sub-margin={_lastSubtitleMargin}");
+                        media.AddOption($":freetype-fontsize={_lastSubtitleFontSize}");
                     }
                 }
                 else
                 {
                     media.AddOption($":sub-margin={_lastSubtitleMargin}");
+                    media.AddOption($":freetype-fontsize={_lastSubtitleFontSize}");
                 }
 
                 if (_mediaPlayer == null) 

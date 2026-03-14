@@ -17,10 +17,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - Tester projesi, `Noctra.Core` kütüphanesini doğrudan referans alacak şekilde baştan aşağı refaktör edildi.
     - Tester içindeki ~600 satırlık mükerrer (duplicate) kod, model ve parser mantığı temizlendi.
     - Artık tester projesi, üretimdeki aynı `M3UParser` ve `SeriesInfoParser` mantığını kullanarak %100 tutarlı sonuçlar üretmektedir.
-- **Dinamik Altyazı Konumlandırma İyileştirmesi** (2026-03-13):
-    - "Yukarı" altyazı konumu seçildiğinde altyazının ekranın en üst sınırına yapışması sorunu çözüldü.
-    - Oynatılacak videonun çözünürlüğü (height) oynatma öncesi anlık olarak analiz edilerek, "Yukarı" konumu için ekran yüksekliğinin %85'ine denk gelen dinamik bir piksel marjini uygulanması sağlandı.
-    - Bu sayede 1080p, 720p veya 4K fark etmeksizin tüm videolarda altyazıların üst tarafta her zaman orantılı ve estetik bir boşluk bırakarak hizalanması sağlandı.
+- **Dinamik Altyazı Boyut ve Konum İyileştirmesi (Netflix Standardı)** (2026-03-13):
+    - **Dinamik Konum:** "Yukarı" altyazı konumu seçildiğinde altyazının ekranın en üst sınırına yapışması sorunu çözüldü. Oynatılacak videonun çözünürlüğü oynatma öncesi anlık olarak analiz edilerek, "Yukarı" konumu için ekran yüksekliğinin %85'ine denk gelen dinamik bir piksel marjini uygulanması sağlandı.
+    - **Dinamik Boyut:** Altyazı boyutları (Küçük, Orta, Büyük) sabit piksel değerleri yerine Netflix standartlarına uygun olarak ekran yüksekliğinin yüzdelik dilimleri (Sırasıyla ~%3, ~%4.5, ~%8.5) olarak yeniden düzenlendi. Böylece 720p, 1080p veya 4K videolarda altyazı boyutları her zaman videoyla orantılı olarak görünecek.
 - **Gelişmiş Altyazı Özelleştirme Sistemi** (2026-03-12):
     - **Altyazı Boyut Profilleri**: Altyazılar için Küçük (28), Standart (40) ve Büyük (60) olmak üzere üç farklı boyut profili eklendi.
     - **Arka Plan Şeffaflığı Kontrolü**: Altyazıların parlak sahnelerde okunabilirliğini artırmak için "Kapalı", "Yarı Saydam" ve "Siyah" arka plan seçenekleri eklendi.
