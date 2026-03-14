@@ -703,18 +703,101 @@
                                 </StackPanel>
                             </Border>
 
-                            <Border Classes="SettingsCard">
-                                <Grid>
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                    <Border Width="60" Height="60" Background="{DynamicResource PrimaryGradientBrush}" CornerRadius="12" Margin="0,0,20,0">
-                                        <TextBlock Text="TV" FontSize="32" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <!-- ABOUT SECTION (Conditional) -->
+                            <Panel Margin="0,0,0,16">
+                                <!-- PREMIUM CARD -->
+                                <Border Background="{DynamicResource PrimaryGradientBrush}" 
+                                        CornerRadius="12" 
+                                        Padding="1.5"
+                                        IsVisible="{Binding IsPremium}">
+                                    <Border Background="{DynamicResource Bg1Brush}" 
+                                            CornerRadius="10.5" 
+                                            Padding="24"
+                                            ClipToBounds="True">
+                                        <Panel>
+                                            <!-- Crown Icon (Top Right Background) -->
+                                            <materialIcons:MaterialIcon Kind="Crown" 
+                                                                      Width="100" Height="100" 
+                                                                      Foreground="#f5c842" 
+                                                                      Opacity="0.05"
+                                                                      HorizontalAlignment="Right" 
+                                                                      VerticalAlignment="Top"
+                                                                      Margin="0,-30,-30,0"/>
+
+                                            <Grid ColumnDefinitions="Auto,*">
+                                                <!-- App Icon -->
+                                                <Border Width="60" Height="60"
+                                                        Background="{DynamicResource PrimaryGradientBrush}"
+                                                        CornerRadius="12"
+                                                        Margin="0,0,20,0">
+                                                    <TextBlock Text="TV" FontSize="32" FontWeight="Bold" Foreground="White"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                                        <TextBlock Text="Noctra" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                        
+                                                        <!-- PREMIUM BADGE -->
+                                                        <Border Padding="10,3" CornerRadius="6" VerticalAlignment="Center">
+                                                            <Border.Background>
+                                                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                                                    <GradientStop Color="#f5c842" Offset="0"/>
+                                                                    <GradientStop Color="#f0a832" Offset="1"/>
+                                                                </LinearGradientBrush>
+                                                            </Border.Background>
+                                                            <TextBlock Text="PREMIUM" FontSize="10" FontWeight="ExtraBold" Foreground="Black"/>
+                                                        </Border>
+                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding CurrentVersion, StringFormat='Sürüm {0} (Noctra Suite)'}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Panel>
                                     </Border>
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="Noctra Premium" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                        <TextBlock Text="Sürüm 1.0.0 (Noctra Suite)" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                </Border>
+
+                                <!-- FREE CARD (Standard Refined) -->
+                                <Border Background="{DynamicResource Surface0Brush}" 
+                                        CornerRadius="8" 
+                                        Padding="24"
+                                        IsVisible="{Binding !IsPremium}"
+                                        Margin="0">
+                                    <StackPanel>
+                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                            <!-- App Icon -->
+                                            <Border Width="60" Height="60" 
+                                                    Background="{DynamicResource PrimaryGradientBrush}" 
+                                                    CornerRadius="12" 
+                                                    Margin="0,0,20,0">
+                                                <TextBlock Text="TV" FontSize="32" 
+                                                           FontWeight="Bold" Foreground="White"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+
+                                            <!-- App Info -->
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="Noctra" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                <TextBlock Text="{Binding CurrentVersion, StringFormat='Sürüm {0}'}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                            </StackPanel>
+
+                                            <!-- UPGRADE BUTTON -->
+                                            <Button Grid.Column="2" 
+                                                    Command="{Binding ShowUpsellCommand}"
+                                                    Padding="12,6"
+                                                    Background="{DynamicResource PrimaryGradientBrush}"
+                                                    Foreground="White"
+                                                    CornerRadius="18"
+                                                    VerticalAlignment="Center"
+                                                    Cursor="Hand">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <materialIcons:MaterialIcon Kind="Crown" Width="14" Height="14"/>
+                                                    <TextBlock Text="Premium'a Geç" FontSize="12" FontWeight="SemiBold"/>
+                                                </StackPanel>
+                                            </Button>
+                                        </Grid>
                                     </StackPanel>
-                                </Grid>
-                            </Border>
+                                </Border>
+                            </Panel>
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>

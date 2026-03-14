@@ -20,6 +20,7 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     private readonly IUpdateService _updateService;
     private readonly IDispatcherService _dispatcherService;
     private readonly IDiagnosticReportService _diagnosticService;
+    private readonly ILicenseService _licenseService;
 
     [ObservableProperty]
     private string _cacheSizeString = "0 B";
@@ -62,7 +63,8 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         ICacheService cacheService,
         IUpdateService updateService,
         IDispatcherService dispatcherService,
-        IDiagnosticReportService diagnosticService)
+        IDiagnosticReportService diagnosticService,
+        ILicenseService licenseService)
     {
         _themeService = themeService;
         _dialogService = dialogService;
@@ -71,6 +73,7 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         _updateService = updateService;
         _dispatcherService = dispatcherService;
         _diagnosticService = diagnosticService;
+        _licenseService = licenseService;
         
         CurrentVersion = _updateService.CurrentVersion;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
@@ -78,6 +81,8 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         LoadSettings();
         _ = UpdateCacheSizeAsync();
     }
+
+    public bool IsPremium => _licenseService.IsPremium;
 
     [RelayCommand]
     private void ReportBug()
@@ -154,6 +159,12 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         {
             IsCheckingUpdates = false;
         }
+    }
+
+    [RelayCommand]
+    private async Task ShowUpsell()
+    {
+        await _dialogService.ShowUpsellAsync();
     }
 
     [RelayCommand]

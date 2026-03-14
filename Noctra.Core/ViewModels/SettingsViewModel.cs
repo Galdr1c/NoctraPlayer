@@ -23,6 +23,8 @@ public partial class SettingsViewModel : ObservableObject
     private readonly MainViewModel _mainViewModel;
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly IDiagnosticReportService _diagnosticService;
+    private readonly ILicenseService _licenseService;
+    private readonly IUpdateService _updateService;
     private CancellationTokenSource? _epgRefreshWatchCts;
     private int _isRefreshOperationRunning;
 
@@ -187,7 +189,9 @@ public partial class SettingsViewModel : ObservableObject
         MainViewModel mainViewModel,
         IPlaylistService playlistService,
         IDbContextFactory<AppDbContext> contextFactory,
-        IDiagnosticReportService diagnosticService)
+        IDiagnosticReportService diagnosticService,
+        ILicenseService licenseService,
+        IUpdateService updateService)
     {
         _settingsService = settingsService;
         _epgService = epgService;
@@ -198,6 +202,8 @@ public partial class SettingsViewModel : ObservableObject
         _playlistService = playlistService;
         _contextFactory = contextFactory;
         _diagnosticService = diagnosticService;
+        _licenseService = licenseService;
+        _updateService = updateService;
         
         _mainViewModel.PropertyChanged += MainViewModel_PropertyChanged;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
@@ -209,6 +215,15 @@ public partial class SettingsViewModel : ObservableObject
         _ = ScanChannelListStatsCoreAsync(updateStatusMessage: false);
         _ = ScanEpgStatsCoreAsync(updateStatusMessage: false);
         _ = _mainViewModel.RefreshCurrentProfileExpirationAsync();
+    }
+
+    public string CurrentVersion => _updateService.CurrentVersion;
+    public bool IsPremium => _licenseService.IsPremium;
+
+    [RelayCommand]
+    private async Task ShowUpsell()
+    {
+        await _dialogService.ShowUpsellAsync();
     }
 
     [RelayCommand]

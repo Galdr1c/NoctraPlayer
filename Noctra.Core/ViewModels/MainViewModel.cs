@@ -63,6 +63,8 @@ public partial class MainViewModel : ObservableObject
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly HttpClient _httpClient;
     private readonly ITmdbSyncService _tmdbSyncService;
+    private readonly ILicenseService _licenseService;
+    private readonly IUpdateService _updateService;
     private readonly DateTime _downloadCenterSessionStartUtc = DateTime.UtcNow;
     private CancellationTokenSource? _slowLoadingWarnCts;
 
@@ -254,6 +256,8 @@ public partial class MainViewModel : ObservableObject
         ISecurityService securityService,
         HttpClient httpClient,
         ITmdbSyncService tmdbSyncService,
+        ILicenseService licenseService,
+        IUpdateService updateService,
         ILogger<MainViewModel>? logger = null)
     {
         _settingsService = settingsService;
@@ -276,6 +280,8 @@ public partial class MainViewModel : ObservableObject
         _securityService = securityService;
         _httpClient = httpClient;
         _tmdbSyncService = tmdbSyncService;
+        _licenseService = licenseService;
+        _updateService = updateService;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
         InitializeAsync();
         _contentDownloadService.DownloadsChanged += (_, _) =>
@@ -329,6 +335,9 @@ public partial class MainViewModel : ObservableObject
             });
         };
     }
+
+    public bool IsPremium => _licenseService.IsPremium;
+    public string CurrentVersion => _updateService.CurrentVersion;
 
     public Task InitializeAsync()
     {
