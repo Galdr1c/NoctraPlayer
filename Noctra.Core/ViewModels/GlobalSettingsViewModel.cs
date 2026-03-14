@@ -19,6 +19,7 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     private readonly ICacheService _cacheService;
     private readonly IUpdateService _updateService;
     private readonly IDispatcherService _dispatcherService;
+    private readonly IDiagnosticReportService _diagnosticService;
 
     [ObservableProperty]
     private string _cacheSizeString = "0 B";
@@ -60,7 +61,8 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         ISettingsService settingsService,
         ICacheService cacheService,
         IUpdateService updateService,
-        IDispatcherService dispatcherService)
+        IDispatcherService dispatcherService,
+        IDiagnosticReportService diagnosticService)
     {
         _themeService = themeService;
         _dialogService = dialogService;
@@ -68,12 +70,19 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         _cacheService = cacheService;
         _updateService = updateService;
         _dispatcherService = dispatcherService;
+        _diagnosticService = diagnosticService;
         
         CurrentVersion = _updateService.CurrentVersion;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
         
         LoadSettings();
         _ = UpdateCacheSizeAsync();
+    }
+
+    [RelayCommand]
+    private void ReportBug()
+    {
+        _diagnosticService.OpenBugReport();
     }
 
     private async Task UpdateCacheSizeAsync()

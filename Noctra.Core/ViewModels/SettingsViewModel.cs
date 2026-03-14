@@ -22,6 +22,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IWatchHistoryService _watchHistoryService;
     private readonly MainViewModel _mainViewModel;
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
+    private readonly IDiagnosticReportService _diagnosticService;
     private CancellationTokenSource? _epgRefreshWatchCts;
     private int _isRefreshOperationRunning;
 
@@ -185,7 +186,8 @@ public partial class SettingsViewModel : ObservableObject
         IWatchHistoryService watchHistoryService,
         MainViewModel mainViewModel,
         IPlaylistService playlistService,
-        IDbContextFactory<AppDbContext> contextFactory)
+        IDbContextFactory<AppDbContext> contextFactory,
+        IDiagnosticReportService diagnosticService)
     {
         _settingsService = settingsService;
         _epgService = epgService;
@@ -195,6 +197,7 @@ public partial class SettingsViewModel : ObservableObject
         _mainViewModel = mainViewModel;
         _playlistService = playlistService;
         _contextFactory = contextFactory;
+        _diagnosticService = diagnosticService;
         
         _mainViewModel.PropertyChanged += MainViewModel_PropertyChanged;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
@@ -206,6 +209,12 @@ public partial class SettingsViewModel : ObservableObject
         _ = ScanChannelListStatsCoreAsync(updateStatusMessage: false);
         _ = ScanEpgStatsCoreAsync(updateStatusMessage: false);
         _ = _mainViewModel.RefreshCurrentProfileExpirationAsync();
+    }
+
+    [RelayCommand]
+    private void ReportBug()
+    {
+        _diagnosticService.OpenBugReport();
     }
 
     private void OnSettingsService_Changed()

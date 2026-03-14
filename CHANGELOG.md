@@ -17,6 +17,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **Altyazı Arayüz Senkronizasyonu Düzeltildi** (2026-03-14): Uygulama yeniden başlatıldığında, oynatıcı kontrol panelindeki altyazı ayar butonlarının (Boyut, Arkaplan Şeffaflığı, Konum) en son kaydedilen ayar yerine varsayılan ("Standart") seçili görünmesi sorunu çözüldü. Arayüz modelinin (`PlayerViewModel`) ayarlardaki gerçek veriyi başlatma anında okuması sağlandı.
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Gelişmiş Hata Raporlama ve Çökme Takip Sistemi** (2026-03-14):
+    - Uygulama içerisinde karşılaşılan hataların ve beklenmedik çökmelerin (crash) anında geliştiriciye raporlanmasını sağlayan profesyonel bir teşhis altyapısı eklendi.
+    - **Otomatik Teşhis:** Kullanıcı ID, lisans durumu, işletim sistemi versiyonu ve mimari bilgilerini içeren minimalist ve İngilizce raporlar oluşturulması sağlandı.
+    - **Kritik Hata Yönetimi:** Uygulamayı kapatan büyük hatalar için (Unhandled Exception) otomatik mail taslağı oluşturma ve asenkron görev hatalarını (Task Exception) takip etme mekanizması devreye alındı.
+    - **Kullanıcı Dostu UI:** Global ve profil ayarları sayfalarına, estetik "Hata Bildir" butonları entegre edildi.
 - **Profile Özel Ayarlar Mimarisi** (2026-03-14):
     - Uygulama ayarlarının (altyazı dili, geçmiş saklama süresi, otomatik oynatma vb.) her profil için bağımsız olarak saklanması sağlandı.
     - Tek bir `settings.json` yerine, her profil için `settings_profile_{id}.json` yapısına geçilerek profiller arası ayar çakışmaları tamamen engellendi.

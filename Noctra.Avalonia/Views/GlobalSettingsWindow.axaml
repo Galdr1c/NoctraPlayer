@@ -507,6 +507,16 @@
                                 </StackPanel>
                             </Grid>
 
+                            <Border Background="#1AE50914" BorderBrush="#E50914" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,20,0,0">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Bir sorun mu yaşıyorsunuz?" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                        <TextBlock Text="Sistem tanılama verilerini içeren bir hata raporu oluşturun." FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" Content="Hata Bildir" Command="{Binding ReportBugCommand}" Padding="16,8" Background="#E50914" Foreground="White" CornerRadius="4"/>
+                                </Grid>
+                            </Border>
+
                             <Rectangle Height="1" 
                                       Fill="{DynamicResource BorderBrush}" 
                                       Margin="0,20"/>

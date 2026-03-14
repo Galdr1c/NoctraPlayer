@@ -433,8 +433,7 @@
                 <TabItem Classes="SettingsTab" Cursor="Hand">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <materialIcons:MaterialIcon Kind="TvGuide" Width="20" Height="20" />
-                            <TextBlock Text="EPG" VerticalAlignment="Center"/>
+                            <materialIcons:MaterialIcon Kind="CalendarClock" Width="20" Height="20" />                            <TextBlock Text="EPG" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,0,0">
@@ -724,8 +723,19 @@
             <!-- FOOTER -->
             <Border Grid.Row="2" Padding="32,16" Background="{DynamicResource SurfaceBrush}" CornerRadius="0,0,16,16" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
                 <Grid>
-                    <Button Content="Varsayılanlara Sıfırla" Command="{Binding ResetToDefaultsCommand}" 
-                            HorizontalAlignment="Left" Padding="20,10"/>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Button Content="Varsayılanlara Sıfırla" Command="{Binding ResetToDefaultsCommand}" 
+                                HorizontalAlignment="Left" Padding="20,10"/>
+                        
+                        <Button Command="{Binding ReportBugCommand}" 
+                                Background="Transparent" BorderBrush="#E50914" BorderThickness="1" 
+                                Padding="16,10" CornerRadius="6">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <materialIcons:MaterialIcon Kind="BugOutline" Width="18" Height="18" Foreground="#E50914"/>
+                                <TextBlock Text="Hata Bildir" Foreground="#E50914" VerticalAlignment="Center" FontSize="14"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
                     
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,20,0" FontWeight="SemiBold"/>

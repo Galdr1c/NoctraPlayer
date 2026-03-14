@@ -29,6 +29,7 @@ public partial class App : Application
     {
         try
         {
+            RegisterCrashHandlers();
             StartupDiagnostics.Log("App.Initialize started.");
             AvaloniaXamlLoader.Load(this);
             StartupDiagnostics.Log("AvaloniaXamlLoader.Load completed.");
@@ -280,6 +281,7 @@ public partial class App : Application
         services.AddSingleton<IUpdateService, UpdateService>();
 
         services.AddSingleton<ITmdbSyncService, TmdbSyncService>();
+        services.AddSingleton<IDiagnosticReportService, DiagnosticReportService>();
 
         services.AddSingleton<IDispatcherService, AvaloniaDispatcherService>();
         services.AddSingleton<IDialogService, AvaloniaDialogService>();
@@ -539,5 +541,42 @@ CREATE TABLE IF NOT EXISTS SeriesEpisodeProgresses (
         Thread.CurrentThread.CurrentUICulture = culture;
         CultureInfo.DefaultThreadCurrentCulture = culture;
         CultureInfo.DefaultThreadCurrentUICulture = culture;
+    }
+
+    private void RegisterCrashHandlers()
+    {
+        AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+        {
+            if (e.ExceptionObject is Exception ex)
+            {
+                StartupDiagnostics.LogException("Unhandled Exception", ex);
+                
+                // Mailto penceresini açmayı dene
+                var reportService = Services?.GetService<IDiagnosticReportService>();
+                if (reportService != null)
+                {
+                    if (e.IsTerminating)
+                    {
+                        // Uygulama kapanmak üzere, doğrudan açmayı dene
+                        reportService.OpenCrashReport(ex, "Global (Terminating)");
+                    }
+                    else
+                    {
+                        // UI thread'ine post ederek aç
+                        Dispatcher.UIThread.Post(() => reportService.OpenCrashReport(ex, "Global"));
+                    }
+                }
+            }
+        };
+
+        TaskScheduler.UnobservedTaskException += (s, e) =>
+        {
+            StartupDiagnostics.LogException("Unobserved Task Exception", e.Exception);
+            e.SetObserved(); // Sürecin ölmesini engelle
+            
+            // Task hataları çok sık olabilir (özellikle ağ kopmalarında), 
+            // kullanıcıyı rahatsız etmemek için otomatik mail açma kapalı bırakılabilir.
+            // Ama yine de kritikse burası aktif edilebilir.
+        };
     }
 }
