@@ -48,7 +48,7 @@ public partial class DialogWindow : Window
             if (global::Avalonia.Application.Current?.ApplicationLifetime is global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && 
                 desktop.MainWindow != null)
             {
-                var screen = desktop.MainWindow.Screens.Primary;
+                var screen = desktop.MainWindow.Screens.ScreenFromVisual(desktop.MainWindow) ?? desktop.MainWindow.Screens.Primary;
                 if (screen != null)
                 {
                     var workingArea = screen.WorkingArea;

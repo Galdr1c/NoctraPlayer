@@ -88,7 +88,7 @@ public partial class MainWindow : Window
     private void MainWindow_PositionChanged(object? sender, PixelPointEventArgs e)
     {
         // Pencere hareket ettiğinde (sürükleme dahil) PiP kontrollerini yenile
-        if (_isPiPMode && _playerViewModel != null)
+        if (_playerViewModel?.IsPiPMode == true)
         {
             _playerViewModel.UserInteractionCommand.Execute(null);
         }
@@ -425,7 +425,7 @@ public partial class MainWindow : Window
                 {
                     _playerViewModel.ToggleFullScreenCommand.Execute(null);
                 }
-                else if (_isPiPMode)
+                else if (_playerViewModel.IsPiPMode)
                 {
                     ClosePiP(true);
                 }
@@ -585,7 +585,6 @@ public partial class MainWindow : Window
     private Size _savedWindowSize;
     private PixelPoint _savedWindowPosition;
     private SystemDecorations _savedSystemDecorations;
-    private bool _isPiPMode;
 
     private void PlayerViewModel_PiPRequested(object? sender, EventArgs e)
     {
@@ -594,10 +593,9 @@ public partial class MainWindow : Window
 
     public void OpenPiP()
     {
-        if (_isPiPMode) return;
+        if (_playerViewModel.IsPiPMode) return;
         if (!_videoPlayerService.IsPlaying) return;
 
-        _isPiPMode = true;
         _playerViewModel.IsPiPMode = true;
 
         // 1. Mevcut durumu kaydet
@@ -615,7 +613,7 @@ public partial class MainWindow : Window
         MainContentArea.IsVisible = false;
         StatusBar.IsVisible = false;
         PiPWatermark.IsVisible = false; // PiP modunda watermark ekranı kapatıyor
-        // MouseCaptureLayer.IsHitTestVisible = true; // PiP modunda tıklayınca sürüklemeyi sağlayacağız
+        MouseCaptureLayer.IsHitTestVisible = true; // PiP modunda tıklayınca sürüklemeyi sağlayacağız
         Grid.SetRowSpan(PlayerArea, 3); // Ensure it covers everything regardless of hidden rows
 
         // 4. Küçük PiP boyutuna geç
@@ -630,7 +628,7 @@ public partial class MainWindow : Window
         Height = pipHeight;
 
         // 5. Ekranın sağ alt köşesine taşı
-        var screen = Screens.Primary;
+        var screen = Screens.ScreenFromVisual(this) ?? Screens.Primary;
         if (screen != null)
         {
             var wa = screen.WorkingArea;
@@ -653,8 +651,7 @@ public partial class MainWindow : Window
 
     private void ClosePiP(bool returnToMain)
     {
-        if (!_isPiPMode) return;
-        _isPiPMode = false;
+        if (!_playerViewModel.IsPiPMode) return;
         _playerViewModel.IsPiPMode = false;
 
         // 1. Önce pencere boyutlarını ve dekorasyonları geri al (Layout için kritik)
@@ -716,35 +713,37 @@ public partial class MainWindow : Window
         }
     }
 
-    private void PiPDrag_PointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-        {
-            // Ensure we are in a state that allows dragging
-            if (WindowState == WindowState.Normal)
-                BeginMoveDrag(e);
-        }
-    }
-
     private void PiPReturn_Click(object? sender, RoutedEventArgs e) => ClosePiP(returnToMain: true);
     
     private void PiPClose_Click(object? sender, RoutedEventArgs e) => ClosePiP(returnToMain: false);
 
     private void PiPCornerResize_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (!_isPiPMode) return;
+        if (_playerViewModel?.IsPiPMode != true) return;
+        if (_playerViewModel != null)
+        {
+            _playerViewModel.IsResizing = true;
+            _playerViewModel.UserInteractionCommand.Execute(null);
+        }
         _windowResizeService.BeginResize(sender, e);
     }
 
     private void PiPCornerResize_PointerMoved(object? sender, PointerEventArgs e)
     {
-        if (!_isPiPMode) return;
+        if (_playerViewModel?.IsPiPMode != true) return;
+        if (_playerViewModel != null)
+            _playerViewModel.UserInteractionCommand.Execute(null);
         _windowResizeService.UpdateResize(e);
     }
 
     private void PiPCornerResize_PointerReleased(object? sender, PointerReleasedEventArgs e)
     {
-        if (!_isPiPMode) return;
+        if (_playerViewModel?.IsPiPMode != true) return;
+        if (_playerViewModel != null)
+        {
+            _playerViewModel.IsResizing = false;
+            _playerViewModel.UserInteractionCommand.Execute(null);
+        }
         _windowResizeService.EndResize(e);
     }
 
@@ -762,7 +761,7 @@ public partial class MainWindow : Window
         }
 
         // PiP modunda tüm yüzeyden sürükleme yap
-        if (_isPiPMode)
+        if (_playerViewModel?.IsPiPMode == true)
         {
             Activate();
             Focus();
@@ -774,7 +773,9 @@ public partial class MainWindow : Window
             }
             else if (WindowState == WindowState.Normal)
             {
+                if (_playerViewModel != null) _playerViewModel.IsDragging = true;
                 BeginMoveDrag(e);
+                if (_playerViewModel != null) _playerViewModel.IsDragging = false;
             }
             return;
         }
@@ -792,6 +793,16 @@ public partial class MainWindow : Window
     }
 
     private void MouseCaptureLayer_PointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (!PlayerArea.IsVisible)
+        {
+            return;
+        }
+
+        _playerViewModel.UserInteractionCommand.Execute(null);
+    }
+
+    private void MouseCaptureLayer_PointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         if (!PlayerArea.IsVisible)
         {

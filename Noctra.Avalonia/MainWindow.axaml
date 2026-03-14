@@ -846,14 +846,16 @@
                               ZIndex="2500"
                               Background="Transparent"
                               PointerMoved="MouseCaptureLayer_PointerMoved"
-                              PointerPressed="MouseCaptureLayer_PointerPressed"/>
+                              PointerPressed="MouseCaptureLayer_PointerPressed"
+                              PointerReleased="MouseCaptureLayer_PointerReleased"/>
 
                       <!-- PiP Window Frame (Border & Shadows) - Visible only in PiP -->
                       <Border x:Name="PiPFrame"
+                              DataContext="{Binding #OverlayControl.DataContext}" x:DataType="vm:PlayerViewModel"
                               BorderBrush="#44FFFFFF"
                               BorderThickness="1"
                               CornerRadius="0"
-                              IsVisible="{Binding #PiPCentralControls.IsVisible}"
+                              IsVisible="{Binding IsPiPControlsVisible}"
                               ZIndex="5001"
                               IsHitTestVisible="False">
                           <Border.BoxShadow>

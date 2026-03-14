@@ -132,6 +132,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string _playerLoadingWarningMessage = string.Empty;
 
+    [ObservableProperty]
+    private bool _isDragging;
+
+    [ObservableProperty]
+    private bool _isResizing;
 
     [ObservableProperty]
     private bool _isAudioSettingsOpen;
@@ -1094,12 +1099,38 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     {
         return IsPlaying
             && !IsLocked
+            && !IsDragging
+            && !IsResizing
             && !IsBuffering
             && !IsAudioSettingsOpen
             && !IsQualitySettingsOpen
             && !IsEpisodesPanelOpen
             && !IsInfoPanelOpen
             && !IsNextEpisodePromptVisible;
+    }
+
+    partial void OnIsDraggingChanged(bool value)
+    {
+        if (value)
+        {
+            _autoHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            IsVisible = true;
+            return;
+        }
+
+        RestartAutoHideTimer();
+    }
+
+    partial void OnIsResizingChanged(bool value)
+    {
+        if (value)
+        {
+            _autoHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            IsVisible = true;
+            return;
+        }
+
+        RestartAutoHideTimer();
     }
 
     [RelayCommand]
