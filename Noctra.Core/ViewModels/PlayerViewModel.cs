@@ -434,6 +434,14 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         UpdateNetworkStatus(_networkService.CurrentNetworkStatus);
         _networkService.NetworkStatusChanged += OnNetworkStatusChanged;
 
+        // Initialize subtitle settings from SettingsService to sync UI
+        if (_settingsService?.Settings != null)
+        {
+            _subtitleFontSize = _settingsService.Settings.SubtitleFontSize;
+            _subtitleBackgroundOpacity = _settingsService.Settings.SubtitleBackgroundOpacity;
+            _subtitleMargin = _settingsService.Settings.SubtitleMargin;
+        }
+
         _settingsService.SettingsChanged += OnSettingsChanged;
 
         // Auto-hide timer

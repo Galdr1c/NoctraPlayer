@@ -8,6 +8,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### 🐛 Hata Düzeltmeleri
+- **Altyazı Arayüz Senkronizasyonu Düzeltildi** (2026-03-14): Uygulama yeniden başlatıldığında, oynatıcı kontrol panelindeki altyazı ayar butonlarının (Boyut, Arkaplan Şeffaflığı, Konum) en son kaydedilen ayar yerine varsayılan ("Standart") seçili görünmesi sorunu çözüldü. Arayüz modelinin (`PlayerViewModel`) ayarlardaki gerçek veriyi başlatma anında okuması sağlandı.
+
 ### ✨ Yeni Özellikler ve Geliştirmeler
 - **Kapsamlı Kararlılık ve Birim Testi Seferberliği** (2026-03-14):
     - `EpgService` ve `PlaylistOrganizerService` için toplam 146 yeni birim testi (Unit Test) eklendi.
