@@ -9,6 +9,12 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### 🐛 Hata Düzeltmeleri
+- **Ayarlar Arayüzü ve Güncelleme Sistemi İyileştirildi** (2026-03-15): 
+  - Güncelleme denetleme bölümü Premium/Ücretsiz kartlarından bağımsız hale getirilerek ayrı bir kutu (box) olarak sabitlendi ve boyutu %30 küçültülerek daha kompakt hale getirildi.
+  - "Güncelleştirmeleri Denetle" butonlarındaki komut bağlama (binding) hatası giderilerek butonların pasif kalma sorunu çözüldü.
+  - `UpdateService` içerisindeki versiyon karşılaştırma mantığı `v1.2.3` gibi yaygın formatları ve özel sürüm isimlendirmelerini destekleyecek şekilde güçlendirildi.
+  - `SettingsWindow.axaml` üzerindeki XAML etiket hataları (mismatch) giderilerek derleme kararlılığı sağlandı.
+- **Gizli Geliştirici Modu Erişilebilirliği Artırıldı** (2026-03-15): Geliştirici şifresinin girileceği alan, "v1.0.0" sürüm yazısının üzerine taşınarak gizliliğini korurken erişilebilirliği artırıldı.
 - **PiP Modunda Sürükleme Sırasında Kontrollerin Kaybolması Düzeltildi** (2026-03-14): PiP (Picture-in-Picture) modunda pencere sürüklenirken, işletim sistemi kaynaklı modal döngünün (`BeginMoveDrag`) zamanlayıcıyı (timer) hatalı sıfırlayarak kontrollerin 2.5 saniye sonra aniden kaybolmasına neden olan sorun çözüldü. Sürükleme işlemi için özel bir durum (`IsDragging`) eklendi ve farenin bırakılma anını (`PointerReleased`) doğru yakalayacak mekanizmalar kurularak kontrollerin kullanıcı deneyimine uygun şekilde gizlenmesi sağlandı.
 - **PiP Modunda Yeniden Boyutlandırma Sırasında Kontrollerin Kaybolması Düzeltildi** (2026-03-14): PiP penceresi yeniden boyutlandırılırken (`Resize`) farenin hareketine rağmen kontrollerin aniden kaybolması sorunu giderildi. Boyutlandırma esnasında kontrollerin gizlenmesini önleyen (`IsResizing`) durumu eklendi ve boyutlandırma sırasında farenin hareketi sürekli olarak arayüzle etkileşim (`UserInteractionCommand`) sayılacak şekilde güncellendi.
 - **Çoklu Monitörlerde PiP Konumlandırma Hatası Giderildi** (2026-03-14): Uygulama ikinci bir monitörde çalışırken PiP moduna geçildiğinde, küçük pencerenin aktif monitör yerine birincil monitörün (`Screens.Primary`) köşesine gitmesine neden olan konumlandırma sorunu çözüldü. Pencere artık kullanıcının o an uygulamayı kullandığı aktif ekrana (`Screens.ScreenFromVisual`) göre konumlandırılıyor.

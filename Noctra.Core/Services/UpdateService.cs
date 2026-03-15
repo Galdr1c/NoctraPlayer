@@ -70,11 +70,26 @@ public class UpdateService : IUpdateService
 
     private static bool IsNewerVersion(string remoteVersion, string currentVersion)
     {
+        if (string.IsNullOrWhiteSpace(remoteVersion)) return false;
+
+        // Clean versions (remove leading 'v', 'V' or spaces)
+        remoteVersion = remoteVersion.Trim().TrimStart('v', 'V');
+        currentVersion = currentVersion.Trim().TrimStart('v', 'V');
+
         if (Version.TryParse(remoteVersion, out var remote) && 
             Version.TryParse(currentVersion, out var current))
         {
             return remote > current;
         }
-        return false;
+        
+        // Fallback for non-standard versions (e.g. "1.0.0-beta")
+        try 
+        {
+            return string.Compare(remoteVersion, currentVersion, StringComparison.OrdinalIgnoreCase) > 0;
+        }
+        catch 
+        {
+            return false;
+        }
     }
 }
