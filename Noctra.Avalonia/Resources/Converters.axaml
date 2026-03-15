@@ -24,6 +24,7 @@
   <converters:EqualityToResourceBrushConverter x:Key="EqualityToSelectionBrushConverter" ResourceKey="NavActiveBackgroundBrush" />
   <converters:EqualityToBrushConverter x:Key="EqualityToBrushConverter" TrueBrush="{StaticResource AccentBrush}" FalseBrush="Transparent" />
   <converters:EqualityToVisibilityConverter x:Key="EqualityToVisibilityConverter" />
+  <converters:EqualityToOpacityConverter x:Key="EqualityToOpacityConverter" />
   <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
   <converters:AvatarPathConverter x:Key="AvatarPathConverter" />
   <converters:BoolAndMultiConverter x:Key="BoolAndMultiConverter" />

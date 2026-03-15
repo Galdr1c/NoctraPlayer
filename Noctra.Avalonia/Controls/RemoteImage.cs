@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
+using Avalonia.Animation;
+using Avalonia.Collections;
+using Avalonia.Media;
 using Avalonia.Platform;
 using Avalonia.Threading;
 
@@ -37,6 +40,27 @@ public class RemoteImage : Image
     static RemoteImage()
     {
         UrlProperty.Changed.AddClassHandler<RemoteImage>((control, _) => control.StartImageLoad());
+        IsImageLoadedProperty.Changed.AddClassHandler<RemoteImage>((control, e) =>
+        {
+            if (e.NewValue is bool isLoaded)
+            {
+                control.Opacity = isLoaded ? 1.0 : 0.0;
+            }
+        });
+    }
+
+    public RemoteImage()
+    {
+        // Initialize for fade-in effect
+        Opacity = 0;
+        Transitions = new Transitions
+        {
+            new DoubleTransition
+            {
+                Property = OpacityProperty,
+                Duration = TimeSpan.FromSeconds(0.25)
+            }
+        };
     }
 
     public string? Url

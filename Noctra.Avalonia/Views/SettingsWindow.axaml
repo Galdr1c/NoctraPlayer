@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         xmlns:controls="using:Noctra.Avalonia.Controls"
+        xmlns:behaviors="using:Noctra.Avalonia.Behaviors"
         mc:Ignorable="d"
         x:Class="Noctra.Avalonia.Views.SettingsWindow"
         x:DataType="vm:SettingsViewModel"
@@ -133,7 +134,7 @@
             </Grid>
 
             <!-- CONTENT -->
-            <TabControl Grid.Row="1" Margin="32,0,32,0" Background="Transparent">
+            <TabControl behaviors:TabSlideTransitionBehavior.IsEnabled="True" ClipToBounds="True"Grid.Row="1" Margin="32,0,32,0" Background="Transparent">
                 <TabControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <StackPanel Orientation="Horizontal" />

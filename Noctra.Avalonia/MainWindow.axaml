@@ -5,6 +5,7 @@
         xmlns:views="using:Noctra.Avalonia.Views"
         xmlns:controls="using:Noctra.Avalonia.Controls"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        xmlns:b="using:Noctra.Avalonia.Behaviors"
         x:Class="Noctra.Avalonia.MainWindow"
         x:Name="RootWindow"
         x:DataType="vm:MainViewModel"
@@ -71,16 +72,22 @@
 
       <Style Selector="Button.navItem Border.ActiveIndicator">
         <Setter Property="IsVisible" Value="False"/>
-        <Setter Property="Width" Value="4"/>
+        <Setter Property="Width" Value="0"/>
         <Setter Property="CornerRadius" Value="0,2,2,0"/>
         <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
         <Setter Property="HorizontalAlignment" Value="Left"/>
         <Setter Property="VerticalAlignment" Value="Stretch"/>
         <Setter Property="Height" Value="24"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Width" Duration="0:0:0.25" Easing="CubicEaseOut"/>
+            </Transitions>
+        </Setter>
       </Style>
 
       <Style Selector="Button.navItem.active Border.ActiveIndicator">
         <Setter Property="IsVisible" Value="True"/>
+        <Setter Property="Width" Value="4"/>
       </Style>
 
       <Style Selector="Button.navItem TextBlock">
@@ -412,38 +419,83 @@
       <Grid Margin="60,0,0,0">
 
         <!-- 1. HOME VIEW -->
-                <views:HomeView IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Home}}" />
+                <views:HomeView Opacity="{Binding ActiveView, Converter={StaticResource EqualityToOpacityConverter}, ConverterParameter={x:Static vm:AppView.Home}}"
+                                IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Home}}">
+                    <views:HomeView.Transitions>
+                        <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.15"/></Transitions>
+                    </views:HomeView.Transitions>
+                </views:HomeView>
 
 
         <!-- 2. MOVIES VIEW -->
-                <views:MoviesView IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Movies}}" />
+                <views:MoviesView Opacity="{Binding ActiveView, Converter={StaticResource EqualityToOpacityConverter}, ConverterParameter={x:Static vm:AppView.Movies}}"
+                                  IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Movies}}">
+                    <views:MoviesView.Transitions>
+                        <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.15"/></Transitions>
+                    </views:MoviesView.Transitions>
+                </views:MoviesView>
 
 
         <!-- 3. SERIES VIEW -->
-                <views:SeriesView IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Series}}" />
+                <views:SeriesView Opacity="{Binding ActiveView, Converter={StaticResource EqualityToOpacityConverter}, ConverterParameter={x:Static vm:AppView.Series}}"
+                                  IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Series}}">
+                    <views:SeriesView.Transitions>
+                        <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.15"/></Transitions>
+                    </views:SeriesView.Transitions>
+                </views:SeriesView>
 
 
         <!-- 4. LIVE TV VIEW -->
-                <views:LiveView IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Live}}" />
+                <views:LiveView Opacity="{Binding ActiveView, Converter={StaticResource EqualityToOpacityConverter}, ConverterParameter={x:Static vm:AppView.Live}}"
+                                IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Live}}">
+                    <views:LiveView.Transitions>
+                        <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.15"/></Transitions>
+                    </views:LiveView.Transitions>
+                </views:LiveView>
 
 
         <!-- 5. SEARCH VIEW -->
-                <views:SearchView IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Search}}" />
+                <views:SearchView Opacity="{Binding ActiveView, Converter={StaticResource EqualityToOpacityConverter}, ConverterParameter={x:Static vm:AppView.Search}}"
+                                  IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Search}}">
+                    <views:SearchView.Transitions>
+                        <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.15"/></Transitions>
+                    </views:SearchView.Transitions>
+                </views:SearchView>
 
         <!-- 6. MY LIST VIEW -->
-                <views:MyListView IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.MyList}}" />
+                <views:MyListView Opacity="{Binding ActiveView, Converter={StaticResource EqualityToOpacityConverter}, ConverterParameter={x:Static vm:AppView.MyList}}"
+                                  IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.MyList}}">
+                    <views:MyListView.Transitions>
+                        <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.15"/></Transitions>
+                    </views:MyListView.Transitions>
+                </views:MyListView>
 
 
         <!-- 7. FAVORITES VIEW -->
-                <views:FavoritesView IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Favorites}}" />
+                <views:FavoritesView Opacity="{Binding ActiveView, Converter={StaticResource EqualityToOpacityConverter}, ConverterParameter={x:Static vm:AppView.Favorites}}"
+                                     IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Favorites}}">
+                    <views:FavoritesView.Transitions>
+                        <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.15"/></Transitions>
+                    </views:FavoritesView.Transitions>
+                </views:FavoritesView>
 
 
         <!-- 8. HISTORY VIEW -->
-                <views:HistoryView IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.History}}" />
+                <views:HistoryView Opacity="{Binding ActiveView, Converter={StaticResource EqualityToOpacityConverter}, ConverterParameter={x:Static vm:AppView.History}}"
+                                   IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.History}}">
+                    <views:HistoryView.Transitions>
+                        <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.15"/></Transitions>
+                    </views:HistoryView.Transitions>
+                </views:HistoryView>
 
 
         <!-- 9. DOWNLOADS VIEW -->
-                <views:DownloadsView IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Downloads}}" />
+                <views:DownloadsView Opacity="{Binding ActiveView, Converter={StaticResource EqualityToOpacityConverter}, ConverterParameter={x:Static vm:AppView.Downloads}}"
+                                     IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Downloads}}">
+                    <views:DownloadsView.Transitions>
+                        <Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.15"/></Transitions>
+                    </views:DownloadsView.Transitions>
+                </views:DownloadsView>
 
 
 
@@ -691,12 +743,17 @@
                                               </Border>
                                               <Border x:Name="SelectionIndicator"
                                                       Height="3"
-                                                      Width="20"
+                                                      Width="0"
                                                       Background="{DynamicResource AccentBrush}"
                                                       VerticalAlignment="Bottom"
                                                       HorizontalAlignment="Center"
-                                                      CornerRadius="1.5"
-                                                      IsVisible="False"/>
+                                                      CornerRadius="1.5">
+                                                  <Border.Transitions>
+                                                      <Transitions>
+                                                          <DoubleTransition Property="Width" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+                                                      </Transitions>
+                                                  </Border.Transitions>
+                                              </Border>
                                           </Grid>
                                       </ControlTemplate>
                                   </Setter>
@@ -745,7 +802,8 @@
                   </StackPanel>
 
                   <!-- Episode Row List -->
-                  <ItemsControl Grid.Row="1" ItemsSource="{Binding SelectedSeason.Episodes}">
+                  <ItemsControl Grid.Row="1" ItemsSource="{Binding SelectedSeason.Episodes}"
+                                b:SlideTransitionBehavior.TriggerValue="{Binding SelectedSeason}">
                       <ItemsControl.ItemTemplate>
                           <DataTemplate>
                               <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).PlayEpisodeCommand}"
@@ -1165,10 +1223,15 @@
             <ProgressBar IsIndeterminate="True" Width="14" Height="14" 
                          IsVisible="{Binding IsLoading}" 
                          Theme="{StaticResource ProgressRingTheme}"/>
-            <TextBlock Text="{Binding StatusMessage}" FontSize="12" 
-                       Foreground="{DynamicResource TextPrimaryBrush}" 
-                       VerticalAlignment="Center"/>
-            <TextBlock Text="{Binding ChannelLoadingStats}" 
+            <TextBlock Text="{Binding StatusMessage}" FontSize="12"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       VerticalAlignment="Center">
+              <TextBlock.Transitions>
+                <Transitions>
+                  <DoubleTransition Property="Opacity" Duration="0:0:0.25"/>
+                </Transitions>
+              </TextBlock.Transitions>
+            </TextBlock>            <TextBlock Text="{Binding ChannelLoadingStats}" 
                        IsVisible="{Binding IsChannelLoading}" 
                        FontSize="11" Foreground="{DynamicResource TextMutedBrush}" 
                        VerticalAlignment="Center" Margin="8,0,0,0"/>
