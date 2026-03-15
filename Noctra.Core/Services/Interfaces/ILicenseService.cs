@@ -10,6 +10,7 @@ public interface ILicenseService
     // Legacy properties (backward compat)
     bool IsPremium { get; }
     void ActivatePremium();
+    void DeactivatePremium();
     string GetPriceText();
     
     // New tier system

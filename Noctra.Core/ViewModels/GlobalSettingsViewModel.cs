@@ -37,6 +37,41 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool _isCheckingUpdates;
 
+    [ObservableProperty]
+    private string _developerPassword = string.Empty;
+
+    [ObservableProperty]
+    private bool _isDeveloperModeActive;
+
+    partial void OnDeveloperPasswordChanged(string value)
+    {
+        var envPassword = Environment.GetEnvironmentVariable("DEV_PASSWORD");
+        if (!string.IsNullOrEmpty(envPassword) && value == envPassword)
+        {
+            IsDeveloperModeActive = true;
+            DeveloperPassword = string.Empty; // clear
+        }
+        else if (value == "close")
+        {
+            IsDeveloperModeActive = false;
+            DeveloperPassword = string.Empty;
+        }
+    }
+
+    [RelayCommand]
+    private void TogglePremium()
+    {
+        if (_licenseService.IsPremium)
+        {
+            _licenseService.DeactivatePremium();
+        }
+        else
+        {
+            _licenseService.ActivatePremium();
+        }
+        OnPropertyChanged(nameof(IsPremium));
+    }
+
     private UpdateInfo? _latestUpdate;
 
     private GlobalSettings _settings = new();

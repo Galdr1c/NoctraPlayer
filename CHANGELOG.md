@@ -29,6 +29,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **Altyazı Arayüz Senkronizasyonu Düzeltildi** (2026-03-14): Uygulama yeniden başlatıldığında, oynatıcı kontrol panelindeki altyazı ayar butonlarının (Boyut, Arkaplan Şeffaflığı, Konum) en son kaydedilen ayar yerine varsayılan ("Standart") seçili görünmesi sorunu çözüldü. Arayüz modelinin (`PlayerViewModel`) ayarlardaki gerçek veriyi başlatma anında okuması sağlandı.
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Gizli Geliştirici Modu ve Premium Bypass** (2026-03-14): Ayarlar menüsüne (`GlobalSettingsWindow`) sadece geliştiricilerin erişebileceği, test süreçlerini hızlandıracak gizli bir araç seti (`Developer Tools`) eklendi.
+  - Ayarlar sayfasının en altında yer alan görünmez metin kutusuna ortam değişkenlerinden (`.env` içerisindeki `DEV_PASSWORD`) alınan şifre girildiğinde özel panel aktif hale gelir. 
+  - Geliştirici paneline, tek tıkla uygulamanın Premium ve Ücretsiz sürümleri arasında geçiş yapabilmesini sağlayan "Toggle Premium" özelliği entegre edildi.
 - **Gelişmiş Hata Raporlama ve Çökme Takip Sistemi** (2026-03-14):
     - Uygulama içerisinde karşılaşılan hataların ve beklenmedik çökmelerin (crash) anında geliştiriciye raporlanmasını sağlayan profesyonel bir teşhis altyapısı eklendi.
     - **Otomatik Teşhis:** Kullanıcı ID, lisans durumu, işletim sistemi versiyonu ve mimari bilgilerini içeren minimalist ve İngilizce raporlar oluşturulması sağlandı.

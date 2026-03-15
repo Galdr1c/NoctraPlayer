@@ -220,6 +220,69 @@ public partial class SettingsViewModel : ObservableObject
     public string CurrentVersion => _updateService.CurrentVersion;
     public bool IsPremium => _licenseService.IsPremium;
 
+    [ObservableProperty]
+    private string _updateStatusText = "Güncel";
+
+    [ObservableProperty]
+    private bool _isUpdateAvailable;
+
+    [ObservableProperty]
+    private bool _isCheckingUpdates;
+
+    private UpdateInfo? _latestUpdate;
+
+    [RelayCommand]
+    private async Task CheckForUpdatesAsync()
+    {
+        if (IsCheckingUpdates) return;
+
+        IsCheckingUpdates = true;
+        UpdateStatusText = "Kontrol ediliyor...";
+        IsUpdateAvailable = false;
+        _latestUpdate = null;
+
+        try
+        {
+            await Task.Delay(800); // UI feedback
+            var update = await _updateService.CheckForUpdatesAsync();
+
+            if (update != null)
+            {
+                _latestUpdate = update;
+                IsUpdateAvailable = true;
+                UpdateStatusText = $"Yeni Sürüm: v{update.Version}";
+            }
+            else
+            {
+                UpdateStatusText = "Uygulama güncel";
+            }
+        }
+        catch (Exception)
+        {
+            UpdateStatusText = "Kontrol edilemedi";
+        }
+        finally
+        {
+            IsCheckingUpdates = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task StartUpdateAsync()
+    {
+        if (_latestUpdate == null) return;
+
+        var confirmed = await _dialogService.ShowConfirmationAsync(
+            "Güncelleme",
+            $"v{_latestUpdate.Version} sürümünü şimdi indirmek istiyor musunuz?\n\nDeğişiklikler:\n{_latestUpdate.Changelog}"
+        );
+
+        if (confirmed)
+        {
+            await _updateService.StartUpdateAsync(_latestUpdate);
+        }
+    }
+
     [RelayCommand]
     private async Task ShowUpsell()
     {

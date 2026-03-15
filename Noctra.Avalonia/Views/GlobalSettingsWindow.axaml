@@ -514,41 +514,11 @@
                                         </Border>
 
                                         <!-- PREMIUM FOOTER -->
-                                        <Grid ColumnDefinitions="*,Auto">
+                                        <Grid>
                                             <StackPanel>
                                                 <TextBlock Text="© 2026 Noctra. Tüm Hakları Saklıdır."
                                                          FontSize="12"
                                                          Foreground="{DynamicResource TextMutedBrush}"/>
-                                            </StackPanel>
-                                            
-                                            <!-- Update Status & Check Button -->
-                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Button Command="{Binding CheckForUpdatesAsyncCommand}"
-                                                        Classes="TextLinkButtonStyle"
-                                                        Content="Güncelleştirmeleri Denetle"
-                                                        IsVisible="{Binding !IsUpdateAvailable}"/>
-                                                
-                                                <Button Command="{Binding StartUpdateAsyncCommand}"
-                                                        Background="{DynamicResource AccentBrush}"
-                                                        Foreground="White"
-                                                        Padding="12,6"
-                                                        CornerRadius="4"
-                                                        Content="Güncelleştirmeyi İndir"
-                                                        IsVisible="{Binding IsUpdateAvailable}"/>
-
-                                                <TextBlock Text="{Binding UpdateStatusText}"
-                                                           FontSize="13"
-                                                           Foreground="{DynamicResource AccentBrush}"
-                                                           VerticalAlignment="Center"
-                                                           Margin="12,0,0,0"
-                                                           IsVisible="{Binding !IsCheckingUpdates}"/>
-                                                
-                                                <ProgressBar IsIndeterminate="True" 
-                                                             Width="60" 
-                                                             Height="2"
-                                                             VerticalAlignment="Center"
-                                                             Margin="12,0,0,0"
-                                                             IsVisible="{Binding IsCheckingUpdates}"/>
                                             </StackPanel>
                                         </Grid>
                                     </StackPanel>
@@ -615,6 +585,54 @@
                         </Border>
                     </Panel>
 
+                    <!-- UPDATE SECTION (Separate Box) -->
+                    <Border Background="{DynamicResource Surface0Brush}" 
+                            CornerRadius="8" 
+                            Padding="16,12" 
+                            Margin="0,0,0,16">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel VerticalAlignment="Center" Spacing="2">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <materialIcons:MaterialIcon Kind="Update" Width="18" Height="18" Foreground="{DynamicResource AccentBrush}"/>
+                                    <TextBlock Text="Uygulama Güncellemesi" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding UpdateStatusText}"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextMutedBrush}"/>
+                            </StackPanel>
+                            
+                            <!-- Update Actions -->
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Command="{Binding CheckForUpdatesCommand}"
+                                        Padding="14,6"
+                                        Background="{DynamicResource Surface1Brush}"
+                                        Foreground="{DynamicResource TextPrimaryBrush}"
+                                        CornerRadius="6"
+                                        Cursor="Hand"
+                                        IsVisible="{Binding !IsUpdateAvailable}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <materialIcons:MaterialIcon Kind="Refresh" Width="14" Height="14" IsVisible="{Binding !IsCheckingUpdates}"/>
+                                        <ProgressBar IsIndeterminate="True" Width="14" Height="14" Margin="0" IsVisible="{Binding IsCheckingUpdates}" Theme="{StaticResource FluentProgressBar}"/>
+                                        <TextBlock Text="Güncelleştirmeleri Denetle" FontSize="13"/>
+                                    </StackPanel>
+                                </Button>
+                                
+                                <Button Command="{Binding StartUpdateCommand}"
+                                        Background="{DynamicResource AccentBrush}"
+                                        Foreground="White"
+                                        Padding="16,8"
+                                        CornerRadius="6"
+                                        Cursor="Hand"
+                                        IsVisible="{Binding IsUpdateAvailable}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <materialIcons:MaterialIcon Kind="Download" Width="16" Height="16"/>
+                                        <TextBlock Text="Şimdi Güncelle" FontWeight="Bold" FontSize="13"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
                     <!-- BUG REPORT (Common for both) -->
                     <Border Background="#1AE50914" BorderBrush="#E50914" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,20">
                         <Grid ColumnDefinitions="*,Auto">
@@ -650,6 +668,56 @@
                                 <Button Content="Destek"
                                         Classes="TextLinkButtonStyle"/>
                             </StackPanel>
+
+                    <!-- DEVELOPER TOOLS SECTION -->
+                    <Border Background="#0D00FF00" BorderBrush="#3300FF00" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,24,0,0"
+                            IsVisible="{Binding IsDeveloperModeActive}">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
+                                <materialIcons:MaterialIcon Kind="CodeBraces" Width="20" Height="20" Foreground="#00FF00"/>
+                                <TextBlock Text="Geliştirici Araçları" FontWeight="Bold" Foreground="#00FF00" FontSize="16" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            
+                            <Border Background="{DynamicResource Surface1Brush}" CornerRadius="6" Padding="12">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Premium Bypass" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                        <TextBlock Text="Abonelik seviyesini Premium/Free olarak değiştirir" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="1" 
+                                            Content="Toggle Premium" 
+                                            Command="{Binding TogglePremiumCommand}" 
+                                            Background="#1A00FF00" 
+                                            Foreground="#00FF00"
+                                            BorderBrush="#3300FF00"
+                                            BorderThickness="1"
+                                            Padding="12,6" 
+                                            CornerRadius="4"
+                                            Cursor="Hand"/>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- SECRET DEVELOPER ENTRY -->
+                    <Grid Height="30" Margin="0,10,0,0">
+                        <TextBlock Text="{Binding CurrentVersion}" 
+                                  FontSize="10" 
+                                  Foreground="{DynamicResource BorderBrush}"
+                                  HorizontalAlignment="Center" 
+                                  VerticalAlignment="Center"
+                                  IsHitTestVisible="False"/>
+                        <TextBox Text="{Binding DeveloperPassword}" 
+                                 Background="Transparent" 
+                                 BorderThickness="0" 
+                                 Foreground="Transparent"
+                                 CaretBrush="Transparent"
+                                 SelectionBrush="Transparent"
+                                 HorizontalAlignment="Stretch"
+                                 VerticalAlignment="Stretch"
+                                 Opacity="0.05"
+                                 Cursor="IBeam"/>
+                    </Grid>
                         
 
                 </StackPanel>
