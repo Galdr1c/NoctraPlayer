@@ -134,7 +134,7 @@
             </Grid>
 
             <!-- CONTENT -->
-            <TabControl behaviors:TabSlideTransitionBehavior.IsEnabled="True" ClipToBounds="True"Grid.Row="1" Margin="32,0,32,0" Background="Transparent">
+            <TabControl behaviors:TabSlideTransitionBehavior.IsEnabled="True" ClipToBounds="True" Grid.Row="1" Margin="32,0,32,0" Background="Transparent">
                 <TabControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <StackPanel Orientation="Horizontal" />

@@ -72,7 +72,7 @@ public class SlideTransitionBehavior : AvaloniaObject
         int newOrder = GetSeasonOrder(e.NewValue);
 
         // İlk açılışta veya bilinmeyen yönde hafif bir fade-in
-        double slideDistance = e.OldValue is null ? 12.0 : 28.0;
+        double slideDistance = e.OldValue is null ? 12.0 : 32.0; // Mesafeyi TabSlideTransitionBehavior ile eşitledik (32.0)
         double startX = (e.OldValue is null || newOrder >= oldOrder)
             ? slideDistance    // sağdan geliyor → sola kayar
             : -slideDistance;  // soldan geliyor → sağa kayar
@@ -87,7 +87,7 @@ public class SlideTransitionBehavior : AvaloniaObject
         // Easing: iOS/Apple TV tarzı — hızlı giriş, çok yumuşak çıkış
         var animation = new Animation
         {
-            Duration    = TimeSpan.FromMilliseconds(380),
+            Duration    = TimeSpan.FromMilliseconds(320), // Süreyi TabSlideTransitionBehavior ile eşitledik (320ms)
             Easing      = new SplineEasing(0.25, 1.0, 0.3, 1.0),
             FillMode    = FillMode.Forward,
             Children    =
@@ -101,10 +101,11 @@ public class SlideTransitionBehavior : AvaloniaObject
                         new Setter(TranslateTransform.XProperty, startX),
                     }
                 },
-                // %40'da opacity tamamlanır; kalan sürede sadece kayma usulca biter
+                // %35'te opacity tamamlanır — içerik çabuk "snap" eder,
+                // kalan sürede sadece kayma usulca biter
                 new KeyFrame
                 {
-                    Cue     = new Cue(0.4d),
+                    Cue     = new Cue(0.35d),
                     Setters =
                     {
                         new Setter(Visual.OpacityProperty, 1.0d),
