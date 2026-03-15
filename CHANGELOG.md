@@ -14,6 +14,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - "Güncelleştirmeleri Denetle" butonlarındaki komut bağlama (binding) hatası giderilerek butonların pasif kalma sorunu çözüldü.
   - `UpdateService` içerisindeki versiyon karşılaştırma mantığı `v1.2.3` gibi yaygın formatları ve özel sürüm isimlendirmelerini destekleyecek şekilde güçlendirildi.
   - `SettingsWindow.axaml` üzerindeki XAML etiket hataları (mismatch) giderilerek derleme kararlılığı sağlandı.
+- **Hata Raporlama E-posta Adresi Güncellendi** (2026-03-15): Diagnostic raporlarının gönderileceği hedef e-posta adresi `kynora.studio@gmail.com` olarak güncellendi.
 - **Gizli Geliştirici Modu Erişilebilirliği Artırıldı** (2026-03-15): Geliştirici şifresinin girileceği alan, "v1.0.0" sürüm yazısının üzerine taşınarak gizliliğini korurken erişilebilirliği artırıldı.
 - **PiP Modunda Sürükleme Sırasında Kontrollerin Kaybolması Düzeltildi** (2026-03-14): PiP (Picture-in-Picture) modunda pencere sürüklenirken, işletim sistemi kaynaklı modal döngünün (`BeginMoveDrag`) zamanlayıcıyı (timer) hatalı sıfırlayarak kontrollerin 2.5 saniye sonra aniden kaybolmasına neden olan sorun çözüldü. Sürükleme işlemi için özel bir durum (`IsDragging`) eklendi ve farenin bırakılma anını (`PointerReleased`) doğru yakalayacak mekanizmalar kurularak kontrollerin kullanıcı deneyimine uygun şekilde gizlenmesi sağlandı.
 - **PiP Modunda Yeniden Boyutlandırma Sırasında Kontrollerin Kaybolması Düzeltildi** (2026-03-14): PiP penceresi yeniden boyutlandırılırken (`Resize`) farenin hareketine rağmen kontrollerin aniden kaybolması sorunu giderildi. Boyutlandırma esnasında kontrollerin gizlenmesini önleyen (`IsResizing`) durumu eklendi ve boyutlandırma sırasında farenin hareketi sürekli olarak arayüzle etkileşim (`UserInteractionCommand`) sayılacak şekilde güncellendi.
@@ -38,6 +39,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **Gizli Geliştirici Modu ve Premium Bypass** (2026-03-14): Ayarlar menüsüne (`GlobalSettingsWindow`) sadece geliştiricilerin erişebileceği, test süreçlerini hızlandıracak gizli bir araç seti (`Developer Tools`) eklendi.
   - Ayarlar sayfasının en altında yer alan görünmez metin kutusuna ortam değişkenlerinden (`.env` içerisindeki `DEV_PASSWORD`) alınan şifre girildiğinde özel panel aktif hale gelir. 
   - Geliştirici paneline, tek tıkla uygulamanın Premium ve Ücretsiz sürümleri arasında geçiş yapabilmesini sağlayan "Toggle Premium" özelliği entegre edildi.
+- **İçerik Yükleme ve Boş Durum (Empty State) Tasarımları** (2026-03-15):
+  - **Dinamik Yükleme:** Canlı TV, Film ve Dizi sayfaları için içeriğin yüklenme durumunu belirten (`IsContentLoading`) yeni bir sistem eklendi. Yükleme sırasında sayfa içeriğine uygun mesajlar ve premium yükleme animasyonu gösterilir.
+  - **Görsel Boş Durumlar:** Filtreleme veya arama sonucunda içerik bulunamadığında (`ShowEmptyChannels`) her kategoriye özel (Televizyon, Filmstrip, MovieFilter) ikonlar ve yönlendirici metinler içeren estetik paneller tasarlandı.
+  - **Zeki Durum Yönetimi:** Yükleme ve boş state geçişleri, listenin o anki doluluk oranına ve sunucu yanıt durumuna göre otomatik olarak yönetilir.
 - **Gelişmiş Hata Raporlama ve Çökme Takip Sistemi** (2026-03-14):
     - Uygulama içerisinde karşılaşılan hataların ve beklenmedik çökmelerin (crash) anında geliştiriciye raporlanmasını sağlayan profesyonel bir teşhis altyapısı eklendi.
     - **Otomatik Teşhis:** Kullanıcı ID, lisans durumu, işletim sistemi versiyonu ve mimari bilgilerini içeren minimalist ve İngilizce raporlar oluşturulması sağlandı.

@@ -200,6 +200,21 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _isChannelLoading;
 
+    public bool IsContentLoading => IsChannelLoading && (ActiveView == AppView.Series ? SeriesViewItems.Count == 0 : FilteredChannels.Count == 0);
+    public bool ShowEmptyChannels => !IsChannelLoading && (ActiveView == AppView.Series ? SeriesViewItems.Count == 0 : FilteredChannels.Count == 0);
+
+    partial void OnIsChannelLoadingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsContentLoading));
+        OnPropertyChanged(nameof(ShowEmptyChannels));
+    }
+
+    partial void OnActiveViewChanged(AppView value)
+    {
+        OnPropertyChanged(nameof(IsContentLoading));
+        OnPropertyChanged(nameof(ShowEmptyChannels));
+    }
+
     [ObservableProperty]
     private double _channelLoadingProgress;
 
@@ -1552,6 +1567,8 @@ public partial class MainViewModel : ObservableObject
         _isLoadingMoreChannels = false;
         Channels.Clear();
         FilteredChannels.Clear();
+        OnPropertyChanged(nameof(IsContentLoading));
+        OnPropertyChanged(nameof(ShowEmptyChannels));
     }
 
     private void ResetSeriesIncrementalState()
@@ -1561,6 +1578,8 @@ public partial class MainViewModel : ObservableObject
         _isLoadingMoreSeriesItems = false;
         _seriesFilteredSource = new List<Series>();
         SeriesViewItems.Clear();
+        OnPropertyChanged(nameof(IsContentLoading));
+        OnPropertyChanged(nameof(ShowEmptyChannels));
     }
 
     public async Task LoadMoreChannelsAsync(CancellationToken cancellationToken = default)
@@ -1650,6 +1669,8 @@ public partial class MainViewModel : ObservableObject
                         Channels.Add(item);
                     }
                 }
+                OnPropertyChanged(nameof(IsContentLoading));
+                OnPropertyChanged(nameof(ShowEmptyChannels));
             });
 
             var isPersonalView = ActiveView == AppView.MyList || ActiveView == AppView.Favorites;
@@ -1724,6 +1745,8 @@ public partial class MainViewModel : ObservableObject
             {
                 SeriesViewItems.Add(item);
             }
+            OnPropertyChanged(nameof(IsContentLoading));
+            OnPropertyChanged(nameof(ShowEmptyChannels));
 
             // On-demand TMDB enrichment for newly visible series
             var enrichPage = page.Where(s => (s.TmdbId == null && s.LastTmdbSync == null) || s.MetadataFetchedAt == null).ToList();

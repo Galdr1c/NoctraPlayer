@@ -9,7 +9,7 @@ namespace Noctra.Services;
 
 public class DiagnosticReportService : IDiagnosticReportService
 {
-    private const string TargetEmail = "support@noctra.app";
+    private const string TargetEmail = "kynora.studio@gmail.com";
     private readonly ILicenseService _licenseService;
 
     public DiagnosticReportService(ILicenseService licenseService)
