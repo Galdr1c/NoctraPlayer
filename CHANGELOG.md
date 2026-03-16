@@ -18,6 +18,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - `VideoOverlayView` içerisindeki yükleniyor (buffering) animasyonu, noktalar arası geçiş süresi ve döngü asimetrisi giderilerek daha akıcı hale getirildi.
   - `VideoOverlayView` içerisindeki ilerleme çubuğu (Seek Bar) üzerine fare ile gelindiğinde o anki zamanı gösteren estetik bir "hover preview" Tooltip (pill) eklendi; `track.ValueFromPoint` ile %100 senkronizasyon sağlandı.
   - Video oynatıcı yan panel başlıkları (HAKKINDA, SES VE ALTYAZI vb.) ve alt başlıklar (VİDEO, SES vb.) için separetör çizgileri yazı genişliğine göre standartlaştırıldı.
+  - `SeriesDetailOverlay` içerisinde backdrop poster üzerindeki standart gradient, `Transparent` -> `Bg0Color` geçişli `LinearGradientBrush` ile değiştirilerek posterden içeriğe daha sinematik ve yumuşak bir geçiş sağlandı.
+  - Dizi detay sayfasındaki başlık alanı `Viewbox` ile sarmalanarak uzun dizi isimlerinin (örn: "Diriliş: Ertuğrul") tasarımda taşma yapmadan dinamik olarak ölçeklenmesi sağlandı.
+  - Dizi detay sayfasındaki "Oynat" butonuna hover durumunda accent renginde yumuşak bir parlama (glow) efekti eklendi (`BoxShadow`).
   - `PremiumSpinner` bileşeni içerisindeki placeholder ikon kaldırıldı ve yerine "nefes alma" (pulse) animasyonlu Noctra logosu yerleştirildi; bu görsel iyileştirme `ProfileLoadingWindow`, `SplashWindow` ve `MainWindow` yükleme katmanlarına uygulandı.
 
 ### 🐛 Hata Düzeltmeleri

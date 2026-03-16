@@ -512,7 +512,14 @@
                         <BlurEffect Radius="60"/>
                     </controls:RemoteImage.Effect>
                 </controls:RemoteImage>
-                <Border Background="{DynamicResource BackgroundGradientBrush}"/>
+                <Border>
+                  <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                      <GradientStop Color="Transparent" Offset="0.0"/>
+                      <GradientStop Color="{DynamicResource Bg0Color}" Offset="1.0"/>
+                    </LinearGradientBrush>
+                  </Border.Background>
+                </Border>
             </Grid>
 
             <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -554,10 +561,12 @@
                       </Button>
 
                       <StackPanel Spacing="8">
+                        <Viewbox Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left" MaxHeight="120">
                           <TextBlock Text="{Binding SelectedSeries.Name}" FontSize="52" FontWeight="Black" 
-                                    Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" LineHeight="58" LetterSpacing="-1"/>
-                          <TextBlock Text="İndirilen Bölümler" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"
-                                     IsVisible="{Binding IsDownloadedSeriesDetailMode}"/>
+                                     Foreground="{DynamicResource TextPrimaryBrush}" LetterSpacing="-1"/>
+                        </Viewbox>
+                        <TextBlock Text="İndirilen Bölümler" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"
+                                   IsVisible="{Binding IsDownloadedSeriesDetailMode}"/>
                       </StackPanel>
 
                       <!-- Badges & Stats (Netflix Style Meta) -->
@@ -626,14 +635,21 @@
 
                     <!-- Action Buttons -->
                     <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,24,0,0" Spacing="10" IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
-                        <Button Command="{Binding PlayEpisodeCommand}" CommandParameter="{Binding SelectedSeriesContinueEpisode}"
-                                Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource TextPrimaryBrush}"
-                                Padding="16,8" CornerRadius="8" Focusable="False">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <materialIcons:MaterialIcon Kind="Play" Width="18" Height="18" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                <TextBlock Text="Oynat" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
+                        <Border CornerRadius="8" Background="Transparent" ClipToBounds="False">
+                            <Border.Styles>
+                                <Style Selector="Border:pointerover">
+                                    <Setter Property="BoxShadow" Value="0 0 16 0 #608B5CF6"/>
+                                </Style>
+                            </Border.Styles>
+                            <Button Command="{Binding PlayEpisodeCommand}" CommandParameter="{Binding SelectedSeriesContinueEpisode}"
+                                    Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource TextPrimaryBrush}"
+                                    Padding="16,8" CornerRadius="8" Focusable="False">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <materialIcons:MaterialIcon Kind="Play" Width="18" Height="18" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="Oynat" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </Border>
 
                         <Button Command="{Binding PlayEpisodeCommand}" CommandParameter="{Binding SelectedSeriesContinueEpisode}"
                                 Background="#1A8B5CF6" Foreground="{DynamicResource AccentBrush}"
@@ -842,7 +858,7 @@
 
                                                   <!-- Status Badge (Verified Style) -->
                                                   <Border IsVisible="{Binding IsCompleted}" VerticalAlignment="Center" ToolTip.Tip="İzlendi" Background="Transparent">
-                                                      <materialIcons:MaterialIcon Kind="CheckCircleOutline" Width="22" Height="22" Foreground="{DynamicResource AccentBrush}"/>
+                                                      <materialIcons:MaterialIcon Kind="CheckCircle" Width="22" Height="22" Foreground="{DynamicResource AccentBrush}"/>
                                                   </Border>                                              </StackPanel>
                                               <TextBlock Text="{Binding TmdbEpisodeName}" 
                                                          FontSize="14" Foreground="{DynamicResource AccentBrush}" FontStyle="Italic" Opacity="0.85"

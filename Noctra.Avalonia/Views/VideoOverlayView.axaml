@@ -554,7 +554,7 @@
                                                                         <TextBlock Text="{Binding TmdbEpisodeName}" FontSize="12" Foreground="{DynamicResource AccentBrush}" FontStyle="Italic" Opacity="0.9" TextTrimming="CharacterEllipsis" IsVisible="{Binding TmdbEpisodeName, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
                                                                         <DockPanel LastChildFill="True">
                                                                             <Border DockPanel.Dock="Right" IsVisible="{Binding IsCompleted}" VerticalAlignment="Center" Margin="8,0,0,0" ToolTip.Tip="İzlendi">
-                                                                                <materialIcons:MaterialIcon Kind="CheckCircleOutline" Width="18" Height="18" Foreground="{DynamicResource AccentBrush}"/>
+                                                                                <materialIcons:MaterialIcon Kind="CheckCircle" Width="18" Height="18" Foreground="{DynamicResource AccentBrush}"/>
                                                                             </Border>
                                                                             <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" MaxLines="2" TextWrapping="Wrap" LineHeight="17" VerticalAlignment="Center"/>
                                                                         </DockPanel>
