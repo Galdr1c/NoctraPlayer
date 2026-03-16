@@ -264,8 +264,9 @@
 
         <!-- Filter Row -->
         <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,20">
-          <!-- Filter chips removed as requested -->
-          <ComboBox Grid.Column="1" Width="160" SelectedIndex="{Binding SelectedDownloadSortOrder}" Background="Transparent" BorderThickness="0">
+          <ComboBox Grid.Column="1" Theme="{StaticResource ModernComboBox}" 
+                    Width="200" HorizontalAlignment="Right"
+                    SelectedIndex="{Binding SelectedDownloadSortOrder}">
             <ComboBoxItem Content="Son İndirilen"/>
             <ComboBoxItem Content="İsim (A-Z)"/>
             <ComboBoxItem Content="Boyut (Büyük)"/>

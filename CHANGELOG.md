@@ -8,6 +8,16 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### ✨ Yeni Özellikler ve İyileştirmeler
+- **Tema Seçimi ve UI Estetiği Güçlendirildi** (2026-03-16):
+  - `SettingsWindow` ve `GlobalSettingsWindow` pencerelerindeki tema önizleme butonlarında kullanılan tüm hardcoded renk kodları (`#141414`, `#1A1A1A`, vb.) temizlendi.
+  - Tema önizlemeleri için `DarkTheme.axaml` ve `LightTheme.axaml` dosyalarına dinamik kaynaklar (`ThemePreview` resources) eklendi, böylece butonlar aktif temaya tam uyumlu hale getirildi.
+  - `DownloadsView` sayfasındaki sıralama ComboBox'ı, uygulamanın geri alanıyla tutarlı olacak şekilde `ModernComboBox` tasarımına yükseltildi.
+  - `LiveView`, `MoviesView` ve `SeriesView` görünümlerinde kartların sağ ve alt kenarlarda bıraktığı gereksiz boşluklar (margin collision), `ItemsControl` üzerine uygulanan negatif offset (`Margin="0,0,-16,-16"`) ile giderildi.
+  - Uygulama genelindeki tema seçim butonlarının boyutları standartlaştırılarak (130x85) görsel tutarlılık sağlandı.
+  - `VideoOverlayView` içerisindeki yükleniyor (buffering) animasyonu, noktalar arası geçiş süresi ve döngü asimetrisi giderilerek daha akıcı hale getirildi.
+  - `PremiumSpinner` bileşeni içerisindeki placeholder ikon kaldırıldı ve yerine "nefes alma" (pulse) animasyonlu Noctra logosu yerleştirildi; bu görsel iyileştirme `ProfileLoadingWindow`, `SplashWindow` ve `MainWindow` yükleme katmanlarına uygulandı.
+
 ### 🐛 Hata Düzeltmeleri
 - **Ayarlar Arayüzü ve Güncelleme Sistemi İyileştirildi** (2026-03-15): 
   - Güncelleme denetleme bölümü Premium/Ücretsiz kartlarından bağımsız hale getirilerek ayrı bir kutu (box) olarak sabitlendi ve boyutu %30 küçültülerek daha kompakt hale getirildi.
@@ -137,6 +147,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **Gelişmiş Yenileme Seçenekleri**: EPG ve Kanal Listesi yenileme sıklığı seçeneklerine 2 gün, 3 gün ve 7 gün alternatifleri eklendi. Varsayılan bekleme süresi her iki ayar için de "Kapalı (Sadece Manuel)" (0 saat) olarak ayarlandı.
 - **Arama Önerisi İyileştirmeleri**: "Bunu mu demek istediniz?" mantığı daha isabetli olacak şekilde optimize edildi.
 - **Ana Sayfa Boş Durum Görünümü**: "İzlemeye Devam Et" listesi boş olduğunda (yeni profil veya içerik izlenmemişse) ekrana hoş geldiniz mesajı ve yönlendirmeler içeren şık bir placeholder eklendi.
+- **İndirilenler Tasarım Güncellemesi**: İndirilenler sayfasındaki sıralama ComboBox'ı, uygulamanın genel modern tasarım diliyle (`ModernComboBox`) uyumlu hale getirildi.
 
 ### 🛠️ Düzeltmeler ve Optimizasyonlar
 - **Gelişmiş Seri ve EPG Kimlik Algılama** (2026-03-14):

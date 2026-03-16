@@ -21,7 +21,7 @@
                 <ComboBox Width="240" Height="45" ItemsSource="{Binding SortOptions}" SelectedValue="{Binding SelectedSortOrder}" SelectedValueBinding="{Binding Key}" DisplayMemberBinding="{Binding Value}" Theme="{StaticResource ModernComboBox}"/>
               </StackPanel>
             </Grid>
-            <ItemsControl ItemsSource="{Binding FilteredChannels}">
+            <ItemsControl ItemsSource="{Binding FilteredChannels}" Margin="0,0,-16,-16">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="models:Channel">

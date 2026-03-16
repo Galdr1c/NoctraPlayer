@@ -577,7 +577,53 @@
         </Border>
 
         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" ZIndex="950" IsVisible="{Binding IsBuffering}">
-            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center"><Ellipse Width="10" Height="10" Fill="{DynamicResource AccentBrush}" Opacity="0.35"><Ellipse.Styles><Style Selector="Ellipse"><Style.Animations><Animation Duration="0:0:1.0" IterationCount="INFINITE"><KeyFrame Cue="0%"><Setter Property="Opacity" Value="1"/></KeyFrame><KeyFrame Cue="33%"><Setter Property="Opacity" Value="0.35"/></KeyFrame><KeyFrame Cue="66%"><Setter Property="Opacity" Value="0.35"/></KeyFrame><KeyFrame Cue="100%"><Setter Property="Opacity" Value="1"/></KeyFrame></Animation></Style.Animations></Style></Ellipse.Styles></Ellipse><Ellipse Width="10" Height="10" Fill="{DynamicResource AccentBrush}" Opacity="0.35"><Ellipse.Styles><Style Selector="Ellipse"><Style.Animations><Animation Duration="0:0:1.0" IterationCount="INFINITE"><KeyFrame Cue="0%"><Setter Property="Opacity" Value="0.35"/></KeyFrame><KeyFrame Cue="33%"><Setter Property="Opacity" Value="1"/></KeyFrame><KeyFrame Cue="66%"><Setter Property="Opacity" Value="0.35"/></KeyFrame><KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.35"/></KeyFrame></Animation></Style.Animations></Style></Ellipse.Styles></Ellipse><Ellipse Width="10" Height="10" Fill="{DynamicResource AccentBrush}" Opacity="0.35"><Ellipse.Styles><Style Selector="Ellipse"><Style.Animations><Animation Duration="0:0:1.0" IterationCount="INFINITE"><KeyFrame Cue="0%"><Setter Property="Opacity" Value="0.35"/></KeyFrame><KeyFrame Cue="33%"><Setter Property="Opacity" Value="0.35"/></KeyFrame><KeyFrame Cue="66%"><Setter Property="Opacity" Value="1"/></KeyFrame><KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.35"/></KeyFrame></Animation></Style.Animations></Style></Ellipse.Styles></Ellipse></StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                <!-- Dot 1: Peak at 0% and 100% -->
+                <Ellipse Width="10" Height="10" Fill="{DynamicResource AccentBrush}" Opacity="0.35">
+                    <Ellipse.Styles>
+                        <Style Selector="Ellipse">
+                            <Style.Animations>
+                                <Animation Duration="0:0:1.0" IterationCount="INFINITE">
+                                    <KeyFrame Cue="0%"><Setter Property="Opacity" Value="1"/></KeyFrame>
+                                    <KeyFrame Cue="33%"><Setter Property="Opacity" Value="0.35"/></KeyFrame>
+                                    <KeyFrame Cue="66%"><Setter Property="Opacity" Value="0.35"/></KeyFrame>
+                                    <KeyFrame Cue="100%"><Setter Property="Opacity" Value="1"/></KeyFrame>
+                                </Animation>
+                            </Style.Animations>
+                        </Style>
+                    </Ellipse.Styles>
+                </Ellipse>
+                <!-- Dot 2: Peak at 33% -->
+                <Ellipse Width="10" Height="10" Fill="{DynamicResource AccentBrush}" Opacity="0.35">
+                    <Ellipse.Styles>
+                        <Style Selector="Ellipse">
+                            <Style.Animations>
+                                <Animation Duration="0:0:1.0" IterationCount="INFINITE">
+                                    <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0.35"/></KeyFrame>
+                                    <KeyFrame Cue="33%"><Setter Property="Opacity" Value="1"/></KeyFrame>
+                                    <KeyFrame Cue="66%"><Setter Property="Opacity" Value="0.35"/></KeyFrame>
+                                    <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.35"/></KeyFrame>
+                                </Animation>
+                            </Style.Animations>
+                        </Style>
+                    </Ellipse.Styles>
+                </Ellipse>
+                <!-- Dot 3: Peak at 66%, symmetric and smooth -->
+                <Ellipse Width="10" Height="10" Fill="{DynamicResource AccentBrush}" Opacity="0.35">
+                    <Ellipse.Styles>
+                        <Style Selector="Ellipse">
+                            <Style.Animations>
+                                <Animation Duration="0:0:1.0" IterationCount="INFINITE">
+                                    <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0.35"/></KeyFrame>
+                                    <KeyFrame Cue="33%"><Setter Property="Opacity" Value="0.35"/></KeyFrame>
+                                    <KeyFrame Cue="66%"><Setter Property="Opacity" Value="1"/></KeyFrame>
+                                    <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.35"/></KeyFrame>
+                                </Animation>
+                            </Style.Animations>
+                        </Style>
+                    </Ellipse.Styles>
+                </Ellipse>
+            </StackPanel>
             <TextBlock Text="Y&#252;kleniyor..." Foreground="White" FontSize="13" HorizontalAlignment="Center" Margin="0,12,0,0"/>
             <TextBlock Text="{Binding PlayerLoadingWarningMessage}" Foreground="#FFA500" FontSize="13" HorizontalAlignment="Center" TextWrapping="Wrap" MaxWidth="350" TextAlignment="Center" Margin="0,8,0,0" IsVisible="{Binding PlayerLoadingWarningMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
         </StackPanel>

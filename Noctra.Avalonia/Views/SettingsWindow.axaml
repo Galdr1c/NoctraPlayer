@@ -634,13 +634,13 @@
                                             <!-- Dark Theme Button -->
                                             <Border x:Name="DarkThemeButton" Width="130" Height="85" CornerRadius="10" BorderThickness="3" BorderBrush="Transparent" Cursor="Hand" PointerPressed="DarkTheme_PointerPressed" Margin="0,0,16,0">
                                                 <Grid>
-                                                    <Border Background="#141414" CornerRadius="7">
+                                                    <Border Background="{DynamicResource ThemePreviewDarkBg}" CornerRadius="7">
                                                         <Grid>
-                                                            <Border Background="#1A1A1A" Width="95" Height="50" CornerRadius="6" Margin="12">
+                                                            <Border Background="{DynamicResource ThemePreviewDarkInnerBg}" Width="95" Height="50" CornerRadius="6" Margin="12">
                                                                 <StackPanel Margin="10,8">
                                                                     <Rectangle Fill="White" Height="4" Width="40" HorizontalAlignment="Left" Margin="0,0,0,6"/>
-                                                                    <Rectangle Fill="#404040" Height="3" Width="55" HorizontalAlignment="Left" Margin="0,0,0,4"/>
-                                                                    <Rectangle Fill="#404040" Height="3" Width="45" HorizontalAlignment="Left"/>
+                                                                    <Rectangle Fill="{DynamicResource ThemePreviewDarkText}" Height="3" Width="55" HorizontalAlignment="Left" Margin="0,0,0,4"/>
+                                                                    <Rectangle Fill="{DynamicResource ThemePreviewDarkText}" Height="3" Width="45" HorizontalAlignment="Left"/>
                                                                 </StackPanel>
                                                             </Border>
                                                             <Border x:Name="DarkCheckmark" Width="22" Height="22" Background="{DynamicResource AccentBrush}" CornerRadius="11" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6">
@@ -648,20 +648,20 @@
                                                             </Border>
                                                         </Grid>
                                                     </Border>
-                                                    <TextBlock Text="Koyu" FontSize="12" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
+                                                    <TextBlock Text="Koyu" FontSize="12" Foreground="{DynamicResource ThemePreviewDarkLabelBrush}" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
                                                 </Grid>
                                             </Border>
 
                                             <!-- Light Theme Button -->
                                             <Border x:Name="LightThemeButton" Width="130" Height="85" CornerRadius="10" BorderThickness="3" BorderBrush="Transparent" Cursor="Hand" PointerPressed="LightTheme_PointerPressed">
                                                 <Grid>
-                                                    <Border Background="#F5F5F5" CornerRadius="7">
+                                                    <Border Background="{DynamicResource ThemePreviewLightBg}" CornerRadius="7">
                                                         <Grid>
-                                                            <Border Background="White" Width="95" Height="50" CornerRadius="6" Margin="12">
+                                                            <Border Background="{DynamicResource ThemePreviewLightInnerBg}" Width="95" Height="50" CornerRadius="6" Margin="12">
                                                                 <StackPanel Margin="10,8">
-                                                                    <Rectangle Fill="#141414" Height="4" Width="40" HorizontalAlignment="Left" Margin="0,0,0,6"/>
-                                                                    <Rectangle Fill="#CCCCCC" Height="3" Width="55" HorizontalAlignment="Left" Margin="0,0,0,4"/>
-                                                                    <Rectangle Fill="#CCCCCC" Height="3" Width="45" HorizontalAlignment="Left"/>
+                                                                    <Rectangle Fill="{DynamicResource ThemePreviewDarkBg}" Height="4" Width="40" HorizontalAlignment="Left" Margin="0,0,0,6"/>
+                                                                    <Rectangle Fill="{DynamicResource ThemePreviewLightText}" Height="3" Width="55" HorizontalAlignment="Left" Margin="0,0,0,4"/>
+                                                                    <Rectangle Fill="{DynamicResource ThemePreviewLightText}" Height="3" Width="45" HorizontalAlignment="Left"/>
                                                                 </StackPanel>
                                                             </Border>
                                                             <Border x:Name="LightCheckmark" Width="22" Height="22" Background="{DynamicResource AccentBrush}" CornerRadius="11" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6" IsVisible="False">
@@ -669,7 +669,7 @@
                                                             </Border>
                                                         </Grid>
                                                     </Border>
-                                                    <TextBlock Text="Açık" FontSize="12" Foreground="#666666" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
+                                                    <TextBlock Text="Açık" FontSize="12" Foreground="{DynamicResource ThemePreviewLightLabelBrush}" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
                                                 </Grid>
                                             </Border>
                                         </StackPanel>

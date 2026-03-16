@@ -132,5 +132,15 @@
   <CornerRadius x:Key="RadiusLarge">16</CornerRadius>
   <CornerRadius x:Key="RadiusXLarge">24</CornerRadius>
   <CornerRadius x:Key="RadiusPill">100</CornerRadius>
+
+  <!-- Theme Selection Preview Resources -->
+  <SolidColorBrush x:Key="ThemePreviewDarkBg" Color="#141414" />
+  <SolidColorBrush x:Key="ThemePreviewDarkInnerBg" Color="#1A1A1A" />
+  <SolidColorBrush x:Key="ThemePreviewDarkText" Color="#404040" />
+  <SolidColorBrush x:Key="ThemePreviewLightBg" Color="#F5F5F5" />
+  <SolidColorBrush x:Key="ThemePreviewLightInnerBg" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="ThemePreviewLightText" Color="#CCCCCC" />
+  <SolidColorBrush x:Key="ThemePreviewDarkLabelBrush" Color="White" />
+  <SolidColorBrush x:Key="ThemePreviewLightLabelBrush" Color="#666666" />
 </ResourceDictionary>
 
