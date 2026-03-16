@@ -63,6 +63,22 @@
     <Style Selector="ScrollBar RepeatButton">
         <Setter Property="Cursor" Value="Hand"/>
     </Style>
+    
+    <!-- ToolTip Animation and Delay -->
+    <Style Selector="Control">
+        <Setter Property="ToolTip.ShowDelay" Value="400"/>
+    </Style>
+    <Style Selector="ToolTip">
+        <Setter Property="Opacity" Value="0"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.15" Easing="CubicEaseOut"/>
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="ToolTip:open">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
       
   </Application.Styles>
 </Application>

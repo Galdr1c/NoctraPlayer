@@ -1147,4 +1147,114 @@
         <Setter Property="MinWidth" Value="10"/>
     </ControlTheme>
 
+    <!-- ==========================================
+         GLOBAL TOGGLE SWITCH THEME (Unified Animation)
+         ========================================== -->
+    <ControlTheme x:Key="{x:Type ToggleSwitch}" TargetType="ToggleSwitch">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Grid Background="Transparent" RowDefinitions="Auto,Auto">
+                    <ContentPresenter x:Name="PART_ContentPresenter"
+                                      Grid.Row="0"
+                                      Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      RecognizesAccessKey="True"
+                                      VerticalAlignment="Center"/>
+                    <Grid Grid.Row="1" x:Name="SwitchContainer" ColumnDefinitions="Auto,Auto" Margin="0,4,0,0">
+                        <Grid x:Name="SwitchRoot" Grid.Column="0" Width="44" Height="24">
+                            <Border x:Name="OuterBorder"
+                                    Background="{DynamicResource Surface1Brush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1.5"
+                                    CornerRadius="12">
+                                <Border.Transitions>
+                                    <Transitions>
+                                        <BrushTransition Property="Background" Duration="0:0:0.2" Easing="0.4,0,0.2,1"/>
+                                        <BrushTransition Property="BorderBrush" Duration="0:0:0.2" Easing="0.4,0,0.2,1"/>
+                                    </Transitions>
+                                </Border.Transitions>
+                            </Border>
+                            
+                            <!-- Required part: PART_MovingKnobs -->
+                            <Panel x:Name="PART_MovingKnobs">
+                                <Canvas x:Name="PART_SwitchKnob" Width="44" Height="24" HorizontalAlignment="Left">
+                                    <Border x:Name="SwitchKnob"
+                                            Background="White"
+                                            Width="16" Height="16"
+                                            CornerRadius="8"
+                                            Canvas.Top="4"
+                                            Canvas.Left="4">
+                                        <Border.Transitions>
+                                            <Transitions>
+                                                <DoubleTransition Property="Canvas.Left" Duration="0:0:0.2" Easing="0.4,0,0.2,1"/>
+                                                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" Easing="0.4,0,0.2,1"/>
+                                            </Transitions>
+                                        </Border.Transitions>
+                                        <Border.BoxShadow>
+                                            <BoxShadows>0 1 3 0 #40000000</BoxShadows>
+                                        </Border.BoxShadow>
+                                    </Border>
+                                </Canvas>
+                            </Panel>
+                        </Grid>
+                        <ContentPresenter x:Name="PART_OffContentPresenter"
+                                          Grid.Column="1"
+                                          Content="{TemplateBinding OffContent}"
+                                          ContentTemplate="{TemplateBinding OffContentTemplate}"
+                                          Margin="12,0,0,0"
+                                          VerticalAlignment="Center"
+                                          IsVisible="False"/>
+                        <ContentPresenter x:Name="PART_OnContentPresenter"
+                                          Grid.Column="1"
+                                          Content="{TemplateBinding OnContent}"
+                                          ContentTemplate="{TemplateBinding OnContentTemplate}"
+                                          Margin="12,0,0,0"
+                                          VerticalAlignment="Center"
+                                          IsVisible="False"/>
+                    </Grid>
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+
+        <!-- Hover State -->
+        <Style Selector="^:pointerover /template/ Border#OuterBorder">
+            <Setter Property="BorderBrush" Value="{DynamicResource TextDisabledBrush}"/>
+        </Style>
+        <Style Selector="^:pointerover /template/ Border#SwitchKnob">
+            <Setter Property="RenderTransform" Value="scale(1.1)"/>
+        </Style>
+
+        <!-- Checked State -->
+        <Style Selector="^:checked /template/ Border#OuterBorder">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+        </Style>
+        <Style Selector="^:checked /template/ Border#SwitchKnob">
+            <Setter Property="Canvas.Left" Value="24"/>
+        </Style>
+
+        <!-- Hide label margin if no content -->
+        <Style Selector="^:empty /template/ Grid#SwitchContainer">
+            <Setter Property="Margin" Value="0"/>
+        </Style>
+
+        <!-- Content Visibility -->
+        <Style Selector="^:checked /template/ ContentPresenter#PART_OnContentPresenter">
+            <Setter Property="IsVisible" Value="True"/>
+        </Style>
+        <Style Selector="^:not(:checked) /template/ ContentPresenter#PART_OffContentPresenter">
+            <Setter Property="IsVisible" Value="True"/>
+        </Style>
+
+        <!-- Disabled State -->
+        <Style Selector="^:disabled">
+            <Setter Property="Opacity" Value="0.5"/>
+        </Style>
+    </ControlTheme>
+
 </ResourceDictionary>

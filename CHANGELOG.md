@@ -21,7 +21,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - `SeriesDetailOverlay` içerisinde backdrop poster üzerindeki standart gradient, `Transparent` -> `Bg0Color` geçişli `LinearGradientBrush` ile değiştirilerek posterden içeriğe daha sinematik ve yumuşak bir geçiş sağlandı.
   - Dizi detay sayfasındaki başlık alanı `Viewbox` ile sarmalanarak uzun dizi isimlerinin (örn: "Diriliş: Ertuğrul") tasarımda taşma yapmadan dinamik olarak ölçeklenmesi sağlandı.
   - Dizi detay sayfasındaki "Oynat" butonuna hover durumunda accent renginde yumuşak bir parlama (glow) efekti eklendi (`BoxShadow`).
+  - Uygulama genelindeki ToolTip'lere (ipuçları) 400ms gecikme ve 150ms fade-in animasyonu eklenerek daha akıcı ve premium bir kullanıcı deneyimi sağlandı.
   - `PremiumSpinner` bileşeni içerisindeki placeholder ikon kaldırıldı ve yerine "nefes alma" (pulse) animasyonlu Noctra logosu yerleştirildi; bu görsel iyileştirme `ProfileLoadingWindow`, `SplashWindow` ve `MainWindow` yükleme katmanlarına uygulandı.
+  - **ToggleSwitch Animasyon Birliği:** Uygulama genelindeki tüm `ToggleSwitch` kontrolleri merkezi bir `ControlTheme` ile standartlaştırıldı. Geçiş animasyonları `200ms` süre ve `SplineEasing (0.4, 0, 0.2, 1)` ile sabitlenerek tüm temalarda daha "akıcı" ve tutarlı bir deneyim sağlandı.
 
 ### 🐛 Hata Düzeltmeleri
 - **Ayarlar Arayüzü ve Güncelleme Sistemi İyileştirildi** (2026-03-15): 
