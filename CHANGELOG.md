@@ -16,6 +16,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - `LiveView`, `MoviesView` ve `SeriesView` görünümlerinde kartların sağ ve alt kenarlarda bıraktığı gereksiz boşluklar (margin collision), `ItemsControl` üzerine uygulanan negatif offset (`Margin="0,0,-16,-16"`) ile giderildi.
   - Uygulama genelindeki tema seçim butonlarının boyutları standartlaştırılarak (130x85) görsel tutarlılık sağlandı.
   - `VideoOverlayView` içerisindeki yükleniyor (buffering) animasyonu, noktalar arası geçiş süresi ve döngü asimetrisi giderilerek daha akıcı hale getirildi.
+  - `VideoOverlayView` içerisindeki ilerleme çubuğu (Seek Bar) üzerine fare ile gelindiğinde o anki zamanı gösteren estetik bir "hover preview" Tooltip (pill) eklendi.
   - `PremiumSpinner` bileşeni içerisindeki placeholder ikon kaldırıldı ve yerine "nefes alma" (pulse) animasyonlu Noctra logosu yerleştirildi; bu görsel iyileştirme `ProfileLoadingWindow`, `SplashWindow` ve `MainWindow` yükleme katmanlarına uygulandı.
 
 ### 🐛 Hata Düzeltmeleri

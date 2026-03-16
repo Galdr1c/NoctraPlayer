@@ -1,8 +1,12 @@
+using System;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Input;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Noctra.ViewModels;
 
 namespace Noctra.Avalonia.Views;
@@ -172,6 +176,57 @@ public partial class VideoOverlayView : UserControl
     private void OverlayRoot_PointerMoved(object? sender, PointerEventArgs e)
     {
         _playerViewModel?.UserInteractionCommand.Execute(null);
+    }
+
+    private void TimelineSlider_PointerEntered(object? sender, PointerEventArgs e)
+    {
+        if (_playerViewModel == null || _playerViewModel.IsLiveContent || _playerViewModel.Duration <= 0)
+            return;
+
+        HoverTimePopup.IsOpen = true;
+    }
+
+    private void TimelineSlider_PointerExited(object? sender, PointerEventArgs e)
+    {
+        HoverTimePopup.IsOpen = false;
+    }
+
+    private void TimelineSlider_PointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_playerViewModel == null || _playerViewModel.IsLiveContent || _playerViewModel.Duration <= 0 || !HoverTimePopup.IsOpen)
+            return;
+
+        var slider = TimelineSlider;
+        var pointerPos = e.GetPosition(slider);
+        
+        // Accurate calculation using Track if possible
+        // Avalonia Slider uses a Track inside its template to map values.
+        // The Track might have margins (e.g. to fit the Thumb).
+        var track = slider.GetVisualDescendants().OfType<Track>().FirstOrDefault();
+        double hoverTimeSeconds;
+
+        if (track != null && track.Bounds.Width > 0)
+        {
+            var trackPos = e.GetPosition(track);
+            hoverTimeSeconds = track.ValueFromPoint(trackPos);
+        }
+        else
+        {
+            var width = slider.Bounds.Width;
+            if (width <= 0) return;
+            var percent = Math.Clamp(pointerPos.X / width, 0, 1);
+            hoverTimeSeconds = percent * _playerViewModel.Duration;
+        }
+        
+        // Format time (00:00 or 0:00:00)
+        var timeSpan = TimeSpan.FromSeconds(hoverTimeSeconds);
+        HoverTimeText.Text = timeSpan.TotalHours >= 1 
+            ? timeSpan.ToString(@"h\:mm\:ss") 
+            : timeSpan.ToString(@"m\:ss");
+
+        // Position popup centered above pointer
+        var center = slider.Bounds.Width / 2;
+        HoverTimePopup.HorizontalOffset = pointerPos.X - center;
     }
 
     private void OverlayRoot_PointerPressed(object? sender, PointerPressedEventArgs e)

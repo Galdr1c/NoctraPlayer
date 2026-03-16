@@ -200,10 +200,24 @@
                     </LinearGradientBrush>
                 </Border.Background>
                 <Grid RowDefinitions="Auto,Auto">
-                    <!-- Timeline Slider -->
-                    <Slider x:Name="TimelineSlider" Grid.Row="0" Margin="0,0,0,12"
-                            Minimum="0" Maximum="{Binding Duration}" Value="{Binding Position}"
-                            IsVisible="{Binding !IsLiveContent}" Foreground="{DynamicResource AccentBrush}" Focusable="False"/>
+                    <!-- Timeline Slider with Hover Preview -->
+                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                        <Slider x:Name="TimelineSlider" 
+                                Minimum="0" Maximum="{Binding Duration}" Value="{Binding Position}"
+                                IsVisible="{Binding !IsLiveContent}" Foreground="{DynamicResource AccentBrush}" 
+                                Focusable="False" 
+                                PointerMoved="TimelineSlider_PointerMoved"
+                                PointerEntered="TimelineSlider_PointerEntered"
+                                PointerExited="TimelineSlider_PointerExited"/>
+                        
+                        <Popup x:Name="HoverTimePopup" IsOpen="False" IsHitTestVisible="False"
+                               PlacementTarget="{Binding #TimelineSlider}"
+                               Placement="Top" VerticalOffset="-8">
+                            <Border Background="#CC000000" CornerRadius="100" Padding="12,6" BorderBrush="#33FFFFFF" BorderThickness="1">
+                                <TextBlock x:Name="HoverTimeText" Foreground="White" FontSize="12" FontWeight="Bold"/>
+                            </Border>
+                        </Popup>
+                    </Grid>
 
                     <!-- Live Stream EPG Info -->
                     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,16"
