@@ -176,6 +176,7 @@
                                             BorderBrush="{DynamicResource AccentBrush}"
                                             Cursor="Hand"
                                             PointerPressed="DarkTheme_PointerPressed"
+                                            IsEnabled="{Binding IsPremium}"
                                             Margin="0,0,16,0">
                                         <Grid>
                                             <Border Background="{DynamicResource ThemePreviewDarkBg}" CornerRadius="7">
@@ -185,11 +186,18 @@
                                                            Width="95" Height="50"
                                                            CornerRadius="6"
                                                            Margin="12">
-                                                        <StackPanel Margin="8">
-                                                            <Rectangle Fill="White" Height="4" Width="40" HorizontalAlignment="Left" Margin="0,0,0,4"/>
-                                                            <Rectangle Fill="{DynamicResource ThemePreviewDarkText}" Height="3" Width="50" HorizontalAlignment="Left" Margin="0,0,0,3"/>
-                                                            <Rectangle Fill="{DynamicResource ThemePreviewDarkText}" Height="3" Width="45" HorizontalAlignment="Left"/>
-                                                        </StackPanel>
+                                                        <Panel>
+                                                            <StackPanel Margin="8">
+                                                                <Rectangle Fill="White" Height="4" Width="40" HorizontalAlignment="Left" Margin="0,0,0,4"/>
+                                                                <Rectangle Fill="{DynamicResource ThemePreviewDarkText}" Height="3" Width="50" HorizontalAlignment="Left" Margin="0,0,0,3"/>
+                                                                <Rectangle Fill="{DynamicResource ThemePreviewDarkText}" Height="3" Width="45" HorizontalAlignment="Left"/>
+                                                            </StackPanel>
+
+                                                            <!-- Lock Overlay for Free users -->
+                                                            <Border Background="#AA000000" CornerRadius="6" IsVisible="{Binding !IsPremium}">
+                                                                <materialIcons:MaterialIcon Kind="Lock" Width="28" Height="28" Foreground="White" Opacity="0.9"/>
+                                                            </Border>
+                                                        </Panel>
                                                     </Border>
                                                     
                                                     <!-- Checkmark -->

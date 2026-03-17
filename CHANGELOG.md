@@ -8,7 +8,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
-### ✨ Yeni Özellikler ve İyileştirmeler
+### ✨ Yeni Özellikler ve Geliştirmeler
+- **Premium Kilitleri ve Özelleştirme Kısıtlamaları** (2026-03-17):
+  - **Koyu Tema (Dark Mode):** Uygulama genelinde Koyu Tema seçeneği Premium kullanıcılara özel hale getirildi. Ücretsiz kullanıcılarda bu seçenek kilitli (`Lock` ikonu ile) ve devre dışı olarak görünecek. Tema önizleme kutusunun (Mini Preview) üzerine estetik bir kilit katmanı eklendi.
+  - **Otomatik Yenileme Ayarları:** "EPG" ve "Kanal Listesi" için sunulan otomatik yenileme sıklığı seçenekleri (1 saat, 24 saat vb.) Premium kullanıcıların hizmetine sunuldu. Ücretsiz kullanıcılar bu seçeneklerin yanında sağa yaslanmış kilit ikonlarını görecek ve sadece manuel güncellemeyi kullanabilecekler.
+  - **Kompakt Ayarlar Menüsü:** Yenileme sıklığı menüleri (`ComboBox`) daha modern ve kompakt bir görünüme kavuşturuldu (`Width="200"`), kilit ikonları büyütülerek görsel hiyerarşi güçlendirildi.
 - **Tema Seçimi ve UI Estetiği Güçlendirildi** (2026-03-16):
   - `SettingsWindow` ve `GlobalSettingsWindow` pencerelerindeki tema önizleme butonlarında kullanılan tüm hardcoded renk kodları (`#141414`, `#1A1A1A`, vb.) temizlendi.
   - Tema önizlemeleri için `DarkTheme.axaml` ve `LightTheme.axaml` dosyalarına dinamik kaynaklar (`ThemePreview` resources) eklendi, böylece butonlar aktif temaya tam uyumlu hale getirildi.
