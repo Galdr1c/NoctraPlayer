@@ -413,16 +413,51 @@
                                     <TextBlock Text="Yenileme Sıklığı" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                     <ComboBox Theme="{StaticResource ModernComboBox}"
                                               SelectedIndex="{Binding ChannelListRefreshFrequencyIndex, Mode=TwoWay}"
-                                              Width="260"
+                                              Width="200"
                                               HorizontalAlignment="Left">
                                         <ComboBoxItem Content="Kapalı (Sadece manuel)" Tag="0"/>
-                                        <ComboBoxItem Content="Her 1 saat" Tag="1"/>
-                                        <ComboBoxItem Content="Her 3 saat" Tag="3"/>
-                                        <ComboBoxItem Content="Her 12 saat" Tag="12"/>
-                                        <ComboBoxItem Content="Her 24 saat" Tag="24"/>
-                                        <ComboBoxItem Content="Her 2 günde" Tag="48"/>
-                                        <ComboBoxItem Content="Her 3 günde" Tag="72"/>
-                                        <ComboBoxItem Content="Her 7 günde" Tag="168"/>
+                                        <ComboBoxItem Tag="1" IsEnabled="{Binding IsPremium}">
+                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                                <TextBlock Text="Her 1 saat" VerticalAlignment="Center"/>
+                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem Tag="3" IsEnabled="{Binding IsPremium}">
+                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                                <TextBlock Text="Her 3 saat" VerticalAlignment="Center"/>
+                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem Tag="12" IsEnabled="{Binding IsPremium}">
+                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                                <TextBlock Text="Her 12 saat" VerticalAlignment="Center"/>
+                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem Tag="24" IsEnabled="{Binding IsPremium}">
+                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                                <TextBlock Text="Her 24 saat" VerticalAlignment="Center"/>
+                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem Tag="48" IsEnabled="{Binding IsPremium}">
+                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                                <TextBlock Text="Her 2 günde" VerticalAlignment="Center"/>
+                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem Tag="72" IsEnabled="{Binding IsPremium}">
+                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                                <TextBlock Text="Her 3 günde" VerticalAlignment="Center"/>
+                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem Tag="168" IsEnabled="{Binding IsPremium}">
+                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                                <TextBlock Text="Her 7 günde" VerticalAlignment="Center"/>
+                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </ComboBoxItem>
                                     </ComboBox>
                                 </StackPanel>
                             </Border>
@@ -494,17 +529,52 @@
                                     <TextBlock Text="Yenileme Sıklığı" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                     <ComboBox Theme="{StaticResource ModernComboBox}"
                                               SelectedIndex="{Binding EpgRefreshFrequencyIndex, Mode=TwoWay}"
-                                              Width="260"
+                                              Width="200"
                                               HorizontalAlignment="Left"
                                               Margin="0,0,0,20">
                                         <ComboBoxItem Content="Kapalı (Sadece manuel)" Tag="0"/>
-                                        <ComboBoxItem Content="Her 1 saat" Tag="1"/>
-                                        <ComboBoxItem Content="Her 3 saat" Tag="3"/>
-                                        <ComboBoxItem Content="Her 12 saat" Tag="12"/>
-                                        <ComboBoxItem Content="Her 24 saat" Tag="24"/>
-                                        <ComboBoxItem Content="Her 2 günde" Tag="48"/>
-                                        <ComboBoxItem Content="Her 3 günde" Tag="72"/>
-                                        <ComboBoxItem Content="Her 7 günde" Tag="168"/>
+                                        <ComboBoxItem Tag="1" IsEnabled="{Binding IsPremium}">
+                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                                <TextBlock Text="Her 1 saat" VerticalAlignment="Center"/>
+                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem Tag="3" IsEnabled="{Binding IsPremium}">
+                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                                <TextBlock Text="Her 3 saat" VerticalAlignment="Center"/>
+                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem Tag="12" IsEnabled="{Binding IsPremium}">
+                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                                <TextBlock Text="Her 12 saat" VerticalAlignment="Center"/>
+                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem Tag="24" IsEnabled="{Binding IsPremium}">
+                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                                <TextBlock Text="Her 24 saat" VerticalAlignment="Center"/>
+                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem Tag="48" IsEnabled="{Binding IsPremium}">
+                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                                <TextBlock Text="Her 2 günde" VerticalAlignment="Center"/>
+                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem Tag="72" IsEnabled="{Binding IsPremium}">
+                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                                <TextBlock Text="Her 3 günde" VerticalAlignment="Center"/>
+                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem Tag="168" IsEnabled="{Binding IsPremium}">
+                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                                <TextBlock Text="Her 7 günde" VerticalAlignment="Center"/>
+                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </ComboBoxItem>
                                     </ComboBox>
 
                                     <TextBlock Text="Özel EPG URL (Opsiyonel)" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>

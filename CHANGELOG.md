@@ -57,6 +57,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **Altyazı Arayüz Senkronizasyonu Düzeltildi** (2026-03-14): Uygulama yeniden başlatıldığında, oynatıcı kontrol panelindeki altyazı ayar butonlarının (Boyut, Arkaplan Şeffaflığı, Konum) en son kaydedilen ayar yerine varsayılan ("Standart") seçili görünmesi sorunu çözüldü. Arayüz modelinin (`PlayerViewModel`) ayarlardaki gerçek veriyi başlatma anında okuması sağlandı.
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Premium Kilitleri ve Ayrıcalıkları Eklendi** (2026-03-17):
+  - Ayarlar menüsündeki **"EPG Yenileme Sıklığı"** ve **"Kanal Listesi Yenileme Sıklığı"** otomatik yenileme seçenekleri Premium kullanıcılara özel hale getirildi. 
+  - Ücretsiz (Free) kullanıcılar sadece "Kapalı (Sadece manuel)" seçeneğini kullanabilecek. Diğer tüm otomatik yenileme aralıkları (1 saat, 24 saat vb.) devre dışı bırakıldı ve yanlarına şık bir sarı "Kilit (Lock)" ikonu eklenerek kilitli oldukları açıkça belirtildi.
 - **Arayüz Geçiş Animasyonları (Fade-in) İyileştirildi** (2026-03-15):
   - **İndirilenler (Downloads) Menüsü Animasyonu:** İndirilenler ekranında bulunan "Kütüphane" ve "İndirme Merkezi" sekmeleri (eski adıyla RadioButton'lar) yapısal olarak `TabControl` sistemine geçirildi. Bu sayede Ayarlar menüsünde kullanılan iOS/Apple TV kalitesindeki yatay kaydırma (Slide & Fade) animasyonu (`TabSlideTransitionBehavior`) bu ekrana da entegre edildi. Eski görünüm birebir korunurken etkileşim kalitesi artırıldı.
   - **Ayarlar Menüsü (Sekmeler) Animasyonu:** Genel Ayarlar ve Profil Ayarları ekranlarındaki Tab (sekme) geçişlerine iOS/Apple TV kalitesinde yatay kaydırma animasyonu eklendi. Özel yazılan `TabSlideTransitionBehavior` sayesinde, tıklandığında seçilen sekmenin eski sekmeye göre yönü (sağ/sol) hesaplanıp içerik o yönden süzülerek (`SplineEasing`) ekrana geliyor.
