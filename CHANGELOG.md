@@ -26,6 +26,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - **ToggleSwitch Animasyon Birliği:** Uygulama genelindeki tüm `ToggleSwitch` kontrolleri merkezi bir `ControlTheme` ile standartlaştırıldı. Geçiş animasyonları `200ms` süre ve `SplineEasing (0.4, 0, 0.2, 1)` ile sabitlenerek tüm temalarda daha "akıcı" ve tutarlı bir deneyim sağlandı.
 
 ### 🐛 Hata Düzeltmeleri
+- **Tema ve Ayarların Kaydedilmesi Düzeltildi** (2026-03-17):
+  - Tema ve genel ayarlar (dil, güncelleme vb.) tüm profiller için merkezi hale getirildi (Global Settings).
+  - Profil geçişlerinde seçili temanın bazen sıfırlanması veya değişmesi sorunu, ayarların profil bazlı değil global olarak yönetilmesiyle çözüldildi.
+  - Uygulama başlangıcında ve profil yüklemelerinde temanın anında yeniden uygulanması sağlandı.
 - **Ayarlar Arayüzü ve Güncelleme Sistemi İyileştirildi** (2026-03-15): 
   - Güncelleme denetleme bölümü Premium/Ücretsiz kartlarından bağımsız hale getirilerek ayrı bir kutu (box) olarak sabitlendi ve boyutu %30 küçültülerek daha kompakt hale getirildi.
   - "Güncelleştirmeleri Denetle" butonlarındaki komut bağlama (binding) hatası giderilerek butonların pasif kalma sorunu çözüldü.

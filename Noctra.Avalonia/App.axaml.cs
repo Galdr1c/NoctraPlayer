@@ -53,7 +53,12 @@ public partial class App : Application
             var themeService = Services.GetRequiredService<IThemeService>();
             ApplyApplicationLanguage(settings.Settings.Language);
             themeService.SetTheme(settings.Settings.IsDarkTheme);
-            settings.SettingsChanged += () => ApplyApplicationLanguage(settings.Settings.Language);
+            
+            settings.SettingsChanged += () => 
+            {
+                ApplyApplicationLanguage(settings.Settings.Language);
+                themeService.SetTheme(settings.Settings.IsDarkTheme);
+            };
             StartupDiagnostics.Log("Theme applied.");
         }
         catch (Exception ex)

@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Noctra.Models;
 using Microsoft.Extensions.Logging;
 
@@ -55,30 +55,47 @@ public class SettingsService : ISettingsService
         try
         {
             var path = GetSettingsPath(profileId);
+            AppSettings loaded;
+
             if (!File.Exists(path))
             {
                 _logger?.LogInformation("Settings file not found for profile {Id}, using defaults", profileId);
-                _currentSettings = CreateDefaultSettings(profileId);
-                SettingsChanged?.Invoke();
-                return;
+                loaded = CreateDefaultSettings(profileId);
             }
-            
-            var json = await File.ReadAllTextAsync(path);
-            var loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
-            
-            if (loaded != null)
+            else
             {
-                loaded.ProfileId = profileId; // Ensure correct ID
-                _currentSettings = loaded;
-                System.Diagnostics.Debug.WriteLine($"[SettingsService] Settings loaded for profile {profileId}: IsDarkTheme={Settings.IsDarkTheme}");
-                _logger?.LogInformation("Settings loaded from {Path}", path);
-                SettingsChanged?.Invoke();
+                var json = await File.ReadAllTextAsync(path);
+                loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? CreateDefaultSettings(profileId);
             }
+
+            // Centralization Logic: Ensure global settings are synced from profile 0
+            if (profileId != 0)
+            {
+                var globalSettings = LoadInternalSync(0);
+                SyncGlobalSettings(loaded, globalSettings);
+            }
+
+            loaded.ProfileId = profileId; // Ensure correct ID
+            _currentSettings = loaded;
+            
+            System.Diagnostics.Debug.WriteLine($"[SettingsService] Settings loaded for profile {profileId}: IsDarkTheme={Settings.IsDarkTheme}");
+            _logger?.LogInformation("Settings loaded for profile {Id}", profileId);
+            SettingsChanged?.Invoke();
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to load settings for profile {Id}", profileId);
         }
+    }
+
+    private void SyncGlobalSettings(AppSettings target, AppSettings source)
+    {
+        target.IsDarkTheme = source.IsDarkTheme;
+        target.Language = source.Language;
+        target.AutoUpdate = source.AutoUpdate;
+        target.HardwareAcceleration = source.HardwareAcceleration;
+        target.Analytics = source.Analytics;
+        target.AutoSelectLastProfile = source.AutoSelectLastProfile;
     }
 
     public async Task<AppSettings?> PeekProfileSettingsAsync(int profileId)
@@ -90,7 +107,15 @@ public class SettingsService : ISettingsService
 
             var json = await File.ReadAllTextAsync(path);
             var loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
-            if (loaded != null) loaded.ProfileId = profileId;
+            if (loaded != null)
+            {
+                loaded.ProfileId = profileId;
+                // Peek should also reflect current global settings if it's not the active one
+                if (profileId != 0)
+                {
+                    SyncGlobalSettings(loaded, LoadInternalSync(0));
+                }
+            }
             return loaded;
         }
         catch
@@ -109,19 +134,20 @@ public class SettingsService : ISettingsService
         try
         {
             var path = GetSettingsPath(profileId);
-            if (!File.Exists(path))
+            AppSettings? loaded = null;
+            if (File.Exists(path))
             {
-                return CreateDefaultSettings(profileId);
+                var json = File.ReadAllText(path);
+                loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
             }
 
-            var json = File.ReadAllText(path);
-            var loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
-
-            if (loaded != null)
+            if (loaded == null)
             {
-                loaded.ProfileId = profileId;
-                return loaded;
+                loaded = CreateDefaultSettings(profileId);
             }
+
+            loaded.ProfileId = profileId;
+            return loaded;
         }
         catch (Exception ex)
         {
@@ -145,11 +171,27 @@ public class SettingsService : ISettingsService
         try
         {
             var profileId = Settings.ProfileId;
+            
+            // 1. Save current profile settings
             var path = GetSettingsPath(profileId);
             var json = JsonSerializer.Serialize(Settings, JsonOptions);
             await File.WriteAllTextAsync(path, json);
+            _logger?.LogInformation("Settings saved for profile {Id}", profileId);
+
+            // 2. If it's a sub-profile, update the master global settings too
+            if (profileId != 0)
+            {
+                var globalPath = GetSettingsPath(0);
+                var globalSettings = LoadInternalSync(0);
+                
+                // Only sync if actual global values changed (optimization optionally, but let's be safe)
+                SyncGlobalSettings(globalSettings, Settings);
+                
+                var globalJson = JsonSerializer.Serialize(globalSettings, JsonOptions);
+                await File.WriteAllTextAsync(globalPath, globalJson);
+                _logger?.LogInformation("Global settings updated from profile {Id}", profileId);
+            }
             
-            _logger?.LogInformation("Settings saved to {Path}", path);
             SettingsChanged?.Invoke();
         }
         catch (Exception ex)

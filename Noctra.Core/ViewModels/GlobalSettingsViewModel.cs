@@ -156,7 +156,6 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ApplyTheme()
     {
-        _themeService.SetTheme(Settings.IsDarkTheme);
         SaveSettings();
     }
 

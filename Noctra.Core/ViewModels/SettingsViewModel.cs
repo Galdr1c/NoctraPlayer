@@ -131,10 +131,8 @@ public partial class SettingsViewModel : ObservableObject
 
     partial void OnIsDarkThemeChanged(bool value)
     {
-        _themeService.SetTheme(value);
-        
         // Tema değiştiği an kaydet (user request)
-        if (_settingsService != null)
+        if (_settingsService != null && _settingsService.Settings.IsDarkTheme != value)
         {
             _settingsService.Settings.IsDarkTheme = value;
             _ = _settingsService.SaveAsync();
