@@ -791,7 +791,7 @@
                                   <Setter Property="FontWeight" Value="Bold"/>
                               </Style>
                               <Style Selector="ListBoxItem:selected /template/ Border#SelectionIndicator">
-                                  <Setter Property="IsVisible" Value="True"/>
+                                  <Setter Property="Width" Value="20"/>
                               </Style>
 
                               <!-- Pressed State -->

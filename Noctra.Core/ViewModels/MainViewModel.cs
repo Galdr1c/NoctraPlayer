@@ -3004,6 +3004,16 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _isDownloadCenterVisible;
 
+    public int DownloadTabIndex
+    {
+        get => IsDownloadCenterVisible ? 1 : 0;
+        set
+        {
+            IsDownloadCenterVisible = value == 1;
+            OnPropertyChanged(nameof(DownloadTabIndex));
+        }
+    }
+
     [ObservableProperty]
     private DownloadSortOrder _selectedDownloadSortOrder = DownloadSortOrder.Latest;
 
