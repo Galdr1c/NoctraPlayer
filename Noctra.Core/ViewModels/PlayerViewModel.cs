@@ -44,6 +44,14 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         EndedSeekRecovering = 2
     }
 
+    public enum FillMode
+    {
+        Fit,      // Aspect ratio auto (VLC default)
+        Fill,     // Forced 16:9 with crop
+        Stretch,  // Forced 16:9 or window size stretch
+        Original  // Native resolution
+    }
+
     private readonly IVideoPlayerService _videoPlayerService;
     private readonly IEpgService _epgService;
     private readonly IMetadataService _metadataService;
@@ -166,6 +174,32 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string _overlaySecondaryText = string.Empty;
 
+    [ObservableProperty]
+    private string _overlayMessage = string.Empty;
+
+    [ObservableProperty]
+    private bool _isOverlayMessageVisible;
+
+    private CancellationTokenSource? _overlayMessageCts;
+
+    private async Task ShowOverlayMessageAsync(string message, int durationMs = 2000)
+    {
+        _overlayMessageCts?.Cancel();
+        _overlayMessageCts = new CancellationTokenSource();
+        var token = _overlayMessageCts.Token;
+
+        OverlayMessage = message;
+        IsOverlayMessageVisible = true;
+
+        try
+        {
+            await Task.Delay(durationMs, token);
+            if (!token.IsCancellationRequested)
+                IsOverlayMessageVisible = false;
+        }
+        catch (TaskCanceledException) { }
+    }
+
     public bool IsLiveInfoVisible => IsLiveContent && CurrentProgram != null && !string.IsNullOrWhiteSpace(CurrentProgram.Title);
     public bool IsSeriesPlotVisible => IsSeriesContent && !IsLiveContent && CurrentEpisode != null && !string.IsNullOrWhiteSpace(CurrentEpisode.Plot);
     public bool IsVodPlotVisible => !IsLiveContent && !IsSeriesContent && CurrentChannel != null && !string.IsNullOrWhiteSpace(CurrentChannel.Plot);
@@ -175,6 +209,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private int _volume = 100;
+
+    [ObservableProperty]
+    private FillMode _videoFillMode = FillMode.Fit;
 
     [ObservableProperty]
     private int _subtitleFontSize = 40;
@@ -242,6 +279,55 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     [RelayCommand]
     private void SetSubtitlePosition(string margin) => SubtitleMargin = int.Parse(margin);
+
+    [RelayCommand]
+    private void CycleVideoFillMode()
+    {
+        VideoFillMode = VideoFillMode switch
+        {
+            FillMode.Fit => FillMode.Fill,
+            FillMode.Fill => FillMode.Stretch,
+            FillMode.Stretch => FillMode.Original,
+            _ => FillMode.Fit
+        };
+        ApplyVideoFillMode();
+
+        var message = VideoFillMode switch
+        {
+            FillMode.Fit => "UYDUR (FIT)",
+            FillMode.Fill => "DOLDUR (FILL 16:9)",
+            FillMode.Stretch => "GENİŞLET (STRETCH 16:9)",
+            FillMode.Original => "ORİJİNAL (ORIGINAL)",
+            _ => "UYDUR (FIT)"
+        };
+        _ = ShowOverlayMessageAsync(message);
+    }
+
+    private void ApplyVideoFillMode()
+    {
+        var mediaPlayer = _videoPlayerService.GetMediaPlayer();
+        if (mediaPlayer == null) return;
+
+        try
+        {
+            mediaPlayer.AspectRatio = VideoFillMode switch
+            {
+                FillMode.Fill => "16:9",
+                FillMode.Stretch => "16:9",
+                FillMode.Original => (StreamQuality != null && StreamQuality.Width > 0 && StreamQuality.Height > 0)
+                    ? $"{StreamQuality.Width}:{StreamQuality.Height}"
+                    : null,
+                _ => null
+            };
+            mediaPlayer.CropGeometry = VideoFillMode == FillMode.Fill ? "16:9" : null;
+            
+            LogDebug($"VM: VideoFillMode applied: {VideoFillMode}");
+        }
+        catch (Exception ex)
+        {
+            LogDebug($"VM: Error applying VideoFillMode: {ex.Message}");
+        }
+    }
 
     [ObservableProperty]
     private bool _isMuted;

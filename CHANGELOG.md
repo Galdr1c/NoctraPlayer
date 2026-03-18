@@ -9,6 +9,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Video Görüntü Doldurma Modları (Video Fill Mode)** (2026-03-18):
+  - Video oynatıcıya 4 farklı doldurma modu eklendi: Uydur (Fit), Doldur (Fill 16:9), Genişlet (Stretch 16:9) ve Orijinal.
+  - Mod değiştirildiğinde ekranın ortasında belirip kaybolan estetik bir "Mod Göstergesi" (Overlay Message) eklendi.
+  - Oynatıcı kontrollerindeki her mod için özel Material Design ikon entegrasyonu sağlandı.
+  - Ayarlar pencerelerindeki (`SettingsWindow` ve `GlobalSettingsWindow`) dikey kaydırma çubuğu konumu ve hizalaması düzeltilerek daha temiz bir görünüm elde edildi.
 - **Özelleştirilebilir Video Buffer (Önbellek) Boyutu** (2026-03-18):
   - Ayarlar > Oynatma sekmesine video buffer boyutu seçimi eklendi (Küçük: 2sn, Normal: 5sn, Büyük: 10sn).
   - İnternet bağlantı hızına göre video yükleme performansını optimize etme imkanı sağlandı.

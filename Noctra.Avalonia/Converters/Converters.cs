@@ -9,6 +9,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Noctra.Models;
+using Noctra.ViewModels;
 using Material.Icons;
 
 namespace Noctra.Avalonia.Converters;
@@ -1259,4 +1260,25 @@ public class DownloadStatusToBrushConverter : IValueConverter
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
+}
+public class FillModeToIconConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is PlayerViewModel.FillMode mode)
+        {
+            return mode switch
+            {
+                PlayerViewModel.FillMode.Fit => MaterialIconKind.AspectRatio,
+                PlayerViewModel.FillMode.Fill => MaterialIconKind.CropFree,
+                PlayerViewModel.FillMode.Stretch => MaterialIconKind.ArrowExpandAll,
+                PlayerViewModel.FillMode.Original => MaterialIconKind.ImageSizeSelectActual,
+                _ => MaterialIconKind.AspectRatio
+            };
+        }
+        return MaterialIconKind.AspectRatio;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => null;
 }

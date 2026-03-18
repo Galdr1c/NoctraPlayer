@@ -55,4 +55,5 @@
   <converters:DoubleToStarGridLengthConverter x:Key="DoubleToStarGridLengthConverter" />
   <converters:BytesToHumanConverter x:Key="BytesToHumanConverter" />
   <converters:DownloadStatusToBrushConverter x:Key="DownloadStatusToBrushConverter" />
+  <converters:FillModeToIconConverter x:Key="FillModeToIconConverter" />
 </ResourceDictionary>
