@@ -2543,16 +2543,29 @@ public partial class MainViewModel : ObservableObject
             }
 
             // Initial EPG visibility check: ensure we have programs in DB if not refreshing
-        if (!forceRefresh && SelectedPlaylist != null)
-        {
-            var hasCachedPrograms = await HasEpgForChannelsAsync(db, liveChannels);
-            if (hasCachedPrograms && isBackgroundSync)
+            if (!forceRefresh && SelectedPlaylist != null)
             {
-                // In background sync, if we have programs, we still continue to download based on timer
-                // but we can skip if we really want to save bandwidth. 
-                // However, the user wants "direct connection" and no forced limits.
+                var hasCachedPrograms = await HasEpgForChannelsAsync(db, liveChannels);
+                var refreshThresholdHours = _settingsService.Settings.EpgRefreshFrequencyHours;
+
+                if (hasCachedPrograms)
+                {
+                    // If refresh frequency is 0 (Manual) and we have data, skip.
+                    if (refreshThresholdHours <= 0)
+                    {
+                        if (isBackgroundSync) return;
+                    }
+                    else
+                    {
+                        // If EPG was updated recently (within the threshold), skip.
+                        var lastUpdated = SelectedPlaylist.EpgLastUpdated ?? DateTime.MinValue;
+                        if ((DateTime.UtcNow - lastUpdated).TotalHours < refreshThresholdHours)
+                        {
+                            if (isBackgroundSync) return;
+                        }
+                    }
+                }
             }
-        }
 
             // 1. Provider EPG URL (Xtream)
             string? providerEpgUrl = null;
@@ -2662,7 +2675,7 @@ public partial class MainViewModel : ObservableObject
                         source.Url, 
                         source.IsPrimary, 
                         targetChannels, 
-                        daysAhead: 1, 
+                        daysAhead: 7, 
                         progress: epgProgressReporter,
                         clearBeforeSave: source.ClearBeforeLoad); // ATOMIC CLEAR: Only clear if we actually start saving programs
 
