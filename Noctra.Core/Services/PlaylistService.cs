@@ -790,20 +790,19 @@ public partial class PlaylistService : IPlaylistService
     /// <summary>
     /// Get channels with filtering and pagination for fast loading
     /// </summary>
-    public async Task<List<Channel>> GetChannelsFilteredAsync(int playlistId, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, int limit = 1000, ChannelSortOrder sortOrder = ChannelSortOrder.NewestFirst)
+    public async Task<List<Channel>> GetChannelsFilteredAsync(int playlistId, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, int limit = 1000, ChannelSortOrder sortOrder = ChannelSortOrder.NewestFirst, List<string>? hiddenGroups = null)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
-        var query = BuildFilteredChannelQuery(context, playlistId, searchText, group, type, onlyFavorites);
-        
+        var query = BuildFilteredChannelQuery(context, playlistId, searchText, group, type, onlyFavorites, hiddenGroups);
+
         return await ApplySort(query, sortOrder)
             .Take(limit)
             .ToListAsync();
     }
-
-    public async Task<List<Channel>> GetChannelsFilteredPageAsync(int playlistId, int skip, int take, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, ChannelSortOrder sortOrder = ChannelSortOrder.NewestFirst)
+    public async Task<List<Channel>> GetChannelsFilteredPageAsync(int playlistId, int skip, int take, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, ChannelSortOrder sortOrder = ChannelSortOrder.NewestFirst, List<string>? hiddenGroups = null)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
-        var query = BuildFilteredChannelQuery(context, playlistId, searchText, group, type, onlyFavorites);
+        var query = BuildFilteredChannelQuery(context, playlistId, searchText, group, type, onlyFavorites, hiddenGroups);
 
         return await ApplySort(query, sortOrder)
             .Skip(Math.Max(0, skip))
@@ -905,7 +904,7 @@ public partial class PlaylistService : IPlaylistService
         };
     }
 
-    private IQueryable<Channel> BuildFilteredChannelQuery(AppDbContext context, int playlistId, string? searchText, string? group, ChannelType? type, bool onlyFavorites)
+    private IQueryable<Channel> BuildFilteredChannelQuery(AppDbContext context, int playlistId, string? searchText, string? group, ChannelType? type, bool onlyFavorites, List<string>? hiddenGroups = null)
     {
         var query = context.Channels.Where(c => c.PlaylistId == playlistId);
 
@@ -932,6 +931,11 @@ public partial class PlaylistService : IPlaylistService
         if (onlyFavorites)
         {
             query = query.Where(c => c.IsFavorite);
+        }
+
+        if (hiddenGroups != null && hiddenGroups.Count > 0)
+        {
+            query = query.Where(c => c.GroupTitle == null || !hiddenGroups.Contains(c.GroupTitle));
         }
 
         return query;

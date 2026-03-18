@@ -186,6 +186,11 @@ public class AppSettings
     /// Uygulama kapandığında geçmişi temizle
     /// </summary>
     public bool ClearHistoryOnExit { get; set; } = false;
+
+    // ============ Kategori Gizleme ============
+    public List<string> HiddenLiveGroups { get; set; } = new();
+    public List<string> HiddenMovieGroups { get; set; } = new();
+    public List<string> HiddenSeriesGroups { get; set; } = new();
 }
 
 

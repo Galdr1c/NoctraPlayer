@@ -1602,6 +1602,15 @@ public partial class MainViewModel : ObservableObject
             var effectiveGroup = hasSearch ? null : SelectedGroup;
             var effectiveType = hasSearch ? null : SelectedChannelType;
 
+            var s = _settingsService.Settings;
+            var hiddenGroups = effectiveType switch
+            {
+                ChannelType.Live => s.HiddenLiveGroups,
+                ChannelType.VOD => s.HiddenMovieGroups,
+                ChannelType.Series => s.HiddenSeriesGroups,
+                _ => s.HiddenLiveGroups.Concat(s.HiddenMovieGroups).Concat(s.HiddenSeriesGroups).ToList()
+            };
+
             var page = await _playlistService.GetChannelsFilteredPageAsync(
                 SelectedPlaylist.Id,
                 skip: _currentPage * IncrementalPageSize,
@@ -1610,7 +1619,8 @@ public partial class MainViewModel : ObservableObject
                 group: effectiveGroup,
                 type: effectiveType,
                 onlyFavorites: ShowOnlyFavorites,
-                sortOrder: SelectedSortOrder);
+                sortOrder: SelectedSortOrder,
+                hiddenGroups: hiddenGroups);
 
             // If selected group returns nothing on first page, fallback to "all" to avoid false empty UI.
             if (_currentPage == 0 &&
@@ -1896,12 +1906,13 @@ public partial class MainViewModel : ObservableObject
 
     private void UpdateGroupsForSelectedType()
     {
+        var s = _settingsService.Settings;
         var nextGroups = SelectedChannelType switch
         {
-            ChannelType.Live => _liveGroupsCache,
-            ChannelType.VOD => _vodGroupsCache,
-            ChannelType.Series => _seriesGroupsCache,
-            _ => _allGroupsCache
+            ChannelType.Live => _liveGroupsCache.Where(g => !s.HiddenLiveGroups.Contains(g)).ToList(),
+            ChannelType.VOD => _vodGroupsCache.Where(g => !s.HiddenMovieGroups.Contains(g)).ToList(),
+            ChannelType.Series => _seriesGroupsCache.Where(g => !s.HiddenSeriesGroups.Contains(g)).ToList(),
+            _ => _allGroupsCache.Where(g => !s.HiddenLiveGroups.Contains(g) && !s.HiddenMovieGroups.Contains(g) && !s.HiddenSeriesGroups.Contains(g)).ToList()
         };
 
         _dispatcherService.Invoke(() => Groups = new ObservableCollection<string>(nextGroups));
@@ -1975,7 +1986,7 @@ public partial class MainViewModel : ObservableObject
         ScheduleImmediateFilter();
     }
 
-    private void ScheduleImmediateFilter()
+    public void ScheduleImmediateFilter()
     {
         _filterCts?.Cancel();
         _filterCts = new CancellationTokenSource();
@@ -2428,6 +2439,70 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger?.LogDebug($"TouchPlaylistLastUpdatedAsync failed: {ex}");
+        }
+    }
+
+    [RelayCommand]
+    private void HideGroup(string? groupName)
+    {
+        if (string.IsNullOrWhiteSpace(groupName)) return;
+
+        var s = _settingsService.Settings;
+        var list = SelectedChannelType switch
+        {
+            ChannelType.Live => s.HiddenLiveGroups,
+            ChannelType.VOD => s.HiddenMovieGroups,
+            ChannelType.Series => s.HiddenSeriesGroups,
+            _ => null
+        };
+
+        if (list == null) return;
+
+        if (!list.Contains(groupName))
+        {
+            list.Add(groupName);
+            StatusMessage = $"'{groupName}' kategorisi gizlendi";
+            
+            // Arayüzden anında kaldır (akıcılık için)
+            if (Groups.Contains(groupName))
+            {
+                Groups.Remove(groupName);
+            }
+            
+            if (SelectedGroup == groupName)
+            {
+                SelectedGroup = null; // Bu işlem otomatik filtrelemeyi tetikler
+            }
+            else
+            {
+                ScheduleImmediateFilter();
+            }
+
+            // Diske yazma işlemini arayüzü dondurmamak için arka planda yap
+            _ = Task.Run(async () => 
+            {
+                try { await _settingsService.SaveAsync(); } catch { }
+            });
+        }
+    }
+
+    [RelayCommand]
+    private async Task UnhideGroup(string? groupName)
+    {
+        if (string.IsNullOrWhiteSpace(groupName)) return;
+
+        var s = _settingsService.Settings;
+        // Search in all lists
+        bool removed = false;
+        if (s.HiddenLiveGroups.Remove(groupName)) removed = true;
+        if (s.HiddenMovieGroups.Remove(groupName)) removed = true;
+        if (s.HiddenSeriesGroups.Remove(groupName)) removed = true;
+
+        if (removed)
+        {
+            await _settingsService.SaveAsync();
+            StatusMessage = $"'{groupName}' kategorisi tekrar görünür yapıldı";
+            ScheduleImmediateFilter();
         }
     }
 
@@ -4441,7 +4516,8 @@ public partial class MainViewModel : ObservableObject
             .ThenBy(x => x.Item.Name)
             .Select(x => x.Item));
 
-        var seriesSnapshot = _allSeriesCache;
+        var hiddenSeriesGroups = _settingsService.Settings.HiddenSeriesGroups;
+        var seriesSnapshot = _allSeriesCache.Where(s => s.GroupTitle == null || !hiddenSeriesGroups.Contains(s.GroupTitle)).ToList();
         
         int CalculateSeriesScore(Series s)
         {
@@ -4795,9 +4871,16 @@ public partial class MainViewModel : ObservableObject
         var normalizedQuery = NormalizeSeriesQuery(query);
         var selectedGroup = SelectedGroup?.Trim();
         var hasSearch = !string.IsNullOrWhiteSpace(query);
+        var s = _settingsService.Settings;
 
         var filtered = source.Where(series =>
         {
+            // Filter out hidden groups
+            if (series.GroupTitle != null && s.HiddenSeriesGroups.Contains(series.GroupTitle))
+            {
+                return false;
+            }
+
             var groupOk = true;
             if (!hasSearch && !string.IsNullOrWhiteSpace(selectedGroup))
             {

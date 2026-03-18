@@ -26,6 +26,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - Ayarlar > EPG sekmesine "Özel EPG URL" alanı için bağımsız bir "Şimdi Yenile" butonu eklendi. Bu buton, girilen URL'yi anında kaydederek yenileme işlemini başlatır.
   - Özel EPG URL'leri artık sistemde en yüksek öncelikli (`Priority 0`) kaynak olarak kabul edilir; sistem önce bu adresten veriyi çeker ve sadece bu kaynakta bulunmayan eksik kanallar için ikincil kaynaklara (`iptv-epg.org` vb.) başvurur (Akıllı Hibrit Eşleştirme).
   - Özel URL alanı için estetik bir yer tutucu (watermark) eklenerek kullanıcı deneyimi iyileştirildi.
+- **Kategori Gizleme Desteği** (2026-03-18):
+  - Canlı TV, Film ve Dizi kategorilerinde istenmeyen grupların tamamen gizlenebilmesi sağlandı.
+  - Grup seçim listelerindeki (ComboBox) kategori adlarının başına eklenen "Göz" ikonu ile kategoriler anında gizlenebilir.
+  - Gizlenen kategoriler ve içindeki tüm yayınlar arayüzden ve genel arama (Search) motorundan tamamen kaldırılır (aramalarda çıkmaz).
+  - Ayarlar > Kanal Listesi sekmesine "Gizlenen Kategoriler" için modern, genişletilebilir (Expander) kutular eklendi. Bu şık paneller üzerinden Canlı TV, Film ve Dizi grupları ayrı ayrı yönetilebilir ve istenilen kategoriler tekrar görünür ("Göster") yapılabilir.
 - **EPG Veri Kaybı ve Yenileme İyileştirmeleri** (2026-03-18):
   - Uygulama her açıldığında EPG verilerinin azalmasına neden olan "1 günlük veri sınırı" 7 güne çıkarıldı.
   - Ayarlardaki yenileme sıklığına (örn. 12 saat) sadık kalınarak, gereksiz otomatik yenilemeler ve veritabanı temizleme işlemleri engellendi.

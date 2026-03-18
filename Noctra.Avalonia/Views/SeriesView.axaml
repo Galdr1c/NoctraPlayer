@@ -16,7 +16,20 @@
             <Grid Margin="0,0,0,24" ColumnDefinitions="*,Auto">
               <TextBlock Text="Diziler" FontSize="24" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
               <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
-                <ComboBox Width="260" Height="45" ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}" Theme="{StaticResource ModernComboBox}"/>
+                <ComboBox Width="260" Height="45" ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}" Theme="{StaticResource ModernComboBox}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <Grid ColumnDefinitions="Auto,*">
+                        <Button Grid.Column="0" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).HideGroupCommand}"
+                                CommandParameter="{Binding}" Padding="6" Margin="0,0,8,0" Background="Transparent" BorderThickness="0" CornerRadius="16" Cursor="Hand"
+                                ToolTip.Tip="Kategoriyi Gizle">
+                          <materialIcons:MaterialIcon Kind="EyeOffOutline" Width="16" Height="16" Foreground="{DynamicResource TextMutedBrush}"/>
+                        </Button>
+                        <TextBlock Grid.Column="1" Text="{Binding}" VerticalAlignment="Center"/>
+                      </Grid>
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
                 <Button Content="Tümü" Width="80" Height="45" Click="ClearGroupSelection_Click" Theme="{StaticResource FilterButtonStyle}"/>
                 <ComboBox Width="240" Height="45" ItemsSource="{Binding SortOptions}" SelectedValue="{Binding SelectedSortOrder}" SelectedValueBinding="{Binding Key}" DisplayMemberBinding="{Binding Value}" Theme="{StaticResource ModernComboBox}"/>
               </StackPanel>

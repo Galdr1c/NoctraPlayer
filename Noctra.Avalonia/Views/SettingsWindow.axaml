@@ -1,6 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:Noctra.ViewModels"
+        xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
@@ -104,6 +104,42 @@
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="Padding" Value="24"/>
             <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+
+        <!-- Flat Expander Style for Settings -->
+        <Style Selector="Expander.FlatExpander">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        </Style>
+        <Style Selector="Expander.FlatExpander /template/ ToggleButton#ExpanderHeader, Expander.FlatExpander:down /template/ ToggleButton#ExpanderHeader, Expander.FlatExpander:up /template/ ToggleButton#ExpanderHeader">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Padding" Value="24"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        </Style>
+        <Style Selector="Expander.FlatExpander /template/ ToggleButton#ExpanderHeader:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
+        </Style>
+        <Style Selector="Expander.FlatExpander /template/ ToggleButton#ExpanderHeader:pressed">
+            <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
+        </Style>
+        <Style Selector="Expander.FlatExpander /template/ ToggleButton#ExpanderHeader /template/ ContentPresenter#PART_ContentPresenter, Expander.FlatExpander /template/ ToggleButton#ExpanderHeader:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="Expander.FlatExpander /template/ Border#ExpanderContent, Expander.FlatExpander:down /template/ Border#ExpanderContent, Expander.FlatExpander:up /template/ Border#ExpanderContent, Expander.FlatExpander:left /template/ Border#ExpanderContent, Expander.FlatExpander:right /template/ Border#ExpanderContent">
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Padding" Value="24,0,24,24"/>
+        </Style>
+        <Style Selector="Expander.FlatExpander /template/ Border#PART_ContentBorder">
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Padding" Value="0"/>
         </Style>
     </Window.Styles>
 
@@ -304,7 +340,7 @@
                                                          IsEnabled="{Binding IsPremium}"
                                                          Theme="{StaticResource ModernRadioButton}"/>
                                             <!-- Lock icon positioned over the circle -->
-                                            <materialIcons:MaterialIcon Kind="Lock" Width="18" Height="18" 
+                                            <materialIcons:MaterialIcon Kind="Lock" Width="20" Height="20" 
                                                                         Foreground="{DynamicResource TextMutedBrush}" 
                                                                         IsVisible="{Binding !IsPremium}" 
                                                                         HorizontalAlignment="Left" VerticalAlignment="Center"
@@ -324,7 +360,7 @@
                                                          IsEnabled="{Binding IsPremium}"
                                                          Theme="{StaticResource ModernRadioButton}"/>
                                             <!-- Lock icon positioned over the circle -->
-                                            <materialIcons:MaterialIcon Kind="Lock" Width="18" Height="18" 
+                                            <materialIcons:MaterialIcon Kind="Lock" Width="20" Height="20" 
                                                                         Foreground="{DynamicResource TextMutedBrush}" 
                                                                         IsVisible="{Binding !IsPremium}" 
                                                                         HorizontalAlignment="Left" VerticalAlignment="Center"
@@ -519,6 +555,147 @@
                                         </ComboBoxItem>
                                     </ComboBox>
                                 </StackPanel>
+                            </Border>
+
+                            <Border Classes="SettingsCard" Padding="0">
+                                <Expander Classes="FlatExpander" IsExpanded="False">
+                                    <Expander.Header>
+                                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,16,0">
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="Gizlenen Canlı TV Kategorileri" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,4"/>
+                                                <TextBlock Text="Bu kategoriler ve içerikleri ana ekranlarda görünmez."
+                                                           FontSize="13" Foreground="{DynamicResource TextMutedBrush}"/>
+                                            </StackPanel>
+                                            <Border Grid.Column="1" Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="12,4" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding HiddenLiveGroups.Count, StringFormat='{}{0} Kategori'}" 
+                                                           Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" FontSize="14"/>
+                                            </Border>
+                                        </Grid>
+                                    </Expander.Header>
+                                    <ScrollViewer MaxHeight="250">
+                                        <StackPanel>
+                                            <ItemsControl ItemsSource="{Binding HiddenLiveGroups}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Background="{DynamicResource Surface1Brush}" CornerRadius="6" Padding="12,8" Margin="0,0,0,6">
+                                                            <Grid ColumnDefinitions="*,Auto">
+                                                                <TextBlock Text="{Binding}" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Medium" TextTrimming="CharacterEllipsis"/>
+                                                                <Button Grid.Column="1" 
+                                                                        Theme="{StaticResource FilterButtonStyle}"
+                                                                        Command="{Binding $parent[Window].DataContext.UnhideGroupCommand}"
+                                                                        CommandParameter="{Binding}"
+                                                                        Padding="10,4" CornerRadius="4" Cursor="Hand">
+                                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                        <materialIcons:MaterialIcon Kind="EyeOutline" Width="14" Height="14"/>
+                                                                        <TextBlock Text="Göster" FontSize="12" FontWeight="Medium"/>
+                                                                    </StackPanel>
+                                                                </Button>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <TextBlock Text="Gizlenen canlı TV kategorisi yok."
+                                                       FontSize="13" Foreground="{DynamicResource TextMutedBrush}"
+                                                       HorizontalAlignment="Center" Margin="0,20"
+                                                       IsVisible="{Binding !HiddenLiveGroups.Count}"/>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </Expander>
+                            </Border>
+
+                            <Border Classes="SettingsCard" Padding="0">
+                                <Expander Classes="FlatExpander" IsExpanded="False">
+                                    <Expander.Header>
+                                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,16,0">
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="Gizlenen Film Kategorileri" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,4"/>
+                                                <TextBlock Text="Bu kategoriler ve içerikleri ana ekranlarda görünmez."
+                                                           FontSize="13" Foreground="{DynamicResource TextMutedBrush}"/>
+                                            </StackPanel>
+                                            <Border Grid.Column="1" Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="12,4" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding HiddenMovieGroups.Count, StringFormat='{}{0} Kategori'}" 
+                                                           Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" FontSize="14"/>
+                                            </Border>
+                                        </Grid>
+                                    </Expander.Header>
+                                    <ScrollViewer MaxHeight="250">
+                                        <StackPanel>
+                                            <ItemsControl ItemsSource="{Binding HiddenMovieGroups}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Background="{DynamicResource Surface1Brush}" CornerRadius="6" Padding="12,8" Margin="0,0,0,6">
+                                                            <Grid ColumnDefinitions="*,Auto">
+                                                                <TextBlock Text="{Binding}" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Medium" TextTrimming="CharacterEllipsis"/>
+                                                                <Button Grid.Column="1" 
+                                                                        Theme="{StaticResource FilterButtonStyle}"
+                                                                        Command="{Binding $parent[Window].DataContext.UnhideGroupCommand}"
+                                                                        CommandParameter="{Binding}"
+                                                                        Padding="10,4" CornerRadius="4" Cursor="Hand">
+                                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                        <materialIcons:MaterialIcon Kind="EyeOutline" Width="14" Height="14"/>
+                                                                        <TextBlock Text="Göster" FontSize="12" FontWeight="Medium"/>
+                                                                    </StackPanel>
+                                                                </Button>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <TextBlock Text="Gizlenen film kategorisi yok."
+                                                       FontSize="13" Foreground="{DynamicResource TextMutedBrush}"
+                                                       HorizontalAlignment="Center" Margin="0,20"
+                                                       IsVisible="{Binding !HiddenMovieGroups.Count}"/>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </Expander>
+                            </Border>
+
+                            <Border Classes="SettingsCard" Padding="0">
+                                <Expander Classes="FlatExpander" IsExpanded="False">
+                                    <Expander.Header>
+                                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,16,0">
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="Gizlenen Dizi Kategorileri" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,4"/>
+                                                <TextBlock Text="Bu kategoriler ve içerikleri ana ekranlarda görünmez."
+                                                           FontSize="13" Foreground="{DynamicResource TextMutedBrush}"/>
+                                            </StackPanel>
+                                            <Border Grid.Column="1" Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="12,4" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding HiddenSeriesGroups.Count, StringFormat='{}{0} Kategori'}" 
+                                                           Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" FontSize="14"/>
+                                            </Border>
+                                        </Grid>
+                                    </Expander.Header>
+                                    <ScrollViewer MaxHeight="250">
+                                        <StackPanel>
+                                            <ItemsControl ItemsSource="{Binding HiddenSeriesGroups}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Background="{DynamicResource Surface1Brush}" CornerRadius="6" Padding="12,8" Margin="0,0,0,6">
+                                                            <Grid ColumnDefinitions="*,Auto">
+                                                                <TextBlock Text="{Binding}" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Medium" TextTrimming="CharacterEllipsis"/>
+                                                                <Button Grid.Column="1" 
+                                                                        Theme="{StaticResource FilterButtonStyle}"
+                                                                        Command="{Binding $parent[Window].DataContext.UnhideGroupCommand}"
+                                                                        CommandParameter="{Binding}"
+                                                                        Padding="10,4" CornerRadius="4" Cursor="Hand">
+                                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                        <materialIcons:MaterialIcon Kind="EyeOutline" Width="14" Height="14"/>
+                                                                        <TextBlock Text="Göster" FontSize="12" FontWeight="Medium"/>
+                                                                    </StackPanel>
+                                                                </Button>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <TextBlock Text="Gizlenen dizi kategorisi yok."
+                                                       FontSize="13" Foreground="{DynamicResource TextMutedBrush}"
+                                                       HorizontalAlignment="Center" Margin="0,20"
+                                                       IsVisible="{Binding !HiddenSeriesGroups.Count}"/>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </Expander>
                             </Border>
                         </StackPanel>
                     </ScrollViewer>

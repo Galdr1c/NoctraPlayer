@@ -5,7 +5,8 @@ using Noctra.Data;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using System.Collections.ObjectModel;
 
 namespace Noctra.ViewModels;
 
@@ -411,6 +412,48 @@ public partial class SettingsViewModel : ObservableObject
         return rawUrl;
     }
 
+    [ObservableProperty]
+    private ObservableCollection<string> _hiddenLiveGroups = new();
+
+    [ObservableProperty]
+    private ObservableCollection<string> _hiddenMovieGroups = new();
+
+    [ObservableProperty]
+    private ObservableCollection<string> _hiddenSeriesGroups = new();
+
+    public int TotalHiddenGroupsCount => HiddenLiveGroups.Count + HiddenMovieGroups.Count + HiddenSeriesGroups.Count;
+
+    [RelayCommand]
+    private async Task UnhideGroupAsync(string groupName)
+    {
+        if (string.IsNullOrWhiteSpace(groupName)) return;
+
+        var s = _settingsService.Settings;
+        bool removed = false;
+        
+        if (s.HiddenLiveGroups.Remove(groupName))
+        {
+            HiddenLiveGroups.Remove(groupName);
+            removed = true;
+        }
+        if (s.HiddenMovieGroups.Remove(groupName))
+        {
+            HiddenMovieGroups.Remove(groupName);
+            removed = true;
+        }
+        if (s.HiddenSeriesGroups.Remove(groupName))
+        {
+            HiddenSeriesGroups.Remove(groupName);
+            removed = true;
+        }
+
+        if (removed)
+        {
+            await _settingsService.SaveAsync();
+            _mainViewModel.ScheduleImmediateFilter();
+        }
+    }
+
     private void LoadSettings()
     {
         var s = _settingsService.Settings;
@@ -482,7 +525,11 @@ public partial class SettingsViewModel : ObservableObject
         EpgTimeOffsetIndex = EpgTimeOffsetHours + 12;
 
         CustomEpgUrl = s.CustomEpgUrl ?? string.Empty;
-        
+
+        // Hidden Groups
+        HiddenLiveGroups = new ObservableCollection<string>(s.HiddenLiveGroups);
+        HiddenMovieGroups = new ObservableCollection<string>(s.HiddenMovieGroups);
+        HiddenSeriesGroups = new ObservableCollection<string>(s.HiddenSeriesGroups);
     }
 
     [RelayCommand]
