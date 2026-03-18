@@ -9,10 +9,6 @@ namespace Noctra.Services;
 /// </summary>
 public class VideoPlayerService : IVideoPlayerService
 {
-    private const int NetworkCachingMs = 5000;
-    private const int LiveCachingMs = 4000;
-    private const int FileCachingMs = 1500;
-
     private LibVLC? _libVLC;
     private MediaPlayer? _mediaPlayer;
     private readonly IDispatcherService _dispatcherService;
@@ -24,6 +20,7 @@ public class VideoPlayerService : IVideoPlayerService
     private int _lastSubtitleBackgroundOpacity;
     private int _lastSubtitleMargin;
     private bool _lastHardwareAcceleration;
+    private BufferSize _lastVideoBufferSize;
     
     private int _retryCount = 0;
     private const int MaxRetries = 3;
@@ -65,6 +62,16 @@ public class VideoPlayerService : IVideoPlayerService
     public StreamQualityInfo? StreamQuality { get; private set; }
 
 
+    private int GetNetworkCaching() => _settingsService.Settings.VideoBufferSize switch
+    {
+        BufferSize.Small => 2000,
+        BufferSize.Large => 10000,
+        _ => 5000  // Normal
+    };
+
+    private int GetLiveCaching() => GetNetworkCaching() - 1000;
+    private int GetFileCaching() => 1500;
+
     public VideoPlayerService(IDispatcherService dispatcherService, ISettingsService settingsService)
     {
         _dispatcherService = dispatcherService;
@@ -77,6 +84,7 @@ public class VideoPlayerService : IVideoPlayerService
         _lastSubtitleBackgroundOpacity = _settingsService.Settings.SubtitleBackgroundOpacity;
         _lastSubtitleMargin = _settingsService.Settings.SubtitleMargin;
         _lastHardwareAcceleration = _settingsService.Settings.HardwareAcceleration;
+        _lastVideoBufferSize = _settingsService.Settings.VideoBufferSize;
 
         _settingsService.SettingsChanged += OnSettingsChanged;
 
@@ -119,6 +127,12 @@ public class VideoPlayerService : IVideoPlayerService
             shouldReinit = true;
         }
 
+        if (_lastVideoBufferSize != settings.VideoBufferSize)
+        {
+            _lastVideoBufferSize = settings.VideoBufferSize;
+            shouldReinit = true;
+        }
+
         if (shouldReinit)
         {
             var cts = new CancellationTokenSource();
@@ -155,7 +169,10 @@ public class VideoPlayerService : IVideoPlayerService
                 LibVLCSharp.Shared.Core.Initialize();
                 
                 var ua = string.IsNullOrWhiteSpace(_lastUserAgent) ? "VLC/3.0.4" : _lastUserAgent;
-                
+                var netCaching = GetNetworkCaching();
+                var liveCaching = GetLiveCaching();
+                var fileCaching = GetFileCaching();
+
                 var optionsList = new List<string>
                 {
                     // avcodec-fast: daha az kalite ama takılma yok
@@ -163,9 +180,9 @@ public class VideoPlayerService : IVideoPlayerService
                     // Direct rendering — CPU→GPU kopyalama yükünü azaltır
                     "--avcodec-dr",
 
-                    $"--network-caching={NetworkCachingMs}",
-                    $"--live-caching={LiveCachingMs}",
-                    $"--file-caching={FileCachingMs}",
+                    $"--network-caching={netCaching}",
+                    $"--live-caching={liveCaching}",
+                    $"--file-caching={fileCaching}",
                     
                     // Canlı TV için clock düzeltmesi
                     "--clock-synchro=0",
@@ -475,11 +492,14 @@ public class VideoPlayerService : IVideoPlayerService
                     media.AddOption($":http-user-agent={currentUa}");
                     media.AddOption(":http-reconnect=true");
 
+                    var netCaching = GetNetworkCaching();
+                    var liveCaching = GetLiveCaching();
+
                     var streamProfile = DetectStreamProfile(url);
                     switch (streamProfile)
                     {
                         case StreamProfile.LiveTs:
-                            media.AddOption($":network-caching={LiveCachingMs}");
+                            media.AddOption($":network-caching={liveCaching}");
                             media.AddOption(":clock-synchro=0");
                             media.AddOption(":clock-jitter=500");
                             media.AddOption(":ts-seek-percent");
@@ -487,8 +507,8 @@ public class VideoPlayerService : IVideoPlayerService
                             break;
 
                         case StreamProfile.VodMkv:
-                            media.AddOption(":network-caching=10000");
-                            media.AddOption(":live-caching=10000");
+                            media.AddOption($":network-caching={netCaching * 2}");
+                            media.AddOption($":live-caching={netCaching * 2}");
                             
                             if (_lastHardwareAcceleration)
                             {
@@ -505,18 +525,18 @@ public class VideoPlayerService : IVideoPlayerService
                             break;
 
                         case StreamProfile.VodMp4:
-                            media.AddOption($":network-caching={NetworkCachingMs}");
+                            media.AddOption($":network-caching={netCaching}");
                             media.AddOption(":demux=mp4,avformat");
                             break;
 
                         case StreamProfile.LiveM3u8:
-                            media.AddOption(":network-caching=6000");
+                            media.AddOption($":network-caching={netCaching + 1000}");
                             media.AddOption(":adaptive-logic=rate"); // highest yerine rate kullanılarak donmalar engellendi
                             break;
 
                         case StreamProfile.Unknown:
                             // Uzantısız/belirsiz stream — VLC kendi demuxer'ı ile otomatik algılasın
-                            media.AddOption($":network-caching={NetworkCachingMs}");
+                            media.AddOption($":network-caching={netCaching}");
                             media.AddOption(":no-drop-late-frames");
                             media.AddOption(":no-skip-frames");
                             media.AddOption(":http-continuous");
@@ -524,7 +544,7 @@ public class VideoPlayerService : IVideoPlayerService
                             break;
 
                         default:
-                            media.AddOption($":network-caching={NetworkCachingMs}");
+                            media.AddOption($":network-caching={netCaching}");
                             media.AddOption(":no-drop-late-frames");
                             media.AddOption(":no-skip-frames");
                             break;
@@ -540,7 +560,7 @@ public class VideoPlayerService : IVideoPlayerService
                     }
 
                     media = new Media(_libVLC, localPath, FromType.FromPath);
-                    media.AddOption($":file-caching={FileCachingMs}");
+                    media.AddOption($":file-caching={GetFileCaching()}");
                     media.AddOption(":no-drop-late-frames");
                     media.AddOption(":no-skip-frames");
                 }

@@ -21,6 +21,16 @@ public enum DownloadQuality
 }
 
 /// <summary>
+/// Video buffer boyutu
+/// </summary>
+public enum BufferSize
+{
+    Small,  // 2sn
+    Normal, // 5sn
+    Large   // 10sn
+}
+
+/// <summary>
 /// Uygulama ayarları modeli
 /// </summary>
 public class AppSettings
@@ -42,6 +52,11 @@ public class AppSettings
     /// </summary>
     public bool AutoPlayNext { get; set; } = true;
     
+    /// <summary>
+    /// Video buffer boyutu (Premium)
+    /// </summary>
+    public BufferSize VideoBufferSize { get; set; } = BufferSize.Normal;
+
     /// <summary>
     /// Veri kullanımı / video kalitesi
     /// </summary>

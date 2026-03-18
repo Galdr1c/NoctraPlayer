@@ -34,6 +34,15 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _autoPlayNext;
+
+    [ObservableProperty]
+    private bool _isBufferSmall;
+
+    [ObservableProperty]
+    private bool _isBufferNormal;
+
+    [ObservableProperty]
+    private bool _isBufferLarge;
     
     [ObservableProperty]
     private int _selectedDataUsage;
@@ -409,6 +418,11 @@ public partial class SettingsViewModel : ObservableObject
         // Playback
         UserAgent = s.UserAgent ?? string.Empty;
         AutoPlayNext = s.AutoPlayNext;
+        
+        IsBufferSmall = s.VideoBufferSize == BufferSize.Small;
+        IsBufferNormal = s.VideoBufferSize == BufferSize.Normal;
+        IsBufferLarge = s.VideoBufferSize == BufferSize.Large;
+
         SelectedDataUsage = (int)s.DataUsage;
         SubtitleEnabled = s.SubtitleEnabled;
         SubtitleLanguage = string.IsNullOrWhiteSpace(s.SubtitleLanguage) ? "tr" : s.SubtitleLanguage;
@@ -479,6 +493,11 @@ public partial class SettingsViewModel : ObservableObject
         // Playback
         s.UserAgent = UserAgent?.Trim() ?? string.Empty;
         s.AutoPlayNext = AutoPlayNext;
+
+        if (IsBufferSmall && IsPremium) s.VideoBufferSize = BufferSize.Small;
+        else if (IsBufferLarge && IsPremium) s.VideoBufferSize = BufferSize.Large;
+        else s.VideoBufferSize = BufferSize.Normal;
+
         s.DataUsage = (DataUsageLevel)SelectedDataUsage;
         s.SubtitleEnabled = SubtitleEnabled;
         s.SubtitleLanguage = SubtitleLanguage;

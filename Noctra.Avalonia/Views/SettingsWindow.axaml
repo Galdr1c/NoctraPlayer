@@ -293,6 +293,50 @@
 
                             <Border Classes="SettingsCard">
                                 <StackPanel>
+                                    <TextBlock Text="Video Buffer (Önbellek) Boyutu" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,10"/>
+                                    <TextBlock Text="Bağlantı hızınıza göre video yükleme tamponunu ayarlayın." FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20"/>
+
+                                    <StackPanel Orientation="Horizontal" Spacing="24">
+                                        <!-- Küçük (2sn) - PREMIUM -->
+                                        <Grid VerticalAlignment="Center">
+                                            <RadioButton Content="Küçük (2sn)" GroupName="Buffer"
+                                                         IsChecked="{Binding IsBufferSmall}"
+                                                         IsEnabled="{Binding IsPremium}"
+                                                         Theme="{StaticResource ModernRadioButton}"/>
+                                            <!-- Lock icon positioned over the circle -->
+                                            <materialIcons:MaterialIcon Kind="Lock" Width="18" Height="18" 
+                                                                        Foreground="{DynamicResource TextMutedBrush}" 
+                                                                        IsVisible="{Binding !IsPremium}" 
+                                                                        HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                                        Margin="0,0,0,0"
+                                                                        IsHitTestVisible="False"/>
+                                        </Grid>
+                                        
+                                        <!-- Normal (5sn) - FREE -->
+                                        <RadioButton Content="Normal (5sn)" GroupName="Buffer"
+                                                     IsChecked="{Binding IsBufferNormal}"
+                                                     Theme="{StaticResource ModernRadioButton}"/>
+
+                                        <!-- Büyük (10sn) - PREMIUM -->
+                                        <Grid VerticalAlignment="Center">
+                                            <RadioButton Content="Büyük (10sn)" GroupName="Buffer"
+                                                         IsChecked="{Binding IsBufferLarge}"
+                                                         IsEnabled="{Binding IsPremium}"
+                                                         Theme="{StaticResource ModernRadioButton}"/>
+                                            <!-- Lock icon positioned over the circle -->
+                                            <materialIcons:MaterialIcon Kind="Lock" Width="18" Height="18" 
+                                                                        Foreground="{DynamicResource TextMutedBrush}" 
+                                                                        IsVisible="{Binding !IsPremium}" 
+                                                                        HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                                        Margin="0,0,0,0"
+                                                                        IsHitTestVisible="False"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Classes="SettingsCard">
+                                <StackPanel>
                                     <TextBlock Text="Ses ve Altyazı" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
                                     
                                     <Grid Margin="0,0,0,18">
@@ -634,7 +678,6 @@
                                                 Height="45"
                                                 VerticalAlignment="Stretch"/>
                                     </Grid>
-
                                 </StackPanel>
                             </Border>
                         </StackPanel>

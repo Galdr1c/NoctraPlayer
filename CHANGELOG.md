@@ -9,6 +9,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Özelleştirilebilir Video Buffer (Önbellek) Boyutu** (2026-03-18):
+  - Ayarlar > Oynatma sekmesine video buffer boyutu seçimi eklendi (Küçük: 2sn, Normal: 5sn, Büyük: 10sn).
+  - İnternet bağlantı hızına göre video yükleme performansını optimize etme imkanı sağlandı.
+  - "Küçük (2sn)" ve "Büyük (10sn)" seçenekleri Premium kullanıcılara özel olarak sunuldu.
+  - Premium kilit ikonları, kullanıcı deneyimini artırmak için doğrudan RadioButton seçim yuvarlaklarının üzerine estetik bir şekilde yerleştirildi.
 - **Gelişmiş EPG Yönetimi ve Özel URL Desteği** (2026-03-18):
   - Ayarlar > EPG sekmesine "Özel EPG URL" alanı için bağımsız bir "Şimdi Yenile" butonu eklendi. Bu buton, girilen URL'yi anında kaydederek yenileme işlemini başlatır.
   - Özel EPG URL'leri artık sistemde en yüksek öncelikli (`Priority 0`) kaynak olarak kabul edilir; sistem önce bu adresten veriyi çeker ve sadece bu kaynakta bulunmayan eksik kanallar için ikincil kaynaklara (`iptv-epg.org` vb.) başvurur (Akıllı Hibrit Eşleştirme).
