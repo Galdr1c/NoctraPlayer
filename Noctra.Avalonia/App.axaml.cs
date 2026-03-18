@@ -298,7 +298,20 @@ public partial class App : Application
         services.AddTransient<WatermarkViewModel>();
         
         services.AddSingleton<MainViewModel>();
-        services.AddSingleton<PlayerViewModel>();
+        services.AddSingleton<PlayerViewModel>(sp => 
+            new PlayerViewModel(
+                sp.GetRequiredService<IVideoPlayerService>(),
+                sp.GetRequiredService<IEpgService>(),
+                sp.GetRequiredService<IMetadataService>(),
+                sp.GetRequiredService<IMediaService>(),
+                sp.GetRequiredService<IContentDownloadService>(),
+                sp.GetRequiredService<INetworkService>(),
+                sp.GetRequiredService<IDispatcherService>(),
+                sp.GetRequiredService<ISettingsService>(),
+                sp.GetRequiredService<ILicenseService>(),
+                sp.GetRequiredService<MainViewModel>(),
+                sp.GetService<IWatchHistoryService>()
+            ));
         
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<ProfilesViewModel>();

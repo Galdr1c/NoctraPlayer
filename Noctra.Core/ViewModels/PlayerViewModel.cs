@@ -60,6 +60,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private readonly INetworkService _networkService;
     private readonly ISettingsService _settingsService;
     private readonly ILicenseService _licenseService;
+    private readonly MainViewModel _mainViewModel;
     private int _playRequestVersion;
     private bool _isPreferenceApplied;
 
@@ -161,6 +162,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsVodPlotVisible))]
     private Channel? _currentChannel;
+
+    [ObservableProperty]
+    private bool _isCurrentChannelFavorite;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLiveInfoVisible))]
@@ -279,6 +283,28 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     [RelayCommand]
     private void SetSubtitlePosition(string margin) => SubtitleMargin = int.Parse(margin);
+
+    [RelayCommand]
+    private async Task ToggleLiveFavoriteAsync()
+    {
+        var channel = CurrentChannel;
+        if (channel == null) return;
+
+        try
+        {
+            await _mainViewModel.ToggleFavoriteCommand.ExecuteAsync(channel);
+            
+            // Check if the channel is still the same after execution
+            if (CurrentChannel?.Id == channel.Id)
+            {
+                IsCurrentChannelFavorite = channel.IsFavorite;
+            }
+        }
+        catch (Exception ex)
+        {
+            LogDebug($"ToggleLiveFavoriteAsync failed: {ex.Message}");
+        }
+    }
 
     [RelayCommand]
     private void CycleVideoFillMode()
@@ -490,6 +516,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         IDispatcherService dispatcherService,
         ISettingsService settingsService,
         ILicenseService licenseService,
+        MainViewModel mainViewModel,
         IWatchHistoryService? watchHistoryService = null)
     {
         _videoPlayerService = videoPlayerService;
@@ -501,6 +528,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _dispatcherService = dispatcherService;
         _settingsService = settingsService;
         _licenseService = licenseService;
+        _mainViewModel = mainViewModel;
         _watchHistoryService = watchHistoryService;
 
         // Initialize Network Status
@@ -791,6 +819,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     partial void OnCurrentChannelChanged(Channel? value)
     {
+        IsCurrentChannelFavorite = value?.IsFavorite ?? false;
         DownloadStatusMessage = string.Empty;
         IsDownloadInProgress = false;
         Interlocked.Exchange(ref _isDownloadActionRunning, 0);

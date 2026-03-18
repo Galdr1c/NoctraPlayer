@@ -1282,3 +1282,17 @@ public class FillModeToIconConverter : IValueConverter
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => null;
 }
+
+public class BoolToFavoriteIconConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool isFavorite)
+        {
+            return isFavorite ? MaterialIconKind.Heart : MaterialIconKind.HeartOutline;
+        }
+        return MaterialIconKind.HeartOutline;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
+}

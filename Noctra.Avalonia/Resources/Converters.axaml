@@ -56,4 +56,5 @@
   <converters:BytesToHumanConverter x:Key="BytesToHumanConverter" />
   <converters:DownloadStatusToBrushConverter x:Key="DownloadStatusToBrushConverter" />
   <converters:FillModeToIconConverter x:Key="FillModeToIconConverter" />
+  <converters:BoolToFavoriteIconConverter x:Key="BoolToFavoriteIconConverter" />
 </ResourceDictionary>

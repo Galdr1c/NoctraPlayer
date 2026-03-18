@@ -14,6 +14,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - Mod değiştirildiğinde ekranın ortasında belirip kaybolan estetik bir "Mod Göstergesi" (Overlay Message) eklendi.
   - Oynatıcı kontrollerindeki her mod için özel Material Design ikon entegrasyonu sağlandı.
   - Ayarlar pencerelerindeki (`SettingsWindow` ve `GlobalSettingsWindow`) dikey kaydırma çubuğu konumu ve hizalaması düzeltilerek daha temiz bir görünüm elde edildi.
+- **Canlı TV Favori Butonu (Overlay Favorite)** (2026-03-18):
+  - Video oynatıcı (Live TV) kontrol paneline aktif kanalı favorilere ekleyip çıkarmayı sağlayan interaktif bir "Kalp" (Favori) butonu eklendi.
+  - Buton durumu (`IsFavorite`) ile senkronize çalışarak anlık görsel geri bildirim sağlar.
 - **Özelleştirilebilir Video Buffer (Önbellek) Boyutu** (2026-03-18):
   - Ayarlar > Oynatma sekmesine video buffer boyutu seçimi eklendi (Küçük: 2sn, Normal: 5sn, Büyük: 10sn).
   - İnternet bağlantı hızına göre video yükleme performansını optimize etme imkanı sağlandı.

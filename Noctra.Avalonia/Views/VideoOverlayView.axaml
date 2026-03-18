@@ -266,6 +266,13 @@
                             <Button Click="PlayNextLiveChannel_Click" Classes="iconBtn" IsVisible="{Binding IsLiveContent}" ToolTip.Tip="Sonraki Kanal">
                                 <materialIcons:MaterialIcon Kind="SkipNext" Width="20" Height="20" Foreground="#E6FFFFFF"/>
                             </Button>
+                            <Button Command="{Binding ToggleLiveFavoriteCommand}" 
+                                    Classes="iconBtn" 
+                                    IsVisible="{Binding IsLiveContent}" 
+                                    ToolTip.Tip="Favorilere Ekle / Çıkar">
+                                <materialIcons:MaterialIcon Kind="{Binding IsCurrentChannelFavorite, Converter={StaticResource BoolToFavoriteIconConverter}}" 
+                                                           Width="20" Height="20" Foreground="#E6FFFFFF"/>
+                            </Button>
                             <Button Command="{Binding ToggleMuteCommand}" Classes="iconBtn" Margin="4,0,0,0" ToolTip.Tip="Sesi Aç/Kapa">
                                 <Grid>
                                     <materialIcons:MaterialIcon Kind="VolumeOff" Width="20" Height="20" Foreground="#E6FFFFFF" IsVisible="{Binding IsMuted}"/>
