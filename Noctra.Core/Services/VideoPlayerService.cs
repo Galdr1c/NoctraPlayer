@@ -19,6 +19,7 @@ public class VideoPlayerService : IVideoPlayerService
     private readonly ISettingsService _settingsService;
     private bool _disposed;
     private int _currentVolume = 100;
+    private string _lastUserAgent;
     private int _lastSubtitleFontSize;
     private int _lastSubtitleBackgroundOpacity;
     private int _lastSubtitleMargin;
@@ -71,6 +72,7 @@ public class VideoPlayerService : IVideoPlayerService
         
         // Initialize volume from settings
         _currentVolume = _settingsService.Settings.DefaultVolume;
+        _lastUserAgent = _settingsService.Settings.UserAgent;
         _lastSubtitleFontSize = _settingsService.Settings.SubtitleFontSize;
         _lastSubtitleBackgroundOpacity = _settingsService.Settings.SubtitleBackgroundOpacity;
         _lastSubtitleMargin = _settingsService.Settings.SubtitleMargin;
@@ -86,6 +88,12 @@ public class VideoPlayerService : IVideoPlayerService
     {
         var settings = _settingsService.Settings;
         bool shouldReinit = false;
+
+        if (_lastUserAgent != settings.UserAgent)
+        {
+            _lastUserAgent = settings.UserAgent;
+            shouldReinit = true;
+        }
 
         if (_lastSubtitleFontSize != settings.SubtitleFontSize)
         {
@@ -146,6 +154,8 @@ public class VideoPlayerService : IVideoPlayerService
             {
                 LibVLCSharp.Shared.Core.Initialize();
                 
+                var ua = string.IsNullOrWhiteSpace(_lastUserAgent) ? "VLC/3.0.4" : _lastUserAgent;
+                
                 var optionsList = new List<string>
                 {
                     // avcodec-fast: daha az kalite ama takılma yok
@@ -166,7 +176,7 @@ public class VideoPlayerService : IVideoPlayerService
                     // "--skip-frames",      // Kaldırıldı
                     "--ts-seek-percent",
                     "--http-reconnect",
-                    "--http-user-agent=IPTVSmartersPro",
+                    $"--http-user-agent={ua}",
                     "--verbose=0",
                     "--quiet",
                     
@@ -461,7 +471,8 @@ public class VideoPlayerService : IVideoPlayerService
                     // 🌐 İNTERNET YAYINI (IPTV / VOD) - Akıllı profiller
                     media = new Media(_libVLC, url, FromType.FromLocation);
 
-                    media.AddOption(":http-user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+                    var currentUa = string.IsNullOrWhiteSpace(_lastUserAgent) ? "VLC/3.0.4" : _lastUserAgent;
+                    media.AddOption($":http-user-agent={currentUa}");
                     media.AddOption(":http-reconnect=true");
 
                     var streamProfile = DetectStreamProfile(url);

@@ -30,6 +30,9 @@ public partial class SettingsViewModel : ObservableObject
 
     // ============ Oynatma Ayarları ============
     [ObservableProperty]
+    private string _userAgent = string.Empty;
+
+    [ObservableProperty]
     private bool _autoPlayNext;
     
     [ObservableProperty]
@@ -393,6 +396,7 @@ public partial class SettingsViewModel : ObservableObject
         var s = _settingsService.Settings;
         
         // Playback
+        UserAgent = s.UserAgent ?? string.Empty;
         AutoPlayNext = s.AutoPlayNext;
         SelectedDataUsage = (int)s.DataUsage;
         SubtitleEnabled = s.SubtitleEnabled;
@@ -459,6 +463,7 @@ public partial class SettingsViewModel : ObservableObject
         var s = _settingsService.Settings;
         
         // Playback
+        s.UserAgent = UserAgent?.Trim() ?? string.Empty;
         s.AutoPlayNext = AutoPlayNext;
         s.DataUsage = (DataUsageLevel)SelectedDataUsage;
         s.SubtitleEnabled = SubtitleEnabled;

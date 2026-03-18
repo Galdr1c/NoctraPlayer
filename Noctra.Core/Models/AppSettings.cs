@@ -33,6 +33,11 @@ public class AppSettings
     // ============ Oynatma Ayarları ============
     
     /// <summary>
+    /// HTTP isteklerinde kullanılacak User-Agent
+    /// </summary>
+    public string UserAgent { get; set; } = string.Empty;
+
+    /// <summary>
     /// Sonraki bölümü otomatik oynat
     /// </summary>
     public bool AutoPlayNext { get; set; } = true;

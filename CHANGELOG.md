@@ -9,6 +9,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Özelleştirilebilir User-Agent Desteği** (2026-03-18):
+  - Ayarlar menüsüne "Ağ Ayarları" bölümü eklenerek kullanıcıların HTTP isteklerinde gönderilecek `User-Agent` kimliğini değiştirmesine olanak tanındı.
+  - Bu sayede belirli player'ları engelleyen inatçı IPTV sunucularında kanalların açılmaması ve EPG yüklenmemesi sorunları "IPTVSmartersPro" veya benzeri kimlikler kullanılarak aşılabilecek.
+  - User-Agent alanı boş bırakıldığında uygulama standart "VLC/3.0.4" kimliğini kullanmaya devam edecektir.
 - **Premium Kilitleri ve Özelleştirme Kısıtlamaları** (2026-03-17):
   - **Koyu Tema (Dark Mode):** Uygulama genelinde Koyu Tema seçeneği Premium kullanıcılara özel hale getirildi. Ücretsiz kullanıcılarda bu seçenek kilitli (`Lock` ikonu ile) ve devre dışı olarak görünecek. Tema önizleme kutusunun (Mini Preview) üzerine estetik bir kilit katmanı eklendi.
   - **Otomatik Yenileme Ayarları:** "EPG" ve "Kanal Listesi" için sunulan otomatik yenileme sıklığı seçenekleri (1 saat, 24 saat vb.) Premium kullanıcıların hizmetine sunuldu. Ücretsiz kullanıcılar bu seçeneklerin yanında sağa yaslanmış kilit ikonlarını görecek ve sadece manuel güncellemeyi kullanabilecekler.

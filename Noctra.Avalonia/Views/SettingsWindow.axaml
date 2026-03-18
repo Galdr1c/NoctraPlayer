@@ -247,7 +247,22 @@
                     </TabItem.Header>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,32,0">
                         <StackPanel HorizontalAlignment="Stretch" Margin="0,0,0,100">
-                            
+
+                            <!-- Ağ Ayarları -->
+                            <Border Classes="SettingsCard">
+                                <StackPanel>
+                                    <TextBlock Text="Ağ Ayarları" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
+                                    
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="User-Agent" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <TextBox Text="{Binding UserAgent, Mode=TwoWay}" Watermark="VLC/3.0.x LibVLC/3.0.x" Padding="12" Margin="0,12,0,0"/>
+                                </StackPanel>
+                            </Border>
+
                             <Border Classes="SettingsCard">
                                 <StackPanel>
                                     <TextBlock Text="Otomatik Oynatma" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
