@@ -22,6 +22,7 @@ public class VideoPlayerService : IVideoPlayerService
     private int _lastSubtitleFontSize;
     private int _lastSubtitleBackgroundOpacity;
     private int _lastSubtitleMargin;
+    private bool _lastHardwareAcceleration;
     
     private int _retryCount = 0;
     private const int MaxRetries = 3;
@@ -73,6 +74,7 @@ public class VideoPlayerService : IVideoPlayerService
         _lastSubtitleFontSize = _settingsService.Settings.SubtitleFontSize;
         _lastSubtitleBackgroundOpacity = _settingsService.Settings.SubtitleBackgroundOpacity;
         _lastSubtitleMargin = _settingsService.Settings.SubtitleMargin;
+        _lastHardwareAcceleration = _settingsService.Settings.HardwareAcceleration;
 
         _settingsService.SettingsChanged += OnSettingsChanged;
 
@@ -100,6 +102,12 @@ public class VideoPlayerService : IVideoPlayerService
         if (_lastSubtitleMargin != settings.SubtitleMargin)
         {
             _lastSubtitleMargin = settings.SubtitleMargin;
+            shouldReinit = true;
+        }
+        
+        if (_lastHardwareAcceleration != settings.HardwareAcceleration)
+        {
+            _lastHardwareAcceleration = settings.HardwareAcceleration;
             shouldReinit = true;
         }
 
@@ -138,12 +146,8 @@ public class VideoPlayerService : IVideoPlayerService
             {
                 LibVLCSharp.Shared.Core.Initialize();
                 
-                var options = new string[]
+                var optionsList = new List<string>
                 {
-                    // dxva2 (eski) → d3d11va (modern, H.265/HEVC destekli)
-                    "--avcodec-hw=d3d11va",
-                    "--vout=direct3d11",
-                    
                     // avcodec-fast: daha az kalite ama takılma yok
                     "--avcodec-fast",
                     // Direct rendering — CPU→GPU kopyalama yükünü azaltır
@@ -172,8 +176,20 @@ public class VideoPlayerService : IVideoPlayerService
                     "--freetype-background-color=0x000000",         // Arkaplan rengi siyah
                     $"--sub-margin={_lastSubtitleMargin}",          // Alttan yukarı doğru marjin
                 };
+
+                if (_lastHardwareAcceleration)
+                {
+                    // dxva2 (eski) → d3d11va (modern, H.265/HEVC destekli)
+                    optionsList.Add("--avcodec-hw=d3d11va");
+                    optionsList.Add("--vout=direct3d11");
+                }
+                else
+                {
+                    optionsList.Add("--avcodec-hw=none");
+                    optionsList.Add("--vout=any");
+                }
                 
-                _libVLC = new LibVLC(options);
+                _libVLC = new LibVLC(optionsList.ToArray());
                 _mediaPlayer = new MediaPlayer(_libVLC);
             });
 
@@ -462,7 +478,16 @@ public class VideoPlayerService : IVideoPlayerService
                         case StreamProfile.VodMkv:
                             media.AddOption(":network-caching=10000");
                             media.AddOption(":live-caching=10000");
-                            media.AddOption(":avcodec-hw=d3d11va");
+                            
+                            if (_lastHardwareAcceleration)
+                            {
+                                media.AddOption(":avcodec-hw=d3d11va");
+                            }
+                            else
+                            {
+                                media.AddOption(":avcodec-hw=none");
+                            }
+                            
                             media.AddOption(":no-drop-late-frames");
                             media.AddOption(":no-skip-frames");
                             media.AddOption(":http-forward-cookies");

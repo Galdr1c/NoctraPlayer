@@ -30,6 +30,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - **ToggleSwitch Animasyon Birliği:** Uygulama genelindeki tüm `ToggleSwitch` kontrolleri merkezi bir `ControlTheme` ile standartlaştırıldı. Geçiş animasyonları `200ms` süre ve `SplineEasing (0.4, 0, 0.2, 1)` ile sabitlenerek tüm temalarda daha "akıcı" ve tutarlı bir deneyim sağlandı.
 
 ### 🐛 Hata Düzeltmeleri
+- **Donanım Hızlandırma Ayarı Aktifleştirildi** (2026-03-18):
+  - Ayarlar menüsündeki "Donanım Hızlandırma" seçeneğinin çalışmaması (VLC motorunda her zaman zorunlu açık kalması) sorunu çözüldü. Artık ayar kapatıldığında video çözme yükü tamamen yazılımsal olarak (CPU) yapılıyor; açıksa ekran kartı (d3d11va) kullanılıyor.
+  - Ayar değiştirildiğinde VLC motorunun otomatik olarak yeni donanım ivmelendirme ayarlarıyla yeniden başlatılması sağlandı.
+  - VOD/MKV oynatma profillerindeki sabit donanım hızlandırma kodları da bu dinamik ayara bağlandı.
 - **Tema ve Ayarların Kaydedilmesi Düzeltildi** (2026-03-17):
   - Tema ve genel ayarlar (dil, güncelleme vb.) tüm profiller için merkezi hale getirildi (Global Settings).
   - Profil geçişlerinde seçili temanın bazen sıfırlanması veya değişmesi sorunu, ayarların profil bazlı değil global olarak yönetilmesiyle çözüldildi.

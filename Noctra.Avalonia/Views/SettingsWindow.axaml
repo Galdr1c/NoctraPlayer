@@ -134,7 +134,7 @@
             </Grid>
 
             <!-- CONTENT -->
-            <TabControl behaviors:TabSlideTransitionBehavior.IsEnabled="True" ClipToBounds="True" Grid.Row="1" Margin="32,0,32,0" Background="Transparent">
+            <TabControl behaviors:TabSlideTransitionBehavior.IsEnabled="True" ClipToBounds="True" Grid.Row="1" Margin="32,0,0,0" Background="Transparent" Padding="0">
                 <TabControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <StackPanel Orientation="Horizontal" />
@@ -149,7 +149,7 @@
                             <TextBlock Text="Profil" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,0,0">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,32,0">
                         <StackPanel HorizontalAlignment="Stretch" Margin="0,0,0,20">
                             
                             <!-- Current Profile Card -->
@@ -245,7 +245,7 @@
                             <TextBlock Text="Oynatma &amp; İndirme" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,0,0">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,32,0">
                         <StackPanel HorizontalAlignment="Stretch" Margin="0,0,0,100">
                             
                             <Border Classes="SettingsCard">
@@ -357,7 +357,7 @@
                             <TextBlock Text="Kanal Listesi" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,0,0">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,32,0">
                         <StackPanel HorizontalAlignment="Stretch" Margin="0,0,0,100">
                             <Border Classes="SettingsCard">
                                 <StackPanel>
@@ -472,7 +472,7 @@
                             <materialIcons:MaterialIcon Kind="CalendarClock" Width="20" Height="20" />                            <TextBlock Text="EPG" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,0,0">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,32,0">
                         <StackPanel HorizontalAlignment="Stretch" Margin="0,0,0,100">
                             <Border Classes="SettingsCard">
                                 <StackPanel>
@@ -595,7 +595,7 @@
                             <TextBlock Text="Bildirimler" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,0,0">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,32,0">
                         <StackPanel HorizontalAlignment="Stretch" Margin="0,0,0,100">
                             <Border Classes="SettingsCard">
                                 <StackPanel>
@@ -623,7 +623,7 @@
                             <TextBlock Text="Gizlilik" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,0,0">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,32,0">
                         <StackPanel HorizontalAlignment="Stretch" Margin="0,0,0,100">
                             <Border Classes="SettingsCard">
                                 <StackPanel>
@@ -681,7 +681,7 @@
                             <TextBlock Text="Görünüm" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,0,0">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,32,0">
                         <StackPanel HorizontalAlignment="Stretch" Margin="0,0,0,100">
                             <Border Classes="SettingsCard">
                                 <StackPanel>
@@ -702,25 +702,16 @@
                                         <!-- Theme Options -->
                                         <StackPanel Grid.Column="1" Orientation="Horizontal">
                                             <!-- Dark Theme Button -->
-                                            <Border x:Name="DarkThemeButton" Width="130" Height="85" CornerRadius="10" BorderThickness="3" BorderBrush="Transparent" Cursor="Hand" PointerPressed="DarkTheme_PointerPressed" 
-                                                    IsEnabled="{Binding IsPremium}"
-                                                    Margin="0,0,16,0">
+                                            <Border x:Name="DarkThemeButton" Width="130" Height="85" CornerRadius="10" BorderThickness="3" BorderBrush="Transparent" Cursor="Hand" PointerPressed="DarkTheme_PointerPressed" Margin="0,0,16,0">
                                                 <Grid>
                                                     <Border Background="{DynamicResource ThemePreviewDarkBg}" CornerRadius="7">
                                                         <Grid>
                                                             <Border Background="{DynamicResource ThemePreviewDarkInnerBg}" Width="95" Height="50" CornerRadius="6" Margin="12">
-                                                                <Panel>
-                                                                    <StackPanel Margin="10,8">
-                                                                        <Rectangle Fill="White" Height="4" Width="40" HorizontalAlignment="Left" Margin="0,0,0,6"/>
-                                                                        <Rectangle Fill="{DynamicResource ThemePreviewDarkText}" Height="3" Width="55" HorizontalAlignment="Left" Margin="0,0,0,4"/>
-                                                                        <Rectangle Fill="{DynamicResource ThemePreviewDarkText}" Height="3" Width="45" HorizontalAlignment="Left"/>
-                                                                    </StackPanel>
-
-                                                                    <!-- Lock Overlay for Free users -->
-                                                                    <Border Background="#AA000000" CornerRadius="6" IsVisible="{Binding !IsPremium}">
-                                                                        <materialIcons:MaterialIcon Kind="Lock" Width="28" Height="28" Foreground="White" Opacity="0.9"/>
-                                                                    </Border>
-                                                                </Panel>
+                                                                <StackPanel Margin="10,8">
+                                                                    <Rectangle Fill="White" Height="4" Width="40" HorizontalAlignment="Left" Margin="0,0,0,6"/>
+                                                                    <Rectangle Fill="{DynamicResource ThemePreviewDarkText}" Height="3" Width="55" HorizontalAlignment="Left" Margin="0,0,0,4"/>
+                                                                    <Rectangle Fill="{DynamicResource ThemePreviewDarkText}" Height="3" Width="45" HorizontalAlignment="Left"/>
+                                                                </StackPanel>
                                                             </Border>
                                                             <Border x:Name="DarkCheckmark" Width="22" Height="22" Background="{DynamicResource AccentBrush}" CornerRadius="11" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6">
                                                                 <Path Data="M9,16.2L4.8,12l-1.4,1.4L9,19L21,7l-1.4-1.4L9,16.2z" Fill="White" Stretch="Uniform" Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
