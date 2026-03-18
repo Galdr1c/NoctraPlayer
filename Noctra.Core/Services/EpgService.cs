@@ -551,11 +551,34 @@ public class EpgService : IEpgService
         var aCount = a.Length - 1;
         return (2.0 * intersection) / (aCount + bCount);
     }
+    private void ApplyTimeOffset(EpgProgram? program)
+    {
+        if (program == null) return;
+        var offset = TimeSpan.FromHours(_settingsService.Settings.EpgTimeOffsetHours);
+        if (offset == TimeSpan.Zero) return;
+
+        program.StartTime = program.StartTime.Add(offset);
+        program.EndTime = program.EndTime.Add(offset);
+    }
+
+    private void ApplyTimeOffset(IEnumerable<EpgProgram> programs)
+    {
+        var offset = TimeSpan.FromHours(_settingsService.Settings.EpgTimeOffsetHours);
+        if (offset == TimeSpan.Zero) return;
+
+        foreach (var program in programs)
+        {
+            program.StartTime = program.StartTime.Add(offset);
+            program.EndTime = program.EndTime.Add(offset);
+        }
+    }
+
     public async Task<EpgProgram?> GetCurrentProgramAsync(Channel channel)
     {
-        var now = DateTime.UtcNow;
+        var offset = TimeSpan.FromHours(_settingsService.Settings.EpgTimeOffsetHours);
+        var now = DateTime.UtcNow.Add(-offset);
         using var context = await _contextFactory.CreateDbContextAsync();
-        
+
         // Level 1: Try Primary TvgId
         if (!string.IsNullOrEmpty(channel.TvgId))
         {
@@ -564,7 +587,11 @@ public class EpgService : IEpgService
                 .Where(p => p.ChannelId == channel.TvgId && p.StartTime <= now && p.EndTime > now)
                 .FirstOrDefaultAsync();
 
-            if (program != null) return program;
+            if (program != null) 
+            {
+                ApplyTimeOffset(program);
+                return program;
+            }
         }
 
         // Level 2: Try Internal Id (Secondary EPG mapped by Name)
@@ -574,11 +601,9 @@ public class EpgService : IEpgService
             .Where(p => p.ChannelId == internalId && p.StartTime <= now && p.EndTime > now)
             .FirstOrDefaultAsync();
 
-        if (programByInternalId != null) return programByInternalId;
-
-        return null; 
+        ApplyTimeOffset(programByInternalId);
+        return programByInternalId;
     }
-
     public async Task ClearEpgAsync()
     {
         using var context = await _contextFactory.CreateDbContextAsync();
@@ -588,40 +613,52 @@ public class EpgService : IEpgService
 
     public async Task<List<EpgProgram>> GetProgramsAsync(string channelId, DateTime from, DateTime to)
     {
+        var offset = TimeSpan.FromHours(_settingsService.Settings.EpgTimeOffsetHours);
         // Ensure we compare in UTC if stored in UTC
-        var fromUtc = from.ToUniversalTime();
-        var toUtc = to.ToUniversalTime();
+        var fromUtc = from.ToUniversalTime().Add(-offset);
+        var toUtc = to.ToUniversalTime().Add(-offset);
 
         using var context = await _contextFactory.CreateDbContextAsync();
-        return await context.EpgPrograms
+        var programs = await context.EpgPrograms
             .AsNoTracking()
             .Where(p => p.ChannelId == channelId && p.StartTime >= fromUtc && p.StartTime <= toUtc)
             .OrderBy(p => p.StartTime)
             .ToListAsync();
+
+        ApplyTimeOffset(programs);
+        return programs;
     }
 
     public async Task<List<EpgProgram>> GetUpcomingProgramsAsync(string channelId, int count = 5)
     {
-        var now = DateTime.UtcNow;
+        var offset = TimeSpan.FromHours(_settingsService.Settings.EpgTimeOffsetHours);
+        var now = DateTime.UtcNow.Add(-offset);
         using var context = await _contextFactory.CreateDbContextAsync();
-        return await context.EpgPrograms
+        var programs = await context.EpgPrograms
             .AsNoTracking()
             .Where(p => p.ChannelId == channelId && p.StartTime > now)
             .OrderBy(p => p.StartTime)
             .Take(count)
             .ToListAsync();
+
+        ApplyTimeOffset(programs);
+        return programs;
     }
 
     public async Task<List<EpgProgram>> GetTodayProgramsAsync(string channelId)
     {
-        var todayStart = DateTime.UtcNow.Date;
+        var offset = TimeSpan.FromHours(_settingsService.Settings.EpgTimeOffsetHours);
+        var todayStart = DateTime.UtcNow.Date.Add(-offset);
         var todayEnd = todayStart.AddDays(1);
         using var context = await _contextFactory.CreateDbContextAsync();
-        return await context.EpgPrograms
+        var programs = await context.EpgPrograms
             .AsNoTracking()
             .Where(p => p.ChannelId == channelId && p.StartTime >= todayStart && p.StartTime < todayEnd)
             .OrderBy(p => p.StartTime)
             .ToListAsync();
+
+        ApplyTimeOffset(programs);
+        return programs;
     }
 
     public async Task<int> GetTotalProgramCountAsync()

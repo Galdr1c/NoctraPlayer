@@ -9,6 +9,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Gelişmiş EPG Yönetimi ve Özel URL Desteği** (2026-03-18):
+  - Ayarlar > EPG sekmesine "Özel EPG URL" alanı için bağımsız bir "Şimdi Yenile" butonu eklendi. Bu buton, girilen URL'yi anında kaydederek yenileme işlemini başlatır.
+  - Özel EPG URL'leri artık sistemde en yüksek öncelikli (`Priority 0`) kaynak olarak kabul edilir; sistem önce bu adresten veriyi çeker ve sadece bu kaynakta bulunmayan eksik kanallar için ikincil kaynaklara (`iptv-epg.org` vb.) başvurur (Akıllı Hibrit Eşleştirme).
+  - Özel URL alanı için estetik bir yer tutucu (watermark) eklenerek kullanıcı deneyimi iyileştirildi.
+- **EPG Saat Dilimi Ofseti** (2026-03-18):
+  - Ayarlar > EPG menüsüne "EPG Saat Dilimi Ofseti" ayarı eklendi.
+  - Bu sayede yayıncıların UTC bazlı veya yanlış saat diliminde gönderdiği elektronik program rehberi (EPG) verileri için manuel düzeltme yapılabilecek (örneğin Türkiye için +3 saat).
+  - Ayar değiştirildiğinde EPG içerikleri otomatik olarak belirlenen ofset ile kaydırılarak gösterilir.
 - **Özelleştirilebilir User-Agent Desteği** (2026-03-18):
   - Ayarlar menüsüne "Ağ Ayarları" bölümü eklenerek kullanıcıların HTTP isteklerinde gönderilecek `User-Agent` kimliğini değiştirmesine olanak tanındı.
   - Bu sayede belirli player'ları engelleyen inatçı IPTV sunucularında kanalların açılmaması ve EPG yüklenmemesi sorunları "IPTVSmartersPro" veya benzeri kimlikler kullanılarak aşılabilecek.

@@ -146,9 +146,14 @@ public class AppSettings
     public bool EpgEnabled { get; set; } = true;
 
     /// <summary>
-    /// EPG icin kullanicinin verdigi ozel URL (opsiyonel)
+    /// EPG için kullanıcının verdiği özel URL (opsiyonel)
     /// </summary>
     public string? CustomEpgUrl { get; set; }
+
+    /// <summary>
+    /// EPG saat dilimi ofseti (saat). Örn: +3 için 3, -5 için -5
+    /// </summary>
+    public int EpgTimeOffsetHours { get; set; } = 0;
 
     // ============ Gizlilik / Geçmiş ============
 

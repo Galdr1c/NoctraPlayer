@@ -126,13 +126,16 @@ namespace Noctra.Tests
                 history,
                 null!, // xtream
                 null!, // stalker
-                null!, // language
-                null!, // epg resolver
-                null!, // db context factory
+                null!, // lang
+                null!, // resolver
+                null!, // db context
                 null!, // security
-                null!, // httpclient
+                null!, // http
                 null!, // tmdb sync
-                null); // logger
+                license,
+                null!, // update service
+                null   // logger
+            );
         }
     }
 

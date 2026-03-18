@@ -153,7 +153,9 @@ namespace Noctra.Tests
         public bool IsFeatureAvailable(string feature) => IsPremium;
         public void SetTierForTesting(SubscriptionTier tier) { IsPremium = tier == SubscriptionTier.Premium; }
         public event Action? SubscriptionChanged;
+
         public void ActivatePremium() { IsPremium = true; SubscriptionChanged?.Invoke(); }
+        public void DeactivatePremium() { IsPremium = false; SubscriptionChanged?.Invoke(); }
         public string GetPriceText() => "0";
         public SubscriptionInfo GetCurrentSubscription() => new() { Tier = CurrentTier };
         public bool IsWithinLimit(string limit, int count) => true;

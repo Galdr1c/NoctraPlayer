@@ -592,10 +592,49 @@
                                         </ComboBoxItem>
                                     </ComboBox>
 
+                                    <TextBlock Text="EPG Saat Dilimi" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                    <ComboBox SelectedIndex="{Binding EpgTimeOffsetIndex, Mode=TwoWay}" Theme="{StaticResource ModernComboBox}" Width="200" HorizontalAlignment="Left" Margin="0,0,0,20">
+                                        <ComboBoxItem Content="-12 saat"/>
+                                        <ComboBoxItem Content="-11 saat"/>
+                                        <ComboBoxItem Content="-10 saat"/>
+                                        <ComboBoxItem Content="-9 saat"/>
+                                        <ComboBoxItem Content="-8 saat"/>
+                                        <ComboBoxItem Content="-7 saat"/>
+                                        <ComboBoxItem Content="-6 saat"/>
+                                        <ComboBoxItem Content="-5 saat"/>
+                                        <ComboBoxItem Content="-4 saat"/>
+                                        <ComboBoxItem Content="-3 saat"/>
+                                        <ComboBoxItem Content="-2 saat"/>
+                                        <ComboBoxItem Content="-1 saat"/>
+                                        <ComboBoxItem Content="0 (Otomatik)"/>
+                                        <ComboBoxItem Content="+1 saat"/>
+                                        <ComboBoxItem Content="+2 saat"/>
+                                        <ComboBoxItem Content="+3 saat"/>
+                                        <ComboBoxItem Content="+4 saat"/>
+                                        <ComboBoxItem Content="+5 saat"/>
+                                        <ComboBoxItem Content="+6 saat"/>
+                                        <ComboBoxItem Content="+7 saat"/>
+                                        <ComboBoxItem Content="+8 saat"/>
+                                        <ComboBoxItem Content="+9 saat"/>
+                                        <ComboBoxItem Content="+10 saat"/>
+                                        <ComboBoxItem Content="+11 saat"/>
+                                        <ComboBoxItem Content="+12 saat"/>
+                                    </ComboBox>
+
                                     <TextBlock Text="Özel EPG URL (Opsiyonel)" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
-                                    <TextBox Text="{Binding CustomEpgUrl, Mode=TwoWay}"
-                                             Watermark="https://.../epg.xml veya .xml.gz"
-                                             Padding="12"/>
+                                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,20">
+                                        <TextBox Grid.Column="0" Text="{Binding CustomEpgUrl, Mode=TwoWay}"
+                                                 Watermark="https://.../epg.xml veya .xml.gz"
+                                                 Padding="12"/>
+                                        <Button Grid.Column="1" Content="Şimdi Yenile" 
+                                                Command="{Binding RefreshEpgNowCommand}"
+                                                IsEnabled="{Binding !_mainViewModel.IsGlobalLoading}"
+                                                Theme="{StaticResource FilterButtonStyle}"
+                                                Margin="10,0,0,0"
+                                                Height="45"
+                                                VerticalAlignment="Stretch"/>
+                                    </Grid>
+
                                 </StackPanel>
                             </Border>
                         </StackPanel>

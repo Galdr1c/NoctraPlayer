@@ -87,10 +87,10 @@ namespace Noctra.Tests
         public SubscriptionTier CurrentTier => IsPremium ? SubscriptionTier.Premium : SubscriptionTier.Free;
         public bool IsFeatureAvailable(string feature) => IsPremium;
         public event Action? SubscriptionChanged;
-        
+
         public void ActivatePremium() { IsPremium = true; SubscriptionChanged?.Invoke(); }
-        public string GetPriceText() => "0";
-        public SubscriptionInfo GetCurrentSubscription() => new() { Tier = CurrentTier };
+        public void DeactivatePremium() { IsPremium = false; SubscriptionChanged?.Invoke(); }
+        public string GetPriceText() => "0";        public SubscriptionInfo GetCurrentSubscription() => new() { Tier = CurrentTier };
         public bool IsWithinLimit(string limit, int count) => true;
         public int GetLimit(string limit) => int.MaxValue;
         public Task<bool> StartPurchaseFlowAsync(SubscriptionTier targetTier) => Task.FromResult(true);

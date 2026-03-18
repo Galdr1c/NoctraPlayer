@@ -85,6 +85,12 @@ public partial class SettingsViewModel : ObservableObject
     private int _epgRefreshFrequencyIndex;
 
     [ObservableProperty]
+    private int _epgTimeOffsetHours;
+
+    [ObservableProperty]
+    private int _epgTimeOffsetIndex;
+
+    [ObservableProperty]
     private bool _epgEnabled;
 
     partial void OnChannelListRefreshFrequencyIndexChanged(int value)
@@ -115,6 +121,11 @@ public partial class SettingsViewModel : ObservableObject
             7 => 168, // 7 gün
             _ => 0
         };
+    }
+
+    partial void OnEpgTimeOffsetIndexChanged(int value)
+    {
+        EpgTimeOffsetHours = value - 12; // Index 12 is '0 (Otomatik)', so value 12 - 12 = 0
     }
 
     [ObservableProperty]
@@ -453,6 +464,9 @@ public partial class SettingsViewModel : ObservableObject
             _ => 0
         };
 
+        EpgTimeOffsetHours = s.EpgTimeOffsetHours;
+        EpgTimeOffsetIndex = EpgTimeOffsetHours + 12;
+
         CustomEpgUrl = s.CustomEpgUrl ?? string.Empty;
         
     }
@@ -485,6 +499,7 @@ public partial class SettingsViewModel : ObservableObject
         s.EpgRefreshFrequencyHours = Math.Max(0, EpgRefreshFrequencyHours);
         s.CustomEpgUrl = string.IsNullOrWhiteSpace(CustomEpgUrl) ? null : CustomEpgUrl.Trim();
         s.EpgEnabled = EpgEnabled;
+        s.EpgTimeOffsetHours = EpgTimeOffsetHours;
 
         // Privacy
         s.SaveWatchHistory = SaveWatchHistory;
@@ -714,6 +729,9 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task RefreshEpgNowAsync()
     {
+        // Önce ayarları kaydet ki arka plan görevi yeni URL'yi görebilsin
+        await SaveSettingsAsync();
+
         if (!TryBeginRefreshOperation("EPG yenileme başlatılıyor"))
         {
             return;
