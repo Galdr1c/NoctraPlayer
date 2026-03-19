@@ -56,8 +56,18 @@ public partial class App : Application
             
             settings.SettingsChanged += () => 
             {
-                ApplyApplicationLanguage(settings.Settings.Language);
-                themeService.SetTheme(settings.Settings.IsDarkTheme);
+                Dispatcher.UIThread.Post(() =>
+                {
+                    try
+                    {
+                        ApplyApplicationLanguage(settings.Settings.Language);
+                        themeService.SetTheme(settings.Settings.IsDarkTheme);
+                    }
+                    catch (Exception ex)
+                    {
+                        StartupDiagnostics.LogException("Error applying settings change", ex);
+                    }
+                });
             };
             StartupDiagnostics.Log("Theme applied.");
         }

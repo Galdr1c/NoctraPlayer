@@ -4,7 +4,7 @@
              x:Class="Noctra.Avalonia.Views.WatermarkView"
              x:DataType="vm:WatermarkViewModel">
   <Grid IsVisible="{Binding IsVisible}">
-    <Border Background="#10000000"
+    <Border Background="Transparent"
             CornerRadius="12"
             Padding="12,6"
             HorizontalAlignment="Right"
@@ -19,7 +19,8 @@
       <TextBlock Text="Noctra MP - Free"
                  FontWeight="SemiBold"
                  FontSize="38"
-                 Foreground="White"/>
+                 Foreground="White"
+                 Opacity="0.5"/>
     </Border>
   </Grid>
 </UserControl>

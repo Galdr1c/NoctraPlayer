@@ -135,24 +135,30 @@ public class VideoPlayerService : IVideoPlayerService
 
         if (shouldReinit)
         {
-            var cts = new CancellationTokenSource();
-            _reinitCts?.Cancel();
-            _reinitCts?.Dispose();
-            _reinitCts = cts;
+            var oldCts = _reinitCts;
+            _reinitCts = new CancellationTokenSource();
+            var token = _reinitCts.Token;
 
-            var token = cts.Token;
+            if (oldCts != null)
+            {
+                oldCts.Cancel();
+                oldCts.Dispose();
+            }
+
             _ = Task.Run(async () =>
             {
                 try
                 {
                     // Debounce süresi: Çoklu ayar değişikliğinin sonlanmasını bekle
-                    await Task.Delay(500, token);
+                    await Task.Delay(150, token);
                     if (!token.IsCancellationRequested)
                     {
                         await ReinitializeAsync();
                     }
                 }
-                catch (TaskCanceledException) { }
+                catch (OperationCanceledException) { }
+                catch (ObjectDisposedException) { }
+                catch (Exception) { }
             }, token);
         }
     }

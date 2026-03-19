@@ -8,6 +8,12 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### 🐛 Hata Düzeltmeleri
+- **Altyazı Ayarları Yeniden Başlatma Sorunu (Debounce/Race Condition)** (2026-03-19): Son SettingsService güncellemesi sonrası arayüzde altyazı boyut/şeffaflık ayarları hızlı değiştirildiğinde VLC motorunun çökmeye veya tepkisiz kalmaya neden olan yarış durumu onarıldı. 
+  - `PlayerViewModel` ve `VideoPlayerService` içindeki `CancellationTokenSource` yaşam döngüleri (ObjectDisposedException fırlatılmasını engelleyecek şekilde) güçlendirildi.
+  - Oynatıcıyı dondurmamak için gecikmeli kayıt koruma (Debounce) süresi toplamda ~1500ms'den ~450ms'ye indirilerek arayüz tepkiselliği 3 kat hızlandırıldı.
+  - `SettingsChanged` delegesi ana UI thread'e (`Dispatcher.UIThread.Post`) taşınarak arkaplan thread çökmelerinin diğer dinleyicileri bozması engellendi.
+
 ### ✨ Yeni Özellikler ve Geliştirmeler
 - **Akıllı Uyku Zamanlayıcısı (Sleep Timer)** (2026-03-19):
   - Video oynatıcıya (VOD, Dizi ve İndirilen İçerikler) kapsamlı bir uyku zamanlayıcısı sistemi eklendi.

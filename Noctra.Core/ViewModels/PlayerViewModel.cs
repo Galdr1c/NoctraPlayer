@@ -286,23 +286,29 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         if (changed)
         {
-            var cts = new CancellationTokenSource();
-            _subtitleSaveCts?.Cancel();
-            _subtitleSaveCts?.Dispose();
-            _subtitleSaveCts = cts;
+            var oldCts = _subtitleSaveCts;
+            _subtitleSaveCts = new CancellationTokenSource();
+            var token = _subtitleSaveCts.Token;
 
-            var token = cts.Token;
+            if (oldCts != null)
+            {
+                oldCts.Cancel();
+                oldCts.Dispose();
+            }
+
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    await Task.Delay(1000, token);
+                    await Task.Delay(300, token);
                     if (!token.IsCancellationRequested)
                     {
                         await _settingsService.SaveAsync();
                     }
                 }
-                catch (TaskCanceledException) { }
+                catch (OperationCanceledException) { }
+                catch (ObjectDisposedException) { }
+                catch (Exception) { }
             }, token);
         }
     }
