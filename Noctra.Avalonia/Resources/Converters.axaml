@@ -1,6 +1,7 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:converters="using:Noctra.Avalonia.Converters">
+  <converters:SleepModeToBackgroundConverter x:Key="SleepModeToBackgroundConverter" />
   <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
   <converters:FavoriteConverter x:Key="FavoriteConverter" />
   <converters:InverseBoolConverter x:Key="InverseBoolConverter" />

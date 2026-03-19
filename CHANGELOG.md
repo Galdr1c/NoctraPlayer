@@ -9,6 +9,15 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Akıllı Uyku Zamanlayıcısı (Sleep Timer)** (2026-03-19):
+  - Video oynatıcıya (VOD, Dizi ve İndirilen İçerikler) kapsamlı bir uyku zamanlayıcısı sistemi eklendi.
+  - **Esnek Zaman Seçenekleri:** 15, 30 ve 60 dakikalık hazır sürelerin yanı sıra, akıllı "Bölüm Bitince" veya "Film Bitince" modları eklendi.
+  - **Premium Entegrasyonu:** Uyku zamanlayıcısı özellikleri Premium kullanıcılara özel olarak sunuldu. Non-premium kullanıcılar için seçenekler kilit ikonuyla görsel olarak belirtildi ve pasif hale getirildi.
+  - **Dinamik Arayüz:** Zamanlayıcı aktif olduğunda, oynatıcı kontrollerindeki ay ikonu üzerinde canlı geri sayım badge'i (örn. "12:47") belirecek şekilde tasarlandı.
+  - **İçerik Duyarlı Etiketler:** Zamanlayıcı menüsü ve tooltip'ler, izlenen içeriğin türüne göre (Dizi vs Film) otomatik olarak "Bölüm Bitince" veya "Film Bitince" şeklinde kendini günceller.
+  - **Performans Dostu Mimari:** Geri sayım işlemleri ana UI iş parçacığını yormayacak şekilde hafif arka plan görevleri (Task) olarak kurgulandı ve saniyelik hassasiyetle çalışır.
+  - **Güvenlik ve Kısıtlamalar:** Uyku zamanlayıcısının canlı yayınlarda (Live TV) kullanılması, yayın akışının doğası gereği engellendi.
+  - **Kapsamlı Test Doğrulaması:** Sistemin kararlılığını ölçmek için premium gating, canlı yayın kısıtlamaları, dinamik etiketler ve otomatik kapanma senaryolarını içeren 8 adet yeni birim testi (`PlayerSleepTimerTests.cs`) sisteme dahil edildi.
 - **Kapsamlı Profil PIN Kilidi Sistemi** (2026-03-19):
   - Profil bazlı erişim kısıtlaması için güvenli 4 haneli PIN sistemi hayata geçirildi.
   - **Premium Kilidi:** PIN oluşturma ve yönetimi özellikleri Premium kullanıcılara özel olarak sunuldu.

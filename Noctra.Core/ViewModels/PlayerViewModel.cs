@@ -52,6 +52,36 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         Original  // Native resolution
     }
 
+    public enum SleepTimerOption { Off, Minutes15, Minutes30, Minutes60, EndOfEpisode }
+
+    // ── Sleep Timer ────────────────────────────────────────────────────────
+    private CancellationTokenSource? _sleepCountdownCts;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsSleepTimerActive))]
+    [NotifyPropertyChangedFor(nameof(SleepTimerLabel))]
+    private SleepTimerOption _sleepTimerMode = SleepTimerOption.Off;
+
+    [ObservableProperty]
+    private string _sleepTimerCountdown = string.Empty;  // "12:47" formatında geri sayım
+
+    [ObservableProperty]
+    private bool _isSleepTimerPanelOpen;
+
+    public bool IsSleepTimerActive => SleepTimerMode != SleepTimerOption.Off;
+
+    public string SleepTimerLabel => SleepTimerMode switch
+    {
+        SleepTimerOption.Minutes15    => $"Uyku: 15 dk",
+        SleepTimerOption.Minutes30    => $"Uyku: 30 dk",
+        SleepTimerOption.Minutes60    => $"Uyku: 60 dk",
+        SleepTimerOption.EndOfEpisode => IsSeriesContent ? "Bölüm Bitince Kapanır" : "Film Bitince Kapanır",
+        _                           => "Uyku Zamanlayıcısı"
+    };
+
+    public string EndOfContentText => IsSeriesContent ? "Bu Bölüm Bitince" : "Bu Film Bitince";
+    public string EndOfContentDescription => IsSeriesContent ? "Bölüm tamamlanınca oynatma durur" : "Film tamamlanınca oynatma durur";
+
     private readonly IVideoPlayerService _videoPlayerService;
     private readonly IEpgService _epgService;
     private readonly IMetadataService _metadataService;
@@ -76,8 +106,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSeriesPlotVisible))]
-    [NotifyPropertyChangedFor(nameof(IsVodPlotVisible))]
     private bool _isSeriesContent;
+
+    public bool IsPremium => _licenseService.IsPremium;
 
     [ObservableProperty]
     private bool _isDownloadedPlayback;
@@ -628,6 +659,13 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
                 _isPlaybackEnded = true;
 
+                // Sleep timer: EndOfEpisode modundaysa kapat
+                if (SleepTimerMode == SleepTimerOption.EndOfEpisode)
+                {
+                    _ = Task.Delay(1500).ContinueWith(_ =>
+                        _dispatcherService.BeginInvoke(TriggerSleepShutdown));
+                }
+
                 // Erken bitiş tespiti (Premature End Analysis) & Canlı Yayın Kopması
                 var duration = _videoPlayerService.Duration;
                 var currentPos = Position;
@@ -813,6 +851,16 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                     Volume = vol;
                     _isUpdatingFromService = false;
                 }
+            });
+        };
+
+        // Premium statüsü değiştiğinde UI'ı haberdar et
+        _licenseService.SubscriptionChanged += () =>
+        {
+            _dispatcherService.BeginInvoke(() => 
+            {
+                OnPropertyChanged(nameof(IsPremium));
+                SetSleepTimerCommand.NotifyCanExecuteChanged();
             });
         };
     }
@@ -1314,8 +1362,110 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         IsQualitySettingsOpen = false;
         IsEpisodesPanelOpen = false;
         IsInfoPanelOpen = false;
+        IsSleepTimerPanelOpen = false;
         IsLocked = false;
         RestartAutoHideTimer();
+    }
+
+    [RelayCommand]
+    private void ShowSleepTimerMenu()
+    {
+        IsSleepTimerPanelOpen = !IsSleepTimerPanelOpen;
+        if (IsSleepTimerPanelOpen)
+        {
+            IsAudioSettingsOpen = false;
+            IsQualitySettingsOpen = false;
+            IsEpisodesPanelOpen = false;
+            IsInfoPanelOpen = false;
+            IsLocked = true;
+        }
+    }
+
+    [RelayCommand]
+    private void SetSleepTimer(SleepTimerOption mode)
+    {
+        if (mode != SleepTimerOption.Off && IsLiveContent)
+        {
+            _ = ShowOverlayMessageAsync("Uyku zamanlayıcısı canlı yayında kullanılamaz.");
+            return;
+        }
+
+        // Feature availability check removed here, UI handles it via IsEnabled
+        // If somehow called without license, we just return
+        if (mode != SleepTimerOption.Off && !IsPremium) return;
+
+        CancelSleepTimer();
+
+        SleepTimerMode = mode;
+        switch (mode)
+        {
+            case SleepTimerOption.Minutes15:
+                StartCountdownTimer(TimeSpan.FromMinutes(15));
+                break;
+            case SleepTimerOption.Minutes30:
+                StartCountdownTimer(TimeSpan.FromMinutes(30));
+                break;
+            case SleepTimerOption.Minutes60:
+                StartCountdownTimer(TimeSpan.FromMinutes(60));
+                break;
+            case SleepTimerOption.EndOfEpisode:
+                SleepTimerCountdown = "Bölüm Bitince";
+                break;
+        }
+    }
+
+    [RelayCommand]
+    private void CancelSleepTimer()
+    {
+        _sleepCountdownCts?.Cancel();
+        _sleepCountdownCts?.Dispose();
+        _sleepCountdownCts = null;
+
+        SleepTimerMode = SleepTimerOption.Off;
+        SleepTimerCountdown = string.Empty;
+    }
+
+    private void StartCountdownTimer(TimeSpan duration)
+    {
+        _sleepCountdownCts = new CancellationTokenSource();
+        var token = _sleepCountdownCts.Token;
+        var endsAt = DateTime.UtcNow + duration;
+
+        _ = Task.Run(async () =>
+        {
+            while (!token.IsCancellationRequested)
+            {
+                var remaining = endsAt - DateTime.UtcNow;
+
+                if (remaining <= TimeSpan.Zero)
+                {
+                    _dispatcherService.BeginInvoke(() =>
+                    {
+                        SleepTimerCountdown = "00:00";
+                        TriggerSleepShutdown();
+                    });
+                    return;
+                }
+
+                var display = remaining.TotalHours >= 1
+                    ? remaining.ToString(@"h\:mm\:ss")
+                    : remaining.ToString(@"mm\:ss");
+
+                _dispatcherService.BeginInvoke(() => SleepTimerCountdown = display);
+
+                try { await Task.Delay(1000, token); }
+                catch (OperationCanceledException) { return; }
+            }
+        }, token);
+    }
+
+    private void TriggerSleepShutdown()
+    {
+        _videoPlayerService.Stop();
+        SleepTimerMode = SleepTimerOption.Off;
+        SleepTimerCountdown = string.Empty;
+
+        _ = ShowOverlayMessageAsync("Uyku zamanlayıcısı: Oynatma durduruldu 🌙");
     }
 
     private void UpdateMediaInfo()
@@ -3227,6 +3377,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _autoHideTimer?.Dispose();
         _clockTimer?.Dispose();
         _watchHistoryTimer?.Dispose();
+
+        _sleepCountdownCts?.Cancel();
+        _sleepCountdownCts?.Dispose();
+        _sleepCountdownCts = null;
+
         if (_settingsService != null)
         {
             _settingsService.SettingsChanged -= OnSettingsChanged;

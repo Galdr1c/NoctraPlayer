@@ -298,6 +298,27 @@
                                 <materialIcons:MaterialIcon Kind="{Binding VideoFillMode,
                                     Converter={StaticResource FillModeToIconConverter}}"/>
                             </Button>
+
+                            <!-- Sleep Timer Butonu — sadece Premium -->
+                            <Button Classes="iconBtn"
+                                    IsVisible="{Binding !IsLiveContent}"
+                                    ToolTip.Tip="{Binding SleepTimerLabel, FallbackValue='Uyku Zamanlayıcısı'}"
+                                    Command="{Binding ShowSleepTimerMenuCommand}">
+                                <Panel>
+                                    <materialIcons:MaterialIcon Kind="WeatherNight" Width="20" Height="20" Foreground="#E6FFFFFF"/>
+                                    <!-- Aktifken üzerinde küçük geri sayım badge -->
+                                    <Border IsVisible="{Binding IsSleepTimerActive}"
+                                            Background="{DynamicResource AccentBrush}"
+                                            CornerRadius="6" Padding="3,1"
+                                            HorizontalAlignment="Right" VerticalAlignment="Top"
+                                            Margin="0,-4,-4,0">
+                                        <TextBlock Text="{Binding SleepTimerCountdown}"
+                                                   FontSize="8" FontWeight="Bold"
+                                                   Foreground="White"/>
+                                    </Border>
+                                </Panel>
+                            </Button>
+
                             <Button Command="{Binding OpenAudioSettingsCommand}" Classes="iconBtn" ToolTip.Tip="Altyazı"><materialIcons:MaterialIcon Kind="Subtitles" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
                             <Button Command="{Binding OpenQualitySettingsCommand}" Classes="iconBtn" ToolTip.Tip="Ayarlar"><materialIcons:MaterialIcon Kind="Cog" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
                             <Button Command="{Binding EnterPiPCommand}" Classes="iconBtn" ToolTip.Tip="Resim İçinde Resim"><materialIcons:MaterialIcon Kind="PictureInPictureBottomRight" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
@@ -311,6 +332,127 @@
                     </Grid>
                 </Grid>
             </Border>
+
+            <!-- Sleep Timer Panel -->
+            <Grid x:Name="SleepTimerPanel" Width="320" HorizontalAlignment="Right" IsVisible="{Binding IsSleepTimerPanelOpen}">
+                <Grid.Transitions><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" Easing="CubicEaseOut"/></Transitions></Grid.Transitions>
+                <Border Background="{DynamicResource SurfaceBrush}" BorderThickness="0"><Border.BoxShadow><BoxShadows>0 0 40 0 #A6000000</BoxShadows></Border.BoxShadow>
+                    <Grid RowDefinitions="Auto,*">
+                        <Grid Grid.Row="0" Margin="32,40,32,24" ColumnDefinitions="*,Auto">
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="UYKU ZAMANLAYICISI" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1.5" Margin="0,0,0,16"/>
+                                <Border Height="1" Width="100" HorizontalAlignment="Left" Background="{DynamicResource Surface1Brush}" Margin="0,-8,0,8" Opacity="0.5"/>
+                            </StackPanel>
+                            <Button Grid.Column="1" Command="{Binding ClosePanelsCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0"><materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}" ToolTip.Tip="Kapat"/></Button>
+                        </Grid>
+                        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Padding="32,0,32,40">
+                            <StackPanel Spacing="8">
+                                <Border Background="{Binding SleepTimerMode, Converter={StaticResource SleepModeToBackgroundConverter}, ConverterParameter=Off}" CornerRadius="8">
+                                    <Button Command="{Binding SetSleepTimerCommand}" CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Off}" Classes="listItemBtn">
+                                        <Grid ColumnDefinitions="Auto,*">
+                                            <materialIcons:MaterialIcon Kind="CloseCircleOutline" Width="20" Height="20" Foreground="{DynamicResource TextMutedBrush}"/>
+                                            <TextBlock Grid.Column="1" Text="Kapalı" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Button>
+                                </Border>
+
+                                <Grid>
+                                    <Border Background="{Binding SleepTimerMode, Converter={StaticResource SleepModeToBackgroundConverter}, ConverterParameter=Minutes15}" CornerRadius="8">
+                                        <Button Command="{Binding SetSleepTimerCommand}" 
+                                                CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes15}" 
+                                                IsEnabled="{Binding IsPremium}"
+                                                Classes="listItemBtn">
+                                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                                <materialIcons:MaterialIcon Kind="Timer" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}"/>
+                                                <TextBlock Grid.Column="1" Text="15 Dakika" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="2" Text="{Binding SleepTimerCountdown}" IsVisible="{Binding SleepTimerMode, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:PlayerViewModel+SleepTimerOption.Minutes15}}" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Button>
+                                    </Border>
+                                    <materialIcons:MaterialIcon Kind="Lock" Width="18" Height="18" 
+                                                                Foreground="{DynamicResource TextMutedBrush}" 
+                                                                IsVisible="{Binding !IsPremium}" 
+                                                                HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                                Margin="0,0,12,0"
+                                                                IsHitTestVisible="False"/>
+                                </Grid>
+
+                                <Grid>
+                                    <Border Background="{Binding SleepTimerMode, Converter={StaticResource SleepModeToBackgroundConverter}, ConverterParameter=Minutes30}" CornerRadius="8">
+                                        <Button Command="{Binding SetSleepTimerCommand}" 
+                                                CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes30}" 
+                                                IsEnabled="{Binding IsPremium}"
+                                                Classes="listItemBtn">
+                                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                                <materialIcons:MaterialIcon Kind="Timer" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}"/>
+                                                <TextBlock Grid.Column="1" Text="30 Dakika" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="2" Text="{Binding SleepTimerCountdown}" IsVisible="{Binding SleepTimerMode, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:PlayerViewModel+SleepTimerOption.Minutes30}}" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Button>
+                                    </Border>
+                                    <materialIcons:MaterialIcon Kind="Lock" Width="18" Height="18" 
+                                                                Foreground="{DynamicResource TextMutedBrush}" 
+                                                                IsVisible="{Binding !IsPremium}" 
+                                                                HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                                Margin="0,0,12,0"
+                                                                IsHitTestVisible="False"/>
+                                </Grid>
+
+                                <Grid>
+                                    <Border Background="{Binding SleepTimerMode, Converter={StaticResource SleepModeToBackgroundConverter}, ConverterParameter=Minutes60}" CornerRadius="8">
+                                        <Button Command="{Binding SetSleepTimerCommand}" 
+                                                CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes60}" 
+                                                IsEnabled="{Binding IsPremium}"
+                                                Classes="listItemBtn">
+                                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                                <materialIcons:MaterialIcon Kind="Timer" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}"/>
+                                                <TextBlock Grid.Column="1" Text="60 Dakika" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="2" Text="{Binding SleepTimerCountdown}" IsVisible="{Binding SleepTimerMode, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:PlayerViewModel+SleepTimerOption.Minutes60}}" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Button>
+                                    </Border>
+                                    <materialIcons:MaterialIcon Kind="Lock" Width="18" Height="18" 
+                                                                Foreground="{DynamicResource TextMutedBrush}" 
+                                                                IsVisible="{Binding !IsPremium}" 
+                                                                HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                                Margin="0,0,12,0"
+                                                                IsHitTestVisible="False"/>
+                                </Grid>
+
+                                <Grid>
+                                    <Border Background="{Binding SleepTimerMode, Converter={StaticResource SleepModeToBackgroundConverter}, ConverterParameter=EndOfEpisode}" CornerRadius="8">
+                                        <Button Command="{Binding SetSleepTimerCommand}" 
+                                                CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.EndOfEpisode}" 
+                                                IsEnabled="{Binding IsPremium}"
+                                                Classes="listItemBtn">
+                                            <Grid ColumnDefinitions="Auto,*">
+                                                <materialIcons:MaterialIcon Kind="CheckCircleOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}"/>
+                                                <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                                                    <TextBlock Text="{Binding EndOfContentText}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding EndOfContentDescription}" FontSize="11" Opacity="0.6" Foreground="{DynamicResource TextMutedBrush}" Margin="0,2,0,0"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Button>
+                                    </Border>
+                                    <materialIcons:MaterialIcon Kind="Lock" Width="18" Height="18" 
+                                                                Foreground="{DynamicResource TextMutedBrush}" 
+                                                                IsVisible="{Binding !IsPremium}" 
+                                                                HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                                Margin="0,0,12,0"
+                                                                IsHitTestVisible="False"/>
+                                </Grid>
+
+                                <Button IsVisible="{Binding IsSleepTimerActive}" Command="{Binding CancelSleepTimerCommand}" Margin="0,16,0,0" HorizontalAlignment="Stretch" Padding="12" CornerRadius="8">
+                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                                        <materialIcons:MaterialIcon Kind="TimerOff" Width="16" Height="16"/>
+                                        <TextBlock Text="Zamanlayıcıyı İptal Et"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+            </Grid>
 
             <!-- Info Panel -->
             <Grid x:Name="InfoPanel" Width="420" HorizontalAlignment="Right" IsVisible="{Binding IsInfoPanelOpen}">

@@ -14,6 +14,30 @@ using Material.Icons;
 
 namespace Noctra.Avalonia.Converters;
 
+public class SleepModeToBackgroundConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value == null || parameter == null) return Brushes.Transparent;
+
+        bool isEqual = value.ToString() == parameter.ToString();
+
+        if (isEqual)
+        {
+            if (Application.Current?.TryGetResource("AccentBrush", out var accent) == true && accent is IBrush brush)
+            {
+                return brush;
+            }
+            return new SolidColorBrush(Color.Parse("#8B5CF6")); // Fallback accent
+        }
+
+        return Brushes.Transparent;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => null;
+}
+
 public class DoubleToStarGridLengthConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
