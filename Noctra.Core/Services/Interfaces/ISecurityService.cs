@@ -15,4 +15,14 @@ public interface ISecurityService
     /// Şifrelenmiş metni çözer.
     /// </summary>
     string? Decrypt(string? cipherText);
+
+    /// <summary>
+    /// 4 haneli PIN'in SHA256 hash'ini üretir.
+    /// </summary>
+    string HashPin(string pin);
+
+    /// <summary>
+    /// PIN'in verilen hash ile eşleşip eşleşmediğini doğrular.
+    /// </summary>
+    bool VerifyPin(string pin, string hash);
 }

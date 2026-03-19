@@ -63,5 +63,35 @@ namespace Noctra.Tests
             Assert.Null(_securityService.Encrypt(string.Empty));
             Assert.Null(_securityService.Decrypt(string.Empty));
         }
+
+        [Fact]
+        public void HashPin_ShouldReturnConsistentHash()
+        {
+            var hash1 = _securityService.HashPin("1234");
+            var hash2 = _securityService.HashPin("1234");
+            Assert.Equal(hash1, hash2);
+        }
+
+        [Fact]
+        public void HashPin_DifferentPins_ShouldReturnDifferentHashes()
+        {
+            var hash1 = _securityService.HashPin("1234");
+            var hash2 = _securityService.HashPin("5678");
+            Assert.NotEqual(hash1, hash2);
+        }
+
+        [Fact]
+        public void VerifyPin_CorrectPin_ShouldReturnTrue()
+        {
+            var hash = _securityService.HashPin("9090");
+            Assert.True(_securityService.VerifyPin("9090", hash));
+        }
+
+        [Fact]
+        public void VerifyPin_WrongPin_ShouldReturnFalse()
+        {
+            var hash = _securityService.HashPin("1111");
+            Assert.False(_securityService.VerifyPin("2222", hash));
+        }
     }
 }

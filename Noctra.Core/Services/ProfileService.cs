@@ -85,6 +85,7 @@ public class ProfileService : IProfileService
             existingProfile.Avatar = request.Avatar;
             // existingProfile.IsChild is intentionally NOT updated here. 
             // A child profile cannot be unchecked, and a regular profile cannot be made a child profile later.
+            existingProfile.PinHash = request.PinHash;
             profile = existingProfile;
         }
         else
@@ -104,6 +105,7 @@ public class ProfileService : IProfileService
                 ProviderAccount = account,
                 Avatar = request.Avatar,
                 IsChild = request.IsChild,
+                PinHash = request.PinHash,
                 LastUsed = DateTime.UtcNow
             };
             db.Profiles.Add(profile);
@@ -201,5 +203,68 @@ public class ProfileService : IProfileService
             profile.LastUsed = DateTime.UtcNow;
             await db.SaveChangesAsync();
         }
+    }
+
+    public async Task ScheduleProfileDeletionAsync(int profileId)
+    {
+        await using var db = await _contextFactory.CreateDbContextAsync();
+        var profile = await db.Profiles.FindAsync(profileId);
+        if (profile == null) return;
+
+        if (profile.PendingDeletionAt != null) return;
+
+        profile.PendingDeletionAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+    }
+
+    public async Task CancelProfileDeletionAsync(int profileId)
+    {
+        await using var db = await _contextFactory.CreateDbContextAsync();
+        var profile = await db.Profiles.FindAsync(profileId);
+        if (profile == null) return;
+
+        profile.PendingDeletionAt = null;
+        await db.SaveChangesAsync();
+    }
+
+    public async Task PurgeExpiredProfilesAsync()
+    {
+        await using var db = await _contextFactory.CreateDbContextAsync();
+        var cutoff = DateTime.UtcNow.AddDays(-3);
+
+        var expired = await db.Profiles
+            .Include(p => p.ProviderAccount)
+            .Where(p => p.PendingDeletionAt.HasValue && p.PendingDeletionAt <= cutoff)
+            .ToListAsync();
+
+        foreach (var profile in expired)
+        {
+            await _contentDownloadService.DeleteProfileDownloadsAsync(profile.Id);
+
+            var hasOtherProfiles = await db.Profiles
+                .AnyAsync(p => p.ProviderAccountId == profile.ProviderAccountId && p.Id != profile.Id);
+
+            await db.WatchHistories
+                .Where(h => h.ProfileId == profile.Id)
+                .ExecuteDeleteAsync();
+
+            await db.SeriesEpisodeProgresses
+                .Where(p => p.ProfileId == profile.Id)
+                .ExecuteDeleteAsync();
+
+            await db.Playlists
+                .Where(p => p.ProfileId == profile.Id)
+                .ExecuteDeleteAsync();
+
+            db.Profiles.Remove(profile);
+
+            if (!hasOtherProfiles && profile.ProviderAccount != null)
+            {
+                db.ProviderAccounts.Remove(profile.ProviderAccount);
+            }
+        }
+
+        if (expired.Any())
+            await db.SaveChangesAsync();
     }
 }

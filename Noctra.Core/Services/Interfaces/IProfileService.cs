@@ -31,6 +31,21 @@ public interface IProfileService
     /// Updates the LastUsed timestamp of a profile.
     /// </summary>
     Task UpdateLastUsedAsync(int profileId);
+
+    /// <summary>
+    /// 3 günlük silme geri sayımını başlatır (PIN unutuldu akışı).
+    /// </summary>
+    Task ScheduleProfileDeletionAsync(int profileId);
+
+    /// <summary>
+    /// Geri sayımı iptal eder (PIN hatırlanıp başarılı giriş yapıldığında).
+    /// </summary>
+    Task CancelProfileDeletionAsync(int profileId);
+
+    /// <summary>
+    /// Süresi dolmuş profilleri kalıcı olarak siler (uygulama açılışında çağrılır).
+    /// </summary>
+    Task PurgeExpiredProfilesAsync();
 }
 
 /// <summary>
@@ -47,6 +62,11 @@ public record ProfileSaveRequest
     public required string EncryptedPassword { get; init; }
     public required ProfileType AccountType { get; init; }
     public bool CredentialsChanged { get; init; }
+
+    /// <summary>
+    /// PIN hash (SHA256). Null = PIN kaldır, değer = PIN ayarla/güncelle.
+    /// </summary>
+    public string? PinHash { get; init; }
 
     /// <summary>
     /// When editing an existing profile, provides the IDs needed for update.

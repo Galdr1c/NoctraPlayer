@@ -9,6 +9,15 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
+- **Kapsamlı Profil PIN Kilidi Sistemi** (2026-03-19):
+  - Profil bazlı erişim kısıtlaması için güvenli 4 haneli PIN sistemi hayata geçirildi.
+  - **Premium Kilidi:** PIN oluşturma ve yönetimi özellikleri Premium kullanıcılara özel olarak sunuldu.
+  - **Gelişmiş Profil Düzenleyici:** PIN oluşturma sırasında "PIN Tekrar" adımı ile doğrulama eklendi. Mevcut bir PIN varsa "PIN Aktif" rozeti ve kolay PIN kaldırma/değiştirme seçenekleri sunuldu.
+  - **PIN Giriş Ekranı:** Estetik, numpad destekli ve 380x560 boyutunda modern bir PIN giriş penceresi eklendi. Yanlış girişlerde 30 saniyelik güvenlik kilidi mekanizması uygulandı.
+  - **"PIN'imi Unuttum" Prosedürü:** PIN'i unutulan profiller için 3 günlük bir silme geri sayımı sistemi kuruldu. Bu süre zarfında PIN hatırlanırsa silme işlemi iptal edilebilir. Güvenlik gereği PIN sıfırlama seçeneği sunulmamıştır.
+  - **Kompakt Diyalog Pencereleri:** Uygulama genelindeki uyarı ve bilgi pencereleri (`DialogWindow`) optimize edilerek 400px sabit genişliğe ve içeriğe göre otomatik yükselen (scroll-free) bir yapıya geçirildi.
+  - **Güvenli Depolama:** PIN'ler veritabanında SHA256 algoritması ve "salt" (tuzlama) yöntemiyle geri dönüştürülemez şekilde şifrelenerek saklanmaktadır.
+  - **Hata Düzeltmeleri:** Silme geri sayımının her tıklamada tekrar 3 güne sıfırlanması hatası ve profil düzenleme ekranındaki PIN durumu bildirim senkronizasyonu sorunları giderildi.
 - **Video Görüntü Doldurma Modları (Video Fill Mode)** (2026-03-18):
   - Video oynatıcıya 4 farklı doldurma modu eklendi: Uydur (Fit), Doldur (Fill 16:9), Genişlet (Stretch 16:9) ve Orijinal.
   - Mod değiştirildiğinde ekranın ortasında belirip kaybolan estetik bir "Mod Göstergesi" (Overlay Message) eklendi.

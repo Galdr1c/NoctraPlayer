@@ -218,6 +218,126 @@
                                       IsVisible="{Binding IsChildVisible}"
                                       Margin="4,16,0,0"
                                       ToolTip.Tip="Çocuklara özel içerikler gösterilir. Yine de kontrol etmeniz önerilir."/>
+
+                            <!-- PIN Management Section -->
+                            <Border Background="{DynamicResource Surface1Brush}" CornerRadius="10"
+                                    Padding="20,16" Margin="0,24,0,0">
+                                <StackPanel Spacing="12">
+                                    <!-- Toggle Row -->
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Spacing="2">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <materialIcons:MaterialIcon Kind="Lock" Width="18" Height="18"
+                                                                             Foreground="{DynamicResource AccentBrush}"
+                                                                             VerticalAlignment="Center"/>
+                                                <TextBlock Text="Profil PIN Kilidi" FontSize="15" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                                           VerticalAlignment="Center"/>
+                                                <!-- Premium Badge (visible for free users) -->
+                                                <Border Background="#FFD700" CornerRadius="4" Padding="6,2"
+                                                        VerticalAlignment="Center"
+                                                        IsVisible="{Binding !IsPinAvailable}">
+                                                    <TextBlock Text="PREMIUM" FontSize="10" FontWeight="Bold"
+                                                               Foreground="#1A1A2E"/>
+                                                </Border>
+                                            </StackPanel>
+                                            <TextBlock Text="Profile giriş için 4 haneli PIN gerektirir"
+                                                       FontSize="12" Foreground="{DynamicResource TextMutedBrush}"
+                                                       Margin="26,0,0,0"/>
+                                        </StackPanel>
+
+                                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding HasPin}"
+                                                      OnContent="" OffContent=""
+                                                      IsEnabled="{Binding IsPinAvailable}"
+                                                      VerticalAlignment="Center"/>
+                                    </Grid>
+
+                                    <!-- PIN Input (visible when toggle is on) -->
+                                    <StackPanel IsVisible="{Binding HasPin}" Spacing="12" Margin="26,4,0,0">
+                                        
+                                        <!-- State 1: Existing PIN info (editing a profile that already has PIN) -->
+                                        <StackPanel IsVisible="{Binding HasExistingPin}" Spacing="8">
+                                            <!-- Active PIN Badge -->
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <materialIcons:MaterialIcon Kind="ShieldCheckOutline" Width="18" Height="18"
+                                                                             Foreground="#4CAF50" VerticalAlignment="Center"/>
+                                                <TextBlock Text="PIN aktif" FontSize="13" FontWeight="SemiBold"
+                                                           Foreground="#4CAF50" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <TextBlock Text="PIN'i kaldırmak için toggle'ı kapatıp kaydedin. Yeni bir PIN belirlemek için aşağıya girin."
+                                                       FontSize="11" Foreground="{DynamicResource TextMutedBrush}"
+                                                       TextWrapping="Wrap" MaxWidth="350"/>
+                                            
+                                            <!-- Optional: Change PIN fields -->
+                                            <TextBlock Text="Yeni PIN (isteğe bağlı)" FontSize="12" FontWeight="Medium"
+                                                       Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+
+                                        <!-- PIN Field -->
+                                        <StackPanel Spacing="4">
+                                            <Panel>
+                                                <TextBlock Text="Yeni PIN" FontSize="13" FontWeight="Medium"
+                                                           Foreground="{DynamicResource TextMutedBrush}"
+                                                           IsVisible="{Binding HasExistingPin}"/>
+                                                <TextBlock Text="PIN" FontSize="13" FontWeight="Medium"
+                                                           Foreground="{DynamicResource TextMutedBrush}"
+                                                           IsVisible="{Binding !HasExistingPin}"/>
+                                            </Panel>
+                                            <TextBox Text="{Binding PinCode}" 
+                                                     MaxLength="4"
+                                                     PasswordChar="•"
+                                                     Watermark="••••"
+                                                     Width="140"
+                                                     Height="44"
+                                                     FontSize="20"
+                                                     LetterSpacing="8"
+                                                     HorizontalAlignment="Left"
+                                                     HorizontalContentAlignment="Center"/>
+                                        </StackPanel>
+
+                                        <!-- PIN Confirm Field -->
+                                        <StackPanel Spacing="4">
+                                            <Panel>
+                                                <TextBlock Text="Yeni PIN Tekrar" FontSize="13" FontWeight="Medium"
+                                                           Foreground="{DynamicResource TextMutedBrush}"
+                                                           IsVisible="{Binding HasExistingPin}"/>
+                                                <TextBlock Text="PIN Tekrar" FontSize="13" FontWeight="Medium"
+                                                           Foreground="{DynamicResource TextMutedBrush}"
+                                                           IsVisible="{Binding !HasExistingPin}"/>
+                                            </Panel>
+                                            <TextBox Text="{Binding PinConfirm}" 
+                                                     MaxLength="4"
+                                                     PasswordChar="•"
+                                                     Watermark="••••"
+                                                     Width="140"
+                                                     Height="44"
+                                                     FontSize="20"
+                                                     LetterSpacing="8"
+                                                     HorizontalAlignment="Left"
+                                                     HorizontalContentAlignment="Center"/>
+                                        </StackPanel>
+
+                                        <!-- Error -->
+                                        <TextBlock Text="{Binding PinError}"
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource ErrorBrush}"
+                                                   IsVisible="{Binding PinError, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+
+                                        <!-- Warning -->
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource TextMutedBrush}"
+                                                   TextWrapping="Wrap" MaxWidth="350" HorizontalAlignment="Left">
+                                            <Run Text="PIN'inizi unutursanız profil "/>
+                                            <Run Text="3 gün içinde silinir" FontWeight="SemiBold"/>
+                                            <Run Text=". Kurtarma seçeneği yoktur."/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
                             
                             <Rectangle Height="1" Fill="{DynamicResource BorderBrush}" Margin="0,32"/>
                             

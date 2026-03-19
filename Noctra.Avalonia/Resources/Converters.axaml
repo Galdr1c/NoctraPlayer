@@ -57,4 +57,7 @@
   <converters:DownloadStatusToBrushConverter x:Key="DownloadStatusToBrushConverter" />
   <converters:FillModeToIconConverter x:Key="FillModeToIconConverter" />
   <converters:BoolToFavoriteIconConverter x:Key="BoolToFavoriteIconConverter" />
+  <converters:PinDotConverter x:Key="PinDotConverter" />
+  <converters:UrgencyToColorConverter x:Key="UrgencyToColorConverter" />
+  <converters:TimeSpanToCountdownConverter x:Key="TimeSpanToCountdownConverter" />
 </ResourceDictionary>

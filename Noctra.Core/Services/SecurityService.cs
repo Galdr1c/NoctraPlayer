@@ -59,4 +59,13 @@ public class SecurityService : ISecurityService
             return cipherText;
         }
     }
+
+    public string HashPin(string pin)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes($"NOCTRA_PIN_{pin}"));
+        return Convert.ToHexString(bytes);
+    }
+
+    public bool VerifyPin(string pin, string hash)
+        => string.Equals(HashPin(pin), hash, StringComparison.OrdinalIgnoreCase);
 }

@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +16,7 @@ public partial class ProfilesViewModel : ObservableObject
     private readonly IDialogService _dialogService;
     private readonly IDispatcherService _dispatcherService;
     private readonly ILicenseService _licenseService;
+    private System.Timers.Timer? _countdownRefreshTimer;
     
     [ObservableProperty]
     private ObservableCollection<Profile> _profiles = new();
@@ -73,6 +74,37 @@ public partial class ProfilesViewModel : ObservableObject
             System.Diagnostics.Debug.WriteLine($"Profil yükleme hatası: {ex.Message}");
             Profiles = new ObservableCollection<Profile>();
             IsManageMode = false;
+        }
+
+        StartCountdownRefreshIfNeeded();
+    }
+
+    private void StartCountdownRefreshIfNeeded()
+    {
+        var hasPendingDeletions = Profiles.Any(p => p.IsPendingDeletion);
+
+        if (hasPendingDeletions && _countdownRefreshTimer == null)
+        {
+            _countdownRefreshTimer = new System.Timers.Timer(60_000); // 60 saniyede bir
+            _countdownRefreshTimer.Elapsed += async (_, _) =>
+            {
+                try
+                {
+                    await _dispatcherService.InvokeAsync(async () =>
+                    {
+                        await LoadProfilesAsync();
+                    });
+                }
+                catch { /* Ignore timer errors */ }
+            };
+            _countdownRefreshTimer.AutoReset = true;
+            _countdownRefreshTimer.Start();
+        }
+        else if (!hasPendingDeletions && _countdownRefreshTimer != null)
+        {
+            _countdownRefreshTimer.Stop();
+            _countdownRefreshTimer.Dispose();
+            _countdownRefreshTimer = null;
         }
     }
 

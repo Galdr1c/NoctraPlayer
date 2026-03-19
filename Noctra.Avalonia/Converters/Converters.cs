@@ -1296,3 +1296,64 @@ public class BoolToFavoriteIconConverter : IValueConverter
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
 }
+
+public class PinDotConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var pinLen = value is int i ? i : 0;
+        var dotIndex = 0;
+        if (parameter != null) int.TryParse(parameter.ToString(), out dotIndex);
+
+        var filled = pinLen >= dotIndex;
+
+        if (filled && Application.Current?.TryGetResource("AccentBrush", out var accentRes) == true && accentRes is IBrush accentBrush)
+            return accentBrush;
+
+        if (Application.Current?.TryGetResource("BorderBrush", out var borderRes) == true && borderRes is IBrush borderBrush)
+            return borderBrush;
+
+        return filled
+            ? new SolidColorBrush(Color.Parse("#8B5CF6"))
+            : new SolidColorBrush(Color.Parse("#333333"));
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
+}
+
+public class UrgencyToColorConverter : IValueConverter
+{
+    private static readonly SolidColorBrush OrangeBrush = new(Color.Parse("#FF8C00"));
+    private static readonly SolidColorBrush RedOrangeBrush = new(Color.Parse("#FF4500"));
+    private static readonly SolidColorBrush RedBrush = new(Color.Parse("#FF1744"));
+
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var urgency = value is double d ? d : 1.0;
+
+        if (urgency >= 0.6) return OrangeBrush;
+        if (urgency >= 0.3) return RedOrangeBrush;
+        return RedBrush;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
+}
+
+public class TimeSpanToCountdownConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is not TimeSpan ts || ts <= TimeSpan.Zero)
+            return "Siliniyor...";
+
+        if (ts.TotalDays >= 1)
+            return $"{(int)ts.TotalDays}g {ts.Hours}s kaldı\nSilinecek";
+
+        if (ts.TotalHours >= 1)
+            return $"{(int)ts.TotalHours}s {ts.Minutes}dk kaldı\nSilinecek";
+
+        return $"{ts.Minutes}dk kaldı\nSilinecek";
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
+}

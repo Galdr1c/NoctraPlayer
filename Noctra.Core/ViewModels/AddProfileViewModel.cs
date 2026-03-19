@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Noctra.Models;
 using Noctra.Services;
@@ -500,6 +500,25 @@ public partial class AddProfileViewModel : ObservableObject
     [ObservableProperty]
     private bool _isChildVisible = true;
 
+    // PIN Management
+    [ObservableProperty]
+    private bool _hasPin;
+
+    [ObservableProperty]
+    private string _pinCode = string.Empty;
+
+    [ObservableProperty]
+    private string _pinConfirm = string.Empty;
+
+    [ObservableProperty]
+    private string? _pinError;
+
+    /// <summary>PIN creation is a premium feature.</summary>
+    public bool IsPinAvailable => _licenseService.IsPremium;
+
+    /// <summary>True when editing a profile that already has a PIN stored.</summary>
+    public bool HasExistingPin => !string.IsNullOrEmpty(EditingProfile?.PinHash);
+
     // Validations
     [ObservableProperty]
     private string _statusMessage = string.Empty;
@@ -563,11 +582,15 @@ public partial class AddProfileViewModel : ObservableObject
     public void InitializeForEdit(Profile profile)
     {
         EditingProfile = profile;
+        OnPropertyChanged(nameof(HasExistingPin));
         ProfileName = profile.Name;
         SelectedAvatar = profile.Avatar ?? "default";
         IsChild = profile.IsChild;
         CanEditIsChild = false;
         IsChildVisible = profile.IsChild; // Only show if it's already a child profile when editing
+        HasPin = !string.IsNullOrEmpty(profile.PinHash);
+        PinCode = string.Empty; // Never show existing PIN
+        PinConfirm = string.Empty;
         
         // Set account
         InitializeEdit(profile);
@@ -947,7 +970,13 @@ public partial class AddProfileViewModel : ObservableObject
         // Clear previous errors
         ProfileNameError = null;
         UrlError = null;
+        PinError = null;
         HasError = false;
+        // Non-premium users cannot save with PIN
+        if (HasPin && !_licenseService.IsPremium)
+        {
+            HasPin = false;
+        }
         StatusMessage = string.Empty;
 
         // If user did not type a name, generate one from URL host.
@@ -967,6 +996,30 @@ public partial class AddProfileViewModel : ObservableObject
         // Validate URL
         if (!ValidateUrl())
         {
+            return;
+        }
+
+        // Validate PIN
+        if (HasPin && PinCode.Length > 0)
+        {
+            // Must be exactly 4 digits
+            if (PinCode.Length != 4 || !PinCode.All(char.IsDigit))
+            {
+                PinError = "PIN 4 haneli rakam olmalıdır";
+                return;
+            }
+
+            // Confirmation must match
+            if (PinCode != PinConfirm)
+            {
+                PinError = "PIN'ler eşleşmiyor";
+                return;
+            }
+        }
+        else if (HasPin && string.IsNullOrEmpty(EditingProfile?.PinHash))
+        {
+            // New PIN required but nothing entered
+            PinError = "PIN giriniz";
             return;
         }
 
@@ -1023,6 +1076,11 @@ public partial class AddProfileViewModel : ObservableObject
                 EncryptedPassword = encryptedPassword,
                 AccountType = newAccountType,
                 CredentialsChanged = credentialsChanged,
+                PinHash = HasPin && PinCode.Length == 4
+                    ? _securityService.HashPin(PinCode)
+                    : HasPin && EditingProfile?.PinHash != null
+                        ? EditingProfile.PinHash  // Keep existing PIN if toggle is on but no new code entered
+                        : null,                    // PIN disabled or removed
                 ExistingIds = EditingProfile != null
                     ? new ExistingProfileIds(EditingProfile.Id, EditingProfile.ProviderAccountId)
                     : null

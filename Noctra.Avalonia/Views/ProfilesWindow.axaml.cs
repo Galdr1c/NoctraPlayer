@@ -18,6 +18,8 @@ public partial class ProfilesWindow : Window
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly IDialogService _dialogService;
     private readonly ISettingsService _settingsService;
+    private readonly ISecurityService _securityService;
+    private readonly IProfileService _profileService;
     private readonly MainWindow _mainWindow;
     private readonly MainViewModel _mainViewModel;
     private bool _autoSelectTriggered;
@@ -31,6 +33,8 @@ public partial class ProfilesWindow : Window
             ((App)Application.Current!).Services.GetRequiredService<IDbContextFactory<AppDbContext>>(),
             ((App)Application.Current!).Services.GetRequiredService<IDialogService>(),
             ((App)Application.Current!).Services.GetRequiredService<ISettingsService>(),
+            ((App)Application.Current!).Services.GetRequiredService<ISecurityService>(),
+            ((App)Application.Current!).Services.GetRequiredService<IProfileService>(),
             ((App)Application.Current!).Services.GetRequiredService<MainWindow>(),
             ((App)Application.Current!).Services.GetRequiredService<MainViewModel>())
     {
@@ -41,6 +45,8 @@ public partial class ProfilesWindow : Window
         IDbContextFactory<AppDbContext> contextFactory,
         IDialogService dialogService,
         ISettingsService settingsService,
+        ISecurityService securityService,
+        IProfileService profileService,
         MainWindow mainWindow,
         MainViewModel mainViewModel)
     {
@@ -49,6 +55,8 @@ public partial class ProfilesWindow : Window
         _contextFactory = contextFactory;
         _dialogService = dialogService;
         _settingsService = settingsService;
+        _securityService = securityService;
+        _profileService = profileService;
         _mainWindow = mainWindow;
         _mainViewModel = mainViewModel;
 
@@ -58,6 +66,66 @@ public partial class ProfilesWindow : Window
         _viewModel.OnProfileEditRequested += ViewModel_OnProfileEditRequested;
         _viewModel.OnProfileSelected += ViewModel_OnProfileSelected;
         Opened += ProfilesWindow_Opened;
+    }
+
+    // ── PIN Doğrulama — Merkezi Geçit ─────────────────────────────────
+    /// <summary>
+    /// PIN varsa doğrulama penceresi açar.
+    /// true = geçebilir, false = reddedildi/iptal/unuttum
+    /// </summary>
+    private async Task<bool> VerifyPinIfRequired(Profile profile, string purpose = "giriş")
+    {
+        if (string.IsNullOrEmpty(profile.PinHash))
+            return true; // PIN yok, direkt geç
+
+        var pinVm = new PinEntryViewModel(
+            _securityService,
+            profile.PinHash,
+            profile.Name,
+            profile.Avatar,
+            purpose);
+
+        var pinWindow = new PinEntryWindow(pinVm);
+        bool? result = null;
+
+        pinVm.PinResult += (_, r) =>
+        {
+            result = r;
+            pinWindow.Close();
+        };
+
+        await pinWindow.ShowDialog(this);
+
+        // null = "Şifremi unuttum" tıklandı
+        if (result == null)
+        {
+            await HandleForgotPin(profile);
+            return false;
+        }
+
+        return result == true;
+    }
+
+    // ── PIN Unutuldu — 3 Günlük Silme Geri Sayımı ─────────────────────
+    private async Task HandleForgotPin(Profile profile)
+    {
+        var confirmed = await _dialogService.ShowConfirmationAsync(
+            "PIN'inizi mi Unuttunuz?",
+            $"'{profile.Name}' profiline erişmek için PIN gerekiyor.\n\n" +
+            "PIN kurtarma seçeneği yoktur.\n\n" +
+            "\"Evet\" seçeneği ile profil 3 gün içinde kalıcı olarak silinir. " +
+            "Bu süre içinde PIN'inizi hatırlayıp profile girerseniz silme işlemi iptal edilir.\n\n" +
+            "Silme başlatılsın mı?");
+
+        if (!confirmed) return;
+
+        await _profileService.ScheduleProfileDeletionAsync(profile.Id);
+        await _viewModel.RefreshProfilesAsync();
+
+        await _dialogService.ShowMessageAsync(
+            "Silme Zamanlandı",
+            $"'{profile.Name}' profili 3 gün içinde silinecek.\n\n" +
+            "Bu süre içinde PIN'inizi hatırlayıp profile girerseniz silme işlemi otomatik iptal edilir.");
     }
 
     private void Close_Click(object? sender, RoutedEventArgs e)
@@ -83,22 +151,52 @@ public partial class ProfilesWindow : Window
         }
     }
 
-    private void SelectProfile_Click(object? sender, RoutedEventArgs e)
+    private async void SelectProfile_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not ProfilesViewModel vm || sender is not Control control || control.DataContext is not Profile profile)
         {
             return;
+        }
+
+        // Manage modundaysa düzenleme/silme — PIN kontrolü orada yapılır
+        if (vm.IsManageMode)
+        {
+            // PIN kontrolü — düzenleme için
+            if (!await VerifyPinIfRequired(profile, "bu profili düzenlemek"))
+                return;
+
+            vm.EditProfileCommand.Execute(profile);
+            return;
+        }
+
+        // Normal mod — giriş: PIN kontrolü
+        if (!await VerifyPinIfRequired(profile, "bu profile girmek"))
+            return;
+
+        // PIN doğru girildi — eğer geri sayım aktifse iptal et
+        if (profile.IsPendingDeletion)
+        {
+            await _profileService.CancelProfileDeletionAsync(profile.Id);
+            await _viewModel.RefreshProfilesAsync();
+
+            await _dialogService.ShowMessageAsync(
+                "Profil Kurtarıldı!",
+                $"'{profile.Name}' profili silme işlemi iptal edildi. Profil güvende.");
         }
 
         vm.SelectProfileCommand.Execute(profile);
     }
 
-    private void DeleteProfile_Click(object? sender, RoutedEventArgs e)
+    private async void DeleteProfile_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not ProfilesViewModel vm || sender is not Control control || control.DataContext is not Profile profile)
         {
             return;
         }
+
+        // PIN kontrolü — silme için
+        if (!await VerifyPinIfRequired(profile, "bu profili silmek"))
+            return;
 
         vm.DeleteProfileCommand.Execute(profile);
     }
@@ -116,6 +214,12 @@ public partial class ProfilesWindow : Window
 
             var lastProfile = _viewModel.Profiles.OrderByDescending(p => p.LastUsed).FirstOrDefault();
             if (lastProfile == null)
+            {
+                return;
+            }
+
+            // Auto-select: PIN korumalı profilleri otomatik seçme
+            if (!string.IsNullOrEmpty(lastProfile.PinHash))
             {
                 return;
             }
@@ -179,10 +283,6 @@ public partial class ProfilesWindow : Window
             
             await Task.WhenAll(minDelayTask, loadTask);
             
-            // Re-check for internal errors from MainViewModel (StatusMessage might contain error)
-            // If LoadProfileAsync caught an error, MainViewModel.IsLoading might be false but wait...
-            // MainViewModel doesn't have IsError property, but StatusMessage is updated.
-            
             // Clean up status listener
             _mainViewModel.PropertyChanged -= OnStatusChanged;
 
@@ -218,8 +318,10 @@ public partial class ProfilesWindow : Window
         OpenAddProfileWindow(null);
     }
 
-    private void ViewModel_OnProfileEditRequested(Profile profile)
+    private async void ViewModel_OnProfileEditRequested(Profile profile)
     {
+        // PIN kontrolü düzenleme için — SelectProfile_Click'te zaten yapıldı
+        // ama direkt event üzerinden gelen çağrılar için de kontrol
         OpenAddProfileWindow(profile);
     }
 

@@ -7,7 +7,7 @@
         x:DataType="views:DialogWindow"
         x:CompileBindings="False"
         Title="{Binding TitleText}"
-        Width="460" Height="240"
+        Width="400" SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
         Topmost="True"
@@ -74,34 +74,32 @@
             CornerRadius="16" ClipToBounds="True"
             BoxShadow="0 12 32 0 #90000000">
 
-        <Grid Margin="32">
+        <Grid Margin="24">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <!-- Header Row -->
-            <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,0,0,20">
+            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,0,0,16">
                 <materialIcons:MaterialIcon x:Name="DialogIcon" 
-                                             Width="32" Height="32" 
+                                             Width="28" Height="28" 
                                              VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding TitleText}" 
                            Foreground="{DynamicResource TextPrimaryBrush}" 
-                           FontSize="22" FontWeight="Bold" 
+                           FontSize="20" FontWeight="Bold" 
                            VerticalAlignment="Center"/>
             </StackPanel>
 
             <!-- Content Area -->
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                <TextBlock Text="{Binding MessageText}" 
-                           Foreground="{DynamicResource TextSecondaryBrush}"
-                           FontSize="16" 
-                           LineHeight="24"
-                           TextWrapping="Wrap"
-                           VerticalAlignment="Top"
-                           Margin="0,0,0,16"/>
-            </ScrollViewer>
+            <TextBlock Grid.Row="1" Text="{Binding MessageText}" 
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       FontSize="15" 
+                       LineHeight="22"
+                       TextWrapping="Wrap"
+                       VerticalAlignment="Top"
+                       Margin="0,0,0,20"/>
 
             <!-- Actions -->
             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12" Margin="0,8,0,0">

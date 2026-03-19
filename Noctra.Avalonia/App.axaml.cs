@@ -101,6 +101,18 @@ public partial class App : Application
                             StartupDiagnostics.Log("EF Core warmed up.");
                         }
 
+                        // 2.1 Purge profiles with expired deletion countdown
+                        try
+                        {
+                            var profileService = Services.GetRequiredService<IProfileService>();
+                            await profileService.PurgeExpiredProfilesAsync();
+                            StartupDiagnostics.Log("Expired profile purge completed.");
+                        }
+                        catch (Exception ex)
+                        {
+                            StartupDiagnostics.LogException("Failed to purge expired profiles", ex);
+                        }
+
                         // 2.5 TMDB Sync Service is now on-demand (no background processing)
                         StartupDiagnostics.Log("TMDB Sync Service ready (on-demand mode).");
 
@@ -384,6 +396,8 @@ public partial class App : Application
     {
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE ProviderAccounts ADD COLUMN ExpirationDate TEXT;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Profiles ADD COLUMN CreatedAt TEXT NOT NULL DEFAULT '0001-01-01 00:00:00';"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Profiles ADD COLUMN PinHash TEXT;"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Profiles ADD COLUMN PendingDeletionAt TEXT;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Playlists ADD COLUMN EpgUrl TEXT;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Playlists ADD COLUMN DetectedCountry TEXT;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Playlists ADD COLUMN EpgLastUpdated TEXT;"); } catch { }

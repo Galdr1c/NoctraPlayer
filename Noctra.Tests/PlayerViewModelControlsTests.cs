@@ -203,6 +203,7 @@ namespace Noctra.Tests
                 new SyncDispatcher(),
                 Settings,
                 License,
+                null!,  // MainViewModel — not needed for these tests
                 WatchHistory);
         }
 
