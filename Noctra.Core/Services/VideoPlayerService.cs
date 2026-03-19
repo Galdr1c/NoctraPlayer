@@ -157,77 +157,82 @@ public class VideoPlayerService : IVideoPlayerService
         }
     }
 
+    private async Task InitializeCoreAsync()
+    {
+        if (_isInitialized) return;
+
+        await Task.Run(() =>
+        {
+            LibVLCSharp.Shared.Core.Initialize();
+
+            var ua = string.IsNullOrWhiteSpace(_lastUserAgent) ? "VLC/3.0.4" : _lastUserAgent;
+            var netCaching = GetNetworkCaching();
+            var liveCaching = GetLiveCaching();
+            var fileCaching = GetFileCaching();
+
+            var optionsList = new List<string>
+            {
+                // avcodec-fast: daha az kalite ama takılma yok
+                "--avcodec-fast",
+                // Direct rendering — CPU→GPU kopyalama yükünü azaltır
+                "--avcodec-dr",
+
+                $"--network-caching={netCaching}",
+                $"--live-caching={liveCaching}",
+                $"--file-caching={fileCaching}",
+
+                // Canlı TV için clock düzeltmesi
+                "--clock-synchro=0",
+                "--clock-jitter=500",
+
+                "--rtsp-tcp",
+                // "--drop-late-frames", // Kaldırıldı (MKV için sorunlu)
+                // "--skip-frames",      // Kaldırıldı
+                "--ts-seek-percent",
+                "--http-reconnect",
+                $"--http-user-agent={ua}",
+                "--verbose=0",
+                "--quiet",
+                
+                //Altyaz ayarlarını buraya ekle
+                $"--freetype-fontsize={_lastSubtitleFontSize}", // Altyazı boyutu
+                $"--freetype-background-opacity={_lastSubtitleBackgroundOpacity}", // Arkaplan şeffaflığı
+                "--freetype-background-color=0x000000",         // Arkaplan rengi siyah
+                $"--sub-margin={_lastSubtitleMargin}",          // Alttan yukarı doğru marjin
+            };
+
+            if (_lastHardwareAcceleration)
+            {
+                // dxva2 (eski) → d3d11va (modern, H.265/HEVC destekli)
+                optionsList.Add("--avcodec-hw=d3d11va");
+                optionsList.Add("--vout=direct3d11");
+            }
+            else
+            {
+                optionsList.Add("--avcodec-hw=none");
+                optionsList.Add("--vout=any");
+            }
+
+            _libVLC = new LibVLC(optionsList.ToArray());
+            _mediaPlayer = new MediaPlayer(_libVLC);
+        });
+
+        SetupEventHandlers();
+        _isInitialized = true;
+
+        await _dispatcherService.InvokeAsync(() =>
+        {
+            MediaPlayerReady?.Invoke(this, _mediaPlayer);
+            return Task.CompletedTask;
+        });
+    }
+
     private async Task InitializeAsync()
     {
         await _initLock.WaitAsync();
         try
         {
-            if (_isInitialized) return;
-
-            await Task.Run(() => 
-            {
-                LibVLCSharp.Shared.Core.Initialize();
-                
-                var ua = string.IsNullOrWhiteSpace(_lastUserAgent) ? "VLC/3.0.4" : _lastUserAgent;
-                var netCaching = GetNetworkCaching();
-                var liveCaching = GetLiveCaching();
-                var fileCaching = GetFileCaching();
-
-                var optionsList = new List<string>
-                {
-                    // avcodec-fast: daha az kalite ama takılma yok
-                    "--avcodec-fast",
-                    // Direct rendering — CPU→GPU kopyalama yükünü azaltır
-                    "--avcodec-dr",
-
-                    $"--network-caching={netCaching}",
-                    $"--live-caching={liveCaching}",
-                    $"--file-caching={fileCaching}",
-                    
-                    // Canlı TV için clock düzeltmesi
-                    "--clock-synchro=0",
-                    "--clock-jitter=500",
-
-                    "--rtsp-tcp",
-                    // "--drop-late-frames", // Kaldırıldı (MKV için sorunlu)
-                    // "--skip-frames",      // Kaldırıldı
-                    "--ts-seek-percent",
-                    "--http-reconnect",
-                    $"--http-user-agent={ua}",
-                    "--verbose=0",
-                    "--quiet",
-                    
-                    //Altyaz ayarlarını buraya ekle
-                    $"--freetype-fontsize={_lastSubtitleFontSize}", // Altyazı boyutu
-                    $"--freetype-background-opacity={_lastSubtitleBackgroundOpacity}", // Arkaplan şeffaflığı
-                    "--freetype-background-color=0x000000",         // Arkaplan rengi siyah
-                    $"--sub-margin={_lastSubtitleMargin}",          // Alttan yukarı doğru marjin
-                };
-
-                if (_lastHardwareAcceleration)
-                {
-                    // dxva2 (eski) → d3d11va (modern, H.265/HEVC destekli)
-                    optionsList.Add("--avcodec-hw=d3d11va");
-                    optionsList.Add("--vout=direct3d11");
-                }
-                else
-                {
-                    optionsList.Add("--avcodec-hw=none");
-                    optionsList.Add("--vout=any");
-                }
-                
-                _libVLC = new LibVLC(optionsList.ToArray());
-                _mediaPlayer = new MediaPlayer(_libVLC);
-            });
-
-            SetupEventHandlers();
-            _isInitialized = true;
-            
-            await _dispatcherService.InvokeAsync(() =>
-            {
-                MediaPlayerReady?.Invoke(this, _mediaPlayer);
-                return Task.CompletedTask;
-            });
+            await InitializeCoreAsync();
         }
         catch (Exception ex)
         {
@@ -247,43 +252,51 @@ public class VideoPlayerService : IVideoPlayerService
         var wasPlaying = IsPlaying;
         var currentPosition = Position;
         
-        // Ses ve altyazı seçimini kaydet
-        if (_mediaPlayer != null)
+        await _initLock.WaitAsync();
+        try
         {
-            _restoredAudioTrack = _mediaPlayer.AudioTrack;
-            _restoredSpu = _mediaPlayer.Spu;
-        }
-        
-        // 2. Oynatmayı durdur
-        Stop();
-
-        // 3. UI üzerindeki MediaPlayer referansını kaldır (crash önlemek için çok kritik)
-        await _dispatcherService.InvokeAsync(() =>
-        {
-            MediaPlayerReady?.Invoke(this, null);
-            return Task.CompletedTask;
-        });
-        
-        // 4. Mevcut nesneleri arka planda temizle
-        await Task.Run(() =>
-        {
+            // Ses ve altyazı seçimini kaydet
             if (_mediaPlayer != null)
             {
-                _mediaPlayer.Dispose();
-                _mediaPlayer = null;
+                _restoredAudioTrack = _mediaPlayer.AudioTrack;
+                _restoredSpu = _mediaPlayer.Spu;
             }
 
-            if (_libVLC != null)
+            // 2. Oynatmayı durdur
+            Stop();
+
+            // 3. UI üzerindeki MediaPlayer referansını kaldır (crash önlemek için çok kritik)
+            await _dispatcherService.InvokeAsync(() =>
             {
-                _libVLC.Dispose();
-                _libVLC = null;
-            }
-        });
+                MediaPlayerReady?.Invoke(this, null);
+                return Task.CompletedTask;
+            });
 
-        _isInitialized = false;
+            // 4. Mevcut nesneleri arka planda temizle
+            await Task.Run(() =>
+            {
+                if (_mediaPlayer != null)
+                {
+                    _mediaPlayer.Dispose();
+                    _mediaPlayer = null;
+                }
 
-        // 5. Yeni ayarlarla tekrar başlat
-        await InitializeAsync();
+                if (_libVLC != null)
+                {
+                    _libVLC.Dispose();
+                    _libVLC = null;
+                }
+            });
+
+            _isInitialized = false;
+
+            // 5. Yeni ayarlarla tekrar başlat
+            await InitializeCoreAsync();
+        }
+        finally
+        {
+            _initLock.Release();
+        }
 
         // 6. Eğer bir şey çalıyorsa kaldığı yerden devam ettir
         if (!string.IsNullOrEmpty(currentUrl))
