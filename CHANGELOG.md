@@ -8,11 +8,13 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
-### 🐛 Hata Düzeltmeleri
-- **Altyazı Ayarları Yeniden Başlatma Sorunu (Debounce/Race Condition)** (2026-03-19): Son SettingsService güncellemesi sonrası arayüzde altyazı boyut/şeffaflık ayarları hızlı değiştirildiğinde VLC motorunun çökmeye veya tepkisiz kalmaya neden olan yarış durumu onarıldı. 
-  - `PlayerViewModel` ve `VideoPlayerService` içindeki `CancellationTokenSource` yaşam döngüleri (ObjectDisposedException fırlatılmasını engelleyecek şekilde) güçlendirildi.
-  - Oynatıcıyı dondurmamak için gecikmeli kayıt koruma (Debounce) süresi toplamda ~1500ms'den ~450ms'ye indirilerek arayüz tepkiselliği 3 kat hızlandırıldı.
-  - `SettingsChanged` delegesi ana UI thread'e (`Dispatcher.UIThread.Post`) taşınarak arkaplan thread çökmelerinin diğer dinleyicileri bozması engellendi.
+### 🐞 Hata Düzeltmeleri ve Kritik İyileştirmeler
+- **Altyazı Ayarları Uygulama ve Senkronizasyon Sorunu Giderildi** (2026-03-20):
+  - **Re-initialization (Yeniden Başlatma) Mekanizması Onarıldı:** Altyazı boyutu, arka plan şeffaflığı ve konumu değiştirildiğinde video oynatıcının bazen değişikliği algılamaması veya tepki vermemesi sorunu çözüldü. Arka plandaki "Debounce" ve `CancellationTokenSource` yaşam döngüsü, hızlı tıklamalarda oluşabilen `ObjectDisposedException` hatalarını önleyecek şekilde daha güvenli bir yapıya kavuşturuldu.
+  - **Thread Güvenliği (UI Crash Fix):** Ayarlar değiştirildiğinde tetiklenen dil ve tema güncelleme işlemlerinin arka plan thread'inden ana UI thread'ine (`Dispatcher.UIThread`) güvenli bir şekilde aktarılması sağlandı. Bu sayede ayar değişimleri sırasında uygulamanın kilitlenmesi veya event zincirinin kopması engellendi.
+  - **Kusursuz UI-Ayarlar Senkronizasyonu:** Uygulama ilk açıldığında veya yeni bir videoya geçildiğinde, kontrol panelindeki altyazı butonlarının (Küçük/Normal/Büyük vb.) seçili durumunun gerçek ayarlarla tutarsız görünmesi sorunu giderildi.
+  - **Otomatik UI Güncelleme:** `PlayerViewModel` üzerindeki altyazı özellikleri, `SettingsChanged` event'i ile tam uyumlu hale getirildi. Artık ayarlar başka bir pencereden (Global Ayarlar vb.) değiştirilse dahi, açık olan oynatıcıdaki seçimler anlık ve otomatik olarak güncellenir.
+  - **VOD/Series Devamlılık Koruması:** Uzak sunuculardan gelen (HTTP Streaming) içeriklerde altyazı ayarı uygulandığında videonun kaldığı saniyeden ve kullanıcının seçtiği Ses/Altyazı kanalından (Track) sapmadan devam etmesi sağlandı.
 
 ### ✨ Yeni Özellikler ve Geliştirmeler
 - **Akıllı Uyku Zamanlayıcısı (Sleep Timer)** (2026-03-19):

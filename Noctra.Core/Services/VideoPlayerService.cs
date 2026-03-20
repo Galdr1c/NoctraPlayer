@@ -150,7 +150,7 @@ public class VideoPlayerService : IVideoPlayerService
                 try
                 {
                     // Debounce süresi: Çoklu ayar değişikliğinin sonlanmasını bekle
-                    await Task.Delay(150, token);
+                    await Task.Delay(500, token);
                     if (!token.IsCancellationRequested)
                     {
                         await ReinitializeAsync();

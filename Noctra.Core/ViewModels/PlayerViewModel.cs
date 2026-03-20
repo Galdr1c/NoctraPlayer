@@ -300,7 +300,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             {
                 try
                 {
-                    await Task.Delay(300, token);
+                    await Task.Delay(1000, token);
                     if (!token.IsCancellationRequested)
                     {
                         await _settingsService.SaveAsync();
@@ -576,9 +576,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         // Initialize subtitle settings from SettingsService to sync UI
         if (_settingsService?.Settings != null)
         {
-            _subtitleFontSize = _settingsService.Settings.SubtitleFontSize;
-            _subtitleBackgroundOpacity = _settingsService.Settings.SubtitleBackgroundOpacity;
-            _subtitleMargin = _settingsService.Settings.SubtitleMargin;
+            SubtitleFontSize = _settingsService.Settings.SubtitleFontSize;
+            SubtitleBackgroundOpacity = _settingsService.Settings.SubtitleBackgroundOpacity;
+            SubtitleMargin = _settingsService.Settings.SubtitleMargin;
         }
 
         _settingsService.SettingsChanged += OnSettingsChanged;
@@ -3375,7 +3375,16 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     private void OnSettingsChanged()
     {
-        // Settings synced directly via VideoPlayerService or components now
+        _dispatcherService.BeginInvoke(() =>
+        {
+            if (_settingsService?.Settings != null)
+            {
+                // UI'daki seçili butonların ve değerlerin güncel kalması için
+                SubtitleFontSize = _settingsService.Settings.SubtitleFontSize;
+                SubtitleBackgroundOpacity = _settingsService.Settings.SubtitleBackgroundOpacity;
+                SubtitleMargin = _settingsService.Settings.SubtitleMargin;
+            }
+        });
     }
 
     public void Dispose()
