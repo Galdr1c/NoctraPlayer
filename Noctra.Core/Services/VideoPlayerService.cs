@@ -37,11 +37,14 @@ public class VideoPlayerService : IVideoPlayerService
     private int? _restoredAudioTrack;
     private int? _restoredSpu;
 
+    private static readonly object _logLock = new object();
     private void LogDebug(string msg)
     {
         try
         {
-            System.IO.File.AppendAllText(@"d:\IPTVPlayer\vlc_debug_log.txt", $"[{DateTime.Now:HH:mm:ss.fff}] [VPS] {msg}\n");
+            lock (_logLock) {
+                System.IO.File.AppendAllText(@"d:\IPTVPlayer\vlc_debug_log.txt", $"[{DateTime.Now:HH:mm:ss.fff}] [VPS] {msg}\n");
+            }
         }
         catch { }
         
@@ -189,6 +192,7 @@ public class VideoPlayerService : IVideoPlayerService
                     $"--network-caching={netCaching}",
                     $"--live-caching={liveCaching}",
                     $"--file-caching={fileCaching}",
+                    "--ipv4-timeout=12000",
                     
                     // Canlı TV için clock düzeltmesi
                     "--clock-synchro=0",
@@ -505,11 +509,14 @@ public class VideoPlayerService : IVideoPlayerService
                     switch (streamProfile)
                     {
                         case StreamProfile.LiveTs:
-                            media.AddOption($":network-caching={liveCaching}");
+                            // Kullanıcının seçtiği BufferSize ayarına saygı duy, üzerine sadece küçük bir pay ekle
+                            media.AddOption($":network-caching={netCaching + 1000}");
                             media.AddOption(":clock-synchro=0");
                             media.AddOption(":clock-jitter=500");
                             media.AddOption(":ts-seek-percent");
-                            // :drop-late-frames kaldırıldı (iyi bağlantıda görüntü bozukluğu yapabiliyor)
+                            // Sağlayıcı kaynaklı anlık kopmalarda VLC'nin EOF (End of File) fırlatmasını engelleyip akışı sürdürmeye zorlamak için:
+                            media.AddOption(":http-continuous");
+                            media.AddOption(":http-reconnect");
                             break;
 
                         case StreamProfile.VodMkv:

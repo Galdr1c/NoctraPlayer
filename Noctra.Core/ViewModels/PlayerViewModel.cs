@@ -533,10 +533,13 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private readonly System.Timers.Timer _clockTimer;
     private readonly System.Timers.Timer _watchHistoryTimer;
 
+    private static readonly object _logLock = new object();
     internal void LogDebug(string msg) {
         Task.Run(() => {
             try {
-                File.AppendAllText(@"d:\IPTVPlayer\vlc_debug_log.txt", $"[{DateTime.Now:HH:mm:ss.fff}] [PVM] {msg}\n");
+                lock (_logLock) {
+                    File.AppendAllText(@"d:\IPTVPlayer\vlc_debug_log.txt", $"[{DateTime.Now:HH:mm:ss.fff}] [PVM] {msg}\n");
+                }
             } catch { }
         });
     }
@@ -683,8 +686,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 if (isPrematureEnd)
                 {
                     var now = DateTime.UtcNow;
-                    // Reset counter if enough time has passed since last issue
-                    if (now - _lastPrematureEndRecoveryUtc > PrematureEndRecoveryWindowReset)
+                    // Reset counter if it played successfully for at least 30 seconds since the last recovery.
+                    // This prevents giving up on streams that frequently disconnect but still offer 30+ seconds of playback.
+                    if (now - _lastPrematureEndRecoveryUtc > TimeSpan.FromSeconds(30))
                         _prematureEndRecoveryCount = 0;
 
                     // Check if we've exceeded max attempts
@@ -961,7 +965,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         // If user hasn't clicked Stop or changed channel
         if (CurrentChannel == null || _isContentTransitioning || requestVersion != _playRequestVersion) return;
 
-        LogDebug($"AutoRecoverPrematureEnd: Executing ResumePlaybackAsync from {lastPos}s");        _lastPausedPosition = lastPos;
+        // VOD içeriklerde Keyframe (Anahtar Kare) sebebiyle 4-5 saniye geriye atmasını azaltmak için ufak bir ileri kompanzasyon
+        var compensatedPos = IsLiveContent ? lastPos : lastPos + 2.5;
+
+        LogDebug($"AutoRecoverPrematureEnd: Executing ResumePlaybackAsync from {compensatedPos}s");        _lastPausedPosition = compensatedPos;
         _isPlaybackEnded = false;
         await ResumePlaybackAsync(CurrentChannel.StreamUrl, false);
     }
@@ -1004,12 +1011,14 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             _lastPausedPosition = startPosition.Value;
             _lastPausedTimeMs = (long)(startPosition.Value * 1000);
             _pendingResumeSeekPosition = startPosition.Value;
+            _lastKnownValidPosition = startPosition.Value;
         }
         else
         {
             _lastPausedPosition = 0;
             _lastPausedTimeMs = 0;
             _pendingResumeSeekPosition = 0;
+            _lastKnownValidPosition = 0;
         }
 
         StreamQuality = null;
