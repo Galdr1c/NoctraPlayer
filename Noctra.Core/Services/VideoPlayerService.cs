@@ -207,7 +207,10 @@ public class VideoPlayerService : IVideoPlayerService
                     "--verbose=0",
                     "--quiet",
                     
-                    //Altyaz ayarlarını buraya ekle
+                    // Windows Session Volume'dan bağımsız iç ses ayarı için DirectSound kullanıyoruz:
+                    "--aout=directsound",
+
+                    // Altyaz ayarlarını buraya ekle
                     $"--freetype-fontsize={_lastSubtitleFontSize}", // Altyazı boyutu
                     $"--freetype-background-opacity={_lastSubtitleBackgroundOpacity}", // Arkaplan şeffaflığı
                     "--freetype-background-color=0x000000",         // Arkaplan rengi siyah
@@ -227,6 +230,11 @@ public class VideoPlayerService : IVideoPlayerService
                 }
                 
                 _libVLC = new LibVLC(optionsList.ToArray());
+                
+                // Windows Ses Karıştırıcısında (Volume Mixer) "VLC media player" yerine "Noctra" yazması için:
+                _libVLC.SetAppId("Noctra", "1.0.0", "Noctra");
+                _libVLC.SetUserAgent("Noctra", "Noctra IPTV Player");
+
                 _mediaPlayer = new MediaPlayer(_libVLC);
             });
 
@@ -321,6 +329,22 @@ public class VideoPlayerService : IVideoPlayerService
         _mediaPlayer.Playing += (s, e) =>
         {
             LogDebug("Event: Playing");
+
+            // DirectSound aout kullanıldığında, Ses modülünün (Audio Output) tam yüklenmesi 
+            // 'Playing' eventinden birkaç milisaniye sonra tamamlanır.
+            // Bu yüzden sesi sadece o an değil, tam emin olana kadar (yarım saniye içinde) birkaç kez zorluyoruz.
+            _ = Task.Run(async () =>
+            {
+                for (int i = 0; i < 5; i++)
+                {
+                    if (_mediaPlayer != null && _mediaPlayer.IsPlaying)
+                    {
+                        _mediaPlayer.Volume = _currentVolume;
+                        if (_mediaPlayer.Volume == _currentVolume) break; // Uygulandı!
+                    }
+                    await Task.Delay(100);
+                }
+            });
 
             // Kaydedilmiş ses veya altyazı track seçimleri varsa geri yükle
             if (_restoredAudioTrack.HasValue || _restoredSpu.HasValue)
