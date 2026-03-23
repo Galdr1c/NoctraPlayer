@@ -1,4 +1,4 @@
-﻿using Noctra.Models;
+using Noctra.Models;
 
 namespace Noctra.Services.Interfaces;
 
@@ -68,6 +68,11 @@ public interface IEpgService
     /// </summary>
     Task<List<EpgProgram>> GetTodayProgramsAsync(string channelId);
     
+    /// <summary>
+    /// Verilen kanallar için şu anki programları toplu halde getirir (Performans için)
+    /// </summary>
+    Task<Dictionary<int, EpgProgram?>> GetCurrentProgramsAsync(IEnumerable<Channel> channels);
+
     /// <summary>
     /// EPG verisinin güncelliğini kontrol eder
     /// </summary>

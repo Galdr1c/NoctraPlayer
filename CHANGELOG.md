@@ -9,6 +9,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### 🐞 Hata Düzeltmeleri ve Kritik İyileştirmeler
+- **Canlı TV Kartları EPG Yükseltmesi** (2026-03-23):
+  - Canlı TV kanal kartları, o an oynatılan program bilgisini ve ilerleme çubuğunu (EPG Progress) gösterecek şekilde yenilendi.
+  - EPG verisi olmayan kanallar için kart yüksekliği ve yerleşimi sabit tutularak (85px) görsel estetik ve hizalama korundu.
+  - **Dinamik UI Güncelleme** (5dk): Canlı yayınların program bilgileri ve ilerleme çubukları artık her 5 dakikada bir otomatik olarak yenilenir; yeni bir program başladığında UI kendiliğinden güncellenir.
+  - Arama, Favoriler, İzleme Listem ve Geçmiş listelerindeki tüm canlı kanallar artık uygulama başlangıcında ve çalışma zamanında tam EPG verisiyle zenginleştirilir.
 - **Video Oynatıcı Kesinti ve Önbellek Optimizasyonları**:
   - **Dinamik Önbellek (Buffer) Tamiri:** Ayarlar menüsündeki "Video Önbellek Boyutu" (Küçük/Normal/Büyük) seçimlerinin Canlı TV yayınlarında güvenlik sınırına takılarak "Küçük (2000ms)" ayarının çalışmaması mantık hatası giderildi. Artık "Küçük" seçimi, kullanıcı istediğinde Zapping hızını maksimuma çıkarmak ve yayının geriden gelme süresini azaltmak için %100 oranında çalışıyor.
   - **VOD Kayıpsız Kurtarma (Forward Compensation):** Dizi ve filmlerde sessiz donma/kopma yaşandığında, VLC'nin yayın başlangıcını en yakın "Anahtar Kareye (Keyframe)" yuvarlamasından dolayı kullanıcıyı 4-5 saniye geriye atması engellendi. Kurtarma algoritmasına otomatik **+2.5 saniye ileri kompanzasyon (avans)** eklendi. Sistem koptuğu anda, video geriye düşmeden tam kaldığı noktadan akıcı şekilde devam eder.

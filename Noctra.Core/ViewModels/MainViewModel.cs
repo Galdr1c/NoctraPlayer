@@ -1518,6 +1518,7 @@ public partial class MainViewModel : ObservableObject
     private List<string> _vodGroupsCache = new();
     private List<string> _seriesGroupsCache = new();
     private Timer? _epgSyncTimer;
+    private Timer? _uiEpgRefreshTimer;
     private Timer? _channelSyncTimer;
     private int _isBackgroundEpgSyncRunning;
     private int _isBackgroundChannelSyncRunning;
@@ -1679,6 +1680,10 @@ public partial class MainViewModel : ObservableObject
                         Channels.Add(item);
                     }
                 }
+                
+                // Fire and forget EPG enrichment for the new page
+                _ = EnrichChannelsWithEpgAsync(page);
+
                 OnPropertyChanged(nameof(IsContentLoading));
                 OnPropertyChanged(nameof(ShowEmptyChannels));
             });
@@ -2802,6 +2807,9 @@ public partial class MainViewModel : ObservableObject
                         await db.SaveChangesAsync();
                         SelectedPlaylist.EpgLastUpdated = playlistToUpdate.EpgLastUpdated;
                         SelectedPlaylist.EpgLastError = null;
+                        
+                        // Sync completed, refresh UI immediately
+                        _ = EnrichVisibleChannelsWithEpgAsync();
                     }
                     else
                     {
@@ -2907,36 +2915,65 @@ public partial class MainViewModel : ObservableObject
     private void EnsureEpgBackgroundSync()
     {
         var hours = _settingsService.Settings.EpgRefreshFrequencyHours;
+        var epgEnabled = _settingsService.Settings.EpgEnabled;
+
+        if (!epgEnabled)
+        {
+            _epgSyncTimer?.Dispose();
+            _epgSyncTimer = null;
+            _uiEpgRefreshTimer?.Dispose();
+            _uiEpgRefreshTimer = null;
+            return;
+        }
+
         if (hours <= 0)
         {
             _epgSyncTimer?.Dispose();
             _epgSyncTimer = null;
-            return;
+        }
+        else
+        {
+            var interval = TimeSpan.FromHours(hours);
+            if (_epgSyncTimer != null)
+            {
+                _epgSyncTimer.Change(interval, interval);
+            }
+            else
+            {
+                _epgSyncTimer = new Timer(async _ =>
+                {
+                    if (Interlocked.Exchange(ref _isBackgroundEpgSyncRunning, 1) == 1) return;
+                    try { await LoadEpgInternalAsync(isBackgroundSync: true, forceRefresh: false); }
+                    finally { Interlocked.Exchange(ref _isBackgroundEpgSyncRunning, 0); }
+                }, null, interval, interval);
+            }
         }
 
-        var interval = TimeSpan.FromHours(hours);
-        if (_epgSyncTimer != null)
+        // Start UI EPG refresh timer (refresh visible program titles every 5 minutes)
+        if (_uiEpgRefreshTimer == null)
         {
-            _epgSyncTimer.Change(interval, interval);
-            return;
+            var uiInterval = TimeSpan.FromMinutes(5);
+            _uiEpgRefreshTimer = new Timer(_ =>
+            {
+                _ = EnrichVisibleChannelsWithEpgAsync();
+            }, null, uiInterval, uiInterval);
         }
+    }
 
-        _epgSyncTimer = new Timer(async _ =>
-        {
-            if (Interlocked.Exchange(ref _isBackgroundEpgSyncRunning, 1) == 1)
-            {
-                return;
-            }
+    private async Task EnrichVisibleChannelsWithEpgAsync()
+    {
+        // Enrich main list
+        if (Channels.Count > 0)
+            await EnrichChannelsWithEpgAsync(Channels);
 
-            try
-            {
-                await LoadEpgInternalAsync(isBackgroundSync: true, forceRefresh: false);
-            }
-            finally
-            {
-                Interlocked.Exchange(ref _isBackgroundEpgSyncRunning, 0);
-            }
-        }, null, interval, interval);
+        // Enrich favorites (only live)
+        var favoriteLive = FavoriteChannels.OfType<Channel>().Where(c => c.Type == ChannelType.Live).ToList();
+        if (favoriteLive.Count > 0)
+            await EnrichChannelsWithEpgAsync(favoriteLive);
+
+        // Enrich history (only live)
+        if (HistoryLiveChannels.Count > 0)
+            await EnrichChannelsWithEpgAsync(HistoryLiveChannels);
     }
 
     private void EnsureChannelBackgroundRefresh()
@@ -3293,7 +3330,10 @@ public partial class MainViewModel : ObservableObject
             list.AddRange(seriesMap.Values.Where(s => s.IsFavorite).Cast<object>());
             SetItems(FavoriteChannels, list
                 .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty),
-                () => ShowFavoritesEmptyState = FavoriteChannels.Count == 0);
+                () => {
+                    ShowFavoritesEmptyState = FavoriteChannels.Count == 0;
+                    _ = EnrichChannelsWithEpgAsync(FavoriteChannels.OfType<Channel>());
+                });
         }
         catch (Exception ex)
         {
@@ -3343,12 +3383,10 @@ public partial class MainViewModel : ObservableObject
     public void UpdateHistoryChannels()
     {
         // 1. Update Channels history
-        if (Channels != null)
-        {
             SetItems(HistoryChannels, Channels
                 .Where(c => c.LastWatched.HasValue)
-                .OrderByDescending(c => c.LastWatched));
-        }
+                .OrderByDescending(c => c.LastWatched),
+                () => _ = EnrichChannelsWithEpgAsync(HistoryChannels));
         
         // 2. Refresh buckets (includes series from cache)
         UpdateHistoryBuckets();
@@ -4211,7 +4249,10 @@ public partial class MainViewModel : ObservableObject
                 .Cast<object>()
                 .Concat(myListSeries.Cast<object>())
                 .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty),
-                () => ShowMyListEmptyState = MyList.Count == 0);
+                () => {
+                    ShowMyListEmptyState = MyList.Count == 0;
+                    _ = EnrichChannelsWithEpgAsync(MyList.OfType<Channel>());
+                });
 
             var favoriteChannels = await db.Channels
                 .AsNoTracking()
@@ -4229,10 +4270,14 @@ public partial class MainViewModel : ObservableObject
                 .Cast<object>()
                 .Concat(favoriteSeries.Cast<object>())
                 .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty),
-                () => ShowFavoritesEmptyState = FavoriteChannels.Count == 0);
+                () => {
+                    ShowFavoritesEmptyState = FavoriteChannels.Count == 0;
+                    _ = EnrichChannelsWithEpgAsync(FavoriteChannels.OfType<Channel>());
+                });
 
             SetItems(HistoryChannels, await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds), () => {
                 UpdateHistoryBuckets();
+                _ = EnrichChannelsWithEpgAsync(HistoryChannels);
             });
 
             if (ActiveView == AppView.Downloads)
@@ -4280,7 +4325,7 @@ public partial class MainViewModel : ObservableObject
         _historyPage = 1;
         _hasMoreHistory = initialChannels.Count == IncrementalPageSize;
 
-        SetItems(HistoryChannels, initialChannels);
+        SetItems(HistoryChannels, initialChannels, () => _ = EnrichChannelsWithEpgAsync(HistoryChannels));
         UpdateHistoryBuckets();
     }
 
@@ -4409,6 +4454,7 @@ public partial class MainViewModel : ObservableObject
                     HistoryChannels.Add(item);
                 }
                 UpdateHistoryBuckets();
+                _ = EnrichChannelsWithEpgAsync(nextPage);
             });
         }
         finally
@@ -6580,6 +6626,44 @@ public partial class MainViewModel : ObservableObject
         }
 
         return null;
+    }
+
+    private async Task EnrichChannelsWithEpgAsync(IEnumerable<Channel> channels)
+    {
+        try
+        {
+            var liveChannels = channels.Where(c => c.Type == ChannelType.Live).ToList();
+            if (liveChannels.Count == 0) return;
+
+            var epgData = await _epgService.GetCurrentProgramsAsync(liveChannels);
+            
+            _dispatcherService.Invoke(() =>
+            {
+                foreach (var channel in liveChannels)
+                {
+                    if (epgData.TryGetValue(channel.Id, out var program) && program != null)
+                    {
+                        if (channel.CurrentProgramTitle != program.Title)
+                            channel.CurrentProgramTitle = program.Title;
+                        
+                        if (channel.EpgProgress != program.ProgressPercentage)
+                            channel.EpgProgress = program.ProgressPercentage;
+                    }
+                    else
+                    {
+                        if (channel.CurrentProgramTitle != null)
+                            channel.CurrentProgramTitle = null;
+                        
+                        if (channel.EpgProgress != 0)
+                            channel.EpgProgress = 0;
+                    }
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug($"EPG enrichment error: {ex.Message}");
+        }
     }
 
     private void SetItems<T>(ObservableCollection<T> collection, IEnumerable<T> items, Action? onComplete = null)

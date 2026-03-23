@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Noctra.Models;
@@ -78,7 +78,14 @@ public partial class Channel : ObservableObject
         }
     }
     
-    // Navigation property
+    [property: NotMapped]
+    [ObservableProperty]
+    private string? _currentProgramTitle;
+
+    [property: NotMapped]
+    [ObservableProperty]
+    private double _epgProgress;
+
     public Playlist? Playlist { get; set; }
     
     [NotMapped]

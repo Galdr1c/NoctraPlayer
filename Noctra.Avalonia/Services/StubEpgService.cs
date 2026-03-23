@@ -18,6 +18,9 @@ public sealed class StubEpgService : IEpgService
     public Task<EpgProgram?> GetCurrentProgramAsync(Channel channel)
         => Task.FromResult<EpgProgram?>(null);
 
+    public Task<Dictionary<int, EpgProgram?>> GetCurrentProgramsAsync(IEnumerable<Channel> channels)
+        => Task.FromResult(new Dictionary<int, EpgProgram?>());
+
     public Task<List<EpgProgram>> GetProgramsAsync(string channelId, DateTime from, DateTime to)
         => Task.FromResult(new List<EpgProgram>());
 

@@ -604,6 +604,56 @@ public class EpgService : IEpgService
         ApplyTimeOffset(programByInternalId);
         return programByInternalId;
     }
+
+    public async Task<Dictionary<int, EpgProgram?>> GetCurrentProgramsAsync(IEnumerable<Channel> channels)
+    {
+        var offset = TimeSpan.FromHours(_settingsService.Settings.EpgTimeOffsetHours);
+        var now = DateTime.UtcNow.Add(-offset);
+        using var context = await _contextFactory.CreateDbContextAsync();
+
+        var liveChannels = channels.Where(c => c.Type == ChannelType.Live).ToList();
+        var results = new Dictionary<int, EpgProgram?>();
+
+        if (liveChannels.Count == 0) return results;
+
+        // Collect all possible search IDs (TvgId and ChannelId as string)
+        var tvgIds = liveChannels.Select(c => c.TvgId).Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
+        var internalIds = liveChannels.Select(c => c.Id.ToString()).Distinct().ToList();
+        var allSearchIds = tvgIds.Concat(internalIds).Distinct().ToList();
+
+        // Optimized bulk query: fetch all current programs for these IDs in one go
+        var matchingPrograms = await context.EpgPrograms
+            .AsNoTracking()
+            .Where(p => allSearchIds.Contains(p.ChannelId) && p.StartTime <= now && p.EndTime > now)
+            .ToListAsync();
+
+        foreach (var channel in liveChannels)
+        {
+            EpgProgram? program = null;
+
+            // Priority 1: Primary TvgId
+            if (!string.IsNullOrEmpty(channel.TvgId))
+            {
+                program = matchingPrograms.FirstOrDefault(p => p.ChannelId == channel.TvgId);
+            }
+
+            // Priority 2: Internal Id mapping
+            if (program == null)
+            {
+                var internalId = channel.Id.ToString();
+                program = matchingPrograms.FirstOrDefault(p => p.ChannelId == internalId);
+            }
+
+            if (program != null)
+            {
+                ApplyTimeOffset(program);
+            }
+            results[channel.Id] = program;
+        }
+
+        return results;
+    }
+
     public async Task ClearEpgAsync()
     {
         using var context = await _contextFactory.CreateDbContextAsync();

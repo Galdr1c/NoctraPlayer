@@ -89,6 +89,7 @@ namespace Noctra.Tests
         public void ClearLastError() { }
         public Task<int> GetTotalProgramCountAsync() => Task.FromResult(0);
         public Task<int> GetDistinctChannelCountAsync() => Task.FromResult(0);
+        public Task<Dictionary<int, EpgProgram?>> GetCurrentProgramsAsync(IEnumerable<Channel> channels) => Task.FromResult(new Dictionary<int, EpgProgram?>());
     }
 
     internal sealed class FakeMetadataService : IMetadataService

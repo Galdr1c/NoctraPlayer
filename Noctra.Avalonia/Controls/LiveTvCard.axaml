@@ -7,34 +7,30 @@
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Avalonia.Controls.LiveTvCard"
              x:DataType="models:Channel"
-             Width="300" Height="56"
+             Width="300" Height="85"
              ClipToBounds="False">
   <UserControl.Styles>
     <Style Selector="Button.CardContainer">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="CornerRadius" Value="8"/>
-      <Setter Property="Padding" Value="12,6"/>
-      <Setter Property="Transitions">
-        <Transitions>
-          <BrushTransition Property="Background" Duration="0:0:0.1"/>
-        </Transitions>
-      </Setter>
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Padding" Value="10,6"/>
     </Style>
     <Style Selector="Button.CardContainer:pointerover">
       <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
     </Style>
     
     <Style Selector="Button.FavoriteBtn">
-      <Setter Property="Opacity" Value="0.6"/>
+      <Setter Property="Opacity" Value="0.4"/>
       <Setter Property="Transitions">
         <Transitions>
-          <DoubleTransition Property="Opacity" Duration="0:0:0.15"/>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
         </Transitions>
       </Setter>
     </Style>
     <Style Selector="Button.FavoriteBtn:pointerover">
       <Setter Property="Opacity" Value="1"/>
+      <Setter Property="RenderTransform" Value="scale(1.1)"/>
     </Style>
     <Style Selector="Button.FavoriteBtn.active">
       <Setter Property="Opacity" Value="1"/>
@@ -44,35 +40,62 @@
   <Button Classes="CardContainer" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
           Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
     
-    <Grid ColumnDefinitions="44,*,Auto">
-      <!-- Logo -->
-      <Border Grid.Column="0" Width="44" Height="44" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource Surface0Brush}">
-        <Grid>
-          <!-- Placeholder -->
-          <Border Background="{DynamicResource SurfaceLightBrush}">
-            <Border.IsVisible>
-              <Binding Path="#ChannelLogo.IsImageLoaded" Converter="{StaticResource InverseBoolConverter}"/>
-            </Border.IsVisible>
-          </Border>
-          <controls:RemoteImage x:Name="ChannelLogo" Width="36" Height="36" Stretch="Uniform" Url="{Binding CoverUrl}" RenderOptions.BitmapInterpolationMode="MediumQuality"/>
-        </Grid>
-      </Border>
+    <Grid RowDefinitions="54,20,11">
+      <!-- Info Section: Logo, Name, Favorite -->
+      <Grid Grid.Row="0" ColumnDefinitions="44,*,Auto" VerticalAlignment="Center">
+        <!-- Logo -->
+        <Border Grid.Column="0" Width="44" Height="44" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource Surface0Brush}">
+          <Grid>
+            <!-- Placeholder -->
+            <Border Background="{DynamicResource SurfaceLightBrush}">
+              <Border.IsVisible>
+                <Binding Path="#ChannelLogo.IsImageLoaded" Converter="{StaticResource InverseBoolConverter}"/>
+              </Border.IsVisible>
+            </Border>
+            <controls:RemoteImage x:Name="ChannelLogo" Width="36" Height="36" Stretch="Uniform" Url="{Binding CoverUrl}" RenderOptions.BitmapInterpolationMode="MediumQuality"/>
+          </Grid>
+        </Border>
 
-      <!-- Content -->
-      <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="14,0">
-        <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-        <TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis" Opacity="0.8"/>
-      </StackPanel>
+        <!-- Content -->
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="14,0">
+          <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+          <TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis" Opacity="0.8"/>
+        </StackPanel>
 
-      <!-- Favorite -->
-      <Button Grid.Column="2" Classes="FavoriteBtn" Background="Transparent" BorderThickness="0" Padding="6" VerticalAlignment="Center"
-              Classes.active="{Binding IsFavorite}"
-              Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}" CommandParameter="{Binding}">
-        <Panel>
-          <materialIcons:MaterialIcon Kind="Heart" Width="20" Height="20" Foreground="#E50914" IsVisible="{Binding IsFavorite}"/>
-          <materialIcons:MaterialIcon Kind="HeartOutline" Width="20" Height="20" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsFavorite}"/>
-        </Panel>
-      </Button>
+        <!-- Favorite -->
+        <Button Grid.Column="2" Classes="FavoriteBtn" Background="Transparent" BorderThickness="0" Padding="6" VerticalAlignment="Center"
+                Classes.active="{Binding IsFavorite}"
+                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}" CommandParameter="{Binding}">
+          <Panel>
+            <materialIcons:MaterialIcon Kind="Heart" Width="20" Height="20" Foreground="#E50914" IsVisible="{Binding IsFavorite}"/>
+            <materialIcons:MaterialIcon Kind="HeartOutline" Width="20" Height="20" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsFavorite}"/>
+          </Panel>
+        </Button>
+      </Grid>
+
+      <!-- EPG Title Section -->
+      <TextBlock Grid.Row="1" 
+                 Text="{Binding CurrentProgramTitle}" 
+                 Foreground="{DynamicResource TextMutedBrush}" 
+                 FontSize="11.5" 
+                 FontWeight="Medium"
+                 TextTrimming="CharacterEllipsis" 
+                 Opacity="0.85"
+                 Margin="0,2,0,0"
+                 VerticalAlignment="Top"
+                 IsVisible="{Binding CurrentProgramTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+
+      <!-- EPG Progress Section -->
+      <ProgressBar Grid.Row="2" 
+                   Value="{Binding EpgProgress}" 
+                   Minimum="0" Maximum="100" 
+                   Height="3" 
+                   VerticalAlignment="Bottom"
+                   Margin="0,0,0,4"
+                   Background="{DynamicResource SurfaceLightBrush}" 
+                   Foreground="{DynamicResource AccentBrush}" 
+                   CornerRadius="1.5"
+                   IsVisible="{Binding CurrentProgramTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
     </Grid>
   </Button>
 </UserControl>
