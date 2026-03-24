@@ -61,12 +61,13 @@ public class EpgMatchingTests
         return (double)m.Invoke(null, new object[] { a, b })!;
     }
 
-    private static string? ResolveMappedChannelId(string normalizedName, Dictionary<string, string> channelMap)
+    private static List<string>? ResolveMappedChannelIds(string normalizedName, Dictionary<string, List<string>> channelMap)
     {
-        var m = _epgType.GetMethod("ResolveMappedChannelId",
+        var m = _epgType.GetMethod("ResolveMappedChannelIds",
             BindingFlags.NonPublic | BindingFlags.Static)!;
         Assert.NotNull(m);
-        return (string?)m.Invoke(null, new object[] { normalizedName, channelMap });
+        var result = m.Invoke(null, new object[] { normalizedName, channelMap });
+        return (List<string>?)result;
     }
 
     // =========================================================================
@@ -103,6 +104,9 @@ public class EpgMatchingTests
     [InlineData("Star TV BKP",   "startv")]
     [InlineData("TRT 1 TURKEY",  "trt1")]
     [InlineData("SHOW TURKIYE",  "show")]
+    [InlineData("Show TV RAW",   "showtv")]
+    [InlineData("Kanal D FHD+",  "kanald")]
+    [InlineData("Star TV HDR",   "startv")]
     public void NormalizeName_NoiseWords_Stripped(string input, string expected)
     {
         var result = NormalizeName(input);
@@ -315,61 +319,75 @@ public class EpgMatchingTests
     // =========================================================================
 
     [Fact]
-    public void ResolveMappedChannelId_ExactMatch_ReturnsMapped()
+    public void ResolveMappedChannelIds_ExactMatch_ReturnsMapped()
     {
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        var map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
         {
-            ["trt1"] = "ch-001",
-            ["kanald"] = "ch-002",
+            ["trt1"] = new List<string> { "ch-001" },
+            ["kanald"] = new List<string> { "ch-002" },
         };
-        Assert.Equal("ch-001", ResolveMappedChannelId("trt1", map));
+        Assert.Equal("ch-001", ResolveMappedChannelIds("trt1", map)?.First());
     }
 
     [Fact]
-    public void ResolveMappedChannelId_CaseInsensitiveExact_Matches()
+    public void ResolveMappedChannelIds_MultiMatch_ReturnsAllIds()
     {
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        var map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
         {
-            ["kanald"] = "ch-002",
+            ["showtv"] = new List<string> { "id1", "id2" }
         };
-        Assert.Equal("ch-002", ResolveMappedChannelId("KANALD", map));
+        var result = ResolveMappedChannelIds("showtv", map);
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Count);
+        Assert.Contains("id1", result);
+        Assert.Contains("id2", result);
     }
 
     [Fact]
-    public void ResolveMappedChannelId_NotFound_ReturnsNull()
+    public void ResolveMappedChannelIds_CaseInsensitiveExact_Matches()
     {
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        var map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
         {
-            ["trt1"] = "ch-001",
+            ["kanald"] = new List<string> { "ch-002" },
         };
-        Assert.Null(ResolveMappedChannelId("foxnews", map));
+        Assert.Equal("ch-002", ResolveMappedChannelIds("KANALD", map)?.First());
     }
 
     [Fact]
-    public void ResolveMappedChannelId_EmptyInput_ReturnsNull()
+    public void ResolveMappedChannelIds_NotFound_ReturnsNull()
     {
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        var map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
         {
-            ["trt1"] = "ch-001",
+            ["trt1"] = new List<string> { "ch-001" },
         };
-        Assert.Null(ResolveMappedChannelId(string.Empty, map));
+        Assert.Null(ResolveMappedChannelIds("foxnews", map));
     }
 
     [Fact]
-    public void ResolveMappedChannelId_TooShortInput_ReturnsNull()
+    public void ResolveMappedChannelIds_EmptyInput_ReturnsNull()
+    {
+        var map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["trt1"] = new List<string> { "ch-001" },
+        };
+        Assert.Null(ResolveMappedChannelIds(string.Empty, map));
+    }
+
+    [Fact]
+    public void ResolveMappedChannelIds_TooShortInput_ReturnsNull()
     {
         // < 3 karakter → koşulsuz null
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        var map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
         {
-            ["ab"] = "ch-001",
+            ["ab"] = new List<string> { "ch-001" },
         };
-        Assert.Null(ResolveMappedChannelId("ab", map));
+        Assert.Null(ResolveMappedChannelIds("ab", map));
     }
 
     [Fact]
-    public void ResolveMappedChannelId_EmptyMap_ReturnsNull()
+    public void ResolveMappedChannelIds_EmptyMap_ReturnsNull()
     {
-        Assert.Null(ResolveMappedChannelId("trt1", new Dictionary<string, string>()));
+        Assert.Null(ResolveMappedChannelIds("trt1", new Dictionary<string, List<string>>()));
     }
 
     // ── Fuzzy eşleşme ─────────────────────────────────────────────────────────
@@ -377,62 +395,48 @@ public class EpgMatchingTests
     //  normalize sonuçlar üretiliyor)
 
     [Fact]
-    public void ResolveMappedChannelId_FuzzyClose_MatchesWithinThreshold()
+    public void ResolveMappedChannelIds_FuzzyClose_MatchesWithinThreshold()
     {
-        // "trt1tr" ile "trt1" çok yakın — threshold geçmeli
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        var map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
         {
-            ["trt1"] = "ch-001",
+            ["trt1"] = new List<string> { "ch-001" },
         };
-        var result = ResolveMappedChannelId("trt1tr", map);
-        // Yakın eşleşme ≥ threshold (6 karakter → threshold 0.75)
-        // "trt1tr".Contains("trt1") → score = 0.88 * 4/6 ≈ 0.587
-        // BigramDice("trt1tr","trt1") hesaplanır; sonuç threshold'un üzerinde veya altında olabilir
-        // En az null veya "ch-001" — sadece exception olmadığını doğrula
-        Assert.True(result == null || result == "ch-001");
+        var result = ResolveMappedChannelIds("trt1tr", map);
+        Assert.True(result == null || result.Contains("ch-001"));
     }
 
     [Fact]
-    public void ResolveMappedChannelId_DifferentFirstChar_NotMatched()
+    public void ResolveMappedChannelIds_DifferentFirstChar_NotMatched()
     {
-        // İlk karakter filtresi: farklı başlangıç → kesinlikle null
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        var map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
         {
-            ["kanald"] = "ch-002",
+            ["kanald"] = new List<string> { "ch-002" },
         };
-        // "startv" ≠ "kanald" ilk harf 's' ≠ 'k'
-        Assert.Null(ResolveMappedChannelId("startv", map));
-    }
-
-    // ── Gerçek dünya senaryoları ──────────────────────────────────────────────
-
-    [Fact]
-    public void ResolveMappedChannelId_RealWorld_TRT1HD_MatchesTRT1()
-    {
-        // EPG XML'de "trt1" var, kanalda "trt1hd" normalize edilmiş geliyor
-        // → exact match yoksa fuzzy devreye girer
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["trt1"] = "ch-trt1",
-        };
-        // Hem exact hem fuzzy yol için: sonuç ya "ch-trt1" ya da null
-        var result = ResolveMappedChannelId("trt1hd", map);
-        Assert.True(result == null || result == "ch-trt1",
-            $"Unexpected result: {result}");
+        Assert.Null(ResolveMappedChannelIds("startv", map));
     }
 
     [Fact]
-    public void ResolveMappedChannelId_MultipleEntries_PicksBestMatch()
+    public void ResolveMappedChannelIds_RealWorld_TRT1HD_MatchesTRT1()
     {
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        var map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
         {
-            ["trt1"]  = "ch-trt1",
-            ["trt2"]  = "ch-trt2",
-            ["trtsp"] = "ch-trts",
+            ["trt1"] = new List<string> { "ch-trt1" },
         };
-        // Exact match "trt1" → "ch-trt1" kesinlikle dönmeli
-        Assert.Equal("ch-trt1", ResolveMappedChannelId("trt1", map));
-        Assert.Equal("ch-trt2", ResolveMappedChannelId("trt2", map));
+        var result = ResolveMappedChannelIds("trt1hd", map);
+        Assert.True(result == null || result.Contains("ch-trt1"));
+    }
+
+    [Fact]
+    public void ResolveMappedChannelIds_MultipleEntries_PicksBestMatch()
+    {
+        var map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["trt1"]  = new List<string> { "ch-trt1" },
+            ["trt2"]  = new List<string> { "ch-trt2" },
+            ["trtsp"] = new List<string> { "ch-trts" },
+        };
+        Assert.Equal("ch-trt1", ResolveMappedChannelIds("trt1", map)?.First());
+        Assert.Equal("ch-trt2", ResolveMappedChannelIds("trt2", map)?.First());
     }
 }
 

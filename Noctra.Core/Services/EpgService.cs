@@ -89,10 +89,10 @@ public class EpgService : IEpgService
             };
             using var reader = System.Xml.XmlReader.Create(dataStream, settings);
 
-            // Build mapping dictionary for EPG (Name -> channel Id)
-            var channelMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            var xmlChannelIdToDbTvgId = new Dictionary<string, string>();
-            var tvgIdToInternalId = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            // Build mapping dictionary for EPG (Name -> list of channel Ids)
+            var channelMap = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            var xmlChannelIdToDbTvgIds = new Dictionary<string, List<string>>();
+            var tvgIdToInternalIds = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
             var allowedPrimaryIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             if (channelsForMapping != null)
@@ -100,26 +100,41 @@ public class EpgService : IEpgService
                 progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Matching, Message = "Kanallar eşleştiriliyor...", ProgressPercent = 25 });
                 foreach (var channel in channelsForMapping)
                 {
+                    var idStr = channel.Id.ToString();
                     if (!string.IsNullOrWhiteSpace(channel.TvgId))
                     {
                         allowedPrimaryIds.Add(channel.TvgId!);
-                        if (!tvgIdToInternalId.ContainsKey(channel.TvgId!))
-                            tvgIdToInternalId[channel.TvgId!] = channel.Id.ToString();
+                        if (!tvgIdToInternalIds.TryGetValue(channel.TvgId!, out var list))
+                        {
+                            list = new List<string>();
+                            tvgIdToInternalIds[channel.TvgId!] = list;
+                        }
+                        if (!list.Contains(idStr)) list.Add(idStr);
                     }
 
-                    allowedPrimaryIds.Add(channel.Id.ToString());
+                    allowedPrimaryIds.Add(idStr);
 
                     foreach (var variant in GetNameVariants(channel.Name))
                     {
-                        if (!string.IsNullOrEmpty(variant) && !channelMap.ContainsKey(variant))
-                            channelMap[variant] = channel.Id.ToString();
+                        if (string.IsNullOrEmpty(variant)) continue;
+                        if (!channelMap.TryGetValue(variant, out var list))
+                        {
+                            list = new List<string>();
+                            channelMap[variant] = list;
+                        }
+                        if (!list.Contains(idStr)) list.Add(idStr);
                     }
                     if (!string.IsNullOrEmpty(channel.TvgName))
                     {
                         foreach (var variant in GetNameVariants(channel.TvgName))
                         {
-                            if (!string.IsNullOrEmpty(variant) && !channelMap.ContainsKey(variant))
-                                channelMap[variant] = channel.Id.ToString();
+                            if (string.IsNullOrEmpty(variant)) continue;
+                            if (!channelMap.TryGetValue(variant, out var list))
+                            {
+                                list = new List<string>();
+                                channelMap[variant] = list;
+                            }
+                            if (!list.Contains(idStr)) list.Add(idStr);
                         }
                     }
                 }
@@ -142,18 +157,21 @@ public class EpgService : IEpgService
                         {
                             if (channelMap.Count > 0)
                             {
-                                var xmlId = reader.GetAttribute("id");
+                                 var xmlId = reader.GetAttribute("id");
                                 if (xmlId != null)
                                 {
-                                    if (tvgIdToInternalId.TryGetValue(xmlId, out var byTvgId))
+                                    if (tvgIdToInternalIds.TryGetValue(xmlId, out var byTvgIds))
                                     {
-                                        xmlChannelIdToDbTvgId[xmlId] = byTvgId;
-                                        if (isPrimary) allowedPrimaryIds.Add(xmlId);
-                                        continue;
-                                    }
+                                        if (!xmlChannelIdToDbTvgIds.TryGetValue(xmlId, out var targetList))
+                                        {
+                                            targetList = new List<string>();
+                                            xmlChannelIdToDbTvgIds[xmlId] = targetList;
+                                        }
+                                        foreach (var id in byTvgIds)
+                                            if (!targetList.Contains(id)) targetList.Add(id);
 
-                                    if (isPrimary && allowedPrimaryIds.Contains(xmlId))
-                                        continue;
+                                        if (isPrimary) allowedPrimaryIds.Add(xmlId);
+                                    }
 
                                     using var subReader = reader.ReadSubtree();
                                     while (await subReader.ReadAsync().ConfigureAwait(false))
@@ -161,18 +179,22 @@ public class EpgService : IEpgService
                                         if (subReader.NodeType == System.Xml.XmlNodeType.Element && subReader.Name == "display-name")
                                         {
                                             var displayName = await subReader.ReadElementContentAsStringAsync().ConfigureAwait(false);
-                                            string? dbChannelId = null;
                                             foreach (var variant in GetNameVariants(displayName))
                                             {
-                                                dbChannelId = ResolveMappedChannelId(variant, channelMap);
-                                                if (!string.IsNullOrEmpty(dbChannelId))
-                                                    break;
-                                            }
-                                            if (!string.IsNullOrEmpty(dbChannelId))
-                                            {
-                                                xmlChannelIdToDbTvgId[xmlId] = dbChannelId!;
-                                                if (isPrimary) allowedPrimaryIds.Add(xmlId);
-                                                break; 
+                                                var dbChannelIds = ResolveMappedChannelIds(variant, channelMap);
+                                                if (dbChannelIds != null && dbChannelIds.Any())
+                                                {
+                                                    if (!xmlChannelIdToDbTvgIds.TryGetValue(xmlId, out var targetList))
+                                                    {
+                                                        targetList = new List<string>();
+                                                        xmlChannelIdToDbTvgIds[xmlId] = targetList;
+                                                    }
+                                                    foreach (var id in dbChannelIds)
+                                                        if (!targetList.Contains(id)) targetList.Add(id);
+                                                    
+                                                    if (isPrimary) allowedPrimaryIds.Add(xmlId);
+                                                    break; 
+                                                }
                                             }
                                         }
                                     }
@@ -183,14 +205,14 @@ public class EpgService : IEpgService
                         {
                             var start = reader.GetAttribute("start");
                             var stop = reader.GetAttribute("stop");
-                            var channel = reader.GetAttribute("channel");
+                             var channel = reader.GetAttribute("channel");
 
                             if (string.IsNullOrEmpty(channel)) continue;
 
-                            string targetChannelId = channel;
-                            if (xmlChannelIdToDbTvgId.TryGetValue(channel, out var mappedId))
+                            var targetIds = new List<string>();
+                            if (xmlChannelIdToDbTvgIds.TryGetValue(channel, out var mappedIds))
                             {
-                                targetChannelId = mappedId;
+                                targetIds.AddRange(mappedIds);
                             }
                             else if (isPrimary)
                             {
@@ -198,6 +220,7 @@ public class EpgService : IEpgService
                                 {
                                     continue;
                                 }
+                                targetIds.Add(channel);
                             }
                             else
                             {
@@ -207,12 +230,11 @@ public class EpgService : IEpgService
                             var startTime = ParseXmlTvDate(start);
                             var endTime = ParseXmlTvDate(stop);
 
-                            if (endTime <= windowStartUtc || startTime >= windowEndUtc)
+                             if (endTime <= windowStartUtc || startTime >= windowEndUtc)
                                 continue;
 
-                            var program = new EpgProgram
+                            var programTemplate = new EpgProgram
                             {
-                                ChannelId = targetChannelId,
                                 StartTime = startTime,
                                 EndTime = endTime
                             };
@@ -225,15 +247,15 @@ public class EpgService : IEpgService
                                     switch (subReader.Name)
                                     {
                                         case "title":
-                                            program.Title = await subReader.ReadElementContentAsStringAsync().ConfigureAwait(false);
+                                            programTemplate.Title = await subReader.ReadElementContentAsStringAsync().ConfigureAwait(false);
                                             break;
                                         case "desc":
-                                            if (string.IsNullOrWhiteSpace(program.Description))
+                                            if (string.IsNullOrWhiteSpace(programTemplate.Description))
                                             {
                                                 var desc = await subReader.ReadElementContentAsStringAsync().ConfigureAwait(false);
                                                 if (!string.IsNullOrWhiteSpace(desc))
                                                 {
-                                                    program.Description = desc;
+                                                    programTemplate.Description = desc;
                                                 }
                                             }
                                             break;
@@ -250,8 +272,18 @@ public class EpgService : IEpgService
                                 _logger?.LogDebug("[EpgService] EPG data cleared just before saving new records (Atomic).");
                             }
 
-                            programs.Add(program);
-                            totalLoaded++;
+                            foreach (var tId in targetIds)
+                            {
+                                programs.Add(new EpgProgram
+                                {
+                                    ChannelId = tId,
+                                    StartTime = programTemplate.StartTime,
+                                    EndTime = programTemplate.EndTime,
+                                    Title = programTemplate.Title,
+                                    Description = programTemplate.Description
+                                });
+                                totalLoaded++;
+                            }
 
                             if (programs.Count >= batchSize)
                             {
@@ -455,10 +487,11 @@ public class EpgService : IEpgService
 
         var noise = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "hd", "fhd", "uhd", "sd", "hevc", "h265", "h264", "4k",
-            "1080p", "720p", "480p", "2160p", "live", "vip",
-            "backup", "bkp", "multi", "sub", "ace", "plus",
-            "turkey", "turkiye", "tr", "s"
+            "hd", "fhd", "uhd", "sd", "hevc", "h265", "h264", "4k", "fullhd", "qhd", "hdr", "10bit", "av1", "raw", "1080i", "720i",
+            "feed", "ticari", "50fps", "60fps", "mobie", "mobile", "web", "app", "ios", "android", "iptv", "ts", "m3u8",
+            "1080p", "720p", "480p", "2160p", "1080", "720", "576", "live", "vip",
+            "backup", "bkp", "multi", "sub", "ace", "plus", "extra",
+            "turkey", "turkiye", "türkiye", "tr", "s",
         };
 
         var tokens = new string(chars.ToArray())
@@ -467,28 +500,26 @@ public class EpgService : IEpgService
 
         return string.Concat(tokens);
     }
-    private static string? ResolveMappedChannelId(string normalizedDisplayName, Dictionary<string, string> channelMap)
+    private static List<string>? ResolveMappedChannelIds(string normalizedDisplayName, Dictionary<string, List<string>> channelMap)
     {
         if (string.IsNullOrWhiteSpace(normalizedDisplayName) || normalizedDisplayName.Length < 3)
             return null;
 
         // Fast path: Exact match (O(1))
-        if (channelMap.TryGetValue(normalizedDisplayName, out var exact))
+        if (channelMap.TryGetValue(normalizedDisplayName, out var exactList))
         {
-            return exact;
+            return exactList;
         }
 
-        // Optimization: Do not perform expensive similarity checks if the list is too large 
-        // and we are looking for obscure secondary channels.
-        // Also, skip fuzzy matching for very short names to avoid false positives.
+        // Optimization: Skip fuzzy matching for very short names to avoid false positives.
         if (normalizedDisplayName.Length < 4)
             return null;
 
         // Dynamic threshold: shorter names need less strict matching
         var maxLen = Math.Max(normalizedDisplayName.Length, 3);
-        var threshold = maxLen <= 6 ? 0.70 : maxLen <= 10 ? 0.75 : 0.82; // Thresholds tightened
+        var threshold = maxLen <= 6 ? 0.70 : maxLen <= 10 ? 0.75 : 0.82;
 
-        string? bestId = null;
+        List<string>? bestIds = null;
         double bestScore = 0;
 
         foreach (var kvp in channelMap)
@@ -500,14 +531,14 @@ public class EpgService : IEpgService
             if (score > bestScore)
             {
                 bestScore = score;
-                bestId = kvp.Value;
+                bestIds = kvp.Value;
             }
             
             // If we found a very high confidence match, stop searching
             if (bestScore > 0.95) break;
         }
 
-        return bestScore >= threshold ? bestId : null;
+        return bestScore >= threshold ? bestIds : null;
     }
 
     private static double Similarity(string a, string b)
