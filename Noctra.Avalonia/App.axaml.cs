@@ -46,8 +46,12 @@ public partial class App : Application
             using var scope = Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Database.EnsureCreated();
-            ApplySchemaFixupsAsync(db).GetAwaiter().GetResult();
-            StartupDiagnostics.Log("Database EnsureCreated completed.");
+            
+            // Phase 29: Move blocking schema fixups to an async flow to avoid deadlock
+            // ApplySchemaFixupsAsync(db).GetAwaiter().GetResult(); 
+            // We will call this inside OnFrameworkInitializationCompleted's background task
+            
+            StartupDiagnostics.Log("Database check completed.");
 
             var settings = scope.ServiceProvider.GetRequiredService<ISettingsService>();
             var themeService = Services.GetRequiredService<IThemeService>();
@@ -107,8 +111,12 @@ public partial class App : Application
                         using (var scope = Services.CreateScope())
                         {
                             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                            
+                            // Phase 29: Apply schema fixups here (async) to avoid UI hang
+                            await ApplySchemaFixupsAsync(db);
+                            
                             await db.Profiles.AnyAsync();
-                            StartupDiagnostics.Log("EF Core warmed up.");
+                            StartupDiagnostics.Log("EF Core warmed up (Schema fixups applied).");
                         }
 
                         // 2.1 Purge profiles with expired deletion countdown
@@ -416,6 +424,10 @@ public partial class App : Application
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Playlists ADD COLUMN SourceLastModified TEXT;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Playlists ADD COLUMN SourceContentLength INTEGER;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN IsCompleted INTEGER NOT NULL DEFAULT 0;"); } catch { }
+        
+        // Phase 29: Defensive fix for phantom CurrentProgramId column seen in logs
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN CurrentProgramId INTEGER;"); } catch { }
+        
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN IsCompleted INTEGER NOT NULL DEFAULT 0;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN IntroStartSec REAL;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN IntroEndSec REAL;"); } catch { }

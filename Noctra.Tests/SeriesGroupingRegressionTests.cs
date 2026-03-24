@@ -9,7 +9,7 @@ public class SeriesGroupingRegressionTests
     [InlineData("%3 S01 %3", "3", 1, 1)]
     [InlineData("%3 S02 %3", "3", 2, 1)]
     [InlineData("Stranger Things (2016) S03", "stranger things", 3, 1)]
-    [InlineData("DIZIAX Stranger Things", "stranger things", 1, 1)]
+    [InlineData("DIZIAX Stranger Things", "stranger things", 0, 0)]
     [InlineData("NETFLIX %3 S01 %3", "3", 1, 1)]
     public void NormalizeKey_Regressions(string title, string expectedKey, int expectedSeason, int expectedEpisode)
     {

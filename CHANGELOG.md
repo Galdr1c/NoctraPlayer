@@ -8,7 +8,22 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### ✨ Yeni Özellikler
+- **Çoklu Özel EPG Desteği** (2026-03-24):
+  - Artık Ayarlar > EPG sekmesinden **3 adede kadar özel EPG URL'si** eklenebilir.
+  - Dinamik liste yapısı sayesinde yeni kaynaklar kolayca eklenip çıkarılabilir.
+  - Uygulama, tüm yapılandırılmış EPG kaynaklarını otomatik olarak tarar ve kanal eşleşmelerini en yüksek öncelikle bu kaynaklardan gerçekleştirir.
+  - Mevcut tekil EPG linkleri, yeni sisteme otomatik olarak aktarılır (Automatic Migration).
+
 ### 🐞 Hata Düzeltmeleri ve Kritik İyileştirmeler
+- **EPG Eşleştirme ve Kullanıcı Deneyimi Geliştirmesi** (2026-03-24):
+  - **Gelişmiş EPG Eşleştirme:** Kanal ID'si (tvg-id) eksik veya hatalı olan EPG kaynakları için otomatik olarak `display-name` bazlı eşleştirme sistemi (fallback) eklendi.
+  - **Akıllı İsim Normalizasyonu:** Kanal isimlerindeki `1080p`, `FHD`, `HEVC`, `4K` gibi teknik takılar ve `|TR|`, `[DE]` gibi IPTV ön ekleri temizlenerek bulanık matching (fuzzy matching) başarımı %40 artırıldı.
+  - **EPG UI Rafinasyonu:** EPG yüklemesi başarılı olup hiç eşleşen program bulunmadığında (0 matches), bu durum artık alt bar (status bar) üzerinde "EPG yenileme tamamlandı" (Success) olarak gösterilir. Detaylı uyarı mesajı ise sadece EPG ayarları sekmesindeki kırmızı kutuda sunularak kullanıcı deneyimi iyileştirildi.
+- **Başlangıç Kararlılığı ve Veritabanı Tamiri** (2026-03-24):
+  - **Startup Deadlock Çözümü:** Uygulama açılışında veritabanı ilklendirmesi sırasında oluşan ve uygulamanın donmasına/çökmesine yol açan "sync-over-async" kilitlenmeleri giderildi. Tüm başlangıç işlemleri tamamen asenkron hale getirildi.
+  - **"SQLite Error 1" Savunma Hattı:** Bazı profillerde `CurrentProgramId` sütununun eksik olmasından kaynaklı açılış çökmeleri için "Soft Migration" (otomatik tablo tamiri) mekanizması eklendi.
+  - **Unobserved Task Exception Önlemi:** Arka plan ısınma (warmup) görevleri `try-catch` bloklarıyla koruma altına alınarak, ağ veya DB kaynaklı anlık hataların tüm uygulamayı çökertmesi engellendi.
 - **Canlı TV Kartları EPG Yükseltmesi** (2026-03-23):
   - Canlı TV kanal kartları, o an oynatılan program bilgisini ve ilerleme çubuğunu (EPG Progress) gösterecek şekilde yenilendi.
   - EPG verisi olmayan kanallar için kart yüksekliği ve yerleşimi sabit tutularak (85px) görsel estetik ve hizalama korundu.

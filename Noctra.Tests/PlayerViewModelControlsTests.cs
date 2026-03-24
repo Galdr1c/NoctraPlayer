@@ -81,7 +81,7 @@ namespace Noctra.Tests
         public string? LastError => null;
 
         public Task<EpgProgram?> GetCurrentProgramAsync(Channel channel) => Task.FromResult<EpgProgram?>(null);
-        public Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1, IProgress<EpgProgressInfo>? progress = null, bool clearBeforeSave = false) => Task.FromResult(0);
+        public Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1, IProgress<EpgProgressInfo>? progress = null, bool clearBeforeSave = false, IDictionary<string, string>? headers = null) => Task.FromResult(0);
         public Task ClearEpgAsync() => Task.CompletedTask;
         public Task<List<EpgProgram>> GetProgramsAsync(string channelId, DateTime from, DateTime to) => Task.FromResult(new List<EpgProgram>());
         public Task<List<EpgProgram>> GetUpcomingProgramsAsync(string channelId, int count = 5) => Task.FromResult(new List<EpgProgram>());

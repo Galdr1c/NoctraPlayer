@@ -166,6 +166,13 @@ public class AppSettings
     public string? CustomEpgUrl { get; set; }
 
     /// <summary>
+    /// Birden fazla özel EPG kaynağı (max 3)
+    /// </summary>
+    public List<string> CustomEpgUrls { get; set; } = new();
+
+    public const int EPG_URL_LIMIT = 3;
+
+    /// <summary>
     /// EPG saat dilimi ofseti (saat). Örn: +3 için 3, -5 için -5
     /// </summary>
     public int EpgTimeOffsetHours { get; set; } = 0;

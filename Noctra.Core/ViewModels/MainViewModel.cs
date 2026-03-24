@@ -2647,8 +2647,10 @@ public partial class MainViewModel : ObservableObject
                 }
             }
 
-            // 1. Provider EPG URL (Xtream)
+            // 1. Provider EPG URL & Headers (Xtream / Stalker / Inferred)
             string? providerEpgUrl = null;
+            Dictionary<string, string>? providerHeaders = null;
+
             if (CurrentProfile.ProviderAccount?.Type == ProfileType.XtreamCodes)
             {
                 var baseUrl = CurrentProfile.ProviderAccount.Url.TrimEnd('/');
@@ -2656,31 +2658,37 @@ public partial class MainViewModel : ObservableObject
                 var decryptedPassword = _securityService.Decrypt(CurrentProfile.ProviderAccount.Password) ?? "";
                 providerEpgUrl = $"{baseUrl}/xmltv.php?username={Uri.EscapeDataString(CurrentProfile.ProviderAccount.Username ?? "")}&password={Uri.EscapeDataString(decryptedPassword)}";
             }
+            else if (CurrentProfile.ProviderAccount?.Type == ProfileType.StalkerPortal)
+            {
+                var baseUrl = CurrentProfile.ProviderAccount.Url.TrimEnd('/');
+                var macAddress = CurrentProfile.ProviderAccount.Username ?? "";
+                providerEpgUrl = _stalkerPortalService.GetEpgUrl(baseUrl);
+                
+                providerHeaders = new Dictionary<string, string>
+                {
+                    ["Cookie"] = $"mac={macAddress}; stb_lang=en; timezone=Europe/Istanbul"
+                };
+            }
+            else if (CurrentProfile.ProviderAccount?.Type == ProfileType.M3U && !string.IsNullOrWhiteSpace(SelectedPlaylist?.Url))
+            {
+                // M3U olarak eklenmiş ama Xtream formatındaysa EPG URL'ini tahmin et
+                providerEpgUrl = _epgSourceResolver.TryInferXtreamEpgUrl(SelectedPlaylist.Url);
+            }
 
-            // 2. Çoklu ülke tespiti (App Language + Top Major Countries)
-            var channelNames = channelsForMapping.Select(c => c.Name ?? "").ToList();
+            // 2. EPG kaynaklarını topla
             var appLanguage = (_settingsService.Settings.Language ?? "tr").ToUpperInvariant();
-
-            // Detect top countries (limit to top 2 other major countries to save data)
-            var majorCountries = _languageDetectionService.DetectCountries(channelsForMapping)
-                .Where(c => c.Percentage > 20 || c.ChannelCount > 50) // Daha sıkı eşik: %20 pay veya 50+ kanal
-                .OrderByDescending(c => c.Percentage)
-                .Take(2)
-                .Select(c => c.CountryCode.ToUpperInvariant())
-                .ToList();
-
-            // 3. EPG kaynaklarını topla (App Language her zaman dahil edilir)
             var playlistEpgUrl = (SelectedPlaylist?.EpgUrl ?? string.Empty).Trim();
-            var customEpgUrl = (_settingsService.Settings.CustomEpgUrl ?? string.Empty).Trim();
+            var customEpgUrls = _settingsService.Settings.CustomEpgUrls?.Where(u => !string.IsNullOrWhiteSpace(u)).ToList() ?? new List<string>();
             var hasUsableTvgIds = channelsForMapping.Any(c => !string.IsNullOrWhiteSpace(c.TvgId));
             
             var epgSources = _epgSourceResolver.ResolveEpgSources(
-                majorCountries, 
+                new List<string>(), // Country based detection removed with iptv-epg.org
                 providerEpgUrl, 
                 playlistEpgUrl, 
-                Uri.TryCreate(customEpgUrl, UriKind.Absolute, out _) ? customEpgUrl : null,
+                customEpgUrls,
                 hasUsableTvgIds,
-                preferredLanguageCode: appLanguage);
+                preferredLanguageCode: appLanguage,
+                providerHeaders: providerHeaders);
 
             if (!isBackgroundSync)
             {
@@ -2701,17 +2709,6 @@ public partial class MainViewModel : ObservableObject
                 }
             });
 
-            // Yabancı kanallar için popülerlik filtresi kelimeleri (Büyük harf duyarlı, kanal isimleri üst karakter yapıldığı için)
-            var popularKeywords = new[] 
-            { 
-                "BBC", "ITV", "SKY", "ABC", "CBS", "NBC", "FOX", "CNN", "ESPN", "HBO", "SHOWTIME", "AMC", "TNT", "TBS", "SYFY", "BEIN", "BE IN", "BEN",
-                "DISCOVERY", "HISTORY", "NAT GEO", "NATGEO", "USA", "TLC", "DMAX", "BLOOMBERG", "CNBC", "AL JAZEERA", "ALJAZEERA", 
-                "EUROSPORT", "ANIMAL PLANET", "HGTV", "FOOD NETWORK", "ARD", "ZDF", "RTL", "SAT1", "PROSIEBEN", "VOX", "WELT", 
-                "NTV", "TF1", "CANAL", "M6", "ARTE", "BFM", "RAI", "MEDIASET", "CANALE5", "ITALIA1", "RETE4", "LA7", "TVE", 
-                "ANTENA3", "CUATRO", "TELECINCO", "LASEXTA", "MOVISTAR", "FRANCE24", "NICKELODEON", "CARTOON", "PARAMOUNT", 
-                "SONY", "MTV", "VH1", "INVESTIGATION", "MOVIES", "SPORTS", "KIDS", "DISNEY", "CINEMA", "NEWS", "NETFLIX", "HD", "4K" 
-            };
-
             foreach (var source in epgSources)
             {
                 try
@@ -2721,35 +2718,9 @@ public partial class MainViewModel : ObservableObject
                         StatusMessage = $"EPG: {source.Type} kaynağına bağlanılıyor...";
                     }
 
-                    // Sadece bu kaynağa (ülkeye) ait olan kanalları filtrele
-                    List<Channel> targetChannels;
-                    
-                    if (source.Type == EpgSourceType.Provider || source.Type == EpgSourceType.CustomUrl || source.Url.Contains($"-{appLanguage.ToLower()}.", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Ana kaynaklar veya kendi dilimiz: Tüm kanalları dene
-                        targetChannels = liveChannels;
-                    }
-                    else 
-                    {
-                        // Yabancı Ülke Kaynağı: Sadece o ülkenin popüler kanallarını işle (Kullanıcı isteği)
-                        var sourceCountryCode = ExtractCountryCodeFromUrl(source.Url);
-                        targetChannels = liveChannels
-                            .Where(c => 
-                            {
-                                var name = (c.Name ?? "").ToUpperInvariant();
-                                // 1. Kanal bu ülkeye mi ait?
-                                bool isThisCountry = !string.IsNullOrEmpty(sourceCountryCode) && name.Contains(sourceCountryCode);
-                                if (!isThisCountry) return false;
-
-                                // 2. Popüler mi? (İsminde majör kelimeler geçiyor mu?)
-                                return popularKeywords.Any(k => name.Contains(k));
-                            })
-                            .ToList();
-
-                        _logger?.LogDebug($"[EPG] Foreign source {sourceCountryCode} optimized: matching only {targetChannels.Count} popular channels.");
-                    }
-
-                    if (targetChannels.Count == 0 && source.Type == EpgSourceType.IptvEpgOrg) continue;
+                    // Always process all live channels for every source
+                    List<Channel> targetChannels = liveChannels;
+                    if (targetChannels.Count == 0) continue;
 
                     var loadedPrograms = await _epgService.LoadEpgAsync(
                         source.Url, 
@@ -2757,7 +2728,8 @@ public partial class MainViewModel : ObservableObject
                         targetChannels, 
                         daysAhead: 7, 
                         progress: epgProgressReporter,
-                        clearBeforeSave: source.ClearBeforeLoad); // ATOMIC CLEAR: Only clear if we actually start saving programs
+                        clearBeforeSave: source.ClearBeforeLoad,
+                        headers: source.Headers); // ATOMIC CLEAR: Only clear if we actually start saving programs
 
                     if (loadedPrograms > 0)
                     {
@@ -2798,8 +2770,17 @@ public partial class MainViewModel : ObservableObject
                     {
                         if (!string.IsNullOrWhiteSpace(successfulSourceUrl))
                         {
-                            playlistToUpdate.EpgUrl = successfulSourceUrl;
-                            SelectedPlaylist.EpgUrl = successfulSourceUrl;
+                            // Xtream ve Stalker için dinamik üretilen linkleri DB'ye (açık şifre/mac ile) kaydetmiyoruz.
+                            // Çünkü bunlar her seferinde ProviderAccount üzerinden güvenlice oluşturuluyor.
+                            // M3U Header veya Custom URL söz konusuysa kaydediyoruz.
+                            bool isDynamicProvider = CurrentProfile.ProviderAccount?.Type == ProfileType.XtreamCodes || 
+                                                    CurrentProfile.ProviderAccount?.Type == ProfileType.StalkerPortal;
+                            
+                            if (!isDynamicProvider)
+                            {
+                                playlistToUpdate.EpgUrl = successfulSourceUrl;
+                                SelectedPlaylist.EpgUrl = successfulSourceUrl;
+                            }
                         }
 
                         playlistToUpdate.EpgLastUpdated = DateTime.UtcNow;
@@ -2850,23 +2831,6 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private static string ExtractCountryCodeFromUrl(string url)
-    {
-        // Örn: https://iptv-epg.org/files/epg-tr.xml.gz -> TR
-        try
-        {
-            var fileName = Path.GetFileName(url);
-            var parts = fileName.Split('-');
-            if (parts.Length >= 2)
-            {
-                var codePart = parts[1];
-                var dotIdx = codePart.IndexOf('.');
-                if (dotIdx > 0) return codePart.Substring(0, dotIdx).ToUpperInvariant();
-            }
-        }
-        catch { }
-        return string.Empty;
-    }
 
     private async Task PersistSelectedPlaylistEpgErrorAsync(string error)
     {
@@ -4285,6 +4249,10 @@ public partial class MainViewModel : ObservableObject
                 await RefreshDownloadedItemsFromDatabaseAsync();
             }
         }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to refresh personal lists from database.");
+        }
         finally
         {
             _refreshSemaphore.Release();
@@ -4321,12 +4289,19 @@ public partial class MainViewModel : ObservableObject
         _hasMoreHistory = true;
         _isLoadingMoreHistory = false;
 
-        var initialChannels = await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds, skip: 0, take: IncrementalPageSize);
-        _historyPage = 1;
-        _hasMoreHistory = initialChannels.Count == IncrementalPageSize;
+        try
+        {
+            var initialChannels = await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds, skip: 0, take: IncrementalPageSize);
+            _historyPage = 1;
+            _hasMoreHistory = initialChannels.Count == IncrementalPageSize;
 
-        SetItems(HistoryChannels, initialChannels, () => _ = EnrichChannelsWithEpgAsync(HistoryChannels));
-        UpdateHistoryBuckets();
+            SetItems(HistoryChannels, initialChannels, () => _ = EnrichChannelsWithEpgAsync(HistoryChannels));
+            UpdateHistoryBuckets();
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to refresh history channels only.");
+        }
     }
 
     private static async Task<List<int>> GetProfilePlaylistIdsAsync(AppDbContext db, int profileId)

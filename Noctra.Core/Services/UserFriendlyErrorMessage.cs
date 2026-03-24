@@ -198,7 +198,7 @@ public static class UserFriendlyErrorMessage
 
         if (ContainsAny(normalized, "0 program", "0 programs", "program bulunamadi"))
         {
-            return "EPG kaynaginda kanallarinizla eslesen program bulunamadi.";
+            return "EPG kaynağı yüklendi ancak mevcut kanallarınızla eşleşen yayın bilgisi bulunamadı.";
         }
 
         if (ContainsAny(normalized,

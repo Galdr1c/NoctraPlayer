@@ -36,7 +36,7 @@ public class EpgService : IEpgService
         LastError = null;
     }
 
-    public async Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1, IProgress<EpgProgressInfo>? progress = null, bool clearBeforeSave = false)
+    public async Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1, IProgress<EpgProgressInfo>? progress = null, bool clearBeforeSave = false, IDictionary<string, string>? headers = null)
     {
         if (!await _loadSemaphore.WaitAsync(0).ConfigureAwait(false))
         {
@@ -61,9 +61,25 @@ public class EpgService : IEpgService
             progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Downloading, Message = "EPG dosyası indiriliyor...", ProgressPercent = 5 });
 
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
-            using var response = await NetworkRetry.ExecuteAsync(
-                () => _httpClient.GetAsync(epgUrl, HttpCompletionOption.ResponseHeadersRead, cts.Token),
-                cancellationToken: cts.Token).ConfigureAwait(false);
+            
+            HttpResponseMessage response;
+            if (headers != null && headers.Count > 0)
+            {
+                var request = new HttpRequestMessage(HttpMethod.Get, epgUrl);
+                foreach (var header in headers)
+                {
+                    request.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                }
+                response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token).ConfigureAwait(false);
+            }
+            else
+            {
+                response = await NetworkRetry.ExecuteAsync(
+                    () => _httpClient.GetAsync(epgUrl, HttpCompletionOption.ResponseHeadersRead, cts.Token),
+                    cancellationToken: cts.Token).ConfigureAwait(false);
+            }
+
+            using var _ = response;
             response.EnsureSuccessStatusCode();
 
             var totalBytes = response.Content.Headers.ContentLength;
@@ -149,6 +165,14 @@ public class EpgService : IEpgService
             context.ChangeTracker.AutoDetectChangesEnabled = false;
             try
             {
+                // Clear immediately if requested, ensuring we don't wait for the first matching program.
+                if (clearBeforeSave)
+                {
+                    await context.Database.ExecuteSqlRawAsync("DELETE FROM EpgPrograms").ConfigureAwait(false);
+                    hasCleared = true;
+                    _logger?.LogDebug("[EpgService] EPG data cleared at the start of load (Atomic).");
+                }
+
                 while (await reader.ReadAsync().ConfigureAwait(false))
                 {
                     if (reader.NodeType == System.Xml.XmlNodeType.Element)
@@ -157,21 +181,11 @@ public class EpgService : IEpgService
                         {
                             if (channelMap.Count > 0)
                             {
-                                 var xmlId = reader.GetAttribute("id");
-                                if (xmlId != null)
-                                {
-                                    if (tvgIdToInternalIds.TryGetValue(xmlId, out var byTvgIds))
-                                    {
-                                        if (!xmlChannelIdToDbTvgIds.TryGetValue(xmlId, out var targetList))
-                                        {
-                                            targetList = new List<string>();
-                                            xmlChannelIdToDbTvgIds[xmlId] = targetList;
-                                        }
-                                        foreach (var id in byTvgIds)
-                                            if (!targetList.Contains(id)) targetList.Add(id);
-
-                                        if (isPrimary) allowedPrimaryIds.Add(xmlId);
-                                    }
+                                    var xmlId = reader.GetAttribute("id");
+                                    var effectiveXmlId = xmlId;
+                                    
+                                    // Fallback for malformed XML where channel ID is missing or empty
+                                    var isMalformedId = string.IsNullOrWhiteSpace(xmlId);
 
                                     using var subReader = reader.ReadSubtree();
                                     while (await subReader.ReadAsync().ConfigureAwait(false))
@@ -179,26 +193,47 @@ public class EpgService : IEpgService
                                         if (subReader.NodeType == System.Xml.XmlNodeType.Element && subReader.Name == "display-name")
                                         {
                                             var displayName = await subReader.ReadElementContentAsStringAsync().ConfigureAwait(false);
+                                            
+                                            // If the ID was missing or empty, use the first display name as the effective ID
+                                            if (isMalformedId && string.IsNullOrWhiteSpace(effectiveXmlId))
+                                            {
+                                                effectiveXmlId = displayName;
+                                            }
+
                                             foreach (var variant in GetNameVariants(displayName))
                                             {
                                                 var dbChannelIds = ResolveMappedChannelIds(variant, channelMap);
                                                 if (dbChannelIds != null && dbChannelIds.Any())
                                                 {
-                                                    if (!xmlChannelIdToDbTvgIds.TryGetValue(xmlId, out var targetList))
+                                                    if (!xmlChannelIdToDbTvgIds.TryGetValue(effectiveXmlId!, out var targetList))
                                                     {
                                                         targetList = new List<string>();
-                                                        xmlChannelIdToDbTvgIds[xmlId] = targetList;
+                                                        xmlChannelIdToDbTvgIds[effectiveXmlId!] = targetList;
                                                     }
                                                     foreach (var id in dbChannelIds)
                                                         if (!targetList.Contains(id)) targetList.Add(id);
                                                     
-                                                    if (isPrimary) allowedPrimaryIds.Add(xmlId);
+                                                    if (isPrimary) allowedPrimaryIds.Add(effectiveXmlId!);
                                                     break; 
                                                 }
                                             }
                                         }
                                     }
-                                }
+
+                                    // If we still have a valid ID (from attribute or fallback) 
+                                    // and it matches a TvgId directly in our database
+                                    if (!string.IsNullOrWhiteSpace(effectiveXmlId) && tvgIdToInternalIds.TryGetValue(effectiveXmlId, out var byTvgIds))
+                                    {
+                                        if (!xmlChannelIdToDbTvgIds.TryGetValue(effectiveXmlId, out var targetList))
+                                        {
+                                            targetList = new List<string>();
+                                            xmlChannelIdToDbTvgIds[effectiveXmlId] = targetList;
+                                        }
+                                        foreach (var id in byTvgIds)
+                                            if (!targetList.Contains(id)) targetList.Add(id);
+
+                                        if (isPrimary) allowedPrimaryIds.Add(effectiveXmlId);
+                                    }
                             }
                         }
                         else if (reader.Name == "programme")
@@ -263,15 +298,6 @@ public class EpgService : IEpgService
                                 }
                             }
 
-                            // If this is the FIRST program we are about to save, and clearBeforeSave is true,
-                            // we clear the database NOW. This ensures we don't clear if download fails.
-                            if (clearBeforeSave && !hasCleared)
-                            {
-                                await context.Database.ExecuteSqlRawAsync("DELETE FROM EpgPrograms").ConfigureAwait(false);
-                                hasCleared = true;
-                                _logger?.LogDebug("[EpgService] EPG data cleared just before saving new records (Atomic).");
-                            }
-
                             foreach (var tId in targetIds)
                             {
                                 programs.Add(new EpgProgram
@@ -305,13 +331,6 @@ public class EpgService : IEpgService
 
                 if (programs.Any())
                 {
-                    // Handle case where we have small EPG and never reached batchSize
-                    if (clearBeforeSave && !hasCleared)
-                    {
-                        await context.Database.ExecuteSqlRawAsync("DELETE FROM EpgPrograms").ConfigureAwait(false);
-                        hasCleared = true;
-                    }
-
                     await context.EpgPrograms.AddRangeAsync(programs).ConfigureAwait(false);
                     await context.SaveChangesAsync().ConfigureAwait(false);
                 }
@@ -479,6 +498,13 @@ public class EpgService : IEpgService
             .Replace('ç', 'c')
             .Replace('Ç', 'c');
 
+        // IPTV Specific: Remove anything inside brackets or pipes
+        // "TR | Kanal D" -> "Kanal D", "[TR] Star TV" -> "Star TV"
+        s = System.Text.RegularExpressions.Regex.Replace(s, @"\|[^|]+\|", " ");
+        s = System.Text.RegularExpressions.Regex.Replace(s, @"\[[^\]]+\]", " ");
+        s = System.Text.RegularExpressions.Regex.Replace(s, @"\([^)]+\)", " ");
+        s = s.Replace("|", " ");
+
         var chars = new List<char>(s.Length);
         foreach (var ch in s)
         {
@@ -488,10 +514,10 @@ public class EpgService : IEpgService
         var noise = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "hd", "fhd", "uhd", "sd", "hevc", "h265", "h264", "4k", "fullhd", "qhd", "hdr", "10bit", "av1", "raw", "1080i", "720i",
-            "feed", "ticari", "50fps", "60fps", "mobie", "mobile", "web", "app", "ios", "android", "iptv", "ts", "m3u8",
-            "1080p", "720p", "480p", "2160p", "1080", "720", "576", "live", "vip",
-            "backup", "bkp", "multi", "sub", "ace", "plus", "extra",
-            "turkey", "turkiye", "türkiye", "tr", "s",
+            "feed", "ticari", "50fps", "60fps", "mobie", "mobile", "sdmobile", "fhdmobile", "web", "app", "ios", "android", "iptv", "ts", "m3u8",
+            "1080p", "720p", "480p", "2160p", "1080", "720", "576", "live", "vip", "premium",
+            "backup", "bkp", "multi", "sub", "ace", "plus", "extra", "max",
+            "turkey", "turkiye", "türkiye", "tr", "yayin", "kesintisiz",
         };
 
         var tokens = new string(chars.ToArray())

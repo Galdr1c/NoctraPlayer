@@ -842,19 +842,51 @@
                                         <ComboBoxItem Content="+12 saat"/>
                                     </ComboBox>
 
-                                    <TextBlock Text="Özel EPG URL (Opsiyonel)" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
-                                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,20">
-                                        <TextBox Grid.Column="0" Text="{Binding CustomEpgUrl, Mode=TwoWay}"
-                                                 Watermark="https://.../epg.xml veya .xml.gz"
-                                                 Padding="12"/>
-                                        <Button Grid.Column="1" Content="Şimdi Yenile" 
-                                                Command="{Binding RefreshEpgNowCommand}"
-                                                IsEnabled="{Binding !_mainViewModel.IsGlobalLoading}"
+                                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+                                        <TextBlock Text="Özel EPG Kaynakları" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1" 
                                                 Theme="{StaticResource FilterButtonStyle}"
-                                                Margin="10,0,0,0"
-                                                Height="45"
-                                                VerticalAlignment="Stretch"/>
+                                                Command="{Binding AddCustomEpgCommand}"
+                                                IsEnabled="{Binding !_mainViewModel.IsGlobalLoading}"
+                                                Padding="12,6" CornerRadius="6" Cursor="Hand">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <materialIcons:MaterialIcon Kind="Plus" Width="18" Height="18"/>
+                                                <TextBlock Text="Yeni Ekle" FontSize="13" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                        </Button>
                                     </Grid>
+
+                                    <ItemsControl ItemsSource="{Binding CustomEpgUrls}" Margin="0,0,0,20">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+                                                    <TextBox Text="{Binding Url, Mode=TwoWay}"
+                                                             Watermark="https://.../epg.xml veya .xml.gz"
+                                                             Padding="12"
+                                                             Height="45"
+                                                             VerticalContentAlignment="Center"/>
+                                                    <Button Grid.Column="1" 
+                                                            Theme="{StaticResource FilterButtonStyle}"
+                                                            Command="{Binding $parent[Window].DataContext.RemoveCustomEpgCommand}"
+                                                            CommandParameter="{Binding .}"
+                                                            Margin="10,0,0,0"
+                                                            Width="45" Height="45"
+                                                            Padding="0"
+                                                            ToolTip.Tip="Kaynağı Kaldır">
+                                                        <materialIcons:MaterialIcon Kind="DeleteOutline" Width="20" Height="20" Foreground="{DynamicResource ErrorBrush}"/>
+                                                    </Button>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <!-- En altta tek bir yenile butonu (opsiyonel ama kullanıcı eski haliyle alışık olabilir) -->
+                                    <Button Content="Tüm EPG Kaynaklarını Şimdi Yenile" 
+                                            Command="{Binding RefreshEpgNowCommand}"
+                                            IsEnabled="{Binding !_mainViewModel.IsGlobalLoading}"
+                                            HorizontalAlignment="Stretch"
+                                            Height="45"
+                                            Margin="0,0,0,20"/>
                                 </StackPanel>
                             </Border>
                         </StackPanel>

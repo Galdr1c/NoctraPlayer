@@ -224,24 +224,11 @@ public partial class PlaylistService : IPlaylistService
             {
                 try
                 {
-                    var countryCandidates = _languageDetection.DetectCountries(channelSnapshot)
-                        .Where(c => c.Percentage > 20 || c.ChannelCount > 20)
-                        .Select(c => c.CountryCode)
-                        .Distinct(StringComparer.OrdinalIgnoreCase)
-                        .Take(3)
-                        .ToList();
-
-                    if (countryCandidates.Count == 0)
-                    {
-                        countryCandidates.Add("TR");
-                    }
-
-                    var detectedCountry = countryCandidates[0];
                     var appLanguage = (_settingsService?.Settings?.Language ?? "tr").ToUpperInvariant();
-                    var majorCountries = countryCandidates.Take(2).ToList(); // Sadece en çok kanallı 2 ülkeyi al
 
                     var epgSources = _epgSourceResolver.ResolveEpgSources(
-                        majorCountries,
+                        new List<string>(), // Country based detection removed with iptv-epg.org
+                        providerEpgUrl: _epgSourceResolver.TryInferXtreamEpgUrl(sourceUrl),
                         m3uEpgUrl: NormalizeEpgUrl(detectedEpgUrl),
                         preferredLanguageCode: appLanguage);
 
@@ -286,7 +273,6 @@ public partial class PlaylistService : IPlaylistService
                     var playlistToUpdate = await db.Playlists.FirstOrDefaultAsync(p => p.Id == playlistId);
                     if (playlistToUpdate != null)
                     {
-                        playlistToUpdate.DetectedCountry = detectedCountry;
                         playlistToUpdate.EpgLastError = autoEpgError;
 
                         if (!string.IsNullOrWhiteSpace(usedEpgUrl))

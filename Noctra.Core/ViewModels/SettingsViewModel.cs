@@ -141,6 +141,9 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _customEpgUrl = string.Empty;
 
+    [ObservableProperty]
+    private ObservableCollection<EpgUrlItem> _customEpgUrls = new();
+
     // ============ Gizlilik / Geçmiş ============
 
     [ObservableProperty]
@@ -526,6 +529,14 @@ public partial class SettingsViewModel : ObservableObject
 
         CustomEpgUrl = s.CustomEpgUrl ?? string.Empty;
 
+        // Custom EPG URLs List (with Migration)
+        var urls = s.CustomEpgUrls ?? new List<string>();
+        if (urls.Count == 0 && !string.IsNullOrWhiteSpace(s.CustomEpgUrl))
+        {
+            urls = new List<string> { s.CustomEpgUrl };
+        }
+        CustomEpgUrls = new ObservableCollection<EpgUrlItem>(urls.Select(u => new EpgUrlItem { Url = u }));
+
         // Hidden Groups
         HiddenLiveGroups = new ObservableCollection<string>(s.HiddenLiveGroups);
         HiddenMovieGroups = new ObservableCollection<string>(s.HiddenMovieGroups);
@@ -564,6 +575,7 @@ public partial class SettingsViewModel : ObservableObject
         s.ChannelListRefreshFrequencyHours = Math.Max(0, ChannelListRefreshFrequencyHours);
         s.EpgRefreshFrequencyHours = Math.Max(0, EpgRefreshFrequencyHours);
         s.CustomEpgUrl = string.IsNullOrWhiteSpace(CustomEpgUrl) ? null : CustomEpgUrl.Trim();
+        s.CustomEpgUrls = CustomEpgUrls.Where(u => !string.IsNullOrWhiteSpace(u.Url)).Select(u => u.Url.Trim()).ToList();
         s.EpgEnabled = EpgEnabled;
         s.EpgTimeOffsetHours = EpgTimeOffsetHours;
 
@@ -605,6 +617,25 @@ public partial class SettingsViewModel : ObservableObject
     private string? _epgLastError;
 
     [RelayCommand]
+    private void AddCustomEpg()
+    {
+        if (CustomEpgUrls.Count < AppSettings.EPG_URL_LIMIT)
+        {
+            CustomEpgUrls.Add(new EpgUrlItem());
+        }
+        else
+        {
+            StatusMessage = $"En fazla {AppSettings.EPG_URL_LIMIT} adet özel EPG ekleyebilirsiniz.";
+        }
+    }
+
+    [RelayCommand]
+    private void RemoveCustomEpg(EpgUrlItem item)
+    {
+        CustomEpgUrls.Remove(item);
+    }
+
+    [RelayCommand]
     private async Task ScanEpgStatsAsync()
         => await ScanEpgStatsCoreAsync(updateStatusMessage: true);
 
@@ -619,20 +650,45 @@ public partial class SettingsViewModel : ObservableObject
 
             using var db = await _contextFactory.CreateDbContextAsync();
 
-            TotalEpgPrograms = await db.EpgPrograms.CountAsync();
-            TotalEpgChannels = await db.EpgPrograms
-                .Select(p => p.ChannelId)
-                .Distinct()
-                .CountAsync();
-
-            LastEpgUpdate = await db.Playlists
-                .AsNoTracking()
-                .Where(p => p.IsActive && p.EpgLastUpdated != null)
-                .OrderByDescending(p => p.EpgLastUpdated)
-                .Select(p => p.EpgLastUpdated)
-                .FirstOrDefaultAsync();
-
             var profileId = _mainViewModel.CurrentProfile?.Id;
+            if (profileId.HasValue)
+            {
+                var activeChannels = await db.Channels
+                    .AsNoTracking()
+                    .Where(c => c.Playlist != null && c.Playlist.ProfileId == profileId.Value && c.Playlist.IsActive)
+                    .Select(c => new { c.Id, c.TvgId })
+                    .ToListAsync();
+
+                var searchIds = activeChannels
+                    .Select(c => c.TvgId)
+                    .Where(id => !string.IsNullOrEmpty(id))
+                    .Concat(activeChannels.Select(c => c.Id.ToString()))
+                    .Distinct()
+                    .ToList();
+
+                TotalEpgPrograms = await db.EpgPrograms
+                    .CountAsync(p => searchIds.Contains(p.ChannelId));
+
+                TotalEpgChannels = await db.EpgPrograms
+                    .Where(p => searchIds.Contains(p.ChannelId))
+                    .Select(p => p.ChannelId)
+                    .Distinct()
+                    .CountAsync();
+
+                LastEpgUpdate = await db.Playlists
+                    .AsNoTracking()
+                    .Where(p => p.ProfileId == profileId.Value && p.IsActive && p.EpgLastUpdated != null)
+                    .OrderByDescending(p => p.EpgLastUpdated)
+                    .Select(p => p.EpgLastUpdated)
+                    .FirstOrDefaultAsync();
+            }
+            else
+            {
+                TotalEpgPrograms = 0;
+                TotalEpgChannels = 0;
+                LastEpgUpdate = null;
+            }
+
             var errorQuery = db.Playlists.AsNoTracking().Where(p => p.IsActive && !string.IsNullOrWhiteSpace(p.EpgLastError));
             if (profileId.HasValue)
             {
@@ -656,7 +712,15 @@ public partial class SettingsViewModel : ObservableObject
             
             if (updateStatusMessage && !string.IsNullOrEmpty(EpgLastError))
             {
-                StatusMessage = "[Istatistik] EPG hatasi bulundu";
+                var isWarning = EpgLastError.Contains("eşleşen yayın bilgisi bulunamadı") || EpgLastError.Contains("0 program");
+                if (isWarning)
+                {
+                    StatusMessage = "[İstatistik] EPG istatistikleri güncellendi";
+                }
+                else
+                {
+                    StatusMessage = "[İstatistik] EPG hatası bulundu";
+                }
             }
             else if (updateStatusMessage)
             {
@@ -867,10 +931,19 @@ public partial class SettingsViewModel : ObservableObject
 
                     if (!string.IsNullOrWhiteSpace(EpgLastError))
                     {
-                        SetProgressStatus(
-                            "EPG",
-                            RefreshProgressPercent,
-                            $"EPG yenileme hatası: {EpgLastError}");
+                        var isWarning = EpgLastError.Contains("eşleşen yayın bilgisi bulunamadı") || EpgLastError.Contains("0 program");
+                        
+                        if (isWarning)
+                        {
+                            SetProgressStatus("EPG", 100, "EPG yenileme tamamlandı");
+                        }
+                        else
+                        {
+                            SetProgressStatus(
+                                "EPG",
+                                100,
+                                $"EPG yenileme hatası: {EpgLastError}");
+                        }
                         return;
                     }
                 }
@@ -991,4 +1064,13 @@ public partial class SettingsViewModel : ObservableObject
             }
         }
     }
+}
+
+/// <summary>
+/// Özel EPG URL öğesi
+/// </summary>
+public partial class EpgUrlItem : ObservableObject
+{
+    [ObservableProperty]
+    private string _url = string.Empty;
 }
