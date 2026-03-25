@@ -372,13 +372,11 @@ public class EpgService : IEpgService
         if (normalizedFull.Length >= 3 && seen.Add(normalizedFull))
             yield return normalizedFull;
 
-        // 2. Strip leading country code prefix: "TR - Show TV" → "Show TV"
-        if (TryStripLeadingCountryCode(name, out var stripped))
-        {
-            var v = NormalizeName(stripped);
-            if (v.Length >= 3 && seen.Add(v))
-                yield return v;
-        }
+        // NOTE: TryStripLeadingCountryCode removed here intentionally.
+        // Stripping country prefixes (e.g. "FR: beIN SPORTS 1" → "beIN SPORTS 1")
+        // caused cross-country EPG pollution: French, German etc. channels
+        // would receive Turkish EPG data because they shared the same
+        // normalized key ("beinsports1") as the TR variant.
 
         // 3. Strip parenthesized suffix: "Star TV (TR)" → "Star TV"
         var noParens = System.Text.RegularExpressions.Regex.Replace(name, @"\s*\([^)]*\)\s*$", "").Trim();

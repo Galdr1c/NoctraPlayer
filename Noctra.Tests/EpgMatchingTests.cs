@@ -140,11 +140,15 @@ public class EpgMatchingTests
     }
 
     [Fact]
-    public void GetNameVariants_WithCountryPrefix_VariantWithoutPrefix()
+    public void GetNameVariants_WithCountryPrefix_PreservesCountryInKey()
     {
-        // "TR - Kanal D" → "kanald" varyantı olmalı
-        var variants = GetNameVariants("TR - Kanal D");
-        Assert.Contains(variants, v => v.Contains("kanald"));
+        // "TR - Kanal D" → "kanald" varyantı olmalı (TR noise'dan çıkarılır)
+        // Ama "FR - Kanal D" → "frkanald" olmalı (FR noise'da değil)
+        var trVariants = GetNameVariants("TR - Kanal D");
+        Assert.Contains(trVariants, v => v.Contains("kanald"));
+
+        var frVariants = GetNameVariants("FR - Kanal D");
+        Assert.Contains(frVariants, v => v.StartsWith("fr"));
     }
 
     [Fact]
@@ -500,5 +504,150 @@ public class EpgGetNameVariantsRealWorldTests
         // "TR/Kanal D" → slash sonrası varyant
         var variants = GetNameVariants("TR/Kanal D");
         Assert.Contains(variants, v => v.Contains("kanald"));
+    }
+}
+
+// =============================================================================
+// EpgCountryAwareMatchingTests
+// Ülke bazlı EPG eşleştirme düzeltmesini doğrular.
+// Farklı ülke prefix'li aynı kanal isminin farklı anahtarlar üretmesini test eder.
+// =============================================================================
+
+public class EpgCountryAwareMatchingTests
+{
+    private static readonly Type _epgType = typeof(Noctra.Services.EpgService);
+
+    private static string NormalizeName(string name)
+    {
+        var m = _epgType.GetMethod("NormalizeName",
+            BindingFlags.NonPublic | BindingFlags.Static)!;
+        return (string)m.Invoke(null, new object[] { name })!;
+    }
+
+    private static List<string> GetNameVariants(string name)
+    {
+        var m = _epgType.GetMethod("GetNameVariants",
+            BindingFlags.NonPublic | BindingFlags.Static)!;
+        return ((System.Collections.IEnumerable)m.Invoke(null, new object[] { name })!)
+            .Cast<string>().ToList();
+    }
+
+    // ── NormalizeName: Ülke kodu ayrımı ──────────────────────────────────────
+
+    [Theory]
+    [InlineData("FR: beIN SPORTS 1", "TR: beIN SPORTS 1")]
+    [InlineData("DE: Sport1", "TR: Sport1")]
+    [InlineData("UK: Sky Sports 1", "TR: Sky Sports 1")]
+    public void NormalizeName_DifferentCountries_ProduceDifferentKeys(string channelA, string channelB)
+    {
+        var keyA = NormalizeName(channelA);
+        var keyB = NormalizeName(channelB);
+        Assert.NotEqual(keyA, keyB);
+    }
+
+    [Theory]
+    [InlineData("FR: beIN SPORTS 1")]
+    [InlineData("FR: beIN SPORTS 2")]
+    [InlineData("DE: Sport1")]
+    [InlineData("UK: Sky Sports 1")]
+    public void NormalizeName_NonTRCountry_KeyContainsCountryCode(string channelName)
+    {
+        var key = NormalizeName(channelName);
+        // İlk 2 karakter ülke kodu olmalı (fr, de, uk vb.)
+        var expectedPrefix = channelName[..2].ToLowerInvariant();
+        Assert.StartsWith(expectedPrefix, key);
+    }
+
+    [Fact]
+    public void NormalizeName_TRPrefix_StrippedByNoise()
+    {
+        // "TR" noise listesinde olduğu için çıkarılır
+        var key = NormalizeName("TR: beIN SPORTS 1");
+        Assert.DoesNotContain("tr", key, StringComparison.OrdinalIgnoreCase);
+        Assert.StartsWith("bein", key);
+    }
+
+    // ── GetNameVariants: Ülke kodu soyulmuş varyant üretmemeli ───────────────
+
+    [Fact]
+    public void GetNameVariants_FRPrefix_DoesNotProduceTRCollision()
+    {
+        // "FR: beIN Sports 1" varyantlarında "beinsports1" (TR anahtarı) olmamalı
+        var frVariants = GetNameVariants("FR: beIN SPORTS 1");
+        var trKey = NormalizeName("beIN SPORTS 1"); // = "beinsports1"
+
+        Assert.DoesNotContain(trKey, frVariants);
+    }
+
+    [Fact]
+    public void GetNameVariants_DEPrefix_DoesNotProduceTRCollision()
+    {
+        var deVariants = GetNameVariants("DE: RTL");
+        var trKey = NormalizeName("RTL");
+
+        Assert.DoesNotContain(trKey, deVariants);
+    }
+
+    [Theory]
+    [InlineData("FR: beIN SPORTS 1", "TR: beIN SPORTS 1")]
+    [InlineData("DE: Sport1 HD", "TR: Sport1 HD")]
+    [InlineData("UK: Sky Sports", "TR: Sky Sports")]
+    public void GetNameVariants_DifferentCountries_NoOverlap(string channelA, string channelB)
+    {
+        var variantsA = GetNameVariants(channelA);
+        var variantsB = GetNameVariants(channelB);
+
+        // İki farklı ülke kanalının varyantları kesişmemeli
+        var overlap = variantsA.Intersect(variantsB, StringComparer.OrdinalIgnoreCase).ToList();
+        Assert.Empty(overlap);
+    }
+
+    // ── Gerçek dünya senaryosu: channelMap simülasyonu ────────────────────────
+
+    [Fact]
+    public void ChannelMap_FRandTR_BeinSports_DontCollide()
+    {
+        // Gerçek dünya: channelMap oluşturma simülasyonu
+        var channelMap = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+        // TR kanalları ekle
+        foreach (var variant in GetNameVariants("TR: beIN Sports 1"))
+        {
+            channelMap[variant] = new List<string> { "ch-tr-bein1" };
+        }
+
+        // FR kanalları ekle
+        foreach (var variant in GetNameVariants("FR: beIN SPORTS 1"))
+        {
+            channelMap[variant] = new List<string> { "ch-fr-bein1" };
+        }
+
+        // EPG kaynağında "beIN Sports 1" geldiğinde → sadece TR'ye eşleşmeli
+        var epgNormalized = NormalizeName("beIN Sports 1");
+        Assert.True(channelMap.TryGetValue(epgNormalized, out var matched));
+        Assert.Contains("ch-tr-bein1", matched);
+        Assert.DoesNotContain("ch-fr-bein1", matched);
+    }
+
+    [Fact]
+    public void ChannelMap_MultipleCountries_CorrectIsolation()
+    {
+        var channelMap = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+        // 3 farklı ülke kanalı ekle
+        foreach (var v in GetNameVariants("TR: beIN Sports 1"))
+            channelMap[v] = new List<string> { "ch-tr" };
+        foreach (var v in GetNameVariants("FR: beIN SPORTS 1"))
+            channelMap[v] = new List<string> { "ch-fr" };
+        foreach (var v in GetNameVariants("DE: beIN SPORTS 1"))
+            channelMap[v] = new List<string> { "ch-de" };
+
+        // Anahtar sayısı 3 olmalı (her ülke ayrı anahtar)
+        Assert.True(channelMap.Count >= 3,
+            $"Expected at least 3 distinct keys, got {channelMap.Count}: {string.Join(", ", channelMap.Keys)}");
+
+        // Her birinin ayrı ID'si olmalı
+        Assert.DoesNotContain("ch-fr", channelMap[NormalizeName("TR: beIN Sports 1")]);
+        Assert.DoesNotContain("ch-de", channelMap[NormalizeName("TR: beIN Sports 1")]);
     }
 }

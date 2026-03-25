@@ -90,6 +90,7 @@ namespace Noctra.Tests
         public Task<int> GetTotalProgramCountAsync() => Task.FromResult(0);
         public Task<int> GetDistinctChannelCountAsync() => Task.FromResult(0);
         public Task<Dictionary<int, EpgProgram?>> GetCurrentProgramsAsync(IEnumerable<Channel> channels) => Task.FromResult(new Dictionary<int, EpgProgram?>());
+        public Task<DateTime?> GetMaxProgramEndTimeAsync() => Task.FromResult<DateTime?>(null);
     }
 
     internal sealed class FakeMetadataService : IMetadataService

@@ -18,6 +18,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - EPG verileri, çekilen kaynağın son gününe ulaştığında (tüm programlar bittiğinde) veritabanından otomatik olarak tamamen silinir.
   - Ayarlarda otomatik yenileme kapalıysa, sistem "Yayın Bilgisi Yok" (0 EPG) durumunda kalarak kullanıcının manuel yenileme yapmasını bekler.
   - Bu özellik, her 5 dakikada bir otomatik olarak kontrol edilir ve veri kirliliğini önler.
+- **EPG Ülke Bazlı Eşleştirme Düzeltmesi** (2026-03-25):
+  - Farklı ülkelere ait aynı isimli kanalların (örn. "FR: beIN SPORTS 1" ve "TR: beIN SPORTS 1") birbirinin EPG verilerini alması sorunu giderildi.
+  - Artık her kanalın ülke kodu, EPG eşleştirme anahtarının bir parçası olarak korunarak yalnızca kendi ülkesinin EPG verileriyle eşleşmesi sağlanır.
 
 ### 🐞 Hata Düzeltmeleri ve Kritik İyileştirmeler
 - **EPG Eşleştirme ve Kullanıcı Deneyimi Geliştirmesi** (2026-03-24):
