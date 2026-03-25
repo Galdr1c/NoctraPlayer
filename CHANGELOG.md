@@ -14,6 +14,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - Dinamik liste yapısı sayesinde yeni kaynaklar kolayca eklenip çıkarılabilir.
   - Uygulama, tüm yapılandırılmış EPG kaynaklarını otomatik olarak tarar ve kanal eşleşmelerini en yüksek öncelikle bu kaynaklardan gerçekleştirir.
   - Mevcut tekil EPG linkleri, yeni sisteme otomatik olarak aktarılır (Automatic Migration).
+- **EPG Otomatik Temizleme (Expiration Cleanup)** (2026-03-25):
+  - EPG verileri, çekilen kaynağın son gününe ulaştığında (tüm programlar bittiğinde) veritabanından otomatik olarak tamamen silinir.
+  - Ayarlarda otomatik yenileme kapalıysa, sistem "Yayın Bilgisi Yok" (0 EPG) durumunda kalarak kullanıcının manuel yenileme yapmasını bekler.
+  - Bu özellik, her 5 dakikada bir otomatik olarak kontrol edilir ve veri kirliliğini önler.
 
 ### 🐞 Hata Düzeltmeleri ve Kritik İyileştirmeler
 - **EPG Eşleştirme ve Kullanıcı Deneyimi Geliştirmesi** (2026-03-24):

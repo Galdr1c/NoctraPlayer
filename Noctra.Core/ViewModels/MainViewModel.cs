@@ -2926,6 +2926,31 @@ public partial class MainViewModel : ObservableObject
 
     private async Task EnrichVisibleChannelsWithEpgAsync()
     {
+        // Check for EPG expiration (All programs in database have ended)
+        if (_settingsService.Settings.EpgEnabled)
+        {
+            try
+            {
+                var maxEndTime = await _epgService.GetMaxProgramEndTimeAsync();
+                if (maxEndTime.HasValue && DateTime.UtcNow > maxEndTime.Value)
+                {
+                    _logger?.LogInformation("EPG data has expired (Latest program ended at {MaxEndTime}). Clearing database.", maxEndTime.Value);
+                    await _epgService.ClearEpgAsync();
+                    
+                    // Clear current program titles from memory to reflect "No Information" immediately
+                    foreach (var channel in Channels)
+                    {
+                        channel.CurrentProgramTitle = null;
+                        channel.EpgProgress = 0;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogDebug($"EPG expiration check failed: {ex.Message}");
+            }
+        }
+
         // Enrich main list
         if (Channels.Count > 0)
             await EnrichChannelsWithEpgAsync(Channels);

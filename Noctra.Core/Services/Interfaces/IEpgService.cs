@@ -75,6 +75,11 @@ public interface IEpgService
     Task<Dictionary<int, EpgProgram?>> GetCurrentProgramsAsync(IEnumerable<Channel> channels);
 
     /// <summary>
+    /// Kaydedilmiş programlar arasındaki en son bitiş tarihini getirir
+    /// </summary>
+    Task<DateTime?> GetMaxProgramEndTimeAsync();
+
+    /// <summary>
     /// EPG verisinin güncelliğini kontrol eder
     /// </summary>
     bool IsLoaded { get; }

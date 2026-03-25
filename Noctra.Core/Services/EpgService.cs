@@ -783,6 +783,15 @@ public class EpgService : IEpgService
             .CountAsync();
     }
 
+    public async Task<DateTime?> GetMaxProgramEndTimeAsync()
+    {
+        using var context = await _contextFactory.CreateDbContextAsync();
+        var maxTime = await context.EpgPrograms
+            .Select(p => (DateTime?)p.EndTime)
+            .MaxAsync();
+        return maxTime;
+    }
+
     /// <summary>
     /// XMLTV tarih formatını parse eder (yyyyMMddHHmmss +HHMM)
     /// </summary>
