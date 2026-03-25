@@ -619,14 +619,19 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private void AddCustomEpg()
     {
-        if (CustomEpgUrls.Count < AppSettings.EPG_URL_LIMIT)
-        {
-            CustomEpgUrls.Add(new EpgUrlItem());
-        }
-        else
+        if (CustomEpgUrls.Count >= AppSettings.EPG_URL_LIMIT)
         {
             StatusMessage = $"En fazla {AppSettings.EPG_URL_LIMIT} adet özel EPG ekleyebilirsiniz.";
+            return;
         }
+
+        if (!IsPremium && CustomEpgUrls.Count >= AppSettings.EPG_URL_FREE_LIMIT)
+        {
+            StatusMessage = $"Ücretsiz sürümde en fazla {AppSettings.EPG_URL_FREE_LIMIT} özel EPG kaynağı eklenebilir. Daha fazlası için Premium'a geçin.";
+            return;
+        }
+
+        CustomEpgUrls.Add(new EpgUrlItem());
     }
 
     [RelayCommand]

@@ -842,8 +842,12 @@
                                         <ComboBoxItem Content="+12 saat"/>
                                     </ComboBox>
 
-                                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
-                                        <TextBlock Text="Özel EPG Kaynakları" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,4">
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="Özel EPG Kaynakları" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{Binding CustomEpgUrls.Count, StringFormat='{}{0} kaynak eklendi'}" 
+                                                       FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,2,0,0"/>
+                                        </StackPanel>
                                         <Button Grid.Column="1" 
                                                 Theme="{StaticResource FilterButtonStyle}"
                                                 Command="{Binding AddCustomEpgCommand}"
@@ -855,6 +859,20 @@
                                             </StackPanel>
                                         </Button>
                                     </Grid>
+
+                                    <!-- Performans uyarısı -->
+                                    <Border Background="#1AFFA500" 
+                                            BorderBrush="#55FFA500" 
+                                            BorderThickness="1" 
+                                            CornerRadius="6" 
+                                            Padding="10" 
+                                            Margin="0,4,0,8">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <materialIcons:MaterialIcon Kind="AlertCircleOutline" Width="16" Height="16" Foreground="#FFA500" VerticalAlignment="Top" Margin="0,2,0,0"/>
+                                            <TextBlock Text="Fazla EPG kaynağı eklemek, uygulama açılışını yavaşlatabilir ve depolama alanını artırabilir. Sadece ihtiyacınız olan kaynakları ekleyin."
+                                                       TextWrapping="Wrap" FontSize="12" Foreground="#FFA500" Opacity="0.9"/>
+                                        </StackPanel>
+                                    </Border>
 
                                     <ItemsControl ItemsSource="{Binding CustomEpgUrls}" Margin="0,0,0,20">
                                         <ItemsControl.ItemTemplate>
@@ -881,12 +899,22 @@
                                     </ItemsControl>
 
                                     <!-- En altta tek bir yenile butonu (opsiyonel ama kullanıcı eski haliyle alışık olabilir) -->
-                                    <Button Content="Tüm EPG Kaynaklarını Şimdi Yenile" 
-                                            Command="{Binding RefreshEpgNowCommand}"
-                                            IsEnabled="{Binding !_mainViewModel.IsGlobalLoading}"
-                                            HorizontalAlignment="Stretch"
-                                            Height="45"
-                                            Margin="0,0,0,20"/>
+                                     <!-- Tüm EPG Kaynaklarını Yenile -->
+                                     <Button Command="{Binding RefreshEpgNowCommand}"
+                                             IsEnabled="{Binding !_mainViewModel.IsGlobalLoading}"
+                                             HorizontalAlignment="Left"
+                                             Padding="20,10"
+                                             Margin="0,0,0,20"
+                                             Background="{DynamicResource Surface1Brush}"
+                                             BorderBrush="{DynamicResource BorderBrush}"
+                                             BorderThickness="1"
+                                             CornerRadius="8"
+                                             Cursor="Hand">
+                                         <StackPanel Orientation="Horizontal" Spacing="10">
+                                             <materialIcons:MaterialIcon Kind="Refresh" Width="18" Height="18" Foreground="{DynamicResource AccentBrush}"/>
+                                             <TextBlock Text="Tüm EPG Kaynaklarını Şimdi Yenile" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                         </StackPanel>
+                                     </Button>
                                 </StackPanel>
                             </Border>
                         </StackPanel>
@@ -1227,8 +1255,9 @@
 
             <!-- FOOTER -->
             <Border Grid.Row="2" Padding="32,16" Background="{DynamicResource SurfaceBrush}" CornerRadius="0,0,16,16" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
-                <Grid>
-                    <StackPanel Orientation="Horizontal" Spacing="12">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <!-- Left Actions -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12">
                         <Button Content="Varsayılanlara Sıfırla" Command="{Binding ResetToDefaultsCommand}" 
                                 HorizontalAlignment="Left" Padding="20,10"/>
                         
@@ -1242,11 +1271,24 @@
                         </Button>
                     </StackPanel>
                     
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,20,0" FontWeight="SemiBold"/>
-                        <Button Content="Ayarları Kaydet" Command="{Binding SaveSettingsCommand}" 
-                                Padding="32,12" FontSize="15"/>
-                    </StackPanel>
+                    <!-- Status Message (Center) -->
+                    <TextBlock Grid.Column="1" 
+                               Text="{Binding StatusMessage}" 
+                               Foreground="{DynamicResource AccentBrush}" 
+                               VerticalAlignment="Center" 
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"
+                               Margin="20,0" 
+                               FontWeight="SemiBold"/>
+                    
+                    <!-- Save Button (Right) -->
+                    <Button Grid.Column="2" 
+                            Content="Ayarları Kaydet" 
+                            Command="{Binding SaveSettingsCommand}" 
+                            Padding="32,12" 
+                            FontSize="15"
+                            HorizontalAlignment="Right"/>
                 </Grid>
             </Border>
 

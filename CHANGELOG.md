@@ -9,10 +9,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 ### ✨ Yeni Özellikler
-- **Çoklu Özel EPG Desteği** (2026-03-24):
-  - Artık Ayarlar > EPG sekmesinden **3 adede kadar özel EPG URL'si** eklenebilir.
+- **Çoklu Özel EPG Desteği** (2026-03-25):
+  - Artık Ayarlar > EPG sekmesinden **10 adede kadar özel EPG URL'si** eklenebilir.
+  - Ücretsiz kullanıcılar **2 adet** EPG kaynağı ekleyebilirken, Premium kullanıcılar **10 adede kadar** kaynak yönetebilir.
+  - EPG kaynak sayısı ve performans uyarısı EPG sekmesinde gösterilir.
   - Dinamik liste yapısı sayesinde yeni kaynaklar kolayca eklenip çıkarılabilir.
-  - Uygulama, tüm yapılandırılmış EPG kaynaklarını otomatik olarak tarar ve kanal eşleşmelerini en yüksek öncelikle bu kaynaklardan gerçekleştirir.
   - Mevcut tekil EPG linkleri, yeni sisteme otomatik olarak aktarılır (Automatic Migration).
 - **EPG Otomatik Temizleme (Expiration Cleanup)** (2026-03-25):
   - EPG verileri, çekilen kaynağın son gününe ulaştığında (tüm programlar bittiğinde) veritabanından otomatik olarak tamamen silinir.
@@ -21,6 +22,12 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **EPG Ülke Bazlı Eşleştirme Düzeltmesi** (2026-03-25):
   - Farklı ülkelere ait aynı isimli kanalların (örn. "FR: beIN SPORTS 1" ve "TR: beIN SPORTS 1") birbirinin EPG verilerini alması sorunu giderildi.
   - Artık her kanalın ülke kodu, EPG eşleştirme anahtarının bir parçası olarak korunarak yalnızca kendi ülkesinin EPG verileriyle eşleşmesi sağlanır.
+
+### 🎨 Arayüz İyileştirmeleri (2026-03-25)
+- **Ayarlar Footer Düzeni Düzeltildi**:
+  - Durum mesajlarının butonlarla (Varsayılanlara Sıfırla / Hata Bildir) çakışması sorunu 3 sütunlu Grid yapısına geçilerek ve metin kaydırma (text-wrap) özelliği ile tamamen giderildi.
+- **EPG Yenileme Butonu Optimizasyonu**:
+  - "Tüm EPG Kaynaklarını Şimdi Yenile" butonu, projenin modern estetiğine uygun şekilde ikonlu ve sol hizalı olacak şekilde yeniden tasarlandı.
 
 ### 🐞 Hata Düzeltmeleri ve Kritik İyileştirmeler
 - **EPG Eşleştirme ve Kullanıcı Deneyimi Geliştirmesi** (2026-03-24):
