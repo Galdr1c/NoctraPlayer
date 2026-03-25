@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
 
@@ -15,22 +15,8 @@ public class LicenseService : ObservableObject, ILicenseService
     // ==========================================
     // FEATURE NAMES
     // ==========================================
-    public static class Features
-    {
-        public const string AudioTrackSelection = "audio_track_selection";
-        public const string SubtitleTrackSelection = "subtitle_track_selection";
-        public const string MiniPlayer = "mini_player";
-        public const string AdvancedSearch = "advanced_search";
-        public const string HideChannels = "hide_channels";
-        public const string ReorderChannels = "reorder_channels";
-        public const string AnimatedBackgrounds = "animated_backgrounds";
-        public const string AvatarPacks = "avatar_packs";
-        public const string Multiview = "multiview";
-        public const string Timeshift = "timeshift";
-        public const string Recording = "recording";
-        public const string CustomShortcuts = "custom_shortcuts";
         public const string AdFree = "ad_free";
-        public const string FullEpg = "full_epg";
+        public const string EpgAutoRefresh = "epg_auto_refresh";
         public const string ResumePlayback = "resume_playback";
     }
 
@@ -41,9 +27,7 @@ public class LicenseService : ObservableObject, ILicenseService
     {
         public const string Profiles = "profiles";
         public const string M3UAccounts = "m3u_accounts";
-        public const string Favorites = "favorites";
-        public const string FavoriteGroups = "favorite_groups";
-        public const string Themes = "themes";
+        public const string CustomEpgUrls = "custom_epg_urls";
     }
 
     // ==========================================
@@ -91,24 +75,12 @@ public class LicenseService : ObservableObject, ILicenseService
         
         return featureName switch
         {
-            // Premium features (Everything unlocks with Premium)
-            Features.AudioTrackSelection => tier == SubscriptionTier.Premium,
-            Features.SubtitleTrackSelection => tier == SubscriptionTier.Premium,
-            Features.MiniPlayer => tier == SubscriptionTier.Premium,
-            Features.AdvancedSearch => tier == SubscriptionTier.Premium,
-            Features.HideChannels => tier == SubscriptionTier.Premium,
-            Features.ReorderChannels => tier == SubscriptionTier.Premium,
-            Features.AnimatedBackgrounds => tier == SubscriptionTier.Premium,
-            Features.AvatarPacks => tier == SubscriptionTier.Premium,
+            // Premium features
             Features.AdFree => tier == SubscriptionTier.Premium,
-            Features.FullEpg => tier == SubscriptionTier.Premium,
-            Features.Multiview => tier == SubscriptionTier.Premium,
-            Features.Timeshift => tier == SubscriptionTier.Premium,
-            Features.Recording => tier == SubscriptionTier.Premium,
-            Features.CustomShortcuts => tier == SubscriptionTier.Premium,
+            Features.EpgAutoRefresh => tier == SubscriptionTier.Premium,
             Features.ResumePlayback => tier == SubscriptionTier.Premium,
             
-            _ => false // Unknown features default to unavailable
+            _ => false
         };
     }
 
@@ -121,9 +93,7 @@ public class LicenseService : ObservableObject, ILicenseService
         {
             Limits.Profiles => TierLimits.Free.MaxProfiles,
             Limits.M3UAccounts => TierLimits.Free.MaxM3UAccounts,
-            Limits.Favorites => TierLimits.Free.MaxFavorites,
-            Limits.FavoriteGroups => TierLimits.Free.MaxFavoriteGroups,
-            Limits.Themes => TierLimits.Free.ThemeCount,
+            Limits.CustomEpgUrls => TierLimits.Free.MaxCustomEpgUrls,
             _ => int.MaxValue
         };
 
@@ -139,7 +109,6 @@ public class LicenseService : ObservableObject, ILicenseService
         {
             Limits.Profiles => TierLimits.Free.MaxProfiles,
             Limits.M3UAccounts => TierLimits.Free.MaxM3UAccounts,
-            Limits.Favorites => TierLimits.Free.MaxFavorites,
             _ => int.MaxValue
         };
     }

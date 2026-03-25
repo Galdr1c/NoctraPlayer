@@ -1,4 +1,4 @@
-﻿namespace Noctra.Models;
+namespace Noctra.Models;
 
 /// <summary>
 /// Subscription tier enum
@@ -21,18 +21,10 @@ public static class TierLimits
     {
         public const int MaxProfiles = 3;
         public const int MaxM3UAccounts = 3;
-        public const int MaxFavorites = 50; // Updated to 50
-        public const int MaxFavoriteGroups = 2;
-        public const int EpgHours = 24; // 24 saat EPG
-        public const int ThemeCount = 1; // Sadece default mor tema
-        public const bool HasAds = true; // Watermark dahil
+        public const int MaxCustomEpgUrls = 2;
+        public const bool HasAds = true;
         public const bool HasWatermark = true;
-        public const bool CanSelectAudioTrack = false;
-        public const bool CanSelectSubtitleTrack = false;
-        public const bool HasMiniPlayer = false;
-        public const bool HasAdvancedSearch = false;
-        public const bool CanHideChannels = false;
-        public const bool CanReorderChannels = false;
+        public const bool EpgAutoRefresh = false; // Sadece manuel
     }
 
     // ==========================================
@@ -40,26 +32,13 @@ public static class TierLimits
     // ==========================================
     public static class Premium
     {
-        public const int MaxProfiles = 5; // Netflix standard: max 5 profiles
-        public const int MaxM3UAccounts = int.MaxValue; // Sınırsız
-        public const int MaxFavorites = int.MaxValue; // Sınırsız
-        public const int MaxFavoriteGroups = int.MaxValue; // Sınırsız
-        public const int EpgDays = 14; // 14 gün EPG
-        public const int ThemeCount = int.MaxValue; // Tüm temalar
+        public const int MaxProfiles = 10;
+        public const int MaxM3UAccounts = int.MaxValue;
+        public const int MaxCustomEpgUrls = 10;
         public const bool HasAds = false;
-        public const bool HasWatermark = false; // Filigran yok
-        public const bool CanSelectAudioTrack = true;
-        public const bool CanSelectSubtitleTrack = true;
-        public const bool HasMiniPlayer = true;
-        public const bool HasAdvancedSearch = true;
-        public const bool CanHideChannels = true;
-        public const bool CanReorderChannels = true;
-        public const bool HasAnimatedBackgrounds = true;
-        public const bool HasAvatarPacks = true;
-        
-        // Former Pro features merged into Premium
-        public const bool HasMultiview = true;
-        public const bool HasTimeshift = true;
+        public const bool HasWatermark = false;
+        public const bool EpgAutoRefresh = true;
+        public const bool HasResumePlayback = true;
     }
 }
 

@@ -108,33 +108,25 @@
                     <!-- FREE CARD -->
                     <Border Grid.Column="0" Background="{DynamicResource Surface0Brush}" CornerRadius="12" Padding="24">
                         <StackPanel>
-                            <TextBlock Text="Free" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Text="Ücretsiz" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                             <TextBlock Text="Temel Kullanım" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20"/>
 
                             <StackPanel Margin="0,0,0,8" Spacing="8">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                    <TextBlock Text="1 Profil" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="3 Profil Desteği" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                    <TextBlock Text="1 M3U Hesabı" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="2 Özel EPG Kaynağı" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                    <TextBlock Text="24 Saatlik EPG" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="Manuel EPG Yenileme" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                    <TextBlock Text="50 Favori Kanal" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <materialIcons:MaterialIcon Kind="Close" Width="16" Height="16" Foreground="{DynamicResource TextMutedBrush}"/>
-                                    <TextBlock Text="Noctra Filigranı" Foreground="{DynamicResource TextMutedBrush}"/>
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <materialIcons:MaterialIcon Kind="Close" Width="16" Height="16" Foreground="{DynamicResource TextMutedBrush}"/>
-                                    <TextBlock Text="Kanal Yönetimi Yok" Foreground="{DynamicResource TextMutedBrush}"/>
+                                    <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource TextMutedBrush}"/>
+                                    <TextBlock Text="Noctra Filigranı &amp; Reklamlar" Foreground="{DynamicResource TextMutedBrush}"/>
                                 </StackPanel>
                             </StackPanel>
                         </StackPanel>
@@ -149,38 +141,43 @@
                             <Grid>
                                 <StackPanel>
                                     <TextBlock Text="Premium" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="Lifetime Lisans" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20"/>
+                                    <TextBlock Text="Ömür Boyu Lisans" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20"/>
                                 </StackPanel>
                                 <Border HorizontalAlignment="Right" VerticalAlignment="Top"
                                         Background="{DynamicResource AccentBrush}" CornerRadius="4" Padding="8,4">
-                                    <TextBlock Text="EN İYİ DEĞER" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                                    <TextBlock Text="ÖNERİLEN" FontSize="10" FontWeight="Bold" Foreground="White"/>
                                 </Border>
                             </Grid>
-
+                            
                             <StackPanel Margin="0,0,0,8" Spacing="8">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="Sınırsız Profil" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="10 Farklı Profil" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="Sınırsız M3U Hesabı" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Otomatik EPG Güncelleme" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="2 Haftalık EPG + Grid" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="10 Özel EPG Kaynağı" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="Filigransız İzleme" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Kaldığın Yerden İzleme" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="Kanal Gizleme/Sıralama" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Uyku Zamanlayıcısı" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
+                                    <TextBlock Text="Filigransız &amp; Reklamsız İzleme" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="Tüm Temalar &amp; Animasyonlar" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Daha Fazlası..." Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
                                 </StackPanel>
                             </StackPanel>
                         </StackPanel>
@@ -194,7 +191,7 @@
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                             <materialIcons:MaterialIcon Kind="Crown" Width="20" Height="20" Foreground="White" Margin="0,0,8,0"/>
                             <TextBlock Text="Premium Satın Al" FontSize="18" FontWeight="Bold" Foreground="White"/>
-                            <TextBlock Text=" - 480 TL (Tek Sefer)" FontSize="16" FontWeight="Normal" Foreground="White" Opacity="0.9"/>
+                            <TextBlock Text=" - 499.50 TL (Tek Sefer)" FontSize="16" FontWeight="Normal" Foreground="White" Opacity="0.9"/>
                         </StackPanel>
                     </Button>
 
