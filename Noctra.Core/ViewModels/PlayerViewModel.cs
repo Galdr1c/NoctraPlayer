@@ -528,6 +528,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private const int StallThreshold = 25; // x120ms = ~3sn
     private readonly IDispatcherService _dispatcherService;
     private DateTime _lastWatchHistoryUpdateUtc = DateTime.MinValue;
+    private DateTime _sessionPlaybackStartTimeUtc = DateTime.MinValue;
     private readonly IWatchHistoryService? _watchHistoryService;
     private readonly System.Threading.Timer _autoHideTimer;
     private readonly System.Timers.Timer _clockTimer;
@@ -1058,6 +1059,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         if (!IsLiveContent)
         {
             _lastWatchHistoryUpdateUtc = DateTime.UtcNow;
+            _sessionPlaybackStartTimeUtc = DateTime.UtcNow;
             _watchHistoryTimer.Start();
         }
         else
@@ -1174,6 +1176,20 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             var currentPosition = TimeSpan.FromSeconds(Math.Max(Position, livePosition));
             var currentDuration = Duration > 0 ? TimeSpan.FromSeconds(Duration) : (TimeSpan?)null;
             var isCompleted = IsEpisodeCompleted(Duration, Position);
+
+            // SAFETY NET: Skip ANY save (timer or forced exit) if we are at the very beginning (Pos < 15s) 
+            // AND the playback session just started (< 15s).
+            // This prevents "Start from Beginning" (often forced for Free users) from immediately 
+            // wiping long previous progress via the auto-save timer or immediate exit.
+            var sessionDurationSeconds = _sessionPlaybackStartTimeUtc == DateTime.MinValue 
+                ? 0 
+                : (DateTime.UtcNow - _sessionPlaybackStartTimeUtc).TotalSeconds;
+
+            if (currentPosition.TotalSeconds < 15 && sessionDurationSeconds < 15)
+            {
+                LogDebug($"FlushWatchHistoryAsync: Skipping early near-zero save (Safety Net). Session: {sessionDurationSeconds:F1}s, Pos: {currentPosition.TotalSeconds:F1}s");
+                return;
+            }
 
             await _watchHistoryService.TrackWatchAsync(
                 CurrentProfileId.Value,

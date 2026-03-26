@@ -11,6 +11,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ### ✨ Yeni Özellikler ve Geliştirmeler (2026-03-26)
 - **Premium UI Modernizasyonu & Kısıtlama Deneyimi**: "Kaldığım Yerden Devam Et" (Resume Dialog) ekranındaki eski "PRO" rozeti kaldırıldı ve standart Kilit ikonu ile değiştirildi. Kilitli özellikler artık tıklanamaz (Etkileşimsiz) hale getirilerek Upsell ekranının istenmeyen durumlarda açılması engellendi; Ayarlar ve Uyku Zamanlayıcısı ile tam uyum sağlandı.
 - **Açık Tema (Light Mode) İyileştirmeleri**: Geliştirici Araçları ve Premium Bypass bölümlerindeki neon yeşili renkler, açık temada okunabilirliği artıran standart `SuccessBrush` (Zümrüt Yeşili) ile değiştirildi.
+- **İzleme Geçmişi Koruma Sistemi (Safety Net) v2**: "Baştan Başla" seçeneğiyle başlatılan içeriklerde, ilk 15 saniye içindeki tüm otomatik (timer) ve manuel (çıkış) kayıt işlemleri durduruldu. Bu sayede sadece çıkışta değil, içerik oynarken gerçekleşen ara kayıtların da eski ilerlemeyi silmesi tamamen engellendi. Yanlışlıkla sıfırlanan progress sorunları giderildi.
 - **Profil Sayısı Artırıldı & UI Deneyimi Yenilendi**:
   - Ücretsiz kullanıcılar için profil limiti **5**, Premium kullanıcılar için **12** olarak güncellendi.
   - **Profil Izgarası "Tek Akış" (Unified Flow)**: Profiller ve "Profil Ekle" butonu tek bir koleksiyonda birleştirilerek satır bazlı hizalanma sorunları tamamen giderildi. Artık buton, profillerle birlikte doğal bir şekilde akar.
