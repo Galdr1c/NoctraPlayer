@@ -200,6 +200,15 @@
         <Style Selector="Button.ProfileCardStyle:pointerover">
             <Setter Property="RenderTransform" Value="scale(1.04)"/>
         </Style>
+        
+        <!-- Compact Mode for Profile Cards -->
+        <Style Selector="Window[Tag=True] Button.ProfileCardStyle">
+            <Setter Property="RenderTransform" Value="scale(0.85)"/>
+        </Style>
+        <Style Selector="Window[Tag=True] Button.ProfileCardStyle:pointerover">
+            <Setter Property="RenderTransform" Value="scale(0.9)"/>
+        </Style>
+        
         <Style Selector="Button.ProfileCardStyle:focus /template/ Border#AvatarBorder">
             <Setter Property="BorderBrush" Value="{DynamicResource AccentLightBrush}"/>
             <!-- BoxShadow for Glow Effect -->
@@ -216,7 +225,7 @@
             <Setter Property="RenderTransform" Value="scale(1)"/>
             <Setter Property="Template">
                 <ControlTemplate>
-                    <Grid Width="{StaticResource RatioSquareSize}" Background="Transparent">
+                    <Grid Width="150" Background="Transparent">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
@@ -275,6 +284,14 @@
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
 
+        <!-- Compact Mode for Add Button -->
+        <Style Selector="Window[Tag=True] Button.AddProfileButtonStyle">
+            <Setter Property="RenderTransform" Value="scale(0.85)"/>
+        </Style>
+        <Style Selector="Window[Tag=True] Button.AddProfileButtonStyle:pointerover">
+            <Setter Property="RenderTransform" Value="scale(0.9)"/>
+        </Style>
+        
         <!-- Manage Mode Text Button Style -->
         <Style Selector="Button.ManageModeButtonStyle">
              <Setter Property="Background" Value="Transparent"/>
@@ -314,7 +331,8 @@
     </Window.Styles>
 
     <Border CornerRadius="{DynamicResource RadiusMedium}" ClipToBounds="True"
-            Background="{DynamicResource BackgroundGradientBrush}">
+            Background="{DynamicResource BackgroundGradientBrush}"
+            Tag="{Binding IsCompact}">
 
         <Grid RowDefinitions="Auto,*">
             
@@ -356,30 +374,41 @@
                         <TextBlock Text="Profil seçin"
                                    FontSize="18" Foreground="{DynamicResource TextMutedBrush}"
                                    HorizontalAlignment="Center" Margin="0,12,0,56"/>
-
-                        <!-- Profile Grid -->
-                        <WrapPanel HorizontalAlignment="Center" MaxWidth="900">
-                            <ItemsControl ItemsSource="{Binding Profiles}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel ItemWidth="170" ItemHeight="210"/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Button Classes="ProfileCardStyle"
-                                                Click="SelectProfile_Click"
-                                                Margin="10,0"/>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-
-                            <!-- Add Profile Button -->
-                            <Button Classes="AddProfileButtonStyle"
-                                    Command="{Binding AddProfileCommand}"
-                                    Margin="10,0"
-                                    IsVisible="{Binding ShowAddButton}"/>
-                        </WrapPanel>
+                        <!-- Profile Grid (Unified Flow) -->
+                        <ItemsControl ItemsSource="{Binding DisplayItems}" MaxWidth="1050" HorizontalAlignment="Center">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel HorizontalAlignment="Center">
+                                        <WrapPanel.Styles>
+                                            <Style Selector="WrapPanel">
+                                                <Setter Property="ItemWidth" Value="170"/>
+                                                <Setter Property="ItemHeight" Value="210"/>
+                                            </Style>
+                                            <Style Selector="Window[Tag=True] WrapPanel">
+                                                <Setter Property="ItemWidth" Value="145"/>
+                                                <Setter Property="ItemHeight" Value="180"/>
+                                            </Style>
+                                        </WrapPanel.Styles>
+                                    </WrapPanel>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            
+                            <ItemsControl.DataTemplates>
+                                <!-- 1. Profile Card Template -->
+                                <DataTemplate DataType="models:Profile">
+                                    <Button Classes="ProfileCardStyle"
+                                            Click="SelectProfile_Click"
+                                            Margin="10,0"/>
+                                </DataTemplate>
+                                
+                                <!-- 2. Add Profile Button Template -->
+                                <DataTemplate DataType="vm:AddProfilePlaceholder">
+                                    <Button Classes="AddProfileButtonStyle"
+                                            Command="{Binding $parent[Window].DataContext.AddProfileCommand}"
+                                            Margin="10,0"/>
+                                </DataTemplate>
+                            </ItemsControl.DataTemplates>
+                        </ItemsControl>
                     </StackPanel>
 
                     <!-- FOOTER -->

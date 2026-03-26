@@ -296,7 +296,7 @@
                             <Button Command="{Binding CycleVideoFillModeCommand}" Classes="iconBtn"
                                     ToolTip.Tip="Görüntü Doldurma Modu">
                                 <materialIcons:MaterialIcon Kind="{Binding VideoFillMode,
-                                    Converter={StaticResource FillModeToIconConverter}}"/>
+                                    Converter={StaticResource FillModeToIconConverter}}" Width="20" Height="20" Foreground="#E6FFFFFF"/>
                             </Button>
 
                             <!-- Sleep Timer Butonu — sadece Premium -->

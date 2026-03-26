@@ -9,6 +9,8 @@ using Noctra.Services.Interfaces;
 
 namespace Noctra.ViewModels;
 
+public class AddProfilePlaceholder { }
+
 public partial class ProfilesViewModel : ObservableObject
 {
     private const string ProfilesLimitKey = "profiles";
@@ -29,6 +31,12 @@ public partial class ProfilesViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _showAddButton = true;
+
+    [ObservableProperty]
+    private bool _isCompact;
+
+    [ObservableProperty]
+    private ObservableCollection<object> _displayItems = new();
 
     public event Action<Profile>? OnProfileSelected;
     public event Action<Profile>? OnProfileAddRequested;
@@ -68,6 +76,7 @@ public partial class ProfilesViewModel : ObservableObject
             
             CanAddProfile = _licenseService.IsWithinLimit(ProfilesLimitKey, items.Count);
             UpdateShowAddButton();
+            UpdateDisplayItems();
         }
         catch (Exception ex)
         {
@@ -113,22 +122,66 @@ public partial class ProfilesViewModel : ObservableObject
     {
         IsManageMode = !IsManageMode;
         UpdateShowAddButton();
+        UpdateDisplayItems();
     }
 
     private void UpdateShowAddButton()
     {
-        // Keep the button visible even if limit is reached (to show upsell),
-        // but hide it when in Manage Mode.
-        ShowAddButton = !IsManageMode;
+        if (IsManageMode)
+        {
+            ShowAddButton = false;
+            return;
+        }
+
+        // Premium users only see the add button if they haven't reached the hard limit (12).
+        // Free users always see it (unless in manage mode) to trigger the Upsell window.
+        if (_licenseService.CurrentTier == SubscriptionTier.Premium)
+        {
+            ShowAddButton = Profiles.Count < TierLimits.Premium.MaxProfiles;
+        }
+        else
+        {
+            ShowAddButton = true;
+        }
+    }
+
+    private void UpdateDisplayItems()
+    {
+        _dispatcherService.InvokeAsync(() =>
+        {
+            DisplayItems.Clear();
+            foreach (var profile in Profiles)
+            {
+                DisplayItems.Add(profile);
+            }
+
+            if (ShowAddButton)
+            {
+                DisplayItems.Add(new AddProfilePlaceholder());
+            }
+
+            IsCompact = DisplayItems.Count > 6;
+            return Task.CompletedTask;
+        });
     }
 
     [RelayCommand]
     private async Task AddProfile()
     {
         var profileCount = Profiles.Count;
+        
         if (!_licenseService.IsWithinLimit(ProfilesLimitKey, profileCount))
         {
-            await _dialogService.ShowUpsellAsync();
+            // If at limit and not premium, show upsell. 
+            // If already premium and at limit (12), show info dialog (though button should be hidden).
+            if (_licenseService.CurrentTier != SubscriptionTier.Premium)
+            {
+                await _dialogService.ShowUpsellAsync();
+            }
+            else
+            {
+                await _dialogService.ShowErrorAsync("Sınır", $"Maksimum {TierLimits.Premium.MaxProfiles} profil oluşturabilirsiniz.");
+            }
             return;
         }
 

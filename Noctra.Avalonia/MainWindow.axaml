@@ -1131,12 +1131,12 @@
                               </StackPanel>
                             </Button>
 
-                            <!-- Ücretsiz kullanıcı: kilitli görünüm -->
-                            <Button Command="{Binding OpenPremiumUpsellCommand}"
-                                    IsVisible="{Binding !IsPremiumResume}"
+                            <!-- Ücretsiz kullanıcı: kilitli görünüm (Etkileşimsiz) -->
+                            <Button IsVisible="{Binding !IsPremiumResume}"
+                                    IsEnabled="False"
                                     HorizontalAlignment="Stretch"
                                     Padding="0,15"
-                                    BorderThickness="1" CornerRadius="8" Cursor="Hand"
+                                    BorderThickness="1" CornerRadius="8"
                                     Background="{DynamicResource Surface1Brush}">
                               <Button.BorderBrush>
                                 <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
@@ -1158,19 +1158,12 @@
                                              VerticalAlignment="Center"/>
                                 </StackPanel>
 
-                                <!-- Sağ: Premium Badge -->
-                                <Border Grid.Column="1" Theme="{StaticResource PremiumLockBadgeStyle}"
-                                        Margin="0,0,12,0" VerticalAlignment="Center">
-                                  <StackPanel Orientation="Horizontal" Spacing="4">
-                                    <materialIcons:MaterialIcon Kind="LockOutline"
-                                                                Width="13" Height="13"
-                                                                Foreground="{DynamicResource AccentLightBrush}"/>
-                                    <TextBlock Text="PRO"
-                                               FontSize="10" FontWeight="Bold"
-                                               Foreground="{DynamicResource AccentLightBrush}"
-                                               VerticalAlignment="Center"/>
-                                  </StackPanel>
-                                </Border>
+                                <!-- Sağ: Standart Kilit İkonu -->
+                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" 
+                                                            Width="18" Height="18"
+                                                            Foreground="{DynamicResource TextMutedBrush}"
+                                                            VerticalAlignment="Center"
+                                                            Margin="0,0,16,0"/>
 
                               </Grid>
                             </Button>
@@ -1194,12 +1187,10 @@
 
                         </StackPanel>
 
-                        <!-- Ücretsiz kullanıcıya küçük upsell notu -->
+                        <!-- Ücretsiz kullanıcıya küçük bilgi notu (Etkileşimsiz) -->
                         <Border IsVisible="{Binding !IsPremiumResume}"
-                                Background="Transparent" Padding="0">
-                          <Button Command="{Binding OpenPremiumUpsellCommand}"
-                                  Background="Transparent" BorderThickness="0"
-                                  HorizontalAlignment="Center" Cursor="Hand" Padding="4">
+                                Background="Transparent" Padding="4"
+                                HorizontalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                               <materialIcons:MaterialIcon Kind="Crown" Width="14" Height="14"
                                                           Foreground="{DynamicResource AccentLightBrush}"/>
@@ -1209,7 +1200,6 @@
                                      Foreground="{DynamicResource TextMutedBrush}"/>
                               </TextBlock>
                             </StackPanel>
-                          </Button>
                         </Border>
 
                       </StackPanel>

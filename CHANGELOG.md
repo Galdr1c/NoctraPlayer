@@ -8,6 +8,20 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### ✨ Yeni Özellikler ve Geliştirmeler (2026-03-26)
+- **Premium UI Modernizasyonu & Kısıtlama Deneyimi**: "Kaldığım Yerden Devam Et" (Resume Dialog) ekranındaki eski "PRO" rozeti kaldırıldı ve standart Kilit ikonu ile değiştirildi. Kilitli özellikler artık tıklanamaz (Etkileşimsiz) hale getirilerek Upsell ekranının istenmeyen durumlarda açılması engellendi; Ayarlar ve Uyku Zamanlayıcısı ile tam uyum sağlandı.
+- **Açık Tema (Light Mode) İyileştirmeleri**: Geliştirici Araçları ve Premium Bypass bölümlerindeki neon yeşili renkler, açık temada okunabilirliği artıran standart `SuccessBrush` (Zümrüt Yeşili) ile değiştirildi.
+- **Profil Sayısı Artırıldı & UI Deneyimi Yenilendi**:
+  - Ücretsiz kullanıcılar için profil limiti **5**, Premium kullanıcılar için **12** olarak güncellendi.
+  - **Profil Izgarası "Tek Akış" (Unified Flow)**: Profiller ve "Profil Ekle" butonu tek bir koleksiyonda birleştirilerek satır bazlı hizalanma sorunları tamamen giderildi. Artık buton, profillerle birlikte doğal bir şekilde akar.
+  - **Akıllı Kompakt Mod (Compact Mode)**: 6'dan fazla profil olduğunda kartlar otomatik olarak **%85 oranında küçülür**, bu sayede 12 profil bile ekranda düzenli ve estetik durur.
+  - **6'lı Izgara Düzeni**: Bir satırda en fazla **6 profil** olacak şekilde tasarım optimize edildi; 12 profilde 6+6'lık mükemmel bir matris görünümü sağlandı.
+- **Premium Özelliklerin Senkronizasyonu**:
+  - Lisans ve özellik kısıtlama mantığı (`LicenseService`) elden geçirilerek mevcut uygulama yetenekleriyle %100 uyumlu hale getirildi. 
+  - Fake/olmayan özellikler (Multiview, Timeshift vb.) kaldırıldı; herkese açık olanlar (Alt yazı/Ses kanalı seçimi, Favoriler vb.) doğru kategorilere tasnif edildi.
+  - `UpsellWindow` üzerinde gerçek Free/Premium farkları net ve şeffaf bir şekilde yansıtıldı.
+
+
 ### ✨ Yeni Özellikler
 - **Çoklu Özel EPG Desteği** (2026-03-25):
   - Artık Ayarlar > EPG sekmesinden **10 adede kadar özel EPG URL'si** eklenebilir.

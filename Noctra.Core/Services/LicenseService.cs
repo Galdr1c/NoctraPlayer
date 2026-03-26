@@ -15,9 +15,12 @@ public class LicenseService : ObservableObject, ILicenseService
     // ==========================================
     // FEATURE NAMES
     // ==========================================
+    public static class Features
+    {
         public const string AdFree = "ad_free";
         public const string EpgAutoRefresh = "epg_auto_refresh";
         public const string ResumePlayback = "resume_playback";
+        public const string SleepTimer = "sleep_timer";
     }
 
     // ==========================================
@@ -79,6 +82,7 @@ public class LicenseService : ObservableObject, ILicenseService
             Features.AdFree => tier == SubscriptionTier.Premium,
             Features.EpgAutoRefresh => tier == SubscriptionTier.Premium,
             Features.ResumePlayback => tier == SubscriptionTier.Premium,
+            Features.SleepTimer => tier == SubscriptionTier.Premium,
             
             _ => false
         };
@@ -87,13 +91,18 @@ public class LicenseService : ObservableObject, ILicenseService
     public bool IsWithinLimit(string limitName, int currentCount)
     {
         var tier = _currentSubscription.Tier;
-        if (tier == SubscriptionTier.Premium) return true;
         
         int maxAllowed = limitName switch
         {
-            Limits.Profiles => TierLimits.Free.MaxProfiles,
-            Limits.M3UAccounts => TierLimits.Free.MaxM3UAccounts,
-            Limits.CustomEpgUrls => TierLimits.Free.MaxCustomEpgUrls,
+            Limits.Profiles => tier == SubscriptionTier.Premium 
+                ? TierLimits.Premium.MaxProfiles 
+                : TierLimits.Free.MaxProfiles,
+            Limits.M3UAccounts => tier == SubscriptionTier.Premium 
+                ? TierLimits.Premium.MaxM3UAccounts 
+                : TierLimits.Free.MaxM3UAccounts,
+            Limits.CustomEpgUrls => tier == SubscriptionTier.Premium 
+                ? TierLimits.Premium.MaxCustomEpgUrls 
+                : TierLimits.Free.MaxCustomEpgUrls,
             _ => int.MaxValue
         };
 
@@ -103,12 +112,18 @@ public class LicenseService : ObservableObject, ILicenseService
     public int GetLimit(string limitName)
     {
         var tier = _currentSubscription.Tier;
-        if (tier == SubscriptionTier.Premium) return int.MaxValue;
         
         return limitName switch
         {
-            Limits.Profiles => TierLimits.Free.MaxProfiles,
-            Limits.M3UAccounts => TierLimits.Free.MaxM3UAccounts,
+            Limits.Profiles => tier == SubscriptionTier.Premium 
+                ? TierLimits.Premium.MaxProfiles 
+                : TierLimits.Free.MaxProfiles,
+            Limits.M3UAccounts => tier == SubscriptionTier.Premium 
+                ? TierLimits.Premium.MaxM3UAccounts 
+                : TierLimits.Free.MaxM3UAccounts,
+            Limits.CustomEpgUrls => tier == SubscriptionTier.Premium 
+                ? TierLimits.Premium.MaxCustomEpgUrls 
+                : TierLimits.Free.MaxCustomEpgUrls,
             _ => int.MaxValue
         };
     }

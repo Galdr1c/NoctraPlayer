@@ -670,12 +670,17 @@
                             </StackPanel>
 
                     <!-- DEVELOPER TOOLS SECTION -->
-                    <Border Background="#0D00FF00" BorderBrush="#3300FF00" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,24,0,0"
+                    <Border Background="{DynamicResource SuccessBackgroundBrush}" 
+                            BorderBrush="{DynamicResource SuccessBrush}" Opacity="0.8"
+                            BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,24,0,0"
                             IsVisible="{Binding IsDeveloperModeActive}">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
-                                <materialIcons:MaterialIcon Kind="CodeBraces" Width="20" Height="20" Foreground="#00FF00"/>
-                                <TextBlock Text="Geliştirici Araçları" FontWeight="Bold" Foreground="#00FF00" FontSize="16" VerticalAlignment="Center"/>
+                                <materialIcons:MaterialIcon Kind="CodeBraces" Width="20" Height="20" 
+                                                            Foreground="{DynamicResource SuccessBrush}"/>
+                                <TextBlock Text="Geliştirici Araçları" FontWeight="Bold" 
+                                           Foreground="{DynamicResource SuccessBrush}" FontSize="16" 
+                                           VerticalAlignment="Center"/>
                             </StackPanel>
                             
                             <Border Background="{DynamicResource Surface1Brush}" CornerRadius="6" Padding="12">
@@ -687,9 +692,9 @@
                                     <Button Grid.Column="1" 
                                             Content="Toggle Premium" 
                                             Command="{Binding TogglePremiumCommand}" 
-                                            Background="#1A00FF00" 
-                                            Foreground="#00FF00"
-                                            BorderBrush="#3300FF00"
+                                            Background="{DynamicResource SuccessBackgroundBrush}" 
+                                            Foreground="{DynamicResource SuccessBrush}"
+                                            BorderBrush="{DynamicResource SuccessBrush}"
                                             BorderThickness="1"
                                             Padding="12,6" 
                                             CornerRadius="4"
