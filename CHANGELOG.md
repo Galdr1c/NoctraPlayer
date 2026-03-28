@@ -8,6 +8,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### 💄 Arayüz ve Kullanıcı Deneyimi (2026-03-28)
+- **Profil Sınırı Kontrolü**: 12 profile ulaşıldığında "Profil Ekle" butonunun hala görünmesi sorunu giderildi. Artık mutlak sınıra ulaşıldığında (+) butonu otomatik olarak gizleniyor.
+
 ### 🎨 Arayüz İyileştirmeleri (2026-03-28)
 - **Xtream ve Stalker Yükleme Ekranı Düzelmesi**: 
   - Portal yüklemesi sırasında kanalların "İçerik yükleniyor..." (dummy channels) durumunda takılı kalması ve ancak sayfa değiştirince düzelmesi sorunu giderildi.

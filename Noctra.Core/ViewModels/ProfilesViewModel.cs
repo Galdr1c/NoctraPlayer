@@ -133,8 +133,15 @@ public partial class ProfilesViewModel : ObservableObject
             return;
         }
 
-        // Premium users only see the add button if they haven't reached the hard limit (12).
-        // Free users always see it (unless in manage mode) to trigger the Upsell window.
+        // Eğer mutlak üst sınıra (12) ulaşıldıysa, butonu her durumda gizle.
+        if (Profiles.Count >= TierLimits.Premium.MaxProfiles)
+        {
+            ShowAddButton = false;
+            return;
+        }
+
+        // Premium değilse, upsell ekranını tetiklemek için buton görünmeye devam eder 
+        // (ancak yukarıdaki 12 sınırı burada da geçerlidir).
         if (_licenseService.CurrentTier == SubscriptionTier.Premium)
         {
             ShowAddButton = Profiles.Count < TierLimits.Premium.MaxProfiles;

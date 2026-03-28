@@ -70,7 +70,7 @@ public class ContentDownloadService : IContentDownloadService
         var normalizedSource = request.SourceUrl.Trim().Trim('"', '\'');
         if (IsLocalFilePath(normalizedSource))
         {
-            return new DownloadContentResult(true, true, "Icerik zaten yerel indirildi.");
+            return new DownloadContentResult(true, true, "İçerik zaten yerel indirildi.");
         }
 
         using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
@@ -87,10 +87,10 @@ public class ContentDownloadService : IContentDownloadService
         {
             if (duplicate.IsCompleted)
             {
-                return new DownloadContentResult(true, true, "Icerik daha once indirildi.", duplicate.Id);
+                return new DownloadContentResult(true, true, "İçerik daha önce indirildi.", duplicate.Id);
             }
 
-            return new DownloadContentResult(true, true, "Indirme zaten kuyrukta.", duplicate.Id);
+            return new DownloadContentResult(true, true, "İndirme zaten kuyrukta.", duplicate.Id);
         }
 
         var item = new DownloadItem
@@ -100,7 +100,7 @@ public class ContentDownloadService : IContentDownloadService
             ChannelId = request.ChannelId > 0 ? request.ChannelId : null,
             EpisodeId = request.EpisodeId > 0 ? request.EpisodeId : null,
             ChannelType = request.ItemType == DownloadItemType.SeriesEpisode ? ChannelType.Series : ChannelType.VOD,
-            DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? "Icerik" : request.DisplayName.Trim(),
+            DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? "İçerik" : request.DisplayName.Trim(),
             PosterUrl = request.PosterUrl,
             SourceUrl = normalizedSource,
             AudioTracksJson = SerializeTrackList(request.AudioTracks),
@@ -125,7 +125,7 @@ public class ContentDownloadService : IContentDownloadService
 
         EnsureQueueWorkerStarted();
         DownloadsChanged?.Invoke(this, EventArgs.Empty);
-        return new DownloadContentResult(true, false, "Indirme kuyruga eklendi.", item.Id);
+        return new DownloadContentResult(true, false, "İndirme kuyruğa eklendi.", item.Id);
     }
 
     public Task<string> ResolvePlayableUrlAsync(
@@ -566,7 +566,7 @@ public class ContentDownloadService : IContentDownloadService
             using var response = await SendFirstSuccessfulRequestAsync(candidates, resumedBytes, localCts.Token);
             if (response == null)
             {
-                await MarkInterruptedAsPausedAsync(downloadId, "Sunucudan yanit alinamadi, devam etmek icin 'Devam Et' kullanin.");
+                await MarkInterruptedAsPausedAsync(downloadId, "Sunucudan yanıt alınamadı, devam etmek için 'Devam Et' kullanın.");
                 return;
             }
 
@@ -574,9 +574,9 @@ public class ContentDownloadService : IContentDownloadService
             {
                 var errorMsg = response.StatusCode switch
                 {
-                    System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden => "Yetkisiz erisim. Hesap suresi dolmus veya iptal edilmis olabilir.",
-                    System.Net.HttpStatusCode.NotFound => "Icerik bulunamadi. Kaynak silinmis veya saglayici degistirilmis olabilir.",
-                    _ => $"Sunucu hatasi: {(int)response.StatusCode}"
+                    System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden => "Yetkisiz erişim. Hesap süresi dolmuş veya iptal edilmiş olabilir.",
+                    System.Net.HttpStatusCode.NotFound => "İçerik bulunamadı. Kaynak silinmiş veya sağlayıcı değiştirilmiş olabilir.",
+                    _ => $"Sunucu hatası: {(int)response.StatusCode}"
                 };
                 
                 // Clear any auto resume attempts so it doesn't loop
@@ -657,7 +657,7 @@ public class ContentDownloadService : IContentDownloadService
 
             if (downloaded <= 0)
             {
-                await MarkFailedAsync(downloadId, "Indirme tamamlanamadi (bos dosya).");
+                await MarkFailedAsync(downloadId, "İndirme tamamlanamadı (boş dosya).");
                 TryDeleteFile(plainTempPath);
                 TryDeleteFile(finalPath);
                 return;
@@ -707,7 +707,7 @@ public class ContentDownloadService : IContentDownloadService
             {
                 // Network timeout/interruption can also throw OperationCanceledException.
                 // Do not delete artifacts unless user explicitly canceled.
-                await MarkInterruptedAsPausedAsync(downloadId, "Baglanti kesildi, devam etmek icin 'Devam Et' kullanin.");
+                await MarkInterruptedAsPausedAsync(downloadId, "Bağlantı kesildi, devam etmek için 'Devam Et' kullanın.");
             }
         }
         catch (Exception ex)
@@ -720,7 +720,7 @@ public class ContentDownloadService : IContentDownloadService
             else
             {
                 _autoResumeAttempts.TryRemove(downloadId, out _);
-                await MarkInterruptedAsPausedAsync(downloadId, UserFriendlyErrorMessage.WithPrefix("Indirme durduruldu", ex));
+                await MarkInterruptedAsPausedAsync(downloadId, UserFriendlyErrorMessage.WithPrefix("İndirme durduruldu", ex));
             }
         }
         finally
@@ -1472,7 +1472,7 @@ public class ContentDownloadService : IContentDownloadService
 
         if (!isUnmetered)
         {
-            message = "Sadece Wi-Fi veya Ethernet uzerinden indirme yapilabilir (ayarlardan degistirilebilir).";
+            message = "Sadece Wi-Fi veya Ethernet üzerinden indirme yapılabilir (ayarlardan değiştirilebilir).";
             return false;
         }
 

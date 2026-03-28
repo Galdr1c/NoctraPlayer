@@ -4,7 +4,7 @@ namespace Noctra.Services;
 
 public static class UserFriendlyErrorMessage
 {
-    private const string DefaultMessage = "Bilinmeyen bir hata olustu. Lutfen tekrar deneyin.";
+    private const string DefaultMessage = "Bilinmeyen bir hata oluştu. Lütfen tekrar deneyin.";
 
     public static string WithPrefix(string prefix, Exception? ex, string? fallback = null)
         => WithPrefix(prefix, FromException(ex, fallback));
@@ -44,12 +44,12 @@ public static class UserFriendlyErrorMessage
         {
             if (http.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
             {
-                return "Kimlik dogrulama hatasi. Bilgilerinizi kontrol edip tekrar deneyin.";
+                return "Kimlik doğrulama hatası. Bilgilerinizi kontrol edip tekrar deneyin.";
             }
 
             if (http.StatusCode == HttpStatusCode.NotFound)
             {
-                return "Icerik bulunamadi. Kaynak guncel olmayabilir. (404)";
+                return "İçerik bulunamadı. Kaynak güncel olmayabilir. (404)";
             }
 
             if (http.StatusCode is HttpStatusCode.BadGateway
@@ -57,20 +57,20 @@ public static class UserFriendlyErrorMessage
                 or HttpStatusCode.GatewayTimeout
                 or HttpStatusCode.InternalServerError)
             {
-                return $"Sunucuya su anda ulasilamiyor. Biraz sonra tekrar deneyin. ({(int)http.StatusCode})";
+                return $"Sunucuya şu anda ulaşılamıyor. Biraz sonra tekrar deneyin. ({(int)http.StatusCode})";
             }
 
-            return "Ag hatasi olustu. Baglantinizi kontrol edip tekrar deneyin.";
+            return "Ağ hatası oluştu. Bağlantınızı kontrol edip tekrar deneyin.";
         }
 
         if (baseException is UnauthorizedAccessException)
         {
-            return "Erisim izni hatasi. Dosya izinlerini kontrol edip tekrar deneyin.";
+            return "Erişim izni hatası. Dosya izinlerini kontrol edip tekrar deneyin.";
         }
 
         if (baseException is InvalidDataException)
         {
-            return "Dosya dogrulamasi basarisiz. Icerigi yeniden indirip tekrar deneyin.";
+            return "Dosya doğrulama hatası. İçeriği yeniden indirip tekrar deneyin.";
         }
 
         if (baseException is InvalidOperationException invalidOpEx)
@@ -95,7 +95,7 @@ public static class UserFriendlyErrorMessage
 
         if (baseException is IOException ioEx)
         {
-            return FromText(ioEx.Message, "Dosya islemi sirasinda hata olustu. Disk alanini ve dosya erisimini kontrol edin.");
+            return FromText(ioEx.Message, "Dosya işlemi sırasında hata oluştu. Disk alanını ve dosya erişimini kontrol edin.");
         }
 
         if (baseException.GetType().Name == "SocketException")
@@ -131,7 +131,7 @@ public static class UserFriendlyErrorMessage
                 "sunucudan yanit alinamadi",
                 "baglanti kesildi"))
         {
-            return "Ag baglantisi kesildi. Lutfen tekrar deneyin.";
+            return "Ağ bağlantısı kesildi. Lütfen tekrar deneyin.";
         }
 
         if (ContainsAny(normalized,
@@ -140,7 +140,7 @@ public static class UserFriendlyErrorMessage
                 "zaman asimi",
                 "taskcanceledexception"))
         {
-            return "Ag zaman asimina ugradi. Baglantinizi kontrol edip tekrar deneyin.";
+            return "Ağ zaman aşımına uğradı. Bağlantınızı kontrol edip tekrar deneyin.";
         }
 
         if (ContainsAny(normalized,
@@ -151,17 +151,17 @@ public static class UserFriendlyErrorMessage
                 "kimlik dogrulama basarisiz",
                 "token yenilenemedi"))
         {
-            return "Kimlik dogrulama hatasi. Bilgilerinizi kontrol edip tekrar deneyin.";
+            return "Kimlik doğrulama hatası. Bilgilerinizi kontrol edip tekrar deneyin.";
         }
 
         if (ContainsAny(normalized, "404", "not found", "bulunamadi"))
         {
-            return "Icerik bulunamadi. Kaynak guncel olmayabilir. (404)";
+            return "İçerik bulunamadı. Kaynak güncel olmayabilir. (404)";
         }
 
         if (ContainsAny(normalized, "500", "502", "503", "504", "server error", "sunucu"))
         {
-            return "Sunucu hatasi olustu. Biraz sonra tekrar deneyin.";
+            return "Sunucu hatası oluştu. Biraz sonra tekrar deneyin.";
         }
 
         if (ContainsAny(normalized,
@@ -171,7 +171,7 @@ public static class UserFriendlyErrorMessage
                 "desteklenmeyen dosya formati",
                 "sifreli veri yok"))
         {
-            return "Dosya dogrulamasi basarisiz. Icerigi yeniden indirip tekrar deneyin.";
+            return "Dosya doğrulama hatası. İçeriği yeniden indirip tekrar deneyin.";
         }
 
         if (ContainsAny(normalized,
@@ -180,7 +180,7 @@ public static class UserFriendlyErrorMessage
                 "not enough space",
                 "there is not enough space"))
         {
-            return "Yetersiz depolama alani. Lutfen disk alanini kontrol edip tekrar deneyin.";
+            return "Yetersiz depolama alanı. Lütfen disk alanını kontrol edip tekrar deneyin.";
         }
 
         if (ContainsAny(normalized,
@@ -188,12 +188,12 @@ public static class UserFriendlyErrorMessage
                 "file is being used",
                 "dosya kullanimda"))
         {
-            return "Dosya baska bir islem tarafindan kullaniliyor. Biraz sonra tekrar deneyin.";
+            return "Dosya başka bir işlem tarafından kullanılıyor. Biraz sonra tekrar deneyin.";
         }
 
         if (ContainsAny(normalized, "ag baglantisi bulunamadi", "network"))
         {
-            return "Ag hatasi olustu. Baglantinizi kontrol edip tekrar deneyin.";
+            return "Ağ hatası oluştu. Bağlantınızı kontrol edip tekrar deneyin.";
         }
 
         if (ContainsAny(normalized, "0 program", "0 programs", "program bulunamadi"))

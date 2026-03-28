@@ -240,7 +240,7 @@ public partial class MainWindow : Window
         {
             StartupDiagnostics.LogException("Media playback failed in MainWindow_OnMediaSelected.", ex);
             PlayerArea.IsVisible = false;
-            _mainViewModel.StatusMessage = UserFriendlyErrorMessage.WithPrefix("Icerik oynatilamadi", ex);
+            _mainViewModel.StatusMessage = UserFriendlyErrorMessage.WithPrefix("İçerik oynatılamadı", ex);
         }
     }
 
