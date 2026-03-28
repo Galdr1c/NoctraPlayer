@@ -190,17 +190,20 @@ public partial class PlaylistService : IPlaylistService
 
         try
         {
+            // Otomatik organizasyon: dedup, kategorize, sıralama
+            var organizedChannels = _organizer.Organize(channels.ToList());
+            
+            playlist.ChannelCount = organizedChannels.Count;
             context.Playlists.Add(playlist);
             await context.SaveChangesAsync();
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] Created playlist with ID: {playlist.Id}");
 
             // Single-transaction bulk insert using Raw ADO.NET (extreme performance)
-            var channelList = channels.ToList();
-            foreach (var channel in channelList)
+            foreach (var channel in organizedChannels)
             {
                 channel.PlaylistId = playlist.Id;
             }
-            await FastSqliteBulkInsertAsync(context, channelList);
+            await FastSqliteBulkInsertAsync(context, organizedChannels);
 
             // Fire-and-forget: aggregation runs in background, UI unblocked
             var aggregationPlaylistId = playlist.Id;
@@ -386,11 +389,14 @@ public partial class PlaylistService : IPlaylistService
 
         using var context = await _contextFactory.CreateDbContextAsync();
 
-        foreach (var channel in channels)
+        // Otomatik organizasyon: dedup, kategorize, sıralama
+        var organized = _organizer.Organize(channels.ToList());
+
+        foreach (var channel in organized)
             channel.PlaylistId = playlistId;
 
         // Mevcut FastSqliteBulkInsertAsync metodunu kullan
-        await FastSqliteBulkInsertAsync(context, channels);
+        await FastSqliteBulkInsertAsync(context, organized);
 
         // Kanal sayısını güncelle
         await context.Playlists
@@ -429,10 +435,13 @@ public partial class PlaylistService : IPlaylistService
                     .ExecuteDeleteAsync();
             }
 
-            foreach (var channel in realChannels)
+            // Otomatik organizasyon: dedup, kategorize, sıralama
+            var organized = _organizer.Organize(realChannels.ToList());
+
+            foreach (var channel in organized)
                 channel.PlaylistId = playlistId;
 
-            await FastSqliteBulkInsertAsync(context, realChannels);
+            await FastSqliteBulkInsertAsync(context, organized);
         }
 
         // Kanal sayısını güncelle
@@ -513,6 +522,9 @@ public partial class PlaylistService : IPlaylistService
                 }
             }
             
+            // Otomatik organizasyon: dedup, kategorize, sıralama
+            var organized = _organizer.Organize(channels.ToList());
+
             var playlist = new Playlist
             {
                 Name = name,
@@ -520,7 +532,7 @@ public partial class PlaylistService : IPlaylistService
                 ProfileId = profileId,
                 CreatedAt = DateTime.UtcNow,
                 LastUpdated = DateTime.UtcNow,
-                ChannelCount = channels.Count,
+                ChannelCount = organized.Count,
                 IsActive = true,
                 EpgUrl = detectedEpgUrl
             };
@@ -530,11 +542,11 @@ public partial class PlaylistService : IPlaylistService
             await context.SaveChangesAsync();
 
             // Single-transaction bulk insert using Raw ADO.NET (extreme performance)
-            foreach (var channel in channels)
+            foreach (var channel in organized)
             {
                 channel.PlaylistId = playlist.Id;
             }
-            await FastSqliteBulkInsertAsync(context, channels);
+            await FastSqliteBulkInsertAsync(context, organized);
 
             // Fire-and-forget: aggregation runs in background, UI unblocked
             var fileAggregationPlaylistId = playlist.Id;

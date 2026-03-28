@@ -76,13 +76,16 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
 
         var originalCount = channels.Count;
 
-        // Stage 1: Remove duplicates (keeps highest quality)
+        // Stage 1: Fix misplaced Live channels (Series appearing as Live) before deduplication
+        FixChannelTypes(channels);
+
+        // Stage 2: Remove duplicates (keeps highest quality)
         var organized = RemoveDuplicates(channels);
 
-        // Stage 2: Auto-categorize uncategorized channels
+        // Stage 3: Auto-categorize uncategorized channels
         AutoCategorize(organized);
 
-        // Stage 3: Normalize group names
+        // Stage 4: Normalize group names
         NormalizeGroupNames(organized);
 
         // Stage 4: Smart sort
@@ -175,6 +178,71 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
     }
 
     /// <summary>
+    /// Canlı TV kategorilerine yanlışlıkla karışmış dizi (Series) gruplarını tespit edip tipini düzeltir.
+    /// </summary>
+    public void FixChannelTypes(List<Channel> channels)
+    {
+        var groups = channels.GroupBy(c => c.GroupTitle ?? "Uncategorized").ToList();
+        foreach (var group in groups)
+        {
+            var isLiveGroup = group.Any(c => c.Type == ChannelType.Live);
+            if (!isLiveGroup) continue;
+
+            // Kategori ismi bazlı tespit (Daha güvenilir bir işaret)
+            var groupName = group.Key;
+            
+            // (S| pattern i Xtream series için çok spesifiktir, doğrudan kabul et.
+            var hasSeriesMarker = groupName.Contains("(S|", StringComparison.OrdinalIgnoreCase);
+            
+            // "Series" anahtar kelimesi ise ambiguous olabilir, Live TV belirteçlerini kontrol et.
+            var hasSeriesKeywords = groupName.Contains("Series", StringComparison.OrdinalIgnoreCase) || 
+                                     groupName.Contains("Série", StringComparison.OrdinalIgnoreCase) ||
+                                     groupName.Contains("Dizi", StringComparison.OrdinalIgnoreCase);
+
+            var hasLiveKeywords = groupName.Contains("CINE", StringComparison.OrdinalIgnoreCase) || 
+                                   groupName.Contains("MOVIES", StringComparison.OrdinalIgnoreCase) ||
+                                   groupName.Contains("FILMS", StringComparison.OrdinalIgnoreCase) ||
+                                   groupName.Contains("RADIO", StringComparison.OrdinalIgnoreCase) ||
+                                   groupName.Contains("SPOR", StringComparison.OrdinalIgnoreCase) ||
+                                   groupName.Contains("SPORT", StringComparison.OrdinalIgnoreCase) ||
+                                   groupName.Contains("NEWS", StringComparison.OrdinalIgnoreCase) ||
+                                   groupName.Contains("|", StringComparison.OrdinalIgnoreCase) && !hasSeriesMarker; // ES | SERIES gibi durumlar genellikle Live'dır.
+
+            var isSeriesGroupByName = hasSeriesMarker || (hasSeriesKeywords && !hasLiveKeywords);
+
+            if (isSeriesGroupByName)
+            {
+                foreach (var channel in group)
+                {
+                    channel.Type = ChannelType.Series;
+                }
+                continue;
+            }
+
+            // Dizi formatına uygun olan kanal sayısını hesapla
+            int seriesVotes = 0;
+            int total = 0;
+            foreach (var channel in group)
+            {
+                total++;
+                if (SeriesInfoParser.IsSeries(channel.Name))
+                {
+                    seriesVotes++;
+                }
+            }
+
+            // Gruptaki içeriklerin %60'ından fazlası S01E01 vb. dizi formatındaysa bu bir Dizi grubudur
+            if (total > 0 && (double)seriesVotes / total > 0.6)
+            {
+                foreach (var channel in group)
+                {
+                    channel.Type = ChannelType.Series;
+                }
+            }
+        }
+    }
+
+    /// <summary>
     /// Tutarsız grup isimlerini standart Türkçe isimlere dönüştürür
     /// </summary>
     public void NormalizeGroupNames(List<Channel> channels)
@@ -226,11 +294,19 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
     /// </summary>
     private static string GenerateSimilarityKey(Channel channel)
     {
+        // Temel anahtar: Temizlenmiş ve normalize edilmiş kanal adı
         var key = SeriesInfoParser.NormalizeKey(channel.Name);
         
-        // Grup bilgisini de ekleyerek farklı dillerdeki aynı isimli yayınları koru
-        if (!string.IsNullOrEmpty(channel.GroupTitle))
+        // Eğer StreamUrl varsa, URL bazlı tekilleştirme en güvenilisidir.
+        // Aynı isimde farklı URL'ler farklı yayınları temsil edebilir (farklı diller, farklı kaynaklar).
+        // Ancak aynı URL'ye sahip içerikler kesinlikle aynıdır.
+        if (!string.IsNullOrEmpty(channel.StreamUrl))
         {
+            key += $"|url|{channel.StreamUrl.Trim().ToLowerInvariant()}";
+        }
+        else if (!string.IsNullOrEmpty(channel.GroupTitle))
+        {
+            // URL yoksa grup bilgisini de ekleyerek farklı dillerdeki aynı isimli yayınları koru
             key += $"|{NormalizeIdentityToken(channel.GroupTitle)}";
         }
 
@@ -240,11 +316,6 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
             if (parsed.Season > 0 || parsed.Episode > 0)
             {
                 key += $" s{parsed.Season:00}e{parsed.Episode:00}";
-            }
-            else
-            {
-                // Fallback for unparseable series channels: ensure uniqueness so we don't lose episodes
-                key += $"|fallback|{channel.StreamUrl}";
             }
         }
         return key;
@@ -261,9 +332,22 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
     /// </summary>
     private static bool IsHigherQuality(Channel a, Channel b)
     {
+        // 1. Tip önceliği (Dizi/VOD, Live'dan daha değerlidir eğer bunlar duplicate ise)
+        if (a.Type != b.Type)
+        {
+            if (a.Type == ChannelType.Series && b.Type != ChannelType.Series) return true;
+            if (a.Type == ChannelType.VOD && b.Type == ChannelType.Live) return true;
+        }
+
+        // 2. Çözünürlük/Kalite tagi önceliği
         var aIndex = GetQualityIndex(a.Name);
         var bIndex = GetQualityIndex(b.Name);
-        return aIndex < bIndex; // Lower index = higher quality
+        
+        if (aIndex < bIndex) return true;
+        if (aIndex > bIndex) return false;
+
+        // 3. Tarih önceliği (Daha yeni eklenen veya güncellenen daha iyidir)
+        return a.Id > b.Id;
     }
 
     private static int GetQualityIndex(string name)

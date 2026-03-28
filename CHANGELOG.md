@@ -8,6 +8,19 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### 🛠️ Xtream ve M3U İçerik Düzenleme İyileştirmeleri (2026-03-28)
+- **Akıllı Seri Kategorizasyonu (False-Positive Fix)**: 
+  - Canlı TV kategorileri arasına sızan "(S|UK)" gibi dizi grupları artık otomatik olarak tespit edilip **Diziler** sekmesine taşınarak Live TV listesi temizleniyor.
+  - "ES CINE - SERIES" veya "SPOR SERIES" gibi içinde "Series" kelimesi geçen ancak aslında **Canlı TV kanalı** olan paketlerin yanlışlıkla diziye taşınması engellendi. (CINE, MOVIES, SPOR, NEWS vb. anahtar kelimelerle koruma sağlandı).
+- **Gelişmiş İsim Temizleme (Prefix Removal)**: 
+  - Xtream üzerinden gelen içeriklerdeki `(EN-)`, `(TR-)`, `(FR-)` gibi ülke ön ekleri artık kanal ve dizi isimlerinden otomatik olarak temizlenerek daha temiz bir görünüm sağlanıyor.
+- **Mükerrer İçerik Kontrolü (Cross-Type Deduplication)**: 
+  - Aynı yayın adresine (URL) sahip içerikler hem Canlı TV hem de Dizi/VOD olarak gelirse, sistem artık bunları otomatik olarak tekilleştiriyor ve **Dizi/VOD** tipine öncelik vererek kategori kirliliğini önlüyor.
+- **Veri Giriş Hattı (Ingestion Pipeline) Güçlendirildi**: 
+  - Xtream ve M3U içeriklerinin yüklendiği tüm yollar (Lazy load, parça parça ekleme, dosya yükleme) organizasyon pipeline'ına bağlandı. Bu sayede tüm içerikler veritabanına girmeden önce kategorize ediliyor ve temizleniyor.
+- **Doğrulama ve Stabilite**: 
+  - Yeni kategorizasyon ve temizleme mantığını doğrulayan kapsamlı bir test seti (`SeriesLeakageTests.cs`) projeye dahil edildi.
+
 ### ✨ Yeni Özellikler ve Geliştirmeler (2026-03-27)
 - **Xtream Dizi Lazy Loading & S1E1 Hata Çözümü**: Xtream Codes servisinden gelen dizilerin sadece "1 Sezon 1 Bölüm" olarak görünmesine neden olan mimari hata giderildi. Artık diziler ilk yüklemede sadece birer "Series" kaydı olarak oluşturulur (Placeholder) ve kullanıcı diziyi açtığında gerçek sezon ve bölüm bilgileri Xtream API'den dinamik (lazy load) olarak çekilir.
 - **Dizi Arayüzü & Performans Optimizasyonu**:
