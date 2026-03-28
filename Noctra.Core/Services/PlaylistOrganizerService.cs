@@ -197,18 +197,29 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
             // "Series" anahtar kelimesi ise ambiguous olabilir, Live TV belirteçlerini kontrol et.
             var hasSeriesKeywords = groupName.Contains("Series", StringComparison.OrdinalIgnoreCase) || 
                                      groupName.Contains("Série", StringComparison.OrdinalIgnoreCase) ||
-                                     groupName.Contains("Dizi", StringComparison.OrdinalIgnoreCase);
+                                     groupName.Contains("Dizi", StringComparison.OrdinalIgnoreCase) ||
+                                     groupName.Contains("Bölüm", StringComparison.OrdinalIgnoreCase);
 
-            var hasLiveKeywords = groupName.Contains("CINE", StringComparison.OrdinalIgnoreCase) || 
-                                   groupName.Contains("MOVIES", StringComparison.OrdinalIgnoreCase) ||
-                                   groupName.Contains("FILMS", StringComparison.OrdinalIgnoreCase) ||
-                                   groupName.Contains("RADIO", StringComparison.OrdinalIgnoreCase) ||
-                                   groupName.Contains("SPOR", StringComparison.OrdinalIgnoreCase) ||
+            // "Koleksiyon" veya doğrudan dizi arşivi belirteçleri (BEIN DİZİLER vb. durumlar için)
+            var isStrongSeriesCategory = groupName.Contains("DİZİLER", StringComparison.OrdinalIgnoreCase) || 
+                                         groupName.Contains("KOLEKSİYON", StringComparison.OrdinalIgnoreCase);
+
+            var hasLiveKeywords = groupName.Contains("SPOR", StringComparison.OrdinalIgnoreCase) || 
                                    groupName.Contains("SPORT", StringComparison.OrdinalIgnoreCase) ||
+                                   groupName.Contains("HABER", StringComparison.OrdinalIgnoreCase) ||
                                    groupName.Contains("NEWS", StringComparison.OrdinalIgnoreCase) ||
-                                   groupName.Contains("|", StringComparison.OrdinalIgnoreCase) && !hasSeriesMarker; // ES | SERIES gibi durumlar genellikle Live'dır.
+                                   groupName.Contains("RADIO", StringComparison.OrdinalIgnoreCase) ||
+                                   groupName.Contains("24/7", StringComparison.OrdinalIgnoreCase) ||
+                                   groupName.Contains("CANLI", StringComparison.OrdinalIgnoreCase) ||
+                                   groupName.Contains("LIVE", StringComparison.OrdinalIgnoreCase) ||
+                                   groupName.Contains("|", StringComparison.OrdinalIgnoreCase) ||
+                                   groupName.Contains("✅", StringComparison.OrdinalIgnoreCase) ||
+                                   groupName.Contains("FHD", StringComparison.OrdinalIgnoreCase) ||
+                                   groupName.Contains("4K", StringComparison.OrdinalIgnoreCase) ||
+                                   (groupName.Contains(" - ", StringComparison.OrdinalIgnoreCase) && !hasSeriesMarker); // TR - SERIES gibi durumlar genellikle Live'dır.
 
-            var isSeriesGroupByName = hasSeriesMarker || (hasSeriesKeywords && !hasLiveKeywords);
+            // Eğer çok güçlü bir Dizi kategorisi ismiyse (MAX DİZİLER gibi), Live keyword'leri olsa bile dizi kabul et.
+            var isSeriesGroupByName = hasSeriesMarker || isStrongSeriesCategory || (hasSeriesKeywords && !hasLiveKeywords);
 
             if (isSeriesGroupByName)
             {

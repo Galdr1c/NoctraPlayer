@@ -214,6 +214,15 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnActiveViewChanged(AppView value)
     {
+        // Görünüm değiştiğinde kategori tipini de senkronize et
+        SelectedChannelType = value switch
+        {
+            AppView.Live => ChannelType.Live,
+            AppView.Movies => ChannelType.VOD,
+            AppView.Series => ChannelType.Series,
+            _ => (ChannelType?)null
+        };
+
         OnPropertyChanged(nameof(IsContentLoading));
         OnPropertyChanged(nameof(ShowEmptyChannels));
     }
@@ -1943,7 +1952,17 @@ public partial class MainViewModel : ObservableObject
     private void UpdateGroupsForSelectedType()
     {
         var s = _settingsService.Settings;
-        var nextGroups = SelectedChannelType switch
+
+        // Eğer SelectedChannelType null ise ActiveView'den türetmeyi dene
+        var effectiveType = SelectedChannelType ?? ActiveView switch
+        {
+            AppView.Live => ChannelType.Live,
+            AppView.Movies => ChannelType.VOD,
+            AppView.Series => ChannelType.Series,
+            _ => (ChannelType?)null
+        };
+
+        var nextGroups = effectiveType switch
         {
             ChannelType.Live => _liveGroupsCache.Where(g => !s.HiddenLiveGroups.Contains(g)).ToList(),
             ChannelType.VOD => _vodGroupsCache.Where(g => !s.HiddenMovieGroups.Contains(g)).ToList(),

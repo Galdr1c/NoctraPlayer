@@ -143,4 +143,14 @@ public class SeriesInfoParserTests
         Assert.Equal("Bye Bye Birdie", SeriesInfoParser.CleanSeriesName("Bye Bye Birdie"));
         Assert.Equal("Breaking Bad", SeriesInfoParser.CleanSeriesName("Breaking Bad Breaking Bad"));
     }
+
+    [Theory]
+    [InlineData("A.B.İ.", "A.B.İ.")]
+    [InlineData("(TR-) A.B.İ.", "A.B.İ.")]
+    [InlineData("TR. A.B.İ.", "A.B.İ.")]
+    [InlineData("US | A.B.İ.", "A.B.İ.")]
+    public void CleanSeriesName_PreservesAcronymsWithDots(string title, string expected)
+    {
+        Assert.Equal(expected, SeriesInfoParser.CleanSeriesName(title));
+    }
 }

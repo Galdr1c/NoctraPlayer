@@ -418,6 +418,23 @@ public class PlaylistOrganizerServiceTests
         var result = _sut.Organize(channels);
         Assert.Equal(5, result.Count);
     }
+
+    [Theory]
+    [InlineData("TR ⭐ BEIN ⭐ TOD ⭐ MAX DİZİLER")]
+    [InlineData("BEIN DİZİLER")]
+    [InlineData("DİZİ KOLEKSİYONU")]
+    public void FixChannelTypes_StrongSeriesKeywords_ForcesSeriesType(string groupName)
+    {
+        var channels = new List<Channel>
+        {
+            Live("Yellowstone", groupName),
+            Live("Watchmen", groupName)
+        };
+
+        _sut.FixChannelTypes(channels);
+
+        Assert.All(channels, c => Assert.Equal(ChannelType.Series, c.Type));
+    }
 }
 
 // =============================================================================

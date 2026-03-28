@@ -8,6 +8,20 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### 🛠️ Xtream/Stalker İçerik Hattı Optimizasyonu (2026-03-28)
+- **Metadata Stratejisi Rafine Edildi**: 
+  - Xtream ve Stalker üzerinden gelen kaliteli sağlayıcı metadatalarının (Poster, Özet vb.) TMDB tarafından ezilmesi engellendi. `IsMetadataSufficient` kontrolü ile yeterli verisi olan içeriklerde TMDB sorgusu atlanarak API kotası korundu ve orijinal afişler önceliklendirildi.
+- **Kategorizasyon Sızıntısı (Leakage) Giderildi**:
+  - "MAX DİZİLER", "DİZİ KOLEKSİYONU" gibi aslında dizi olan ancak içerisinde "BEIN" veya "TOD" kelimesi geçtiği için yanlışlıkla **Canlı TV** sanılan gruplar için "Güçlü Dizi Anahtar Kelimesi" (Strong Series Keyword) sistemi eklendi. Bu kelimeleri içeren gruplar artık isimde ne geçerse geçsin **Diziler** sekmesine taşınıyor.
+- **Regex ve İsim Ayrıştırma İyileştirmeleri**:
+  - **Akronim Koruması**: "A.B.İ." gibi dizi isimlerinin başındaki tek harf ve nokta kombinasyonlarının (A.) "Ülke Kodu" (TR.) sanılıp silinmesi hatası giderildi. Ülke kodu temizleyicisi artık en az 2 karakter arayacak şekilde optimize edildi.
+  - **Sondaki Nokta Koruması**: Akronimlerin sonundaki noktaların (`.`) temizlik aşamasında silinmesi engellendi; "A.B.İ." ismi artık tam olarak korunuyor.
+- **Arayüz Senkronizasyon Çözümleri**:
+  - **Kategori Listesi Senkronizasyonu**: Playlist yenilendikten sonra kategori ComboBox'ının boş görünmesi sorunu giderildi. Kategori listesi artık her zaman o anki aktif sekme (Canlı/Film/Dizi) tipiyle %100 uyumlu şekilde yükleniyor.
+  - **ActiveView ve Kanal Tipi Bağlantısı**: Sol menüden sekme değiştirildiğinde, seçili kanal tipinin (`SelectedChannelType`) de otomatik olarak o sekmeye uygun hale gelmesi sağlanarak kategori filtreleme deneyimi akıcılaştırıldı.
+- **Test ve Doğrulama**:
+  - Yeni isim temizleme ve kategorizasyon mantığı için `SeriesInfoParserTests` ve `PlaylistOrganizerServiceTests` üzerine regresyon testleri eklendi.
+
 ### 💄 Arayüz ve Kullanıcı Deneyimi (2026-03-28)
 - **Profil Sınırı Kontrolü**: 12 profile ulaşıldığında "Profil Ekle" butonunun hala görünmesi sorunu giderildi. Artık mutlak sınıra ulaşıldığında (+) butonu otomatik olarak gizleniyor.
 

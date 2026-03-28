@@ -35,9 +35,10 @@ public class TmdbSyncService : ITmdbSyncService
 
     public async Task EnrichSeriesBatchAsync(List<Series> series, CancellationToken cancellationToken = default)
     {
-        // Process: never-synced series OR series whose cache was invalidated (MetadataFetchedAt cleared)
+        // Process: series that need enrichment (missing TmdbId AND don't have enough metadata from provider)
         var pending = series
-            .Where(s => (s.TmdbId == null && s.LastTmdbSync == null) || s.MetadataFetchedAt == null)
+            .Where(s => ((s.TmdbId == null && s.LastTmdbSync == null) || s.MetadataFetchedAt == null) 
+                        && !IsMetadataSufficient(s))
             .ToList();
 
         if (pending.Count == 0)
@@ -242,6 +243,28 @@ public class TmdbSyncService : ITmdbSyncService
         }
 
         await context.SaveChangesAsync(cancellationToken);
+    }
+
+    private bool IsMetadataSufficient(Series series)
+    {
+        // Provider (Xtream vb.) zaten yeterli veri gönderdiyse (Poster + Özet + Puan), 
+        // TMDB'yi "son çare" olarak bırakmak için senkronizasyonu atla.
+        if (string.IsNullOrEmpty(series.CoverUrl) || 
+            series.CoverUrl.Contains("noposter") || 
+            series.CoverUrl.Contains("placeholder") ||
+            series.CoverUrl.Contains("default"))
+        {
+            return false;
+        }
+
+        // Özet (Plot) çok kısa veya boşsa yetersizdir.
+        if (string.IsNullOrEmpty(series.Plot) || series.Plot.Length < 30)
+        {
+            return false;
+        }
+
+        // Puan bilgisi de varsa yeterli kabul et.
+        return series.Rating > 0;
     }
 
     private async Task<bool> CheckAndPurgeUnsafeSeriesAsync(AppDbContext context, Series dbSeries, CancellationToken cancellationToken)
