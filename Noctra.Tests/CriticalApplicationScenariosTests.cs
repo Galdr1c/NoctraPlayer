@@ -740,8 +740,8 @@ namespace Noctra.Tests
             var license = new LicenseService();
             license.SetTierForTesting(SubscriptionTier.Free);
 
-            Assert.False(license.IsFeatureAvailable(LicenseService.Features.MiniPlayer));
-            Assert.False(license.IsFeatureAvailable(LicenseService.Features.AudioTrackSelection));
+            Assert.False(license.IsFeatureAvailable(LicenseService.Features.AdFree));
+            Assert.False(license.IsFeatureAvailable(LicenseService.Features.SleepTimer));
             Assert.False(license.IsFeatureAvailable(LicenseService.Features.ResumePlayback));
         }
 
@@ -755,13 +755,13 @@ namespace Noctra.Tests
         }
 
         [Fact]
-        public void FreeTier_FavoriteLimit_BlocksAt50()
+        public void FreeTier_M3UAccountLimit_BlocksAt1()
         {
             var license = new LicenseService();
             license.SetTierForTesting(SubscriptionTier.Free);
 
-            Assert.False(license.IsWithinLimit(LicenseService.Limits.Favorites, 50));
-            Assert.True(license.IsWithinLimit(LicenseService.Limits.Favorites, 49));
+            Assert.False(license.IsWithinLimit(LicenseService.Limits.M3UAccounts, 1));
+            Assert.True(license.IsWithinLimit(LicenseService.Limits.M3UAccounts, 0));
         }
 
         [Fact]
@@ -769,10 +769,10 @@ namespace Noctra.Tests
         {
             var license = new LicenseService();
             license.ActivatePremium();
-            Assert.True(license.IsFeatureAvailable(LicenseService.Features.MiniPlayer));
+            Assert.True(license.IsFeatureAvailable(LicenseService.Features.AdFree));
 
             license.DeactivatePremium();
-            Assert.False(license.IsFeatureAvailable(LicenseService.Features.MiniPlayer));
+            Assert.False(license.IsFeatureAvailable(LicenseService.Features.AdFree));
         }
 
         // ════════════════════════════════════════════════════════════════════════════════

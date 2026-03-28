@@ -10,7 +10,6 @@ namespace Noctra.Models;
 public partial class Series : ObservableObject
 {
     private ICollection<Season> _seasons = new List<Season>();
-    private int? _cachedSeasonCount;
 
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
@@ -54,7 +53,9 @@ public partial class Series : ObservableObject
         set
         {
             _seasons = value ?? new List<Season>();
-            _cachedSeasonCount = null;
+            OnPropertyChanged(nameof(SeasonCountSafe));
+            OnPropertyChanged(nameof(TotalEpisodesCount));
+            OnPropertyChanged(nameof(SeriesInfoText));
         }
     }
 
@@ -67,32 +68,19 @@ public partial class Series : ObservableObject
     public string? LocalSizeText { get; set; }
 
     [NotMapped]
-    public int SeasonCountSafe
+    public int SeasonCountSafe => _seasons?.Count ?? 0;
+
+    [NotMapped]
+    public int TotalEpisodesCount => _seasons?.Sum(s => s.Episodes?.Count ?? 0) ?? 0;
+
+    [NotMapped]
+    public string? SeriesInfoText
     {
         get
         {
-            if (_cachedSeasonCount.HasValue)
-            {
-                return _cachedSeasonCount.Value;
-            }
-
-            if (_seasons == null || _seasons.Count == 0)
-            {
-                _cachedSeasonCount = 1;
-                return 1;
-            }
-
-            var seasonNumbers = new HashSet<int>();
-            foreach (var season in _seasons)
-            {
-                if (season.SeasonNumber > 0)
-                {
-                    seasonNumbers.Add(season.SeasonNumber);
-                }
-            }
-
-            _cachedSeasonCount = seasonNumbers.Count > 0 ? seasonNumbers.Count : 1;
-            return _cachedSeasonCount.Value;
+            if (string.IsNullOrWhiteSpace(Name)) return null;
+            var info = SeriesInfoParser.Parse(Name);
+            return SeriesInfoParser.GetSeriesInfoText(info.Season, info.Episode);
         }
     }
 }
@@ -198,17 +186,6 @@ public partial class Episode : ObservableObject
             if (string.IsNullOrWhiteSpace(Name)) return string.Empty;
             var info = SeriesInfoParser.Parse(Name);
             return info.SeriesName;
-        }
-    }
-
-    [NotMapped]
-    public string? SeriesInfoText
-    {
-        get
-        {
-            if (string.IsNullOrWhiteSpace(Name)) return null;
-            var info = SeriesInfoParser.Parse(Name);
-            return SeriesInfoParser.GetSeriesInfoText(info.Season, info.Episode);
         }
     }
 }

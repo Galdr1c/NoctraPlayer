@@ -114,6 +114,56 @@ namespace Noctra.Tests
             Assert.Contains("S01E01", channel.Name);
         }
 
+        [Fact]
+        public async Task GetSeriesInfoAsync_HandlesEpisodesAsObject_ReturnsCorrectData()
+        {
+            // Arrange
+            string baseUrl = "http://series-obj.com";
+            var seriesId = 123L;
+            var episodesJson = new
+            {
+                info = new { name = "Test Series" },
+                seasons = new[] { new { season_number = 1, name = "Season 1" } },
+                episodes = new Dictionary<string, object> {
+                    { "1", new[] { new { id = "1001", episode_num = 1, title = "Ep 1" } } }
+                }
+            };
+            SetupMockByAction(baseUrl, "get_series_info", episodesJson);
+
+            // Act
+            var result = await _service.GetSeriesInfoAsync(baseUrl, "user", "pass", seriesId);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.True(result.Episodes.ContainsKey("1"));
+            Assert.Single(result.Episodes["1"]);
+            Assert.Equal(1001, result.Episodes["1"][0].Id);
+        }
+
+        [Fact]
+        public async Task GetSeriesInfoAsync_HandlesEpisodesAsArray_ReturnsCorrectData()
+        {
+            // Arrange
+            string baseUrl = "http://series-arr.com";
+            var seriesId = 456L;
+            var episodesJson = new
+            {
+                info = new { name = "Test Series Array" },
+                seasons = new[] { new { season_number = 1, name = "Season 1" } },
+                episodes = new[] { new { id = "2001", episode_num = 1, title = "Ep 1" } }
+            };
+            SetupMockByAction(baseUrl, "get_series_info", episodesJson);
+
+            // Act
+            var result = await _service.GetSeriesInfoAsync(baseUrl, "user", "pass", seriesId);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.True(result.Episodes.ContainsKey("1")); // Defaulted to "1" in our fix
+            Assert.Single(result.Episodes["1"]);
+            Assert.Equal(2001, result.Episodes["1"][0].Id);
+        }
+
         private void SetupMockByAction(string baseUrl, string? action, object responseData)
         {
             var json = JsonSerializer.Serialize(responseData);

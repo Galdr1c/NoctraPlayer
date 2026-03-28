@@ -8,6 +8,26 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### ✨ Yeni Özellikler ve Geliştirmeler (2026-03-27)
+- **Xtream Dizi Lazy Loading & S1E1 Hata Çözümü**: Xtream Codes servisinden gelen dizilerin sadece "1 Sezon 1 Bölüm" olarak görünmesine neden olan mimari hata giderildi. Artık diziler ilk yüklemede sadece birer "Series" kaydı olarak oluşturulur (Placeholder) ve kullanıcı diziyi açtığında gerçek sezon ve bölüm bilgileri Xtream API'den dinamik (lazy load) olarak çekilir.
+- **Dizi Arayüzü & Performans Optimizasyonu**:
+  - **UI Rafinasyonu (SeriesCard)**: Dizi kartları üzerindeki (başta hatalı/eksik olabilen) sezon sayısı bilgisi kaldırılarak daha temiz bir görünüm sağlandı. Doğru bilgiler dizi detay sayfasında dinamik olarak gösterilir.
+  - **Backend Temizliği**: `Series` modelindeki karmaşık sezon sayma ve önbellekleme mantığı (`SeasonCountSafe`, `RefreshSeasonCount`) sadeleştirilerek kod karmaşıklığı azaltıldı.
+  - **Placeholder Desteği**: `MediaService` üzerinde `xtream-series://` ve `stalker-series://` gibi sanal URL şemaları desteklenerek gereksiz "hayalet" bölümlerin oluşması engellendi.
+
+### 🐞 Xtream Dizi Yükleme ve Arayüz İyileştirmeleri (2026-03-27)
+- **Xtream Dizi Detay Ayrıştırma Hatası Giderildi**: Bazı Xtream sunucularının bölüm listesini (episodes) nesne yerine dizi (Array) olarak dönmesinden kaynaklı "0 Sezon 0 Bölüm" görünme hatası çözüldü. Her iki format için de tam destek sağlandı.
+- **Gelişmiş Bölüm Kimlik Doğrulaması**: Sunucu tarafından farklı anahtarlarla (`id`, `id`, `stream_id`) gönderilen bölüm kimlikleri için akıllı eşleştirme sistemi eklendi.
+- **Dizi İsim Temizleme (Deduplication) Rafine Edildi**: "**Bang Bang Baby**" veya "**Bye Bye Birdie**" gibi meşru tekrarlara sahip dizi isimlerinin hatalı şekilde kısaltılması ("Bang Baby") engellendi. Tekrarlar artık sadece kelime uzunluğu 4'ten büyükse veya karmaşık paternler içeriyorsa temizleniyor.
+- **Boş Dizi Arayüzü (Empty State) İyileştirildi**: 
+  - Authoritative veri geldiğinde artık mevcut (tahmini) sezonlar temizlenerek, hiç içeriği olmayan dizilerde gereksiz "**Sezon 0**" görünmesi engellendi.
+  - Sunucu detay API'sinden gelen daha güncel/doğru dizi isimlerinin otomatik olarak güncellenmesi sağlandı.
+- **Model ve UI Bağlantı Güçlendirmesi**: `Series` modeline `TotalEpisodesCount` (Özet Sayı) eklendi ve UI'da sezon sayısı değişimlerinin anlık yansıması (Property Change Notification) sağlandı.
+- **Test Seti Bakımı ve Kararlılık**:
+  - `LicenseService` ve `CriticalApplicationScenariosTests` üzerindeki derleme hataları, güncel servis sabitlerine (Pro/Free Limitleri) göre güncellenerek giderildi.
+  - Yeni dizi ismi temizleme mantığı için 40 senaryolu kapsamlı test seti (`SeriesInfoParserTests`) doğrulandı.
+  - Xtream Array/Object formatları için entegrasyon testleri eklendi.
+
 ### ✨ Yeni Özellikler ve Geliştirmeler (2026-03-26)
 - **Premium UI Modernizasyonu & Kısıtlama Deneyimi**: "Kaldığım Yerden Devam Et" (Resume Dialog) ekranındaki eski "PRO" rozeti kaldırıldı ve standart Kilit ikonu ile değiştirildi. Kilitli özellikler artık tıklanamaz (Etkileşimsiz) hale getirilerek Upsell ekranının istenmeyen durumlarda açılması engellendi; Ayarlar ve Uyku Zamanlayıcısı ile tam uyum sağlandı.
 - **Açık Tema (Light Mode) İyileştirmeleri**: Geliştirici Araçları ve Premium Bypass bölümlerindeki neon yeşili renkler, açık temada okunabilirliği artıran standart `SuccessBrush` (Zümrüt Yeşili) ile değiştirildi.

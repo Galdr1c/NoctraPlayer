@@ -65,10 +65,9 @@ namespace Noctra.Tests
         // ─── Free Tier Feature Checks ─────────────────────────────────────────────────
 
         [Theory]
-        [InlineData(LicenseService.Features.Multiview)]
-        [InlineData(LicenseService.Features.MiniPlayer)]
         [InlineData(LicenseService.Features.AdFree)]
-        [InlineData(LicenseService.Features.AudioTrackSelection)]
+        [InlineData(LicenseService.Features.SleepTimer)]
+        [InlineData(LicenseService.Features.EpgAutoRefresh)]
         public void IsFeatureAvailable_AllPremiumFeatures_FreeTier_ReturnFalse(string feature)
         {
             var service = new LicenseService();
@@ -98,22 +97,22 @@ namespace Noctra.Tests
         }
 
         [Fact]
-        public void IsWithinLimit_Favorites_AtExactLimit_ReturnsFalse()
+        public void IsWithinLimit_M3UAccounts_AtExactLimit_ReturnsFalse()
         {
             var service = new LicenseService();
             service.SetTierForTesting(SubscriptionTier.Free);
 
-            // Free tier favori limiti = 50; count=50 → false
-            Assert.False(service.IsWithinLimit(LicenseService.Limits.Favorites, 50));
+            // Free tier M3U limit = 1; count=1 → false
+            Assert.False(service.IsWithinLimit(LicenseService.Limits.M3UAccounts, 1));
         }
 
         [Fact]
-        public void IsWithinLimit_Favorites_OneBelowLimit_ReturnsTrue()
+        public void IsWithinLimit_M3UAccounts_OneBelowLimit_ReturnsTrue()
         {
             var service = new LicenseService();
             service.SetTierForTesting(SubscriptionTier.Free);
 
-            Assert.True(service.IsWithinLimit(LicenseService.Limits.Favorites, 49));
+            Assert.True(service.IsWithinLimit(LicenseService.Limits.M3UAccounts, 0));
         }
 
         [Fact]
@@ -122,9 +121,9 @@ namespace Noctra.Tests
             var service = new LicenseService();
             service.SetTierForTesting(SubscriptionTier.Premium);
 
-            // Premium'da limit yok — 1000 favori de olsa true
+            // Premium'da limit yok
             Assert.True(service.IsWithinLimit(LicenseService.Limits.Profiles, 1000));
-            Assert.True(service.IsWithinLimit(LicenseService.Limits.Favorites, 1000));
+            Assert.True(service.IsWithinLimit(LicenseService.Limits.M3UAccounts, 1000));
         }
 
         // ─── DeactivatePremium ────────────────────────────────────────────────────────

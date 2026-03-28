@@ -200,8 +200,11 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _isChannelLoading;
 
-    public bool IsContentLoading => IsChannelLoading && (ActiveView == AppView.Series ? SeriesViewItems.Count == 0 : FilteredChannels.Count == 0);
-    public bool ShowEmptyChannels => !IsChannelLoading && (ActiveView == AppView.Series ? SeriesViewItems.Count == 0 : FilteredChannels.Count == 0);
+    public bool IsContentLoading => IsChannelLoading && (ActiveView == AppView.Series ? SeriesViewItems.Count == 0 : !FilteredChannels.Any(c => !IsDummyChannel(c)));
+    public bool ShowEmptyChannels => !IsChannelLoading && (ActiveView == AppView.Series ? SeriesViewItems.Count == 0 : !FilteredChannels.Any(c => !IsDummyChannel(c)));
+
+    private static bool IsDummyChannel(Channel c) =>
+        c.StreamUrl != null && (c.StreamUrl.StartsWith("xtream-dummy://") || c.StreamUrl.StartsWith("stalker-dummy://"));
 
     partial void OnIsChannelLoadingChanged(bool value)
     {
@@ -601,26 +604,28 @@ public partial class MainViewModel : ObservableObject
                                                                     },
                                                                     cancellationToken: CancellationToken.None);
 
-                                                                    _ = Task.Run(async () =>
-                                                                    {
                                                                     try
                                                                     {
-                                                                    await _mediaService.AggregateContentAsync(playlist.Id);
-                                                                    _mediaService.RaiseAggregationCompleted(playlist.Id);
+                                                                        _dispatcherService.BeginInvoke(() => StatusMessage = "Diziler ve Filmler düzenleniyor...");
+                                                                        await _mediaService.AggregateContentAsync(playlist.Id);
+                                                                        _mediaService.RaiseAggregationCompleted(playlist.Id);
                                                                     }
                                                                     catch { }
-                                                                    });
 
                                                                     _dispatcherService.BeginInvoke(() =>
                                                                     {
-                                                                    StatusMessage = "Xtream içerikleri yüklendi ✓";
-                                                                    IsChannelLoading = false;
-                                                                    ChannelLoadingProgress = 100;
+                                                                        StatusMessage = "Xtream içerikleri yüklendi ✓";
+                                                                        IsChannelLoading = false;
+                                                                        ChannelLoadingProgress = 100;
                                                                     });                                                        }
                                                         catch (Exception ex)
                                                         {
                                                             _logger?.LogDebug($"[Xtream] Error: {ex}");
-                                                            _dispatcherService.BeginInvoke(() => IsChannelLoading = false);
+                                                            _dispatcherService.BeginInvoke(() =>
+                                                            {
+                                                                StatusMessage = UserFriendlyErrorMessage.WithPrefix("Xtream sunucu hatası", ex);
+                                                                IsChannelLoading = false;
+                                                            });
                                                         }
                                                     });
                                                     break;
@@ -710,27 +715,26 @@ public partial class MainViewModel : ObservableObject
                                     progress: progress,
                                     cancellationToken: CancellationToken.None);
 
+                                // Dizi yapısını oluştur
+                                _dispatcherService.BeginInvoke(() => StatusMessage = "Diziler ve Filmler düzenleniyor...");
+                                
+                                try
+                                {
+                                    await _mediaService.AggregateContentAsync(playlist.Id);
+                                    _mediaService.RaiseAggregationCompleted(playlist.Id);
+                                }
+                                catch (Exception ex)
+                                {
+                                    System.Diagnostics.Debug.WriteLine(
+                                        $"[Stalker] AggregateContent failed: {ex.Message}");
+                                }
+
                                 // Tüm içerik yüklendi
                                 _dispatcherService.BeginInvoke(() =>
                                 {
                                     StatusMessage = $"Tüm içerikler hazır ✓";
                                     IsChannelLoading = false;
                                     ChannelLoadingProgress = 100;
-
-                                    // Dizi yapısını arka planda oluştur
-                                    _ = Task.Run(async () =>
-                                    {
-                                        try
-                                        {
-                                            await _mediaService.AggregateContentAsync(playlist.Id);
-                                            _mediaService.RaiseAggregationCompleted(playlist.Id);
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            System.Diagnostics.Debug.WriteLine(
-                                                $"[Stalker] AggregateContent failed: {ex.Message}");
-                                        }
-                                    });
                                 });
                             }
                             catch (Exception ex)
@@ -879,19 +883,26 @@ public partial class MainViewModel : ObservableObject
                 },
                 cancellationToken: CancellationToken.None);
 
-            _ = Task.Run(async () =>
+            _dispatcherService.BeginInvoke(() => StatusMessage = "Diziler ve Filmler düzenleniyor...");
+            try
             {
-                try
-                {
-                    await _mediaService.AggregateContentAsync(playlist.Id);
-                    _mediaService.RaiseAggregationCompleted(playlist.Id);
-                }
-                catch { }
-            });
+                await _mediaService.AggregateContentAsync(playlist.Id);
+                _mediaService.RaiseAggregationCompleted(playlist.Id);
+            }
+            catch { }
         }
         catch (Exception ex)
         {
             _logger?.LogDebug($"[Xtream] Resume error: {ex}");
+            _dispatcherService.BeginInvoke(() =>
+            {
+                StatusMessage = UserFriendlyErrorMessage.WithPrefix("Xtream sunucu hatası", ex);
+            });
+            
+            if (isFullRefresh)
+            {
+                throw;
+            }
         }
     }
 
@@ -958,15 +969,13 @@ public partial class MainViewModel : ObservableObject
                 progress: progress,
                 cancellationToken: CancellationToken.None);
 
-            _ = Task.Run(async () =>
+            _dispatcherService.BeginInvoke(() => StatusMessage = "Diziler ve Filmler düzenleniyor...");
+            try
             {
-                try
-                {
-                    await _mediaService.AggregateContentAsync(playlist.Id);
-                    _mediaService.RaiseAggregationCompleted(playlist.Id);
-                }
-                catch { }
-            });
+                await _mediaService.AggregateContentAsync(playlist.Id);
+                _mediaService.RaiseAggregationCompleted(playlist.Id);
+            }
+            catch { }
 
             _dispatcherService.BeginInvoke(() =>
             {
@@ -979,6 +988,15 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger?.LogDebug($"[Stalker] Failed to {(isFullRefresh ? "refresh" : "resume")} load: {ex}");
+            _dispatcherService.BeginInvoke(() =>
+            {
+                StatusMessage = UserFriendlyErrorMessage.WithPrefix("Stalker sunucu hatası", ex);
+            });
+            
+            if (isFullRefresh)
+            {
+                throw;
+            }
         }
     }
 
@@ -5622,7 +5640,11 @@ public partial class MainViewModel : ObservableObject
                 try
                 {
                     selectedSeries = await LoadSeriesWithProfileProgressAsync(series);
-                    EnsureSeriesEpisodes(selectedSeries);
+                    // Xtream API is authoritative — skip M3U-style fallback that creates bogus Season 0
+                    if (CurrentProfile?.ProviderAccount?.Type != ProfileType.XtreamCodes)
+                    {
+                        EnsureSeriesEpisodes(selectedSeries);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -5870,6 +5892,14 @@ public partial class MainViewModel : ObservableObject
 
         var source = dbSeries ?? series;
 
+        // ── YENİ: Xtream serisi ve hiç bölüm yoksa → lazy load ──
+        bool hasEpisodes = source.Seasons.Any(s => s.Episodes.Count > 0);
+        if (!hasEpisodes)
+        {
+            await TryLazyLoadXtreamEpisodesAsync(source, db);
+            // Lazy load sonrası Seasons/Episodes güncel — devam et
+        }
+
         // --- LAZY LOAD TMDB METADATA (Seasons & Episodes) ---
         if (source.TmdbId.HasValue && source.MetadataFetchedAt == null)
         {
@@ -6001,6 +6031,151 @@ public partial class MainViewModel : ObservableObject
 
         await ApplyProfileProgressAsync(source, db);
         return source;
+    }
+
+    private async Task TryLazyLoadXtreamEpisodesAsync(Series series, AppDbContext db)
+    {
+        if (CurrentProfile?.ProviderAccount?.Type != ProfileType.XtreamCodes) return;
+
+        // Bu diziye ait Channel kaydını bul — StreamUrl'de series_id var
+        var seriesChannel = await db.Channels
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c =>
+                c.PlaylistId == series.PlaylistId &&
+                c.Type == ChannelType.Series &&
+                c.StreamUrl.StartsWith("xtream-series://") &&
+                // İsim eşleşmesi
+                c.Name == series.Name);
+
+        if (seriesChannel == null)
+        {
+            // İsim eşleşmesi yoksa normalized key ile dene
+            var allSeriesChannels = await db.Channels
+                .AsNoTracking()
+                .Where(c => c.PlaylistId == series.PlaylistId &&
+                            c.Type == ChannelType.Series &&
+                            c.StreamUrl.StartsWith("xtream-series://"))
+                .ToListAsync();
+
+            var targetKey = SeriesInfoParser.NormalizeKey(series.Name);
+            seriesChannel = allSeriesChannels.FirstOrDefault(c =>
+                SeriesInfoParser.NormalizeKey(c.Name) == targetKey);
+        }
+
+        if (seriesChannel == null) return;
+
+        var idStr = seriesChannel.StreamUrl.Replace("xtream-series://", "");
+        if (!long.TryParse(idStr, out var xtreamSeriesId)) return;
+
+        var baseUrl = CurrentProfile.ProviderAccount.Url.TrimEnd('/');
+        if (!baseUrl.StartsWith("http")) baseUrl = "http://" + baseUrl;
+        var username = CurrentProfile.ProviderAccount.Username ?? string.Empty;
+        var password = _securityService.Decrypt(CurrentProfile.ProviderAccount.Password) ?? string.Empty;
+
+        _logger?.LogDebug("[Xtream] Lazy loading episodes for series {Name} (id={Id})", series.Name, xtreamSeriesId);
+
+        var detail = await _xtreamCodesService.GetSeriesInfoAsync(
+            baseUrl, username, password, xtreamSeriesId);
+
+        if (detail == null) return;
+
+        // Poster/metadata/name güncelle
+        if (!string.IsNullOrWhiteSpace(detail.Name) && detail.Name != series.Name)
+            series.Name = detail.Name;
+        if (!string.IsNullOrWhiteSpace(detail.Cover))
+            series.CoverUrl = detail.Cover;
+        if (!string.IsNullOrWhiteSpace(detail.Plot) && string.IsNullOrWhiteSpace(series.Plot))
+            series.Plot = detail.Plot;
+        if (!string.IsNullOrWhiteSpace(detail.Genre) && string.IsNullOrWhiteSpace(series.Genre))
+            series.Genre = detail.Genre;
+        if (!string.IsNullOrWhiteSpace(detail.Cast) && string.IsNullOrWhiteSpace(series.Cast))
+            series.Cast = detail.Cast;
+
+        // Authoritative data geldi — mevcut tahminleri/fallbakleri temizle
+        series.Seasons.Clear();
+
+        // Season + Episode'ları oluştur
+        var streamBase = $"{baseUrl}/series/{Uri.EscapeDataString(username)}/{Uri.EscapeDataString(password)}";
+
+        // Seasons haritası — season_number → Season
+        var seasonMap = detail.Seasons
+            .Where(s => s.SeasonNumber >= 0) // Season 0 is often used for Specials
+            .ToDictionary(s => s.SeasonNumber);
+
+        foreach (var kvp in detail.Episodes.OrderBy(k => k.Key))
+        {
+            if (!int.TryParse(kvp.Key, out var seasonNum)) continue;
+
+            // DB'de bu sezon var mı?
+            var season = series.Seasons.FirstOrDefault(s => s.SeasonNumber == seasonNum);
+            if (season == null)
+            {
+                season = new Season
+                {
+                    SeasonNumber = seasonNum,
+                    Name = seasonMap.TryGetValue(seasonNum, out var sd) ? sd.Name : $"Sezon {seasonNum}",
+                    CoverUrl = seasonMap.TryGetValue(seasonNum, out var sd2) ? sd2.Cover : null,
+                    Series = series
+                };
+                series.Seasons.Add(season);
+            }
+
+            foreach (var ep in kvp.Value.OrderBy(e => e.EpisodeNum))
+            {
+                if (ep.Id <= 0) continue;
+
+                var streamUrl = $"{streamBase}/{ep.Id}.{ep.ContainerExtension ?? "mp4"}";
+
+                // Duplicate kontrolü
+                if (season.Episodes.Any(e =>
+                    string.Equals(e.StreamUrl, streamUrl, StringComparison.OrdinalIgnoreCase)))
+                    continue;
+
+                TimeSpan? duration = ep.DurationSecs.HasValue && ep.DurationSecs.Value > 0
+                    ? TimeSpan.FromSeconds(ep.DurationSecs.Value)
+                    : null;
+
+                DateTime? airDate = null;
+                if (!string.IsNullOrWhiteSpace(ep.AirDate))
+                    DateTime.TryParse(ep.AirDate, out var ad);
+
+                season.Episodes.Add(new Episode
+                {
+                    EpisodeNumber = ep.EpisodeNum,
+                    Name = ep.Title ?? $"Bölüm {ep.EpisodeNum}",
+                    StreamUrl = streamUrl,
+                    CoverUrl = ep.CoverUrl,
+                    Plot = ep.Plot,
+                    Duration = duration,
+                    AirDate = airDate,
+                    SeasonId = season.Id
+                });
+            }
+        }
+
+        // Sezonları sırala
+        series.Seasons = series.Seasons.OrderBy(s => s.SeasonNumber).ToList();
+        foreach (var s in series.Seasons)
+            s.Episodes = s.Episodes.OrderBy(e => e.EpisodeNumber).ToList();
+
+        // DB'ye kaydet (series.Id > 0 ise tracking ile güncellenir)
+        if (series.Id > 0)
+        {
+            try
+            {
+                // Seasons ve Episodes DB'de yeni — ekle
+                foreach (var season in series.Seasons.Where(s => s.Id == 0))
+                {
+                    season.SeriesId = series.Id;
+                    db.Seasons.Add(season);
+                }
+                await db.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "[Xtream] Failed to persist lazy-loaded episodes for {Name}", series.Name);
+            }
+        }
     }
 
     private async Task ApplyBulkProfileProgressAsync(IEnumerable<Series> seriesList)

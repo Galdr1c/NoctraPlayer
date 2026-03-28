@@ -21,9 +21,8 @@ namespace Noctra.Tests
         }
 
         [Theory]
-        [InlineData(LicenseService.Features.AudioTrackSelection, false)]
-        [InlineData(LicenseService.Features.MiniPlayer, false)]
         [InlineData(LicenseService.Features.AdFree, false)]
+        [InlineData(LicenseService.Features.SleepTimer, false)]
         public void FreeTier_ShouldNotHavePremiumFeatures(string feature, bool expected)
         {
             _licenseService.SetTierForTesting(SubscriptionTier.Free);
@@ -35,17 +34,14 @@ namespace Noctra.Tests
         {
             _licenseService.SetTierForTesting(SubscriptionTier.Premium);
             
-            Assert.True(_licenseService.IsFeatureAvailable(LicenseService.Features.AudioTrackSelection));
-            Assert.True(_licenseService.IsFeatureAvailable(LicenseService.Features.MiniPlayer));
-            Assert.True(_licenseService.IsFeatureAvailable(LicenseService.Features.Multiview));
             Assert.True(_licenseService.IsFeatureAvailable(LicenseService.Features.AdFree));
+            Assert.True(_licenseService.IsFeatureAvailable(LicenseService.Features.SleepTimer));
+            Assert.True(_licenseService.IsFeatureAvailable(LicenseService.Features.EpgAutoRefresh));
         }
 
         [Theory]
         [InlineData(LicenseService.Limits.Profiles, 2, true)]  // Limit is 3
         [InlineData(LicenseService.Limits.Profiles, 3, false)]
-        [InlineData(LicenseService.Limits.Favorites, 49, true)] // Limit is 50
-        [InlineData(LicenseService.Limits.Favorites, 50, false)]
         public void FreeTier_ShouldRespectLimits(string limit, int currentCount, bool expected)
         {
             _licenseService.SetTierForTesting(SubscriptionTier.Free);

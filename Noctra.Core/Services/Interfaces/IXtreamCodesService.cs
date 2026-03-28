@@ -42,8 +42,59 @@ public interface IXtreamCodesService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Tek bir dizinin tüm sezon ve bölümlerini çeker (get_series_info).
+    /// Kullanıcı diziyi açtığında lazy load için çağrılır.
+    /// </summary>
+    Task<XtreamSeriesDetail?> GetSeriesInfoAsync(
+        string baseUrl,
+        string username,
+        string password,
+        long seriesId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Xtream sunucusunun standart XMLTV (EPG) URL'sini döndürür.
     /// </summary>
     string GetEpgUrl(string baseUrl, string username, string password);
+}
+
+/// <summary>
+/// get_series_info API yanıtının sade modeli
+/// </summary>
+public class XtreamSeriesDetail
+{
+    public string? Name { get; set; }
+    public string? Cover { get; set; }
+    public string? Plot { get; set; }
+    public double? Rating { get; set; }
+    public int? ReleaseYear { get; set; }
+    public string? Genre { get; set; }
+    public string? Cast { get; set; }
+    public string? Director { get; set; }
+    public List<XtreamSeasonDetail> Seasons { get; set; } = new();
+    // episodes: { "1": [...], "2": [...] }
+    public Dictionary<string, List<XtreamEpisodeDetail>> Episodes { get; set; } = new();
+}
+
+public class XtreamSeasonDetail
+{
+    public int SeasonNumber { get; set; }
+    public string? Name { get; set; }
+    public string? Cover { get; set; }
+    public string? AirDate { get; set; }
+}
+
+public class XtreamEpisodeDetail
+{
+    public long Id { get; set; }
+    public int EpisodeNum { get; set; }
+    public string? Title { get; set; }
+    public string? ContainerExtension { get; set; }
+    public int Season { get; set; }
+    public string? Plot { get; set; }
+    public string? CoverUrl { get; set; }
+    public double? DurationSecs { get; set; }
+    public string? AirDate { get; set; }
+    public double? Rating { get; set; }
 }
 

@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using Noctra.Models;
 using Noctra.Data;
 using Microsoft.EntityFrameworkCore;
@@ -95,16 +95,13 @@ public partial class MediaService : IMediaService
 
             foreach (var channel in channels)
             {
+                // ── YENİ: Xtream/Stalker series-level placeholder → sadece Series kaydı, episode yok ──
+                bool isSeriesPlaceholder = IsSeriesPlaceholder(channel.StreamUrl);
+
                 var parsed = ParseSeriesEpisodeInfo(channel.Name);
                 var seriesName = parsed.SeriesName;
                 var seasonNum = parsed.Season;
                 var episodeNum = parsed.Episode;
-
-                if (seasonNum == 0 || episodeNum == 0)
-                {
-                    seasonNum = Math.Max(1, seasonNum);
-                    episodeNum = Math.Max(1, episodeNum);
-                }
 
                 var seriesKey = BuildSeriesGroupingKey(seriesName);
 
@@ -148,6 +145,16 @@ public partial class MediaService : IMediaService
                         
                     if (string.IsNullOrWhiteSpace(series.ContentRating) && !string.IsNullOrWhiteSpace(channel.ContentRating))
                         series.ContentRating = channel.ContentRating;
+                }
+
+                // ── YENİ: Placeholder ise sadece Series kaydı oluşturduk, episode ekleme ──
+                if (isSeriesPlaceholder)
+                    continue;
+
+                if (seasonNum == 0 || episodeNum == 0)
+                {
+                    seasonNum = Math.Max(1, seasonNum);
+                    episodeNum = Math.Max(1, episodeNum);
                 }
 
                 // O(1) season lookup instead of FirstOrDefault
@@ -245,14 +252,24 @@ public partial class MediaService : IMediaService
                 .ExecuteDeleteAsync(cancellationToken);
 
             // Cleanup empty series (ghost series)
+            var placeholderSeriesKeys = channels
+                .Where(c => IsSeriesPlaceholder(c.StreamUrl))
+                .Select(c => BuildSeriesGroupingKey(SeriesInfoParser.Parse(c.Name).SeriesName))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
             var emptySeries = await context.Series
                 .Where(s => s.PlaylistId == playlistId && !s.Seasons.Any(sn => sn.Episodes.Any()))
                 .ToListAsync(cancellationToken);
 
-            if (emptySeries.Count > 0)
+            // Placeholder'dan gelen (yani Xtream/Stalker series-level) kayıtları silme
+            var orphanSeries = emptySeries
+                .Where(s => !placeholderSeriesKeys.Contains(BuildSeriesGroupingKey(s.Name)))
+                .ToList();
+
+            if (orphanSeries.Count > 0)
             {
-                System.Diagnostics.Debug.WriteLine($"[MediaService] Purging {emptySeries.Count} ghost series.");
-                context.Series.RemoveRange(emptySeries);
+                System.Diagnostics.Debug.WriteLine($"[MediaService] Purging {orphanSeries.Count} orphan series.");
+                context.Series.RemoveRange(orphanSeries);
                 await context.SaveChangesAsync(cancellationToken);
             }
         }
@@ -265,6 +282,16 @@ public partial class MediaService : IMediaService
         {
             _aggregateLock.Release();
         }
+    }
+
+    /// <summary>Xtream veya Stalker series-level placeholder URL'si mi?</summary>
+    private static bool IsSeriesPlaceholder(string? streamUrl)
+    {
+        if (string.IsNullOrWhiteSpace(streamUrl)) return true;
+        return streamUrl.StartsWith("xtream-series://", StringComparison.OrdinalIgnoreCase)
+            || streamUrl.StartsWith("stalker-series://", StringComparison.OrdinalIgnoreCase)
+            || streamUrl.StartsWith("xtream-dummy://", StringComparison.OrdinalIgnoreCase)
+            || streamUrl.StartsWith("stalker-dummy://", StringComparison.OrdinalIgnoreCase);
     }
 
     private static Episode? FindExistingEpisode(Season season, int episodeNumber, string? episodeName, string? streamUrl)

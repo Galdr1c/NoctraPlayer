@@ -410,7 +410,13 @@ public static partial class SeriesInfoParser
         var uniqueWords = new List<string>();
         foreach (var word in words)
         {
-            if (uniqueWords.Count == 0 || !string.Equals(uniqueWords[^1], word, StringComparison.OrdinalIgnoreCase))
+            // Only deduplicate if word is relatively long (>4 chars) 
+            // This allows title patterns like "Bang Bang Baby", "Bye Bye", "No No"
+            bool isDuplicate = uniqueWords.Count > 0 && 
+                               string.Equals(uniqueWords[^1], word, StringComparison.OrdinalIgnoreCase) &&
+                               word.Length > 4;
+
+            if (uniqueWords.Count == 0 || !isDuplicate)
             {
                 uniqueWords.Add(word);
             }
@@ -435,6 +441,13 @@ public static partial class SeriesInfoParser
 
                     if (isMatch)
                     {
+                        // Only deduplicate single words if they are long (>4)
+                        // Short words like "Bang Bang", "Bye Bye" are often legitimate
+                        if (size == 1 && uniqueWords[start].Length <= 4)
+                        {
+                            continue;
+                        }
+
                         uniqueWords.RemoveRange(start + size, size);
                         // Reset search after removal
                         size = 0; 

@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -151,6 +151,85 @@ public class XtreamCodesService : IXtreamCodesService
     private static IReadOnlyDictionary<string, string> BuildCategoryMapFromXtream(IEnumerable<XtreamCategory> categories)
     {
         return categories.ToDictionary(c => c.Id, c => c.Name, StringComparer.OrdinalIgnoreCase);
+    }
+
+    public async Task<XtreamSeriesDetail?> GetSeriesInfoAsync(
+        string baseUrl,
+        string username,
+        string password,
+        long seriesId,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedBaseUrl = NormalizeBaseUrl(baseUrl);
+        var url = BuildApiUrl(normalizedBaseUrl, username, password,
+            "get_series_info", ("series_id", seriesId.ToString()));
+
+        try
+        {
+            var json = await GetStringAsync(url, cancellationToken);
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            var detail = new XtreamSeriesDetail();
+
+            // info block
+            if (root.TryGetProperty("info", out var info))
+            {
+                detail.Name = GetStringOrNull(info, "name");
+                detail.Cover = GetStringOrNull(info, "cover");
+                detail.Plot = GetStringOrNull(info, "plot");
+                detail.Genre = GetStringOrNull(info, "genre");
+                detail.Cast = GetStringOrNull(info, "cast");
+                detail.Director = GetStringOrNull(info, "director");
+                detail.Rating = ParseDouble(GetStringOrNull(info, "rating"));
+                detail.ReleaseYear = ParseInt(GetStringOrNull(info, "releaseDate")
+                                        ?.Split('-').FirstOrDefault());
+            }
+
+            // seasons block
+            if (root.TryGetProperty("seasons", out var seasons) &&
+                seasons.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var s in seasons.EnumerateArray())
+                {
+                    var sn = ParseInt(GetStringOrNull(s, "season_number")
+                             ?? (s.TryGetProperty("season_number", out var snProp)
+                                ? snProp.GetRawText() : null));
+                    detail.Seasons.Add(new XtreamSeasonDetail
+                    {
+                        SeasonNumber = sn ?? 0,
+                        Name = GetStringOrNull(s, "name"),
+                        Cover = GetStringOrNull(s, "cover"),
+                        AirDate = GetStringOrNull(s, "air_date")
+                    });
+                }
+            }
+
+            // episodes block — can be { "1": [...], "2": [...] } (Object) or [...] (Array)
+            if (root.TryGetProperty("episodes", out var episodes))
+            {
+                if (episodes.ValueKind == JsonValueKind.Object)
+                {
+                    foreach (var seasonProp in episodes.EnumerateObject())
+                    {
+                        if (seasonProp.Value.ValueKind != JsonValueKind.Array) continue;
+                        detail.Episodes[seasonProp.Name] = ParseEpisodeArray(seasonProp.Value, seasonProp.Name);
+                    }
+                }
+                else if (episodes.ValueKind == JsonValueKind.Array)
+                {
+                    // Fallback for single-season series or servers that return a flat array
+                    detail.Episodes["1"] = ParseEpisodeArray(episodes, "1");
+                }
+            }
+
+            return detail;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Xtream] GetSeriesInfo failed for {seriesId}: {ex.Message}");
+            return null;
+        }
     }
 
     public string GetEpgUrl(string baseUrl, string username, string password)
@@ -356,15 +435,16 @@ public class XtreamCodesService : IXtreamCodesService
 
         return series
             .Where(s => s.SeriesId > 0)
-            .Select(s => 
+            .Select(s =>
             {
                 var groupTitle = ResolveCategory(s.CategoryId, null, categories, "Series");
                 var isLive = SeriesInfoParser.IsLiveSeries(s.Name) || SeriesInfoParser.IsLiveSeries(groupTitle);
-                
+
                 return new Channel
                 {
                     Name = SafeName(s.Name, "Dizi"),
-                    StreamUrl = string.Empty,
+                    // ← ID'yi URL'e göm — lazy load için anahtar
+                    StreamUrl = $"xtream-series://{s.SeriesId}",
                     LogoUrl = s.Cover,
                     GroupTitle = groupTitle,
                     Type = isLive ? ChannelType.Live : ChannelType.Series,
@@ -375,7 +455,6 @@ public class XtreamCodesService : IXtreamCodesService
             })
             .ToList();
     }
-
     private async Task<List<Channel>> FetchSeriesEpisodesAsync(
         IReadOnlyCollection<XtreamSeriesDto> series,
         string baseUrl,
@@ -800,6 +879,58 @@ public class XtreamCodesService : IXtreamCodesService
 
             writer.WriteStringValue(value);
         }
+    }
+
+    private List<XtreamEpisodeDetail> ParseEpisodeArray(JsonElement array, string seasonName)
+    {
+        var epList = new List<XtreamEpisodeDetail>();
+        if (array.ValueKind != JsonValueKind.Array) return epList;
+
+        foreach (var ep in array.EnumerateArray())
+        {
+            var epIdStr = GetStringOrNull(ep, "id") 
+                       ?? GetStringOrNull(ep, "id") 
+                       ?? GetStringOrNull(ep, "stream_id");
+            var epId = ParseLong(epIdStr);
+            if (epId is null or <= 0) continue;
+
+            string? coverUrl = null;
+            string? plot = null;
+            double? duration = null;
+            string? airDate = null;
+            double? epRating = null;
+
+            if (ep.TryGetProperty("info", out var epInfo))
+            {
+                coverUrl = GetStringOrNull(epInfo, "movie_image");
+                plot = GetStringOrNull(epInfo, "plot");
+                airDate = GetStringOrNull(epInfo, "releasedate")
+                           ?? GetStringOrNull(epInfo, "air_date");
+                epRating = ParseDouble(GetStringOrNull(epInfo, "rating"));
+
+                if (epInfo.TryGetProperty("duration_secs", out var ds) &&
+                    ds.ValueKind == JsonValueKind.Number)
+                    duration = ds.GetDouble();
+            }
+
+            if (!int.TryParse(seasonName, out var fallbackSeason))
+                fallbackSeason = 1;
+
+            epList.Add(new XtreamEpisodeDetail
+            {
+                Id = epId.Value,
+                EpisodeNum = ParseInt(GetStringOrNull(ep, "episode_num")) ?? 0,
+                Title = GetStringOrNull(ep, "title"),
+                ContainerExtension = GetStringOrNull(ep, "container_extension") ?? "mp4",
+                Season = ParseInt(GetStringOrNull(ep, "season")) ?? fallbackSeason,
+                Plot = plot,
+                CoverUrl = coverUrl,
+                DurationSecs = duration,
+                AirDate = airDate,
+                Rating = epRating
+            });
+        }
+        return epList;
     }
 
     private sealed class CachedAuthState

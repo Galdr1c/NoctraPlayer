@@ -135,4 +135,12 @@ public class SeriesInfoParserTests
         
         Assert.Equal("Alice in Borderland S01E01", match.Groups[1].Value);
     }
+
+    [Fact]
+    public void CleanSeriesName_HandlesRepeatedWords()
+    {
+        Assert.Equal("Bang Bang Baby", SeriesInfoParser.CleanSeriesName("Bang Bang Baby"));
+        Assert.Equal("Bye Bye Birdie", SeriesInfoParser.CleanSeriesName("Bye Bye Birdie"));
+        Assert.Equal("Breaking Bad", SeriesInfoParser.CleanSeriesName("Breaking Bad Breaking Bad"));
+    }
 }

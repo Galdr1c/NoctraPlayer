@@ -613,8 +613,8 @@
 
                       <!-- Seasons & Episodes Stats -->
                       <StackPanel Orientation="Horizontal" Margin="0,12,0,0" Spacing="16" IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
-                        <TextBlock Text="{Binding SelectedSeriesTotalSeasonsCount, StringFormat='{}{0} Sezon'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="Medium"/>
-                        <TextBlock Text="{Binding SelectedSeriesTotalEpisodesCount, StringFormat='{}{0} Bölüm'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="Medium"/>
+                        <TextBlock Text="{Binding SelectedSeries.SeasonCountSafe, StringFormat='{}{0} Sezon'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="Medium"/>
+                        <TextBlock Text="{Binding SelectedSeries.TotalEpisodesCount, StringFormat='{}{0} Bölüm'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="Medium"/>
                       </StackPanel>
                     </StackPanel>
 
@@ -695,7 +695,8 @@
                 </Grid>
 
                 <!-- Seasons & Episodes -->
-                <Grid Grid.Row="1" Margin="0,48,0,0" RowDefinitions="Auto,Auto">
+                <Grid Grid.Row="1" Margin="0,48,0,0" RowDefinitions="Auto,Auto"
+                      IsVisible="{Binding SelectedSeries.TotalEpisodesCount, Converter={StaticResource CountToVisibilityConverter}}">
                   <!-- Seasons Tab Menu -->
                   <StackPanel Grid.Row="0">
                       <Grid ColumnDefinitions="*,Auto">
