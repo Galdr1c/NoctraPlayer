@@ -41,8 +41,29 @@ public class SettingsService : ISettingsService
     {
         if (profileId == 0)
             return Path.Combine(_basePath, "settings.json");
+
+        var settingsDir = Path.Combine(_basePath, "Settings");
+        if (!Directory.Exists(settingsDir)) Directory.CreateDirectory(settingsDir);
+
+        var newPath = Path.Combine(settingsDir, $"profile_{profileId}.json");
         
-        return Path.Combine(_basePath, $"settings_profile_{profileId}.json");
+        // Migration: If file doesn't exist in new location but exists in old location, move it
+        var oldPath = Path.Combine(_basePath, $"settings_profile_{profileId}.json");
+        if (!File.Exists(newPath) && File.Exists(oldPath))
+        {
+            try
+            {
+                File.Move(oldPath, newPath);
+                _logger?.LogInformation("Migrated profile settings from {Old} to {New}", oldPath, newPath);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to migrate profile settings for {Id}", profileId);
+                return oldPath; // Fallback to old path if move fails
+            }
+        }
+        
+        return newPath;
     }
     
     public async Task LoadAsync()
