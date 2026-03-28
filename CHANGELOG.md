@@ -8,6 +8,16 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### 🛠️ Gelişmiş Önbellek ve Veritabanı Temizliği (2026-03-28)
+- **Kapsamlı Veri Temizleme Hattı**: "Önbelleği Temizle" butonu artık sadece geçici dosyaları değil, tüm gereksiz verileri (EPG, Yetim Ayarlar) temizleyip disk alanını geri kazanan tam bir bakım aracına dönüştürüldü.
+- **Doğru Boyut Hesaplama**: Hesaplama motoru güncellenerek veritabanı dosyası (`noctra_v1.db`) ve ayarlar klasörü de kapsama dahil edildi. Bu sayede özellikle EPG verilerinin kapladığı alan artık UI'da net bir şekilde takip edilebiliyor.
+- **Veritabanı Optimizasyonu (VACUUM)**: EPG verileri silindikten sonra SQLite veritabanının fiziksel olarak küçültülmesi sağlanarak disk alanının anında geri kazanılması sağlandı.
+- **Yetim Ayar Temizliği**: Artık mevcut olmayan (silinmiş) profillere ait eski `profile_*.json` dosyaları otomatik tespit edilip temizleniyor.
+- **EPG ve Ayar Kayıt Koruması**: Temizleme öncesi "Otomatik Kayıt" (Auto-Save) eklenerek yeni eklenen EPG kaynaklarının kaybolması engellendi. Ayrıca aktif olan profilin ayarları koruma altına alındı.
+- **Akıllı Diyalog Konumlandırma**: Başarı ve hata mesajlarının her zaman aktif pencerenin merkezinde görünmesi sağlanarak UX iyileştirildi.
+- **Legacy Dosya Tasfiyesi**: Sistemsel olarak artık kullanılmayan eski `noctra.db` dosyalarının otomatik silinmesi sağlandı.
+- **Dayanıklılık (Robustness)**: Dosya boyutları hesaplanırken kilitli veya erişilemeyen dosyalar nedeniyle tüm işlemin durması engellendi; hatalı dosyalar atlanarak toplam boyutun en doğru şekilde yansıtılması sağlandı.
+
 ### 🛠️ Xtream/Stalker İçerik Hattı Optimizasyonu (2026-03-28)
 - **Metadata Stratejisi Rafine Edildi**: 
   - Xtream ve Stalker üzerinden gelen kaliteli sağlayıcı metadatalarının (Poster, Özet vb.) TMDB tarafından ezilmesi engellendi. `IsMetadataSufficient` kontrolü ile yeterli verisi olan içeriklerde TMDB sorgusu atlanarak API kotası korundu ve orijinal afişler önceliklendirildi.

@@ -233,6 +233,89 @@ public class SettingsService : ISettingsService
 
         _ = SaveAsync();
     }
+
+    public async Task<int> CleanOrphanedSettingsAsync(IEnumerable<int> activeProfileIds)
+    {
+        return await Task.Run(() =>
+        {
+            if (activeProfileIds == null || !activeProfileIds.Any())
+            {
+                _logger?.LogWarning("[SettingsService] CleanOrphanedSettingsAsync aborted. No active profiles provided, safety guard triggered.");
+                return 0;
+            }
+
+            int deletedCount = 0;
+            var activeIds = new HashSet<int>(activeProfileIds);
+            activeIds.Add(0); // Master settings is always active
+
+            // 1. Clean new 'Settings/' directory
+            var settingsDir = Path.Combine(_basePath, "Settings");
+            if (Directory.Exists(settingsDir))
+            {
+                var files = Directory.GetFiles(settingsDir, "profile_*.json");
+                foreach (var file in files)
+                {
+                    try
+                    {
+                        var fileName = Path.GetFileNameWithoutExtension(file); // e.g., "profile_1"
+                        if (fileName.StartsWith("profile_", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var idPart = fileName.Substring("profile_".Length);
+                            if (int.TryParse(idPart, out var id))
+                            {
+                                if (!activeIds.Contains(id))
+                                {
+                                    File.Delete(file);
+                                    deletedCount++;
+                                    _logger?.LogInformation("Deleted orphaned profile settings: {File}", file);
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogDebug(ex, "Failed to check or delete orphaned setting file: {File}", file);
+                    }
+                }
+            }
+
+            // 2. Clean legacy root 'settings_profile_*.json' files
+            try
+            {
+                var rootFiles = Directory.GetFiles(_basePath, "settings_profile_*.json");
+                foreach (var file in rootFiles)
+                {
+                    try
+                    {
+                        var fileName = Path.GetFileNameWithoutExtension(file); // e.g., "settings_profile_1"
+                        if (fileName.StartsWith("settings_profile_", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var idPart = fileName.Substring("settings_profile_".Length);
+                            if (int.TryParse(idPart, out var id))
+                            {
+                                if (!activeIds.Contains(id))
+                                {
+                                    File.Delete(file);
+                                    deletedCount++;
+                                    _logger?.LogInformation("Deleted legacy orphaned profile settings: {File}", file);
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogDebug(ex, "Failed to check or delete legacy orphaned setting file: {File}", file);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogDebug(ex, "Failed to list legacy root settings files");
+            }
+
+            return deletedCount;
+        });
+    }
 }
 
 

@@ -21,6 +21,8 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     private readonly IDispatcherService _dispatcherService;
     private readonly IDiagnosticReportService _diagnosticService;
     private readonly ILicenseService _licenseService;
+    private readonly IProfileService _profileService;
+    private readonly IEpgService _epgService;
 
     [ObservableProperty]
     private string _cacheSizeString = "0 B";
@@ -99,7 +101,9 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         IUpdateService updateService,
         IDispatcherService dispatcherService,
         IDiagnosticReportService diagnosticService,
-        ILicenseService licenseService)
+        ILicenseService licenseService,
+        IProfileService profileService,
+        IEpgService epgService)
     {
         _themeService = themeService;
         _dialogService = dialogService;
@@ -109,6 +113,8 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         _dispatcherService = dispatcherService;
         _diagnosticService = diagnosticService;
         _licenseService = licenseService;
+        _profileService = profileService;
+        _epgService = epgService;
         
         CurrentVersion = _updateService.CurrentVersion;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
@@ -221,27 +227,58 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     private async Task ClearCacheAsync()
     {
         var confirmed = await _dialogService.ShowConfirmationAsync(
-            "Önbelleği Temizle",
-            "Tüm önbellek dosyaları silinecek. Devam etmek istiyor musunuz?"
+            "Veri ve Önbellek Temizliği",
+            "Bu işlem şunları gerçekleştirecek:\n\n" +
+            "• Tüm resim ve geçici dosya önbelleği silinecek\n" +
+            "• Veritabanındaki tüm yayın akışı (EPG) verileri temizlenecek\n" +
+            "• Silinmiş profillere ait artık yerel ayar dosyaları silinecek\n" +
+            "• Veritabanı sıkıştırılarak disk alanı geri kazanılacak\n\n" +
+            "Devam etmek istiyor musunuz?"
         );
 
         if (confirmed)
         {
             try
             {
+                // 0. Auto-save current settings before clearing (to avoid memory loss)
+                await _settingsService.SaveAsync();
+
+                // 1. Clear file system folders
                 await _cacheService.ClearCacheAsync();
+                
+                // 2. Clear orphaned settings
+                var profiles = await _profileService.GetProfilesAsync();
+                int deletedCount = 0;
+                var activeIds = new HashSet<int>(profiles.Select(p => p.Id));
+                activeIds.Add(0); // Master settings is always active
+                activeIds.Add(_settingsService.Settings.ProfileId); // Always protect current profile!
+                int cleanedSettings = await _settingsService.CleanOrphanedSettingsAsync(activeIds);
+                
+                // 3. Clear EPG Data
+                await _epgService.ClearEpgAsync();
+                
+                // 4. Shrink DB
+                await _epgService.VacuumAsync();
+                
+                // Update size string
                 await UpdateCacheSizeAsync();
+                
+                var successMsg = "Önbellek ve geçici veriler başarıyla temizlendi.";
+                if (cleanedSettings > 0)
+                {
+                    successMsg += $"\n{cleanedSettings} adet artık profil ayar dosyası silindi.";
+                }
                 
                 await _dialogService.ShowMessageAsync(
                     "Başarılı",
-                    "Önbellek temizlendi"
+                    successMsg
                 );
             }
             catch (Exception ex)
             {
                 await _dialogService.ShowErrorAsync(
                     "Hata",
-                    "Önbellek temizlenemedi",
+                    "Temizleme işlemi sırasında bir hata oluştu",
                     ex
                 );
             }

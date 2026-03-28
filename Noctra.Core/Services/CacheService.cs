@@ -16,7 +16,8 @@ public class CacheService : ICacheService
         "image-cache",
         "image-cache-avalonia",
         "TempPlayback",
-        "logs"
+        "Logs",
+        "Settings"
     };
 
     public Task<long> GetCacheSizeAsync()
@@ -24,6 +25,7 @@ public class CacheService : ICacheService
         return Task.Run(() =>
         {
             long size = 0;
+            // Scan folders
             foreach (var dirName in CacheDirectories)
             {
                 var path = Path.Combine(AppDataPath, dirName);
@@ -32,6 +34,21 @@ public class CacheService : ICacheService
                     size += GetDirectorySize(path);
                 }
             }
+
+            // Include current database file (contains EPG)
+            var dbPath = Path.Combine(AppDataPath, "noctra_v1.db");
+            if (File.Exists(dbPath))
+            {
+                try { size += new FileInfo(dbPath).Length; } catch { }
+            }
+
+            // Include legacy database file
+            var legacyDbPath = Path.Combine(AppDataPath, "noctra.db");
+            if (File.Exists(legacyDbPath))
+            {
+                try { size += new FileInfo(legacyDbPath).Length; } catch { }
+            }
+
             return size;
         });
     }
@@ -80,6 +97,20 @@ public class CacheService : ICacheService
                     }
                 }
             }
+
+            // Also delete legacy Database file to free space
+            var legacyDbPath = Path.Combine(AppDataPath, "noctra.db");
+            if (File.Exists(legacyDbPath))
+            {
+                try
+                {
+                    File.Delete(legacyDbPath);
+                }
+                catch
+                {
+                    // Skip if locked or inaccessible
+                }
+            }
         });
     }
 
@@ -88,10 +119,24 @@ public class CacheService : ICacheService
         try
         {
             var files = Directory.GetFiles(path, "*", SearchOption.AllDirectories);
-            return files.Sum(f => new FileInfo(f).Length);
+            long total = 0;
+            foreach (var f in files)
+            {
+                try
+                {
+                    total += new FileInfo(f).Length;
+                }
+                catch
+                {
+                    // Skip files that are temporarily locked or inaccessible
+                }
+            }
+            return total;
         }
-        catch
+        catch (Exception ex)
         {
+            // If the whole directory is inaccessible, log it and return 0
+            System.Diagnostics.Debug.WriteLine($"[CacheService] Error calculating directory size for {path}: {ex.Message}");
             return 0;
         }
     }

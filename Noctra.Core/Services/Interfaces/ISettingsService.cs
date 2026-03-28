@@ -1,4 +1,4 @@
-﻿using Noctra.Models;
+using Noctra.Models;
 
 namespace Noctra.Services;
 
@@ -37,6 +37,12 @@ public interface ISettingsService
     /// </summary>
     void ResetToDefaults();
     
+    /// <summary>
+    /// Veritabanında artık mevcut olmayan profillere ait yerel ayar dosyalarını temizler.
+    /// </summary>
+    /// <returns>Temizlenen dosya sayısı</returns>
+    Task<int> CleanOrphanedSettingsAsync(IEnumerable<int> activeProfileIds);
+
     /// <summary>
     /// Ayar değiştiğinde tetiklenir
     /// </summary>

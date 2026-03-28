@@ -4,8 +4,9 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Toolkit.Uwp.Notifications;
 using Noctra.Avalonia.Views;
-using System.Runtime.InteropServices;
+using System.Linq;
 using System.IO;
+using System.Runtime.InteropServices;
 using Noctra.Models;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
@@ -137,10 +138,17 @@ public sealed class AvaloniaDialogService : IDialogService
 
     private Window GetMainWindow()
     {
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop &&
-            desktop.MainWindow != null)
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            return desktop.MainWindow;
+            // If there's an active (topmost/focused) window that is not the MainWindow, use it as owner
+            // This ensures dialogs center on the Global Settings window if it's open.
+            var activeWindow = desktop.Windows.FirstOrDefault(w => w.IsActive && w.IsVisible && w is not DialogWindow);
+            if (activeWindow != null) return activeWindow;
+            
+            if (desktop.MainWindow != null)
+            {
+                return desktop.MainWindow;
+            }
         }
 
         throw new InvalidOperationException("Main window not found.");

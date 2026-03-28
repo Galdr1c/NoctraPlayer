@@ -790,6 +790,21 @@ public class EpgService : IEpgService
         return maxTime;
     }
 
+    public async Task VacuumAsync()
+    {
+        try
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+            // SQLite specific command to reclaim unused space
+            await context.Database.ExecuteSqlRawAsync("VACUUM");
+            _logger?.LogInformation("[EpgService] Database vacuum completed successfully.");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "[EpgService] Failed to vacuum database.");
+        }
+    }
+
     /// <summary>
     /// XMLTV tarih formatını parse eder (yyyyMMddHHmmss +HHMM)
     /// </summary>

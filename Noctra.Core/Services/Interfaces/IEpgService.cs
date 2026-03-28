@@ -108,6 +108,11 @@ public interface IEpgService
     /// EPG verisi olan benzersiz kanal sayısını getirir (İstatistik için)
     /// </summary>
     Task<int> GetDistinctChannelCountAsync();
+
+    /// <summary>
+    /// Veritabanı dosyasını sıkıştırarak (VACUUM) disk alanını serbest bırakır.
+    /// </summary>
+    Task VacuumAsync();
 }
 
 

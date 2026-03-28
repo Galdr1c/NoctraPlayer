@@ -35,5 +35,5 @@ public sealed class StubEpgService : IEpgService
     public Task<int> GetDistinctChannelCountAsync() => Task.FromResult(0);
 
     public Task<DateTime?> GetMaxProgramEndTimeAsync() => Task.FromResult<DateTime?>(null);
+    public Task VacuumAsync() => Task.CompletedTask;
 }
-
