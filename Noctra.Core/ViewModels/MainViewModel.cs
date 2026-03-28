@@ -617,7 +617,12 @@ public partial class MainViewModel : ObservableObject
                                                                         StatusMessage = "Xtream içerikleri yüklendi ✓";
                                                                         IsChannelLoading = false;
                                                                         ChannelLoadingProgress = 100;
-                                                                    });                                                        }
+                                                                        
+                                                                        // Başarı durumunda son bir yükleme yaparak 
+                                                                        // dummy kanalların temizlendiğinden emin olalım.
+                                                                        if (SelectedPlaylist?.Id == playlist.Id) _ = LoadChannelsAsync(playlist.Id);
+                                                                    });
+                                                                }
                                                         catch (Exception ex)
                                                         {
                                                             _logger?.LogDebug($"[Xtream] Error: {ex}");
@@ -735,6 +740,10 @@ public partial class MainViewModel : ObservableObject
                                     StatusMessage = $"Tüm içerikler hazır ✓";
                                     IsChannelLoading = false;
                                     ChannelLoadingProgress = 100;
+
+                                    // Başarı durumunda son bir yükleme yaparak 
+                                    // dummy kanalların temizlendiğinden emin olalım.
+                                    if (SelectedPlaylist?.Id == playlist.Id) _ = LoadChannelsAsync(playlist.Id);
                                 });
                             }
                             catch (Exception ex)
@@ -1548,24 +1557,28 @@ public partial class MainViewModel : ObservableObject
     private bool _suppressFilterRefresh;
     private Action<string>? _prioritizeStalkerCategoryAction;
     private int _isThrottledLoadPending = 0;
+    private bool _needsThrottledLoad;
     private bool _seriesDetailDownloadedOnlyMode;
-
     private async Task ThrottledLoadChannelsAsync(int playlistId)
     {
-        // Eğer zaten bir güncelleme sıradaysa (pending), yenisini ekleme
-        if (Interlocked.CompareExchange(ref _isThrottledLoadPending, 1, 0) == 1)
+        lock (this)
         {
-            return;
+            if (Interlocked.CompareExchange(ref _isThrottledLoadPending, 1, 0) == 1)
+            {
+                _needsThrottledLoad = true;
+                return;
+            }
         }
 
         try
         {
-            // 500ms bekle (Aynı anda biten diğer kategorilerin de veritabanına yazılmasına izin ver)
-            await Task.Delay(500);
-            
-            // Veri yükleme işlemini arka planda yap, LoadChannelsAsync kendi içinde 
-            // DB awaitleri sayesinde UI thread'i zaten serbest bırakır.
-            await LoadChannelsAsync(playlistId);
+            do
+            {
+                _needsThrottledLoad = false;
+                // 500ms bekle (Aynı anda biten diğer kategorilerin de veritabanına yazılmasına izin ver)
+                await Task.Delay(500);
+                await LoadChannelsAsync(playlistId);
+            } while (_needsThrottledLoad);
         }
         catch
         {

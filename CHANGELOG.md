@@ -8,6 +8,12 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### 🎨 Arayüz İyileştirmeleri (2026-03-28)
+- **Xtream ve Stalker Yükleme Ekranı Düzelmesi**: 
+  - Portal yüklemesi sırasında kanalların "İçerik yükleniyor..." (dummy channels) durumunda takılı kalması ve ancak sayfa değiştirince düzelmesi sorunu giderildi.
+  - **Akıllı Yenileme Hattı (Trailing Throttle)**: Arka arkaya gelen veritabanı güncellemeleri sırasında arayüz yenileme istekleri artık atlanmıyor; her zaman en son veri durumunun yansıtılması için "trailing edge" (son bir kez daha çalıştır) mekanizması eklendi.
+  - **Uçtan Uca Senkronizasyon (Final Load)**: Yükleme süreci %100 tamamlandığında, tüm geçici kanalların gerçek içeriklerle yer değiştirmesini garanti altına alan son bir otomatik yenileme adımı eklendi.
+
 ### 🛠️ Xtream ve M3U İçerik Düzenleme İyileştirmeleri (2026-03-28)
 - **Akıllı Seri Kategorizasyonu (False-Positive Fix)**: 
   - Canlı TV kategorileri arasına sızan "(S|UK)" gibi dizi grupları artık otomatik olarak tespit edilip **Diziler** sekmesine taşınarak Live TV listesi temizleniyor.
