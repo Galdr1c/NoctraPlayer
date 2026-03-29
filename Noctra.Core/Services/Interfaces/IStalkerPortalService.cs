@@ -75,6 +75,50 @@ public interface IStalkerPortalService
     /// Stalker portalı için olası XMLTV (EPG) URL'sini döndürür.
     /// </summary>
     string GetEpgUrl(string portalUrl);
+
+    /// <summary>
+    /// Stalker portalından bir dizinin sezonlarını, bölümlerini ve detaylı medatada bilgisini çeker.
+    /// </summary>
+    Task<StalkerSeriesInfo?> GetSeriesInfoAsync(
+        string portalUrl,
+        string macAddress,
+        string seriesId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Stalker portalındaki bir VOD veya Dizi bölümü için oynatılabilir gerçek manifest/video linkini üretir (create_link eylemi).
+    /// </summary>
+    Task<string?> CreateLinkAsync(
+        string portalUrl,
+        string macAddress,
+        string type,
+        string cmd,
+        string episodeNum = "0",
+        CancellationToken cancellationToken = default);
+}
+
+public class StalkerSeriesInfo
+{
+    public List<StalkerSeasonInfo> Seasons { get; set; } = [];
+
+    // Metadata
+    public string? Description { get; set; }
+    public string? Director { get; set; }
+    public string? Actors { get; set; }
+    public string? Year { get; set; }
+    public string? TmdbId { get; set; }
+    public string? RatingImdb { get; set; }
+    public string? Age { get; set; }
+    public string? CoverUrl { get; set; }
+    public string? GenresStr { get; set; }
+}
+
+public class StalkerSeasonInfo
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Cmd { get; set; } = string.Empty;
+    public List<int> EpisodeNumbers { get; set; } = [];
 }
 
 /// <summary>

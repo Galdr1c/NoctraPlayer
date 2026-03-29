@@ -107,6 +107,7 @@ namespace Noctra.Tests
         };
         public event Action? SettingsChanged;
         public Task LoadAsync() => Task.CompletedTask;
+        public Task<int> CleanOrphanedSettingsAsync(IEnumerable<int> activeProfileIds) => Task.FromResult(0);
         public Task LoadProfileSettingsAsync(int profileId) => Task.CompletedTask;
         public Task<AppSettings?> PeekProfileSettingsAsync(int profileId) => Task.FromResult<AppSettings?>(Settings);
         public Task SaveAsync() => Task.CompletedTask;
@@ -159,7 +160,8 @@ namespace Noctra.Tests
                 Settings,
                 License,
                 null!,  // MainViewModel — not needed for these tests
-                WatchHistory);
+                WatchHistory,
+                new FakeStalkerPortalService());
         }
 
         // ─── Yardımcı Reflection ─────────────────────────────────────────────

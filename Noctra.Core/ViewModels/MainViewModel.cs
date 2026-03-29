@@ -353,6 +353,26 @@ public partial class MainViewModel : ObservableObject
                         await LoadHomeContentAsync();
                         StatusMessage = "Kanal Listesi Hazır ✓"; 
                         System.Diagnostics.Debug.WriteLine($"[MainViewModel] Series refreshed after background aggregation for playlist {playlistId}");
+
+                        // If series detail is open, refresh it with the newly aggregated data
+                        if (IsSeriesDetailVisible && SelectedSeries != null)
+                        {
+                            try
+                            {
+                                var refreshedSeries = await LoadSeriesWithProfileProgressAsync(SelectedSeries);
+                                if (CurrentProfile?.ProviderAccount?.Type != ProfileType.XtreamCodes)
+                                {
+                                    EnsureSeriesEpisodes(refreshedSeries);
+                                }
+                                SelectedSeries = refreshedSeries;
+                                _ = LoadSelectedSeriesMetadataAsync(refreshedSeries);
+                                System.Diagnostics.Debug.WriteLine($"[MainViewModel] Series detail auto-refreshed after aggregation: {refreshedSeries.Name}");
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[MainViewModel] Series detail auto-refresh failed: {ex.Message}");
+                            }
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -933,14 +953,24 @@ public partial class MainViewModel : ObservableObject
             List<string> pendingGroups = new();
             if (!isFullRefresh)
             {
+                var totalChannelCount = await _playlistService.GetChannelCountAsync(playlist.Id);
                 pendingGroups = await _playlistService.GetPendingDummyGroupsAsync(playlist.Id);
+                
+                _logger?.LogInformation($"[Stalker] Startup check for playlist {playlist.Id}: Total channels={totalChannelCount}, Pending dummy groups={pendingGroups.Count}");
+
                 if (pendingGroups.Count == 0)
                 {
+                    _logger?.LogInformation($"[Stalker] Skipping background load - All content already fully loaded in DB (Total channels: {totalChannelCount}).");
                     return; // Everything is loaded!
+                }
+
+                if (pendingGroups.Count > 0 && pendingGroups.Count < 15)
+                {
+                    _logger?.LogInformation($"[Stalker] Pending clusters: {string.Join(", ", pendingGroups)}");
                 }
             }
 
-            _logger?.LogDebug($"[Stalker] {(isFullRefresh ? "Full Refresh" : "Resume background load")} for categories.");
+            _logger?.LogInformation($"[Stalker] {(isFullRefresh ? "Full Refresh" : "Resume background load")} starting for {pendingGroups.Count} categories.");
             var portalUrl = profile.ProviderAccount.Url;
             var macAddress = profile.ProviderAccount.Username ?? string.Empty;
 
@@ -973,10 +1003,12 @@ public partial class MainViewModel : ObservableObject
                         .Where(c => pendingGroups.Contains(c.Name, StringComparer.OrdinalIgnoreCase))
                         .ToList();
 
+                    _logger?.LogInformation($"[Stalker] Filtered categories for resume: {categoriesToDownload.Count} categories will be downloaded (from {categories.Count} total).");
                     return Task.FromResult(categoriesToDownload);
                 },
                 onCategoryLoaded: async (channels, category) =>
                 {
+                    _logger?.LogInformation($"[Stalker] Category Loaded: {category.Name} ({channels.Count} real channels replacing dummy)");
                     await _playlistService.ReplaceDummyWithRealChannelsAsync(playlist.Id, category.Name, channels);
 
                     if (SelectedPlaylist?.Id == playlist.Id && SelectedGroup == category.Name)
@@ -5924,11 +5956,18 @@ public partial class MainViewModel : ObservableObject
 
         var source = dbSeries ?? series;
 
-        // ── YENİ: Xtream serisi ve hiç bölüm yoksa → lazy load ──
+        // ── YENİ: Xtream veya Stalker serisi ve hiç bölüm yoksa → lazy load ──
         bool hasEpisodes = source.Seasons.Any(s => s.Episodes.Count > 0);
         if (!hasEpisodes)
         {
-            await TryLazyLoadXtreamEpisodesAsync(source, db);
+            if (CurrentProfile?.ProviderAccount?.Type == ProfileType.XtreamCodes)
+            {
+                await TryLazyLoadXtreamEpisodesAsync(source, db);
+            }
+            else if (CurrentProfile?.ProviderAccount?.Type == ProfileType.StalkerPortal)
+            {
+                await TryLazyLoadStalkerEpisodesAsync(source, db);
+            }
             // Lazy load sonrası Seasons/Episodes güncel — devam et
         }
 
@@ -6063,6 +6102,129 @@ public partial class MainViewModel : ObservableObject
 
         await ApplyProfileProgressAsync(source, db);
         return source;
+    }
+
+    private async Task TryLazyLoadStalkerEpisodesAsync(Series series, AppDbContext db)
+    {
+        if (CurrentProfile?.ProviderAccount?.Type != ProfileType.StalkerPortal) return;
+
+        // Bu diziye ait Channel kaydını bul — StreamUrl'de series_id var
+        var seriesChannel = await db.Channels
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c =>
+                c.PlaylistId == series.PlaylistId &&
+                c.Type == ChannelType.Series &&
+                c.StreamUrl.StartsWith("stalker-series://") &&
+                c.Name == series.Name);
+
+        if (seriesChannel == null)
+        {
+            // İsim eşleşmesi yoksa normalized key ile dene
+            var allSeriesChannels = await db.Channels
+                .AsNoTracking()
+                .Where(c => c.PlaylistId == series.PlaylistId &&
+                            c.Type == ChannelType.Series &&
+                            c.StreamUrl.StartsWith("stalker-series://"))
+                .ToListAsync();
+
+            var targetKey = SeriesInfoParser.NormalizeKey(series.Name);
+            seriesChannel = allSeriesChannels.FirstOrDefault(c =>
+                SeriesInfoParser.NormalizeKey(c.Name) == targetKey);
+        }
+
+        if (seriesChannel == null) return;
+
+        var idStr = seriesChannel.StreamUrl.Replace("stalker-series://", "");
+        if (string.IsNullOrWhiteSpace(idStr)) return;
+
+        var portalUrl = CurrentProfile.ProviderAccount.Url;
+        var macAddress = CurrentProfile.ProviderAccount.Username ?? string.Empty;
+
+        _logger?.LogDebug("[Stalker] Lazy loading episodes for series {Name} (id={Id})", series.Name, idStr);
+
+        var detail = await _stalkerPortalService.GetSeriesInfoAsync(
+            portalUrl, macAddress, idStr);
+
+        if (detail == null) return;
+
+        // Poster/metadata/name güncelle (Kullanıcı İsteği: Stalker API'den gelen zengin TMDB metadatasını kaydet)
+        if (!string.IsNullOrWhiteSpace(detail.CoverUrl))
+            series.CoverUrl = detail.CoverUrl;
+        if (!string.IsNullOrWhiteSpace(detail.Description) && string.IsNullOrWhiteSpace(series.Plot))
+            series.Plot = detail.Description;
+        if (!string.IsNullOrWhiteSpace(detail.GenresStr) && string.IsNullOrWhiteSpace(series.Genre))
+            series.Genre = detail.GenresStr;
+        if (!string.IsNullOrWhiteSpace(detail.Actors) && string.IsNullOrWhiteSpace(series.Cast))
+            series.Cast = detail.Actors;
+        if (!string.IsNullOrWhiteSpace(detail.Director) && string.IsNullOrWhiteSpace(series.Director))
+            series.Director = detail.Director;
+        if (!string.IsNullOrWhiteSpace(detail.Year) && int.TryParse(detail.Year.Split('-').FirstOrDefault(), out var year))
+            series.ReleaseYear = year;
+        if (!string.IsNullOrWhiteSpace(detail.Age))
+            series.ContentRating = detail.Age;
+        if (!string.IsNullOrWhiteSpace(detail.RatingImdb) && double.TryParse(detail.RatingImdb, out var rate))
+            series.Rating = rate;
+        if (!string.IsNullOrWhiteSpace(detail.TmdbId) && int.TryParse(detail.TmdbId, out var tmdb))
+            series.TmdbId = tmdb;
+
+        // Seasons ve Episodes'ları oluştur
+        series.Seasons.Clear();
+
+        int defaultSeasonNum = 1;
+        foreach (var stalkerSeason in detail.Seasons)
+        {
+            int seasonNum = defaultSeasonNum;
+            // "Season 1" vs içinden rakamı ayıkla
+            var match = System.Text.RegularExpressions.Regex.Match(stalkerSeason.Name, @"\d+");
+            if (match.Success && int.TryParse(match.Value, out var parsedNum))
+            {
+                seasonNum = parsedNum;
+            }
+
+            var season = new Season
+            {
+                SeasonNumber = seasonNum,
+                Name = string.IsNullOrWhiteSpace(stalkerSeason.Name) ? $"Sezon {seasonNum}" : stalkerSeason.Name,
+                Series = series
+            };
+            series.Seasons.Add(season);
+
+            foreach (var epNum in stalkerSeason.EpisodeNumbers)
+            {
+                // PlayChannelAsync intercept etmesi için stalker-series-ep://episode?cmd={cmd}&ep={epNum} formatında özel link
+                // Cmd içinde '/' gibi karakterler olabildiği için query param olarak taşımak daha güvenli (Uri host kısmında hata veriyor)
+                var encodedCmd = System.Net.WebUtility.UrlEncode(stalkerSeason.Cmd);
+                var interceptUrl = $"stalker-series-ep://episode?cmd={encodedCmd}&ep={epNum}";
+
+                if (season.Episodes.Any(e => string.Equals(e.StreamUrl, interceptUrl, StringComparison.OrdinalIgnoreCase)))
+                    continue;
+
+                season.Episodes.Add(new Episode
+                {
+                    EpisodeNumber = epNum,
+                    Name = $"Bölüm {epNum}",
+                    StreamUrl = interceptUrl,
+                    Season = season
+                });
+            }
+
+            defaultSeasonNum++;
+        }
+
+        // DB'ye kaydet
+        if (series.Id > 0)
+        {
+            try
+            {
+                db.Series.Update(series);
+                await db.SaveChangesAsync();
+                _logger?.LogDebug("[Stalker] Series metadata & episodes saved to DB.");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogDebug($"[Stalker] DB Save failed for lazy loaded series: {ex.Message}");
+            }
+        }
     }
 
     private async Task TryLazyLoadXtreamEpisodesAsync(Series series, AppDbContext db)

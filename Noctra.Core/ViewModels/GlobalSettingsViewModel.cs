@@ -248,7 +248,6 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
                 
                 // 2. Clear orphaned settings
                 var profiles = await _profileService.GetProfilesAsync();
-                int deletedCount = 0;
                 var activeIds = new HashSet<int>(profiles.Select(p => p.Id));
                 activeIds.Add(0); // Master settings is always active
                 activeIds.Add(_settingsService.Settings.ProfileId); // Always protect current profile!

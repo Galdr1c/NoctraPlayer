@@ -694,6 +694,27 @@
                   </Grid>
                 </Grid>
 
+                <!-- Episodes Loading Spinner (Stalker/Xtream progressive load in progress) -->
+                <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Top"
+                            Margin="0,80,0,0" Spacing="20">
+                    <StackPanel.IsVisible>
+                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                            <Binding Path="IsChannelLoading"/>
+                            <Binding Path="SelectedSeriesTotalEpisodesCount" Converter="{StaticResource CountToVisibilityConverter}" ConverterParameter="invert"/>
+                        </MultiBinding>
+                    </StackPanel.IsVisible>
+                    <controls:PremiumSpinner Width="56" Height="56"
+                                             HorizontalAlignment="Center"/>
+                    <TextBlock Text="Bölümler yükleniyor..."
+                               FontSize="15" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               TextAlignment="Center"/>
+                    <TextBlock Text="İçerikler arka planda yükleniyor. Bölümler hazır olduğunda otomatik görünecektir."
+                               FontSize="12" Opacity="0.6"
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               TextAlignment="Center"/>
+                </StackPanel>
+
                 <!-- Seasons & Episodes -->
                 <Grid Grid.Row="1" Margin="0,48,0,0" RowDefinitions="Auto,Auto"
                       IsVisible="{Binding SelectedSeries.TotalEpisodesCount, Converter={StaticResource CountToVisibilityConverter}}">

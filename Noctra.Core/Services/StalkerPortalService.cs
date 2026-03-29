@@ -284,6 +284,7 @@ public class StalkerPortalService : IStalkerPortalService
 
                 try
                 {
+                    Log($"[Worker] Loading category: {category.Name} ({category.Type})");
                     var items = await GetAllPagesForCategoryAsync(
                         endpoint, token, macAddress,
                         category.Type, category.Id, cancellationToken);
@@ -299,27 +300,24 @@ public class StalkerPortalService : IStalkerPortalService
 
                         progress?.Report(new StalkerLoadProgress
                         {
-                            LoadedChannels   = total,
+                            CurrentCategory = category.Name,
                             LoadedCategories = loaded,
-                            TotalCategories  = totalCategories,
-                            CurrentCategory  = category.Name
+                            TotalCategories = totalCategories,
+                            LoadedChannels = total, // Map to LoadedChannels
+                            TotalChannels = null    // Total across categories isn't strictly known yet
                         });
-
-                        Log($"[{category.Type}] '{category.Name}': {channels.Count} channels " +
-                            $"({loaded}/{totalCategories} cats, {total} total, {sw.ElapsedMilliseconds}ms)");
 
                         await onCategoryLoaded(channels, category);
                     }
                     else
                     {
-                        // Boş kategori olsa bile ilerlemeyi artır
                         Interlocked.Increment(ref loadedCategories);
                     }
                 }
-                catch (OperationCanceledException) { /* kullanıcı iptal */ }
                 catch (Exception ex)
                 {
-                    Log($"Category '{category.Name}' failed: {ex.Message}");
+                    Interlocked.Increment(ref loadedCategories);
+                    Log($"[Error] Category {category.Name} (ID: {category.Id}, Type: {category.Type}) failed: {ex.Message}");
                 }
             }
         });
@@ -604,6 +602,134 @@ public class StalkerPortalService : IStalkerPortalService
         return all;
     }
 
+    public async Task<StalkerSeriesInfo?> GetSeriesInfoAsync(
+        string portalUrl,
+        string macAddress,
+        string seriesId,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedPortalUrl = NormalizePortalUrl(portalUrl);
+        var (normalizedUrl, endpoint, initialToken) = await ResolveEndpointParallelAsync(
+            normalizedPortalUrl, macAddress, cancellationToken);
+
+        if (endpoint == null) return null;
+
+        var token = await GetOrCreateTokenAsync(
+            normalizedUrl, endpoint, macAddress, initialToken, cancellationToken);
+
+        var queryParams = new Dictionary<string, string>
+        {
+            ["action"] = "get_ordered_list",
+            ["type"] = "series",
+            ["movie_id"] = seriesId,
+            ["token"] = token
+        };
+
+        var query = BuildQueryString(queryParams);
+        try
+        {
+            var js = await GetForJsAsync(endpoint, query, macAddress, token, cancellationToken);
+            if (!js.TryGetProperty("data", out var dataEl) || dataEl.ValueKind != JsonValueKind.Array)
+                return null;
+
+            var result = new StalkerSeriesInfo();
+            bool metadataSet = false;
+
+            foreach (var item in dataEl.EnumerateArray())
+            {
+                if (!metadataSet)
+                {
+                    result.Description = GetString(item, "description");
+                    result.Director = GetString(item, "director");
+                    result.Actors = GetString(item, "actors");
+                    result.Year = GetString(item, "year");
+                    result.TmdbId = GetString(item, "tmdb_id") ?? GetString(item, "tmdb");
+                    result.RatingImdb = GetString(item, "rating_imdb");
+                    result.Age = GetString(item, "age");
+                    result.CoverUrl = GetString(item, "screenshot_uri") ?? GetString(item, "pic");
+                    result.GenresStr = GetString(item, "genres_str");
+                    metadataSet = true;
+                }
+
+                var season = new StalkerSeasonInfo
+                {
+                    Id = GetString(item, "id") ?? string.Empty,
+                    Name = GetString(item, "name") ?? string.Empty,
+                    Cmd = GetString(item, "cmd") ?? string.Empty,
+                };
+
+                if (item.TryGetProperty("series", out var seriesEl) && seriesEl.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var ep in seriesEl.EnumerateArray())
+                    {
+                        if (ep.TryGetInt32(out int epNum))
+                        {
+                            season.EpisodeNumbers.Add(epNum);
+                        }
+                    }
+                }
+                
+                result.Seasons.Add(season);
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Log($"GetSeriesInfoAsync failed for {seriesId}: {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<string?> CreateLinkAsync(
+        string portalUrl,
+        string macAddress,
+        string type,
+        string cmd,
+        string episodeNum = "0",
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedPortalUrl = NormalizePortalUrl(portalUrl);
+        var (normalizedUrl, endpoint, initialToken) = await ResolveEndpointParallelAsync(
+            normalizedPortalUrl, macAddress, cancellationToken);
+
+        if (endpoint == null) return null;
+
+        var token = await GetOrCreateTokenAsync(
+            normalizedUrl, endpoint, macAddress, initialToken, cancellationToken);
+
+        var queryParams = new Dictionary<string, string>
+        {
+            ["action"] = "create_link",
+            ["type"] = type,
+            ["cmd"] = cmd,
+            ["force_ch_link"] = "1",
+            ["token"] = token
+        };
+
+        if (!string.IsNullOrEmpty(episodeNum) && episodeNum != "0")
+        {
+            queryParams["series"] = episodeNum;
+        }
+
+        var query = BuildQueryString(queryParams);
+        try
+        {
+            var js = await GetForJsAsync(endpoint, query, macAddress, token, cancellationToken);
+            if (js.TryGetProperty("cmd", out var cmdEl))
+            {
+                var rawCmd = cmdEl.GetString();
+                return NormalizeStreamCommand(rawCmd, ExtractBaseUrl(endpoint));
+            }
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Log($"CreateLinkAsync failed cmd={cmd}: {ex.Message}");
+            return null;
+        }
+    }
+
     private async Task<(List<StalkerListItem> Items, int? TotalItems, int? MaxPageItems)> GetPageAsync(
         string endpoint, string token, string macAddress,
         string listType, string categoryId, int page, CancellationToken ct)
@@ -774,21 +900,31 @@ public class StalkerPortalService : IStalkerPortalService
         string? token, CancellationToken ct)
     {
         using var request  = BuildGetRequest(endpoint, queryString, macAddress, token);
-        using var response = await _httpClient.SendAsync(
-            request, HttpCompletionOption.ResponseContentRead, ct);
+        var response = await _httpClient.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
 
-        var json = await response.Content.ReadAsStringAsync(ct);
-        if (string.IsNullOrWhiteSpace(json)) return default;
+        var body = await response.Content.ReadAsStringAsync(ct);
+        if (string.IsNullOrWhiteSpace(body))
+            return JsonDocument.Parse("[]").RootElement;
+
+        // --- YENİ: HTML/Hata Sayfası Kontrolü ---
+        var trimmedBody = body.TrimStart();
+        if (trimmedBody.StartsWith("<") || trimmedBody.Contains("<html", StringComparison.OrdinalIgnoreCase))
+        {
+            var snippet = trimmedBody.Length > 100 ? trimmedBody.Substring(0, 100) : trimmedBody;
+            Log($"[StalkerService] HTML response instead of JSON (Snippet: {snippet})");
+            throw new InvalidOperationException($"Sunucu geçerli bir JSON yanıtı yerine HTML hata sayfası döndürdü. (Bkz log)");
+        }
 
         try
         {
-            using var doc = JsonDocument.Parse(json);
+            using var doc = JsonDocument.Parse(body);
             return (doc.RootElement.TryGetProperty("js", out var js) ? js : doc.RootElement).Clone();
         }
         catch (JsonException ex)
         {
-            Log($"JSON parse error: {ex.Message}");
-            return default;
+            Log($"[StalkerService] JSON parse error: {ex.Message}. URL: {endpoint}?{queryString}");
+            throw;
         }
     }
 

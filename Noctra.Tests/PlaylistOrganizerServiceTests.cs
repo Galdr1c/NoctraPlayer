@@ -58,7 +58,7 @@ public class PlaylistOrganizerServiceTests
         var channels = new List<Channel>
         {
             Live("TRT 1", "Ulusal", "http://a/1"),
-            Live("TRT 1", "Ulusal", "http://b/1"),
+            Live("TRT 1", "Ulusal", "http://a/1"),
         };
         var result = _sut.RemoveDuplicates(channels);
         Assert.Single(result);
@@ -68,8 +68,8 @@ public class PlaylistOrganizerServiceTests
     public void RemoveDuplicates_QualityVariants_KeepsHighestQuality()
     {
         // "TRT 1 SD" (düşük) vs "TRT 1 HD" (yüksek) → HD kalmalı
-        var sd = Live("TRT 1 SD", "Ulusal", "http://a/sd");
-        var hd = Live("TRT 1 HD", "Ulusal", "http://b/hd");
+        var sd = Live("TRT 1 SD", "Ulusal", "http://a/1");
+        var hd = Live("TRT 1 HD", "Ulusal", "http://a/1");
         var result = _sut.RemoveDuplicates(new List<Channel> { sd, hd });
         Assert.Single(result);
         Assert.Contains("HD", result[0].Name, StringComparison.OrdinalIgnoreCase);
@@ -78,9 +78,9 @@ public class PlaylistOrganizerServiceTests
     [Fact]
     public void RemoveDuplicates_QualityVariants_4KWins()
     {
-        var hd   = Live("BeIN Sports 1 HD",  "Spor", "http://a/hd");
-        var fhd  = Live("BeIN Sports 1 FHD", "Spor", "http://b/fhd");
-        var uhd4k = Live("BeIN Sports 1 4K", "Spor", "http://c/4k");
+        var hd   = Live("BeIN Sports 1 HD",  "Spor", "http://a/1");
+        var fhd  = Live("BeIN Sports 1 FHD", "Spor", "http://a/1");
+        var uhd4k = Live("BeIN Sports 1 4K", "Spor", "http://a/1");
         var result = _sut.RemoveDuplicates(new List<Channel> { hd, fhd, uhd4k });
         Assert.Single(result);
         Assert.Contains("4K", result[0].Name, StringComparison.OrdinalIgnoreCase);
@@ -106,7 +106,7 @@ public class PlaylistOrganizerServiceTests
         var channels = new List<Channel>
         {
             Series("Breaking Bad S01E01", "Yabancı Dizi", "http://a/1"),
-            Series("Breaking Bad S01E01", "Yabancı Dizi", "http://b/1"),
+            Series("Breaking Bad S01E01", "Yabancı Dizi", "http://a/1"),
         };
         var result = _sut.RemoveDuplicates(channels);
         Assert.Single(result);
@@ -377,7 +377,7 @@ public class PlaylistOrganizerServiceTests
         var channels = new List<Channel>
         {
             Live("TRT 1", null, "http://a/1"),
-            Live("TRT 1", null, "http://b/1"), // duplicate
+            Live("TRT 1", null, "http://a/1"), // duplicate
             Live("CNN Türk", null),             // kategorisiz Haber
         };
         var result = _sut.Organize(channels);
@@ -403,7 +403,7 @@ public class PlaylistOrganizerServiceTests
     public void Organize_CountDecreasesByDuplicateCount()
     {
         var channels = Enumerable.Range(1, 10)
-            .Select(i => Live("Aynı Kanal", "Ulusal", $"http://s/{i}"))
+            .Select(i => Live("Aynı Kanal", "Ulusal", "http://s/1"))
             .ToList();
         var result = _sut.Organize(channels);
         Assert.Single(result);

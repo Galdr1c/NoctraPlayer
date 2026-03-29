@@ -83,6 +83,7 @@ namespace Noctra.Tests
         public Task<EpgProgram?> GetCurrentProgramAsync(Channel channel) => Task.FromResult<EpgProgram?>(null);
         public Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1, IProgress<EpgProgressInfo>? progress = null, bool clearBeforeSave = false, IDictionary<string, string>? headers = null) => Task.FromResult(0);
         public Task ClearEpgAsync() => Task.CompletedTask;
+        public Task VacuumAsync() => Task.CompletedTask;
         public Task<List<EpgProgram>> GetProgramsAsync(string channelId, DateTime from, DateTime to) => Task.FromResult(new List<EpgProgram>());
         public Task<List<EpgProgram>> GetUpcomingProgramsAsync(string channelId, int count = 5) => Task.FromResult(new List<EpgProgram>());
         public Task<List<EpgProgram>> GetTodayProgramsAsync(string channelId) => Task.FromResult(new List<EpgProgram>());
@@ -143,6 +144,7 @@ namespace Noctra.Tests
         public event Action? SettingsChanged;
         public Task SaveAsync() => Task.CompletedTask;
         public Task LoadAsync() => Task.CompletedTask;
+        public Task<int> CleanOrphanedSettingsAsync(IEnumerable<int> activeProfileIds) => Task.FromResult(0);
         public Task LoadProfileSettingsAsync(int profileId) => Task.CompletedTask;
         public Task<AppSettings?> PeekProfileSettingsAsync(int profileId) => Task.FromResult<AppSettings?>(Settings);
         public void ResetToDefaults() { }
@@ -184,6 +186,18 @@ namespace Noctra.Tests
         public Task RemoveFromHistoryAsync(int profileId, int? channelId, int? episodeId, CancellationToken ct = default) => Task.CompletedTask;
     }
 
+    internal sealed class FakeStalkerPortalService : IStalkerPortalService
+    {
+        public Task<bool> AuthenticateAsync(string portalUrl, string macAddress, CancellationToken cancellationToken = default) => Task.FromResult(true);
+        public Task<List<Channel>> GetChannelsAsync(string portalUrl, string macAddress, bool includeVod = true, CancellationToken cancellationToken = default) => Task.FromResult(new List<Channel>());
+        public Task<List<StalkerCategory>> GetCategoriesAsync(string portalUrl, string macAddress, CancellationToken cancellationToken = default) => Task.FromResult(new List<StalkerCategory>());
+        public Task<List<Channel>> GetChannelsByCategoryAsync(string portalUrl, string macAddress, string categoryId, string categoryType, CancellationToken cancellationToken = default) => Task.FromResult(new List<Channel>());
+        public Task GetChannelsProgressiveAsync(string portalUrl, string macAddress, bool includeVod, Func<List<StalkerCategory>, Action<string>, Task<List<StalkerCategory>>> onCategoriesDiscovered, Func<List<Channel>, StalkerCategory, Task> onCategoryLoaded, IProgress<StalkerLoadProgress>? progress = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public string GetEpgUrl(string portalUrl) => string.Empty;
+        public Task<StalkerSeriesInfo?> GetSeriesInfoAsync(string portalUrl, string macAddress, string seriesId, CancellationToken cancellationToken = default) => Task.FromResult<StalkerSeriesInfo?>(null);
+        public Task<string?> CreateLinkAsync(string portalUrl, string macAddress, string type, string cmd, string episodeNum = "0", CancellationToken cancellationToken = default) => Task.FromResult<string?>(null);
+    }
+
     internal sealed class PlayerTestContext
     {
         public FakeVideoPlayerService VideoService { get; } = new();
@@ -206,7 +220,8 @@ namespace Noctra.Tests
                 Settings,
                 License,
                 null!,  // MainViewModel — not needed for these tests
-                WatchHistory);
+                WatchHistory,
+                new FakeStalkerPortalService());
         }
 
         private T? InvokePrivate<T>(string method, params object?[] args)

@@ -530,6 +530,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private DateTime _lastWatchHistoryUpdateUtc = DateTime.MinValue;
     private DateTime _sessionPlaybackStartTimeUtc = DateTime.MinValue;
     private readonly IWatchHistoryService? _watchHistoryService;
+    private readonly IStalkerPortalService _stalkerPortalService;
     private readonly System.Threading.Timer _autoHideTimer;
     private readonly System.Timers.Timer _clockTimer;
     private readonly System.Timers.Timer _watchHistoryTimer;
@@ -558,7 +559,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         ISettingsService settingsService,
         ILicenseService licenseService,
         MainViewModel mainViewModel,
-        IWatchHistoryService? watchHistoryService = null)
+        IWatchHistoryService? watchHistoryService,
+        IStalkerPortalService stalkerPortalService)
     {
         _videoPlayerService = videoPlayerService;
         _epgService = epgService;
@@ -571,6 +573,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _licenseService = licenseService;
         _mainViewModel = mainViewModel;
         _watchHistoryService = watchHistoryService;
+        _stalkerPortalService = stalkerPortalService;
 
         // Initialize Network Status
 
@@ -1026,7 +1029,54 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         StreamInfo = "Kalite tespit ediliyor...";
         try
         {
-            var resolvedStreamUrl = await _contentDownloadService.ResolvePlayableUrlAsync(channel.StreamUrl);
+            string resolvedStreamUrl;
+
+            // --- YENİ: Stalker Episode Intercept ---
+            if (channel.StreamUrl != null && channel.StreamUrl.StartsWith("stalker-series-ep://", StringComparison.OrdinalIgnoreCase))
+            {
+                // Uri parserı custom schemelarda (özellikle host kısmında geçersiz karakter varsa) hata verebildiği için manuel ayıklıyoruz
+                var raw = channel.StreamUrl.Substring("stalker-series-ep://".Length);
+                string cmd = string.Empty;
+                string epNum = "0";
+
+                int queryIndex = raw.IndexOf('?');
+                if (queryIndex >= 0)
+                {
+                    // Yeni format: stalker-series-ep://episode?cmd={encodedCmd}&ep={epNum}
+                    var query = raw.Substring(queryIndex + 1);
+                    var queryParams = System.Web.HttpUtility.ParseQueryString(query);
+                    cmd = System.Net.WebUtility.UrlDecode(queryParams["cmd"] ?? string.Empty);
+                    epNum = queryParams["ep"] ?? "0";
+                }
+                else
+                {
+                    // Eski/Hatalı format toleransı: stalker-series-ep://{raw_cmd}
+                    cmd = raw;
+                }
+
+                var portalUrl = _mainViewModel?.CurrentProfile?.ProviderAccount?.Url ?? string.Empty;
+                var macAddress = _mainViewModel?.CurrentProfile?.ProviderAccount?.Username ?? string.Empty;
+
+                StreamInfo = "Video bağlantısı alınıyor...";
+                
+                var stalkerResolvedUrl = await _stalkerPortalService.CreateLinkAsync(
+                    portalUrl,
+                    macAddress,
+                    "vod", // Stalker API series episodes actually use "vod" type with create_link
+                    cmd,
+                    epNum);
+
+                if (string.IsNullOrEmpty(stalkerResolvedUrl))
+                    throw new InvalidOperationException("Bu bölümün video bağlantısı Stalker sunucusundan alınamadı.");
+
+                resolvedStreamUrl = stalkerResolvedUrl;
+            }
+            else
+            {
+                if (channel.StreamUrl == null)
+                    throw new InvalidOperationException("Kanal akış adresi bulunamadı.");
+                resolvedStreamUrl = await _contentDownloadService.ResolvePlayableUrlAsync(channel.StreamUrl);
+            }
             
             if (startPosition.HasValue && startPosition.Value > 0 && !IsDownloadedPlayback && resolvedStreamUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {

@@ -64,8 +64,8 @@ namespace Noctra.Tests
             _settingsServiceMock.Setup(s => s.Settings).Returns(new AppSettings());
 
             // Default organizer behavior: just return what's given
-            _organizerMock.Setup(o => o.Organize(It.IsAny<List<Channel>>()))
-                .Returns<List<Channel>>(c => c);
+            _organizerMock.Setup(o => o.Organize(It.IsAny<List<Channel>>(), It.IsAny<bool>()))
+                .Returns<List<Channel>, bool>((c, _) => c);
         }
 
         public void Dispose()

@@ -7,7 +7,16 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 
 ## [Unreleased]
- 
+
+### 🛠️ Stalker Portal ve Oynatma Dayanıklılığı (2026-03-29)
+- **Stalker API Hata Koruması**: Sunuculardan gelen beklenmedik HTML hata sayfaları (404/500 vb.) artık uygulamayı çökertmiyor; sistem bu yanıtları algılayıp güvenli bir şekilde logluyor.
+- **Dayanıklı Arka Plan Yükleme**: Stalker portal kanalları yüklenirken tek bir kategoride oluşan hata (örneğin bozuk JSON) artık tüm yükleme sürecini durdurmuyor; hatalı kategori atlanarak diğer içeriklerin yüklenmesine devam ediliyor.
+- **Gelişmiş Seri Oynatma Yakalama**: `stalker-series-ep://` protokolü büyük/küçük harf duyarsız (`case-insensitive`) hale getirilerek, bazı durumlarda VLC'nin ham adresi oynatmaya çalışıp hata alması (404) sorunu kökten çözüldü.
+- **İlerleme Durumu Düzeltmesi**: Stalker portal yükleme ilerlemesi (`StalkerLoadProgress`) arayüz bildirimlerindeki eşleşme hatası giderildi.
+
+### 🔍 Tanılama ve İzleme (2026-03-29)
+- **Detaylı Arka Plan Logları**: Kanal ve dizi yükleme süreçlerinin hangi aşamada olduğunu ve nerede takıldığını anlamak için `MainViewModel` düzeyinde yeni tanısal loglar eklendi.
+- **Hata Yakalama Güçlendirildi**: `StalkerPortalService` içerisindeki JSON ayrıştırma ve kategori yükleme döngüleri asenkron hata yönetim mekanizmalarıyla daha güvenli hale getirildi.
 ### 🧠 Kategori Tespiti ve Sağlayıcı Güveni (Trust Provider Types) (2026-03-29)
 - **Xtream ve Stalker'a Tam Güven**: Otomatik playlist düzenleyici (PlaylistOrganizerService) artık Xtream ve Stalker hesaplarından gelen kanallarda sağlayıcının (provider) belirlediği "Live", "VOD" ve "Series" tiplerini doğrudan kabul ediyor. Daha önce yanlış yazılmış tipleri düzeltmek için yapılan agresif müdahaleler (örneğin ismi diziye benzeyen haber kanallarının kazara dizi sekmesine atılması sorunu) akıllı API'lerde tamamen devre dışı bırakıldı.
 - **M3U Güvenlik Ağı Koruması**: M3U linkleri gibi kanal tipini (Live/VOD) içinde barındırmayan ilkel formatlar için mevcut kategori tespit mekanizması (çöpçü algoritma) korunarak karmaşanın önüne geçilmeye devam ediliyor.
