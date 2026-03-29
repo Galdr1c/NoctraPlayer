@@ -1,4 +1,4 @@
-﻿using Noctra.Models;
+using Noctra.Models;
 
 namespace Noctra.Services.Interfaces;
 
@@ -11,7 +11,7 @@ public interface IPlaylistOrganizerService
     /// <summary>
     /// Tam organizasyon pipeline'ı çalıştırır
     /// </summary>
-    List<Channel> Organize(List<Channel> channels);
+    List<Channel> Organize(List<Channel> channels, bool trustProviderTypes = false);
 
     /// <summary>
     /// Benzer/aynı kanalları kaldırır, yüksek kaliteyi tercih eder

@@ -69,15 +69,19 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
     /// <summary>
     /// Tam organizasyon pipeline'ı
     /// </summary>
-    public List<Channel> Organize(List<Channel> channels)
+    public List<Channel> Organize(List<Channel> channels, bool trustProviderTypes = false)
     {
         if (channels == null || channels.Count == 0)
             return channels ?? new List<Channel>();
 
         var originalCount = channels.Count;
 
-        // Stage 1: Fix misplaced Live channels (Series appearing as Live) before deduplication
-        FixChannelTypes(channels);
+        // Stage 1: Fix misplaced Live channels (Series appearing as Live) before deduplication.
+        // We skip this if the provider (e.g. Xtream/Stalker) explicitly defines valid types.
+        if (!trustProviderTypes)
+        {
+            FixChannelTypes(channels);
+        }
 
         // Stage 2: Remove duplicates (keeps highest quality)
         var organized = RemoveDuplicates(channels);

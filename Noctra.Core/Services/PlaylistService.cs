@@ -390,7 +390,8 @@ public partial class PlaylistService : IPlaylistService
         using var context = await _contextFactory.CreateDbContextAsync();
 
         // Otomatik organizasyon: dedup, kategorize, sıralama
-        var organized = _organizer.Organize(channels.ToList());
+        // Xtream/Stalker aşamalı yüklediği için sağlayıcı tiplerine güveniyoruz
+        var organized = _organizer.Organize(channels.ToList(), trustProviderTypes: true);
 
         foreach (var channel in organized)
             channel.PlaylistId = playlistId;
@@ -436,7 +437,8 @@ public partial class PlaylistService : IPlaylistService
             }
 
             // Otomatik organizasyon: dedup, kategorize, sıralama
-            var organized = _organizer.Organize(realChannels.ToList());
+            // Xtream/Stalker aşamalı yüklediği için sağlayıcı tiplerine güveniyoruz
+            var organized = _organizer.Organize(realChannels.ToList(), trustProviderTypes: true);
 
             foreach (var channel in organized)
                 channel.PlaylistId = playlistId;

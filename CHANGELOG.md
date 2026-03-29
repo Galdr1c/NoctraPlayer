@@ -8,6 +8,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
  
+### 🧠 Kategori Tespiti ve Sağlayıcı Güveni (Trust Provider Types) (2026-03-29)
+- **Xtream ve Stalker'a Tam Güven**: Otomatik playlist düzenleyici (PlaylistOrganizerService) artık Xtream ve Stalker hesaplarından gelen kanallarda sağlayıcının (provider) belirlediği "Live", "VOD" ve "Series" tiplerini doğrudan kabul ediyor. Daha önce yanlış yazılmış tipleri düzeltmek için yapılan agresif müdahaleler (örneğin ismi diziye benzeyen haber kanallarının kazara dizi sekmesine atılması sorunu) akıllı API'lerde tamamen devre dışı bırakıldı.
+- **M3U Güvenlik Ağı Koruması**: M3U linkleri gibi kanal tipini (Live/VOD) içinde barındırmayan ilkel formatlar için mevcut kategori tespit mekanizması (çöpçü algoritma) korunarak karmaşanın önüne geçilmeye devam ediliyor.
+
 ### 🌍 Dizi ve Bölüm İsimlendirme Standardizasyonu (2026-03-29)
 - **Uluslararası Format Seviyesi**: Tüm "Bölüm" ve "Sezon" ibareleri kaldırılarak global bir standart olan `S{sezon} E{bölüm}` formatına geçildi.
 - **Temiz Bölüm İsimleri**: Sağlayıcıdan (provider) gelen bölüm kodları (S01E01 vb.) varken başa eklenen "1. Bölüm" gibi mükerrer kalabalıklar temizlendi.
