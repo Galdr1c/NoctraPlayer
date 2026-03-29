@@ -635,7 +635,7 @@
 
                     <!-- Action Buttons -->
                     <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,24,0,0" Spacing="10" IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
-                        <Border CornerRadius="8" Background="Transparent" ClipToBounds="False">
+                        <Border CornerRadius="8" Background="Transparent" ClipToBounds="True">
                             <Border.Styles>
                                 <Style Selector="Border:pointerover">
                                     <Setter Property="BoxShadow" Value="0 0 16 0 #608B5CF6"/>

@@ -6,7 +6,7 @@
         mc:Ignorable="d" d:DesignWidth="450" d:DesignHeight="300"
         x:Class="Noctra.Avalonia.Views.SplashWindow"
         Title="Noctra IPTV"
-        Width="450" Height="300"
+        Width="450" Height="350"
         WindowStartupLocation="CenterScreen"
         SystemDecorations="None"
         CanResize="False"
@@ -17,9 +17,10 @@
 
     <Panel>
         <!-- Consistent Background Gradient -->
-        <Border CornerRadius="12" Background="{DynamicResource BackgroundGradientBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+        <Border CornerRadius="12" Background="{DynamicResource BackgroundGradientBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                Margin="40" ClipToBounds="True">
             <Border.BoxShadow>
-                <BoxShadows>0 10 30 5 #80000000</BoxShadows>
+                <BoxShadows>0 10 40 10 #80000000</BoxShadows>
             </Border.BoxShadow>
             
             <Grid RowDefinitions="*,Auto,Auto">

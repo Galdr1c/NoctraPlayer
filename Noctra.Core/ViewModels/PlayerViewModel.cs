@@ -1055,17 +1055,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             return;
         }
 
-        // Start watch history tracking for VOD content
-        if (!IsLiveContent)
-        {
-            _lastWatchHistoryUpdateUtc = DateTime.UtcNow;
-            _sessionPlaybackStartTimeUtc = DateTime.UtcNow;
-            _watchHistoryTimer.Start();
-        }
-        else
-        {
-            _watchHistoryTimer.Stop();
-        }
+        // Start watch history tracking for all content
+        _lastWatchHistoryUpdateUtc = DateTime.UtcNow;
+        _sessionPlaybackStartTimeUtc = DateTime.UtcNow;
+        _watchHistoryTimer.Start();
 
         // Always query DB-backed EPG; IsLoaded flag may belong to another service instance.
         var program = await _epgService.GetCurrentProgramAsync(channel);

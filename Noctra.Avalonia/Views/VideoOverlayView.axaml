@@ -23,7 +23,8 @@
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="6"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="CornerRadius" Value="100"/>
             <Setter Property="Opacity" Value="0.85"/>
             <Setter Property="Transitions">
                 <Transitions>
@@ -33,6 +34,7 @@
             </Setter>
         </Style>
         <Style Selector="Button.iconBtn:pointerover">
+            <Setter Property="Background" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="Opacity" Value="1"/>
         </Style>
         <Style Selector="Button.iconBtn:pressed">
@@ -174,7 +176,9 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="16">
-                    <Button Command="{Binding ClosePlayerCommand}" Classes="iconBtn">
+                    <Button Command="{Binding ClosePlayerCommand}" 
+                            Theme="{StaticResource CircleButtonStyle}"
+                            ToolTip.Tip="Geri Dön">
                         <materialIcons:MaterialIcon Kind="ArrowLeft" Width="24" Height="24" Foreground="White"/>
                     </Button>
                     <TextBlock Text="{Binding CurrentChannel.Name}" FontSize="20" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" LetterSpacing="0.2"/>
@@ -805,7 +809,9 @@
 
         <!-- Overlays -->
         <Border Background="Black" IsHitTestVisible="True" ZIndex="900" IsVisible="{Binding IsBufferShieldVisible}"/>
-        <Button Command="{Binding ClosePlayerCommand}" Classes="iconBtn" Background="#33000000" CornerRadius="8" ZIndex="1001" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="24,24,0,0" IsVisible="{Binding IsBuffering}"><materialIcons:MaterialIcon Kind="ArrowLeft" Width="28" Height="28" Foreground="White"/></Button>
+        <Button Command="{Binding ClosePlayerCommand}" Classes="iconBtn" Background="#33000000" CornerRadius="8" ZIndex="1001" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="24,24,0,0" IsVisible="{Binding IsBuffering}">
+            <materialIcons:MaterialIcon Kind="ArrowLeft" Width="28" Height="28" Foreground="White"/>
+        </Button>
         
         <Border x:Name="VolumeToast" Background="#99000000" CornerRadius="8" Padding="16,8" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,40,0,0" IsHitTestVisible="False" ZIndex="1000" IsVisible="{Binding $parent[UserControl].IsVolumeToastVisible}" Opacity="{Binding $parent[UserControl].IsVolumeToastVisible, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=OpacityOnly}">
             <Border.Transitions><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.2"/></Transitions></Border.Transitions>

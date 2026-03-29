@@ -7,6 +7,16 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 
 ## [Unreleased]
+ 
+### 🐞 İzleme Geçmişi Hata Düzeltmeleri (2026-03-29)
+- **Canlı TV Geçmiş Takibi**: Canlı kanalların izleme geçmişine kaydedilmesini engelleyen "Güvenlik Ağı" hatası giderildi. Artık 15 saniyeden uzun süren tüm canlı yayın izlemeleri "Geçmiş" sekmesinde doğru şekilde listeleniyor.
+- **Periyodik Geçmiş Güncelleme**: Canlı yayınlarda da izleme geçmişi (heartbeat) periyodik olarak güncellenmesi sağlanarak, ani kapanmalarda veya kanal değişimlerinde veri kaybı önlendi.
+
+### 🎨 Video Oynatıcı Arayüz Modernizasyonu (2026-03-29)
+- **Yuvarlak Buton Estetiği**: Video oynatıcı üzerindeki "Geri" butonu ve tüm kontrol butonları (Oynat, Ses, Tam Ekran vb.) uygulama genelindeki premium yuvarlak tasarıma uygun hale getirildi.
+- **Gelişmiş Hover Efekti**: Kontrol butonlarına hover durumunda hafif ve modern bir dairesel arka plan vurgusu (`#22FFFFFF`) eklendi.
+- **Sektörel Standartlarda Geri Butonu**: Geri butonu, global `CircleButtonStyle` kullanılarak 40x40 boyutlarında tam daire formuna getirildi ve görünürlüğü artırıldı.
+- **Görsel Bütünlük**: Tüm butonların `CornerRadius` ve `Padding` değerleri, ikonların dairesel vurgular içinde kusursuz merkezlenmesi için optimize edildi.
 
 ### 🛠️ Gelişmiş Önbellek ve Veritabanı Temizliği (2026-03-28)
 - **Kapsamlı Veri Temizleme Hattı**: "Önbelleği Temizle" butonu artık sadece geçici dosyaları değil, tüm gereksiz verileri (EPG, Yetim Ayarlar) temizleyip disk alanını geri kazanan tam bir bakım aracına dönüştürüldü.
