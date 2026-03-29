@@ -8,6 +8,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
  
+### 🌍 Dizi ve Bölüm İsimlendirme Standardizasyonu (2026-03-29)
+- **Uluslararası Format Seviyesi**: Tüm "Bölüm" ve "Sezon" ibareleri kaldırılarak global bir standart olan `S{sezon} E{bölüm}` formatına geçildi.
+- **Temiz Bölüm İsimleri**: Sağlayıcıdan (provider) gelen bölüm kodları (S01E01 vb.) varken başa eklenen "1. Bölüm" gibi mükerrer kalabalıklar temizlendi.
+- **Akıllı Fallback**: Eğer orijinal başlıkta hiç bilgi yoksa, içerik `Ep {sayı}` şeklinde isimlendirilerek düzenli bir liste yapısı korundu.
+
 ### 🐞 İzleme Geçmişi Hata Düzeltmeleri (2026-03-29)
 - **Canlı TV Geçmiş Takibi**: Canlı kanalların izleme geçmişine kaydedilmesini engelleyen "Güvenlik Ağı" hatası giderildi. Artık 15 saniyeden uzun süren tüm canlı yayın izlemeleri "Geçmiş" sekmesinde doğru şekilde listeleniyor.
 - **Periyodik Geçmiş Güncelleme**: Canlı yayınlarda da izleme geçmişi (heartbeat) periyodik olarak güncellenmesi sağlanarak, ani kapanmalarda veya kanal değişimlerinde veri kaybı önlendi.

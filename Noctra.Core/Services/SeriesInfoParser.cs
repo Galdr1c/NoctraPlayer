@@ -324,36 +324,21 @@ public static partial class SeriesInfoParser
 
     public static string CleanEpisodeTitle(string? title, string? seriesName, int episodeNumber)
     {
-        var label = GetEpisodeLabel(title);
+        var seriesPrefix = !string.IsNullOrWhiteSpace(seriesName) ? seriesName : "Bilinmeyen Dizi";
+        
         if (string.IsNullOrWhiteSpace(title))
         {
-            var baseName = !string.IsNullOrWhiteSpace(seriesName) ? seriesName : "Bilinmeyen Dizi";
-            return $"{baseName} - {episodeNumber}. {label}";
+            return $"{seriesPrefix} - Ep {episodeNumber}";
         }
 
         var subtitle = ExtractEpisodeSubtitle(title, seriesName, episodeNumber);
-        var seriesPrefix = !string.IsNullOrWhiteSpace(seriesName) ? seriesName : "Bilinmeyen Dizi";
 
         if (string.IsNullOrWhiteSpace(subtitle))
         {
-            return $"{seriesPrefix} - {episodeNumber}. {label}";
+            return $"{seriesPrefix} - Ep {episodeNumber}";
         }
 
-        return $"{seriesPrefix} - {episodeNumber}. {label} - {subtitle}";
-    }
-
-    private static string GetEpisodeLabel(string? title)
-    {
-        if (string.IsNullOrWhiteSpace(title)) return "Bölüm";
-
-        if (title.Contains("Episodio", StringComparison.OrdinalIgnoreCase)) return "Episodio";
-        if (title.Contains("Episode", StringComparison.OrdinalIgnoreCase)) return "Episode";
-        if (title.Contains("Capitulo", StringComparison.OrdinalIgnoreCase) || title.Contains("Capítulo", StringComparison.OrdinalIgnoreCase)) return "Capitulo";
-        if (title.Contains("Folge", StringComparison.OrdinalIgnoreCase)) return "Folge";
-        if (title.Contains("Bölüm", StringComparison.OrdinalIgnoreCase) || title.Contains("Bolum", StringComparison.OrdinalIgnoreCase)) return "Bölüm";
-        
-        // Default to Bölüm for Turkish UI consistency, but can be smarter
-        return "Bölüm";
+        return $"{seriesPrefix} - {subtitle}";
     }
 
     private static string ExtractEpisodeSubtitle(string title, string? seriesName, int episodeNumber)
@@ -513,11 +498,11 @@ public static partial class SeriesInfoParser
     {
         if (season > 0 && episode > 0)
         {
-            return $"Sezon {season} • Bölüm {episode}";
+            return $"S{season} E{episode}";
         }
         if (season > 0)
         {
-            return $"Sezon {season}";
+            return $"Season {season}";
         }
         return string.Empty;
     }
