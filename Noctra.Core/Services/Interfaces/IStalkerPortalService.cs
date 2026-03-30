@@ -118,7 +118,17 @@ public class StalkerSeasonInfo
     public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string Cmd { get; set; } = string.Empty;
-    public List<int> EpisodeNumbers { get; set; } = [];
+    public List<StalkerEpisodeInfo> Episodes { get; set; } = [];
+}
+
+public class StalkerEpisodeInfo
+{
+    public int EpisodeNumber { get; set; }
+    public string? Name { get; set; }
+    public string? Description { get; set; }
+    public string? Pic { get; set; }
+    public string? Duration { get; set; }
+    public string? Added { get; set; }
 }
 
 /// <summary>

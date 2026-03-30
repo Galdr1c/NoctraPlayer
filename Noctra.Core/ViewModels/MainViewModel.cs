@@ -518,9 +518,9 @@ public partial class MainViewModel : ObservableObject
                             StatusMessage = "İçerikleriniz hızla yükleniyor...";
                             await LoadPlaylistsAsync();
             
-                            // Arka planda URL sağlık kontrolü yap (cache varken bile)
+                            // Arka planda URL sağlık kontrolü yap (M3U için geçerli)
                             var playlistUrl = existingPlaylists[0].Url;
-                            if (!string.IsNullOrWhiteSpace(playlistUrl))
+                            if (!string.IsNullOrWhiteSpace(playlistUrl) && profile.ProviderAccount.Type == ProfileType.M3U)
                             {
                                 _ = CheckPlaylistUrlHealthAsync(playlistUrl);
                             }
@@ -6213,8 +6213,9 @@ public partial class MainViewModel : ObservableObject
             };
             series.Seasons.Add(season);
 
-            foreach (var epNum in stalkerSeason.EpisodeNumbers)
+            foreach (var stalkerEp in stalkerSeason.Episodes)
             {
+                var epNum = stalkerEp.EpisodeNumber;
                 // PlayChannelAsync intercept etmesi için stalker-series-ep://episode?cmd={cmd}&ep={epNum} formatında özel link
                 // Cmd içinde '/' gibi karakterler olabildiği için query param olarak taşımak daha güvenli (Uri host kısmında hata veriyor)
                 var encodedCmd = System.Net.WebUtility.UrlEncode(stalkerSeason.Cmd);
@@ -6223,11 +6224,32 @@ public partial class MainViewModel : ObservableObject
                 if (season.Episodes.Any(e => string.Equals(e.StreamUrl, interceptUrl, StringComparison.OrdinalIgnoreCase)))
                     continue;
 
+                var epDescription = stalkerEp.Description;
+                var epDuration = stalkerEp.Duration;
+                var epCover = stalkerEp.Pic;
+                var epAdded = stalkerEp.Added;
+
+                TimeSpan? duration = null;
+                if (!string.IsNullOrEmpty(epDuration) && int.TryParse(System.Text.RegularExpressions.Regex.Match(epDuration, @"\d+").Value, out var mins))
+                {
+                    duration = TimeSpan.FromMinutes(mins);
+                }
+
+                DateTime? airDate = null;
+                if (!string.IsNullOrEmpty(epAdded) && DateTime.TryParse(epAdded, out var parsedDate))
+                {
+                    airDate = parsedDate;
+                }
+
                 season.Episodes.Add(new Episode
                 {
                     EpisodeNumber = epNum,
-                    Name = $"Bölüm {epNum}",
+                    Name = string.IsNullOrWhiteSpace(stalkerEp.Name) ? $"Bölüm {epNum}" : stalkerEp.Name,
                     StreamUrl = interceptUrl,
+                    Plot = epDescription,
+                    Duration = duration,
+                    CoverUrl = epCover,
+                    AirDate = airDate,
                     Season = season
                 });
             }

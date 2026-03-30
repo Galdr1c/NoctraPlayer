@@ -1118,13 +1118,15 @@
                             <materialIcons:MaterialIcon Kind="ClockOutline" Width="16" Height="16"
                                                         Foreground="{DynamicResource TextMutedBrush}"
                                                         VerticalAlignment="Center"/>
-                            <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="14"
-                                       VerticalAlignment="Center">
-                              <Run Text="Bıraktığın yer: "/>
-                              <Run Text="{Binding ResumePositionText}"
-                                   Foreground="{DynamicResource TextPrimaryBrush}"
-                                   FontWeight="SemiBold"/>
-                            </TextBlock>
+                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                              <TextBlock Text="Bıraktığın yer:" 
+                                         Foreground="{DynamicResource TextMutedBrush}" 
+                                         FontSize="14"/>
+                              <TextBlock Text="{Binding ResumePositionText}"
+                                         Foreground="{DynamicResource TextPrimaryBrush}"
+                                         FontSize="14"
+                                         FontWeight="SemiBold"/>
+                            </StackPanel>
                           </StackPanel>
                         </Border>
 
@@ -1216,11 +1218,12 @@
                             <StackPanel Orientation="Horizontal" Spacing="6">
                               <materialIcons:MaterialIcon Kind="Crown" Width="14" Height="14"
                                                           Foreground="{DynamicResource AccentLightBrush}"/>
-                              <TextBlock FontSize="12" Foreground="{DynamicResource AccentLightBrush}">
-                                <Run Text="Premium"/>
-                                <Run Text="'a geç, kaldığın yerden devam et."
-                                     Foreground="{DynamicResource TextMutedBrush}"/>
-                              </TextBlock>
+                              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="Premium" 
+                                           FontSize="12" Foreground="{DynamicResource AccentLightBrush}"/>
+                                <TextBlock Text="'a geç, kaldığın yerden devam et."
+                                           FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                              </StackPanel>
                             </StackPanel>
                         </Border>
 

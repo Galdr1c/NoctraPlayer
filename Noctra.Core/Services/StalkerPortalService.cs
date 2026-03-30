@@ -720,14 +720,38 @@ public class StalkerPortalService : IStalkerPortalService
         var query = BuildQueryString(queryParams);
         try
         {
+            var stalkerItems = new List<JsonElement>();
             var js = await GetForJsAsync(endpoint, query, macAddress, token, cancellationToken);
-            if (!js.TryGetProperty("data", out var dataEl) || dataEl.ValueKind != JsonValueKind.Array)
-                return null;
+            
+            if (js.TryGetProperty("data", out var dataEl) && dataEl.ValueKind == JsonValueKind.Array)
+            {
+                stalkerItems.AddRange(dataEl.EnumerateArray());
+
+                // Sayfalama desteği — Tüm bölümleri çekmek için gerekirse diğer sayfaları da dolaş
+                var totalItems = GetInt(js, "total_items");
+                var maxPageItems = GetInt(js, "max_page_items") ?? 14; 
+                
+                if (totalItems > maxPageItems)
+                {
+                    int totalPages = (int)Math.Ceiling(totalItems.Value / (double)maxPageItems);
+                    for (int p = 2; p <= totalPages; p++)
+                    {
+                        var pageQuery = BuildQueryString(new Dictionary<string, string>(queryParams) { ["p"] = p.ToString() });
+                        var pJs = await GetForJsAsync(endpoint, pageQuery, macAddress, token, cancellationToken);
+                        if (pJs.TryGetProperty("data", out var pData) && pData.ValueKind == JsonValueKind.Array)
+                        {
+                            stalkerItems.AddRange(pData.EnumerateArray());
+                        }
+                    }
+                }
+            }
+
+            if (stalkerItems.Count == 0) return null;
 
             var result = new StalkerSeriesInfo();
             bool metadataSet = false;
 
-            foreach (var item in dataEl.EnumerateArray())
+            foreach (var item in stalkerItems)
             {
                 if (!metadataSet)
                 {
@@ -754,9 +778,27 @@ public class StalkerPortalService : IStalkerPortalService
                 {
                     foreach (var ep in seriesEl.EnumerateArray())
                     {
-                        if (ep.TryGetInt32(out int epNum))
+                        if (ep.ValueKind == JsonValueKind.Number && ep.TryGetInt32(out int epNum))
                         {
-                            season.EpisodeNumbers.Add(epNum);
+                            season.Episodes.Add(new StalkerEpisodeInfo { EpisodeNumber = epNum });
+                        }
+                        else if (ep.ValueKind == JsonValueKind.Object)
+                        {
+                            var numStr = GetString(ep, "name") ?? GetString(ep, "id") ?? "0";
+                            var numId = 0;
+                            // "Bölüm 1" gibi string'lerden sayıyı ayıkla
+                            var match = System.Text.RegularExpressions.Regex.Match(numStr, @"\d+");
+                            if (match.Success) int.TryParse(match.Value, out numId);
+
+                            season.Episodes.Add(new StalkerEpisodeInfo
+                            {
+                                EpisodeNumber = numId,
+                                Name = GetString(ep, "name"),
+                                Description = GetString(ep, "description"),
+                                Pic = GetString(ep, "pic") ?? GetString(ep, "screenshot_uri"),
+                                Duration = GetString(ep, "duration"),
+                                Added = GetString(ep, "added")
+                            });
                         }
                     }
                 }
@@ -865,7 +907,10 @@ public class StalkerPortalService : IStalkerPortalService
                     Id        = GetString(item, "id"),
                     Name      = GetString(item, "name"),
                     Cmd       = GetString(item, "cmd"),
-                    Logo      = GetString(item, "logo"),
+                    Logo      = GetString(item, "logo") ?? 
+                                GetString(item, "pic") ?? 
+                                GetString(item, "cover") ?? 
+                                GetString(item, "screenshot_uri"),
                     TvGenreId = GetString(item, "tv_genre_id") ??
                                 GetString(item, "category_id") ??
                                 GetString(item, "genre_id"),
