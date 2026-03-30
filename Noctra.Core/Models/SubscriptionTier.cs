@@ -19,9 +19,8 @@ public static class TierLimits
     // ==========================================
     public static class Free
     {
-        public const int MaxProfiles = 3;
-        public const int MaxM3UAccounts = 1;
-        public const int MaxCustomEpgUrls = 1;
+        public const int MaxProfiles = 5;
+        public const int MaxCustomEpgUrls = 2;
         public const bool HasAds = true;
         public const bool HasWatermark = true;
         public const bool EpgAutoRefresh = false; // Sadece manuel
@@ -32,9 +31,8 @@ public static class TierLimits
     // ==========================================
     public static class Premium
     {
-        public const int MaxProfiles = int.MaxValue;
-        public const int MaxM3UAccounts = int.MaxValue;
-        public const int MaxCustomEpgUrls = int.MaxValue;
+        public const int MaxProfiles = 12;
+        public const int MaxCustomEpgUrls = 10;
         public const bool HasAds = false;
         public const bool HasWatermark = false;
         public const bool EpgAutoRefresh = true;

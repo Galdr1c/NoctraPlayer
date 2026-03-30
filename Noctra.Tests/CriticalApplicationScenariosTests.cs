@@ -719,9 +719,9 @@ namespace Noctra.Tests
             var license = new LicenseService();
             license.SetTierForTesting(SubscriptionTier.Free);
 
-            // Free limit = 3
-            Assert.False(license.IsWithinLimit(LicenseService.Limits.Profiles, 3),
-                "3 profilde sınır aşıldı — yeni profil oluşturulmamalı.");
+            // Free limit = 5
+            Assert.False(license.IsWithinLimit(LicenseService.Limits.Profiles, 5),
+                "5 profilde sınır aşıldı — yeni profil oluşturulmamalı.");
         }
 
         [Fact]
@@ -730,8 +730,8 @@ namespace Noctra.Tests
             var license = new LicenseService();
             license.SetTierForTesting(SubscriptionTier.Free);
 
-            Assert.True(license.IsWithinLimit(LicenseService.Limits.Profiles, 2),
-                "2 profil ile sınır henüz aşılmadı — yeni profil oluşturulabilir.");
+            Assert.True(license.IsWithinLimit(LicenseService.Limits.Profiles, 4),
+                "4 profil ile sınır henüz aşılmadı — yeni profil oluşturulabilir.");
         }
 
         [Fact]
@@ -746,23 +746,17 @@ namespace Noctra.Tests
         }
 
         [Fact]
-        public void PremiumTier_ProfileLimit_NeverBlocks()
+        public void PremiumTier_ProfileLimit_BlocksAtExactLimit()
         {
             var license = new LicenseService();
             license.SetTierForTesting(SubscriptionTier.Premium);
 
-            Assert.True(license.IsWithinLimit(LicenseService.Limits.Profiles, 100));
+            // Premium limit = 12
+            Assert.False(license.IsWithinLimit(LicenseService.Limits.Profiles, 12));
+            Assert.True(license.IsWithinLimit(LicenseService.Limits.Profiles, 11));
         }
 
-        [Fact]
-        public void FreeTier_M3UAccountLimit_BlocksAt1()
-        {
-            var license = new LicenseService();
-            license.SetTierForTesting(SubscriptionTier.Free);
 
-            Assert.False(license.IsWithinLimit(LicenseService.Limits.M3UAccounts, 1));
-            Assert.True(license.IsWithinLimit(LicenseService.Limits.M3UAccounts, 0));
-        }
 
         [Fact]
         public void SubscriptionDowngrade_FeaturesRevoked()

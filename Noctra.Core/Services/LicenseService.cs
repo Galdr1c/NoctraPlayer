@@ -29,7 +29,6 @@ public class LicenseService : ObservableObject, ILicenseService
     public static class Limits
     {
         public const string Profiles = "profiles";
-        public const string M3UAccounts = "m3u_accounts";
         public const string CustomEpgUrls = "custom_epg_urls";
     }
 
@@ -97,9 +96,7 @@ public class LicenseService : ObservableObject, ILicenseService
             Limits.Profiles => tier == SubscriptionTier.Premium 
                 ? TierLimits.Premium.MaxProfiles 
                 : TierLimits.Free.MaxProfiles,
-            Limits.M3UAccounts => tier == SubscriptionTier.Premium 
-                ? TierLimits.Premium.MaxM3UAccounts 
-                : TierLimits.Free.MaxM3UAccounts,
+
             Limits.CustomEpgUrls => tier == SubscriptionTier.Premium 
                 ? TierLimits.Premium.MaxCustomEpgUrls 
                 : TierLimits.Free.MaxCustomEpgUrls,
@@ -118,9 +115,7 @@ public class LicenseService : ObservableObject, ILicenseService
             Limits.Profiles => tier == SubscriptionTier.Premium 
                 ? TierLimits.Premium.MaxProfiles 
                 : TierLimits.Free.MaxProfiles,
-            Limits.M3UAccounts => tier == SubscriptionTier.Premium 
-                ? TierLimits.Premium.MaxM3UAccounts 
-                : TierLimits.Free.MaxM3UAccounts,
+
             Limits.CustomEpgUrls => tier == SubscriptionTier.Premium 
                 ? TierLimits.Premium.MaxCustomEpgUrls 
                 : TierLimits.Free.MaxCustomEpgUrls,

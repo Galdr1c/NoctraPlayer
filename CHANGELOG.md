@@ -18,6 +18,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **Stalker Lazy Load Hata Koruması**: `Cmd` değeri boş gelen Stalker sezonları için hatalı `stalker-series-ep://` URL üretimini engelleyen güvenlik kontrolü eklendi.
 - **Gelişmiş Hata Loglama**: `AggregateContentAsync` (Dizi/Film düzenleme) süreçlerindeki sessizce yutulan (`catch { }`) hatalar artık `_logger` üzerinden playlist ID bağlamıyla detaylıca kaydediliyor.
 - **Yükleme Durumu (IsChannelLoading) Yönetimi**: Stalker ve Xtream "Resume" (açılışta yüklemeye devam etme) süreçlerinin sonunda, bazı senaryolarda yükleme ikonunun (loading spinner) açık kalması sorunu tüm çıkış noktalarında (`early return` dahil) giderildi.
+- **Abonelik Profil Limitleri ve Arayüz Düzeltmesi**: Free profil limiti 5, Premium profil limiti ise sınırsız erişimden 12'ye güncellendi (12. kullanıcıda UI'daki 'Profil Ekle' butonunun doğru şekilde gizlenmesi sağlandı). Ayrıca kullanılmayan `MaxM3UAccounts` test ve kısıtlama mantığı kod tabanından tamamen temizlendi.
 
 ## [1.2.1] - 2026-03-29
 

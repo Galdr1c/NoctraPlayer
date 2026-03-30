@@ -40,8 +40,8 @@ namespace Noctra.Tests
         }
 
         [Theory]
-        [InlineData(LicenseService.Limits.Profiles, 2, true)]  // Limit is 3
-        [InlineData(LicenseService.Limits.Profiles, 3, false)]
+        [InlineData(LicenseService.Limits.Profiles, 4, true)]  // Limit is 5
+        [InlineData(LicenseService.Limits.Profiles, 5, false)]
         public void FreeTier_ShouldRespectLimits(string limit, int currentCount, bool expected)
         {
             _licenseService.SetTierForTesting(SubscriptionTier.Free);

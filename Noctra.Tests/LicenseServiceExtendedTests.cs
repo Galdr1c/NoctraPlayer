@@ -83,8 +83,8 @@ namespace Noctra.Tests
             var service = new LicenseService();
             service.SetTierForTesting(SubscriptionTier.Free);
 
-            // Free tier profil limiti = 3; count=3 → false (limit aşıldı / doldu)
-            Assert.False(service.IsWithinLimit(LicenseService.Limits.Profiles, 3));
+            // Free tier profil limiti = 5; count=5 -> false (limit aşıldı / doldu)
+            Assert.False(service.IsWithinLimit(LicenseService.Limits.Profiles, 5));
         }
 
         [Fact]
@@ -93,37 +93,20 @@ namespace Noctra.Tests
             var service = new LicenseService();
             service.SetTierForTesting(SubscriptionTier.Free);
 
-            Assert.True(service.IsWithinLimit(LicenseService.Limits.Profiles, 2));
+            Assert.True(service.IsWithinLimit(LicenseService.Limits.Profiles, 4));
         }
 
-        [Fact]
-        public void IsWithinLimit_M3UAccounts_AtExactLimit_ReturnsFalse()
-        {
-            var service = new LicenseService();
-            service.SetTierForTesting(SubscriptionTier.Free);
 
-            // Free tier M3U limit = 1; count=1 → false
-            Assert.False(service.IsWithinLimit(LicenseService.Limits.M3UAccounts, 1));
-        }
 
         [Fact]
-        public void IsWithinLimit_M3UAccounts_OneBelowLimit_ReturnsTrue()
-        {
-            var service = new LicenseService();
-            service.SetTierForTesting(SubscriptionTier.Free);
-
-            Assert.True(service.IsWithinLimit(LicenseService.Limits.M3UAccounts, 0));
-        }
-
-        [Fact]
-        public void IsWithinLimit_Premium_AlwaysTrue_Regardless()
+        public void IsWithinLimit_Premium_EnforcesUpperLimits()
         {
             var service = new LicenseService();
             service.SetTierForTesting(SubscriptionTier.Premium);
 
-            // Premium'da limit yok
-            Assert.True(service.IsWithinLimit(LicenseService.Limits.Profiles, 1000));
-            Assert.True(service.IsWithinLimit(LicenseService.Limits.M3UAccounts, 1000));
+            // Premium limit = 12 Profiles
+            Assert.False(service.IsWithinLimit(LicenseService.Limits.Profiles, 12));
+            Assert.True(service.IsWithinLimit(LicenseService.Limits.Profiles, 11));
         }
 
         // ─── DeactivatePremium ────────────────────────────────────────────────────────
