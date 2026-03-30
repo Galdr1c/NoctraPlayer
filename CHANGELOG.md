@@ -8,6 +8,19 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### 🛠️ Bellek, Performans ve Playback İyileştirmeleri (2026-03-30)
+- **StalkerPortalService Bellek Sızıntısı Giderildi**: `TokenLocks` (SemaphoreSlim) nesnelerinin sınırsız büyümesi ve `Dispose` edilmemesi sorunu çözüldü. `CleanupExpiredTokens` metodu ile periyodik temizleme mekanizması entegre edildi.
+- **MainViewModel Referans Sızıntısı Giderildi**: `_prioritizeCategoryAction` delegesi, profil geçişlerinde (`ClearProfileState`) temizlenmediği için oluşan bellek sızıntısı ve hatalı tetiklemeler engellendi.
+- **Xtream Codes Kategori Önceliklendirme**: Xtream üzerinden aşamalı (progressive) içerik yüklenirken, kullanıcının seçtiği kategorinin verileri işlenirken en başa alınması (priority processing) sağlandı.
+- **Xtream Resume Mantığı Güçlendirildi**: `ResumeXtreamProgressiveLoadingAsync` içinde kategori eşleşmesi sadece isim bazlı değil, ID bazlı da yapılarak sunucu kaynaklı isim değişikliklerinde resume sürecinin bozulması engellendi.
+- **Stalker Series Kategori Fallback**: Dizi kategorileri API üzerinden boş dönen Stalker panelleri için `get_ordered_list&category=*` üzerinden çalışan otomatik bir fallback mekanizması eklendi ("Tüm Diziler" sanal kategorisi).
+- **Video Oynatıcı Profil Algılama Düzeltmesi**: `stalker-series-ep://`, `/play/` ve `/series/` içeren Stalker VOD linklerinin "canlı yayın" (`Unknown`) sanılarak seek (ileri-geri sarma) özelliklerinin devre dışı kalması sorunu giderildi; bu içerikler artık VOD profiliyle doğru şekilde oynatılıyor.
+- **Stalker Lazy Load Hata Koruması**: `Cmd` değeri boş gelen Stalker sezonları için hatalı `stalker-series-ep://` URL üretimini engelleyen güvenlik kontrolü eklendi.
+- **Gelişmiş Hata Loglama**: `AggregateContentAsync` (Dizi/Film düzenleme) süreçlerindeki sessizce yutulan (`catch { }`) hatalar artık `_logger` üzerinden playlist ID bağlamıyla detaylıca kaydediliyor.
+- **Yükleme Durumu (IsChannelLoading) Yönetimi**: Stalker ve Xtream "Resume" (açılışta yüklemeye devam etme) süreçlerinin sonunda, bazı senaryolarda yükleme ikonunun (loading spinner) açık kalması sorunu tüm çıkış noktalarında (`early return` dahil) giderildi.
+
+## [1.2.1] - 2026-03-29
+
 ### 🛠️ Stalker Portal ve Oynatma Dayanıklılığı (2026-03-29)
 - **Stalker API Hata Koruması**: Sunuculardan gelen beklenmedik HTML hata sayfaları (404/500 vb.) artık uygulamayı çökertmiyor; sistem bu yanıtları algılayıp güvenli bir şekilde logluyor.
 - **Dayanıklı Arka Plan Yükleme**: Stalker portal kanalları yüklenirken tek bir kategoride oluşan hata (örneğin bozuk JSON) artık tüm yükleme sürecini durdurmuyor; hatalı kategori atlanarak diğer içeriklerin yüklenmesine devam ediliyor.

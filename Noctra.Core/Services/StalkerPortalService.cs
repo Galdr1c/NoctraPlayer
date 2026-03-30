@@ -24,6 +24,8 @@ public class StalkerPortalService : IStalkerPortalService
     private static readonly ConcurrentDictionary<string, CachedTokenState>    TokenCache  = new(StringComparer.Ordinal);
     private static readonly ConcurrentDictionary<string, SemaphoreSlim>       TokenLocks  = new(StringComparer.Ordinal);
     private static readonly ConcurrentDictionary<string, CachedEndpointState> EndpointCache = new(StringComparer.Ordinal);
+    private static readonly ConcurrentDictionary<string, ConcurrentDictionary<string, string>> _dummy = new(); // Not used but keeps structure
+    private static int _cleanupCounter;
     private static readonly TimeSpan TokenTtl    = TimeSpan.FromMinutes(15);
     private static readonly TimeSpan EndpointTtl = TimeSpan.FromHours(24);
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(4);
@@ -440,6 +442,12 @@ public class StalkerPortalService : IStalkerPortalService
             !string.IsNullOrWhiteSpace(cached.Token))
             return cached.Token;
 
+        // Periyodik temizleme (her 50 talepte bir)
+        if (Interlocked.Increment(ref _cleanupCounter) % 50 == 0)
+        {
+            _ = Task.Run(CleanupExpiredTokens);
+        }
+
         var tokenLock = TokenLocks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
         await tokenLock.WaitAsync(cancellationToken);
         try
@@ -473,7 +481,58 @@ public class StalkerPortalService : IStalkerPortalService
     }
 
     private static void InvalidateToken(string normalizedPortalUrl, string macAddress)
-        => TokenCache.TryRemove($"{normalizedPortalUrl}|{macAddress.Trim().ToUpperInvariant()}", out _);
+    {
+        var key = $"{normalizedPortalUrl}|{macAddress.Trim().ToUpperInvariant()}";
+        TokenCache.TryRemove(key, out _);
+        
+        // Lock'ı da temizle - Dispose riski nedeniyle sadece dictionary'den kaldırıyoruz
+        // Aktif kullanımda olma ihtimaline karşı Dispose() çağrılmıyor, GC'ye bırakılıyor
+        TokenLocks.TryRemove(key, out _);
+    }
+
+    /// <summary>
+    /// Eski ve süresi dolmuş tokenlar ile lock nesnelerini temizler.
+    /// </summary>
+    private static void CleanupExpiredTokens()
+    {
+        try
+        {
+            var now = DateTimeOffset.UtcNow;
+            var expiredKeys = TokenCache
+                .Where(kvp => kvp.Value.ExpiresAt < now.AddMinutes(-5)) // 5 dk tolerans
+                .Select(kvp => kvp.Key)
+                .ToList();
+
+            foreach (var key in expiredKeys)
+            {
+                TokenCache.TryRemove(key, out _);
+                
+                if (TokenLocks.TryRemove(key, out var sem))
+                {
+                    // Güvenli Dispose: Eğer kilit şu an kullanılmıyorsa (CurrentCount == 1) Dispose et.
+                    // Nadir durumlarda WaitAsync bekleyen bir thread varsa ObjectDisposedException
+                    // oluşmaması için try-catch içinde tutuyoruz.
+                    try
+                    {
+                        if (sem.CurrentCount == 1)
+                        {
+                            sem.Dispose();
+                        }
+                    }
+                    catch { /* Yutulabilir */ }
+                }
+            }
+
+            if (expiredKeys.Count > 0)
+            {
+                Log($"CleanupExpiredTokens: {expiredKeys.Count} expired tokens and locks purged.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"CleanupExpiredTokens failed: {ex.Message}");
+        }
+    }
 
     // ═══════════════════════════════════════════════════════════
     //  STALKER API ÇAĞRILARI
@@ -502,11 +561,44 @@ public class StalkerPortalService : IStalkerPortalService
         await GetForJsAsync(endpoint, query, macAddress, token, ct);
     }
 
+    private async Task<List<StalkerCategory>> FetchCategoriesAsync(
+        string endpoint, string token, string macAddress,
+        string contentType, CancellationToken ct)
+    {
+        var categories = await FetchCategoriesInternalAsync(endpoint, token, macAddress, contentType, ct);
+        
+        // Fallback: Eğer categories boş gelirse ve series'se ordered list dene
+        if (categories.Count == 0 && contentType == "series")
+        {
+            Log($"[Fallback] {contentType} categories empty, trying ordered_list approach");
+            return await FetchSeriesCategoriesFallbackAsync(endpoint, token, macAddress, ct);
+        }
+        
+        return categories;
+    }
+
+    private async Task<List<StalkerCategory>> FetchSeriesCategoriesFallbackAsync(
+        string endpoint, string token, string macAddress, CancellationToken ct)
+    {
+        // get_ordered_list ile type=series&category=* kullanarak en azından tüm dizileri çekmeyi deniyoruz
+        // Bazı sağlayıcılarda kategoriler gelmese bile bu yöntemle tüm listeye ulaşılabiliyor.
+        return new List<StalkerCategory>
+        {
+            new StalkerCategory
+            {
+                Id = "*",
+                Name = "Tüm Diziler",
+                Type = "series",
+                Count = 0
+            }
+        };
+    }
+
     /// <summary>
-    /// Bir içerik tipinin tüm kategorilerini çeker.
+    /// Bir içerik tipinin tüm kategorilerini çeker (İç Mantık).
     /// ITV için "get_genres", VOD/Series için "get_categories".
     /// </summary>
-    private async Task<List<StalkerCategory>> FetchCategoriesAsync(
+    private async Task<List<StalkerCategory>> FetchCategoriesInternalAsync(
         string endpoint, string token, string macAddress,
         string contentType, CancellationToken ct)
     {

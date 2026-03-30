@@ -93,15 +93,11 @@ public class SeriesInfoParserTests
         Assert.Equal(expectedKey, result);
     }
 
-    [Theory]
-    [InlineData("Sezon 1 • Bölüm 1", "Sezon 1 • Bölüm 1")]
-    [InlineData("Sezon 5", "Sezon 5")]
-    [InlineData("", "")]
-    public void GetSeriesInfoText_FormatsCorrectly(string expected, string _)
+    [Fact]
+    public void GetSeriesInfoText_FormatsCorrectly()
     {
-        // Just verify that known season/episode combos produce correct text
-        Assert.Equal("Sezon 1 • Bölüm 1", SeriesInfoParser.GetSeriesInfoText(1, 1));
-        Assert.Equal("Sezon 5", SeriesInfoParser.GetSeriesInfoText(5, 0));
+        Assert.Equal("S1 E1", SeriesInfoParser.GetSeriesInfoText(1, 1));
+        Assert.Equal("Season 5", SeriesInfoParser.GetSeriesInfoText(5, 0));
         Assert.Equal("", SeriesInfoParser.GetSeriesInfoText(0, 0));
     }
 

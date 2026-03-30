@@ -1133,11 +1133,20 @@ public class VideoPlayerService : IVideoPlayerService
         if (lower.EndsWith(".mkv") || lower.Contains("/mkv/") || lower.Contains("format=mkv")) return StreamProfile.VodMkv;
         if (lower.EndsWith(".mp4") || lower.Contains("/mp4/") || lower.Contains("format=mp4")) return StreamProfile.VodMp4;
         if (lower.EndsWith(".ts") || lower.Contains("/live/") || lower.Contains("stream_type=live")) return StreamProfile.LiveTs;
+        
+        // Stalker veya özel VOD yönlendirmeleri
+        if (lower.StartsWith("stalker-series-ep://") || lower.Contains("/play/"))
+        {
+            if (lower.Contains(".mkv")) return StreamProfile.VodMkv;
+            return StreamProfile.VodMp4;
+        }
+
         if (lower.Contains("/movie/") || lower.Contains("/series/"))
         {
             if (lower.Contains(".mkv")) return StreamProfile.VodMkv;
             return StreamProfile.VodMp4;
         }
+
         // Uzantısız URL — demuxer zorlaması yapma, VLC kendi algılasın
         return StreamProfile.Unknown;
     }

@@ -593,6 +593,7 @@ public partial class MainViewModel : ObservableObject
                                                                 includeVod: true,
                                                                 onCategoriesDiscovered: async (categories, prioritizeAction) =>
                                                                 {
+                                                                    _prioritizeCategoryAction = prioritizeAction;
                                                                     totalCats = categories.Count;
                                                                     _dispatcherService.BeginInvoke(() => 
                                                                     {
@@ -711,7 +712,7 @@ public partial class MainViewModel : ObservableObject
                                     includeVod: true,
                                     onCategoriesDiscovered: async (categories, prioritizeAction) =>
                                     {
-                                        _prioritizeStalkerCategoryAction = prioritizeAction;
+                                        _prioritizeCategoryAction = prioritizeAction;
 
                                         // Arayüzün anında dolması için kategori isimleriyle "sahte" kanallar ekle
                                         var dummyChannels = categories.Select(c => new Channel
@@ -759,8 +760,7 @@ public partial class MainViewModel : ObservableObject
                                 }
                                 catch (Exception ex)
                                 {
-                                    System.Diagnostics.Debug.WriteLine(
-                                        $"[Stalker] AggregateContent failed: {ex.Message}");
+                                    _logger?.LogError(ex, "[Stalker] AggregateContent failed for playlist {Id}", playlist.Id);
                                 }
 
                                 // Tüm içerik yüklendi
@@ -864,6 +864,7 @@ public partial class MainViewModel : ObservableObject
         SetItems(SearchSimilarVodChannels, Enumerable.Empty<Channel>());
 
         StatusMessage = string.Empty;
+        _prioritizeCategoryAction = null;
     }
 
     public Task RefreshCurrentProfileExpirationAsync()
@@ -907,7 +908,10 @@ public partial class MainViewModel : ObservableObject
                 {
                     if (isFullRefresh) return Task.FromResult(categories);
 
-                    var toLoad = categories.Where(c => pendingGroups.Contains(c.Name, StringComparer.OrdinalIgnoreCase)).ToList();
+                    var toLoad = categories
+                        .Where(c => pendingGroups.Contains(c.Name, StringComparer.OrdinalIgnoreCase) || 
+                                    pendingGroups.Contains(c.Id, StringComparer.OrdinalIgnoreCase))
+                        .ToList();
                     return Task.FromResult(toLoad);
                 },
                 onCategoryLoaded: async (channels, groupName) =>
@@ -927,7 +931,17 @@ public partial class MainViewModel : ObservableObject
                 await _mediaService.AggregateContentAsync(playlist.Id);
                 _mediaService.RaiseAggregationCompleted(playlist.Id);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[Xtream] Resume AggregateContent failed for playlist {Id}", playlist.Id);
+            }
+
+            _dispatcherService.BeginInvoke(() =>
+            {
+                StatusMessage = "Xtream içerikleri güncellendi ✓";
+                IsChannelLoading = false;
+                ChannelLoadingProgress = 100;
+            });
         }
         catch (Exception ex)
         {
@@ -961,6 +975,7 @@ public partial class MainViewModel : ObservableObject
                 if (pendingGroups.Count == 0)
                 {
                     _logger?.LogInformation($"[Stalker] Skipping background load - All content already fully loaded in DB (Total channels: {totalChannelCount}).");
+                    _dispatcherService.BeginInvoke(() => IsChannelLoading = false);
                     return; // Everything is loaded!
                 }
 
@@ -994,7 +1009,7 @@ public partial class MainViewModel : ObservableObject
                 includeVod: true,
                 onCategoriesDiscovered: (categories, prioritizeAction) =>
                 {
-                    _prioritizeStalkerCategoryAction = prioritizeAction;
+                    _prioritizeCategoryAction = prioritizeAction;
 
                     if (isFullRefresh) return Task.FromResult(categories);
 
@@ -1025,7 +1040,10 @@ public partial class MainViewModel : ObservableObject
                 await _mediaService.AggregateContentAsync(playlist.Id);
                 _mediaService.RaiseAggregationCompleted(playlist.Id);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "[Stalker] Resume AggregateContent failed for playlist {Id}", playlist.Id);
+            }
 
             _dispatcherService.BeginInvoke(() =>
             {
@@ -1596,7 +1614,7 @@ public partial class MainViewModel : ObservableObject
     private int _isManualRefreshRunning;
     private readonly Dictionary<int, DateTime> _playlistNoChangeUntilUtc = new();
     private bool _suppressFilterRefresh;
-    private Action<string>? _prioritizeStalkerCategoryAction;
+    private Action<string>? _prioritizeCategoryAction;
     private int _isThrottledLoadPending = 0;
     private bool _needsThrottledLoad;
     private bool _seriesDetailDownloadedOnlyMode;
@@ -1879,7 +1897,7 @@ public partial class MainViewModel : ObservableObject
 
         if (!string.IsNullOrWhiteSpace(value))
         {
-            _prioritizeStalkerCategoryAction?.Invoke(value);
+            _prioritizeCategoryAction?.Invoke(value);
         }
 
         ScheduleImmediateFilter();
@@ -6173,6 +6191,12 @@ public partial class MainViewModel : ObservableObject
         int defaultSeasonNum = 1;
         foreach (var stalkerSeason in detail.Seasons)
         {
+            if (string.IsNullOrWhiteSpace(stalkerSeason.Cmd))
+            {
+                _logger?.LogWarning("[Stalker] Season {Name} has no cmd, skipping episode generation", stalkerSeason.Name);
+                continue;
+            }
+
             int seasonNum = defaultSeasonNum;
             // "Season 1" vs içinden rakamı ayıkla
             var match = System.Text.RegularExpressions.Regex.Match(stalkerSeason.Name, @"\d+");

@@ -86,15 +86,44 @@ public class XtreamCodesService : IXtreamCodesService
         // 1. Kategorileri Çek
         var allCategories = await GetCategoriesAsync(normalizedBaseUrl, username, password, cancellationToken);
         
+        string? prioritizedCategory = null;
+        
         // Önemli: Discover Callback - UI'ın dolması için
-        // Xtream'de 'prioritize' pek işe yaramaz çünkü JSON'lar blok halinde gelir ama arayüz uyumu için Action<string> geçiyoruz.
-        var categoriesToLoad = await onCategoriesDiscovered(allCategories, (_) => { });
+        var categoriesToLoad = await onCategoriesDiscovered(allCategories, (catName) => 
+        {
+            prioritizedCategory = catName;
+            System.Diagnostics.Debug.WriteLine($"[Xtream] Category prioritized: {catName}");
+        });
+        
         if (categoriesToLoad.Count == 0) return;
 
         // Map'ler
         var liveCategoryMap = BuildCategoryMapFromXtream(allCategories.Where(c => c.Type == "live"));
         var vodCategoryMap = BuildCategoryMapFromXtream(allCategories.Where(c => c.Type == "vod"));
         var seriesCategoryMap = BuildCategoryMapFromXtream(allCategories.Where(c => c.Type == "series"));
+
+        // Helper: Kategorileri öncelik sırasına göre raporla
+        async Task ReportGroupsAsync(IEnumerable<Channel> channels, string fallbackLabel)
+        {
+             var groups = channels.GroupBy(c => c.GroupTitle ?? fallbackLabel).ToList();
+             
+             // Eğer öncelikli bir kategori varsa, onu en başa al
+             if (!string.IsNullOrEmpty(prioritizedCategory))
+             {
+                 var idx = groups.FindIndex(g => string.Equals(g.Key, prioritizedCategory, StringComparison.OrdinalIgnoreCase));
+                 if (idx > 0)
+                 {
+                     var prio = groups[idx];
+                     groups.RemoveAt(idx);
+                     groups.Insert(0, prio);
+                 }
+             }
+
+             foreach (var group in groups)
+             {
+                 await onCategoryLoaded(group.ToList(), group.Key);
+             }
+        }
 
         // 2. İçerikleri Paralel Çek (3 Büyük Görev)
         var liveTask = Task.Run(async () =>
@@ -103,12 +132,7 @@ public class XtreamCodesService : IXtreamCodesService
                 BuildApiUrl(normalizedBaseUrl, username, password, "get_live_streams"), cancellationToken);
             
             var channels = MapLiveChannels(streams, normalizedBaseUrl, username, password, liveCategoryMap);
-            
-            // Kategorilere göre gruplayıp bildir
-            foreach (var group in channels.GroupBy(c => c.GroupTitle ?? "Live"))
-            {
-                await onCategoryLoaded(group.ToList(), group.Key);
-            }
+            await ReportGroupsAsync(channels, "Live");
         }, cancellationToken);
 
         Task? vodTask = null;
@@ -122,11 +146,7 @@ public class XtreamCodesService : IXtreamCodesService
                     BuildApiUrl(normalizedBaseUrl, username, password, "get_vod_streams"), cancellationToken);
                 
                 var channels = MapVodChannels(streams, normalizedBaseUrl, username, password, vodCategoryMap);
-                
-                foreach (var group in channels.GroupBy(c => c.GroupTitle ?? "VOD"))
-                {
-                    await onCategoryLoaded(group.ToList(), group.Key);
-                }
+                await ReportGroupsAsync(channels, "VOD");
             }, cancellationToken);
 
             seriesTask = Task.Run(async () =>
@@ -137,11 +157,7 @@ public class XtreamCodesService : IXtreamCodesService
                 if (seriesDtos == null) return;
 
                 var seriesChannels = MapSeriesAsEntries(seriesDtos, seriesCategoryMap);
-                
-                foreach (var group in seriesChannels.GroupBy(c => c.GroupTitle ?? "Series"))
-                {
-                    await onCategoryLoaded(group.ToList(), group.Key);
-                }
+                await ReportGroupsAsync(seriesChannels, "Series");
             }, cancellationToken);
         }
 
