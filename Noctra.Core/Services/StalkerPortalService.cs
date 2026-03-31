@@ -291,7 +291,22 @@ public class StalkerPortalService : IStalkerPortalService
                         endpoint, token, macAddress,
                         category.Type, category.Id, cancellationToken);
 
-                    if (items.Count > 0)
+                    // If zero items, call onCategoryLoaded anyway to clear the dummy channel from UI
+                    if (items.Count == 0)
+                    {
+                        var loaded = Interlocked.Increment(ref loadedCategories);
+                        progress?.Report(new StalkerLoadProgress
+                        {
+                            CurrentCategory = category.Name,
+                            LoadedCategories = loaded,
+                            TotalCategories = totalCategories,
+                            LoadedChannels = totalChannelCount,
+                            TotalChannels = null
+                        });
+
+                        await onCategoryLoaded([], category);
+                    }
+                    else
                     {
                         var channels = BuildChannels(
                             items, baseUrl, GetChanType(category.Type),
@@ -305,15 +320,11 @@ public class StalkerPortalService : IStalkerPortalService
                             CurrentCategory = category.Name,
                             LoadedCategories = loaded,
                             TotalCategories = totalCategories,
-                            LoadedChannels = total, // Map to LoadedChannels
-                            TotalChannels = null    // Total across categories isn't strictly known yet
+                            LoadedChannels = total, 
+                            TotalChannels = null 
                         });
 
                         await onCategoryLoaded(channels, category);
-                    }
-                    else
-                    {
-                        Interlocked.Increment(ref loadedCategories);
                     }
                 }
                 catch (Exception ex)
@@ -929,16 +940,38 @@ public class StalkerPortalService : IStalkerPortalService
         {
             js = await GetForJsAsync(endpoint, query, macAddress, token, ct);
         }
-        catch
+        catch (Exception ex)
         {
+            Log($"GetPageAsync failed for category {categoryId}, page {page}: {ex.Message}");
             return ([], null, null);
         }
 
-        var totalItems   = GetInt(js, "total_items");
-        var maxPageItems = GetInt(js, "max_page_items");
-        var items        = new List<StalkerListItem>();
+        JsonElement dataEl;
+        int? totalItems = null;
+        int? maxPageItems = null;
 
-        if (js.TryGetProperty("data", out var dataEl) && dataEl.ValueKind == JsonValueKind.Array)
+        if (js.ValueKind == JsonValueKind.Array)
+        {
+            dataEl = js;
+            totalItems = js.GetArrayLength();
+        }
+        else
+        {
+            totalItems   = GetInt(js, "total_items");
+            maxPageItems = GetInt(js, "max_page_items");
+            
+            // Try different data property names used by various Stalker portals
+            if (!js.TryGetProperty("data", out dataEl))
+            {
+                if (!js.TryGetProperty("js", out dataEl))
+                {
+                    _ = js.TryGetProperty("result", out dataEl);
+                }
+            }
+        }
+
+        var items = new List<StalkerListItem>();
+        if (dataEl.ValueKind == JsonValueKind.Array)
         {
             foreach (var item in dataEl.EnumerateArray())
             {
@@ -1082,19 +1115,36 @@ public class StalkerPortalService : IStalkerPortalService
 
         while (true)
         {
-            using var request = BuildGetRequest(endpoint, queryString, macAddress, token);
-            var response = await _httpClient.SendAsync(request, ct);
+            HttpResponseMessage? response = null;
+            try
+            {
+                using var request = BuildGetRequest(endpoint, queryString, macAddress, token);
+                response = await _httpClient.SendAsync(request, ct);
 
-            if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests && retryCount < maxRetries)
+                if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests && retryCount < maxRetries)
+                {
+                    retryCount++;
+                    Log($"[StalkerService] 429 Too Many Requests. Retrying in {delayMs}ms... (Attempt {retryCount}/{maxRetries})");
+                    await Task.Delay(delayMs, ct);
+                    delayMs *= 2; 
+                    continue;
+                }
+
+                response.EnsureSuccessStatusCode();
+            }
+            catch (HttpRequestException ex) when (retryCount < maxRetries)
             {
                 retryCount++;
-                Log($"[StalkerService] 429 Too Many Requests. Retrying in {delayMs}ms... (Attempt {retryCount}/{maxRetries})");
+                Log($"[StalkerService] Network error: {ex.Message}. Retrying in {delayMs}ms... (Attempt {retryCount}/{maxRetries})");
                 await Task.Delay(delayMs, ct);
-                delayMs *= 2; // Giderek artır (Exponential backoff)
+                delayMs *= 2;
                 continue;
             }
-
-            response.EnsureSuccessStatusCode();
+            catch (Exception ex)
+            {
+                Log($"[StalkerService] HTTP error: {ex.Message}");
+                throw;
+            }
 
             var body = await response.Content.ReadAsStringAsync(ct);
         if (string.IsNullOrWhiteSpace(body))

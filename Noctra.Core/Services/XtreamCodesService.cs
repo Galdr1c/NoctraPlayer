@@ -106,23 +106,26 @@ public class XtreamCodesService : IXtreamCodesService
         // Helper: Kategorileri öncelik sırasına göre raporla
         async Task ReportGroupsAsync(IEnumerable<Channel> channels, string fallbackLabel)
         {
-             var groups = channels.GroupBy(c => c.GroupTitle ?? fallbackLabel).ToList();
+             var groups = channels.GroupBy(c => c.GroupTitle ?? fallbackLabel).ToDictionary(g => g.Key, g => g.ToList());
              
-             // Eğer öncelikli bir kategori varsa, onu en başa al
-             if (!string.IsNullOrEmpty(prioritizedCategory))
-             {
-                 var idx = groups.FindIndex(g => string.Equals(g.Key, prioritizedCategory, StringComparison.OrdinalIgnoreCase));
-                 if (idx > 0)
-                 {
-                     var prio = groups[idx];
-                     groups.RemoveAt(idx);
-                     groups.Insert(0, prio);
-                 }
-             }
+             // Önceden bildirilen veya keşfedilen tüm grupları temizlemek için (Empty state fix)
+             // dummy kanalların silinmesi için onCategoryLoaded Boş liste ile çağrılmalı.
+             var reportedGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
              foreach (var group in groups)
              {
-                 await onCategoryLoaded(group.ToList(), group.Key);
+                 await onCategoryLoaded(group.Value, group.Key);
+                 reportedGroups.Add(group.Key);
+             }
+
+             // Eksik grupları da temizle (Eğer keşfedilmiş ama kanalı yoksa)
+             foreach (var cat in categoriesToLoad)
+             {
+                 if (!reportedGroups.Contains(cat.Name))
+                 {
+                     await onCategoryLoaded([], cat.Name);
+                     reportedGroups.Add(cat.Name);
+                 }
              }
         }
 

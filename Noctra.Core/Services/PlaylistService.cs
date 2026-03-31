@@ -463,10 +463,26 @@ public partial class PlaylistService : IPlaylistService
         using var context = await _contextFactory.CreateDbContextAsync();
         return await context.Channels
             .AsNoTracking()
-            .Where(c => c.PlaylistId == playlistId && c.StreamUrl.StartsWith("stalker-dummy://") && c.GroupTitle != null)
+            .Where(c => c.PlaylistId == playlistId && (c.StreamUrl.StartsWith("stalker-dummy://") || c.StreamUrl.StartsWith("xtream-dummy://")) && c.GroupTitle != null)
             .Select(c => c.GroupTitle!)
             .Distinct()
             .ToListAsync();
+    }
+
+    public async Task DeleteAllDummiesAsync(int playlistId)
+    {
+        using var context = await _contextFactory.CreateDbContextAsync();
+        await context.Channels
+            .Where(c => c.PlaylistId == playlistId && (c.StreamUrl.StartsWith("stalker-dummy://") || c.StreamUrl.StartsWith("xtream-dummy://")))
+            .ExecuteDeleteAsync();
+            
+        // Kanal sayısını güncelle
+        await context.Playlists
+            .Where(p => p.Id == playlistId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(p => p.ChannelCount,
+                    p => context.Channels.Count(c => c.PlaylistId == p.Id))
+                .SetProperty(p => p.LastUpdated, DateTime.UtcNow));
     }
 
     public async Task<Playlist> AddFromFileAsync(string name, string filePath, int? profileId = null)

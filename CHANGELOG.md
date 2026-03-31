@@ -8,6 +8,13 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### 🛠️ Stalker & Xtream UI Hayalet Kart Temizliği (2026-03-31)
+- **Proaktif Boş Kategori Temizliği**: Stalker ve Xtream servislerinde, bir kategorinin boş olduğu saptandığı anda (tüm listenin bitmesini beklemeden) UI'ya bildirim gönderilerek "İçerik yükleniyor..." (placeholder) kartlarının anında kaldırılması sağlandı.
+- **Hayalet Kart (Dummy Channel) Temizleme Mekanizması**: Yükleme süreci sonunda (başarı veya hata durumunda) veritabanında kalan yetim `stalker-dummy://` ve `xtream-dummy://` kanallarını otomatik temizleyen `DeleteAllDummiesAsync` fonksiyonu devreye alındı.
+- **Stalker Paralel Yükleme Hızı**: Kullanıcı talebi doğrultusunda `MaxCategoryParallel` değeri 2'den tekrar **5**'e yükseltilerek portal yükleme hızı optimize edildi.
+- **Stalker Bağlantı ve Ayrıştırma Dayanıklılığı**: Stalker portallarında JSON ayrıştırma hataları ve ağ kopmalarına karşı "Exponential Backoff" tabanlı otomatik yeniden deneme ve hata yakalama mekanizması güçlendirildi.
+- **Tip Güvenliği ve Derleme Hataları**: `StalkerPortalService` içerisindeki `Interlocked` kullanımından kaynaklı tip uyuşmazlığı (int/long) ve kazara eklenen kod blokları temizlenerek projenin hatasız derlenmesi sağlandı.
+
 ### 🛠️ Stalker Metadata, Görsel Dayanıklılığı ve Kota Optimizasyonu (2026-03-31)
 - **Stalker Bölüm Metadata Kesintisi Giderildi**: Stalker API'sinin 10. bölümden sonra sadece ID döndüğü durumlarda, bu ID'lerin detaylı verilerle (isim, özet, resim) eşleştirilmesi sağlandı. Artık 10+ bölümler tüm detaylarıyla yükleniyor.
 - **429 Too Many Requests (Rate Limit) Yönetimi**: Sunucu kaynaklı hız sınırlaması hataları için **Exponential Backoff** (500ms -> 1000ms -> 2000ms) içeren otomatik yeniden deneme mekanizması eklendi.

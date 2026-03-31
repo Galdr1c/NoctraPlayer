@@ -644,9 +644,13 @@ public partial class MainViewModel : ObservableObject
                                                                     }
                                                                     catch { }
 
-                                                                    _dispatcherService.BeginInvoke(() =>
+                                                                    _dispatcherService.BeginInvoke(async () =>
                                                                     {
                                                                         StatusMessage = "Xtream içerikleri yüklendi ✓";
+                                                                        
+                                                                        // Temizlik: Yüklenemeyen kategorilerin taslak kanallarını sil
+                                                                        await _playlistService.DeleteAllDummiesAsync(playlist.Id);
+
                                                                         IsChannelLoading = false;
                                                                         ChannelLoadingProgress = 100;
                                                                         
@@ -658,9 +662,10 @@ public partial class MainViewModel : ObservableObject
                                                         catch (Exception ex)
                                                         {
                                                             _logger?.LogDebug($"[Xtream] Error: {ex}");
-                                                            _dispatcherService.BeginInvoke(() =>
+                                                            _dispatcherService.BeginInvoke(async () =>
                                                             {
                                                                 StatusMessage = UserFriendlyErrorMessage.WithPrefix("Xtream sunucu hatası", ex);
+                                                                await _playlistService.DeleteAllDummiesAsync(playlist.Id);
                                                                 IsChannelLoading = false;
                                                             });
                                                         }
@@ -766,9 +771,13 @@ public partial class MainViewModel : ObservableObject
                                 }
 
                                 // Tüm içerik yüklendi
-                                _dispatcherService.BeginInvoke(() =>
+                                _dispatcherService.BeginInvoke(async () =>
                                 {
                                     StatusMessage = $"Tüm içerikler hazır ✓";
+
+                                    // Temizlik: Yüklenemeyen kategorilerin taslak kanallarını sil
+                                    await _playlistService.DeleteAllDummiesAsync(playlist.Id);
+
                                     IsChannelLoading = false;
                                     ChannelLoadingProgress = 100;
 
@@ -779,10 +788,13 @@ public partial class MainViewModel : ObservableObject
                             }
                             catch (Exception ex)
                             {
-                                _dispatcherService.BeginInvoke(() =>
+                                _dispatcherService.BeginInvoke(async () =>
                                 {
                                     StatusMessage = UserFriendlyErrorMessage.WithPrefix(
                                         "İçerik yükleme hatası", ex);
+                                    
+                                    await _playlistService.DeleteAllDummiesAsync(playlist.Id);
+                                    IsChannelLoading = false;
                                 });
                             }
                         });

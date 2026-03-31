@@ -1,4 +1,4 @@
-﻿using Noctra.Models;
+using Noctra.Models;
 
 namespace Noctra.Services.Interfaces;
 
@@ -105,6 +105,12 @@ public interface IPlaylistService
     /// Playlist'in EPG verisini yeniler
     /// </summary>
     Task RefreshEpgAsync(int playlistId);
+
+    /// <summary>
+    /// Tüm geçici (Dummy) kanalları siler.
+    /// Aşamalı yükleme bittiğinde veya iptal edildiğinde temizlik için kullanılır.
+    /// </summary>
+    Task DeleteAllDummiesAsync(int playlistId);
 }
 
 
