@@ -1,8 +1,12 @@
+using System;
+using System.IO;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
-namespace Noctra.Avalonia;
+namespace Noctra.Core.Services;
 
-internal static class StartupDiagnostics
+public static class StartupDiagnostics
 {
     private static readonly object Sync = new();
     private static bool _initialized;
@@ -82,12 +86,22 @@ internal static class StartupDiagnostics
     {
         lock (Sync)
         {
+            if (!_initialized)
+            {
+                 // Minimal initialize if called before explicit init
+                 _logFilePath = ResolveLogPath();
+                 _initialized = true; 
+            }
+
             if (string.IsNullOrWhiteSpace(_logFilePath))
             {
                 return;
             }
 
             var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {message}{Environment.NewLine}";
+            
+            // Also write to Debug Output for IDE/Console
+            System.Diagnostics.Debug.Write(line);
 
             try
             {

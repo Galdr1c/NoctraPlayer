@@ -13,6 +13,8 @@ using Noctra.Data;
 using System.Text.RegularExpressions;
 using System.Net.NetworkInformation;
 using System.Collections.ObjectModel;
+using Noctra.Core.Services;
+using System.Diagnostics;
 
 namespace Noctra.ViewModels;
 
@@ -5978,15 +5980,17 @@ public partial class MainViewModel : ObservableObject
         bool hasEpisodes = source.Seasons.Any(s => s.Episodes.Count > 0);
         if (!hasEpisodes)
         {
+            System.Diagnostics.Debug.WriteLine($"[SelectMedia] Series '{source.Name}' has no episodes. Attempting lazy load for {CurrentProfile?.ProviderAccount?.Type}");
+            
             if (CurrentProfile?.ProviderAccount?.Type == ProfileType.XtreamCodes)
             {
                 await TryLazyLoadXtreamEpisodesAsync(source, db);
+                StartupDiagnostics.Log($"[SelectMedia] After lazy load for '{source.Name}': {source.Seasons.Count} seasons, {source.Seasons.Sum(s => s.Episodes.Count)} episodes.");
             }
             else if (CurrentProfile?.ProviderAccount?.Type == ProfileType.StalkerPortal)
             {
                 await TryLazyLoadStalkerEpisodesAsync(source, db);
             }
-            // Lazy load sonrası Seasons/Episodes güncel — devam et
         }
 
         // --- LAZY LOAD TMDB METADATA (Seasons & Episodes) ---
@@ -6262,6 +6266,7 @@ public partial class MainViewModel : ObservableObject
         {
             try
             {
+                // Mevcut seriyi de güncelle (CoverUrl, Plot vb. için)
                 db.Series.Update(series);
                 await db.SaveChangesAsync();
                 _logger?.LogDebug("[Stalker] Series metadata & episodes saved to DB.");
@@ -6278,13 +6283,14 @@ public partial class MainViewModel : ObservableObject
         if (CurrentProfile?.ProviderAccount?.Type != ProfileType.XtreamCodes) return;
 
         // Bu diziye ait Channel kaydını bul — StreamUrl'de series_id var
+        System.Diagnostics.Debug.WriteLine($"[Xtream-LazyLoad] Searching channel for series: '{series.Name}' (PlaylistId: {series.PlaylistId})");
+
         var seriesChannel = await db.Channels
             .AsNoTracking()
             .FirstOrDefaultAsync(c =>
                 c.PlaylistId == series.PlaylistId &&
                 c.Type == ChannelType.Series &&
                 c.StreamUrl.StartsWith("xtream-series://") &&
-                // İsim eşleşmesi
                 c.Name == series.Name);
 
         if (seriesChannel == null)
@@ -6297,12 +6303,20 @@ public partial class MainViewModel : ObservableObject
                             c.StreamUrl.StartsWith("xtream-series://"))
                 .ToListAsync();
 
+            StartupDiagnostics.Log($"[Xtream-LazyLoad] Exact name match failed. Checking normalized keys across {allSeriesChannels.Count} channels.");
+            
             var targetKey = SeriesInfoParser.NormalizeKey(series.Name);
             seriesChannel = allSeriesChannels.FirstOrDefault(c =>
                 SeriesInfoParser.NormalizeKey(c.Name) == targetKey);
         }
 
-        if (seriesChannel == null) return;
+        if (seriesChannel == null)
+        {
+             StartupDiagnostics.Log($"[Xtream-LazyLoad] FAILED: No matching channel found for series '{series.Name}'");
+             return;
+        }
+
+        StartupDiagnostics.Log($"[Xtream-LazyLoad] Match found: {seriesChannel.Name} -> {seriesChannel.StreamUrl}");
 
         var idStr = seriesChannel.StreamUrl.Replace("xtream-series://", "");
         if (!long.TryParse(idStr, out var xtreamSeriesId)) return;
@@ -6317,7 +6331,11 @@ public partial class MainViewModel : ObservableObject
         var detail = await _xtreamCodesService.GetSeriesInfoAsync(
             baseUrl, username, password, xtreamSeriesId);
 
-        if (detail == null) return;
+        if (detail == null)
+        {
+            StartupDiagnostics.Log($"[Xtream-LazyLoad] FAILED: GetSeriesInfoAsync returned null for ID {xtreamSeriesId}");
+            return;
+        }
 
         // Poster/metadata/name güncelle
         if (!string.IsNullOrWhiteSpace(detail.Name) && detail.Name != series.Name)
@@ -6409,6 +6427,10 @@ public partial class MainViewModel : ObservableObject
                     season.SeriesId = series.Id;
                     db.Seasons.Add(season);
                 }
+
+                // SERİ meta verisini de güncelle (CoverUrl, Plot vb.)
+                db.Series.Update(series);
+                
                 await db.SaveChangesAsync();
             }
             catch (Exception ex)

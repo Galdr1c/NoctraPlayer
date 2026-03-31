@@ -795,7 +795,12 @@ public class StalkerPortalService : IStalkerPortalService
                                 EpisodeNumber = numId,
                                 Name = GetString(ep, "name"),
                                 Description = GetString(ep, "description"),
-                                Pic = GetString(ep, "pic") ?? GetString(ep, "screenshot_uri"),
+                                Pic = GetString(ep, "pic") 
+                                     ?? GetString(ep, "screenshot_uri") 
+                                     ?? GetString(ep, "icon") 
+                                     ?? GetString(ep, "cover") 
+                                     ?? GetString(ep, "movie_image") 
+                                     ?? GetString(ep, "screenshot_url"),
                                 Duration = GetString(ep, "duration"),
                                 Added = GetString(ep, "added")
                             });

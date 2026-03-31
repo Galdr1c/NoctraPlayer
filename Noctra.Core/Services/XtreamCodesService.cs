@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
+using Noctra.Core.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Noctra.Services;
@@ -180,6 +181,8 @@ public class XtreamCodesService : IXtreamCodesService
         var url = BuildApiUrl(normalizedBaseUrl, username, password,
             "get_series_info", ("series_id", seriesId.ToString()));
 
+        StartupDiagnostics.Log($"[Xtream] Calling GetSeriesInfo: {url.Replace(password, "REDACTED")}");
+
         try
         {
             var json = await GetStringAsync(url, cancellationToken);
@@ -189,7 +192,7 @@ public class XtreamCodesService : IXtreamCodesService
             var detail = new XtreamSeriesDetail();
 
             // info block
-            if (root.TryGetProperty("info", out var info))
+            if (root.TryGetProperty("info", out var info) && info.ValueKind == JsonValueKind.Object)
             {
                 detail.Name = GetStringOrNull(info, "name");
                 detail.Cover = GetStringOrNull(info, "cover");
@@ -226,24 +229,36 @@ public class XtreamCodesService : IXtreamCodesService
             {
                 if (episodes.ValueKind == JsonValueKind.Object)
                 {
+                    int count = 0;
                     foreach (var seasonProp in episodes.EnumerateObject())
                     {
                         if (seasonProp.Value.ValueKind != JsonValueKind.Array) continue;
                         detail.Episodes[seasonProp.Name] = ParseEpisodeArray(seasonProp.Value, seasonProp.Name);
+                        count++;
                     }
+                    StartupDiagnostics.Log($"[Xtream] Processed {count} seasons from OBJECT episodes block.");
                 }
                 else if (episodes.ValueKind == JsonValueKind.Array)
                 {
                     // Fallback for single-season series or servers that return a flat array
                     detail.Episodes["1"] = ParseEpisodeArray(episodes, "1");
+                    StartupDiagnostics.Log("[Xtream] Processed episodes from ARRAY fallback block.");
                 }
+                else
+                {
+                    StartupDiagnostics.Log($"[Xtream] UNKNOWN episodes block format: {episodes.ValueKind}");
+                }
+            }
+            else
+            {
+                StartupDiagnostics.Log("[Xtream] NO 'episodes' property found in series info response.");
             }
 
             return detail;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[Xtream] GetSeriesInfo failed for {seriesId}: {ex.Message}");
+            StartupDiagnostics.Log($"[Xtream] GetSeriesInfo failed for {seriesId} (URL: {url.Replace(password, "REDACTED")}): {ex.Message}");
             return null;
         }
     }
@@ -757,7 +772,7 @@ public class XtreamCodesService : IXtreamCodesService
 
     private static string? GetStringOrNull(JsonElement element, string propertyName)
     {
-        if (!element.TryGetProperty(propertyName, out var prop))
+        if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(propertyName, out var prop))
         {
             return null;
         }
@@ -917,9 +932,18 @@ public class XtreamCodesService : IXtreamCodesService
             string? airDate = null;
             double? epRating = null;
 
-            if (ep.TryGetProperty("info", out var epInfo))
+            // Get cover URL from various possible fields
+            coverUrl = GetStringOrNull(ep, "stream_icon")
+                      ?? GetStringOrNull(ep, "icon")
+                      ?? GetStringOrNull(ep, "cover");
+
+            if (ep.TryGetProperty("info", out var epInfo) && epInfo.ValueKind == JsonValueKind.Object)
             {
-                coverUrl = GetStringOrNull(epInfo, "movie_image");
+                coverUrl ??= GetStringOrNull(epInfo, "movie_image")
+                           ?? GetStringOrNull(epInfo, "cover")
+                           ?? GetStringOrNull(epInfo, "screenshot_uri")
+                           ?? GetStringOrNull(epInfo, "image");
+
                 plot = GetStringOrNull(epInfo, "plot");
                 airDate = GetStringOrNull(epInfo, "releasedate")
                            ?? GetStringOrNull(epInfo, "air_date");

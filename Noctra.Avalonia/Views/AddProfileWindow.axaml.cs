@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Microsoft.Extensions.DependencyInjection;
+using Noctra.Core.Services;
 using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
 

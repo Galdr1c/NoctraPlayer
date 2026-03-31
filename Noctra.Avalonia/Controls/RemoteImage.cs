@@ -5,6 +5,9 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Noctra.Services.Interfaces;
+using Noctra.Core.Services;
+using Noctra.ViewModels;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
@@ -542,6 +545,6 @@ public class RemoteImage : Image
             return;
         }
 
-        Noctra.Avalonia.StartupDiagnostics.Log($"[RemoteImage] Failed: {reason} | {url}");
+        StartupDiagnostics.Log($"[RemoteImage] Failed: {reason} | {url}");
     }
 }
