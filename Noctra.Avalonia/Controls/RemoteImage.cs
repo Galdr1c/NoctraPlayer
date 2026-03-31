@@ -298,11 +298,40 @@ public class RemoteImage : Image
                 await using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
                 using var memory = new MemoryStream();
                 await stream.CopyToAsync(memory).ConfigureAwait(false);
+                var length = memory.Length;
+                
+                if (length == 0)
+                {
+                    LogFailure(normalizedUrl, "EMPTY_BODY");
+                    return null;
+                }
+
+                memory.Position = 0;
+                
+                // --- SNIFF FOR HTML/PLAINTEXT ERRORS ---
+                // Bazı paneller 200 OK ile HTML hata sayfası döner. Bitmap(stream) fırlatmadan önce kontrol edelim.
+                byte[] buffer = new byte[Math.Min(length, 128)];
+                await memory.ReadAsync(buffer).ConfigureAwait(false);
                 memory.Position = 0;
 
-                var bitmap = new Bitmap(memory);
-                AddToCache(normalizedUrl, bitmap);
-                return bitmap;
+                if (IsHtmlContent(buffer))
+                {
+                    LogFailure(normalizedUrl, "HTML_CONTENT");
+                    return null;
+                }
+
+                // --- BITMAP DECODE ---
+                try
+                {
+                    var bitmap = new Bitmap(memory);
+                    AddToCache(normalizedUrl, bitmap);
+                    return bitmap;
+                }
+                catch (ArgumentException)
+                {
+                    LogFailure(normalizedUrl, "INVALID_IMAGE_FORMAT");
+                    return null;
+                }
             }
             catch (HttpRequestException) when (attempt < HttpImageMaxAttempts - 1)
             {
@@ -326,6 +355,23 @@ public class RemoteImage : Image
 
         LogFailure(normalizedUrl, "RetryExhausted");
         return null;
+    }
+
+    private static bool IsHtmlContent(byte[] buffer)
+    {
+        if (buffer.Length < 4) return false;
+        
+        // Convert to string to check for start tags
+        try
+        {
+            var snippet = System.Text.Encoding.UTF8.GetString(buffer).TrimStart();
+            return snippet.StartsWith("<html", StringComparison.OrdinalIgnoreCase)
+                || snippet.StartsWith("<!DOCTYPE", StringComparison.OrdinalIgnoreCase)
+                || snippet.StartsWith("<head", StringComparison.OrdinalIgnoreCase)
+                || snippet.StartsWith("<body", StringComparison.OrdinalIgnoreCase)
+                || snippet.StartsWith("<div", StringComparison.OrdinalIgnoreCase);
+        }
+        catch { return false; }
     }
 
     private static IReadOnlyList<Uri> BuildRequestUriCandidates(Uri originalUri)

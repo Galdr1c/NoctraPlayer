@@ -233,7 +233,7 @@ public class XtreamCodesService : IXtreamCodesService
                     foreach (var seasonProp in episodes.EnumerateObject())
                     {
                         if (seasonProp.Value.ValueKind != JsonValueKind.Array) continue;
-                        detail.Episodes[seasonProp.Name] = ParseEpisodeArray(seasonProp.Value, seasonProp.Name);
+                        detail.Episodes[seasonProp.Name] = ParseEpisodeArray(seasonProp.Value, seasonProp.Name, detail.Cover);
                         count++;
                     }
                     StartupDiagnostics.Log($"[Xtream] Processed {count} seasons from OBJECT episodes block.");
@@ -241,7 +241,7 @@ public class XtreamCodesService : IXtreamCodesService
                 else if (episodes.ValueKind == JsonValueKind.Array)
                 {
                     // Fallback for single-season series or servers that return a flat array
-                    detail.Episodes["1"] = ParseEpisodeArray(episodes, "1");
+                    detail.Episodes["1"] = ParseEpisodeArray(episodes, "1", detail.Cover);
                     StartupDiagnostics.Log("[Xtream] Processed episodes from ARRAY fallback block.");
                 }
                 else
@@ -913,7 +913,7 @@ public class XtreamCodesService : IXtreamCodesService
         }
     }
 
-    private List<XtreamEpisodeDetail> ParseEpisodeArray(JsonElement array, string seasonName)
+    private List<XtreamEpisodeDetail> ParseEpisodeArray(JsonElement array, string seasonName, string? seriesCover = null)
     {
         var epList = new List<XtreamEpisodeDetail>();
         if (array.ValueKind != JsonValueKind.Array) return epList;
@@ -953,6 +953,9 @@ public class XtreamCodesService : IXtreamCodesService
                     ds.ValueKind == JsonValueKind.Number)
                     duration = ds.GetDouble();
             }
+
+            // --- FALLBACK ---
+            coverUrl ??= seriesCover;
 
             if (!int.TryParse(seasonName, out var fallbackSeason))
                 fallbackSeason = 1;

@@ -232,17 +232,24 @@ public partial class MediaService : IMediaService
             }
 
             // Phase 2: Cleanup orphan data (episodes/seasons/series that no longer have channels)
-            var allEpisodesInPlaylist = await context.Episodes
-                .Where(e => e.Season.Series.PlaylistId == playlistId)
-                .Select(e => e.Id)
+            // KORUMA: Stalker/Xtream gibi lazy-load servislerinde, güncel listede (9-10 bölüm gibi)
+            // her zaman tüm bölümler olmayabilir. Bu yüzden 'mapped' olmayan ama aktif seriye ait bölümleri SİLMİYORUZ.
+            var activeSeriesIds = seriesGroups.Values.Where(s => s.Id > 0).Select(s => s.Id).ToHashSet();
+
+            var episodesToDelete = await context.Episodes
+                .Where(e => e.Season.Series.PlaylistId == playlistId && !mappedEpisodeIds.Contains(e.Id))
                 .ToListAsync(cancellationToken);
 
-            var toDeleteEpisodeIds = allEpisodesInPlaylist.Except(mappedEpisodeIds).ToList();
-            if (toDeleteEpisodeIds.Count > 0)
+            var toDeleteIds = episodesToDelete
+                .Where(e => !activeSeriesIds.Contains(e.Season.SeriesId))
+                .Select(e => e.Id)
+                .ToList();
+
+            if (toDeleteIds.Count > 0)
             {
-                System.Diagnostics.Debug.WriteLine($"[MediaService] Purging {toDeleteEpisodeIds.Count} orphan episodes.");
+                System.Diagnostics.Debug.WriteLine($"[MediaService] Purging {toDeleteIds.Count} orphan episodes.");
                 await context.Episodes
-                    .Where(e => toDeleteEpisodeIds.Contains(e.Id))
+                    .Where(e => toDeleteIds.Contains(e.Id))
                     .ExecuteDeleteAsync(cancellationToken);
             }
 

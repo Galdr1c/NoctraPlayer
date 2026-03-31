@@ -8,6 +8,17 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### 🛠️ Stalker Metadata, Görsel Dayanıklılığı ve Kota Optimizasyonu (2026-03-31)
+- **Stalker Bölüm Metadata Kesintisi Giderildi**: Stalker API'sinin 10. bölümden sonra sadece ID döndüğü durumlarda, bu ID'lerin detaylı verilerle (isim, özet, resim) eşleştirilmesi sağlandı. Artık 10+ bölümler tüm detaylarıyla yükleniyor.
+- **429 Too Many Requests (Rate Limit) Yönetimi**: Sunucu kaynaklı hız sınırlaması hataları için **Exponential Backoff** (500ms -> 1000ms -> 2000ms) içeren otomatik yeniden deneme mekanizması eklendi.
+- **RemoteImage Dayanıklılık Artışı**: 
+    - Görsel yerine dönen HTML hata sayfalarını ve boş yanıtları tespit eden **Sniffing** (içerik tarama) özelliği eklendi.
+    - Hatalı görseller için `ArgumentException` fırlatılması engellendi ve detaylı hata loglama (`HTML_CONTENT`, `EMPTY_BODY`, `INVALID_IMAGE_FORMAT`) getirildi.
+- **Dizi Veri Koruma (Purge Protection)**: Kanal listesi güncellenirken, Stalker portallarındaki lazy-load ile çekilmiş dizi bölümlerinin "artık yok" sanılarak silinmesi (purging) engellendi.
+- **TMDB API Kota Optimizasyonu**: TMDB zenginleştirme çağrıları (oyuncular, fragmanlar vb.) sadece M3U profilleri için sınırlandırıldı. Xtream ve Stalker portalları kendi verilerini sunduğu için bu alanlarda gereksiz API kullanımı önlendi.
+- **Görsel Yedekleme (Fallback)**: Bölüme özel resim bulunamadığında (Stalker & Xtream), görsel boşluğu gidermek için dizinin ana kapak resmi otomatik yedek (fallback) olarak atandı.
+- **UI Canlı Senkronizasyon**: Arka planda tamamlanan lazy-load işlemlerinin sonuçlarının (resim, özet, plot) ana listedeki cache nesnesine kopyalanması sağlanarak, sayfayı yenilemeye gerek kalmadan değişikliklerin UI'a anlık yansıması sağlandı.
+
 ### 🛠️ Bellek, Performans ve Playback İyileştirmeleri (2026-03-30)
 - **StalkerPortalService Bellek Sızıntısı Giderildi**: `TokenLocks` (SemaphoreSlim) nesnelerinin sınırsız büyümesi ve `Dispose` edilmemesi sorunu çözüldü. `CleanupExpiredTokens` metodu ile periyodik temizleme mekanizması entegre edildi.
 - **MainViewModel Referans Sızıntısı Giderildi**: `_prioritizeCategoryAction` delegesi, profil geçişlerinde (`ClearProfileState`) temizlenmediği için oluşan bellek sızıntısı ve hatalı tetiklemeler engellendi.

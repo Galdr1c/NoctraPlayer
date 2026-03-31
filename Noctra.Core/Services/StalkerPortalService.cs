@@ -751,13 +751,29 @@ public class StalkerPortalService : IStalkerPortalService
             var result = new StalkerSeriesInfo();
             bool metadataSet = false;
 
+            // 1. Tüm detaylı bölüm objelerini ID'lerine göre haritala
+            var richEpisodeMap = new Dictionary<string, JsonElement>();
             foreach (var item in stalkerItems)
             {
+                var id = GetString(item, "id");
+                // Eğer bir 'series' dizisi içermiyorsa, bu bir 'Bölüm' detay objesidir.
+                if (!string.IsNullOrEmpty(id) && !item.TryGetProperty("series", out _))
+                {
+                    richEpisodeMap[id] = item;
+                }
+            }
+
+            foreach (var item in stalkerItems)
+            {
+                // Bir sezona ait 'series' dizisi yoksa bu bir sezon konteyneri değildir, atla.
+                if (!item.TryGetProperty("series", out var seriesEl) || seriesEl.ValueKind != JsonValueKind.Array)
+                    continue;
+
                 if (!metadataSet)
                 {
                     result.Description = GetString(item, "description");
                     result.Director = GetString(item, "director");
-                    result.Actors = GetString(item, "actors");
+                    result.Actors = GetString(item, "actors") ?? GetString(item, "actor");
                     result.Year = GetString(item, "year");
                     result.TmdbId = GetString(item, "tmdb_id") ?? GetString(item, "tmdb");
                     result.RatingImdb = GetString(item, "rating_imdb");
@@ -774,37 +790,56 @@ public class StalkerPortalService : IStalkerPortalService
                     Cmd = GetString(item, "cmd") ?? string.Empty,
                 };
 
-                if (item.TryGetProperty("series", out var seriesEl) && seriesEl.ValueKind == JsonValueKind.Array)
+                foreach (var ep in seriesEl.EnumerateArray())
                 {
-                    foreach (var ep in seriesEl.EnumerateArray())
-                    {
-                        if (ep.ValueKind == JsonValueKind.Number && ep.TryGetInt32(out int epNum))
-                        {
-                            season.Episodes.Add(new StalkerEpisodeInfo { EpisodeNumber = epNum });
-                        }
-                        else if (ep.ValueKind == JsonValueKind.Object)
-                        {
-                            var numStr = GetString(ep, "name") ?? GetString(ep, "id") ?? "0";
-                            var numId = 0;
-                            // "Bölüm 1" gibi string'lerden sayıyı ayıkla
-                            var match = System.Text.RegularExpressions.Regex.Match(numStr, @"\d+");
-                            if (match.Success) int.TryParse(match.Value, out numId);
+                    JsonElement epObj;
+                    bool isRich = false;
 
-                            season.Episodes.Add(new StalkerEpisodeInfo
-                            {
-                                EpisodeNumber = numId,
-                                Name = GetString(ep, "name"),
-                                Description = GetString(ep, "description"),
-                                Pic = GetString(ep, "pic") 
-                                     ?? GetString(ep, "screenshot_uri") 
-                                     ?? GetString(ep, "icon") 
-                                     ?? GetString(ep, "cover") 
-                                     ?? GetString(ep, "movie_image") 
-                                     ?? GetString(ep, "screenshot_url"),
-                                Duration = GetString(ep, "duration"),
-                                Added = GetString(ep, "added")
-                            });
+                    if (ep.ValueKind == JsonValueKind.Number)
+                    {
+                        var epId = ep.ToString();
+                        if (richEpisodeMap.TryGetValue(epId, out var mappedEp))
+                        {
+                            epObj = mappedEp;
+                            isRich = true;
                         }
+                        else
+                        {
+                            // Detay bulunamadıysa sadece numarayı al
+                            if (ep.TryGetInt32(out int epNum))
+                                season.Episodes.Add(new StalkerEpisodeInfo { EpisodeNumber = epNum });
+                            continue;
+                        }
+                    }
+                    else if (ep.ValueKind == JsonValueKind.Object)
+                    {
+                        epObj = ep;
+                        isRich = true;
+                    }
+                    else continue;
+
+                    if (isRich)
+                    {
+                        var numStr = GetString(epObj, "name") ?? GetString(epObj, "id") ?? "0";
+                        var numId = 0;
+                        var match = System.Text.RegularExpressions.Regex.Match(numStr, @"\d+");
+                        if (match.Success) int.TryParse(match.Value, out numId);
+
+                        season.Episodes.Add(new StalkerEpisodeInfo
+                        {
+                            EpisodeNumber = numId,
+                            Name = GetString(epObj, "name"),
+                            Description = GetString(epObj, "description"),
+                            Pic = GetString(epObj, "pic") 
+                                 ?? GetString(epObj, "screenshot_uri") 
+                                 ?? GetString(epObj, "icon") 
+                                 ?? GetString(epObj, "cover") 
+                                 ?? GetString(epObj, "movie_image") 
+                                 ?? GetString(epObj, "screenshot_url")
+                                 ?? result.CoverUrl, // Fallback to series cover
+                            Duration = GetString(epObj, "duration"),
+                            Added = GetString(epObj, "added")
+                        });
                     }
                 }
                 
@@ -1041,11 +1076,27 @@ public class StalkerPortalService : IStalkerPortalService
         string endpoint, string queryString, string macAddress,
         string? token, CancellationToken ct)
     {
-        using var request  = BuildGetRequest(endpoint, queryString, macAddress, token);
-        var response = await _httpClient.SendAsync(request, ct);
-        response.EnsureSuccessStatusCode();
+        int retryCount = 0;
+        int maxRetries = 3;
+        int delayMs = 500;
 
-        var body = await response.Content.ReadAsStringAsync(ct);
+        while (true)
+        {
+            using var request = BuildGetRequest(endpoint, queryString, macAddress, token);
+            var response = await _httpClient.SendAsync(request, ct);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests && retryCount < maxRetries)
+            {
+                retryCount++;
+                Log($"[StalkerService] 429 Too Many Requests. Retrying in {delayMs}ms... (Attempt {retryCount}/{maxRetries})");
+                await Task.Delay(delayMs, ct);
+                delayMs *= 2; // Giderek artır (Exponential backoff)
+                continue;
+            }
+
+            response.EnsureSuccessStatusCode();
+
+            var body = await response.Content.ReadAsStringAsync(ct);
         if (string.IsNullOrWhiteSpace(body))
             return JsonDocument.Parse("[]").RootElement;
 
@@ -1067,6 +1118,7 @@ public class StalkerPortalService : IStalkerPortalService
         {
             Log($"[StalkerService] JSON parse error: {ex.Message}. URL: {endpoint}?{queryString}");
             throw;
+        }
         }
     }
 

@@ -44,7 +44,21 @@ public class TmdbSyncService : ITmdbSyncService
         if (pending.Count == 0)
             return;
 
-        _logger?.LogDebug("Enriching {Count} series with TMDB data", pending.Count);
+        // --- KOTA TASARRUFU: Sadece M3U çalma listeleri için TMDB kullan ---
+        // Xtream ve Stalker portal içerikleri zaten meta veri ile yüklendiği için atla.
+        using var db = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var m3uPlaylistIds = await db.Playlists
+            .Include(p => p.Profile)
+            .Where(p => p.Profile.ProviderAccount.Type == ProfileType.M3U)
+            .Select(p => p.Id)
+            .ToListAsync(cancellationToken);
+
+        pending = pending.Where(s => m3uPlaylistIds.Contains(s.PlaylistId)).ToList();
+
+        if (pending.Count == 0)
+            return;
+
+        _logger?.LogDebug("Enriching {Count} series with TMDB data (M3U only filtering active)", pending.Count);
 
         // Process with limited concurrency (MAX_CONCURRENT parallel requests)
         using var semaphore = new SemaphoreSlim(MAX_CONCURRENT);

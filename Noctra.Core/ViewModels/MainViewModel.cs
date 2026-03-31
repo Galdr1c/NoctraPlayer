@@ -5987,14 +5987,34 @@ public partial class MainViewModel : ObservableObject
                 await TryLazyLoadXtreamEpisodesAsync(source, db);
                 StartupDiagnostics.Log($"[SelectMedia] After lazy load for '{source.Name}': {source.Seasons.Count} seasons, {source.Seasons.Sum(s => s.Episodes.Count)} episodes.");
             }
-            else if (CurrentProfile?.ProviderAccount?.Type == ProfileType.StalkerPortal)
+            if (CurrentProfile?.ProviderAccount?.Type == ProfileType.StalkerPortal)
             {
                 await TryLazyLoadStalkerEpisodesAsync(source, db);
+            }
+
+            // --- UI SENKRONİZASYONU ---
+            // Eğer veritabanından farklı bir instance (source != series) yüklendiyse, 
+            // ana listedeki (cache) nesnenin de güncellenmesi için verileri kopyala.
+            if (!ReferenceEquals(series, source))
+            {
+                series.CoverUrl = source.CoverUrl;
+                series.Plot = source.Plot;
+                series.Genre = source.Genre;
+                series.Cast = source.Cast;
+                series.Director = source.Director;
+                series.ReleaseYear = source.ReleaseYear;
+                series.Rating = source.Rating;
+                series.ContentRating = source.ContentRating;
+                series.TmdbId = source.TmdbId;
+                series.Seasons = source.Seasons;
+                series.MetadataFetchedAt = source.MetadataFetchedAt;
             }
         }
 
         // --- LAZY LOAD TMDB METADATA (Seasons & Episodes) ---
-        if (source.TmdbId.HasValue && source.MetadataFetchedAt == null)
+        // Kullanıcı İsteği: Sadece M3U profillerinde TMDB API kullan, çünkü Xtream/Stalker zaten verilerle geliyor.
+        if (source.TmdbId.HasValue && source.MetadataFetchedAt == null && 
+            CurrentProfile?.ProviderAccount?.Type == ProfileType.M3U)
         {
             try
             {
