@@ -75,11 +75,7 @@
                        IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}" />
         </StackPanel>
 
-        <!-- Top Rating -->
-        <Border VerticalAlignment="Top" HorizontalAlignment="Right" Margin="6" Background="#B3000000" CornerRadius="3" Padding="4,2"
-                IsVisible="{Binding Rating, Converter={x:Static ObjectConverters.IsNotNull}}">
-          <TextBlock Text="{Binding Rating, StringFormat={}{0:F1}}" Foreground="{DynamicResource SuccessBrush}" FontSize="10" FontWeight="Bold"/>
-        </Border>
+
       </Grid>
     </Border>
   </Button>
