@@ -15,6 +15,7 @@ using System.Net.NetworkInformation;
 using System.Collections.ObjectModel;
 using Noctra.Core.Services;
 using System.Diagnostics;
+using System.Collections.Concurrent;
 
 namespace Noctra.ViewModels;
 
@@ -68,6 +69,7 @@ public partial class MainViewModel : ObservableObject
     private readonly ILicenseService _licenseService;
     private readonly IUpdateService _updateService;
     private readonly DateTime _downloadCenterSessionStartUtc = DateTime.UtcNow;
+    private readonly ConcurrentDictionary<string, byte> _pendingVisualEnrichmentKeys = new(StringComparer.OrdinalIgnoreCase);
     private CancellationTokenSource? _slowLoadingWarnCts;
 
     [ObservableProperty]
@@ -1894,6 +1896,8 @@ public partial class MainViewModel : ObservableObject
                 UpdateDownloadedItems();
             }
             UpdateSearchBuckets();
+
+            QueueVisibleChannelVisualEnrichment(page);
         }
         finally
         {
@@ -1972,6 +1976,8 @@ public partial class MainViewModel : ObservableObject
                     }
                 });
             }
+
+            QueueVisibleSeriesVisualEnrichment(page);
         }
         finally
         {
@@ -1979,6 +1985,207 @@ public partial class MainViewModel : ObservableObject
         }
 
         return Task.CompletedTask;
+    }
+
+    private bool ShouldUseLazyVisualEnrichment()
+        => CurrentProfile?.ProviderAccount?.Type is ProfileType.XtreamCodes or ProfileType.StalkerPortal;
+
+    private void QueueVisibleChannelVisualEnrichment(IReadOnlyCollection<Channel> page)
+    {
+        if (!ShouldUseLazyVisualEnrichment())
+        {
+            return;
+        }
+
+        var candidates = page
+            .Where(c => c.Type == ChannelType.VOD && c.Id > 0 && !HasDisplayImage(c))
+            .Take(8)
+            .ToList();
+
+        if (candidates.Count == 0)
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            foreach (var channel in candidates)
+            {
+                try
+                {
+                    await EnrichChannelVisualAsync(channel);
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogDebug(ex, "Lazy visual enrichment failed for VOD {Name}", channel.Name);
+                }
+            }
+        });
+    }
+
+    private void QueueVisibleSeriesVisualEnrichment(IReadOnlyCollection<Series> page)
+    {
+        if (!ShouldUseLazyVisualEnrichment())
+        {
+            return;
+        }
+
+        var candidates = page
+            .Where(s => s.Id > 0 && !HasDisplayImage(s))
+            .Take(8)
+            .ToList();
+
+        if (candidates.Count == 0)
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            foreach (var series in candidates)
+            {
+                try
+                {
+                    await EnrichSeriesVisualAsync(series);
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogDebug(ex, "Lazy visual enrichment failed for Series {Name}", series.Name);
+                }
+            }
+        });
+    }
+
+    private async Task EnrichChannelVisualAsync(Channel channel)
+    {
+        var key = $"vod:{channel.Id}";
+        if (!_pendingVisualEnrichmentKeys.TryAdd(key, 1))
+        {
+            return;
+        }
+
+        try
+        {
+            var languageCode = SeriesInfoParser.ExtractLanguageCode(channel.GroupTitle ?? channel.Name);
+            var metadata = await _metadataService.FetchMetadataAsync(channel.Name, ChannelType.VOD, languageCode);
+            if (metadata == null || string.IsNullOrWhiteSpace(metadata.PosterUrl))
+            {
+                return;
+            }
+
+            using var db = await _contextFactory.CreateDbContextAsync();
+            var dbChannel = await db.Channels.FirstOrDefaultAsync(c => c.Id == channel.Id);
+            if (dbChannel == null)
+            {
+                return;
+            }
+
+            var changed = false;
+
+            if (!HasDisplayImage(dbChannel))
+            {
+                dbChannel.LogoUrl = metadata.PosterUrl;
+                changed = true;
+            }
+
+            if (dbChannel.TmdbId == null && metadata.TmdbId.HasValue)
+            {
+                dbChannel.TmdbId = metadata.TmdbId.Value;
+                changed = true;
+            }
+
+            dbChannel.LastTmdbSync = DateTime.UtcNow;
+            changed = true;
+
+            if (changed)
+            {
+                await db.SaveChangesAsync();
+
+                await _dispatcherService.InvokeAsync(() =>
+                {
+                    channel.LogoUrl = dbChannel.LogoUrl;
+                    if (string.IsNullOrWhiteSpace(channel.BackdropUrl))
+                    {
+                        channel.BackdropUrl = dbChannel.BackdropUrl;
+                    }
+                    channel.TmdbId = dbChannel.TmdbId;
+                    channel.LastTmdbSync = dbChannel.LastTmdbSync;
+                    channel.NotifyVisualsChanged();
+                    return Task.CompletedTask;
+                });
+            }
+        }
+        finally
+        {
+            _pendingVisualEnrichmentKeys.TryRemove(key, out _);
+        }
+    }
+
+    private async Task EnrichSeriesVisualAsync(Series series)
+    {
+        var key = $"series:{series.Id}";
+        if (!_pendingVisualEnrichmentKeys.TryAdd(key, 1))
+        {
+            return;
+        }
+
+        try
+        {
+            var languageCode = SeriesInfoParser.ExtractLanguageCode(series.GroupTitle ?? series.Genre ?? series.Name);
+            var metadata = await _metadataService.SearchSeriesAsync(series.Name, languageCode);
+            if (metadata == null || string.IsNullOrWhiteSpace(metadata.PosterUrl))
+            {
+                return;
+            }
+
+            using var db = await _contextFactory.CreateDbContextAsync();
+            var dbSeries = await db.Series.FirstOrDefaultAsync(s => s.Id == series.Id);
+            if (dbSeries == null)
+            {
+                return;
+            }
+
+            var changed = false;
+
+            if (!HasDisplayImage(dbSeries))
+            {
+                dbSeries.CoverUrl = metadata.PosterUrl;
+                changed = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(dbSeries.BackdropUrl) && !string.IsNullOrWhiteSpace(metadata.BackdropUrl))
+            {
+                dbSeries.BackdropUrl = metadata.BackdropUrl;
+                changed = true;
+            }
+
+            if (dbSeries.TmdbId == null && metadata.TmdbId.HasValue)
+            {
+                dbSeries.TmdbId = metadata.TmdbId.Value;
+                changed = true;
+            }
+
+            dbSeries.LastTmdbSync = DateTime.UtcNow;
+            changed = true;
+
+            if (changed)
+            {
+                await db.SaveChangesAsync();
+
+                await _dispatcherService.InvokeAsync(() =>
+                {
+                    series.CoverUrl = dbSeries.CoverUrl;
+                    series.BackdropUrl = dbSeries.BackdropUrl;
+                    series.TmdbId = dbSeries.TmdbId;
+                    series.LastTmdbSync = dbSeries.LastTmdbSync;
+                    return Task.CompletedTask;
+                });
+            }
+        }
+        finally
+        {
+            _pendingVisualEnrichmentKeys.TryRemove(key, out _);
+        }
     }
 
     partial void OnSearchTextChanged(string value)

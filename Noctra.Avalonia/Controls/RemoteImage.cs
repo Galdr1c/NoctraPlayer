@@ -33,10 +33,11 @@ public class RemoteImage : Image
     private static readonly ConcurrentDictionary<string, byte> FailedUrlLog = new(StringComparer.OrdinalIgnoreCase);
     private static readonly LinkedList<string> CacheLruList = new();
     private static readonly object CacheLock = new();
+    private static readonly SemaphoreSlim HttpDownloadGate = new(8, 8);
     private const int MaxCacheEntries = 1500;
     private const int PreloadConcurrency = 10;
-    private const int HttpImageMaxAttempts = 2;
-    private const int HttpRetryBaseDelayMs = 120;
+    private const int HttpImageMaxAttempts = 4;
+    private const int HttpRetryBaseDelayMs = 250;
 
     private CancellationTokenSource? _loadCts;
 
@@ -268,6 +269,7 @@ public class RemoteImage : Image
         {
             try
             {
+                await HttpDownloadGate.WaitAsync().ConfigureAwait(false);
                 using var request = new HttpRequestMessage(HttpMethod.Get, uri);
                 using var response = await HttpClient
                     .SendAsync(request, HttpCompletionOption.ResponseHeadersRead)
@@ -288,7 +290,17 @@ public class RemoteImage : Image
 
                     if (attempt < HttpImageMaxAttempts - 1)
                     {
-                        await Task.Delay(HttpRetryBaseDelayMs * (attempt + 1)).ConfigureAwait(false);
+                        // Respect Retry-After when available (common for 429/503).
+                        var retryAfter = response.Headers.RetryAfter?.Delta;
+                        if (retryAfter.HasValue && retryAfter.Value > TimeSpan.Zero)
+                        {
+                            await Task.Delay(retryAfter.Value).ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            var backoffMs = HttpRetryBaseDelayMs * (attempt + 1) * (attempt + 1);
+                            await Task.Delay(backoffMs).ConfigureAwait(false);
+                        }
                         continue;
                     }
 
@@ -335,21 +347,28 @@ public class RemoteImage : Image
             }
             catch (HttpRequestException) when (attempt < HttpImageMaxAttempts - 1)
             {
-                await Task.Delay(HttpRetryBaseDelayMs * (attempt + 1)).ConfigureAwait(false);
+                var backoffMs = HttpRetryBaseDelayMs * (attempt + 1) * (attempt + 1);
+                await Task.Delay(backoffMs).ConfigureAwait(false);
             }
             catch (TaskCanceledException) when (attempt < HttpImageMaxAttempts - 1)
             {
-                await Task.Delay(HttpRetryBaseDelayMs * (attempt + 1)).ConfigureAwait(false);
+                var backoffMs = HttpRetryBaseDelayMs * (attempt + 1) * (attempt + 1);
+                await Task.Delay(backoffMs).ConfigureAwait(false);
             }
             catch (Exception ex) when (attempt < HttpImageMaxAttempts - 1)
             {
                 LogFailure(normalizedUrl, ex.GetType().Name);
-                await Task.Delay(HttpRetryBaseDelayMs * (attempt + 1)).ConfigureAwait(false);
+                var backoffMs = HttpRetryBaseDelayMs * (attempt + 1) * (attempt + 1);
+                await Task.Delay(backoffMs).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 LogFailure(normalizedUrl, ex.GetType().Name);
                 return null;
+            }
+            finally
+            {
+                HttpDownloadGate.Release();
             }
         }
 

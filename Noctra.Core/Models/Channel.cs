@@ -96,6 +96,13 @@ public partial class Channel : ObservableObject
     
     [NotMapped]
     public string? Description => Plot;
+
+    public void NotifyVisualsChanged()
+    {
+        OnPropertyChanged(nameof(LogoUrl));
+        OnPropertyChanged(nameof(BackdropUrl));
+        OnPropertyChanged(nameof(CoverUrl));
+    }
 }
 
 
