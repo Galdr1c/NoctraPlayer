@@ -760,10 +760,15 @@ public class StalkerPortalService : IStalkerPortalService
                 }
             }
 
-            if (stalkerItems.Count == 0) return null;
+            if (stalkerItems.Count == 0)
+            {
+                Log($"GetSeriesInfoAsync: no items returned for seriesId={seriesId}");
+                return null;
+            }
 
             var result = new StalkerSeriesInfo();
             bool metadataSet = false;
+            var seasonContainerCount = 0;
 
             // 1. Tüm detaylı bölüm objelerini ID'lerine göre haritala
             var richEpisodeMap = new Dictionary<string, JsonElement>();
@@ -777,11 +782,21 @@ public class StalkerPortalService : IStalkerPortalService
                 }
             }
 
+            Log($"GetSeriesInfoAsync: seriesId={seriesId}, items={stalkerItems.Count}, richEpisodes={richEpisodeMap.Count}");
+            if (richEpisodeMap.Count > 0)
+            {
+                var sampleEpisode = richEpisodeMap.Values.First();
+                Log($"GetSeriesInfoAsync sample episode: keys={string.Join(", ", sampleEpisode.EnumerateObject().Select(p => p.Name))}");
+                Log($"GetSeriesInfoAsync sample episode fields: name='{GetString(sampleEpisode, "name")}', pic='{GetString(sampleEpisode, "pic")}', screenshot_uri='{GetString(sampleEpisode, "screenshot_uri")}', icon='{GetString(sampleEpisode, "icon")}', cover='{GetString(sampleEpisode, "cover")}', movie_image='{GetString(sampleEpisode, "movie_image")}', duration='{GetString(sampleEpisode, "duration")}', added='{GetString(sampleEpisode, "added")}'");
+            }
+
             foreach (var item in stalkerItems)
             {
                 // Bir sezona ait 'series' dizisi yoksa bu bir sezon konteyneri değildir, atla.
                 if (!item.TryGetProperty("series", out var seriesEl) || seriesEl.ValueKind != JsonValueKind.Array)
                     continue;
+
+                seasonContainerCount++;
 
                 if (!metadataSet)
                 {
@@ -792,7 +807,9 @@ public class StalkerPortalService : IStalkerPortalService
                     result.TmdbId = GetString(item, "tmdb_id") ?? GetString(item, "tmdb");
                     result.RatingImdb = GetString(item, "rating_imdb");
                     result.Age = GetString(item, "age");
-                    result.CoverUrl = GetString(item, "screenshot_uri") ?? GetString(item, "pic");
+                    result.CoverUrl = NormalizeLogoUrl(
+                        GetString(item, "screenshot_uri") ?? GetString(item, "pic"),
+                        ExtractBaseUrl(endpoint));
                     result.GenresStr = GetString(item, "genres_str");
                     metadataSet = true;
                 }
@@ -844,13 +861,15 @@ public class StalkerPortalService : IStalkerPortalService
                             EpisodeNumber = numId,
                             Name = GetString(epObj, "name"),
                             Description = GetString(epObj, "description"),
-                            Pic = GetString(epObj, "pic") 
-                                 ?? GetString(epObj, "screenshot_uri") 
-                                 ?? GetString(epObj, "icon") 
-                                 ?? GetString(epObj, "cover") 
-                                 ?? GetString(epObj, "movie_image") 
-                                 ?? GetString(epObj, "screenshot_url")
-                                 ?? result.CoverUrl, // Fallback to series cover
+                            Pic = NormalizeLogoUrl(
+                                GetString(epObj, "pic")
+                                ?? GetString(epObj, "screenshot_uri")
+                                ?? GetString(epObj, "icon")
+                                ?? GetString(epObj, "cover")
+                                ?? GetString(epObj, "movie_image")
+                                ?? GetString(epObj, "screenshot_url")
+                                ?? result.CoverUrl, // Fallback to series cover
+                                ExtractBaseUrl(endpoint)),
                             Duration = GetString(epObj, "duration"),
                             Added = GetString(epObj, "added")
                         });
@@ -859,6 +878,11 @@ public class StalkerPortalService : IStalkerPortalService
                 
                 result.Seasons.Add(season);
             }
+
+            var totalEpisodes = result.Seasons.Sum(s => s.Episodes.Count);
+            var episodesWithImages = result.Seasons.Sum(s => s.Episodes.Count(e => !string.IsNullOrWhiteSpace(e.Pic)));
+            var episodesWithDescriptions = result.Seasons.Sum(s => s.Episodes.Count(e => !string.IsNullOrWhiteSpace(e.Description)));
+            Log($"GetSeriesInfoAsync parsed: seriesId={seriesId}, seasons={result.Seasons.Count}, seasonContainers={seasonContainerCount}, episodes={totalEpisodes}, episodeImages={episodesWithImages}, episodeDescriptions={episodesWithDescriptions}, seriesCover='{result.CoverUrl}', seriesPlotPresent={!string.IsNullOrWhiteSpace(result.Description)}");
 
             return result;
         }

@@ -70,6 +70,8 @@ public partial class MainViewModel : ObservableObject
     private readonly IUpdateService _updateService;
     private readonly DateTime _downloadCenterSessionStartUtc = DateTime.UtcNow;
     private readonly ConcurrentDictionary<string, byte> _pendingVisualEnrichmentKeys = new(StringComparer.OrdinalIgnoreCase);
+    private readonly SemaphoreSlim _channelVisualEnrichmentSemaphore = new(3, 3);
+    private readonly SemaphoreSlim _seriesVisualEnrichmentSemaphore = new(3, 3);
     private CancellationTokenSource? _slowLoadingWarnCts;
 
     [ObservableProperty]
@@ -1988,7 +1990,7 @@ public partial class MainViewModel : ObservableObject
     }
 
     private bool ShouldUseLazyVisualEnrichment()
-        => CurrentProfile?.ProviderAccount?.Type is ProfileType.XtreamCodes or ProfileType.StalkerPortal;
+        => CurrentProfile?.ProviderAccount?.Type == ProfileType.M3U;
 
     private void QueueVisibleChannelVisualEnrichment(IReadOnlyCollection<Channel> page)
     {
@@ -1999,7 +2001,6 @@ public partial class MainViewModel : ObservableObject
 
         var candidates = page
             .Where(c => c.Type == ChannelType.VOD && c.Id > 0 && !HasDisplayImage(c))
-            .Take(8)
             .ToList();
 
         if (candidates.Count == 0)
@@ -2013,11 +2014,16 @@ public partial class MainViewModel : ObservableObject
             {
                 try
                 {
+                    await _channelVisualEnrichmentSemaphore.WaitAsync();
                     await EnrichChannelVisualAsync(channel);
                 }
                 catch (Exception ex)
                 {
                     _logger?.LogDebug(ex, "Lazy visual enrichment failed for VOD {Name}", channel.Name);
+                }
+                finally
+                {
+                    _channelVisualEnrichmentSemaphore.Release();
                 }
             }
         });
@@ -2032,7 +2038,6 @@ public partial class MainViewModel : ObservableObject
 
         var candidates = page
             .Where(s => s.Id > 0 && !HasDisplayImage(s))
-            .Take(8)
             .ToList();
 
         if (candidates.Count == 0)
@@ -2046,11 +2051,16 @@ public partial class MainViewModel : ObservableObject
             {
                 try
                 {
+                    await _seriesVisualEnrichmentSemaphore.WaitAsync();
                     await EnrichSeriesVisualAsync(series);
                 }
                 catch (Exception ex)
                 {
                     _logger?.LogDebug(ex, "Lazy visual enrichment failed for Series {Name}", series.Name);
+                }
+                finally
+                {
+                    _seriesVisualEnrichmentSemaphore.Release();
                 }
             }
         });
@@ -6306,6 +6316,13 @@ public partial class MainViewModel : ObservableObject
                 (s.Id == series.Id || s.Name == series.Name));
 
         var source = dbSeries ?? series;
+        var providerOnlySeriesMetadata = ShouldUseProviderOnlySeriesMetadata();
+        var providerOnlyFieldsCleared = false;
+
+        if (providerOnlySeriesMetadata)
+        {
+            providerOnlyFieldsCleared = ClearTmdbSeasonAndEpisodeMetadata(source);
+        }
 
         // ── YENİ: Xtream veya Stalker serisi ve hiç bölüm yoksa → lazy load ──
         bool hasEpisodes = source.Seasons.Any(s => s.Episodes.Count > 0);
@@ -6337,8 +6354,10 @@ public partial class MainViewModel : ObservableObject
                 series.Rating = source.Rating;
                 series.ContentRating = source.ContentRating;
                 series.TmdbId = source.TmdbId;
+                series.TmdbTitle = source.TmdbTitle;
                 series.Seasons = source.Seasons;
                 series.MetadataFetchedAt = source.MetadataFetchedAt;
+                series.LastTmdbSync = source.LastTmdbSync;
             }
         }
 
@@ -6473,8 +6492,59 @@ public partial class MainViewModel : ObservableObject
         }
         // ----------------------------------------------------
 
+        if (providerOnlyFieldsCleared && dbSeries != null)
+        {
+            await db.SaveChangesAsync();
+        }
+
         await ApplyProfileProgressAsync(source, db);
         return source;
+    }
+
+    private bool ShouldUseProviderOnlySeriesMetadata()
+        => CurrentProfile?.ProviderAccount?.Type is ProfileType.XtreamCodes or ProfileType.StalkerPortal;
+
+    private static bool ClearTmdbSeasonAndEpisodeMetadata(Series series)
+    {
+        var changed = false;
+
+        if (!string.IsNullOrWhiteSpace(series.TmdbTitle))
+        {
+            series.TmdbTitle = null;
+            changed = true;
+        }
+
+        if (series.MetadataFetchedAt != null)
+        {
+            series.MetadataFetchedAt = null;
+            changed = true;
+        }
+
+        if (series.LastTmdbSync != null)
+        {
+            series.LastTmdbSync = null;
+            changed = true;
+        }
+
+        foreach (var season in series.Seasons)
+        {
+            if (season.TmdbSeasonId != null)
+            {
+                season.TmdbSeasonId = null;
+                changed = true;
+            }
+
+            foreach (var episode in season.Episodes)
+            {
+                if (!string.IsNullOrWhiteSpace(episode.TmdbEpisodeName))
+                {
+                    episode.TmdbEpisodeName = null;
+                    changed = true;
+                }
+            }
+        }
+
+        return changed;
     }
 
     private async Task TryLazyLoadStalkerEpisodesAsync(Series series, AppDbContext db)
@@ -6564,6 +6634,7 @@ public partial class MainViewModel : ObservableObject
             {
                 SeasonNumber = seasonNum,
                 Name = string.IsNullOrWhiteSpace(stalkerSeason.Name) ? $"Sezon {seasonNum}" : stalkerSeason.Name,
+                CoverUrl = series.CoverUrl,
                 Series = series
             };
             series.Seasons.Add(season);
@@ -6584,17 +6655,8 @@ public partial class MainViewModel : ObservableObject
                 var epCover = stalkerEp.Pic;
                 var epAdded = stalkerEp.Added;
 
-                TimeSpan? duration = null;
-                if (!string.IsNullOrEmpty(epDuration) && int.TryParse(System.Text.RegularExpressions.Regex.Match(epDuration, @"\d+").Value, out var mins))
-                {
-                    duration = TimeSpan.FromMinutes(mins);
-                }
-
-                DateTime? airDate = null;
-                if (!string.IsNullOrEmpty(epAdded) && DateTime.TryParse(epAdded, out var parsedDate))
-                {
-                    airDate = parsedDate;
-                }
+                var duration = ParseProviderDuration(epDuration);
+                var airDate = ParseProviderDate(epAdded);
 
                 season.Episodes.Add(new Episode
                 {
@@ -6744,9 +6806,14 @@ public partial class MainViewModel : ObservableObject
                     ? TimeSpan.FromSeconds(ep.DurationSecs.Value)
                     : null;
 
-                DateTime? airDate = null;
-                if (!string.IsNullOrWhiteSpace(ep.AirDate))
-                    DateTime.TryParse(ep.AirDate, out var ad);
+        DateTime? airDate = null;
+        if (!string.IsNullOrWhiteSpace(ep.AirDate))
+        {
+            if (DateTime.TryParse(ep.AirDate, out var ad))
+            {
+                airDate = ad;
+            }
+        }
 
                 season.Episodes.Add(new Episode
                 {
@@ -6887,6 +6954,73 @@ public partial class MainViewModel : ObservableObject
         {
             _logger?.LogError(ex, "Error in ApplyBulkProfileProgressAsync");
         }
+    }
+
+    private static TimeSpan? ParseProviderDuration(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        var value = raw.Trim();
+
+        if (TimeSpan.TryParse(value, out var parsed) && parsed > TimeSpan.Zero)
+        {
+            return parsed;
+        }
+
+        if (double.TryParse(value, out var minutesOnly) && minutesOnly > 0)
+        {
+            return TimeSpan.FromMinutes(minutesOnly);
+        }
+
+        var parts = Regex.Matches(value, @"\d+").Select(m => m.Value).ToList();
+        if (parts.Count >= 3 &&
+            int.TryParse(parts[0], out var hours) &&
+            int.TryParse(parts[1], out var minutes) &&
+            int.TryParse(parts[2], out var seconds))
+        {
+            var hhmmss = new TimeSpan(hours, minutes, seconds);
+            if (hhmmss > TimeSpan.Zero)
+            {
+                return hhmmss;
+            }
+        }
+
+        if (parts.Count >= 1 && int.TryParse(parts[0], out var firstNumber) && firstNumber > 0)
+        {
+            return TimeSpan.FromMinutes(firstNumber);
+        }
+
+        return null;
+    }
+
+    private static DateTime? ParseProviderDate(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        if (DateTime.TryParse(raw, out var parsed))
+        {
+            return parsed;
+        }
+
+        if (long.TryParse(raw, out var unixSeconds))
+        {
+            try
+            {
+                return DateTimeOffset.FromUnixTimeSeconds(unixSeconds).LocalDateTime;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        return null;
     }
 
     private async Task ApplyProfileProgressAsync(Series series, AppDbContext db)
