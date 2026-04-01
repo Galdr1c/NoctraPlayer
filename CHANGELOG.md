@@ -10,6 +10,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ### 🛠️ Stalker & Xtream UI Hayalet Kart Temizliği (2026-03-31)
 - **Proaktif Boş Kategori Temizliği**: Stalker ve Xtream servislerinde, bir kategorinin boş olduğu saptandığı anda (tüm listenin bitmesini beklemeden) UI'ya bildirim gönderilerek "İçerik yükleniyor..." (placeholder) kartlarının anında kaldırılması sağlandı.
+- [Fix] Stalker/Xtream UI ghosting: "İçerik yükleniyor..." placeholders now reliably clear even on category load failure.
+- [Fix] Xtream Codes data loss: Parallel loading now safely scopes group cleanup to avoid accidental mass deletion.
+- [Fix] IPTV Category Refresh: Kategoriler artık kanal listesini yenilediğinizde anında temizleniyor ve yeni verilerle baştan dolduruluyor.
+- [Performance] Streamlined dummy channel cleanup in `PlaylistService` to prevent name collisions during refresh.
 - **Hayalet Kart (Dummy Channel) Temizleme Mekanizması**: Yükleme süreci sonunda (başarı veya hata durumunda) veritabanında kalan yetim `stalker-dummy://` ve `xtream-dummy://` kanallarını otomatik temizleyen `DeleteAllDummiesAsync` fonksiyonu devreye alındı.
 - **Stalker Paralel Yükleme Hızı**: Kullanıcı talebi doğrultusunda `MaxCategoryParallel` değeri 2'den tekrar **5**'e yükseltilerek portal yükleme hızı optimize edildi.
 - **Stalker Bağlantı ve Ayrıştırma Dayanıklılığı**: Stalker portallarında JSON ayrıştırma hataları ve ağ kopmalarına karşı "Exponential Backoff" tabanlı otomatik yeniden deneme ve hata yakalama mekanizması güçlendirildi.

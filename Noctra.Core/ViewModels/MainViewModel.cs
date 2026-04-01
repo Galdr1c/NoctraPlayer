@@ -881,6 +881,41 @@ public partial class MainViewModel : ObservableObject
         _prioritizeCategoryAction = null;
     }
 
+    private void ResetUIForRefresh()
+    {
+        // Reset selections and filters
+        SelectedChannel = null;
+        SelectedSeries = null;
+        SelectedGroup = null;
+        IsSeriesDetailVisible = false;
+        SearchText = string.Empty;
+        SearchQuery = string.Empty;
+
+        // Reset pagination and internal caches
+        _currentPage = 0;
+        _hasMoreChannels = false;
+        _isLoadingMoreChannels = false;
+        _currentSeriesPage = 0;
+        _hasMoreSeriesItems = false;
+        _isLoadingMoreSeriesItems = false;
+        _seriesFilteredSource.Clear();
+        _allGroupsCache.Clear();
+        _liveGroupsCache.Clear();
+        _vodGroupsCache.Clear();
+        _seriesGroupsCache.Clear();
+
+        // Clear UI collections
+        SetItems(Channels, Enumerable.Empty<Channel>());
+        SetItems(FilteredChannels, Enumerable.Empty<Channel>());
+        SetItems(Groups, Enumerable.Empty<string>());
+        SetItems(SeriesViewItems, Enumerable.Empty<Series>());
+
+        OnPropertyChanged(nameof(IsContentLoading));
+        OnPropertyChanged(nameof(ShowEmptyChannels));
+        
+        StatusMessage = "Kanal listesi yenileniyor...";
+    }
+
     public Task RefreshCurrentProfileExpirationAsync()
     {
         var account = CurrentProfile?.ProviderAccount;
@@ -903,6 +938,7 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
+            var uiResetDone = false;
             List<string> pendingGroups = new();
             if (!isFullRefresh)
             {
@@ -918,15 +954,39 @@ public partial class MainViewModel : ObservableObject
             await _xtreamCodesService.GetChannelsProgressiveAsync(
                 baseUrl, username, password,
                 includeVod: true,
-                onCategoriesDiscovered: (categories, _) =>
+                onCategoriesDiscovered: async (categories, prioritizeAction) =>
                 {
-                    if (isFullRefresh) return Task.FromResult(categories);
+                    if (isFullRefresh) 
+                    {
+                        if (!uiResetDone)
+                        {
+                            uiResetDone = true;
+                            _dispatcherService.BeginInvoke(() => ResetUIForRefresh());
+                        }
+
+                        // Repopulate UI with dummy channels for the discovered categories
+                        var dummyChannels = categories.Select(c => new Channel
+                        {
+                            Name = "İçerik yükleniyor...",
+                            StreamUrl = $"xtream-dummy://{c.Id}",
+                            GroupTitle = c.Name,
+                            Type = c.Type == "live" ? ChannelType.Live : (c.Type == "series" ? ChannelType.Series : ChannelType.VOD)
+                        }).ToList();
+                
+                        await _playlistService.AppendChannelsAsync(playlist.Id, dummyChannels);
+                        _dispatcherService.BeginInvoke(() => 
+                        {
+                            if (SelectedPlaylist?.Id == playlist.Id) _ = LoadChannelsAsync(playlist.Id);
+                        });
+
+                        return categories;
+                    }
 
                     var toLoad = categories
                         .Where(c => pendingGroups.Contains(c.Name, StringComparer.OrdinalIgnoreCase) || 
                                     pendingGroups.Contains(c.Id, StringComparer.OrdinalIgnoreCase))
                         .ToList();
-                    return Task.FromResult(toLoad);
+                    return toLoad;
                 },
                 onCategoryLoaded: async (channels, groupName) =>
                 {
@@ -978,6 +1038,7 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
+            var uiResetDone = false;
             List<string> pendingGroups = new();
             if (!isFullRefresh)
             {
@@ -1021,11 +1082,39 @@ public partial class MainViewModel : ObservableObject
                 portalUrl,
                 macAddress,
                 includeVod: true,
-                onCategoriesDiscovered: (categories, prioritizeAction) =>
+                onCategoriesDiscovered: async (categories, prioritizeAction) =>
                 {
                     _prioritizeCategoryAction = prioritizeAction;
 
-                    if (isFullRefresh) return Task.FromResult(categories);
+                    if (isFullRefresh) 
+                    {
+                        if (!uiResetDone)
+                        {
+                            uiResetDone = true;
+                            _dispatcherService.BeginInvoke(() => ResetUIForRefresh());
+                        }
+
+                        // Repopulate UI with dummy channels for the discovered categories
+                        var dummyChannels = categories.Select(c => new Channel
+                        {
+                            Name = "İçerik yükleniyor...",
+                            StreamUrl = $"stalker-dummy://{c.Name}",
+                            GroupTitle = c.Name,
+                            Type = c.Type.Equals("series", StringComparison.OrdinalIgnoreCase)
+                                ? ChannelType.Series
+                                : (c.Type.Equals("vod", StringComparison.OrdinalIgnoreCase)
+                                    ? ChannelType.VOD
+                                    : ChannelType.Live)
+                        }).ToList();
+
+                        await _playlistService.AppendChannelsAsync(playlist.Id, dummyChannels);
+                        _dispatcherService.BeginInvoke(() => 
+                        {
+                            if (SelectedPlaylist?.Id == playlist.Id) _ = LoadChannelsAsync(playlist.Id);
+                        });
+
+                        return categories;
+                    }
 
                     // Yalnızca pendingCategories içinde olanları indirilecek listeye filtrele
                     var categoriesToDownload = categories
@@ -1033,7 +1122,7 @@ public partial class MainViewModel : ObservableObject
                         .ToList();
 
                     _logger?.LogInformation($"[Stalker] Filtered categories for resume: {categoriesToDownload.Count} categories will be downloaded (from {categories.Count} total).");
-                    return Task.FromResult(categoriesToDownload);
+                    return categoriesToDownload;
                 },
                 onCategoryLoaded: async (channels, category) =>
                 {
@@ -2434,12 +2523,14 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
+        var playlistId = SelectedPlaylist.Id;
+
         if (!isBackground &&
-            _playlistNoChangeUntilUtc.TryGetValue(SelectedPlaylist.Id, out var noChangeUntil) &&
+            _playlistNoChangeUntilUtc.TryGetValue(playlistId, out var noChangeUntil) &&
             noChangeUntil > DateTime.UtcNow)
         {
             StatusMessage = "Kanal listesi zaten guncel";
-            await TouchPlaylistLastUpdatedAsync(SelectedPlaylist.Id);
+            await TouchPlaylistLastUpdatedAsync(playlistId);
             return;
         }
 
@@ -2467,10 +2558,9 @@ public partial class MainViewModel : ObservableObject
             if (!isBackground)
             {
                 BeginLoading();
-                StatusMessage = "Kanal listesi güncelleniyor...";
+                StatusMessage = "Kanal listesi yenileniyor...";
             }
 
-            var playlistId = SelectedPlaylist.Id;
             var profile = CurrentProfile;
 
             if (profile != null && profile.ProviderAccount != null)
@@ -2503,6 +2593,10 @@ public partial class MainViewModel : ObservableObject
             // "Güvenli Sıfırlama" sonrası tüm kanallar silinip baştan eklendiği için
             // eklenen/silinen farkı 0 olsa dahi kategoriler değişmiş olabilir. 
             // Bu yüzden LoadChannelsAsync her zaman çağrılmalı.
+            if (!isBackground)
+            {
+                ResetUIForRefresh();
+            }
             await LoadChannelsAsync(playlistId);
 
             if (!isBackground)
@@ -2520,8 +2614,22 @@ public partial class MainViewModel : ObservableObject
         {
             if (!isBackground)
             {
-                StatusMessage = UserFriendlyErrorMessage.WithPrefix("Kanal listesi guncelleme hatasi", ex);
+                var errorMessage = UserFriendlyErrorMessage.WithPrefix("Kanal listesi guncelleme hatasi", ex);
+                StatusMessage = errorMessage;
                 ChannelListLastError = UserFriendlyErrorMessage.FromException(ex);
+
+                // Refresh başarısızsa: UI'yi boş bırakma, mevcut DB içeriğini geri yükle.
+                // LoadChannelsAsync kendi status mesajlarını yazacağı için, hata mesajını en sonda tekrar basıyoruz.
+                try
+                {
+                    await LoadChannelsAsync(playlistId);
+                }
+                catch
+                {
+                    // Restore da başarısız olursa, orijinal hata mesajı zaten gösteriliyor.
+                }
+
+                StatusMessage = errorMessage;
             }
         }
         finally
@@ -5024,6 +5132,10 @@ public partial class MainViewModel : ObservableObject
         if (source.Count == 0)
         {
             ResetSeriesIncrementalState();
+            _seriesFilteredSource.Clear();
+            SeriesViewItems.Clear();
+            OnPropertyChanged(nameof(IsContentLoading));
+            OnPropertyChanged(nameof(ShowEmptyChannels));
             return;
         }
 

@@ -418,9 +418,12 @@ public partial class PlaylistService : IPlaylistService
     {
         using var context = await _contextFactory.CreateDbContextAsync();
 
-        // 1. Önce bu gruba ait tüm kanalları (dummy veya gerçek) temizle
+        // 1. Önce bu gruba ait SADECE geçici (dummy) kanalları temizle
+        // Bu sayede aynı isme sahip farklı kategoriler (örn: Live/VOD Action) birbirini silmez, birleşir.
         await context.Channels
-            .Where(c => c.PlaylistId == playlistId && c.GroupTitle == groupTitle)
+            .Where(c => c.PlaylistId == playlistId && 
+                        c.GroupTitle == groupTitle && 
+                        (c.StreamUrl.StartsWith("stalker-dummy://") || c.StreamUrl.StartsWith("xtream-dummy://")))
             .ExecuteDeleteAsync();
 
         // 2. Eğer eklenecek gerçek kanal varsa ekle

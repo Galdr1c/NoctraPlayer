@@ -331,6 +331,9 @@ public class StalkerPortalService : IStalkerPortalService
                 {
                     Interlocked.Increment(ref loadedCategories);
                     Log($"[Error] Category {category.Name} (ID: {category.Id}, Type: {category.Type}) failed: {ex.Message}");
+                    
+                    // Hata durumunda da boş liste bildir ki UI'daki "yükleniyor..." uyarısı kalksın
+                    await onCategoryLoaded([], category);
                 }
             }
         });
@@ -1079,23 +1082,13 @@ public class StalkerPortalService : IStalkerPortalService
 
             var name = string.IsNullOrWhiteSpace(item.Name) ? "İsimsiz Kanal" : item.Name.Trim();
 
-            // 7/24 ve canlı dizi kanallarını Live olarak sınıflandır
-            var finalChannelType = channelType;
-            if (finalChannelType == ChannelType.Series || finalChannelType == ChannelType.VOD)
-            {
-                if (SeriesInfoParser.IsLiveSeries(name) || SeriesInfoParser.IsLiveSeries(group))
-                {
-                    finalChannelType = ChannelType.Live;
-                }
-            }
-
             channels.Add(new Channel
             {
                 Name       = name,
                 StreamUrl  = streamUrl,
                 LogoUrl    = NormalizeLogoUrl(item.Logo, baseUrl),
                 GroupTitle = group,
-                Type       = finalChannelType
+                Type       = channelType
             });
         }
 

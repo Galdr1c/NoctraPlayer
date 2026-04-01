@@ -104,7 +104,7 @@ public class XtreamCodesService : IXtreamCodesService
         var seriesCategoryMap = BuildCategoryMapFromXtream(allCategories.Where(c => c.Type == "series"));
 
         // Helper: Kategorileri öncelik sırasına göre raporla
-        async Task ReportGroupsAsync(IEnumerable<Channel> channels, string fallbackLabel)
+        async Task ReportGroupsAsync(IEnumerable<Channel> channels, string fallbackLabel, string contentType)
         {
              var groups = channels.GroupBy(c => c.GroupTitle ?? fallbackLabel).ToDictionary(g => g.Key, g => g.ToList());
              
@@ -119,7 +119,8 @@ public class XtreamCodesService : IXtreamCodesService
              }
 
              // Eksik grupları da temizle (Eğer keşfedilmiş ama kanalı yoksa)
-             foreach (var cat in categoriesToLoad)
+             // ÖNEMLİ: Sadece bu tipe (live/vod/series) ait kategorileri temizle!
+             foreach (var cat in categoriesToLoad.Where(c => c.Type == contentType))
              {
                  if (!reportedGroups.Contains(cat.Name))
                  {
@@ -136,7 +137,7 @@ public class XtreamCodesService : IXtreamCodesService
                 BuildApiUrl(normalizedBaseUrl, username, password, "get_live_streams"), cancellationToken);
             
             var channels = MapLiveChannels(streams, normalizedBaseUrl, username, password, liveCategoryMap);
-            await ReportGroupsAsync(channels, "Live");
+            await ReportGroupsAsync(channels, "Live", "live");
         }, cancellationToken);
 
         Task? vodTask = null;
@@ -150,7 +151,7 @@ public class XtreamCodesService : IXtreamCodesService
                     BuildApiUrl(normalizedBaseUrl, username, password, "get_vod_streams"), cancellationToken);
                 
                 var channels = MapVodChannels(streams, normalizedBaseUrl, username, password, vodCategoryMap);
-                await ReportGroupsAsync(channels, "VOD");
+                await ReportGroupsAsync(channels, "VOD", "vod");
             }, cancellationToken);
 
             seriesTask = Task.Run(async () =>
@@ -161,7 +162,7 @@ public class XtreamCodesService : IXtreamCodesService
                 if (seriesDtos == null) return;
 
                 var seriesChannels = MapSeriesAsEntries(seriesDtos, seriesCategoryMap);
-                await ReportGroupsAsync(seriesChannels, "Series");
+                await ReportGroupsAsync(seriesChannels, "Series", "series");
             }, cancellationToken);
         }
 
@@ -472,7 +473,6 @@ public class XtreamCodesService : IXtreamCodesService
             .Select(s =>
             {
                 var groupTitle = ResolveCategory(s.CategoryId, null, categories, "Series");
-                var isLive = SeriesInfoParser.IsLiveSeries(s.Name) || SeriesInfoParser.IsLiveSeries(groupTitle);
 
                 return new Channel
                 {
@@ -481,7 +481,7 @@ public class XtreamCodesService : IXtreamCodesService
                     StreamUrl = $"xtream-series://{s.SeriesId}",
                     LogoUrl = s.Cover,
                     GroupTitle = groupTitle,
-                    Type = isLive ? ChannelType.Live : ChannelType.Series,
+                    Type = ChannelType.Series,
                     Plot = s.Plot,
                     ReleaseYear = ParseInt(s.Year),
                     Rating = ParseDouble(s.Rating)
@@ -598,7 +598,6 @@ public class XtreamCodesService : IXtreamCodesService
         IReadOnlyDictionary<string, string> categories)
     {
         var groupTitle = ResolveCategory(series.CategoryId, null, categories, "Series");
-        var isLive = SeriesInfoParser.IsLiveSeries(series.Name) || SeriesInfoParser.IsLiveSeries(groupTitle);
 
         foreach (var ep in episodeArray.EnumerateArray())
         {
@@ -625,7 +624,7 @@ public class XtreamCodesService : IXtreamCodesService
                 StreamUrl = $"{baseUrl}/series/{Uri.EscapeDataString(username)}/{Uri.EscapeDataString(password)}/{id.Value}.{extension}",
                 LogoUrl = series.Cover,
                 GroupTitle = groupTitle,
-                Type = isLive ? ChannelType.Live : ChannelType.Series,
+                Type = ChannelType.Series,
                 Plot = plot ?? series.Plot,
                 ReleaseYear = ParseInt(series.Year),
                 Rating = ParseDouble(series.Rating)
