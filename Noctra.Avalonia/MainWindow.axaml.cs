@@ -784,13 +784,13 @@ public partial class MainWindow : Window
 
         if (e.ClickCount >= 2)
         {
-            _playerViewModel.ToggleFullScreenCommand.Execute(null);
+            _playerViewModel.ToggleFullScreenCommand?.Execute(null);
             e.Handled = true;
             return;
         }
 
-        _playerViewModel.PlayPauseCommand.Execute(null);
-        _playerViewModel.UserInteractionCommand.Execute(null);
+        _playerViewModel.PlayPauseCommand?.Execute(null);
+        _playerViewModel.UserInteractionCommand?.Execute(null);
         e.Handled = true;
     }
 

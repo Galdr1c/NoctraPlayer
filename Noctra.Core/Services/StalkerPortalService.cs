@@ -591,12 +591,12 @@ public class StalkerPortalService : IStalkerPortalService
         return categories;
     }
 
-    private async Task<List<StalkerCategory>> FetchSeriesCategoriesFallbackAsync(
+    private Task<List<StalkerCategory>> FetchSeriesCategoriesFallbackAsync(
         string endpoint, string token, string macAddress, CancellationToken ct)
     {
         // get_ordered_list ile type=series&category=* kullanarak en azından tüm dizileri çekmeyi deniyoruz
         // Bazı sağlayıcılarda kategoriler gelmese bile bu yöntemle tüm listeye ulaşılabiliyor.
-        return new List<StalkerCategory>
+        return Task.FromResult(new List<StalkerCategory>
         {
             new StalkerCategory
             {
@@ -605,7 +605,7 @@ public class StalkerPortalService : IStalkerPortalService
                 Type = "series",
                 Count = 0
             }
-        };
+        });
     }
 
     /// <summary>
@@ -782,13 +782,7 @@ public class StalkerPortalService : IStalkerPortalService
                 }
             }
 
-            Log($"GetSeriesInfoAsync: seriesId={seriesId}, items={stalkerItems.Count}, richEpisodes={richEpisodeMap.Count}");
-            if (richEpisodeMap.Count > 0)
-            {
-                var sampleEpisode = richEpisodeMap.Values.First();
-                Log($"GetSeriesInfoAsync sample episode: keys={string.Join(", ", sampleEpisode.EnumerateObject().Select(p => p.Name))}");
-                Log($"GetSeriesInfoAsync sample episode fields: name='{GetString(sampleEpisode, "name")}', pic='{GetString(sampleEpisode, "pic")}', screenshot_uri='{GetString(sampleEpisode, "screenshot_uri")}', icon='{GetString(sampleEpisode, "icon")}', cover='{GetString(sampleEpisode, "cover")}', movie_image='{GetString(sampleEpisode, "movie_image")}', duration='{GetString(sampleEpisode, "duration")}', added='{GetString(sampleEpisode, "added")}'");
-            }
+            LogSeriesInfoDiagnostics(seriesId, stalkerItems.Count, richEpisodeMap);
 
             foreach (var item in stalkerItems)
             {
@@ -879,10 +873,7 @@ public class StalkerPortalService : IStalkerPortalService
                 result.Seasons.Add(season);
             }
 
-            var totalEpisodes = result.Seasons.Sum(s => s.Episodes.Count);
-            var episodesWithImages = result.Seasons.Sum(s => s.Episodes.Count(e => !string.IsNullOrWhiteSpace(e.Pic)));
-            var episodesWithDescriptions = result.Seasons.Sum(s => s.Episodes.Count(e => !string.IsNullOrWhiteSpace(e.Description)));
-            Log($"GetSeriesInfoAsync parsed: seriesId={seriesId}, seasons={result.Seasons.Count}, seasonContainers={seasonContainerCount}, episodes={totalEpisodes}, episodeImages={episodesWithImages}, episodeDescriptions={episodesWithDescriptions}, seriesCover='{result.CoverUrl}', seriesPlotPresent={!string.IsNullOrWhiteSpace(result.Description)}");
+            LogParsedSeriesInfoDiagnostics(seriesId, result, seasonContainerCount);
 
             return result;
         }
@@ -1298,6 +1289,43 @@ public class StalkerPortalService : IStalkerPortalService
     {
         var raw = GetString(element, propertyName);
         return int.TryParse(raw, out var v) ? v : null;
+    }
+
+    private static void LogSeriesInfoDiagnostics(string seriesId, int itemCount, Dictionary<string, JsonElement> richEpisodeMap)
+    {
+        Log($"GetSeriesInfoAsync: seriesId={seriesId}, items={itemCount}, richEpisodes={richEpisodeMap.Count}");
+
+        if (richEpisodeMap.Count == 0)
+        {
+            return;
+        }
+
+        var sampleEpisode = richEpisodeMap.Values.First();
+        var keys = string.Join(", ", sampleEpisode.EnumerateObject().Select(p => p.Name));
+        var fields = string.Join(", ",
+            new[]
+            {
+                ("name", GetString(sampleEpisode, "name")),
+                ("pic", GetString(sampleEpisode, "pic")),
+                ("screenshot_uri", GetString(sampleEpisode, "screenshot_uri")),
+                ("icon", GetString(sampleEpisode, "icon")),
+                ("cover", GetString(sampleEpisode, "cover")),
+                ("movie_image", GetString(sampleEpisode, "movie_image")),
+                ("duration", GetString(sampleEpisode, "duration")),
+                ("added", GetString(sampleEpisode, "added"))
+            }.Select(entry => $"{entry.Item1}='{entry.Item2}'"));
+
+        Log($"GetSeriesInfoAsync sample episode: keys={keys}");
+        Log($"GetSeriesInfoAsync sample episode fields: {fields}");
+    }
+
+    private static void LogParsedSeriesInfoDiagnostics(string seriesId, StalkerSeriesInfo result, int seasonContainerCount)
+    {
+        var totalEpisodes = result.Seasons.Sum(s => s.Episodes.Count);
+        var episodesWithImages = result.Seasons.Sum(s => s.Episodes.Count(e => !string.IsNullOrWhiteSpace(e.Pic)));
+        var episodesWithDescriptions = result.Seasons.Sum(s => s.Episodes.Count(e => !string.IsNullOrWhiteSpace(e.Description)));
+
+        Log($"GetSeriesInfoAsync parsed: seriesId={seriesId}, seasons={result.Seasons.Count}, seasonContainers={seasonContainerCount}, episodes={totalEpisodes}, episodeImages={episodesWithImages}, episodeDescriptions={episodesWithDescriptions}, seriesCover='{result.CoverUrl}', seriesPlotPresent={!string.IsNullOrWhiteSpace(result.Description)}");
     }
 
     private static void Log(string msg)

@@ -237,11 +237,14 @@ public partial class MediaService : IMediaService
             var activeSeriesIds = seriesGroups.Values.Where(s => s.Id > 0).Select(s => s.Id).ToHashSet();
 
             var episodesToDelete = await context.Episodes
-                .Where(e => e.Season.Series.PlaylistId == playlistId && !mappedEpisodeIds.Contains(e.Id))
+                .Where(e => e.Season != null &&
+                            e.Season.Series != null &&
+                            e.Season.Series.PlaylistId == playlistId &&
+                            !mappedEpisodeIds.Contains(e.Id))
                 .ToListAsync(cancellationToken);
 
             var toDeleteIds = episodesToDelete
-                .Where(e => !activeSeriesIds.Contains(e.Season.SeriesId))
+                .Where(e => e.Season == null || !activeSeriesIds.Contains(e.Season.SeriesId))
                 .Select(e => e.Id)
                 .ToList();
 
@@ -255,7 +258,7 @@ public partial class MediaService : IMediaService
 
             // Cleanup empty seasons (ghost seasons)
             await context.Seasons
-                .Where(s => s.Series.PlaylistId == playlistId && !s.Episodes.Any())
+                .Where(s => s.Series != null && s.Series.PlaylistId == playlistId && !s.Episodes.Any())
                 .ExecuteDeleteAsync(cancellationToken);
 
             // Cleanup empty series (ghost series)

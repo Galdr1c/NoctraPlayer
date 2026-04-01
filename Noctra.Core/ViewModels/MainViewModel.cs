@@ -1694,7 +1694,6 @@ public partial class MainViewModel : ObservableObject
     }
 
     private CancellationTokenSource? _filterCts;
-    private CancellationTokenSource? _searchCts;
     private CancellationTokenSource? _downloadsLandingRefreshCts;
     private int _isDownloadsLandingRefreshing;
     private readonly int _filterDelayMs = 300;
@@ -1990,7 +1989,7 @@ public partial class MainViewModel : ObservableObject
     }
 
     private bool ShouldUseLazyVisualEnrichment()
-        => CurrentProfile?.ProviderAccount?.Type == ProfileType.M3U;
+        => IsM3UProfile();
 
     private void QueueVisibleChannelVisualEnrichment(IReadOnlyCollection<Channel> page)
     {
@@ -5433,8 +5432,6 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSearchQueryChanged(string value)
     {
-        _searchCts?.Cancel();
-
         // Only clear results when query is emptied.
         // Actual search triggers on Enter/button via CommitSearch.
         if (string.IsNullOrWhiteSpace(value))
@@ -6164,7 +6161,7 @@ public partial class MainViewModel : ObservableObject
         });
     }
 
-    private async Task LoadSelectedSeriesMetadataAsync(Series series)
+    private Task LoadSelectedSeriesMetadataAsync(Series series)
     {
         try
         {
@@ -6232,6 +6229,8 @@ public partial class MainViewModel : ObservableObject
         {
             IsSelectedSeriesMetadataLoading = false;
         }
+
+        return Task.CompletedTask;
     }
 
     private void EnsureSeriesEpisodes(Series series)
@@ -6316,55 +6315,22 @@ public partial class MainViewModel : ObservableObject
                 (s.Id == series.Id || s.Name == series.Name));
 
         var source = dbSeries ?? series;
-        var providerOnlySeriesMetadata = ShouldUseProviderOnlySeriesMetadata();
-        var providerOnlyFieldsCleared = false;
-
-        if (providerOnlySeriesMetadata)
-        {
-            providerOnlyFieldsCleared = ClearTmdbSeasonAndEpisodeMetadata(source);
-        }
+        var providerOnlyFieldsCleared = PrepareProviderOnlySeriesMetadata(source);
 
         // ── YENİ: Xtream veya Stalker serisi ve hiç bölüm yoksa → lazy load ──
-        bool hasEpisodes = source.Seasons.Any(s => s.Episodes.Count > 0);
-        if (!hasEpisodes)
+        if (ShouldLazyLoadProviderSeriesEpisodes(source))
         {
-            System.Diagnostics.Debug.WriteLine($"[SelectMedia] Series '{source.Name}' has no episodes. Attempting lazy load for {CurrentProfile?.ProviderAccount?.Type}");
-            
-            if (CurrentProfile?.ProviderAccount?.Type == ProfileType.XtreamCodes)
-            {
-                await TryLazyLoadXtreamEpisodesAsync(source, db);
-                StartupDiagnostics.Log($"[SelectMedia] After lazy load for '{source.Name}': {source.Seasons.Count} seasons, {source.Seasons.Sum(s => s.Episodes.Count)} episodes.");
-            }
-            if (CurrentProfile?.ProviderAccount?.Type == ProfileType.StalkerPortal)
-            {
-                await TryLazyLoadStalkerEpisodesAsync(source, db);
-            }
+            await LazyLoadProviderSeriesEpisodesAsync(source, db);
 
             // --- UI SENKRONİZASYONU ---
             // Eğer veritabanından farklı bir instance (source != series) yüklendiyse, 
             // ana listedeki (cache) nesnenin de güncellenmesi için verileri kopyala.
-            if (!ReferenceEquals(series, source))
-            {
-                series.CoverUrl = source.CoverUrl;
-                series.Plot = source.Plot;
-                series.Genre = source.Genre;
-                series.Cast = source.Cast;
-                series.Director = source.Director;
-                series.ReleaseYear = source.ReleaseYear;
-                series.Rating = source.Rating;
-                series.ContentRating = source.ContentRating;
-                series.TmdbId = source.TmdbId;
-                series.TmdbTitle = source.TmdbTitle;
-                series.Seasons = source.Seasons;
-                series.MetadataFetchedAt = source.MetadataFetchedAt;
-                series.LastTmdbSync = source.LastTmdbSync;
-            }
+            SyncSeriesDetailState(series, source);
         }
 
         // --- LAZY LOAD TMDB METADATA (Seasons & Episodes) ---
         // Kullanıcı İsteği: Sadece M3U profillerinde TMDB API kullan, çünkü Xtream/Stalker zaten verilerle geliyor.
-        if (source.TmdbId.HasValue && source.MetadataFetchedAt == null && 
-            CurrentProfile?.ProviderAccount?.Type == ProfileType.M3U)
+        if (source.TmdbId.HasValue && source.MetadataFetchedAt == null && IsM3UProfile())
         {
             try
             {
@@ -6502,7 +6468,95 @@ public partial class MainViewModel : ObservableObject
     }
 
     private bool ShouldUseProviderOnlySeriesMetadata()
-        => CurrentProfile?.ProviderAccount?.Type is ProfileType.XtreamCodes or ProfileType.StalkerPortal;
+        => IsCurrentProviderType(ProfileType.XtreamCodes) || IsCurrentProviderType(ProfileType.StalkerPortal);
+
+    private bool IsCurrentProviderType(ProfileType profileType)
+        => CurrentProfile?.ProviderAccount?.Type == profileType;
+
+    private bool IsM3UProfile()
+        => IsCurrentProviderType(ProfileType.M3U);
+
+    private bool PrepareProviderOnlySeriesMetadata(Series series)
+        => ShouldUseProviderOnlySeriesMetadata() && ClearTmdbSeasonAndEpisodeMetadata(series);
+
+    private bool ShouldLazyLoadProviderSeriesEpisodes(Series series)
+        => series.Seasons.All(s => s.Episodes.Count == 0) &&
+           (IsCurrentProviderType(ProfileType.XtreamCodes) || IsCurrentProviderType(ProfileType.StalkerPortal));
+
+    private async Task LazyLoadProviderSeriesEpisodesAsync(Series series, AppDbContext db)
+    {
+        Debug.WriteLine($"[SelectMedia] Series '{series.Name}' has no episodes. Attempting lazy load for {CurrentProfile?.ProviderAccount?.Type}");
+
+        if (IsCurrentProviderType(ProfileType.XtreamCodes))
+        {
+            await TryLazyLoadXtreamEpisodesAsync(series, db);
+            StartupDiagnostics.Log($"[SelectMedia] After lazy load for '{series.Name}': {series.Seasons.Count} seasons, {series.Seasons.Sum(s => s.Episodes.Count)} episodes.");
+            return;
+        }
+
+        if (IsCurrentProviderType(ProfileType.StalkerPortal))
+        {
+            await TryLazyLoadStalkerEpisodesAsync(series, db);
+        }
+    }
+
+    private static void SyncSeriesDetailState(Series target, Series source)
+    {
+        if (ReferenceEquals(target, source))
+        {
+            return;
+        }
+
+        target.CoverUrl = source.CoverUrl;
+        target.Plot = source.Plot;
+        target.Genre = source.Genre;
+        target.Cast = source.Cast;
+        target.Director = source.Director;
+        target.ReleaseYear = source.ReleaseYear;
+        target.Rating = source.Rating;
+        target.ContentRating = source.ContentRating;
+        target.TmdbId = source.TmdbId;
+        target.TmdbTitle = source.TmdbTitle;
+        target.Seasons = source.Seasons;
+        target.MetadataFetchedAt = source.MetadataFetchedAt;
+        target.LastTmdbSync = source.LastTmdbSync;
+    }
+
+    private static void ApplyStalkerSeriesMetadata(Series series, StalkerSeriesInfo detail)
+    {
+        if (!string.IsNullOrWhiteSpace(detail.CoverUrl))
+            series.CoverUrl = detail.CoverUrl;
+        if (!string.IsNullOrWhiteSpace(detail.Description) && string.IsNullOrWhiteSpace(series.Plot))
+            series.Plot = detail.Description;
+        if (!string.IsNullOrWhiteSpace(detail.GenresStr) && string.IsNullOrWhiteSpace(series.Genre))
+            series.Genre = detail.GenresStr;
+        if (!string.IsNullOrWhiteSpace(detail.Actors) && string.IsNullOrWhiteSpace(series.Cast))
+            series.Cast = detail.Actors;
+        if (!string.IsNullOrWhiteSpace(detail.Director) && string.IsNullOrWhiteSpace(series.Director))
+            series.Director = detail.Director;
+        if (!string.IsNullOrWhiteSpace(detail.Year) && int.TryParse(detail.Year.Split('-').FirstOrDefault(), out var year))
+            series.ReleaseYear = year;
+        if (!string.IsNullOrWhiteSpace(detail.Age))
+            series.ContentRating = detail.Age;
+        if (!string.IsNullOrWhiteSpace(detail.RatingImdb) && double.TryParse(detail.RatingImdb, out var rate))
+            series.Rating = rate;
+        if (!string.IsNullOrWhiteSpace(detail.TmdbId) && int.TryParse(detail.TmdbId, out var tmdb))
+            series.TmdbId = tmdb;
+    }
+
+    private static void ApplyXtreamSeriesMetadata(Series series, XtreamSeriesDetail detail)
+    {
+        if (!string.IsNullOrWhiteSpace(detail.Name) && detail.Name != series.Name)
+            series.Name = detail.Name;
+        if (!string.IsNullOrWhiteSpace(detail.Cover))
+            series.CoverUrl = detail.Cover;
+        if (!string.IsNullOrWhiteSpace(detail.Plot) && string.IsNullOrWhiteSpace(series.Plot))
+            series.Plot = detail.Plot;
+        if (!string.IsNullOrWhiteSpace(detail.Genre) && string.IsNullOrWhiteSpace(series.Genre))
+            series.Genre = detail.Genre;
+        if (!string.IsNullOrWhiteSpace(detail.Cast) && string.IsNullOrWhiteSpace(series.Cast))
+            series.Cast = detail.Cast;
+    }
 
     private static bool ClearTmdbSeasonAndEpisodeMetadata(Series series)
     {
@@ -6549,7 +6603,7 @@ public partial class MainViewModel : ObservableObject
 
     private async Task TryLazyLoadStalkerEpisodesAsync(Series series, AppDbContext db)
     {
-        if (CurrentProfile?.ProviderAccount?.Type != ProfileType.StalkerPortal) return;
+        if (!IsCurrentProviderType(ProfileType.StalkerPortal)) return;
 
         // Bu diziye ait Channel kaydını bul — StreamUrl'de series_id var
         var seriesChannel = await db.Channels
@@ -6580,8 +6634,11 @@ public partial class MainViewModel : ObservableObject
         var idStr = seriesChannel.StreamUrl.Replace("stalker-series://", "");
         if (string.IsNullOrWhiteSpace(idStr)) return;
 
-        var portalUrl = CurrentProfile.ProviderAccount.Url;
-        var macAddress = CurrentProfile.ProviderAccount.Username ?? string.Empty;
+        var providerAccount = CurrentProfile?.ProviderAccount;
+        if (providerAccount == null) return;
+
+        var portalUrl = providerAccount.Url;
+        var macAddress = providerAccount.Username ?? string.Empty;
 
         _logger?.LogDebug("[Stalker] Lazy loading episodes for series {Name} (id={Id})", series.Name, idStr);
 
@@ -6591,24 +6648,7 @@ public partial class MainViewModel : ObservableObject
         if (detail == null) return;
 
         // Poster/metadata/name güncelle (Kullanıcı İsteği: Stalker API'den gelen zengin TMDB metadatasını kaydet)
-        if (!string.IsNullOrWhiteSpace(detail.CoverUrl))
-            series.CoverUrl = detail.CoverUrl;
-        if (!string.IsNullOrWhiteSpace(detail.Description) && string.IsNullOrWhiteSpace(series.Plot))
-            series.Plot = detail.Description;
-        if (!string.IsNullOrWhiteSpace(detail.GenresStr) && string.IsNullOrWhiteSpace(series.Genre))
-            series.Genre = detail.GenresStr;
-        if (!string.IsNullOrWhiteSpace(detail.Actors) && string.IsNullOrWhiteSpace(series.Cast))
-            series.Cast = detail.Actors;
-        if (!string.IsNullOrWhiteSpace(detail.Director) && string.IsNullOrWhiteSpace(series.Director))
-            series.Director = detail.Director;
-        if (!string.IsNullOrWhiteSpace(detail.Year) && int.TryParse(detail.Year.Split('-').FirstOrDefault(), out var year))
-            series.ReleaseYear = year;
-        if (!string.IsNullOrWhiteSpace(detail.Age))
-            series.ContentRating = detail.Age;
-        if (!string.IsNullOrWhiteSpace(detail.RatingImdb) && double.TryParse(detail.RatingImdb, out var rate))
-            series.Rating = rate;
-        if (!string.IsNullOrWhiteSpace(detail.TmdbId) && int.TryParse(detail.TmdbId, out var tmdb))
-            series.TmdbId = tmdb;
+        ApplyStalkerSeriesMetadata(series, detail);
 
         // Seasons ve Episodes'ları oluştur
         series.Seasons.Clear();
@@ -6693,7 +6733,7 @@ public partial class MainViewModel : ObservableObject
 
     private async Task TryLazyLoadXtreamEpisodesAsync(Series series, AppDbContext db)
     {
-        if (CurrentProfile?.ProviderAccount?.Type != ProfileType.XtreamCodes) return;
+        if (!IsCurrentProviderType(ProfileType.XtreamCodes)) return;
 
         // Bu diziye ait Channel kaydını bul — StreamUrl'de series_id var
         System.Diagnostics.Debug.WriteLine($"[Xtream-LazyLoad] Searching channel for series: '{series.Name}' (PlaylistId: {series.PlaylistId})");
@@ -6734,10 +6774,13 @@ public partial class MainViewModel : ObservableObject
         var idStr = seriesChannel.StreamUrl.Replace("xtream-series://", "");
         if (!long.TryParse(idStr, out var xtreamSeriesId)) return;
 
-        var baseUrl = CurrentProfile.ProviderAccount.Url.TrimEnd('/');
+        var providerAccount = CurrentProfile?.ProviderAccount;
+        if (providerAccount == null) return;
+
+        var baseUrl = providerAccount.Url.TrimEnd('/');
         if (!baseUrl.StartsWith("http")) baseUrl = "http://" + baseUrl;
-        var username = CurrentProfile.ProviderAccount.Username ?? string.Empty;
-        var password = _securityService.Decrypt(CurrentProfile.ProviderAccount.Password) ?? string.Empty;
+        var username = providerAccount.Username ?? string.Empty;
+        var password = _securityService.Decrypt(providerAccount.Password) ?? string.Empty;
 
         _logger?.LogDebug("[Xtream] Lazy loading episodes for series {Name} (id={Id})", series.Name, xtreamSeriesId);
 
@@ -6751,16 +6794,7 @@ public partial class MainViewModel : ObservableObject
         }
 
         // Poster/metadata/name güncelle
-        if (!string.IsNullOrWhiteSpace(detail.Name) && detail.Name != series.Name)
-            series.Name = detail.Name;
-        if (!string.IsNullOrWhiteSpace(detail.Cover))
-            series.CoverUrl = detail.Cover;
-        if (!string.IsNullOrWhiteSpace(detail.Plot) && string.IsNullOrWhiteSpace(series.Plot))
-            series.Plot = detail.Plot;
-        if (!string.IsNullOrWhiteSpace(detail.Genre) && string.IsNullOrWhiteSpace(series.Genre))
-            series.Genre = detail.Genre;
-        if (!string.IsNullOrWhiteSpace(detail.Cast) && string.IsNullOrWhiteSpace(series.Cast))
-            series.Cast = detail.Cast;
+        ApplyXtreamSeriesMetadata(series, detail);
 
         // Authoritative data geldi — mevcut tahminleri/fallbakleri temizle
         series.Seasons.Clear();

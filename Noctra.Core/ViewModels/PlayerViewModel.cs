@@ -505,17 +505,13 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private int _isClockProcessing;
     private bool _isIntentionallyPaused;
     private bool _livePauseRequiresHardRestart;
-    private double _lastLiveObservedPosition = -1;
     private DateTime _lastLiveProgressAtUtc = DateTime.MinValue;
     private DateTime _lastLivePositionEventAtUtc = DateTime.MinValue;
     private DateTime _lastLiveAutoRecoverAttemptAtUtc = DateTime.MinValue;
     private DateTime _liveRecoveryWindowStartUtc = DateTime.MinValue;
-    private int _liveRecoveryAttemptsInWindow;
-    private int _liveStallScore;
     private int _volumeBeforeMute = 100;
     private bool _suppressBufferShieldForSeek;
     private int _seekShieldSuppressionToken;
-    private int _seekVerifyToken;
     private long _lastSeekTargetMs = -1;
     private Series? _currentSeriesContext;
     private bool _isContentTransitioning;
@@ -894,12 +890,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             IsLiveContent = value.Type == ChannelType.Live;
             _livePauseRequiresHardRestart = false;
             _isIntentionallyPaused = false;
-            _lastLiveObservedPosition = -1;
             _lastLiveProgressAtUtc = DateTime.UtcNow;
             _lastLivePositionEventAtUtc = DateTime.UtcNow;
             _liveRecoveryWindowStartUtc = DateTime.MinValue;
-            _liveRecoveryAttemptsInWindow = 0;
-            _liveStallScore = 0;
             _isPlaybackEnded = false;
             ResetSeekInteractionState();
             // Kanal geçişinde eski timeline değerleri görünmesin.
@@ -2192,13 +2185,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         await FlushWatchHistoryAsync(force: true);
         _videoPlayerService.Stop();
         _livePauseRequiresHardRestart = false;
-        _lastLiveObservedPosition = -1;
         _lastLiveProgressAtUtc = DateTime.MinValue;
         _lastLivePositionEventAtUtc = DateTime.MinValue;
         _lastLiveAutoRecoverAttemptAtUtc = DateTime.MinValue;
         _liveRecoveryWindowStartUtc = DateTime.MinValue;
-        _liveRecoveryAttemptsInWindow = 0;
-        _liveStallScore = 0;
         CurrentChannel = null;
         CurrentProgram = null;
         IsVisible = true;

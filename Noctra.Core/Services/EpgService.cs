@@ -52,7 +52,6 @@ public class EpgService : IEpgService
         }
 
         int totalLoaded = 0;
-        bool hasCleared = false;
         try
         {
             LastError = null; // Clear previous error
@@ -169,7 +168,6 @@ public class EpgService : IEpgService
                 if (clearBeforeSave)
                 {
                     await context.Database.ExecuteSqlRawAsync("DELETE FROM EpgPrograms").ConfigureAwait(false);
-                    hasCleared = true;
                     _logger?.LogDebug("[EpgService] EPG data cleared at the start of load (Atomic).");
                 }
 

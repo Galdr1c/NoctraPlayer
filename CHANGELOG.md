@@ -8,6 +8,15 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Sağlayıcı Odaklı Metadata ve Kod Temizliği (2026-04-01)
+- [Değişti] TMDB/search fallback artık yalnızca `M3U` profilleriyle sınırlandı. `Xtream` ve `Stalker` içerikleri artık sadece sağlayıcıdan gelen metadata ile çalışıyor.
+- [Değişti] `Xtream` ve `Stalker` dizi detay akışı artık TMDB sezon/bölüm zenginleştirmesini atlıyor ve sağlayıcı içeriklerinde kalan eski TMDB alanlarını temizliyor.
+- [Düzeltildi] Liste sayfalarındaki lazy poster yükleme artık ilk birkaç karttan sonra durmuyor; görünür sayfadaki aday kartlar yüklenmeye devam ediyor.
+- [Düzeltildi] `Stalker` dizi detay teşhis logları genişletildi; sağlayıcı yanıt yapısı ve eksik bölüm metadata alanları loglardan daha net izlenebiliyor.
+- [Refactor] `MainViewModel` içindeki sağlayıcı metadata kararları tekrarları azaltacak şekilde yardımcı metodlarda toplandı.
+- [Temizlik] Kullanılmayan şablon dosyalar ve ölü kod parçaları kaldırıldı. Buna `Noctra.Core/Class1.cs`, `Noctra.Tests/UnitTest1.cs`, kullanılmayan arama iptal durumu ve kullanılmayan oynatma recovery alanları dahil.
+- [Temizlik] Core servisleri ve view model katmanında null-safety düzeltmeleri ve küçük async imza temizlikleriyle warning yükü azaltıldı.
+
 ### 🛠️ Stalker & Xtream UI Hayalet Kart Temizliği (2026-03-31)
 - **Proaktif Boş Kategori Temizliği**: Stalker ve Xtream servislerinde, bir kategorinin boş olduğu saptandığı anda (tüm listenin bitmesini beklemeden) UI'ya bildirim gönderilerek "İçerik yükleniyor..." (placeholder) kartlarının anında kaldırılması sağlandı.
 - [Fix] Stalker/Xtream UI ghosting: "İçerik yükleniyor..." placeholders now reliably clear even on category load failure.

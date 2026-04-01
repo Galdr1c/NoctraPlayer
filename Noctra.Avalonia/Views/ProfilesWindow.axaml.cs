@@ -318,7 +318,7 @@ public partial class ProfilesWindow : Window
         OpenAddProfileWindow(null);
     }
 
-    private async void ViewModel_OnProfileEditRequested(Profile profile)
+    private void ViewModel_OnProfileEditRequested(Profile profile)
     {
         // PIN kontrolü düzenleme için — SelectProfile_Click'te zaten yapıldı
         // ama direkt event üzerinden gelen çağrılar için de kontrol

@@ -85,7 +85,7 @@ public class WatchHistoryService : IWatchHistoryService
             {
                 var episode = await context.Episodes
                     .Include(e => e.Season)
-                    .ThenInclude(s => s.Series)
+                    .ThenInclude(s => s!.Series)
                     .FirstOrDefaultAsync(e => e.Id == episodeId.Value, ct);
                 if (episode != null)
                 {
@@ -237,14 +237,17 @@ public class WatchHistoryService : IWatchHistoryService
 
         // Reset channel progress
         await context.Channels
-            .Where(c => c.Playlist.ProfileId == profileId)
+            .Where(c => c.Playlist != null && c.Playlist.ProfileId == profileId)
             .ExecuteUpdateAsync(c => c.SetProperty(x => x.LastWatched, (DateTime?)null)
                                       .SetProperty(x => x.WatchedPosition, TimeSpan.Zero)
                                       .SetProperty(x => x.IsCompleted, false), ct);
 
         // Reset episode progress
         await context.Episodes
-            .Where(e => e.Season.Series.Playlist.ProfileId == profileId)
+            .Where(e => e.Season != null &&
+                        e.Season.Series != null &&
+                        e.Season.Series.Playlist != null &&
+                        e.Season.Series.Playlist.ProfileId == profileId)
             .ExecuteUpdateAsync(e => e.SetProperty(x => x.LastWatched, (DateTime?)null)
                                       .SetProperty(x => x.WatchedPosition, TimeSpan.Zero)
                                       .SetProperty(x => x.IsCompleted, false), ct);

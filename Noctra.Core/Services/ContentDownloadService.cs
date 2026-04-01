@@ -1076,7 +1076,7 @@ public class ContentDownloadService : IContentDownloadService
         {
             var episode = await db.Episodes
                 .Include(e => e.Season)
-                .ThenInclude(s => s.Series)
+                .ThenInclude(s => s!.Series)
                 .FirstOrDefaultAsync(e => e.Id == item.EpisodeId.Value);
                 
             if (episode != null)
@@ -1100,7 +1100,7 @@ public class ContentDownloadService : IContentDownloadService
         {
             var episode = await db.Episodes
                 .Include(e => e.Season)
-                .ThenInclude(s => s.Series)
+                .ThenInclude(s => s!.Series)
                 .FirstOrDefaultAsync(e => e.StreamUrl == item.SourceUrl);
                 
             if (episode != null)

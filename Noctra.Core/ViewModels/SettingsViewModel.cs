@@ -780,7 +780,7 @@ public partial class SettingsViewModel : ObservableObject
                         .FirstOrDefaultAsync();
 
                     TotalChannels = await db.Channels
-                        .CountAsync(c => c.Playlist.ProfileId == profileId.Value && c.Playlist.IsActive);
+                        .CountAsync(c => c.Playlist != null && c.Playlist.ProfileId == profileId.Value && c.Playlist.IsActive);
                 }
                 else
                 {
