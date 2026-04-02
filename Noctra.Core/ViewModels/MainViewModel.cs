@@ -6546,8 +6546,10 @@ public partial class MainViewModel : ObservableObject
 
     private static void ApplyXtreamSeriesMetadata(Series series, XtreamSeriesDetail detail)
     {
-        if (!string.IsNullOrWhiteSpace(detail.Name) && detail.Name != series.Name)
-            series.Name = detail.Name;
+        if (!string.IsNullOrWhiteSpace(detail.Name))
+        {
+            series.Name = System.Net.WebUtility.UrlDecode(detail.Name).Trim();
+        }
         if (!string.IsNullOrWhiteSpace(detail.Cover))
             series.CoverUrl = detail.Cover;
         if (!string.IsNullOrWhiteSpace(detail.Plot) && string.IsNullOrWhiteSpace(series.Plot))

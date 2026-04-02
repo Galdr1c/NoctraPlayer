@@ -845,16 +845,30 @@ public class StalkerPortalService : IStalkerPortalService
 
                     if (isRich)
                     {
-                        var numStr = GetString(epObj, "name") ?? GetString(epObj, "id") ?? "0";
+                        var rawEpisodeTitle =
+                            GetString(epObj, "title")
+                            ?? GetString(epObj, "name")
+                            ?? GetString(epObj, "episode_title");
+                        var rawEpisodeNumber =
+                            GetString(epObj, "episode_number")
+                            ?? GetString(epObj, "number")
+                            ?? GetString(epObj, "episode_num")
+                            ?? GetString(epObj, "name")
+                            ?? GetString(epObj, "id")
+                            ?? "0";
+
                         var numId = 0;
-                        var match = System.Text.RegularExpressions.Regex.Match(numStr, @"\d+");
-                        if (match.Success) int.TryParse(match.Value, out numId);
+                        var match = System.Text.RegularExpressions.Regex.Match(rawEpisodeNumber, @"\d+");
+                        if (match.Success)
+                        {
+                            int.TryParse(match.Value, out numId);
+                        }
 
                         season.Episodes.Add(new StalkerEpisodeInfo
                         {
                             EpisodeNumber = numId,
-                            Name = GetString(epObj, "name"),
-                            Description = GetString(epObj, "description"),
+                            Name = rawEpisodeTitle,
+                            Description = GetString(epObj, "description") ?? GetString(epObj, "plot"),
                             Pic = NormalizeLogoUrl(
                                 GetString(epObj, "pic")
                                 ?? GetString(epObj, "screenshot_uri")
@@ -862,7 +876,7 @@ public class StalkerPortalService : IStalkerPortalService
                                 ?? GetString(epObj, "cover")
                                 ?? GetString(epObj, "movie_image")
                                 ?? GetString(epObj, "screenshot_url")
-                                ?? result.CoverUrl, // Fallback to series cover
+                                ?? result.CoverUrl,
                                 ExtractBaseUrl(endpoint)),
                             Duration = GetString(epObj, "duration"),
                             Added = GetString(epObj, "added")

@@ -747,7 +747,7 @@ public class XtreamCodesService : IXtreamCodesService
     private static string SafeName(string? value, string fallback)
     {
         if (string.IsNullOrWhiteSpace(value)) return fallback;
-        return SeriesInfoParser.CleanSeriesName(value);
+        return System.Net.WebUtility.UrlDecode(value).Trim();
     }
 
     private static int? ParseInt(string? input)
