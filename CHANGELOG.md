@@ -10,6 +10,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ### 🛡️ Güvenli Kanal Yenileme (Safe Refresh) (2026-05-01)
 - [Geliştirme] **İşlem Öncesi Koruma**: Kanal listesi yenileme işlemi artık sunucudan başarılı bir yanıt gelmeden DB'yi ve UI'yı temizlemiyor. Bu sayede hatalı şifre veya sunucu erişim sorunlarında mevcut kanal listeniz korunuyor.
 - [Düzeltildi] **Kategori Temizliği**: Yenileme sırasında eski kategorilerin UI'da asılı kalması sorunu, sunucu yanıtı sonrası tetiklenen `ResetUIForRefresh` ve `DeleteAllChannelsForRefreshAsync` mekanizmalarıyla tamamen çözüldü.
+- [Düzeltildi] **Veri Kaybı Önleme (Data Loss Prevention)**: Xtream ve Stalker profillerinde yapılan tam yenilemelerde (Full Refresh) Favoriler, İzleme Geçmişi ve "Listem" verilerinin sıfırlanması sorunu giderildi. Bellek içi yedekleme (`_refreshBackups`) mekanizması ile kullanıcı verileri parmak izi bazlı korunuyor ve yükleme sırasında otomatik olarak geri yükleniyor.
 - [Düzeltildi] **Veri Çakışması**: Yeni "placeholder" (dummy) kanallar eklenmeden önce eski kanalların DB'den temizlenmesi sağlandı, böylece eski ve yeni verilerin üst üste binmesi engellendi.
 
 

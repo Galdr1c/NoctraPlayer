@@ -117,6 +117,7 @@ public interface IPlaylistService
     /// Aşamalı yükleme bittiğinde veya iptal edildiğinde temizlik için kullanılır.
     /// </summary>
     Task DeleteAllDummiesAsync(int playlistId);
+    Task ClearRefreshBackupAsync(int playlistId);
 }
 
 

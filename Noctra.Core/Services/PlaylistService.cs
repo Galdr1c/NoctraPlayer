@@ -16,6 +16,8 @@ namespace Noctra.Services;
 public partial class PlaylistService : IPlaylistService
 {
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> AddPlaylistLocks = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<int, Dictionary<string, ChannelBackupData>> _refreshBackups = new();
+    private record ChannelBackupData(bool Fav, bool List, TimeSpan? Pos, TimeSpan? Dur, bool Comp, DateTime? LastW);
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly IM3UParser _parser;
     private readonly IMediaService _mediaService;
@@ -396,6 +398,8 @@ public partial class PlaylistService : IPlaylistService
         foreach (var channel in organized)
             channel.PlaylistId = playlistId;
 
+        ApplyBackupData(playlistId, organized);
+
         // Mevcut FastSqliteBulkInsertAsync metodunu kullan
         await FastSqliteBulkInsertAsync(context, organized);
 
@@ -446,6 +450,8 @@ public partial class PlaylistService : IPlaylistService
             foreach (var channel in organized)
                 channel.PlaylistId = playlistId;
 
+            ApplyBackupData(playlistId, organized);
+
             await FastSqliteBulkInsertAsync(context, organized);
         }
 
@@ -495,6 +501,39 @@ public partial class PlaylistService : IPlaylistService
     public async Task DeleteAllChannelsForRefreshAsync(int playlistId)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
+        
+        // 1. MEVCUT KULLANICI VERİLERİNİ YEDEKLE (Favori, İzleme Geçmişi vb.)
+        var existingChannelData = await context.Channels
+            .AsNoTracking()
+            .Where(c => c.PlaylistId == playlistId)
+            .Select(c => new { c.Name, c.StreamUrl, c.GroupTitle, c.TvgId, c.TvgName, c.Type, c.IsFavorite, c.IsInMyList, c.WatchedPosition, c.Duration, c.IsCompleted, c.LastWatched })
+            .ToListAsync();
+
+        var userDataMap = new Dictionary<string, ChannelBackupData>(StringComparer.OrdinalIgnoreCase);
+        foreach (var c in existingChannelData)
+        {
+            var chStub = new Channel { Name = c.Name, StreamUrl = c.StreamUrl, GroupTitle = c.GroupTitle, TvgId = c.TvgId, TvgName = c.TvgName };
+            var fingerprint = BuildChannelFingerprint(chStub);
+            if (!userDataMap.TryGetValue(fingerprint, out var existing))
+            {
+                userDataMap[fingerprint] = new ChannelBackupData(c.IsFavorite, c.IsInMyList, c.WatchedPosition, c.Duration, c.IsCompleted, c.LastWatched);
+            }
+            else
+            {
+                userDataMap[fingerprint] = new ChannelBackupData(
+                    existing.Fav || c.IsFavorite,
+                    existing.List || c.IsInMyList,
+                    (c.WatchedPosition > existing.Pos) ? c.WatchedPosition : existing.Pos,
+                    (c.Duration > existing.Dur) ? c.Duration : existing.Dur,
+                    existing.Comp || c.IsCompleted,
+                    (c.LastWatched > existing.LastW) ? c.LastWatched : existing.LastW
+                );
+            }
+        }
+        
+        _refreshBackups[playlistId] = userDataMap;
+
+        // 2. TÜM KANALLARI SİL
         await context.Channels
             .Where(c => c.PlaylistId == playlistId)
             .ExecuteDeleteAsync();
@@ -505,6 +544,32 @@ public partial class PlaylistService : IPlaylistService
             .ExecuteUpdateAsync(s => s
                 .SetProperty(p => p.ChannelCount, 0)
                 .SetProperty(p => p.LastUpdated, DateTime.UtcNow));
+    }
+
+    private void ApplyBackupData(int playlistId, IEnumerable<Channel> channels)
+    {
+        if (_refreshBackups.TryGetValue(playlistId, out var backupMap))
+        {
+            foreach (var nc in channels)
+            {
+                var fingerprint = BuildChannelFingerprint(nc);
+                if (backupMap.TryGetValue(fingerprint, out var data))
+                {
+                    nc.IsFavorite = data.Fav;
+                    nc.IsInMyList = data.List;
+                    nc.WatchedPosition = data.Pos;
+                    nc.Duration = data.Dur;
+                    nc.IsCompleted = data.Comp;
+                    nc.LastWatched = data.LastW;
+                }
+            }
+        }
+    }
+
+    public Task ClearRefreshBackupAsync(int playlistId)
+    {
+        _refreshBackups.TryRemove(playlistId, out _);
+        return Task.CompletedTask;
     }
 
     public async Task<Playlist> AddFromFileAsync(string name, string filePath, int? profileId = null)
