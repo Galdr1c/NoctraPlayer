@@ -107,6 +107,12 @@ public interface IPlaylistService
     Task RefreshEpgAsync(int playlistId);
 
     /// <summary>
+    /// Tam yenileme için playlist'e ait TÜM kanalları siler.
+    /// Sunucudan başarılı yanıt geldikten sonra, yeni dummy kanallar eklenmeden önce çağrılır.
+    /// </summary>
+    Task DeleteAllChannelsForRefreshAsync(int playlistId);
+
+    /// <summary>
     /// Tüm geçici (Dummy) kanalları siler.
     /// Aşamalı yükleme bittiğinde veya iptal edildiğinde temizlik için kullanılır.
     /// </summary>

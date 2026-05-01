@@ -7,6 +7,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 
 ## [Unreleased]
+### 🛡️ Güvenli Kanal Yenileme (Safe Refresh) (2026-05-01)
+- [Geliştirme] **İşlem Öncesi Koruma**: Kanal listesi yenileme işlemi artık sunucudan başarılı bir yanıt gelmeden DB'yi ve UI'yı temizlemiyor. Bu sayede hatalı şifre veya sunucu erişim sorunlarında mevcut kanal listeniz korunuyor.
+- [Düzeltildi] **Kategori Temizliği**: Yenileme sırasında eski kategorilerin UI'da asılı kalması sorunu, sunucu yanıtı sonrası tetiklenen `ResetUIForRefresh` ve `DeleteAllChannelsForRefreshAsync` mekanizmalarıyla tamamen çözüldü.
+- [Düzeltildi] **Veri Çakışması**: Yeni "placeholder" (dummy) kanallar eklenmeden önce eski kanalların DB'den temizlenmesi sağlandı, böylece eski ve yeni verilerin üst üste binmesi engellendi.
+
 
 ### Sağlayıcı Odaklı Metadata ve Kod Temizliği (2026-04-01)
 - [Değişti] TMDB/search fallback artık yalnızca `M3U` profilleriyle sınırlandı. `Xtream` ve `Stalker` içerikleri artık sadece sağlayıcıdan gelen metadata ile çalışıyor.

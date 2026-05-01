@@ -965,6 +965,8 @@ public partial class MainViewModel : ObservableObject
                         if (!uiResetDone)
                         {
                             uiResetDone = true;
+                            // Önce eski kanalları DB'den sil, sonra UI'yı sıfırla
+                            await _playlistService.DeleteAllChannelsForRefreshAsync(playlist.Id);
                             _dispatcherService.BeginInvoke(() => ResetUIForRefresh());
                         }
 
@@ -1095,6 +1097,8 @@ public partial class MainViewModel : ObservableObject
                         if (!uiResetDone)
                         {
                             uiResetDone = true;
+                            // Önce eski kanalları DB'den sil, sonra UI'yı sıfırla
+                            await _playlistService.DeleteAllChannelsForRefreshAsync(playlist.Id);
                             _dispatcherService.BeginInvoke(() => ResetUIForRefresh());
                         }
 

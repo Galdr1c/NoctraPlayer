@@ -488,6 +488,25 @@ public partial class PlaylistService : IPlaylistService
                 .SetProperty(p => p.LastUpdated, DateTime.UtcNow));
     }
 
+    /// <summary>
+    /// Tam yenileme (Full Refresh) için playlist'e ait TÜM kanalları siler.
+    /// Sunucudan başarılı yanıt geldikten sonra, yeni dummy kanallar eklenmeden önce çağrılır.
+    /// </summary>
+    public async Task DeleteAllChannelsForRefreshAsync(int playlistId)
+    {
+        using var context = await _contextFactory.CreateDbContextAsync();
+        await context.Channels
+            .Where(c => c.PlaylistId == playlistId)
+            .ExecuteDeleteAsync();
+
+        // Kanal sayısını sıfırla
+        await context.Playlists
+            .Where(p => p.Id == playlistId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(p => p.ChannelCount, 0)
+                .SetProperty(p => p.LastUpdated, DateTime.UtcNow));
+    }
+
     public async Task<Playlist> AddFromFileAsync(string name, string filePath, int? profileId = null)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
