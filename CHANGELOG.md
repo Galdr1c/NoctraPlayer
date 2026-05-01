@@ -7,6 +7,16 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 
 ## [Unreleased]
+### 🏪 Microsoft Store Free/Premium Çift Uygulama Altyapısı (2026-05-01)
+- [Yeni] Aynı kod tabanından iki ayrı Microsoft Store paketi üretmek için `Free` ve `Premium` edition modeli eklendi.
+- [Yeni] `Noctra.Packaging` altında Store paketleme altyapısı, manifest, görsel varlıklar ve çoklu profil konfigürasyonu (`store-profiles.json`) oluşturuldu.
+- [Yeni] `build/package-store.ps1` ve CI workflow’u güncellenerek `Noctra` ve `Noctra Premium` paketlerinin ayrı ayrı üretilebilmesi sağlandı.
+- [Yeni] `AppEditionService` ve paket metadata akışı eklenerek uygulamanın çalıştığı Store sürümü (`Free`/`Premium`) başlangıçta belirlenebilir hale getirildi.
+- [Değişti] `LicenseService` artık `Premium` Store paketinde tüm premium özellikleri ilk açılışta otomatik etkinleştiriyor.
+- [Değişti] Ücretsiz sürümdeki upsell akışı Microsoft Store’daki premium uygulama listeleme sayfasını açacak şekilde güncellendi.
+- [Değişti] Premium sürümde upsell penceresi ve test amaçlı premium bypass yüzeyleri devre dışı bırakıldı; premium pakette yükseltme/kısıtlama akışı gösterilmiyor.
+- [Dokümantasyon] Microsoft Store submission, Partner Center kimlik alanları ve free/premium paket akışı için rehber ve plan dokümanları eklendi.
+
 ### 🛡️ Güvenli Kanal Yenileme (Safe Refresh) (2026-05-01)
 - [Geliştirme] **İşlem Öncesi Koruma**: Kanal listesi yenileme işlemi artık sunucudan başarılı bir yanıt gelmeden DB'yi ve UI'yı temizlemiyor. Bu sayede hatalı şifre veya sunucu erişim sorunlarında mevcut kanal listeniz korunuyor.
 - [Düzeltildi] **Kategori Temizliği**: Yenileme sırasında eski kategorilerin UI'da asılı kalması sorunu, sunucu yanıtı sonrası tetiklenen `ResetUIForRefresh` ve `DeleteAllChannelsForRefreshAsync` mekanizmalarıyla tamamen çözüldü.

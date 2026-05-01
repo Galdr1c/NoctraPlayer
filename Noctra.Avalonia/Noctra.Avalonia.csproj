@@ -8,9 +8,37 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PackageId>Noctra</PackageId>
+    <Authors>$(NoctraAuthors)</Authors>
+    <Company>$(NoctraCompany)</Company>
+    <Product>$(NoctraAppDisplayName)</Product>
+    <Version>$(NoctraVersionPrefix)</Version>
+    <FileVersion>$(NoctraPackageVersion)</FileVersion>
+    <AssemblyVersion>$(NoctraPackageVersion)</AssemblyVersion>
+    <InformationalVersion>$(NoctraVersionPrefix)</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>NoctraEdition</_Parameter1>
+      <_Parameter2>$(NoctraEdition)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>NoctraEditionDisplayName</_Parameter1>
+      <_Parameter2>$(NoctraEditionDisplayName)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>NoctraPremiumStoreProductId</_Parameter1>
+      <_Parameter2>$(NoctraPremiumStoreProductId)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>NoctraPremiumStoreLaunchUri</_Parameter1>
+      <_Parameter2>$(NoctraPremiumStoreLaunchUri)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>NoctraPremiumStoreWebUri</_Parameter1>
+      <_Parameter2>$(NoctraPremiumStoreWebUri)</_Parameter2>
+    </AssemblyAttribute>
     <PackageReference Include="Avalonia" Version="11.2.1" />
     <PackageReference Include="Avalonia.Desktop" Version="11.2.1" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.1" />

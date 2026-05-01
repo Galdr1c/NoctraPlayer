@@ -1,0 +1,46 @@
+name: store-package
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  package:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore solution
+        run: dotnet restore Noctra.sln
+
+      - name: Build solution
+        run: dotnet build Noctra.sln -c Release --no-restore
+
+      - name: Run tests
+        run: dotnet test Noctra.Tests/Noctra.Tests.csproj -c Release --no-build
+
+      - name: Build Store package
+        shell: pwsh
+        run: .\build\package-store.ps1 -Configuration Release -SkipTests -Editions Free,Premium
+
+      - name: Upload Store artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: noctra-store-package
+          path: |
+            artifacts/store/**
+            Noctra.Packaging/AppPackages/**
+          if-no-files-found: warn

@@ -673,7 +673,7 @@
                     <Border Background="{DynamicResource SuccessBackgroundBrush}" 
                             BorderBrush="{DynamicResource SuccessBrush}" Opacity="0.8"
                             BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,24,0,0"
-                            IsVisible="{Binding IsDeveloperModeActive}">
+                            IsVisible="{Binding CanTogglePremiumForTesting}">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
                                 <materialIcons:MaterialIcon Kind="CodeBraces" Width="20" Height="20" 

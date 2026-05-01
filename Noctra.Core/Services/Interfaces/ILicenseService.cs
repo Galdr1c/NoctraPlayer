@@ -9,6 +9,8 @@ public interface ILicenseService
 {
     // Legacy properties (backward compat)
     bool IsPremium { get; }
+    bool CanUpgradeToPremium { get; }
+    bool IsEditionLockedPremium { get; }
     void ActivatePremium();
     void DeactivatePremium();
     string GetPriceText();
@@ -25,5 +27,4 @@ public interface ILicenseService
     
     event Action? SubscriptionChanged;
 }
-
 

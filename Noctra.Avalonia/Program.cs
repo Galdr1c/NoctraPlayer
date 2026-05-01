@@ -12,6 +12,9 @@ internal sealed class Program
     {
         try
         {
+            StartupDiagnostics.Initialize();
+            StartupDiagnostics.Log($"Program.Main entered. BaseDirectory={AppContext.BaseDirectory}");
+
             var envPath = Path.Combine(AppContext.BaseDirectory, ".env");
             if (File.Exists(envPath))
             {
@@ -26,10 +29,6 @@ internal sealed class Program
         {
             // Keep startup resilient even if trace write fails.
         }
-
-        StartupDiagnostics.Initialize();
-        StartupDiagnostics.Log("Program.Main entered.");
-
 
         try
         {

@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Toolkit.Uwp.Notifications;
+using Noctra.Core.Services;
 using Noctra.Avalonia.Views;
 using System.Linq;
 using System.IO;
@@ -17,10 +18,14 @@ namespace Noctra.Avalonia.Services;
 public sealed class AvaloniaDialogService : IDialogService
 {
     private readonly IServiceProvider _services;
+    private readonly IPackageIdentityService _packageIdentityService;
+    private readonly IAppEditionService _appEditionService;
 
     public AvaloniaDialogService(IServiceProvider services)
     {
         _services = services;
+        _packageIdentityService = services.GetRequiredService<IPackageIdentityService>();
+        _appEditionService = services.GetRequiredService<IAppEditionService>();
     }
 
     public async Task ShowMessageAsync(string title, string message)
@@ -53,6 +58,11 @@ public sealed class AvaloniaDialogService : IDialogService
 
     public async Task ShowUpsellAsync()
     {
+        if (_appEditionService.IsPremiumEdition)
+        {
+            return;
+        }
+
         var owner = GetMainWindow();
         var window = _services.GetRequiredService<UpsellWindow>();
         await window.ShowDialog(owner);
@@ -114,18 +124,23 @@ public sealed class AvaloniaDialogService : IDialogService
         {
             try
             {
-                // Native Windows Toast
-                new ToastContentBuilder()
+                var builder = new ToastContentBuilder()
                     .AddText(title)
-                    .AddText(message)
-                    .AddAppLogoOverride(new Uri("file:///" + Path.GetFullPath("Assets/Logo.png")))
-                    .Show();
-                
+                    .AddText(message);
+
+                var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Logo.png");
+                if (File.Exists(logoPath))
+                {
+                    builder.AddAppLogoOverride(new Uri(logoPath));
+                }
+
+                builder.Show();
+                StartupDiagnostics.Log($"Notification shown via Windows toast. RuntimeMode={_packageIdentityService.RuntimeMode}");
                 return;
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback to custom window if native fails
+                StartupDiagnostics.LogException("Windows toast notification failed", ex);
             }
         }
 

@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <StoreIdentityName Condition="'$(StoreIdentityName)' == ''">Noctra.Noctra</StoreIdentityName>
+    <StorePublisher Condition="'$(StorePublisher)' == ''">CN=00000000-0000-0000-0000-000000000000</StorePublisher>
+    <StorePublisherDisplayName Condition="'$(StorePublisherDisplayName)' == ''">Noctra</StorePublisherDisplayName>
+  </PropertyGroup>
+</Project>

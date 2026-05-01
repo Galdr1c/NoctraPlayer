@@ -45,6 +45,11 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool _isDeveloperModeActive;
 
+    partial void OnIsDeveloperModeActiveChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanTogglePremiumForTesting));
+    }
+
     partial void OnDeveloperPasswordChanged(string value)
     {
         var envPassword = Environment.GetEnvironmentVariable("DEV_PASSWORD");
@@ -63,6 +68,11 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void TogglePremium()
     {
+        if (_licenseService.IsEditionLockedPremium)
+        {
+            return;
+        }
+
         if (_licenseService.IsPremium)
         {
             _licenseService.DeactivatePremium();
@@ -72,6 +82,8 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
             _licenseService.ActivatePremium();
         }
         OnPropertyChanged(nameof(IsPremium));
+        OnPropertyChanged(nameof(IsFreeEdition));
+        OnPropertyChanged(nameof(CanTogglePremiumForTesting));
     }
 
     private UpdateInfo? _latestUpdate;
@@ -124,6 +136,8 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     }
 
     public bool IsPremium => _licenseService.IsPremium;
+    public bool IsFreeEdition => !_licenseService.IsEditionLockedPremium;
+    public bool CanTogglePremiumForTesting => IsDeveloperModeActive && !_licenseService.IsEditionLockedPremium;
 
     [RelayCommand]
     private void ReportBug()

@@ -81,8 +81,8 @@ public partial class MainWindow : Window
         
         _playerViewModel.PremiumUpsellRequested += async (_, _) =>
         {
-            var upsell = ((App)Application.Current!).Services.GetRequiredService<Views.UpsellWindow>();
-            await upsell.ShowDialog(this);
+            var dialogService = ((App)Application.Current!).Services.GetRequiredService<IDialogService>();
+            await dialogService.ShowUpsellAsync();
         };
 
         UpdateDownloadBadgeVisibility();

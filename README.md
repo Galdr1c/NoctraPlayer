@@ -99,6 +99,28 @@ dotnet run --project Noctra.Avalonia/Noctra.Avalonia.csproj
 dotnet test Noctra.Tests/Noctra.Tests.csproj
 ```
 
+## Microsoft Store Packaging
+
+Noctra now includes a dedicated `MSIX` packaging layer for Microsoft Store submission, with two package variants from the same codebase:
+
+- `Free` edition: `Noctra`
+- `Premium` edition: `Noctra Premium`
+
+Primary entry points:
+
+```powershell
+.\build\package-store.ps1
+.\build\test-store-package.ps1
+```
+
+Important notes:
+
+- Local package builds require Visual Studio packaging tools or Build Tools with Desktop Bridge/MSIX support.
+- Real Store submission requires replacing placeholder identity values in `Noctra.Packaging/StoreAssociation.props` and `Noctra.Packaging/store-profiles.json` with the exact Partner Center values.
+- The biggest remaining certification risk is the packaged runtime behavior of `LibVLCSharp` and `VideoLAN.LibVLC.Windows`.
+
+See `docs/microsoft-store-submission.md` for the full workflow.
+
 ## Proje Yapisi
 
 ```text
@@ -112,4 +134,3 @@ Noctra.Tests/      # xUnit testleri
 Ozellik eklerken su iki adimi birlikte yapin:
 1. Kod degisikligi
 2. README guncellemesi (ilgili baslik)
-

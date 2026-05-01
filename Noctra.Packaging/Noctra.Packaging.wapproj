@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <DesktopBridgeTargetsPath Condition="Exists('$(MSBuildExtensionsPath32)\Microsoft\DesktopBridge\Microsoft.DesktopBridge.props')">$(MSBuildExtensionsPath32)\Microsoft\DesktopBridge</DesktopBridgeTargetsPath>
+    <DesktopBridgeTargetsPath Condition="'$(DesktopBridgeTargetsPath)' == '' and Exists('$(MSBuildExtensionsPath)\Microsoft\DesktopBridge\Microsoft.DesktopBridge.props')">$(MSBuildExtensionsPath)\Microsoft\DesktopBridge</DesktopBridgeTargetsPath>
+  </PropertyGroup>
+
+  <Import Project="$(DesktopBridgeTargetsPath)\Microsoft.DesktopBridge.props" Condition="'$(DesktopBridgeTargetsPath)' != ''" />
+
+  <Import Project="StoreAssociation.props" Condition="Exists('StoreAssociation.props')" />
+
+  <PropertyGroup>
+    <ProjectGuid>35A3F562-33E4-4F73-8A76-45A10E6B2F3A</ProjectGuid>
+    <TargetPlatformIdentifier>UAP</TargetPlatformIdentifier>
+    <TargetPlatformVersion>10.0.19041.0</TargetPlatformVersion>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <DefaultLanguage>tr-TR</DefaultLanguage>
+    <AppxBundle>Never</AppxBundle>
+    <AppxBundlePlatforms>x64</AppxBundlePlatforms>
+    <AppxPackageDir Condition="'$(AppxPackageDir)' == ''">$(MSBuildThisFileDirectory)AppPackages\</AppxPackageDir>
+    <GenerateAppInstallerFile>false</GenerateAppInstallerFile>
+    <GenerateTestArtifacts>true</GenerateTestArtifacts>
+    <UapAppxPackageBuildMode Condition="'$(UapAppxPackageBuildMode)' == ''">StoreUpload</UapAppxPackageBuildMode>
+    <AppxPackageSigningEnabled Condition="'$(AppxPackageSigningEnabled)' == ''">false</AppxPackageSigningEnabled>
+    <EntryPointProjectUniqueName>..\Noctra.Avalonia\Noctra.Avalonia.csproj</EntryPointProjectUniqueName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AppxManifest Include="Package.appxmanifest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\**\*.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Noctra.Avalonia\Noctra.Avalonia.csproj" />
+  </ItemGroup>
+
+  <Target Name="EnsureDesktopBridgeInstalled" BeforeTargets="Build" Condition="'$(DesktopBridgeTargetsPath)' == ''">
+    <Error Text="Microsoft Desktop Bridge build targets were not found. Install Visual Studio packaging tools or Build Tools with Windows Application Packaging support." />
+  </Target>
+
+  <Import Project="$(DesktopBridgeTargetsPath)\Microsoft.DesktopBridge.targets" Condition="'$(DesktopBridgeTargetsPath)' != ''" />
+</Project>

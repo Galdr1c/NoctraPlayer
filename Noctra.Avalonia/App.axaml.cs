@@ -14,7 +14,6 @@ using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
 using Noctra.Core.Services;
 using System.Globalization;
-
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -42,6 +41,13 @@ public partial class App : Application
             ConfigureServices(services);
             Services = services.BuildServiceProvider();
             StartupDiagnostics.Log("DI container built.");
+
+            var packageIdentity = Services.GetRequiredService<IPackageIdentityService>();
+            StartupDiagnostics.LogRuntimeContext(
+                packageIdentity.RuntimeMode,
+                packageIdentity.PackageFullName,
+                packageIdentity.PackageFamilyName,
+                AppContext.BaseDirectory);
 
             using var scope = Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -308,8 +314,10 @@ public partial class App : Application
         
         services.AddSingleton<IAvatarService, AvatarService>();
         services.AddSingleton<ISettingsService, SettingsService>();
+        services.AddSingleton<IAppEditionService, AppEditionService>();
         services.AddSingleton<IContentDownloadService, ContentDownloadService>();
         services.AddSingleton<ILicenseService, LicenseService>();
+        services.AddSingleton<IPackageIdentityService, PackageIdentityService>();
         services.AddSingleton<LanguageDetectionService>();
         services.AddSingleton<EpgSourceResolver>();
         services.AddSingleton<INetworkService, NetworkService>();

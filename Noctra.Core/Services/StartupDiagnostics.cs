@@ -128,6 +128,19 @@ public static class StartupDiagnostics
         Log($"{context}: {ex}");
     }
 
+    public static void LogRuntimeContext(
+        string runtimeMode,
+        string? packageFullName,
+        string? packageFamilyName,
+        string baseDirectory)
+    {
+        Log(
+            $"RuntimeContext Mode={runtimeMode}; " +
+            $"PackageFullName={packageFullName ?? "<none>"}; " +
+            $"PackageFamilyName={packageFamilyName ?? "<none>"}; " +
+            $"BaseDirectory={baseDirectory}");
+    }
+
     private static string ResolveLogPath()
     {
         try
