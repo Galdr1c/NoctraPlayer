@@ -151,9 +151,6 @@ namespace Noctra.Tests
         public ScenarioContext(bool isPremium = true)
         {
             License.IsPremium = isPremium;
-            var localizationMock = new Moq.Mock<ILocalizationService>();
-            localizationMock.Setup(l => l.GetString(Moq.It.IsAny<string>())).Returns((string s) => s);
-            localizationMock.Setup(l => l.GetString("Player.Status.Unstable")).Returns("kararsız");
 
             VM = new PlayerViewModel(
                 VideoService,
@@ -167,8 +164,7 @@ namespace Noctra.Tests
                 License,
                 null!,  // MainViewModel — not needed for these tests
                 WatchHistory,
-                new FakeStalkerPortalService(),
-                localizationMock.Object);
+                new FakeStalkerPortalService());
         }
 
         // ─── Yardımcı Reflection ─────────────────────────────────────────────

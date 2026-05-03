@@ -8,7 +8,7 @@ namespace Noctra.Services;
 /// </summary>
 public class NetworkService : INetworkService, IDisposable
 {
-    private string _currentStatus = "Bilinmiyor";
+    private string _currentStatus = "Unknown";
     public string CurrentNetworkStatus => _currentStatus;
 
     public event EventHandler<string>? NetworkStatusChanged;
@@ -85,17 +85,17 @@ public class NetworkService : INetworkService, IDisposable
                 else if (targetInterfaces.Any(n => n.NetworkInterfaceType == NetworkInterfaceType.Wwanpp || 
                                            n.NetworkInterfaceType == NetworkInterfaceType.Wwanpp2))
                 {
-                    _currentStatus = "Mobil veri";
+                    _currentStatus = "Cellular";
                 }
                 else
                 {
-                    _currentStatus = "Çevrimiçi";
+                    _currentStatus = "Online";
                 }
             }
         }
         catch
         {
-            _currentStatus = "Bilinmiyor";
+            _currentStatus = "Unknown";
         }
     }
 
@@ -108,9 +108,9 @@ public class NetworkService : INetworkService, IDisposable
             NetworkInterfaceType.FastEthernetT => "Ethernet",
             NetworkInterfaceType.FastEthernetFx => "Ethernet",
             NetworkInterfaceType.Wireless80211 => "Wi-Fi",
-            NetworkInterfaceType.Wwanpp => "Mobil veri",
-            NetworkInterfaceType.Wwanpp2 => "Mobil veri",
-            _ => "Çevrimiçi"
+            NetworkInterfaceType.Wwanpp => "Cellular",
+            NetworkInterfaceType.Wwanpp2 => "Cellular",
+            _ => "Online"
         };
     }
 

@@ -390,8 +390,7 @@ public partial class App : Application
                 sp.GetRequiredService<ILicenseService>(),
                 sp.GetRequiredService<MainViewModel>(),
                 sp.GetService<IWatchHistoryService>(),
-                sp.GetRequiredService<Noctra.Services.Interfaces.IStalkerPortalService>(),
-                sp.GetRequiredService<ILocalizationService>()
+                sp.GetRequiredService<Noctra.Services.Interfaces.IStalkerPortalService>()
             ));
         
         services.AddTransient<SettingsViewModel>();

@@ -9,7 +9,6 @@ using Noctra.Services;
 using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
 using Xunit;
-using Moq;
 
 namespace Noctra.Tests
 {
@@ -212,12 +211,6 @@ namespace Noctra.Tests
         public PlayerTestContext(bool isPremium = false)
         {
             License.IsPremium = isPremium;
-            var localizationMock = new Mock<ILocalizationService>();
-            localizationMock.Setup(l => l.GetString(It.IsAny<string>())).Returns((string s) => s);
-            localizationMock.Setup(l => l.GetString("Player.Sleep.EndContent.Episode")).Returns("Bu Bölüm Bitince");
-            localizationMock.Setup(l => l.GetString("Player.Sleep.EndContent.Movie")).Returns("Bu Film Bitince");
-            localizationMock.Setup(l => l.GetString("Player.Sleep.EndDescription.Episode")).Returns("Bölüm");
-            localizationMock.Setup(l => l.GetString("Player.Sleep.EndDescription.Movie")).Returns("Film");
 
             VM = new PlayerViewModel(
                 VideoService,
@@ -231,8 +224,7 @@ namespace Noctra.Tests
                 License,
                 null!,  // MainViewModel — not needed for these tests
                 WatchHistory,
-                new FakeStalkerPortalService(),
-                localizationMock.Object);
+                new FakeStalkerPortalService());
         }
 
         private T? InvokePrivate<T>(string method, params object?[] args)

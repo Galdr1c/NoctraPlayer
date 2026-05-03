@@ -70,9 +70,11 @@ public partial class MainViewModel : ObservableObject
     private readonly IUpdateService _updateService;
     private readonly DateTime _downloadCenterSessionStartUtc = DateTime.UtcNow;
     private readonly ConcurrentDictionary<string, byte> _pendingVisualEnrichmentKeys = new(StringComparer.OrdinalIgnoreCase);
+    private long _downloadLandingStoredBytes;
     private readonly SemaphoreSlim _channelVisualEnrichmentSemaphore = new(3, 3);
     private readonly SemaphoreSlim _seriesVisualEnrichmentSemaphore = new(3, 3);
     private CancellationTokenSource? _slowLoadingWarnCts;
+    private readonly ILocalizationService _localizationService;
 
     [ObservableProperty]
     private AppView _activeView = AppView.Home;
@@ -201,7 +203,7 @@ public partial class MainViewModel : ObservableObject
     private EpgProgressInfo? _epgProgress;
 
     [ObservableProperty]
-    private string _statusMessage = "Hazır";
+    private string _statusMessage = "";
 
     [ObservableProperty]
     private bool _isChannelLoading;
@@ -243,7 +245,7 @@ public partial class MainViewModel : ObservableObject
     private ConnectionHealth _connectionQuality = ConnectionHealth.Good;
 
     [ObservableProperty]
-    private string _connectionStatusText = "Bağlantı İyi";
+    private string _connectionStatusText = "";
 
     [ObservableProperty]
     private string? _channelListLastError;
@@ -261,13 +263,9 @@ public partial class MainViewModel : ObservableObject
 
     public WatermarkViewModel WatermarkViewModel { get; }
 
-    public IReadOnlyList<KeyValuePair<ChannelSortOrder, string>> SortOptions { get; } = new List<KeyValuePair<ChannelSortOrder, string>>
-    {
-        new(ChannelSortOrder.NewestFirst, "Son eklenen (Yeni > Eski)"),
-        new(ChannelSortOrder.OldestFirst, "En eski (Eski > Yeni)"),
-        new(ChannelSortOrder.NameAsc, "Alfabetik A -> Z"),
-        new(ChannelSortOrder.NameDesc, "Alfabetik Z -> A")
-    };
+    [ObservableProperty]
+    private IReadOnlyList<KeyValuePair<ChannelSortOrder, string>> _sortOptions =
+        Array.Empty<KeyValuePair<ChannelSortOrder, string>>();
 
     public MainViewModel(
         ISettingsService settingsService,
@@ -291,8 +289,10 @@ public partial class MainViewModel : ObservableObject
         ITmdbSyncService tmdbSyncService,
         ILicenseService licenseService,
         IUpdateService updateService,
+        ILocalizationService localizationService,
         ILogger<MainViewModel>? logger = null)
     {
+        _localizationService = localizationService;
         _settingsService = settingsService;
         _contentDownloadService = contentDownloadService;
         _metadataService = metadataService;
@@ -315,6 +315,21 @@ public partial class MainViewModel : ObservableObject
         _tmdbSyncService = tmdbSyncService;
         _licenseService = licenseService;
         _updateService = updateService;
+        RebuildSortOptions();
+        StatusMessage = _localizationService.GetString("Common.Ready");
+        RefreshConnectionStatusText();
+        _downloadLandingStoredBytes = 0;
+        TotalDownloadedCount = 0;
+        RefreshDownloadLandingLocalizedTexts();
+        _localizationService.LanguageChanged += () =>
+        {
+            _dispatcherService.BeginInvoke(() =>
+            {
+                RefreshConnectionStatusText();
+                RebuildSortOptions();
+                RefreshDownloadLandingLocalizedTexts();
+            });
+        };
         _settingsService.SettingsChanged += OnSettingsService_Changed;
         InitializeAsync();
         _contentDownloadService.DownloadsChanged += (_, _) =>
@@ -341,7 +356,11 @@ public partial class MainViewModel : ObservableObject
             {
                 if (_settingsService.Settings.ShowDownloadNotification)
                 {
-                    await _dialogService.ShowNotificationAsync("İndirme Tamamlandı", $"{item.DisplayName} başarıyla indirildi.");
+                    await _dialogService.ShowNotificationAsync(
+                        _localizationService.GetString("Main.Notification.DownloadCompleted.Title"),
+                        string.Format(CultureInfo.CurrentCulture,
+                            _localizationService.GetString("Main.Notification.DownloadCompleted.MessageFormat"),
+                            item.DisplayName));
                 }
             });
         };
@@ -357,7 +376,7 @@ public partial class MainViewModel : ObservableObject
                     {
                         // Refresh content from DB (Aggregation finished)
                         await LoadHomeContentAsync();
-                        StatusMessage = "Kanal Listesi Hazır ✓"; 
+                        StatusMessage = _localizationService.GetString("Main.Status.ChannelsReady"); 
                         System.Diagnostics.Debug.WriteLine($"[MainViewModel] Series refreshed after background aggregation for playlist {playlistId}");
 
                         // If series detail is open, refresh it with the newly aggregated data
@@ -398,6 +417,54 @@ public partial class MainViewModel : ObservableObject
         return Task.CompletedTask;
     }
 
+    partial void OnConnectionQualityChanged(ConnectionHealth value)
+    {
+        RefreshConnectionStatusText();
+    }
+
+    private void RefreshConnectionStatusText()
+    {
+        ConnectionStatusText = ConnectionQuality switch
+        {
+            ConnectionHealth.Good => _localizationService.GetString("Main.Connection.Good"),
+            ConnectionHealth.Weak => _localizationService.GetString("Main.Connection.Weak"),
+            ConnectionHealth.Bad => _localizationService.GetString("Main.Connection.Weak"),
+            ConnectionHealth.Critical => _localizationService.GetString("Main.Connection.Critical"),
+            _ => _localizationService.GetString("Main.Connection.Good")
+        };
+    }
+
+    private void RebuildSortOptions()
+    {
+        SortOptions = new List<KeyValuePair<ChannelSortOrder, string>>
+        {
+            new(ChannelSortOrder.NewestFirst, _localizationService.GetString("Main.Sort.Newest")),
+            new(ChannelSortOrder.OldestFirst, _localizationService.GetString("Main.Sort.Oldest")),
+            new(ChannelSortOrder.NameAsc, _localizationService.GetString("Main.Sort.AZ")),
+            new(ChannelSortOrder.NameDesc, _localizationService.GetString("Main.Sort.ZA"))
+        };
+    }
+
+    private void RefreshDownloadLandingLocalizedTexts()
+    {
+        var downloadsInfoFmt = _localizationService.GetString("Downloads.Info.Format");
+        if (string.IsNullOrWhiteSpace(downloadsInfoFmt))
+        {
+            downloadsInfoFmt = "{0} items   {1} used";
+        }
+
+        TotalDownloadsInfoText = string.Format(CultureInfo.CurrentCulture,
+            downloadsInfoFmt,
+            TotalDownloadedCount,
+            FormatDownloadBytes(_downloadLandingStoredBytes));
+
+        if (CurrentProfileId is { } profileId)
+        {
+            DownloadFreeDiskSpaceText = ResolveDownloadFreeSpaceText(profileId);
+            UpdateDownloadCenterSummary(profileId);
+        }
+    }
+
     private void OnSettingsService_Changed()
     {
         ApplyRefreshSchedulesFromSettings();
@@ -411,15 +478,13 @@ public partial class MainViewModel : ObservableObject
             if (ct.IsCancellationRequested) return;
 
             ConnectionQuality = ConnectionHealth.Weak;
-            ConnectionStatusText = "Bağlantı Yavaş";
-            LoadingWarningMessage = "⚠️ Bağlantı normalden uzun sürüyor...";
+            LoadingWarningMessage = _localizationService.GetString("Main.Loading.Warning.Slow");
 
             await Task.Delay(12_000, ct);
             if (ct.IsCancellationRequested) return;
 
             ConnectionQuality = ConnectionHealth.Critical;
-            ConnectionStatusText = "Bağlantı Sorunlu";
-            LoadingWarningMessage = "⚠️ Sunucuya erişilemiyor olabilir. Playlist adresinizi kontrol edin.";
+            LoadingWarningMessage = _localizationService.GetString("Main.Loading.Warning.Unreachable");
         }
         catch (TaskCanceledException)
         {
@@ -446,8 +511,9 @@ public partial class MainViewModel : ObservableObject
             {
                 _dispatcherService.BeginInvoke(() =>
                 {
-                    StatusMessage = $"⚠️ Playlist kaynağına erişilemiyor (HTTP {(int)response.StatusCode}). " +
-                                    "URL değişmiş olabilir, profil ayarlarını kontrol edin.";
+                    StatusMessage = string.Format(CultureInfo.CurrentCulture,
+                        _localizationService.GetString("Main.Error.PlaylistUnreachableFormat"),
+                        (int)response.StatusCode);
                 });
             }
         }
@@ -456,7 +522,7 @@ public partial class MainViewModel : ObservableObject
             _logger?.LogDebug("[HealthCheck] Playlist URL erişim hatası: {Msg}", ex.Message);
             _dispatcherService.BeginInvoke(() =>
             {
-                StatusMessage = "⚠️ Playlist kaynağına ulaşılamıyor. İnternet bağlantınızı veya URL'yi kontrol edin.";
+                StatusMessage = _localizationService.GetString("Main.Status.PlaylistUnreachable");
             });
         }
     }
@@ -496,8 +562,7 @@ public partial class MainViewModel : ObservableObject
         ChannelLoadingProgress = 0;
         ChannelLoadingStats = string.Empty;
         ConnectionQuality = ConnectionHealth.Good;
-        ConnectionStatusText = "Bağlantı İyi";
-        StatusMessage = "Kanal ve içerik listeleriniz hazırlanıyor...";
+        StatusMessage = _localizationService.GetString("Main.Status.PreparingContent");
         CurrentProfileId = profile.Id;
         CurrentProfile = profile;
 
@@ -509,7 +574,7 @@ public partial class MainViewModel : ObservableObject
             // Ensure provider account is loaded
             if (profile.ProviderAccount == null)
             {
-                StatusMessage = "Hesap bilgileri yüklenemedi";
+                StatusMessage = _localizationService.GetString("Main.Status.LoadingAccountFailed");
                 IsLoading = false;
                 return;
             }
@@ -521,7 +586,7 @@ public partial class MainViewModel : ObservableObject
                         {
                             // Use cached playlist - much faster!
                             _logger?.LogDebug($"[MainViewModel] Using cached playlist for profile {profile.Id}");
-                            StatusMessage = "İçerikleriniz hızla yükleniyor...";
+                            StatusMessage = _localizationService.GetString("Main.Status.FastLoading");
                             await LoadPlaylistsAsync();
             
                             // Arka planda URL sağlık kontrolü yap (M3U için geçerli)
@@ -551,7 +616,7 @@ public partial class MainViewModel : ObservableObject
                                                 {
                                                     var m3uUrl = profile.ProviderAccount.Url;
                                                     _ = CheckM3UExpirationAsync(profile.ProviderAccount);
-                                                    StatusMessage = "Kanal listeniz arka planda yükleniyor...";
+                                                    StatusMessage = _localizationService.GetString("Main.Status.BackgroundLoading");
                                                     
                                                     _ = Task.Run(async () =>
                                                     {
@@ -561,19 +626,19 @@ public partial class MainViewModel : ObservableObject
                                                             _dispatcherService.BeginInvoke(async () =>
                                                             {
                                                                 await LoadPlaylistsAsync();
-                                                                StatusMessage = "Kanal Listesi Tamamlandı. Diziler Düzenleniyor...";
+                                                                StatusMessage = _localizationService.GetString("Main.Status.ChannelsReadyOrganizingSeries");
                                                             });
                                                         }
                                                         catch (Exception ex)
                                                         {
-                                                            _dispatcherService.BeginInvoke(() => StatusMessage = UserFriendlyErrorMessage.WithPrefix("M3U yükleme hatası", ex));
+                                                            _dispatcherService.BeginInvoke(() => StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Main.Error.M3uLoad"), ex));
                                                         }
                                                     });
                                                     break;
                                                 }
                                                                     case ProfileType.XtreamCodes:
                                                                     {
-                                                                        StatusMessage = "Sunucuyla bağlantı kuruluyor...";
+                                                                        StatusMessage = _localizationService.GetString("Main.Status.ConnectingToServer");
                                                                         var baseUrl = profile.ProviderAccount.Url.TrimEnd('/');
                                                                         if (!baseUrl.StartsWith("http")) baseUrl = "http://" + baseUrl;
                                                  
@@ -603,13 +668,14 @@ public partial class MainViewModel : ObservableObject
                                                                     totalCats = categories.Count;
                                                                     _dispatcherService.BeginInvoke(() => 
                                                                     {
-                                                                        ChannelLoadingStats = $"0 / {totalCats} kategori";
+                                                                        ChannelLoadingStats = string.Format(CultureInfo.CurrentCulture,
+                                                                            _localizationService.GetString("Main.Status.CategoryProgressFormat"), 0, totalCats);
                                                                     });
 
                                                                     // Arayüzün anında dolması için kategori isimleriyle "sahte" kanallar ekle
                                                                     var dummyChannels = categories.Select(c => new Channel
                                                                     {
-                                                                        Name = "İçerik yükleniyor...",
+                                                                        Name = _localizationService.GetString("Main.Status.LoadingContent"),
                                                                         StreamUrl = $"xtream-dummy://{c.Id}",
                                                                         GroupTitle = c.Name,
                                                                         Type = c.Type == "live" ? ChannelType.Live : (c.Type == "series" ? ChannelType.Series : ChannelType.VOD)
@@ -630,7 +696,8 @@ public partial class MainViewModel : ObservableObject
                                                                     _dispatcherService.BeginInvoke(() =>
                                                                     {
                                                                         ChannelLoadingProgress = (double)loadedCats / totalCats * 100;
-                                                                        ChannelLoadingStats = $"{loadedCats} / {totalCats} kategori • {groupName}";
+                                                                        ChannelLoadingStats = string.Format(CultureInfo.CurrentCulture,
+                                                                            _localizationService.GetString("Main.Status.CategoryLoadedFormat"), loadedCats, totalCats, groupName);
                                                                     });
 
                                                                     if (SelectedPlaylist?.Id == playlist.Id && SelectedGroup == groupName)
@@ -642,7 +709,7 @@ public partial class MainViewModel : ObservableObject
 
                                                                     try
                                                                     {
-                                                                        _dispatcherService.BeginInvoke(() => StatusMessage = "Diziler ve Filmler düzenleniyor...");
+                                                                        _dispatcherService.BeginInvoke(() => StatusMessage = _localizationService.GetString("Main.Status.OrganizingMedia"));
                                                                         await _mediaService.AggregateContentAsync(playlist.Id);
                                                                         _mediaService.RaiseAggregationCompleted(playlist.Id);
                                                                     }
@@ -650,7 +717,7 @@ public partial class MainViewModel : ObservableObject
 
                                                                     _dispatcherService.BeginInvoke(async () =>
                                                                     {
-                                                                        StatusMessage = "Xtream içerikleri yüklendi ✓";
+                                                                        StatusMessage = _localizationService.GetString("Main.Status.XtreamLoaded");
                                                                         
                                                                         // Temizlik: Yüklenemeyen kategorilerin taslak kanallarını sil
                                                                         await _playlistService.DeleteAllDummiesAsync(playlist.Id);
@@ -668,7 +735,7 @@ public partial class MainViewModel : ObservableObject
                                                             _logger?.LogDebug($"[Xtream] Error: {ex}");
                                                             _dispatcherService.BeginInvoke(async () =>
                                                             {
-                                                                StatusMessage = UserFriendlyErrorMessage.WithPrefix("Xtream sunucu hatası", ex);
+                                                                StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Main.Error.XtreamServer"), ex);
                                                                 await _playlistService.DeleteAllDummiesAsync(playlist.Id);
                                                                 IsChannelLoading = false;
                                                             });
@@ -678,7 +745,7 @@ public partial class MainViewModel : ObservableObject
                                                 }
                     case ProfileType.StalkerPortal:
                     {
-                        StatusMessage = "Stalker Portal kategorileri yükleniyor...";
+                        StatusMessage = _localizationService.GetString("Main.Status.StalkerCategoriesLoading");
                         var portalUrl  = profile.ProviderAccount.Url;
                         var macAddress = profile.ProviderAccount.Username ?? string.Empty;
                         var sourceUrl  = $"{portalUrl.TrimEnd('/')}/stalker_portal#{macAddress}";
@@ -690,7 +757,7 @@ public partial class MainViewModel : ObservableObject
                             profile.Name, sourceUrl, profile.Id, epgUrl);
                         await LoadPlaylistsAsync();
 
-                        StatusMessage = "İçerikler yükleniyor, bu biraz sürebilir...";
+                        StatusMessage = _localizationService.GetString("Main.Status.StalkerLoadingPatient");
 
                         // ── Adım 2: Aşamalı yükleme — fire-and-forget ──────────────────
                         // Kullanıcı uygulamayı hemen kullanabilir, içerikler arka planda gelir
@@ -728,7 +795,7 @@ public partial class MainViewModel : ObservableObject
                                         // Arayüzün anında dolması için kategori isimleriyle "sahte" kanallar ekle
                                         var dummyChannels = categories.Select(c => new Channel
                                         {
-                                            Name = "İçerik yükleniyor...",
+                                            Name = _localizationService.GetString("Main.Status.LoadingContent"),
                                             StreamUrl = $"stalker-dummy://{c.Id}",
                                             GroupTitle = c.Name,
                                             Type = c.Type == "itv" ? ChannelType.Live : (c.Type == "series" ? ChannelType.Series : ChannelType.VOD)
@@ -762,7 +829,7 @@ public partial class MainViewModel : ObservableObject
                                     cancellationToken: CancellationToken.None);
 
                                 // Dizi yapısını oluştur
-                                _dispatcherService.BeginInvoke(() => StatusMessage = "Diziler ve Filmler düzenleniyor...");
+                                _dispatcherService.BeginInvoke(() => StatusMessage = _localizationService.GetString("Main.Status.OrganizingMedia"));
                                 
                                 try
                                 {
@@ -777,7 +844,7 @@ public partial class MainViewModel : ObservableObject
                                 // Tüm içerik yüklendi
                                 _dispatcherService.BeginInvoke(async () =>
                                 {
-                                    StatusMessage = $"Tüm içerikler hazır ✓";
+                                    StatusMessage = _localizationService.GetString("Main.Status.AllContentReady");
 
                                     // Temizlik: Yüklenemeyen kategorilerin taslak kanallarını sil
                                     await _playlistService.DeleteAllDummiesAsync(playlist.Id);
@@ -795,7 +862,7 @@ public partial class MainViewModel : ObservableObject
                                 _dispatcherService.BeginInvoke(async () =>
                                 {
                                     StatusMessage = UserFriendlyErrorMessage.WithPrefix(
-                                        "İçerik yükleme hatası", ex);
+                                        _localizationService.GetString("Main.Error.ContentLoad"), ex);
                                     
                                     await _playlistService.DeleteAllDummiesAsync(playlist.Id);
                                     IsChannelLoading = false;
@@ -808,13 +875,15 @@ public partial class MainViewModel : ObservableObject
                         break;
                     }
                     default:
-                        throw new NotSupportedException($"Desteklenmeyen profil tipi: {profile.ProviderAccount.Type}");
+                        throw new NotSupportedException(string.Format(CultureInfo.CurrentCulture,
+                            _localizationService.GetString("Main.Error.UnsupportedProfileFormat"),
+                            profile.ProviderAccount.Type));
                 }
             }
         }
         catch (Exception ex)
         {
-            StatusMessage = UserFriendlyErrorMessage.WithPrefix("Profil yuklenirken hata olustu", ex);
+            StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Main.Error.ProfileLoad"), ex);
             _logger?.LogDebug($"LoadProfile Error: {ex}");
         }
         finally
@@ -917,7 +986,7 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(IsContentLoading));
         OnPropertyChanged(nameof(ShowEmptyChannels));
         
-        StatusMessage = "Kanal listesi yenileniyor...";
+        StatusMessage = _localizationService.GetString("Main.Status.RefreshingChannels");
     }
 
     public Task RefreshCurrentProfileExpirationAsync()
@@ -973,7 +1042,7 @@ public partial class MainViewModel : ObservableObject
                         // Repopulate UI with dummy channels for the discovered categories
                         var dummyChannels = categories.Select(c => new Channel
                         {
-                            Name = "İçerik yükleniyor...",
+                            Name = _localizationService.GetString("Main.Status.LoadingContent"),
                             StreamUrl = $"xtream-dummy://{c.Id}",
                             GroupTitle = c.Name,
                             Type = c.Type == "live" ? ChannelType.Live : (c.Type == "series" ? ChannelType.Series : ChannelType.VOD)
@@ -1005,7 +1074,7 @@ public partial class MainViewModel : ObservableObject
                 },
                 cancellationToken: CancellationToken.None);
 
-            _dispatcherService.BeginInvoke(() => StatusMessage = "Diziler ve Filmler düzenleniyor...");
+            _dispatcherService.BeginInvoke(() => StatusMessage = _localizationService.GetString("Main.Status.OrganizingMedia"));
             try
             {
                 await _mediaService.AggregateContentAsync(playlist.Id);
@@ -1018,7 +1087,7 @@ public partial class MainViewModel : ObservableObject
 
             _dispatcherService.BeginInvoke(() =>
             {
-                StatusMessage = "Xtream içerikleri güncellendi ✓";
+                StatusMessage = _localizationService.GetString("Main.Status.XtreamUpdated");
                 IsChannelLoading = false;
                 ChannelLoadingProgress = 100;
             });
@@ -1028,7 +1097,7 @@ public partial class MainViewModel : ObservableObject
             _logger?.LogDebug($"[Xtream] Resume error: {ex}");
             _dispatcherService.BeginInvoke(() =>
             {
-                StatusMessage = UserFriendlyErrorMessage.WithPrefix("Xtream sunucu hatası", ex);
+                StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Main.Error.XtreamServer"), ex);
             });
             
             if (isFullRefresh)
@@ -1105,7 +1174,7 @@ public partial class MainViewModel : ObservableObject
                         // Repopulate UI with dummy channels for the discovered categories
                         var dummyChannels = categories.Select(c => new Channel
                         {
-                            Name = "İçerik yükleniyor...",
+                            Name = _localizationService.GetString("Main.Status.LoadingContent"),
                             StreamUrl = $"stalker-dummy://{c.Name}",
                             GroupTitle = c.Name,
                             Type = c.Type.Equals("series", StringComparison.OrdinalIgnoreCase)
@@ -1145,7 +1214,7 @@ public partial class MainViewModel : ObservableObject
                 progress: progress,
                 cancellationToken: CancellationToken.None);
 
-            _dispatcherService.BeginInvoke(() => StatusMessage = "Diziler ve Filmler düzenleniyor...");
+            _dispatcherService.BeginInvoke(() => StatusMessage = _localizationService.GetString("Main.Status.OrganizingMedia"));
             try
             {
                 await _mediaService.AggregateContentAsync(playlist.Id);
@@ -1158,7 +1227,9 @@ public partial class MainViewModel : ObservableObject
 
             _dispatcherService.BeginInvoke(() =>
             {
-                StatusMessage = $"{(isFullRefresh ? "Yenileme tamamlandı" : "Tüm içerikler hazır")} ✓";
+                StatusMessage = isFullRefresh
+                    ? _localizationService.GetString("Main.Status.RefreshComplete")
+                    : _localizationService.GetString("Main.Status.AllContentReady");
                 IsChannelLoading = false;
                 ChannelLoadingStats = string.Empty;
                 ChannelLoadingProgress = 100;
@@ -1169,7 +1240,7 @@ public partial class MainViewModel : ObservableObject
             _logger?.LogDebug($"[Stalker] Failed to {(isFullRefresh ? "refresh" : "resume")} load: {ex}");
             _dispatcherService.BeginInvoke(() =>
             {
-                StatusMessage = UserFriendlyErrorMessage.WithPrefix("Stalker sunucu hatası", ex);
+                StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Main.Error.StalkerServer"), ex);
             });
             
             if (isFullRefresh)
@@ -1387,7 +1458,7 @@ public partial class MainViewModel : ObservableObject
         try
         {
             BeginLoading();
-            StatusMessage = "Kanal ve kategori düzeni optimize ediliyor...";
+            StatusMessage = _localizationService.GetString("Main.Status.OptimizingLayout");
             
             // Single-pass query: Fetch all groups and total count at once (Significantly faster)
             var meta = await _playlistService.GetChannelGroupMetadataAsync(playlistId);
@@ -1404,7 +1475,8 @@ public partial class MainViewModel : ObservableObject
                 LoadMoreChannelsAsync(),
                 LoadHomeContentAsync());
 
-            StatusMessage = $"{meta.TotalCount:N0} içerik keyfinize hazır";
+            StatusMessage = string.Format(CultureInfo.CurrentCulture,
+                _localizationService.GetString("Main.Status.ContentsReadyFormat"), meta.TotalCount);
             // Fire-and-forget tasks are wrapped to avoid unobserved failures and task races.
             StartPostChannelLoadBackgroundTasks();
             EnsureChannelBackgroundRefresh();
@@ -1412,7 +1484,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger?.LogDebug($"LoadChannels error: {ex}");
-            StatusMessage = UserFriendlyErrorMessage.WithPrefix("Kanallar yuklenemedi", ex);
+            StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Main.Status.LoadingChannelsFailed"), ex);
         }
         finally
         {
@@ -2460,7 +2532,7 @@ public partial class MainViewModel : ObservableObject
             if (ex is OperationCanceledException) return;
 
             _logger?.LogDebug($"ApplyFilters error: {ex}");
-            StatusMessage = "Filtreleme sırasında hata oluştu";
+            StatusMessage = _localizationService.GetString("Main.Status.FilterError");
         }
         finally
         {
@@ -2602,7 +2674,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (!CurrentProfileId.HasValue)
         {
-            StatusMessage = "Önce bir profil seçmelisiniz";
+            StatusMessage = _localizationService.GetString("Main.Status.SelectProfileFirst");
             return;
         }
 
@@ -2622,7 +2694,9 @@ public partial class MainViewModel : ObservableObject
 
             channel.IsFavorite = !channel.IsFavorite;
             await _channelService.UpdateChannelAsync(channel);
-            StatusMessage = channel.IsFavorite ? "Favorilere eklendi" : "Favorilerden çıkarıldı";
+            StatusMessage = channel.IsFavorite
+                ? _localizationService.GetString("Main.Status.FavoriteAdded")
+                : _localizationService.GetString("Main.Status.FavoriteRemoved");
         }
         else if (media is Series series)
         {
@@ -2672,7 +2746,9 @@ public partial class MainViewModel : ObservableObject
             }
 
             await db.SaveChangesAsync();
-            StatusMessage = shouldFavorite ? "Favorilere eklendi" : "Favorilerden çıkarıldı";
+            StatusMessage = shouldFavorite
+                ? _localizationService.GetString("Main.Status.FavoriteAdded")
+                : _localizationService.GetString("Main.Status.FavoriteRemoved");
         }
         else
         {
@@ -2691,32 +2767,35 @@ public partial class MainViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(NewPlaylistName) || string.IsNullOrWhiteSpace(NewPlaylistUrl))
         {
-            StatusMessage = "Lütfen playlist adı ve URL'sini girin";
+            StatusMessage = _localizationService.GetString("Main.Status.EnterPlaylistInfo");
             return;
         }
 
         if (Interlocked.Exchange(ref _isAddingPlaylist, 1) == 1)
         {
-            StatusMessage = "Playlist ekleme zaten devam ediyor...";
+            StatusMessage = _localizationService.GetString("Main.Status.AddInProgress");
             return;
         }
 
         try
         {
             IsLoading = true;
-            StatusMessage = "Playlist ekleniyor...";
+            StatusMessage = _localizationService.GetString("Main.Status.AddingPlaylist");
             
             var playlist = await _playlistService.AddFromUrlAsync(NewPlaylistName, NewPlaylistUrl, CurrentProfileId);
             await LoadPlaylistsAsync();
             SelectedPlaylist = playlist;
             
-            StatusMessage = $"'{NewPlaylistName}' playlist eklendi ({playlist.ChannelCount} kanal)";
+            StatusMessage = string.Format(CultureInfo.CurrentCulture,
+                _localizationService.GetString("Main.Status.PlaylistAddedFormat"),
+                NewPlaylistName,
+                playlist.ChannelCount);
             NewPlaylistName = string.Empty;
             NewPlaylistUrl = string.Empty;
         }
         catch (Exception ex)
         {
-            StatusMessage = UserFriendlyErrorMessage.WithPrefix("Islem basarisiz", ex);
+            StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Main.Error.OperationFailed"), ex);
         }
         finally
         {
@@ -2749,7 +2828,7 @@ public partial class MainViewModel : ObservableObject
             _playlistNoChangeUntilUtc.TryGetValue(playlistId, out var noChangeUntil) &&
             noChangeUntil > DateTime.UtcNow)
         {
-            StatusMessage = "Kanal listesi zaten guncel";
+            StatusMessage = _localizationService.GetString("Main.Status.AlreadyUpToDate");
             await TouchPlaylistLastUpdatedAsync(playlistId);
             return;
         }
@@ -2758,7 +2837,7 @@ public partial class MainViewModel : ObservableObject
         {
             if (!isBackground)
             {
-                StatusMessage = "Playlist zaten yenileniyor...";
+                StatusMessage = _localizationService.GetString("Main.Status.PlaylistRefreshAlreadyInProgress");
             }
             return;
         }
@@ -2767,7 +2846,7 @@ public partial class MainViewModel : ObservableObject
         {
             if (Interlocked.Exchange(ref _isManualRefreshRunning, 1) == 1)
             {
-                StatusMessage = "Baska bir yenileme islemi zaten devam ediyor...";
+                StatusMessage = _localizationService.GetString("Main.Status.OtherRefreshInProgress");
                 Interlocked.Exchange(ref _isRefreshingPlaylist, 0);
                 return;
             }
@@ -2778,7 +2857,7 @@ public partial class MainViewModel : ObservableObject
             if (!isBackground)
             {
                 BeginLoading();
-                StatusMessage = "Kanal listesi yenileniyor...";
+                StatusMessage = _localizationService.GetString("Main.Status.RefreshingChannels");
             }
 
             var profile = CurrentProfile;
@@ -2823,8 +2902,10 @@ public partial class MainViewModel : ObservableObject
             {
                 var delta = afterCount - beforeCount;
                 StatusMessage = delta == 0
-                    ? "Kanal listesi ve kategoriler güncellendi"
-                    : $"Kanal listesi yenilendi ({Math.Abs(delta)} değişiklik)";
+                    ? _localizationService.GetString("Main.Status.PlaylistUpdated")
+                    : string.Format(CultureInfo.CurrentCulture,
+                        _localizationService.GetString("Main.Status.PlaylistRefreshedWithDelta"),
+                        Math.Abs(delta));
                     
                 ChannelListLastError = null;
                 _playlistNoChangeUntilUtc[playlistId] = DateTime.UtcNow.AddMinutes(5);
@@ -2834,7 +2915,7 @@ public partial class MainViewModel : ObservableObject
         {
             if (!isBackground)
             {
-                var errorMessage = UserFriendlyErrorMessage.WithPrefix("Kanal listesi guncelleme hatasi", ex);
+                var errorMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Settings.Refresh.Channel.Error"), ex);
                 StatusMessage = errorMessage;
                 ChannelListLastError = UserFriendlyErrorMessage.FromException(ex);
 
@@ -2908,7 +2989,8 @@ public partial class MainViewModel : ObservableObject
         if (!list.Contains(groupName))
         {
             list.Add(groupName);
-            StatusMessage = $"'{groupName}' kategorisi gizlendi";
+            StatusMessage = string.Format(CultureInfo.CurrentCulture,
+                _localizationService.GetString("Main.Status.CategoryHiddenFormat"), groupName);
             
             // Arayüzden anında kaldır (akıcılık için)
             if (Groups.Contains(groupName))
@@ -2948,7 +3030,8 @@ public partial class MainViewModel : ObservableObject
         if (removed)
         {
             await _settingsService.SaveAsync();
-            StatusMessage = $"'{groupName}' kategorisi tekrar görünür yapıldı";
+            StatusMessage = string.Format(CultureInfo.CurrentCulture,
+                _localizationService.GetString("Main.Status.CategoryUnhidden"), groupName);
             ScheduleImmediateFilter();
         }
     }
@@ -2979,7 +3062,7 @@ public partial class MainViewModel : ObservableObject
         if (Volatile.Read(ref _isManualRefreshRunning) == 1 ||
             Volatile.Read(ref _isManualEpgRefreshRunning) == 1)
         {
-            StatusMessage = "Baska bir yenileme islemi zaten devam ediyor...";
+            StatusMessage = _localizationService.GetString("Main.Status.OtherRefreshInProgress");
             return false;
         }
 
@@ -2991,7 +3074,7 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
-            StatusMessage = "EPG yenileme başlatıldı...";
+            StatusMessage = _localizationService.GetString("Main.Status.EpgRefreshStarted");
             await LoadEpgInternalAsync(isBackgroundSync: false, forceRefresh: true, setBusyState: false);
         }
         catch (Exception ex)
@@ -3009,13 +3092,13 @@ public partial class MainViewModel : ObservableObject
         {
             if (Interlocked.Exchange(ref _isManualEpgRefreshRunning, 1) == 1)
             {
-                StatusMessage = "EPG yenileme zaten devam ediyor...";
+                StatusMessage = _localizationService.GetString("Main.Status.EpgRefreshInProgress");
                 return;
             }
 
             if (Interlocked.Exchange(ref _isManualRefreshRunning, 1) == 1)
             {
-                StatusMessage = "Baska bir yenileme islemi zaten devam ediyor...";
+                StatusMessage = _localizationService.GetString("Main.Status.OtherRefreshInProgress");
                 Interlocked.Exchange(ref _isManualEpgRefreshRunning, 0);
                 return;
             }
@@ -3027,7 +3110,7 @@ public partial class MainViewModel : ObservableObject
             if (!isBackgroundSync && setBusyState)
             {
                 IsLoading = true;
-                StatusMessage = "EPG güncelleniyor...";
+                StatusMessage = _localizationService.GetString("Main.Status.UpdatingEpg");
             }
 
             using var db = await _contextFactory.CreateDbContextAsync();
@@ -3059,7 +3142,7 @@ public partial class MainViewModel : ObservableObject
             {
                 if (!isBackgroundSync)
                 {
-                    StatusMessage = "Canlı kanal bulunamadı, EPG atlandı";
+                    StatusMessage = _localizationService.GetString("Main.Status.NoLiveChannelsSkipEpg");
                 }
                 return;
             }
@@ -3134,7 +3217,7 @@ public partial class MainViewModel : ObservableObject
 
             if (!isBackgroundSync)
             {
-                StatusMessage = "EPG kaynakları deneniyor...";
+                StatusMessage = _localizationService.GetString("Main.Status.TryingEpgSources");
             }
 
             // 4. Her kaynağı indirmeyi dene
@@ -3157,7 +3240,8 @@ public partial class MainViewModel : ObservableObject
                 {
                     if (!isBackgroundSync)
                     {
-                        StatusMessage = $"EPG: {source.Type} kaynağına bağlanılıyor...";
+                        StatusMessage = string.Format(CultureInfo.CurrentCulture,
+                            _localizationService.GetString("Main.Status.EpgConnecting"), source.Type);
                     }
 
                     // Always process all live channels for every source
@@ -3199,8 +3283,10 @@ public partial class MainViewModel : ObservableObject
             if (!isBackgroundSync)
             {
                 StatusMessage = anySuccess
-                    ? "EPG hazır"
-                    : $"EPG yüklenemedi{(string.IsNullOrWhiteSpace(lastSourceError) ? "" : $" ({lastSourceError})")}";
+                    ? _localizationService.GetString("Main.Status.EpgReady")
+                    : string.IsNullOrWhiteSpace(lastSourceError)
+                        ? _localizationService.GetString("Main.Error.EpgLoadFailed")
+                        : $"{_localizationService.GetString("Main.Error.EpgLoadFailed")} ({lastSourceError})";
             }
 
             if (SelectedPlaylist != null)
@@ -3251,7 +3337,7 @@ public partial class MainViewModel : ObservableObject
             await PersistSelectedPlaylistEpgErrorAsync($"LoadEpgInternal: {UserFriendlyErrorMessage.FromException(ex)}");
             if (!isBackgroundSync)
             {
-                StatusMessage = UserFriendlyErrorMessage.WithPrefix("EPG hatasi", ex);
+                StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Main.Error.Epg"), ex);
             }
             else
             {
@@ -3494,7 +3580,7 @@ public partial class MainViewModel : ObservableObject
     private int _totalDownloadedCount;
 
     [ObservableProperty]
-    private string _totalDownloadsInfoText = "0 içerik • 0 B kullanıldı";
+    private string _totalDownloadsInfoText = "";
 
     [ObservableProperty]
     private double _storageOtherPercent;
@@ -4058,7 +4144,11 @@ public partial class MainViewModel : ObservableObject
             }
 
             TotalDownloadedCount = totalCount;
-            TotalDownloadsInfoText = $"{totalCount} içerik • {FormatDownloadBytes(totalSizeBytes)} kullanıldı";
+            _downloadLandingStoredBytes = totalSizeBytes;
+            TotalDownloadsInfoText = string.Format(CultureInfo.CurrentCulture,
+                _localizationService.GetString("Downloads.Info.Format"),
+                totalCount,
+                FormatDownloadBytes(totalSizeBytes));
 
             var root = ResolveGlobalDownloadRoot();
             var driveRoot = Path.GetPathRoot(root);
@@ -4277,7 +4367,9 @@ public partial class MainViewModel : ObservableObject
     private void SetDownloadCenterSummaryEmpty()
     {
         ActiveDownloadCount = 0;
-        ActiveDownloadsTotalSpeedText = "0 B/sn";
+        ActiveDownloadsTotalSpeedText = string.Format(CultureInfo.CurrentCulture,
+            _localizationService.GetString("Downloads.Speed.PerSecondFormat"),
+            FormatDownloadBytes(0));
         DownloadFreeDiskSpaceText = "-";
         ActiveDownloadingItems.Clear();
         QueuedDownloadItems.Clear();
@@ -4290,7 +4382,9 @@ public partial class MainViewModel : ObservableObject
         var totalSpeed = ActiveDownloadItems
             .Where(d => d.Status == DownloadStatus.Downloading)
             .Sum(d => Math.Max(0, d.SpeedBytesPerSecond));
-        ActiveDownloadsTotalSpeedText = $"{FormatDownloadBytes((long)totalSpeed)}/sn";
+        ActiveDownloadsTotalSpeedText = string.Format(CultureInfo.CurrentCulture,
+            _localizationService.GetString("Downloads.Speed.PerSecondFormat"),
+            FormatDownloadBytes((long)totalSpeed));
         DownloadFreeDiskSpaceText = ResolveDownloadFreeSpaceText(profileId);
     }
 
@@ -4313,7 +4407,9 @@ public partial class MainViewModel : ObservableObject
             }
 
             var drive = new DriveInfo(driveRoot);
-            return $"{FormatDownloadBytes(drive.AvailableFreeSpace)} boş";
+            return string.Format(CultureInfo.CurrentCulture,
+                _localizationService.GetString("Downloads.Disk.FreeSpaceFormat"),
+                FormatDownloadBytes(drive.AvailableFreeSpace));
         }
         catch
         {
@@ -4394,10 +4490,11 @@ public partial class MainViewModel : ObservableObject
     {
         if (media == null) return;
 
-        string title = media is Series s ? s.Name : (media is Channel c ? c.Name : "İçerik");
+        string title = media is Series s ? s.Name : (media is Channel c ? c.Name : _localizationService.GetString("Download.DefaultName"));
         var confirmed = await _dialogService.ShowConfirmationAsync(
-            "İçeriği Sil",
-            $"'{title}' içeriği ve tüm dosyaları kalıcı olarak silinecektir. Emin misiniz?");
+            _localizationService.GetString("Downloads.Dialog.DeleteContent.Title"),
+            string.Format(CultureInfo.CurrentCulture,
+                _localizationService.GetString("Downloads.Dialog.DeleteContent.MessageFormat"), title));
 
         if (!confirmed) return;
 
@@ -4443,7 +4540,9 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger?.LogError(ex, $"Failed to delete media: {title}");
-            await _dialogService.ShowErrorAsync("Hata", "İçerik silinirken bir hata oluştu.");
+            await _dialogService.ShowErrorAsync(
+                _localizationService.GetString("Common.Error"),
+                _localizationService.GetString("Downloads.Dialog.DeleteContent.ErrorMessage"));
         }
     }
 
@@ -4451,8 +4550,8 @@ public partial class MainViewModel : ObservableObject
     private async Task DeleteAllDownloadsAsync()
     {
         var confirmed = await _dialogService.ShowConfirmationAsync(
-            "Tüm İndirmeleri Sil",
-            "Tüm indirilen içerikler ve dosyalar kalıcı olarak silinecektir. Emin misiniz?");
+            _localizationService.GetString("Downloads.Dialog.DeleteAll.Title"),
+            _localizationService.GetString("Downloads.Dialog.DeleteAll.Message"));
 
         if (!confirmed) return;
 
@@ -4484,7 +4583,9 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to delete all downloads.");
-            await _dialogService.ShowErrorAsync("Hata", "İndirmeler silinirken bir hata oluştu.");
+            await _dialogService.ShowErrorAsync(
+                _localizationService.GetString("Common.Error"),
+                _localizationService.GetString("Downloads.Dialog.DeleteAll.ErrorMessage"));
         }
     }
 
@@ -4537,8 +4638,8 @@ public partial class MainViewModel : ObservableObject
             if (CurrentProfileId.HasValue && item.ProfileId != CurrentProfileId.Value)
             {
                 await _dialogService.ShowErrorAsync(
-                    "Devam Ettirilemedi", 
-                    "Bu indirme baska bir hesaba ait. Devam ettirmek icin once o hesaba (profile) gecis yapmalisiniz.");
+                    _localizationService.GetString("Download.Error.ResumeWrongProfile.Title"),
+                    _localizationService.GetString("Download.Error.ResumeWrongProfile.Message"));
                 return;
             }
 
@@ -4579,8 +4680,8 @@ public partial class MainViewModel : ObservableObject
         try
         {
             var confirmed = await _dialogService.ShowConfirmationAsync(
-                "Kuyruğu Temizle",
-                "Kuyruktaki tüm indirmeler iptal edilecektir. Emin misiniz?");
+                _localizationService.GetString("Downloads.Dialog.ClearQueue.Title"),
+                _localizationService.GetString("Downloads.Dialog.ClearQueue.Message"));
 
             if (!confirmed) return;
 
@@ -5490,8 +5591,9 @@ public partial class MainViewModel : ObservableObject
         {
             // 3sn'de timeout → sunucu yanıt vermiyor
             _dispatcherService.BeginInvoke(() =>
-                StatusMessage = "⚠️ Playlist sunucusu yanıt vermiyor. URL'yi kontrol edin.");
-
+            {
+                StatusMessage = _localizationService.GetString("Main.Status.ServerNoResponse");
+            });
         }
         catch (ObjectDisposedException)
         {
@@ -5504,7 +5606,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (!CurrentProfileId.HasValue)
         {
-            StatusMessage = "Önce bir profil seçmelisiniz";
+            StatusMessage = _localizationService.GetString("Main.Status.SelectProfileFirst");
             return;
         }
 
@@ -5515,7 +5617,7 @@ public partial class MainViewModel : ObservableObject
 
             if (channel.Type == ChannelType.Live)
             {
-                StatusMessage = "Canlı kanallar listeme eklenemez";
+                StatusMessage = _localizationService.GetString("Main.Status.LiveCannotAddToList");
                 return;
             }
 
@@ -5531,7 +5633,9 @@ public partial class MainViewModel : ObservableObject
 
             channel.IsInMyList = !channel.IsInMyList;
             await _channelService.UpdateChannelAsync(channel);
-            StatusMessage = channel.IsInMyList ? "Listene eklendi" : "Listenden çıkarıldı";
+            StatusMessage = channel.IsInMyList
+                ? _localizationService.GetString("Main.Status.ListAdded")
+                : _localizationService.GetString("Main.Status.RemovedFromList");
         }
         else if (media is Series series)
         {
@@ -5566,7 +5670,9 @@ public partial class MainViewModel : ObservableObject
                 }
             }
 
-            StatusMessage = series.IsInMyList ? "Listene eklendi" : "Listenden çıkarıldı";
+            StatusMessage = series.IsInMyList
+                ? _localizationService.GetString("Main.Status.ListAdded")
+                : _localizationService.GetString("Main.Status.RemovedFromList");
         }
 
         UpdateMyList();
@@ -5639,7 +5745,7 @@ public partial class MainViewModel : ObservableObject
             }
         }
 
-        StatusMessage = "Listenden çıkarıldı";
+        StatusMessage = _localizationService.GetString("Main.Status.RemovedFromList");
         await RefreshPersonalListsFromDatabaseAsync();
     }
 
@@ -5787,7 +5893,7 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        StatusMessage = "Favorilerden çıkarıldı";
+        StatusMessage = _localizationService.GetString("Main.Status.RemovedFromFavorites");
         await RefreshPersonalListsFromDatabaseAsync();
     }
 
@@ -5824,7 +5930,8 @@ public partial class MainViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(episode.StreamUrl))
         {
-            StatusMessage = $"⚠️ İndirme başarısız: \"{episode.Name}\" için kaynak URL bulunamadı. Provider verisi eksik olabilir.";
+            StatusMessage = string.Format(CultureInfo.CurrentCulture,
+                _localizationService.GetString("Download.Error.SourceNotFoundFormat"), episode.Name);
             return;
         }
 
@@ -5842,15 +5949,19 @@ public partial class MainViewModel : ObservableObject
 
             var result = await _contentDownloadService.QueueDownloadAsync(request);
             StatusMessage = result.Success
-                ? $"✅ İndirme kuyruğuna eklendi: {episode.Name}"
+                ? string.Format(CultureInfo.CurrentCulture,
+                    _localizationService.GetString("Download.Status.AddedFormat"), episode.Name)
                 : result.AlreadyExists
-                    ? $"ℹ️ Zaten indirilmiş: {episode.Name}"
-                    : $"❌ {result.Message}";
+                    ? string.Format(CultureInfo.CurrentCulture,
+                        _localizationService.GetString("Download.Status.AlreadyExistsFormat"), episode.Name)
+                    : string.Format(CultureInfo.CurrentCulture,
+                        _localizationService.GetString("Download.Status.ErrorFormat"), result.Message);
         }
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "Episode download failed: {Name}", episode.Name);
-            StatusMessage = $"❌ İndirme hatası: {ex.Message}";
+            StatusMessage = string.Format(CultureInfo.CurrentCulture,
+                _localizationService.GetString("Download.Status.ExceptionFormat"), ex.Message);
         }
     }
 
@@ -5869,7 +5980,10 @@ public partial class MainViewModel : ObservableObject
         int skipped = 0;
         int failed = 0;
 
-        StatusMessage = $"📥 Sezon {SelectedSeason.SeasonNumber} indirme kuyruğuna ekleniyor... ({episodes.Count} bölüm)";
+        StatusMessage = string.Format(CultureInfo.CurrentCulture,
+            _localizationService.GetString("Download.Season.StartingFormat"),
+            SelectedSeason.SeasonNumber,
+            episodes.Count);
 
         foreach (var episode in episodes)
         {
@@ -5902,10 +6016,19 @@ public partial class MainViewModel : ObservableObject
         }
 
         var parts = new List<string>();
-        if (queued > 0) parts.Add($"{queued} bölüm kuyruğa eklendi");
-        if (failed > 0) parts.Add($"{failed} bölüm için kaynak URL bulunamadı");
-        if (skipped > 0) parts.Add($"{skipped} bölüm zaten indirilmiş");
-        StatusMessage = $"✅ Sezon {SelectedSeason.SeasonNumber}: {string.Join(", ", parts)}";
+        if (queued > 0)
+            parts.Add(string.Format(CultureInfo.CurrentCulture,
+                _localizationService.GetString("Download.Season.Result.QueuedFormat"), queued));
+        if (failed > 0)
+            parts.Add(string.Format(CultureInfo.CurrentCulture,
+                _localizationService.GetString("Download.Season.Result.FailedFormat"), failed));
+        if (skipped > 0)
+            parts.Add(string.Format(CultureInfo.CurrentCulture,
+                _localizationService.GetString("Download.Season.Result.SkippedFormat"), skipped));
+        StatusMessage = string.Format(CultureInfo.CurrentCulture,
+            _localizationService.GetString("Download.Season.ResultFormat"),
+            SelectedSeason.SeasonNumber,
+            string.Join(", ", parts));
     }
 
     private async Task PlayEpisodeSafeAsync(Episode? episode)
@@ -5918,7 +6041,9 @@ public partial class MainViewModel : ObservableObject
         {
             _logger?.LogDebug("[HealthCheck] {Msg}", ex.Message);
             _dispatcherService.BeginInvoke(() =>
-                StatusMessage = "⚠️ Playlist kaynağına ulaşılamıyor.");
+            {
+                StatusMessage = _localizationService.GetString("Main.Status.PlaylistUnreachable");
+            });
         }
     }
 
@@ -6199,19 +6324,28 @@ public partial class MainViewModel : ObservableObject
                 {
                     var next = allEpisodes[nextIndex];
                     SelectedSeriesContinueEpisode = next;
-                    SelectedSeriesContinueText = $"S{next.Season?.SeasonNumber ?? 1} B{next.EpisodeNumber}'den Devam Et";
+                    SelectedSeriesContinueText = string.Format(CultureInfo.CurrentCulture,
+                        _localizationService.GetString("Series.Continue.NextFormat"),
+                        next.Season?.SeasonNumber ?? 1,
+                        next.EpisodeNumber);
                 }
                 else
                 {
                     SelectedSeriesContinueEpisode = lastWatched;
-                    SelectedSeriesContinueText = $"S{lastWatched.Season?.SeasonNumber ?? 1} B{lastWatched.EpisodeNumber}'i Yeniden İzle";
+                    SelectedSeriesContinueText = string.Format(CultureInfo.CurrentCulture,
+                        _localizationService.GetString("Series.Continue.WatchAgainFormat"),
+                        lastWatched.Season?.SeasonNumber ?? 1,
+                        lastWatched.EpisodeNumber);
                 }
             }
             else if (allEpisodes.Count > 0)
             {
                 var first = allEpisodes[0];
                 SelectedSeriesContinueEpisode = first;
-                SelectedSeriesContinueText = $"S{first.Season?.SeasonNumber ?? 1} B{first.EpisodeNumber}'den Başla";
+                SelectedSeriesContinueText = string.Format(CultureInfo.CurrentCulture,
+                    _localizationService.GetString("Series.Continue.StartFromFormat"),
+                    first.Season?.SeasonNumber ?? 1,
+                    first.EpisodeNumber);
             }
             else
             {

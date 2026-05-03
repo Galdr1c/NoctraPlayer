@@ -21,7 +21,8 @@ public class LocalizationServiceTests
 
         service.SetLanguage("de");
 
-        Assert.Equal("App Language", service.GetString("Settings.Language.Title"));
+        // Intentionally present only in en-US — verifies cascade to FallbackLanguage ("en-US").
+        Assert.Equal("__EN_FALLBACK_ONLY__", service.GetString("Localization.Tests.FallbackEnglishOnly"));
     }
 
     [Theory]

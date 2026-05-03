@@ -122,8 +122,7 @@ namespace Noctra.Tests
                 new Mock<IXtreamCodesService>().Object,
                 new Mock<IStalkerPortalService>().Object,
                 _securityService,
-                new Mock<ILocalizationService>().Object
-            );
+                new Mock<ILocalizationService>().Object);
 
             // Assert
             Assert.False(vm.IsPinAvailable, "PIN should not be available for non-premium users.");

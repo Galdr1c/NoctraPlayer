@@ -80,6 +80,7 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
 
     private bool _isUpdatingFromService;
     private readonly System.Timers.Timer _volumeToastTimer;
+    private string _networkStatusRaw = "Unknown";
 
     public VideoOverlayViewModel(IVideoPlayerService playerService, INetworkService networkService, IDispatcherService dispatcherService, ILocalizationService localizationService)
     {
@@ -104,17 +105,39 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
 
         // Initialize network status
         ConnectionStatus = _localizationService.GetString("Player.Status.Connecting");
-        NetworkStatus = _networkService.CurrentNetworkStatus;
+        _networkStatusRaw = _networkService.CurrentNetworkStatus;
+        ApplyLocalizedNetworkStatus();
         _networkService.NetworkStatusChanged += OnNetworkStatusChanged;
-        
+        _localizationService.LanguageChanged += OnLocalizationLanguageChanged;
+
         // Subscribe to player events
         _playerService.PlayingChanged += PlayerService_PlayingChanged;
         _playerService.PositionChanged += PlayerService_PositionChanged;
     }
 
+    private void OnLocalizationLanguageChanged()
+    {
+        _dispatcherService.Invoke(ApplyLocalizedNetworkStatus);
+    }
+
+    private void ApplyLocalizedNetworkStatus()
+    {
+        NetworkStatus = _networkStatusRaw switch
+        {
+            "Ethernet" => _localizationService.GetString("Player.Network.Ethernet"),
+            "Wi-Fi" => _localizationService.GetString("Player.Network.Wifi"),
+            "Cellular" => _localizationService.GetString("Player.Network.Cellular"),
+            "Offline" => _localizationService.GetString("Player.Network.Offline"),
+            "Online" => _localizationService.GetString("Player.Network.Online"),
+            "Unknown" => _localizationService.GetString("Player.Network.Unknown"),
+            _ => _networkStatusRaw
+        };
+    }
+
     private void OnNetworkStatusChanged(object? sender, string status)
     {
-        NetworkStatus = status;
+        _networkStatusRaw = status;
+        ApplyLocalizedNetworkStatus();
     }
 
     private void PlayerService_PlayingChanged(object? sender, bool isPlaying)
@@ -352,6 +375,7 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        _localizationService.LanguageChanged -= OnLocalizationLanguageChanged;
         _autoHideTimer?.Dispose();
         _clockTimer?.Dispose();
         _volumeToastTimer?.Dispose();

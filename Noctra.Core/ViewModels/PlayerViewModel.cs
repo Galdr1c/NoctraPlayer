@@ -3424,7 +3424,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         {
             "Ethernet" => "Ethernet",
             "Wi-Fi" => "Wifi",
-            "Mobil veri" => "SignalCellular4Bar",
+            "Cellular" => "SignalCellular4Bar",
             "Offline" => "WifiOff",
             _ => "Web"
         };

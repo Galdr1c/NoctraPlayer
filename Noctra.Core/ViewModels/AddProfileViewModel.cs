@@ -1,3 +1,4 @@
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Noctra.Models;
@@ -20,6 +21,7 @@ public partial class AddProfileViewModel : ObservableObject
     private readonly IXtreamCodesService _xtreamCodesService;
     private readonly IStalkerPortalService _stalkerPortalService;
     private readonly ISecurityService _securityService;
+    private readonly ILocalizationService _localizationService;
 
     // Simplified Account Details
     [ObservableProperty]
@@ -135,7 +137,7 @@ public partial class AddProfileViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = UserFriendlyErrorMessage.WithPrefix("URL parse hatası", ex);
+            StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("AddProfile.Error.UrlParse"), ex);
             HasError = true;
         }
     }
@@ -167,7 +169,7 @@ public partial class AddProfileViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = UserFriendlyErrorMessage.WithPrefix("URL oluşturma hatası", ex);
+            StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("AddProfile.Error.UrlCreate"), ex);
             HasError = true;
         }
     }
@@ -376,8 +378,8 @@ public partial class AddProfileViewModel : ObservableObject
             return;
         }
 
-        if (!string.Equals(UrlError, "MAC adresi geçersiz. Örnek: 00:1A:79:AA:BB:CC", StringComparison.Ordinal) &&
-            !string.Equals(UrlError, "Stalker Portal için MAC adresi gereklidir", StringComparison.Ordinal))
+        if (!string.Equals(UrlError, _localizationService.GetString("AddProfile.Error.MacInvalid"), StringComparison.Ordinal) &&
+            !string.Equals(UrlError, _localizationService.GetString("AddProfile.Error.MacRequired"), StringComparison.Ordinal))
         {
             return;
         }
@@ -396,7 +398,7 @@ public partial class AddProfileViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(Url))
         {
-            UrlError = "URL gereklidir";
+            UrlError = _localizationService.GetString("AddProfile.Error.UrlRequired");
             return;
         }
 
@@ -409,7 +411,7 @@ public partial class AddProfileViewModel : ObservableObject
 
         if (!Uri.TryCreate(normalizedUrl, UriKind.Absolute, out _))
         {
-            UrlError = "Geçersiz URL formatı";
+            UrlError = _localizationService.GetString("AddProfile.Error.UrlInvalid");
             return;
         }
 
@@ -418,14 +420,14 @@ public partial class AddProfileViewModel : ObservableObject
             var lower = normalizedUrl.ToLowerInvariant();
             if (!lower.Contains(".m3u") && !lower.Contains(".m3u8") && !lower.Contains("get.php"))
             {
-                UrlError = "M3U URL'i .m3u, .m3u8 veya get.php içermelidir";
+                UrlError = _localizationService.GetString("AddProfile.Error.M3uUrlRequirement");
                 return;
             }
         }
 
         if (IsXtream && (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password)))
         {
-            UrlError = "Xtream için kullanıcı adı ve şifre gereklidir";
+            UrlError = _localizationService.GetString("AddProfile.Error.XtreamCredentialsRequired");
             return;
         }
 
@@ -441,13 +443,13 @@ public partial class AddProfileViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(currentUsername))
         {
-            UrlError = "Stalker Portal için MAC adresi gereklidir";
+            UrlError = _localizationService.GetString("AddProfile.Error.MacRequired");
             return;
         }
 
         UrlError = StalkerMacRegex().IsMatch(currentUsername.Trim())
             ? null
-            : "MAC adresi geçersiz. Örnek: 00:1A:79:AA:BB:CC";
+            : _localizationService.GetString("AddProfile.Error.MacInvalid");
     }
 
     private static string NormalizeStalkerMacSuffix(string? input)
@@ -562,7 +564,8 @@ public partial class AddProfileViewModel : ObservableObject
         IM3UParser m3uParser,
         IXtreamCodesService xtreamCodesService,
         IStalkerPortalService stalkerPortalService,
-        ISecurityService securityService)
+        ISecurityService securityService,
+        ILocalizationService localizationService)
     {
         _profileService = profileService;
         _dispatcherService = dispatcherService;
@@ -573,6 +576,7 @@ public partial class AddProfileViewModel : ObservableObject
         _xtreamCodesService = xtreamCodesService;
         _stalkerPortalService = stalkerPortalService;
         _securityService = securityService;
+        _localizationService = localizationService;
 
         // Initialize with default avatar
         var avatars = _avatarService.GetAvatarsByCategory().Values.FirstOrDefault();
@@ -637,14 +641,17 @@ public partial class AddProfileViewModel : ObservableObject
     {
         if (profile == null || EditingProfile == null) return;
 
-        var confirmed = await _dialogService.ShowConfirmationAsync("Profil Sil",
-            $"'{profile.Name}' profilini silmek istediğinize emin misiniz?");
+        var confirmed = await _dialogService.ShowConfirmationAsync(
+            _localizationService.GetString("AddProfile.Delete.Title"),
+            string.Format(CultureInfo.CurrentCulture,
+                _localizationService.GetString("AddProfile.Delete.ConfirmationFormat"),
+                profile.Name));
         if (!confirmed) return;
 
         try
         {
             IsSaving = true;
-            StatusMessage = "Profil siliniyor...";
+            StatusMessage = _localizationService.GetString("AddProfile.Delete.Deleting");
 
             await _profileService.DeleteProfileAsync(
                 EditingProfile.Id,
@@ -654,7 +661,9 @@ public partial class AddProfileViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            await _dialogService.ShowErrorAsync("Hata", "Profil silinirken bir hata oluştu.", ex);
+            await _dialogService.ShowErrorAsync(
+                _localizationService.GetString("Common.Error"),
+                _localizationService.GetString("AddProfile.Delete.Error"), ex);
         }
         finally
         {
@@ -666,7 +675,7 @@ public partial class AddProfileViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(Url))
         {
-            UrlError = "URL gereklidir";
+            UrlError = _localizationService.GetString("AddProfile.Error.UrlRequired");
             return false;
         }
 
@@ -678,7 +687,7 @@ public partial class AddProfileViewModel : ObservableObject
 
         if (!Uri.TryCreate(Url, UriKind.Absolute, out _))
         {
-            UrlError = "Geçersiz URL formatı";
+            UrlError = _localizationService.GetString("AddProfile.Error.UrlInvalid");
             return false;
         }
 
@@ -687,7 +696,7 @@ public partial class AddProfileViewModel : ObservableObject
             var lower = Url.ToLowerInvariant();
             if (!lower.Contains(".m3u") && !lower.Contains(".m3u8") && !lower.Contains("get.php"))
             {
-                UrlError = "M3U URL'i .m3u, .m3u8 veya get.php içermelidir";
+                UrlError = _localizationService.GetString("AddProfile.Error.M3uUrlRequirement");
                 return false;
             }
         }
@@ -696,7 +705,7 @@ public partial class AddProfileViewModel : ObservableObject
         {
             if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
             {
-                UrlError = "Xtream için kullanıcı adı ve şifre gereklidir";
+                UrlError = _localizationService.GetString("AddProfile.Error.XtreamCredentialsRequired");
                 return false;
             }
         }
@@ -705,13 +714,13 @@ public partial class AddProfileViewModel : ObservableObject
         {
             if (string.IsNullOrWhiteSpace(Username))
             {
-                UrlError = "Stalker Portal için MAC adresi gereklidir";
+                UrlError = _localizationService.GetString("AddProfile.Error.MacRequired");
                 return false;
             }
 
             if (!StalkerMacRegex().IsMatch(Username.Trim()))
             {
-                UrlError = "MAC adresi geçersiz. Örnek: 00:1A:79:AA:BB:CC";
+                UrlError = _localizationService.GetString("AddProfile.Error.MacInvalid");
                 return false;
             }
         }
@@ -725,7 +734,7 @@ public partial class AddProfileViewModel : ObservableObject
         var urlToCheck = Url?.Trim();
         if (string.IsNullOrWhiteSpace(urlToCheck))
         {
-            StatusMessage = "URL gereklidir";
+            StatusMessage = _localizationService.GetString("AddProfile.Error.UrlRequired");
             return;
         }
 
@@ -777,13 +786,13 @@ public partial class AddProfileViewModel : ObservableObject
 
         if (!Uri.TryCreate(urlToCheck, UriKind.Absolute, out _))
         {
-            StatusMessage = "Geçersiz URL formatı";
+            StatusMessage = _localizationService.GetString("AddProfile.Error.UrlInvalid");
             return;
         }
 
         IsAnalyzingConnection = true;
         HasError = false;
-        StatusMessage = "Bağlantı analiz ediliyor...";
+        StatusMessage = _localizationService.GetString("AddProfile.Status.Analyzing");
         PlaylistPreviewSummary = string.Empty;
         ConnectionHealth = ConnectionHealth.Unknown;
         DetailedStatus = string.Empty;
@@ -807,19 +816,19 @@ public partial class AddProfileViewModel : ObservableObject
             if (health == ConnectionHealth.Critical)
             {
                 HasError = true;
-                StatusMessage = "Bağlantı analizi başarısız";
+                StatusMessage = _localizationService.GetString("AddProfile.Analysis.Failed");
                 return;
             }
             
             HasError = false;
-            StatusMessage = "Bağlantı analizi tamamlandı";
+            StatusMessage = _localizationService.GetString("AddProfile.Analysis.Completed");
         }
         catch (Exception ex)
         {
             HasError = true;
-            StatusMessage = UserFriendlyErrorMessage.WithPrefix("Analiz hatası", ex);
+            StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("AddProfile.Analysis.ErrorPrefix"), ex);
             ConnectionHealth = ConnectionHealth.Critical;
-            DetailedStatus = "Beklenmeyen Hata";
+            DetailedStatus = _localizationService.GetString("AddProfile.Analysis.UnexpectedError");
         }
         finally
         {
@@ -832,7 +841,7 @@ public partial class AddProfileViewModel : ObservableObject
         if (!statusCode.HasValue && !string.IsNullOrEmpty(error))
             return error;
 
-        var statusText = statusCode.HasValue ? $"{statusCode} {GetReasonPhrase(statusCode.Value)}" : "Bilinmiyor";
+        var statusText = statusCode.HasValue ? $"{statusCode} {GetReasonPhrase(statusCode.Value)}" : _localizationService.GetString("AddProfile.Http.Unknown");
         var latencyText = latency.HasValue ? $"{latency}ms" : "";
         
         return $"{statusText} - {latencyText}".Trim(' ', '-');
@@ -842,17 +851,18 @@ public partial class AddProfileViewModel : ObservableObject
     {
         return statusCode switch
         {
-            200 => "Tamam",
-            301 => "Kalıcı Yönlendirme",
-            302 => "Geçici Yönlendirme",
-            400 => "Geçersiz İstek",
-            401 => "Yetkisiz (Kullanıcı Adı/Şifre)",
-            403 => "Yasaklı (Erişim Reddedildi)",
-            404 => "Bulunamadı (URL Hatalı)",
-            500 => "Sunucu Hatası",
-            502 or 503 or 504 => "Ağ Geçidi Hatası (Sunucu erişilebilir fakat endpoint yanıt vermiyor — bağlantı çalışıyor olabilir)",
-            >= 500 => "Sunucu Hatası (Sağlayıcı kaynaklı geçici sorun olabilir)",
-            _ => $"HTTP Hatası {statusCode}"
+            200 => _localizationService.GetString("AddProfile.Http.200"),
+            301 => _localizationService.GetString("AddProfile.Http.301"),
+            302 => _localizationService.GetString("AddProfile.Http.302"),
+            400 => _localizationService.GetString("AddProfile.Http.400"),
+            401 => _localizationService.GetString("AddProfile.Http.401"),
+            403 => _localizationService.GetString("AddProfile.Http.403"),
+            404 => _localizationService.GetString("AddProfile.Http.404"),
+            500 => _localizationService.GetString("AddProfile.Http.500"),
+            502 or 503 or 504 => _localizationService.GetString("AddProfile.Http.GatewayError"),
+            >= 500 => _localizationService.GetString("AddProfile.Http.ServerErrorGeneric"),
+            _ => string.Format(CultureInfo.CurrentCulture,
+                _localizationService.GetString("AddProfile.Http.Format"), statusCode)
         };
     }
 
@@ -900,11 +910,12 @@ public partial class AddProfileViewModel : ObservableObject
             {
                 var error = code switch
                 {
-                    401 or 403 => "Yetkisiz Erişim (Kullanıcı adı/Şifre hatalı olabilir)",
-                    404 => "URL Bulunamadı (Link bozuk veya kanal silinmiş)",
-                    405 => "Erişim Reddedildi (Sunucu bu kontrolü desteklemiyor)",
-                    >= 500 => "Sunucu Hatası (Sağlayıcı kaynaklı sorun)",
-                    _ => $"HTTP Hatası {code}"
+                    401 or 403 => _localizationService.GetString("AddProfile.Error.Unauthorized"),
+                    404 => _localizationService.GetString("AddProfile.Error.NotFound"),
+                    405 => _localizationService.GetString("AddProfile.Error.MethodNotAllowed"),
+                    >= 500 => _localizationService.GetString("AddProfile.Error.ServerError"),
+                    _ => string.Format(CultureInfo.CurrentCulture,
+                        _localizationService.GetString("AddProfile.Http.Format"), code)
                 };
 
                 return (ConnectionHealth.Critical, code, latency, error);
@@ -988,7 +999,7 @@ public partial class AddProfileViewModel : ObservableObject
             }
             else
             {
-                ProfileNameError = "Profil adı gereklidir";
+                ProfileNameError = _localizationService.GetString("AddProfile.Error.ProfileNameRequired");
                 return;
             }
         }
@@ -1005,28 +1016,28 @@ public partial class AddProfileViewModel : ObservableObject
             // Must be exactly 4 digits
             if (PinCode.Length != 4 || !PinCode.All(char.IsDigit))
             {
-                PinError = "PIN 4 haneli rakam olmalıdır";
+                PinError = _localizationService.GetString("AddProfile.Error.PinLength");
                 return;
             }
 
             // Confirmation must match
             if (PinCode != PinConfirm)
             {
-                PinError = "PIN'ler eşleşmiyor";
+                PinError = _localizationService.GetString("AddProfile.Error.PinMismatch");
                 return;
             }
         }
         else if (HasPin && string.IsNullOrEmpty(EditingProfile?.PinHash))
         {
             // New PIN required but nothing entered
-            PinError = "PIN giriniz";
+            PinError = _localizationService.GetString("AddProfile.Error.PinRequired");
             return;
         }
 
         try
         {
             // Show saving indicator
-            StatusMessage = "Kaydediliyor...";
+            StatusMessage = _localizationService.GetString("AddProfile.Status.Saving");
             IsSaving = true;
 
             var newAccountType = IsStalker
@@ -1060,8 +1071,8 @@ public partial class AddProfileViewModel : ObservableObject
             {
                 HasError = true;
                 StatusMessage = newAccountType == ProfileType.M3U
-                    ? "Bu M3U adresi zaten başka bir profilde kullanılıyor"
-                    : "Bu sunucu ve kullanıcı adı zaten başka bir profilde kayıtlı";
+                    ? _localizationService.GetString("AddProfile.Error.DuplicateM3u")
+                    : _localizationService.GetString("AddProfile.Error.DuplicateServer");
                 UrlError = StatusMessage;
                 return;
             }
@@ -1096,7 +1107,7 @@ public partial class AddProfileViewModel : ObservableObject
             }
 
             // Success feedback
-            StatusMessage = "Profil kaydedildi";
+            StatusMessage = _localizationService.GetString("AddProfile.Status.Saved");
             await Task.Delay(400);
 
             RequestClose?.Invoke(this, EventArgs.Empty);
@@ -1104,7 +1115,7 @@ public partial class AddProfileViewModel : ObservableObject
         catch (Exception ex)
         {
             HasError = true;
-            StatusMessage = UserFriendlyErrorMessage.WithPrefix("Hata", ex);
+            StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Common.ErrorPrefix"), ex);
         }
         finally
         {
