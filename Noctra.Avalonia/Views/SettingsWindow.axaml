@@ -6,11 +6,12 @@
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         xmlns:controls="using:Noctra.Avalonia.Controls"
         xmlns:behaviors="using:Noctra.Avalonia.Behaviors"
+        xmlns:loc="using:Noctra.Avalonia.Localization"
         mc:Ignorable="d"
         x:Class="Noctra.Avalonia.Views.SettingsWindow"
         x:DataType="vm:SettingsViewModel"
         x:CompileBindings="False"
-        Title="Ayarlar" Height="750" Width="850"
+        Title="{loc:Translate Settings.Title}" Height="750" Width="850"
         WindowStartupLocation="CenterScreen"
         ShowInTaskbar="False"
         SystemDecorations="None"
@@ -162,11 +163,11 @@
                   Background="Transparent"
                   PointerPressed="Header_PointerPressed">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Ayarlar" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    <TextBlock Text="{loc:Translate Settings.Title}" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                 </StackPanel>
 
                 <Button HorizontalAlignment="Right" Click="CloseButton_Click"
-                        Classes="CloseButtonStyle" ToolTip.Tip="Kapat"/>
+                        Classes="CloseButtonStyle" ToolTip.Tip="{loc:Translate Settings.Close.Tooltip}"/>
             </Grid>
 
             <!-- CONTENT -->
@@ -182,7 +183,7 @@
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <materialIcons:MaterialIcon Kind="AccountBoxOutline" Width="20" Height="20" />
-                            <TextBlock Text="Profil" VerticalAlignment="Center"/>
+                            <TextBlock Text="{loc:Translate Settings.Nav.Profile}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,32,0">
@@ -210,9 +211,9 @@
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding CurrentProfileName}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                         <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                            <TextBlock Text="Aktif Profil" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
+                                            <TextBlock Text="{loc:Translate Settings.Profile.ActiveProfile}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
                                             <TextBlock Text=" • " FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
-                                            <TextBlock Text="{Binding ProfileCreatedAt, StringFormat='Oluşturulma: {0:dd.MM.yyyy}'}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding ProfileCreatedAt, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Profile.CreatedAtFormat'}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Grid>
@@ -220,12 +221,12 @@
 
                             <Border Classes="SettingsCard">
                                 <StackPanel>
-                                    <TextBlock Text="Profil Yönetimi" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
-                                    <TextBlock Text="Kim İzliyor ekranına dönerek aktif profili değiştirebilirsiniz."
+                                    <TextBlock Text="{loc:Translate Settings.Profile.Management}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+                                    <TextBlock Text="{loc:Translate Settings.Profile.ManagementDetail}"
                                                FontSize="13"
                                                Foreground="{DynamicResource TextMutedBrush}"
                                                Margin="0,0,0,14"/>
-                                    <Button Content="Profil Seçme Ekranına Dön"
+                                    <Button Content="{loc:Translate Settings.Profile.BackToProfiles}"
                                             Click="BackToProfiles_Click"
                                             HorizontalAlignment="Left"
                                             Padding="18,10"/>
@@ -235,33 +236,33 @@
                             <!-- Subscription Details -->
                             <Border Classes="SettingsCard">
                                 <StackPanel>
-                                    <TextBlock Text="Hesap Bilgileri" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
+                                    <TextBlock Text="{loc:Translate Settings.Account.Title}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
                                     
                                     <Grid Margin="0,0,0,16">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <TextBlock Text="URL:" FontSize="15" Foreground="{DynamicResource TextMutedBrush}"/>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="160"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="{loc:Translate Settings.Account.Url}" FontSize="15" Foreground="{DynamicResource TextMutedBrush}"/>
                                         <TextBlock Grid.Column="1" Text="{Binding ProviderUrl}" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
                                     </Grid>
 
                                     <Grid Margin="0,0,0,16">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <TextBlock Text="Kullanıcı Adı:" FontSize="15" Foreground="{DynamicResource TextMutedBrush}"/>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="160"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="{loc:Translate Settings.Account.Username}" FontSize="15" Foreground="{DynamicResource TextMutedBrush}"/>
                                         <TextBlock Grid.Column="1" Text="{Binding ProviderUsername}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                     </Grid>
 
                                     <Grid Margin="0,0,0,16">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <TextBlock Text="Şifre:" FontSize="15" Foreground="{DynamicResource TextMutedBrush}"/>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="160"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="{loc:Translate Settings.Account.Password}" FontSize="15" Foreground="{DynamicResource TextMutedBrush}"/>
                                         <TextBlock Grid.Column="1" Text="{Binding ProviderPassword}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                     </Grid>
                                     
                                     <Rectangle Height="1" Fill="{DynamicResource BorderBrush}" Margin="0,4,0,16"/>
 
                                     <Grid>
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <TextBlock Text="Bitiş Tarihi:" FontSize="15" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="160"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="{loc:Translate Settings.Account.Expiry}" FontSize="15" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
                                         <StackPanel Grid.Column="1">
-                                            <TextBlock Text="{Binding ExpirationDate, StringFormat='dd MMMM yyyy', TargetNullValue='Bilgi yok'}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{Binding ExpirationDate, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Account.ExpiryFormat', TargetNullValue='{loc:Translate Settings.Account.NoInfo}'}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                             <TextBlock Text="{Binding ExpirationStatus}" FontSize="14" Foreground="{DynamicResource AccentBrush}" Margin="0,4,0,0"/>
                                         </StackPanel>
                                     </Grid>
@@ -278,21 +279,21 @@
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <materialIcons:MaterialIcon Kind="PlayBoxOutline" Width="20" Height="20" />
-                            <TextBlock Text="Oynatma &amp; İndirme" VerticalAlignment="Center"/>
+                            <TextBlock Text="{loc:Translate Settings.Nav.Playback}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,32,0">
                         <StackPanel HorizontalAlignment="Stretch" Margin="0,0,0,100">
 
-                            <!-- Ağ Ayarları -->
+                            <!-- AÄŸ AyarlarÄ± -->
                             <Border Classes="SettingsCard">
                                 <StackPanel>
-                                    <TextBlock Text="Ağ Ayarları" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
+                                    <TextBlock Text="{loc:Translate Settings.Playback.Network}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
                                     
                                     <Grid>
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                         <StackPanel>
-                                            <TextBlock Text="User-Agent" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{loc:Translate Settings.Playback.UserAgent}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                         </StackPanel>
                                     </Grid>
                                     <TextBox Text="{Binding UserAgent, Mode=TwoWay}" Watermark="VLC/3.0.x LibVLC/3.0.x" Padding="12" Margin="0,12,0,0"/>
@@ -301,13 +302,13 @@
 
                             <Border Classes="SettingsCard">
                                 <StackPanel>
-                                    <TextBlock Text="Otomatik Oynatma" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
+                                    <TextBlock Text="{loc:Translate Settings.Playback.AutoPlay}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
                                     
                                     <Grid>
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                         <StackPanel>
-                                            <TextBlock Text="Sonraki bölümü otomatik oynat" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                            <TextBlock Text="Bir bölüm bittiğinde seriyi otomatik devam ettirir" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                            <TextBlock Text="{loc:Translate Settings.Playback.AutoPlayNext}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{loc:Translate Settings.Playback.AutoPlayDescription}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
                                         </StackPanel>
                                         <ToggleSwitch Grid.Column="1" IsChecked="{Binding AutoPlayNext}"/>
                                     </Grid>
@@ -316,26 +317,26 @@
 
                             <Border Classes="SettingsCard">
                                 <StackPanel>
-                                    <TextBlock Text="Görüntü Kalitesi" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
-                                    <TextBlock Text="Video kalitesi tercihi" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,12"/>
+                                    <TextBlock Text="{loc:Translate Settings.Playback.Quality}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
+                                    <TextBlock Text="{loc:Translate Settings.Playback.QualityDescription}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,12"/>
                                     <ComboBox Theme="{StaticResource ModernComboBox}" SelectedIndex="{Binding SelectedDataUsage}" Width="250" HorizontalAlignment="Left">
-                                        <ComboBoxItem Content="Düşük (480p)"/>
-                                        <ComboBoxItem Content="Orta (720p)"/>
-                                        <ComboBoxItem Content="Yüksek (1080p)"/>
-                                        <ComboBoxItem Content="Otomatik"/>
+                                        <ComboBoxItem Content="{loc:Translate Settings.Playback.Quality.Low}"/>
+                                        <ComboBoxItem Content="{loc:Translate Settings.Playback.Quality.Medium}"/>
+                                        <ComboBoxItem Content="{loc:Translate Settings.Playback.Quality.High}"/>
+                                        <ComboBoxItem Content="{loc:Translate Settings.Playback.Quality.Auto}"/>
                                     </ComboBox>
                                 </StackPanel>
                             </Border>
 
                             <Border Classes="SettingsCard">
                                 <StackPanel>
-                                    <TextBlock Text="Video Buffer (Önbellek) Boyutu" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,10"/>
-                                    <TextBlock Text="Bağlantı hızınıza göre video yükleme tamponunu ayarlayın." FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20"/>
+                                    <TextBlock Text="{loc:Translate Settings.Playback.Buffer}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,10"/>
+                                    <TextBlock Text="{loc:Translate Settings.Playback.BufferDescription}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20"/>
 
                                     <StackPanel Orientation="Horizontal" Spacing="24">
-                                        <!-- Küçük (2sn) - PREMIUM -->
+                                        <!-- KÃ¼Ã§Ã¼k (2sn) - PREMIUM -->
                                         <Grid VerticalAlignment="Center">
-                                            <RadioButton Content="Küçük (2sn)" GroupName="Buffer"
+                                            <RadioButton Content="{loc:Translate Settings.Playback.Buffer.Small}" GroupName="Buffer"
                                                          IsChecked="{Binding IsBufferSmall}"
                                                          IsEnabled="{Binding IsPremium}"
                                                          Theme="{StaticResource ModernRadioButton}"/>
@@ -349,13 +350,13 @@
                                         </Grid>
                                         
                                         <!-- Normal (5sn) - FREE -->
-                                        <RadioButton Content="Normal (5sn)" GroupName="Buffer"
+                                        <RadioButton Content="{loc:Translate Settings.Playback.Buffer.Normal}" GroupName="Buffer"
                                                      IsChecked="{Binding IsBufferNormal}"
                                                      Theme="{StaticResource ModernRadioButton}"/>
 
-                                        <!-- Büyük (10sn) - PREMIUM -->
+                                        <!-- BÃ¼yÃ¼k (10sn) - PREMIUM -->
                                         <Grid VerticalAlignment="Center">
-                                            <RadioButton Content="Büyük (10sn)" GroupName="Buffer"
+                                            <RadioButton Content="{loc:Translate Settings.Playback.Buffer.Large}" GroupName="Buffer"
                                                          IsChecked="{Binding IsBufferLarge}"
                                                          IsEnabled="{Binding IsPremium}"
                                                          Theme="{StaticResource ModernRadioButton}"/>
@@ -373,20 +374,20 @@
 
                             <Border Classes="SettingsCard">
                                 <StackPanel>
-                                    <TextBlock Text="Ses ve Altyazı" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
+                                    <TextBlock Text="{loc:Translate Settings.Playback.AudioSubtitle}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
                                     
                                     <Grid Margin="0,0,0,18">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                         <StackPanel>
-                                            <TextBlock Text="Altyazıları otomatik aç" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                            <TextBlock Text="Altyazıyı varsayılan olarak etkinleştirir" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                            <TextBlock Text="{loc:Translate Settings.Playback.SubtitlesAuto}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{loc:Translate Settings.Playback.SubtitlesAutoDescription}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
                                         </StackPanel>
                                         <ToggleSwitch Grid.Column="1" IsChecked="{Binding SubtitleEnabled}"/>
                                     </Grid>
 
-                                    <TextBlock Text="Tercih Edilen Altyazı Dili" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                                    <TextBlock Text="{loc:Translate Settings.Playback.PreferredSubtitle}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
                                     <ComboBox Theme="{StaticResource ModernComboBox}" SelectedValue="{Binding SubtitleLanguage, Mode=TwoWay}" SelectedValueBinding="{Binding Tag}" Width="250" HorizontalAlignment="Left" Margin="0,0,0,18">
-                                        <ComboBoxItem Content="Türkçe" Tag="tr"/>
+                                        <ComboBoxItem Content="Turkish" Tag="tr"/>
                                         <ComboBoxItem Content="English" Tag="en"/>
                                         <ComboBoxItem Content="Deutsch" Tag="de"/>
                                         <ComboBoxItem Content="Français" Tag="fr"/>
@@ -398,9 +399,9 @@
                                         <ComboBoxItem Content="Nederlands" Tag="nl"/>
                                     </ComboBox>
 
-                                    <TextBlock Text="Tercih Edilen Ses Dili" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                                    <TextBlock Text="{loc:Translate Settings.Playback.PreferredAudio}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
                                     <ComboBox Theme="{StaticResource ModernComboBox}" SelectedValue="{Binding PreferredAudioLanguage, Mode=TwoWay}" SelectedValueBinding="{Binding Tag}" Width="250" HorizontalAlignment="Left">
-                                        <ComboBoxItem Content="Türkçe" Tag="tr"/>
+                                        <ComboBoxItem Content="Turkish" Tag="tr"/>
                                         <ComboBoxItem Content="English" Tag="en"/>
                                         <ComboBoxItem Content="Deutsch" Tag="de"/>
                                         <ComboBoxItem Content="Français" Tag="fr"/>
@@ -418,25 +419,25 @@
                             <!-- Subtitle Section Removed -->
                             <Border Classes="SettingsCard">
                                 <StackPanel>
-                                    <TextBlock Text="İndirme" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
+                                    <TextBlock Text="{loc:Translate Settings.Download.Title}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
                                     <Grid Margin="0,0,0,18">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                         <StackPanel>
-                                            <TextBlock Text="Sadece Wi-Fi ile indir" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                            <TextBlock Text="Mobil veri kullanımını engeller" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                            <TextBlock Text="{loc:Translate Settings.Download.WifiOnly}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{loc:Translate Settings.Download.WifiOnlyDescription}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
                                         </StackPanel>
                                         <ToggleSwitch Grid.Column="1" IsChecked="{Binding DownloadWifiOnly}"/>
                                     </Grid>
-                                    <TextBlock Text="İndirme kalitesi" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                                    <TextBlock Text="{loc:Translate Settings.Download.Quality}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
                                     <ComboBox Theme="{StaticResource ModernComboBox}" SelectedIndex="{Binding SelectedDownloadQuality}" Width="250" HorizontalAlignment="Left" Margin="0,0,0,18">
-                                        <ComboBoxItem Content="Standart"/>
-                                        <ComboBoxItem Content="Yüksek"/>
+                                        <ComboBoxItem Content="{loc:Translate Settings.Download.Quality.Standard}"/>
+                                        <ComboBoxItem Content="{loc:Translate Settings.Download.Quality.High}"/>
                                     </ComboBox>
-                                    <TextBlock Text="Kayıt Konumu" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                    <TextBlock Text="{loc:Translate Settings.Download.Path}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                     <Grid>
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                         <TextBox Text="{Binding DownloadPath}" IsReadOnly="True" Padding="12"/>
-                                        <Button Grid.Column="1" Content="Değiştir" Click="ChangeDownloadPath_Click" Margin="12,0,0,0" Padding="20,10"/>
+                                        <Button Grid.Column="1" Content="{loc:Translate Settings.Download.Change}" Click="ChangeDownloadPath_Click" Margin="12,0,0,0" Padding="20,10"/>
                                     </Grid>
                                 </StackPanel>
                             </Border>
@@ -449,21 +450,21 @@
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <materialIcons:MaterialIcon Kind="FormatListBulletedSquare" Width="20" Height="20" />
-                            <TextBlock Text="Kanal Listesi" VerticalAlignment="Center"/>
+                            <TextBlock Text="{loc:Translate Settings.Nav.Channels}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,32,0">
                         <StackPanel HorizontalAlignment="Stretch" Margin="0,0,0,100">
                             <Border Classes="SettingsCard">
                                 <StackPanel>
-                                    <TextBlock Text="Kanal Listesi Yenileme" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
-                                    <TextBlock Text="Varsayılan olarak kanal listesi önbellekten yüklenir. Kaynaktan yeniden çekmek için aşağıdaki butonu kullanın."
+                                    <TextBlock Text="{loc:Translate Settings.Channels.Refresh}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
+                                    <TextBlock Text="{loc:Translate Settings.Channels.RefreshDescription}"
                                                TextWrapping="Wrap"
                                                FontSize="13"
                                                Foreground="{DynamicResource TextMutedBrush}"
                                                Margin="0,0,0,12"/>
 
-                                    <Button Content="Şimdi Yenile"
+                                    <Button Content="{loc:Translate Settings.Channels.RefreshNow}"
                                             Command="{Binding RefreshChannelListNowCommand}"
                                             IsEnabled="{Binding !_mainViewModel.IsGlobalLoading}"
                                             HorizontalAlignment="Left"
@@ -475,7 +476,7 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Kanal Sayısı" Foreground="{DynamicResource TextMutedBrush}"/>
+                                        <TextBlock Text="{loc:Translate Settings.Channels.Count}" Foreground="{DynamicResource TextMutedBrush}"/>
                                         <TextBlock Grid.Column="1" Text="{Binding TotalChannels}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold"/>
                                     </Grid>
 
@@ -484,14 +485,14 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Son Yenileme" Foreground="{DynamicResource TextMutedBrush}"/>
+                                        <TextBlock Text="{loc:Translate Settings.Channels.LastUpdate}" Foreground="{DynamicResource TextMutedBrush}"/>
                                         <TextBlock Grid.Column="1"
-                                                   Text="{Binding ChannelListLastUpdated, StringFormat='{}{0:dd.MM.yyyy HH:mm}', TargetNullValue='-'}"
+                                                   Text="{Binding ChannelListLastUpdated, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Channels.DateFormat', TargetNullValue='-'}"
                                                    Foreground="{DynamicResource TextPrimaryBrush}"
                                                    FontWeight="SemiBold"/>
                                     </Grid>
 
-                                    <!-- Hata göstergesi (EPG ile aynı tasarım) -->
+                                    <!-- Hata gÃ¶stergesi (EPG ile aynÄ± tasarÄ±m) -->
                                     <Border Background="{DynamicResource Surface1Brush}"
                                             BorderBrush="{DynamicResource ErrorBrush}"
                                             BorderThickness="1"
@@ -505,51 +506,51 @@
                                                    FontWeight="SemiBold"/>
                                     </Border>
 
-                                    <TextBlock Text="Yenileme Sıklığı" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                    <TextBlock Text="{loc:Translate Settings.Channels.Frequency}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                     <ComboBox Theme="{StaticResource ModernComboBox}"
                                               SelectedIndex="{Binding ChannelListRefreshFrequencyIndex, Mode=TwoWay}"
                                               Width="200"
                                               HorizontalAlignment="Left">
-                                        <ComboBoxItem Content="Kapalı (Sadece manuel)" Tag="0"/>
+                                        <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.Off}" Tag="0"/>
                                         <ComboBoxItem Tag="1" IsEnabled="{Binding IsPremium}">
                                             <Grid ColumnDefinitions="*,Auto" Width="175">
-                                                <TextBlock Text="Her 1 saat" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.1h}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="3" IsEnabled="{Binding IsPremium}">
                                             <Grid ColumnDefinitions="*,Auto" Width="175">
-                                                <TextBlock Text="Her 3 saat" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.3h}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="12" IsEnabled="{Binding IsPremium}">
                                             <Grid ColumnDefinitions="*,Auto" Width="175">
-                                                <TextBlock Text="Her 12 saat" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.12h}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="24" IsEnabled="{Binding IsPremium}">
                                             <Grid ColumnDefinitions="*,Auto" Width="175">
-                                                <TextBlock Text="Her 24 saat" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.24h}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="48" IsEnabled="{Binding IsPremium}">
                                             <Grid ColumnDefinitions="*,Auto" Width="175">
-                                                <TextBlock Text="Her 2 günde" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.2d}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="72" IsEnabled="{Binding IsPremium}">
                                             <Grid ColumnDefinitions="*,Auto" Width="175">
-                                                <TextBlock Text="Her 3 günde" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.3d}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="168" IsEnabled="{Binding IsPremium}">
                                             <Grid ColumnDefinitions="*,Auto" Width="175">
-                                                <TextBlock Text="Her 7 günde" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.7d}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
@@ -562,12 +563,12 @@
                                     <Expander.Header>
                                         <Grid ColumnDefinitions="*,Auto" Margin="0,0,16,0">
                                             <StackPanel VerticalAlignment="Center">
-                                                <TextBlock Text="Gizlenen Canlı TV Kategorileri" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,4"/>
-                                                <TextBlock Text="Bu kategoriler ve içerikleri ana ekranlarda görünmez."
+                                                <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Live}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,4"/>
+                                                <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Description}"
                                                            FontSize="13" Foreground="{DynamicResource TextMutedBrush}"/>
                                             </StackPanel>
                                             <Border Grid.Column="1" Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="12,4" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding HiddenLiveGroups.Count, StringFormat='{}{0} Kategori'}" 
+                                                <TextBlock Text="{Binding HiddenLiveGroups.Count, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Channels.Hidden.CountFormat'}" 
                                                            Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" FontSize="14"/>
                                             </Border>
                                         </Grid>
@@ -587,7 +588,7 @@
                                                                         Padding="10,4" CornerRadius="4" Cursor="Hand">
                                                                     <StackPanel Orientation="Horizontal" Spacing="4">
                                                                         <materialIcons:MaterialIcon Kind="EyeOutline" Width="14" Height="14"/>
-                                                                        <TextBlock Text="Göster" FontSize="12" FontWeight="Medium"/>
+                                                                        <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" FontSize="12" FontWeight="Medium"/>
                                                                     </StackPanel>
                                                                 </Button>
                                                             </Grid>
@@ -595,7 +596,7 @@
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
-                                            <TextBlock Text="Gizlenen canlı TV kategorisi yok."
+                                            <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Empty.Live}"
                                                        FontSize="13" Foreground="{DynamicResource TextMutedBrush}"
                                                        HorizontalAlignment="Center" Margin="0,20"
                                                        IsVisible="{Binding !HiddenLiveGroups.Count}"/>
@@ -609,12 +610,12 @@
                                     <Expander.Header>
                                         <Grid ColumnDefinitions="*,Auto" Margin="0,0,16,0">
                                             <StackPanel VerticalAlignment="Center">
-                                                <TextBlock Text="Gizlenen Film Kategorileri" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,4"/>
-                                                <TextBlock Text="Bu kategoriler ve içerikleri ana ekranlarda görünmez."
+                                                <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Movies}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,4"/>
+                                                <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Description}"
                                                            FontSize="13" Foreground="{DynamicResource TextMutedBrush}"/>
                                             </StackPanel>
                                             <Border Grid.Column="1" Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="12,4" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding HiddenMovieGroups.Count, StringFormat='{}{0} Kategori'}" 
+                                                <TextBlock Text="{Binding HiddenMovieGroups.Count, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Channels.Hidden.CountFormat'}" 
                                                            Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" FontSize="14"/>
                                             </Border>
                                         </Grid>
@@ -634,7 +635,7 @@
                                                                         Padding="10,4" CornerRadius="4" Cursor="Hand">
                                                                     <StackPanel Orientation="Horizontal" Spacing="4">
                                                                         <materialIcons:MaterialIcon Kind="EyeOutline" Width="14" Height="14"/>
-                                                                        <TextBlock Text="Göster" FontSize="12" FontWeight="Medium"/>
+                                                                        <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" FontSize="12" FontWeight="Medium"/>
                                                                     </StackPanel>
                                                                 </Button>
                                                             </Grid>
@@ -642,7 +643,7 @@
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
-                                            <TextBlock Text="Gizlenen film kategorisi yok."
+                                            <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Empty.Movies}"
                                                        FontSize="13" Foreground="{DynamicResource TextMutedBrush}"
                                                        HorizontalAlignment="Center" Margin="0,20"
                                                        IsVisible="{Binding !HiddenMovieGroups.Count}"/>
@@ -656,12 +657,12 @@
                                     <Expander.Header>
                                         <Grid ColumnDefinitions="*,Auto" Margin="0,0,16,0">
                                             <StackPanel VerticalAlignment="Center">
-                                                <TextBlock Text="Gizlenen Dizi Kategorileri" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,4"/>
-                                                <TextBlock Text="Bu kategoriler ve içerikleri ana ekranlarda görünmez."
+                                                <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Series}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,4"/>
+                                                <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Description}"
                                                            FontSize="13" Foreground="{DynamicResource TextMutedBrush}"/>
                                             </StackPanel>
                                             <Border Grid.Column="1" Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="12,4" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding HiddenSeriesGroups.Count, StringFormat='{}{0} Kategori'}" 
+                                                <TextBlock Text="{Binding HiddenSeriesGroups.Count, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Channels.Hidden.CountFormat'}" 
                                                            Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" FontSize="14"/>
                                             </Border>
                                         </Grid>
@@ -681,7 +682,7 @@
                                                                         Padding="10,4" CornerRadius="4" Cursor="Hand">
                                                                     <StackPanel Orientation="Horizontal" Spacing="4">
                                                                         <materialIcons:MaterialIcon Kind="EyeOutline" Width="14" Height="14"/>
-                                                                        <TextBlock Text="Göster" FontSize="12" FontWeight="Medium"/>
+                                                                        <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" FontSize="12" FontWeight="Medium"/>
                                                                     </StackPanel>
                                                                 </Button>
                                                             </Grid>
@@ -689,7 +690,7 @@
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
-                                            <TextBlock Text="Gizlenen dizi kategorisi yok."
+                                            <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Empty.Series}"
                                                        FontSize="13" Foreground="{DynamicResource TextMutedBrush}"
                                                        HorizontalAlignment="Center" Margin="0,20"
                                                        IsVisible="{Binding !HiddenSeriesGroups.Count}"/>
@@ -705,7 +706,7 @@
                 <TabItem Classes="SettingsTab" Cursor="Hand">
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <materialIcons:MaterialIcon Kind="CalendarClock" Width="20" Height="20" />                            <TextBlock Text="EPG" VerticalAlignment="Center"/>
+                            <materialIcons:MaterialIcon Kind="CalendarClock" Width="20" Height="20" />                            <TextBlock Text="{loc:Translate Settings.Nav.Epg}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,32,0">
@@ -713,11 +714,11 @@
                             <Border Classes="SettingsCard">
                                 <StackPanel>
                                     <Grid HorizontalAlignment="Stretch" Margin="0,0,0,20">
-                                        <TextBlock Text="EPG Yenileme" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{loc:Translate Settings.Epg.Refresh}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                                         <ToggleSwitch IsChecked="{Binding EpgEnabled}" 
-                                                      Content="Etkinleştirildi" 
-                                                      OnContent="Açık" 
-                                                      OffContent="Kapalı"
+                                                      Content="{loc:Translate Settings.Epg.Enabled}" 
+                                                      OnContent="{loc:Translate Settings.Epg.On}" 
+                                                      OffContent="{loc:Translate Settings.Epg.Off}"
                                                       HorizontalAlignment="Right"/>
                                     </Grid>
 
@@ -726,7 +727,7 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Program Sayısı" Foreground="{DynamicResource TextMutedBrush}"/>
+                                        <TextBlock Text="{loc:Translate Settings.Epg.Count}" Foreground="{DynamicResource TextMutedBrush}"/>
                                         <TextBlock Grid.Column="1" Text="{Binding TotalEpgPrograms}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold"/>
                                     </Grid>
 
@@ -735,9 +736,9 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Son Yenileme" Foreground="{DynamicResource TextMutedBrush}"/>
+                                        <TextBlock Text="{loc:Translate Settings.Channels.LastUpdate}" Foreground="{DynamicResource TextMutedBrush}"/>
                                         <TextBlock Grid.Column="1"
-                                                   Text="{Binding LastEpgUpdate, StringFormat='{}{0:dd.MM.yyyy HH:mm}', TargetNullValue='-'}"
+                                                   Text="{Binding LastEpgUpdate, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Channels.DateFormat', TargetNullValue='-'}"
                                                    Foreground="{DynamicResource TextPrimaryBrush}"
                                                    FontWeight="SemiBold"/>
                                     </Grid>
@@ -755,97 +756,97 @@
                                                    FontWeight="SemiBold"/>
                                     </Border>
 
-                                    <Button Content="EPG'yi Şimdi Yenile"
+                                    <Button Content="{loc:Translate Settings.Epg.RefreshNow}"
                                             Command="{Binding RefreshEpgNowCommand}"
                                             IsEnabled="{Binding !_mainViewModel.IsGlobalLoading}"
                                             HorizontalAlignment="Left"
                                             Padding="20,10"
                                             Margin="0,0,0,20"/>
 
-                                    <TextBlock Text="Yenileme Sıklığı" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                    <TextBlock Text="{loc:Translate Settings.Channels.Frequency}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                     <ComboBox Theme="{StaticResource ModernComboBox}"
                                               SelectedIndex="{Binding EpgRefreshFrequencyIndex, Mode=TwoWay}"
                                               Width="200"
                                               HorizontalAlignment="Left"
                                               Margin="0,0,0,20">
-                                        <ComboBoxItem Content="Kapalı (Sadece manuel)" Tag="0"/>
+                                        <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.Off}" Tag="0"/>
                                         <ComboBoxItem Tag="1" IsEnabled="{Binding IsPremium}">
                                             <Grid ColumnDefinitions="*,Auto" Width="175">
-                                                <TextBlock Text="Her 1 saat" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.1h}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="3" IsEnabled="{Binding IsPremium}">
                                             <Grid ColumnDefinitions="*,Auto" Width="175">
-                                                <TextBlock Text="Her 3 saat" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.3h}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="12" IsEnabled="{Binding IsPremium}">
                                             <Grid ColumnDefinitions="*,Auto" Width="175">
-                                                <TextBlock Text="Her 12 saat" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.12h}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="24" IsEnabled="{Binding IsPremium}">
                                             <Grid ColumnDefinitions="*,Auto" Width="175">
-                                                <TextBlock Text="Her 24 saat" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.24h}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="48" IsEnabled="{Binding IsPremium}">
                                             <Grid ColumnDefinitions="*,Auto" Width="175">
-                                                <TextBlock Text="Her 2 günde" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.2d}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="72" IsEnabled="{Binding IsPremium}">
                                             <Grid ColumnDefinitions="*,Auto" Width="175">
-                                                <TextBlock Text="Her 3 günde" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.3d}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="168" IsEnabled="{Binding IsPremium}">
                                             <Grid ColumnDefinitions="*,Auto" Width="175">
-                                                <TextBlock Text="Her 7 günde" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.7d}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                     </ComboBox>
 
-                                    <TextBlock Text="EPG Saat Dilimi" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                    <TextBlock Text="{loc:Translate Settings.Epg.Timezone}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                     <ComboBox SelectedIndex="{Binding EpgTimeOffsetIndex, Mode=TwoWay}" Theme="{StaticResource ModernComboBox}" Width="200" HorizontalAlignment="Left" Margin="0,0,0,20">
-                                        <ComboBoxItem Content="-12 saat"/>
-                                        <ComboBoxItem Content="-11 saat"/>
-                                        <ComboBoxItem Content="-10 saat"/>
-                                        <ComboBoxItem Content="-9 saat"/>
-                                        <ComboBoxItem Content="-8 saat"/>
-                                        <ComboBoxItem Content="-7 saat"/>
-                                        <ComboBoxItem Content="-6 saat"/>
-                                        <ComboBoxItem Content="-5 saat"/>
-                                        <ComboBoxItem Content="-4 saat"/>
-                                        <ComboBoxItem Content="-3 saat"/>
-                                        <ComboBoxItem Content="-2 saat"/>
-                                        <ComboBoxItem Content="-1 saat"/>
-                                        <ComboBoxItem Content="0 (Otomatik)"/>
-                                        <ComboBoxItem Content="+1 saat"/>
-                                        <ComboBoxItem Content="+2 saat"/>
-                                        <ComboBoxItem Content="+3 saat"/>
-                                        <ComboBoxItem Content="+4 saat"/>
-                                        <ComboBoxItem Content="+5 saat"/>
-                                        <ComboBoxItem Content="+6 saat"/>
-                                        <ComboBoxItem Content="+7 saat"/>
-                                        <ComboBoxItem Content="+8 saat"/>
-                                        <ComboBoxItem Content="+9 saat"/>
-                                        <ComboBoxItem Content="+10 saat"/>
-                                        <ComboBoxItem Content="+11 saat"/>
-                                        <ComboBoxItem Content="+12 saat"/>
+                                        <ComboBoxItem Content="{Binding Source=-12, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
+                                        <ComboBoxItem Content="{Binding Source=-11, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
+                                        <ComboBoxItem Content="{Binding Source=-10, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
+                                        <ComboBoxItem Content="{Binding Source=-9, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
+                                        <ComboBoxItem Content="{Binding Source=-8, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
+                                        <ComboBoxItem Content="{Binding Source=-7, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
+                                        <ComboBoxItem Content="{Binding Source=-6, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
+                                        <ComboBoxItem Content="{Binding Source=-5, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
+                                        <ComboBoxItem Content="{Binding Source=-4, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
+                                        <ComboBoxItem Content="{Binding Source=-3, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
+                                        <ComboBoxItem Content="{Binding Source=-2, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
+                                        <ComboBoxItem Content="{Binding Source=-1, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
+                                        <ComboBoxItem Content="{loc:Translate Settings.Epg.Timezone.Auto}"/>
+                                        <ComboBoxItem Content="{Binding Source=1, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
+                                        <ComboBoxItem Content="{Binding Source=2, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
+                                        <ComboBoxItem Content="{Binding Source=3, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
+                                        <ComboBoxItem Content="{Binding Source=4, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
+                                        <ComboBoxItem Content="{Binding Source=5, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
+                                        <ComboBoxItem Content="{Binding Source=6, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
+                                        <ComboBoxItem Content="{Binding Source=7, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
+                                        <ComboBoxItem Content="{Binding Source=8, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
+                                        <ComboBoxItem Content="{Binding Source=9, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
+                                        <ComboBoxItem Content="{Binding Source=10, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
+                                        <ComboBoxItem Content="{Binding Source=11, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
+                                        <ComboBoxItem Content="{Binding Source=12, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
                                     </ComboBox>
 
                                     <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,4">
                                         <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="Özel EPG Kaynakları" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                            <TextBlock Text="{Binding CustomEpgUrls.Count, StringFormat='{}{0} kaynak eklendi'}" 
+                                            <TextBlock Text="{loc:Translate Settings.Epg.CustomSources}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{Binding CustomEpgUrls.Count, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.SourcesCountFormat'}" 
                                                        FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,2,0,0"/>
                                         </StackPanel>
                                         <Button Grid.Column="1" 
@@ -855,12 +856,12 @@
                                                 Padding="12,6" CornerRadius="6" Cursor="Hand">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <materialIcons:MaterialIcon Kind="Plus" Width="18" Height="18"/>
-                                                <TextBlock Text="Yeni Ekle" FontSize="13" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{loc:Translate Settings.Epg.AddNew}" FontSize="13" FontWeight="SemiBold"/>
                                             </StackPanel>
                                         </Button>
                                     </Grid>
 
-                                    <!-- Performans uyarısı -->
+                                    <!-- Performans uyarÄ±sÄ± -->
                                     <Border Background="#1AFFA500" 
                                             BorderBrush="#55FFA500" 
                                             BorderThickness="1" 
@@ -869,7 +870,7 @@
                                             Margin="0,4,0,8">
                                         <StackPanel Orientation="Horizontal" Spacing="8">
                                             <materialIcons:MaterialIcon Kind="AlertCircleOutline" Width="16" Height="16" Foreground="#FFA500" VerticalAlignment="Top" Margin="0,2,0,0"/>
-                                            <TextBlock Text="Fazla EPG kaynağı eklemek, uygulama açılışını yavaşlatabilir ve depolama alanını artırabilir. Sadece ihtiyacınız olan kaynakları ekleyin."
+                                            <TextBlock Text="{loc:Translate Settings.Epg.PerformanceWarning}"
                                                        TextWrapping="Wrap" FontSize="12" Foreground="#FFA500" Opacity="0.9"/>
                                         </StackPanel>
                                     </Border>
@@ -879,7 +880,7 @@
                                             <DataTemplate>
                                                 <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
                                                     <TextBox Text="{Binding Url, Mode=TwoWay}"
-                                                             Watermark="https://.../epg.xml veya .xml.gz"
+                                                             Watermark="{loc:Translate Settings.Epg.UrlPlaceholder}"
                                                              Padding="12"
                                                              Height="45"
                                                              VerticalContentAlignment="Center"/>
@@ -890,7 +891,7 @@
                                                             Margin="10,0,0,0"
                                                             Width="45" Height="45"
                                                             Padding="0"
-                                                            ToolTip.Tip="Kaynağı Kaldır">
+                                                            ToolTip.Tip="{loc:Translate Settings.Epg.RemoveSource.Tooltip}">
                                                         <materialIcons:MaterialIcon Kind="DeleteOutline" Width="20" Height="20" Foreground="{DynamicResource ErrorBrush}"/>
                                                     </Button>
                                                 </Grid>
@@ -898,8 +899,8 @@
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
 
-                                    <!-- En altta tek bir yenile butonu (opsiyonel ama kullanıcı eski haliyle alışık olabilir) -->
-                                     <!-- Tüm EPG Kaynaklarını Yenile -->
+                                    <!-- En altta tek bir yenile butonu (opsiyonel ama kullanÄ±cÄ± eski haliyle alÄ±ÅŸÄ±k olabilir) -->
+                                     <!-- TÃ¼m EPG KaynaklarÄ±nÄ± Yenile -->
                                      <Button Command="{Binding RefreshEpgNowCommand}"
                                              IsEnabled="{Binding !_mainViewModel.IsGlobalLoading}"
                                              HorizontalAlignment="Left"
@@ -912,7 +913,7 @@
                                              Cursor="Hand">
                                          <StackPanel Orientation="Horizontal" Spacing="10">
                                              <materialIcons:MaterialIcon Kind="Refresh" Width="18" Height="18" Foreground="{DynamicResource AccentBrush}"/>
-                                             <TextBlock Text="Tüm EPG Kaynaklarını Şimdi Yenile" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                             <TextBlock Text="{loc:Translate Settings.Epg.RefreshAllNow}" VerticalAlignment="Center" FontWeight="SemiBold"/>
                                          </StackPanel>
                                      </Button>
                                 </StackPanel>
@@ -926,20 +927,20 @@
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <materialIcons:MaterialIcon Kind="BellOutline" Width="20" Height="20" />
-                            <TextBlock Text="Bildirimler" VerticalAlignment="Center"/>
+                            <TextBlock Text="{loc:Translate Settings.Nav.Notifications}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,32,0">
                         <StackPanel HorizontalAlignment="Stretch" Margin="0,0,0,100">
                             <Border Classes="SettingsCard">
                                 <StackPanel>
-                                    <TextBlock Text="Uygulama Bildirimleri" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
+                                    <TextBlock Text="{loc:Translate Settings.Notifications.AppTitle}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
                                     
                                     <Grid>
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                         <StackPanel>
-                                            <TextBlock Text="İndirme Bildirimleri" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                            <TextBlock Text="İndirme tamamlandığında masaüstü bildirimi göster" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                            <TextBlock Text="{loc:Translate Settings.Notifications.Download}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{loc:Translate Settings.Notifications.DownloadDescription}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
                                         </StackPanel>
                                         <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowDownloadNotification}"/>
                                     </Grid>
@@ -954,20 +955,20 @@
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <materialIcons:MaterialIcon Kind="ShieldAccountOutline" Width="20" Height="20" />
-                            <TextBlock Text="Gizlilik" VerticalAlignment="Center"/>
+                            <TextBlock Text="{loc:Translate Settings.Nav.Privacy}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,32,0">
                         <StackPanel HorizontalAlignment="Stretch" Margin="0,0,0,100">
                             <Border Classes="SettingsCard">
                                 <StackPanel>
-                                    <TextBlock Text="İzleme Geçmişi" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
+                                    <TextBlock Text="{loc:Translate Settings.Privacy.History}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
                                     
                                     <Grid Margin="0,0,0,18">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                         <StackPanel>
-                                            <TextBlock Text="Geçmişi Kaydet" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                            <TextBlock Text="İzlediğiniz içerikleri geçmişe ekler" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                            <TextBlock Text="{loc:Translate Settings.Privacy.SaveHistory}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{loc:Translate Settings.Privacy.SaveHistoryDescription}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
                                         </StackPanel>
                                         <ToggleSwitch Grid.Column="1" IsChecked="{Binding SaveWatchHistory}"/>
                                     </Grid>
@@ -975,29 +976,29 @@
                                     <Grid Margin="0,0,0,18">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                         <StackPanel>
-                                            <TextBlock Text="Çıkışta Geçmişi Temizle" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                            <TextBlock Text="Uygulama kapandığında tüm geçmişi siler" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                            <TextBlock Text="{loc:Translate Settings.Privacy.ClearOnExit}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{loc:Translate Settings.Privacy.ClearOnExitDescription}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
                                         </StackPanel>
                                         <ToggleSwitch Grid.Column="1" IsChecked="{Binding ClearHistoryOnExit}"/>
                                     </Grid>
 
-                                    <TextBlock Text="Geçmişi Tutma Süresi" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                                    <TextBlock Text="{loc:Translate Settings.Privacy.Retention}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                     <ComboBox Theme="{StaticResource ModernComboBox}"
                                               SelectedIndex="{Binding WatchHistoryRetentionIndex}"
                                               Width="260"
                                               HorizontalAlignment="Left"
                                               Margin="0,0,0,20">
-                                        <ComboBoxItem Content="Süresiz (Her zaman tut)"/>
-                                        <ComboBoxItem Content="3 Gün"/>
-                                        <ComboBoxItem Content="7 Gün"/>
-                                        <ComboBoxItem Content="14 Gün"/>
-                                        <ComboBoxItem Content="30 Gün"/>
+                                        <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.Forever}"/>
+                                        <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.3d}"/>
+                                        <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.7d}"/>
+                                        <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.14d}"/>
+                                        <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.30d}"/>
                                     </ComboBox>
 
                                     <Separator Height="1" Background="{DynamicResource BorderBrush}" Margin="0,10,0,20"/>
 
-                                    <TextBlock Text="Tehlikeli Bölge" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource ErrorBrush}" Margin="0,0,0,12"/>
-                                    <Button Content="Tüm İzleme Geçmişini Şimdi Sil" 
+                                    <TextBlock Text="{loc:Translate Settings.Privacy.DangerZone}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource ErrorBrush}" Margin="0,0,0,12"/>
+                                    <Button Content="{loc:Translate Settings.Privacy.ClearAllNow}" 
                                             Command="{Binding ClearHistoryCommand}"
                                             Classes="ErrorButton"
                                             Padding="16,10"/>
@@ -1012,14 +1013,14 @@
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <materialIcons:MaterialIcon Kind="BrushVariant" Width="20" Height="20" />
-                            <TextBlock Text="Görünüm" VerticalAlignment="Center"/>
+                            <TextBlock Text="{loc:Translate Settings.Section.Appearance}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </TabItem.Header>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,32,0">
                         <StackPanel HorizontalAlignment="Stretch" Margin="0,0,0,100">
                             <Border Classes="SettingsCard">
                                 <StackPanel>
-                                    <TextBlock Text="Kişiselleştirme" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
+                                    <TextBlock Text="{loc:Translate Settings.Personalization.Title}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
 
                                     <!-- Theme Selection -->
                                     <Grid Margin="0,0,0,24">
@@ -1029,8 +1030,8 @@
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel>
-                                            <TextBlock Text="Tema" FontSize="16" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                            <TextBlock Text="Uygulamanın renklerini değiştirin" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                            <TextBlock Text="{loc:Translate Settings.Theme.Title}" FontSize="16" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{loc:Translate Settings.Theme.Description}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
                                         </StackPanel>
 
                                         <!-- Theme Options -->
@@ -1052,7 +1053,7 @@
                                                             </Border>
                                                         </Grid>
                                                     </Border>
-                                                    <TextBlock Text="Koyu" FontSize="12" Foreground="{DynamicResource ThemePreviewDarkLabelBrush}" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
+                                                    <TextBlock Text="{loc:Translate Settings.Theme.Dark}" FontSize="12" Foreground="{DynamicResource ThemePreviewDarkLabelBrush}" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
                                                 </Grid>
                                             </Border>
 
@@ -1073,7 +1074,7 @@
                                                             </Border>
                                                         </Grid>
                                                     </Border>
-                                                    <TextBlock Text="Açık" FontSize="12" Foreground="{DynamicResource ThemePreviewLightLabelBrush}" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
+                                                    <TextBlock Text="{loc:Translate Settings.Theme.Light}" FontSize="12" Foreground="{DynamicResource ThemePreviewLightLabelBrush}" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,6"/>
                                                 </Grid>
                                             </Border>
                                         </StackPanel>
@@ -1088,8 +1089,8 @@
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel>
-                                            <TextBlock Text="Uygulama Dili" FontSize="16" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                            <TextBlock Text="Arayüz dilini değiştirin" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                            <TextBlock Text="{loc:Translate Settings.Language.Title}" FontSize="16" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{loc:Translate Settings.Language.Description}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
                                         </StackPanel>
 
                                         <ComboBox Grid.Column="1"
@@ -1097,11 +1098,11 @@
                                                   SelectedValue="{Binding AppLanguage, Mode=TwoWay}"
                                                   SelectedValueBinding="{Binding Tag}"
                                                   Width="180">
-                                            <ComboBoxItem Content="Türkçe" Tag="tr"/>
-                                            <ComboBoxItem Content="English" Tag="en"/>
-                                            <ComboBoxItem Content="Deutsch" Tag="de"/>
-                                            <ComboBoxItem Content="Français" Tag="fr"/>
-                                            <ComboBoxItem Content="Español" Tag="es"/>
+                                            <ComboBoxItem Content="{loc:Translate Language.Turkish}" Tag="tr"/>
+                                            <ComboBoxItem Content="{loc:Translate Language.English}" Tag="en"/>
+                                            <ComboBoxItem Content="{loc:Translate Language.German}" Tag="de"/>
+                                            <ComboBoxItem Content="{loc:Translate Language.French}" Tag="fr"/>
+                                            <ComboBoxItem Content="{loc:Translate Language.Spanish}" Tag="es"/>
                                         </ComboBox>
                                     </Grid>
 
@@ -1154,7 +1155,7 @@
                                                             <TextBlock Text="PREMIUM" FontSize="11" FontWeight="ExtraBold" Foreground="Black"/>
                                                         </Border>
                                                     </StackPanel>
-                                                    <TextBlock Text="{Binding CurrentVersion, StringFormat='Sürüm {0} (Noctra Suite)'}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                                    <TextBlock Text="{Binding CurrentVersion, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.About.PremiumVersionFormat'}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
                                                 </StackPanel>
                                             </Grid>
                                         </Panel>
@@ -1182,7 +1183,7 @@
                                             <!-- App Info -->
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                 <TextBlock Text="Noctra" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                                <TextBlock Text="{Binding CurrentVersion, StringFormat='Sürüm {0}'}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                                <TextBlock Text="{Binding CurrentVersion, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.About.VersionFormat'}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
                                             </StackPanel>
 
                                             <!-- UPGRADE BUTTON -->
@@ -1196,7 +1197,7 @@
                                                     Cursor="Hand">
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                                     <materialIcons:MaterialIcon Kind="Crown" Width="16" Height="16"/>
-                                                    <TextBlock Text="Premium'a Geç" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{loc:Translate Settings.About.UpgradeToPremium}" FontWeight="SemiBold"/>
                                                 </StackPanel>
                                             </Button>
                                         </Grid>
@@ -1210,7 +1211,7 @@
                                     <StackPanel VerticalAlignment="Center" Spacing="2">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <materialIcons:MaterialIcon Kind="Update" Width="18" Height="18" Foreground="{DynamicResource AccentBrush}"/>
-                                            <TextBlock Text="Uygulama Güncellemesi" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{loc:Translate Settings.Update.Title}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                         </StackPanel>
                                         <TextBlock Text="{Binding UpdateStatusText}"
                                                    FontSize="12"
@@ -1229,7 +1230,7 @@
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <materialIcons:MaterialIcon Kind="Refresh" Width="14" Height="14" IsVisible="{Binding !IsCheckingUpdates}"/>
                                                 <ProgressBar IsIndeterminate="True" Width="14" Height="14" Margin="0" IsVisible="{Binding IsCheckingUpdates}" Theme="{StaticResource FluentProgressBar}"/>
-                                                <TextBlock Text="Güncelleştirmeleri Denetle" FontSize="13"/>
+                                                <TextBlock Text="{loc:Translate Settings.Update.CheckNow}" FontSize="13"/>
                                             </StackPanel>
                                         </Button>
                                         
@@ -1242,7 +1243,7 @@
                                                 IsVisible="{Binding IsUpdateAvailable}">
                                             <StackPanel Orientation="Horizontal" Spacing="8">
                                                 <materialIcons:MaterialIcon Kind="Download" Width="16" Height="16"/>
-                                                <TextBlock Text="Şimdi Güncelle" FontWeight="Bold" FontSize="13"/>
+                                                <TextBlock Text="{loc:Translate Settings.Update.UpdateNow}" FontWeight="Bold" FontSize="13"/>
                                             </StackPanel>
                                         </Button>
                                     </StackPanel>
@@ -1258,15 +1259,15 @@
                 <Grid ColumnDefinitions="Auto,*,Auto">
                     <!-- Left Actions -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12">
-                        <Button Content="Varsayılanlara Sıfırla" Command="{Binding ResetToDefaultsCommand}" 
-                                HorizontalAlignment="Left" Padding="20,10"/>
+                        <Button Content="{loc:Translate Settings.Action.ResetDefaults}" Command="{Binding ResetToDefaultsCommand}" 
+                                HorizontalAlignment="Left" Padding="12,8"/>
                         
                         <Button Command="{Binding ReportBugCommand}" 
                                 Background="Transparent" BorderBrush="#E50914" BorderThickness="1" 
-                                Padding="16,10" CornerRadius="6">
+                                Padding="12,8" CornerRadius="6">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <materialIcons:MaterialIcon Kind="BugOutline" Width="18" Height="18" Foreground="#E50914"/>
-                                <TextBlock Text="Hata Bildir" Foreground="#E50914" VerticalAlignment="Center" FontSize="14"/>
+                                <TextBlock Text="{loc:Translate Settings.Action.ReportBug}" Foreground="#E50914" VerticalAlignment="Center" FontSize="14"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>
@@ -1284,9 +1285,9 @@
                     
                     <!-- Save Button (Right) -->
                     <Button Grid.Column="2" 
-                            Content="Ayarları Kaydet" 
+                            Content="{loc:Translate Settings.Action.SaveSettings}" 
                             Command="{Binding SaveSettingsCommand}" 
-                            Padding="32,12" 
+                            Padding="20,10" 
                             FontSize="15"
                             HorizontalAlignment="Right"/>
                 </Grid>
@@ -1308,7 +1309,7 @@
                                   Stretch="Uniform"
                                   VerticalAlignment="Center" HorizontalAlignment="Center"/>
                         </controls:PremiumSpinner>
-                        <TextBlock Text="{Binding GlobalLoadingMessage}" 
+                        <TextBlock Text="{loc:Translate Common.Loading}" 
                                    Foreground="{DynamicResource TextPrimaryBrush}" 
                                    FontSize="18" 
                                    FontWeight="SemiBold"

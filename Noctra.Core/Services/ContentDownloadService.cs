@@ -23,6 +23,7 @@ public class ContentDownloadService : IContentDownloadService
     private readonly ISettingsService _settingsService;
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly HttpClient _httpClient;
+    private readonly ILocalizationService _localizationService;
     private readonly ILogger<ContentDownloadService>? _logger;
     private readonly SemaphoreSlim _queueSignal = new(0);
     private readonly ConcurrentQueue<int> _pendingIds = new();
@@ -42,11 +43,13 @@ public class ContentDownloadService : IContentDownloadService
         ISettingsService settingsService,
         IDbContextFactory<AppDbContext> contextFactory,
         HttpClient httpClient,
+        ILocalizationService localizationService,
         ILogger<ContentDownloadService>? logger = null)
     {
         _settingsService = settingsService;
         _contextFactory = contextFactory;
         _httpClient = httpClient;
+        _localizationService = localizationService;
         _logger = logger;
 
         // Ensure worker starts on app launch to process pending/interrupted downloads
@@ -59,18 +62,18 @@ public class ContentDownloadService : IContentDownloadService
     {
         if (request.ProfileId <= 0)
         {
-            return new DownloadContentResult(false, false, "Profil bulunamadi.");
+            return new DownloadContentResult(false, false, _localizationService.GetString("Download.Error.ProfileNotFound"));
         }
 
         if (string.IsNullOrWhiteSpace(request.SourceUrl))
         {
-            return new DownloadContentResult(false, false, "Indirme URL'i gecersiz.");
+            return new DownloadContentResult(false, false, _localizationService.GetString("Download.Error.InvalidUrl"));
         }
 
         var normalizedSource = request.SourceUrl.Trim().Trim('"', '\'');
         if (IsLocalFilePath(normalizedSource))
         {
-            return new DownloadContentResult(true, true, "İçerik zaten yerel indirildi.");
+            return new DownloadContentResult(true, true, _localizationService.GetString("Download.Status.AlreadyDownloaded"));
         }
 
         using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
@@ -87,10 +90,10 @@ public class ContentDownloadService : IContentDownloadService
         {
             if (duplicate.IsCompleted)
             {
-                return new DownloadContentResult(true, true, "İçerik daha önce indirildi.", duplicate.Id);
+                return new DownloadContentResult(true, true, _localizationService.GetString("Download.Status.AlreadyDownloaded"), duplicate.Id);
             }
 
-            return new DownloadContentResult(true, true, "İndirme zaten kuyrukta.", duplicate.Id);
+            return new DownloadContentResult(true, true, _localizationService.GetString("Download.Status.AlreadyInQueue"), duplicate.Id);
         }
 
         var item = new DownloadItem
@@ -100,7 +103,7 @@ public class ContentDownloadService : IContentDownloadService
             ChannelId = request.ChannelId > 0 ? request.ChannelId : null,
             EpisodeId = request.EpisodeId > 0 ? request.EpisodeId : null,
             ChannelType = request.ItemType == DownloadItemType.SeriesEpisode ? ChannelType.Series : ChannelType.VOD,
-            DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? "İçerik" : request.DisplayName.Trim(),
+            DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? _localizationService.GetString("Download.DefaultName") : request.DisplayName.Trim(),
             PosterUrl = request.PosterUrl,
             SourceUrl = normalizedSource,
             AudioTracksJson = SerializeTrackList(request.AudioTracks),
@@ -125,7 +128,7 @@ public class ContentDownloadService : IContentDownloadService
 
         EnsureQueueWorkerStarted();
         DownloadsChanged?.Invoke(this, EventArgs.Empty);
-        return new DownloadContentResult(true, false, "İndirme kuyruğa eklendi.", item.Id);
+        return new DownloadContentResult(true, false, _localizationService.GetString("Download.Status.AddedToQueue"), item.Id);
     }
 
     public Task<string> ResolvePlayableUrlAsync(
@@ -350,7 +353,7 @@ public class ContentDownloadService : IContentDownloadService
         if (isMissingFiles)
         {
             item.Status = DownloadStatus.Failed;
-            item.ErrorMessage = "İndirme dosyaları klasörden silinmiş veya bulunamıyor. Lütfen tekrar indirmeyi deneyin.";
+            item.ErrorMessage = _localizationService.GetString("Download.Error.MissingFiles");
             item.BytesDownloaded = 0;
             item.SpeedBytesPerSecond = 0;
             item.EstimatedSecondsRemaining = null;
@@ -431,7 +434,7 @@ public class ContentDownloadService : IContentDownloadService
                 if (isMissingFiles)
                 {
                     item.Status = DownloadStatus.Failed;
-                    item.ErrorMessage = "İndirme dosyaları klasörden silinmiş veya bulunamıyor. Lütfen tekrar indirmeyi deneyin.";
+                    item.ErrorMessage = _localizationService.GetString("Download.Error.MissingFiles");
                     item.BytesDownloaded = 0;
                     item.SpeedBytesPerSecond = 0;
                     item.EstimatedSecondsRemaining = null;
@@ -566,7 +569,7 @@ public class ContentDownloadService : IContentDownloadService
             using var response = await SendFirstSuccessfulRequestAsync(candidates, resumedBytes, localCts.Token);
             if (response == null)
             {
-                await MarkInterruptedAsPausedAsync(downloadId, "Sunucudan yanıt alınamadı, devam etmek için 'Devam Et' kullanın.");
+                await MarkInterruptedAsPausedAsync(downloadId, _localizationService.GetString("Download.Error.NoResponse"));
                 return;
             }
 
@@ -574,9 +577,9 @@ public class ContentDownloadService : IContentDownloadService
             {
                 var errorMsg = response.StatusCode switch
                 {
-                    System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden => "Yetkisiz erişim. Hesap süresi dolmuş veya iptal edilmiş olabilir.",
-                    System.Net.HttpStatusCode.NotFound => "İçerik bulunamadı. Kaynak silinmiş veya sağlayıcı değiştirilmiş olabilir.",
-                    _ => $"Sunucu hatası: {(int)response.StatusCode}"
+                    System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden => _localizationService.GetString("Download.Error.Unauthorized"),
+                    System.Net.HttpStatusCode.NotFound => _localizationService.GetString("Download.Error.NotFound"),
+                    _ => string.Format(_localizationService.GetString("Download.Error.ServerFormat"), (int)response.StatusCode)
                 };
                 
                 // Clear any auto resume attempts so it doesn't loop
@@ -657,7 +660,7 @@ public class ContentDownloadService : IContentDownloadService
 
             if (downloaded <= 0)
             {
-                await MarkFailedAsync(downloadId, "İndirme tamamlanamadı (boş dosya).");
+                await MarkFailedAsync(downloadId, _localizationService.GetString("Download.Error.EmptyFile"));
                 TryDeleteFile(plainTempPath);
                 TryDeleteFile(finalPath);
                 return;
@@ -686,7 +689,7 @@ public class ContentDownloadService : IContentDownloadService
 
                     await TryAutoResumeAfterTransientInterruptionAsync(
                         downloadId,
-                        $"Sunucu yaniti erken sonlandi ({FormatBytes(downloaded)}/{FormatBytes(totalBytes.Value)}).");
+                        string.Format(_localizationService.GetString("Download.Error.EarlyEndFormat"), FormatBytes(downloaded), FormatBytes(totalBytes.Value)));
                     return;
                 }
             }
@@ -707,7 +710,7 @@ public class ContentDownloadService : IContentDownloadService
             {
                 // Network timeout/interruption can also throw OperationCanceledException.
                 // Do not delete artifacts unless user explicitly canceled.
-                await MarkInterruptedAsPausedAsync(downloadId, "Bağlantı kesildi, devam etmek için 'Devam Et' kullanın.");
+                await MarkInterruptedAsPausedAsync(downloadId, _localizationService.GetString("Download.Error.Disconnected"));
             }
         }
         catch (Exception ex)
@@ -720,7 +723,7 @@ public class ContentDownloadService : IContentDownloadService
             else
             {
                 _autoResumeAttempts.TryRemove(downloadId, out _);
-                await MarkInterruptedAsPausedAsync(downloadId, UserFriendlyErrorMessage.WithPrefix("İndirme durduruldu", ex));
+                await MarkInterruptedAsPausedAsync(downloadId, UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Download.Error.Stopped"), ex));
             }
         }
         finally
@@ -786,14 +789,14 @@ public class ContentDownloadService : IContentDownloadService
             _autoResumeAttempts.TryRemove(downloadId, out _);
             await MarkInterruptedAsPausedAsync(
                 downloadId,
-                $"Indirme durduruldu: baglanti birden fazla kez kesildi. Lutfen 'Devam Et' ile tekrar deneyin.");
+                _localizationService.GetString("Download.Error.TooManyRetries"));
             return;
         }
 
         var safeDetail = UserFriendlyErrorMessage.FromText(detail);
         await MarkInterruptedAsPausedAsync(
             downloadId,
-            $"Baglanti kesildi, otomatik devam deneniyor ({attempt}/{MaxAutoResumeAttempts}). {safeDetail}");
+            string.Format(_localizationService.GetString("Download.Status.AutoResumingFormat"), attempt, MaxAutoResumeAttempts, safeDetail));
 
         var delayMs = Math.Min(4500, 1200 * attempt);
         await Task.Delay(delayMs);
@@ -1308,9 +1311,9 @@ public class ContentDownloadService : IContentDownloadService
         return $"{value:0.##} {units[unitIndex]}";
     }
 
-    private static string BuildSafeFileName(string rawName)
+    private string BuildSafeFileName(string rawName)
     {
-        var value = string.IsNullOrWhiteSpace(rawName) ? "icerik" : rawName.Trim();
+        var value = string.IsNullOrWhiteSpace(rawName) ? _localizationService.GetString("Download.DefaultName") : rawName.Trim();
         foreach (var invalid in Path.GetInvalidFileNameChars())
         {
             value = value.Replace(invalid, '_');
@@ -1358,7 +1361,7 @@ public class ContentDownloadService : IContentDownloadService
         return basePath;
     }
 
-    private static string EnsureItemDownloadDirectory(string profilePath, DownloadItem item)
+    private string EnsureItemDownloadDirectory(string profilePath, DownloadItem item)
     {
         var category = item.ChannelType == ChannelType.Series ? "Series" : "Movies";
         var categoryPath = Path.Combine(profilePath, category);
@@ -1400,7 +1403,7 @@ public class ContentDownloadService : IContentDownloadService
     /// folder whose normalized name fuzzy-matches the given series name.
     /// Returns null if no match is found.
     /// </summary>
-    private static string? FindMatchingSeriesFolder(string categoryPath, string newSeriesName)
+    private string? FindMatchingSeriesFolder(string categoryPath, string newSeriesName)
     {
         if (!Directory.Exists(categoryPath))
             return null;
@@ -1447,7 +1450,7 @@ public class ContentDownloadService : IContentDownloadService
         return sb.ToString();
     }
 
-    private static string BuildItemFileStem(DownloadItem item)
+    private string BuildItemFileStem(DownloadItem item)
     {
         if (string.IsNullOrWhiteSpace(item.DisplayName)) return "download";
 
@@ -1472,7 +1475,7 @@ public class ContentDownloadService : IContentDownloadService
 
         if (!isUnmetered)
         {
-            message = "Sadece Wi-Fi veya Ethernet üzerinden indirme yapılabilir (ayarlardan değiştirilebilir).";
+            message = _localizationService.GetString("Download.Error.WifiOnly");
             return false;
         }
 

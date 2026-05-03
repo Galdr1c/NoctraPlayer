@@ -121,7 +121,8 @@ namespace Noctra.Tests
                 new Mock<IM3UParser>().Object,
                 new Mock<IXtreamCodesService>().Object,
                 new Mock<IStalkerPortalService>().Object,
-                _securityService
+                _securityService,
+                new Mock<ILocalizationService>().Object
             );
 
             // Assert

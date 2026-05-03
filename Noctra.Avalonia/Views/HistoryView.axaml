@@ -7,6 +7,7 @@
              xmlns:controls="using:Noctra.Avalonia.Controls"
              xmlns:views="using:Noctra.Avalonia.Views"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:loc="using:Noctra.Avalonia.Localization"
              mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="600"
              x:Class="Noctra.Avalonia.Views.HistoryView"
              x:DataType="vm:MainViewModel">
@@ -14,10 +15,10 @@
                   ScrollChanged="HistoryScrollViewer_ScrollChanged"
                   IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.History}}">
           <StackPanel Margin="24">
-            <TextBlock Text="Geçmiş" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
+            <TextBlock Text="{loc:Translate History.Title}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
             
             <!-- Canlı TV Bölümü -->
-            <TextBlock Text="Canlı TV" FontSize="20" LetterSpacing="1" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"
+            <TextBlock Text="{loc:Translate History.LiveTv}" FontSize="20" LetterSpacing="1" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"
                        IsVisible="{Binding HistoryLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
             <ItemsControl ItemsSource="{Binding HistoryLiveChannels}" IsVisible="{Binding HistoryLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
@@ -26,7 +27,7 @@
                   <controls:LiveTvCard Margin="0,0,16,16">
                     <controls:LiveTvCard.ContextMenu>
                       <ContextMenu>
-                        <MenuItem Header="Geçmişten Sil" 
+                        <MenuItem Header="{loc:Translate History.Remove}" 
                                   Command="{Binding #HistoryScrollViewer.((vm:MainViewModel)DataContext).RemoveFromHistoryCommand}"
                                   CommandParameter="{Binding}">
                           <MenuItem.Icon>
@@ -41,7 +42,7 @@
             </ItemsControl>
 
             <!-- Diziler Bölümü (SeriesCard ile) -->
-            <TextBlock Text="Diziler" FontSize="20" LetterSpacing="1" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,12"
+            <TextBlock Text="{loc:Translate History.Series}" FontSize="20" LetterSpacing="1" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,12"
                        IsVisible="{Binding HistorySeriesItems.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
             <ItemsControl ItemsSource="{Binding HistorySeriesItems}" IsVisible="{Binding HistorySeriesItems.Count, Converter={StaticResource CountToVisibilityConverter}}">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
@@ -53,7 +54,7 @@
             </ItemsControl>
 
             <!-- Filmler Bölümü -->
-            <TextBlock Text="Filmler" FontSize="20" LetterSpacing="1" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,12"
+            <TextBlock Text="{loc:Translate History.Movies}" FontSize="20" LetterSpacing="1" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,12"
                        IsVisible="{Binding HistoryVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
             <ItemsControl ItemsSource="{Binding HistoryVodChannels}" IsVisible="{Binding HistoryVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
@@ -68,8 +69,8 @@
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0"
                         IsVisible="{Binding ShowHistoryEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
               <materialIcons:MaterialIcon Kind="History" Width="64" Height="64" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5"/>
-              <TextBlock Text="Geçmiş boş" FontSize="20" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,16,0,4" TextAlignment="Center"/>
-              <TextBlock Text="İzlediğiniz içerikler burada listelenecek." FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
+              <TextBlock Text="{loc:Translate History.Empty.Title}" FontSize="20" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,16,0,4" TextAlignment="Center"/>
+              <TextBlock Text="{loc:Translate History.Empty.Description}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
             </StackPanel>
           </StackPanel>
         </ScrollViewer>

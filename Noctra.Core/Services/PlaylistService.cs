@@ -27,6 +27,7 @@ public partial class PlaylistService : IPlaylistService
     private readonly IEpgService _epgService;
     private readonly HttpClient _httpClient;
     private readonly ISettingsService _settingsService;
+    private readonly ILocalizationService _localizationService;
 
     public PlaylistService(
         IDbContextFactory<AppDbContext> contextFactory, 
@@ -37,7 +38,7 @@ public partial class PlaylistService : IPlaylistService
         EpgSourceResolver epgSourceResolver,
         IEpgService epgService,
         HttpClient httpClient,
-        ISettingsService settingsService)
+        ISettingsService settingsService, ILocalizationService localizationService)
     {
         _contextFactory = contextFactory;
         _parser = parser;
@@ -48,6 +49,7 @@ public partial class PlaylistService : IPlaylistService
         _epgService = epgService;
         _httpClient = httpClient;
         _settingsService = settingsService;
+        _localizationService = localizationService;
     }
 
     public async Task<Playlist> AddFromUrlAsync(string name, string url, int? profileId = null)
@@ -125,7 +127,7 @@ public partial class PlaylistService : IPlaylistService
 
             if (channels.Count == 0)
             {
-                throw new InvalidOperationException("Playlist parse sonucu boş. İndirme başarısız veya liste geçersiz.");
+                throw new InvalidOperationException(_localizationService.GetString("Playlist.Error.ParseEmpty"));
             }
 
             // Otomatik organizasyon: dedup, kategorize, sıralama
@@ -271,7 +273,7 @@ public partial class PlaylistService : IPlaylistService
 
                     if (usedEpgUrl == null && string.IsNullOrWhiteSpace(autoEpgError))
                     {
-                        autoEpgError = "Otomatik EPG kaynagindan veri alinamadi.";
+                        autoEpgError = _localizationService.GetString("Playlist.Error.NoAutoEpg");
                     }
 
                     using var db = await _contextFactory.CreateDbContextAsync();
@@ -701,7 +703,7 @@ public partial class PlaylistService : IPlaylistService
             .FirstOrDefaultAsync(p => p.Id == playlistId);
 
         if (playlist == null)
-            throw new KeyNotFoundException($"Playlist bulunamadı: {playlistId}");
+            throw new KeyNotFoundException(string.Format(_localizationService.GetString("Playlist.Error.NotFound"), playlistId));
 
         RemotePlaylistMetadata? latestRemoteMetadata = null;
         if (!string.IsNullOrWhiteSpace(playlist.Url))
@@ -745,7 +747,7 @@ public partial class PlaylistService : IPlaylistService
         }
         else
         {
-            throw new InvalidOperationException("Playlist'in URL veya dosya yolu yok");
+            throw new InvalidOperationException(_localizationService.GetString("Playlist.Error.NoSource"));
         }
 
         // Organizasyon pipeline'ı uygula
@@ -757,7 +759,7 @@ public partial class PlaylistService : IPlaylistService
         }
         else if (organizedChannels.Count == 0)
         {
-            throw new InvalidOperationException("Playlist parse sonucu boş. Silme işlemi veri güvenliği için iptal edildi.");
+            throw new InvalidOperationException(_localizationService.GetString("Playlist.Error.EmptyNoDelete"));
         }
 
         if (playlist.Profile?.IsChild == true)

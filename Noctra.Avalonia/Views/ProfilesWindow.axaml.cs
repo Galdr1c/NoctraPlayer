@@ -22,6 +22,7 @@ public partial class ProfilesWindow : Window
     private readonly IProfileService _profileService;
     private readonly MainWindow _mainWindow;
     private readonly MainViewModel _mainViewModel;
+    private readonly ILocalizationService _localizationService;
     private bool _autoSelectTriggered;
     private int _isAddProfileWindowOpen; // 0 = closed, 1 = open
 
@@ -36,7 +37,8 @@ public partial class ProfilesWindow : Window
             ((App)Application.Current!).Services.GetRequiredService<ISecurityService>(),
             ((App)Application.Current!).Services.GetRequiredService<IProfileService>(),
             ((App)Application.Current!).Services.GetRequiredService<MainWindow>(),
-            ((App)Application.Current!).Services.GetRequiredService<MainViewModel>())
+            ((App)Application.Current!).Services.GetRequiredService<MainViewModel>(),
+            ((App)Application.Current!).Services.GetRequiredService<ILocalizationService>())
     {
     }
 
@@ -48,7 +50,8 @@ public partial class ProfilesWindow : Window
         ISecurityService securityService,
         IProfileService profileService,
         MainWindow mainWindow,
-        MainViewModel mainViewModel)
+        MainViewModel mainViewModel,
+        ILocalizationService localizationService)
     {
         InitializeComponent();
         _viewModel = viewModel;
@@ -59,6 +62,7 @@ public partial class ProfilesWindow : Window
         _profileService = profileService;
         _mainWindow = mainWindow;
         _mainViewModel = mainViewModel;
+        _localizationService = localizationService;
 
         DataContext = _viewModel;
         _viewModel.RequestClose += ViewModel_RequestClose;
@@ -69,21 +73,18 @@ public partial class ProfilesWindow : Window
     }
 
     // ── PIN Doğrulama — Merkezi Geçit ─────────────────────────────────
-    /// <summary>
-    /// PIN varsa doğrulama penceresi açar.
-    /// true = geçebilir, false = reddedildi/iptal/unuttum
-    /// </summary>
-    private async Task<bool> VerifyPinIfRequired(Profile profile, string purpose = "giriş")
+    private async Task<bool> VerifyPinIfRequired(Profile profile, string purposeKey = "Profiles.Pin.Purpose.Login")
     {
         if (string.IsNullOrEmpty(profile.PinHash))
-            return true; // PIN yok, direkt geç
+            return true;
 
         var pinVm = new PinEntryViewModel(
             _securityService,
             profile.PinHash,
             profile.Name,
             profile.Avatar,
-            purpose);
+            _localizationService.GetString(purposeKey),
+            _localizationService);
 
         var pinWindow = new PinEntryWindow(pinVm);
         bool? result = null;
@@ -96,7 +97,6 @@ public partial class ProfilesWindow : Window
 
         await pinWindow.ShowDialog(this);
 
-        // null = "Şifremi unuttum" tıklandı
         if (result == null)
         {
             await HandleForgotPin(profile);
@@ -110,12 +110,8 @@ public partial class ProfilesWindow : Window
     private async Task HandleForgotPin(Profile profile)
     {
         var confirmed = await _dialogService.ShowConfirmationAsync(
-            "PIN'inizi mi Unuttunuz?",
-            $"'{profile.Name}' profiline erişmek için PIN gerekiyor.\n\n" +
-            "PIN kurtarma seçeneği yoktur.\n\n" +
-            "\"Evet\" seçeneği ile profil 3 gün içinde kalıcı olarak silinir. " +
-            "Bu süre içinde PIN'inizi hatırlayıp profile girerseniz silme işlemi iptal edilir.\n\n" +
-            "Silme başlatılsın mı?");
+            _localizationService.GetString("Profiles.Pin.Forgot.Title"),
+            string.Format(_localizationService.GetString("Profiles.Pin.Forgot.MessageFormat"), profile.Name));
 
         if (!confirmed) return;
 
@@ -123,9 +119,8 @@ public partial class ProfilesWindow : Window
         await _viewModel.RefreshProfilesAsync();
 
         await _dialogService.ShowMessageAsync(
-            "Silme Zamanlandı",
-            $"'{profile.Name}' profili 3 gün içinde silinecek.\n\n" +
-            "Bu süre içinde PIN'inizi hatırlayıp profile girerseniz silme işlemi otomatik iptal edilir.");
+            _localizationService.GetString("Profiles.Pin.Forgot.ScheduledTitle"),
+            string.Format(_localizationService.GetString("Profiles.Pin.Forgot.ScheduledMessageFormat"), profile.Name));
     }
 
     private void Close_Click(object? sender, RoutedEventArgs e)
@@ -147,7 +142,7 @@ public partial class ProfilesWindow : Window
         }
         catch (Exception ex)
         {
-            await _dialogService.ShowErrorAsync("Hata", "Ayarlar penceresi açılamadı.", ex);
+            await _dialogService.ShowErrorAsync(_localizationService.GetString("Settings.Error.Title"), _localizationService.GetString("Settings.Error.OpenFailed"), ex);
         }
     }
 
@@ -162,7 +157,7 @@ public partial class ProfilesWindow : Window
         if (vm.IsManageMode)
         {
             // PIN kontrolü — düzenleme için
-            if (!await VerifyPinIfRequired(profile, "bu profili düzenlemek"))
+            if (!await VerifyPinIfRequired(profile, "Profiles.Pin.Purpose.Edit"))
                 return;
 
             vm.EditProfileCommand.Execute(profile);
@@ -170,7 +165,7 @@ public partial class ProfilesWindow : Window
         }
 
         // Normal mod — giriş: PIN kontrolü
-        if (!await VerifyPinIfRequired(profile, "bu profile girmek"))
+        if (!await VerifyPinIfRequired(profile, "Profiles.Pin.Purpose.Enter"))
             return;
 
         // PIN doğru girildi — eğer geri sayım aktifse iptal et
@@ -180,8 +175,8 @@ public partial class ProfilesWindow : Window
             await _viewModel.RefreshProfilesAsync();
 
             await _dialogService.ShowMessageAsync(
-                "Profil Kurtarıldı!",
-                $"'{profile.Name}' profili silme işlemi iptal edildi. Profil güvende.");
+                _localizationService.GetString("Profiles.Pin.Recovered.Title"),
+                string.Format(_localizationService.GetString("Profiles.Pin.Recovered.MessageFormat"), profile.Name));
         }
 
         vm.SelectProfileCommand.Execute(profile);
@@ -195,7 +190,7 @@ public partial class ProfilesWindow : Window
         }
 
         // PIN kontrolü — silme için
-        if (!await VerifyPinIfRequired(profile, "bu profili silmek"))
+        if (!await VerifyPinIfRequired(profile, "Profiles.Pin.Purpose.Delete"))
             return;
 
         vm.DeleteProfileCommand.Execute(profile);
@@ -230,7 +225,7 @@ public partial class ProfilesWindow : Window
         }
         catch (Exception ex)
         {
-            _mainViewModel.StatusMessage = $"Profil yükleme hatası: {ex.Message}";
+            _mainViewModel.StatusMessage = $"{_localizationService.GetString("Profiles.Error.Loading")}: {ex.Message}";
         }
     }
 
@@ -246,14 +241,14 @@ public partial class ProfilesWindow : Window
 
             if (reloadedProfile == null)
             {
-                _mainViewModel.StatusMessage = "Profil bulunamadi.";
+                _mainViewModel.StatusMessage = _localizationService.GetString("Profiles.Error.NotFound");
                 return;
             }
 
             // Create and show loading window
             var loadingVm = ((App)Application.Current!).Services.GetRequiredService<ProfileLoadingViewModel>();
             loadingVm.SetProfile(reloadedProfile);
-            loadingVm.StatusMessage = "Profil verileri hazırlanıyor...";
+            loadingVm.StatusMessage = _localizationService.GetString("Profiles.Status.Preparing");
             
             loadingWindow = new ProfileLoadingWindow(loadingVm);
             loadingWindow.Show();
@@ -302,7 +297,7 @@ public partial class ProfilesWindow : Window
             if (loadingWindow != null && loadingWindow.DataContext is ProfileLoadingViewModel loadingVm)
             {
                 loadingVm.IsError = true;
-                loadingVm.StatusMessage = $"Hata: {ex.Message}";
+                loadingVm.StatusMessage = $"{_localizationService.GetString("Settings.Error.Title")}: {ex.Message}";
                 
                 // Show the error in red for a bit before returning
                 await Task.Delay(3000);

@@ -5,10 +5,11 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:Noctra.ViewModels"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        xmlns:loc="using:Noctra.Avalonia.Localization"
         mc:Ignorable="d"
         x:DataType="vm:AddProfileViewModel"
         x:CompileBindings="False"
-        Title="Profil Ayarları" Height="700" Width="950"
+        Title="{loc:Translate Profiles.Account.Settings}" Height="700" Width="950"
         MinHeight="550" MinWidth="800"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
@@ -137,7 +138,7 @@
             <Button Click="Cancel_Click" Classes="CloseBtn" 
                     HorizontalAlignment="Right" VerticalAlignment="Top" 
                     Margin="16" Width="32" Height="32"
-                    CornerRadius="16" ToolTip.Tip="Kapat">
+                    CornerRadius="16" ToolTip.Tip="{loc:Translate Profiles.Close.Tooltip}">
                 <materialIcons:MaterialIcon Kind="Close" Width="20" Height="20"/>
             </Button>
 
@@ -152,15 +153,15 @@
                     <!-- Header -->
                     <StackPanel Grid.Row="0" Margin="0,0,0,40">
                         <Panel HorizontalAlignment="Center">
-                            <TextBlock Text="Profili Düzenle" FontSize="56" FontWeight="Medium" 
+                            <TextBlock Text="{loc:Translate Profiles.Edit.Title}" FontSize="56" FontWeight="Medium" 
                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                        IsVisible="{Binding EditingProfile, Converter={StaticResource NullToVisibilityConverter}}"/>
-                            <TextBlock Text="Profil Ekle" FontSize="56" FontWeight="Medium" 
+                            <TextBlock Text="{loc:Translate Profiles.Add.Title}" FontSize="56" FontWeight="Medium" 
                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                        IsVisible="{Binding EditingProfile, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}"/>
                         </Panel>
                         
-                        <TextBlock Text="Noctra izleyen başka bir kişi için profil ekleyin." FontSize="18" 
+                        <TextBlock Text="{loc:Translate Profiles.Add.Description}" FontSize="18" 
                                    Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" Margin="0,5,0,0"/>
                         <Rectangle Height="1" Fill="{DynamicResource BorderBrush}" Margin="0,30,0,0" Width="800"/>
                     </StackPanel>
@@ -207,17 +208,17 @@
                         <!-- Info Column -->
                         <StackPanel Grid.Column="1" VerticalAlignment="Top">
                             <!-- Profile Name -->
-                            <TextBlock Text="Profil Adı" Foreground="{DynamicResource TextMutedBrush}" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"/>
+                            <TextBlock Text="{loc:Translate Profiles.Add.ProfileName}" Foreground="{DynamicResource TextMutedBrush}" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"/>
                             <TextBox Text="{Binding ProfileName}" 
                                      Height="52"
-                                     Watermark="İsim girin"/>
+                                     Watermark="{loc:Translate Profiles.Add.ProfileNamePlaceholder}"/>
 
-                            <CheckBox Content="Çocuk Profili" 
+                            <CheckBox Content="{loc:Translate Profiles.Add.IsChild}" 
                                       IsChecked="{Binding IsChild}"
                                       IsEnabled="{Binding CanEditIsChild}"
                                       IsVisible="{Binding IsChildVisible}"
                                       Margin="4,16,0,0"
-                                      ToolTip.Tip="Çocuklara özel içerikler gösterilir. Yine de kontrol etmeniz önerilir."/>
+                                      ToolTip.Tip="{loc:Translate Profiles.Add.IsChildTooltip}"/>
 
                             <!-- PIN Management Section -->
                             <Border Background="{DynamicResource Surface1Brush}" CornerRadius="10"
@@ -235,7 +236,7 @@
                                                 <materialIcons:MaterialIcon Kind="Lock" Width="18" Height="18"
                                                                              Foreground="{DynamicResource AccentBrush}"
                                                                              VerticalAlignment="Center"/>
-                                                <TextBlock Text="Profil PIN Kilidi" FontSize="15" FontWeight="SemiBold"
+                                                <TextBlock Text="{loc:Translate Profiles.Add.PinLock}" FontSize="15" FontWeight="SemiBold"
                                                            Foreground="{DynamicResource TextPrimaryBrush}"
                                                            VerticalAlignment="Center"/>
                                                 <!-- Premium Badge (visible for free users) -->
@@ -246,7 +247,7 @@
                                                                Foreground="#1A1A2E"/>
                                                 </Border>
                                             </StackPanel>
-                                            <TextBlock Text="Profile giriş için 4 haneli PIN gerektirir"
+                                            <TextBlock Text="{loc:Translate Profiles.Add.PinLockDescription}"
                                                        FontSize="12" Foreground="{DynamicResource TextMutedBrush}"
                                                        Margin="26,0,0,0"/>
                                         </StackPanel>
@@ -266,25 +267,25 @@
                                             <StackPanel Orientation="Horizontal" Spacing="8">
                                                 <materialIcons:MaterialIcon Kind="ShieldCheckOutline" Width="18" Height="18"
                                                                              Foreground="#4CAF50" VerticalAlignment="Center"/>
-                                                <TextBlock Text="PIN aktif" FontSize="13" FontWeight="SemiBold"
+                                                <TextBlock Text="{loc:Translate Profiles.Add.PinActive}" FontSize="13" FontWeight="SemiBold"
                                                            Foreground="#4CAF50" VerticalAlignment="Center"/>
                                             </StackPanel>
-                                            <TextBlock Text="PIN'i kaldırmak için toggle'ı kapatıp kaydedin. Yeni bir PIN belirlemek için aşağıya girin."
+                                            <TextBlock Text="{loc:Translate Profiles.Add.PinChangeInfo}"
                                                        FontSize="11" Foreground="{DynamicResource TextMutedBrush}"
                                                        TextWrapping="Wrap" MaxWidth="350"/>
                                             
                                             <!-- Optional: Change PIN fields -->
-                                            <TextBlock Text="Yeni PIN (isteğe bağlı)" FontSize="12" FontWeight="Medium"
+                                            <TextBlock Text="{loc:Translate Profiles.Add.NewPin}" FontSize="12" FontWeight="Medium"
                                                        Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
                                         </StackPanel>
 
                                         <!-- PIN Field -->
                                         <StackPanel Spacing="4">
                                             <Panel>
-                                                <TextBlock Text="Yeni PIN" FontSize="13" FontWeight="Medium"
+                                                <TextBlock Text="{loc:Translate Profiles.Add.NewPin}" FontSize="13" FontWeight="Medium"
                                                            Foreground="{DynamicResource TextMutedBrush}"
                                                            IsVisible="{Binding HasExistingPin}"/>
-                                                <TextBlock Text="PIN" FontSize="13" FontWeight="Medium"
+                                                <TextBlock Text="{loc:Translate Profiles.Add.Pin}" FontSize="13" FontWeight="Medium"
                                                            Foreground="{DynamicResource TextMutedBrush}"
                                                            IsVisible="{Binding !HasExistingPin}"/>
                                             </Panel>
@@ -303,10 +304,10 @@
                                         <!-- PIN Confirm Field -->
                                         <StackPanel Spacing="4">
                                             <Panel>
-                                                <TextBlock Text="Yeni PIN Tekrar" FontSize="13" FontWeight="Medium"
+                                                <TextBlock Text="{loc:Translate Profiles.Add.ConfirmNewPin}" FontSize="13" FontWeight="Medium"
                                                            Foreground="{DynamicResource TextMutedBrush}"
                                                            IsVisible="{Binding HasExistingPin}"/>
-                                                <TextBlock Text="PIN Tekrar" FontSize="13" FontWeight="Medium"
+                                                <TextBlock Text="{loc:Translate Profiles.Add.ConfirmPin}" FontSize="13" FontWeight="Medium"
                                                            Foreground="{DynamicResource TextMutedBrush}"
                                                            IsVisible="{Binding !HasExistingPin}"/>
                                             </Panel>
@@ -330,11 +331,8 @@
 
                                         <!-- Warning -->
                                         <TextBlock FontSize="11" Foreground="{DynamicResource TextMutedBrush}"
-                                                   TextWrapping="Wrap" MaxWidth="350" HorizontalAlignment="Left">
-                                            <Run Text="PIN'inizi unutursanız profil "/>
-                                            <Run Text="3 gün içinde silinir" FontWeight="SemiBold"/>
-                                            <Run Text=". Kurtarma seçeneği yoktur."/>
-                                        </TextBlock>
+                                                   TextWrapping="Wrap" MaxWidth="350" HorizontalAlignment="Left"
+                                                   Text="{loc:Translate Profiles.Add.PinWarning}"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -342,21 +340,21 @@
                             <Rectangle Height="1" Fill="{DynamicResource BorderBrush}" Margin="0,32"/>
                             
                             <!-- Provider Account -->
-                            <TextBlock Text="Hesap Ayarları" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="20" FontWeight="Bold" Margin="0,0,0,16"/>
+                            <TextBlock Text="{loc:Translate Profiles.Account.Settings}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="20" FontWeight="Bold" Margin="0,0,0,16"/>
 
                             <!-- Connection Details Section -->
                             <StackPanel>
                                 <!-- URL Field -->
                                 <Panel Margin="4,0,0,8">
                                     <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="14" FontWeight="SemiBold"
-                                               Text="M3U Link" IsVisible="{Binding IsM3U}"/>
+                                               Text="{loc:Translate Profiles.Account.M3uLink}" IsVisible="{Binding IsM3U}"/>
                                     <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="14" FontWeight="SemiBold"
-                                               Text="Sunucu URL" IsVisible="{Binding !IsM3U}"/>
+                                               Text="{loc:Translate Profiles.Account.ServerUrl}" IsVisible="{Binding !IsM3U}"/>
                                 </Panel>
                                 
                                 <TextBox Text="{Binding Url}" 
                                          Height="52" Margin="0,0,0,20"
-                                         Watermark="http://server.com:8080"/>
+                                         Watermark="{loc:Translate Profiles.Account.ServerUrlPlaceholder}"/>
                                 
                                 <!-- Credentials Grid -->
                                 <Grid Margin="0,0,0,20" IsVisible="{Binding !IsM3U}">
@@ -368,18 +366,18 @@
                                     <StackPanel Margin="0,0,10,0">
                                         <Panel Margin="4,0,0,8">
                                             <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="14" FontWeight="SemiBold"
-                                                       Text="MAC Adresi" IsVisible="{Binding IsStalker}"/>
+                                                       Text="{loc:Translate Profiles.Account.MacAddress}" IsVisible="{Binding IsStalker}"/>
                                             <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="14" FontWeight="SemiBold"
-                                                       Text="Kullanıcı Adı" IsVisible="{Binding !IsStalker}"/>
+                                                       Text="{loc:Translate Profiles.Account.Username}" IsVisible="{Binding !IsStalker}"/>
                                         </Panel>
                                         <TextBox Text="{Binding Username}" Height="52"
-                                                 Watermark="Kullanıcı adı"/>
+                                                 Watermark="{loc:Translate Profiles.Account.UsernamePlaceholder}"/>
                                     </StackPanel>
 
                                     <StackPanel Grid.Column="1" Margin="10,0,0,0" IsVisible="{Binding !IsStalker}">
-                                        <TextBlock Text="Şifre" Foreground="{DynamicResource TextMutedBrush}" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{loc:Translate Profiles.Account.Password}" Foreground="{DynamicResource TextMutedBrush}" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"/>
                                         <TextBox Text="{Binding Password}" Height="52"
-                                                 Watermark="Şifre" PasswordChar="•"/>
+                                                 Watermark="{loc:Translate Profiles.Account.PasswordPlaceholder}" PasswordChar="•"/>
                                     </StackPanel>
                                 </Grid>
 
@@ -401,7 +399,7 @@
                                     <Button Command="{Binding AnalyzeConnectionCommand}"
                                             Height="42"
                                             Padding="16,8"
-                                            Content="Bağlantıyı Analiz Et"
+                                            Content="{loc:Translate Profiles.Account.Analyze}"
                                             IsEnabled="{Binding !IsAnalyzingConnection}"
                                             Margin="0,0,16,0"/>
 
@@ -414,7 +412,7 @@
                                                                     Width="24" Height="24"
                                                                     Foreground="{Binding ConnectionHealth, Converter={StaticResource ConnectionHealthToBrushConverter}}"
                                                                     Margin="0,0,8,0"
-                                                                    ToolTip.Tip="Yeşil: Mükemmel (&lt;300ms) | Sarı: Orta (300ms-1s) | Kırmızı: Kötü (&gt;1s)"/>
+                                                                    ToolTip.Tip="{loc:Translate Profiles.Account.HealthTooltip}"/>
                                         
                                         <!-- Status Text -->
                                         <StackPanel VerticalAlignment="Center">
@@ -451,7 +449,7 @@
                                                   Width="24" Height="24"
                                                   HorizontalAlignment="Center"
                                                   VerticalAlignment="Center"/>     
-                                <TextBlock Text="Profili Sil"
+                                <TextBlock Text="{loc:Translate Profiles.Add.DeleteProfile}"
                                            FontSize="16"
                                            Foreground="{DynamicResource ErrorBrush}"
                                            VerticalAlignment="Center"/>
@@ -469,12 +467,12 @@
                             <!-- Cancel Button -->
                             <Button Click="Cancel_Click" Width="120" Height="48" Margin="0,0,16,0"
                                     Classes="CancelBtn"
-                                    Content="İptal" FontSize="16"/>
+                                    Content="{loc:Translate Profiles.Add.Cancel}" FontSize="16"/>
                             
                             <!-- Save Button -->
                             <Button Command="{Binding SaveCommand}" Width="140" Height="48"
                                     Classes="SaveBtn"
-                                    Content="Kaydet" FontSize="16"
+                                    Content="{loc:Translate Profiles.Add.Save}" FontSize="16"
                                     IsEnabled="{Binding !IsAnalyzingConnection}"/>
                         </StackPanel>
                     </Grid>

@@ -5,9 +5,10 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
+        xmlns:loc="using:Noctra.Avalonia.Localization"
         x:Class="Noctra.Avalonia.Views.PinEntryWindow"
         x:CompileBindings="False"
-        Title="PIN Girin"
+        Title="{loc:Translate PinEntry.EnterPin}"
         Width="320" Height="480"
         WindowStartupLocation="CenterOwner"
         SystemDecorations="None"
@@ -74,7 +75,7 @@
                             CornerRadius="{TemplateBinding CornerRadius}"
                             Width="{TemplateBinding Width}"
                             Height="{TemplateBinding Height}">
-                        <TextBlock Text="PIN'imi&#x0a;Unuttum"
+                        <TextBlock Text="{loc:Translate PinEntry.ForgotPin}"
                                    FontSize="9"
                                    TextAlignment="Center"
                                    Foreground="{DynamicResource TextMutedBrush}"
@@ -126,7 +127,7 @@
                            Foreground="{DynamicResource TextMutedBrush}"
                            Margin="0,0,0,16"
                            TextAlignment="Center">
-                    <Run Text="PIN girin"/>
+                    <Run Text="{loc:Translate PinEntry.EnterPin}"/>
                 </TextBlock>
 
                 <!-- 4 Dot Indicator -->
@@ -174,7 +175,7 @@
             </StackPanel>
 
             <!-- Cancel Button -->
-            <Button Grid.Row="1" Content="İptal"
+            <Button Grid.Row="1" Content="{loc:Translate Dialog.Cancel}"
                     Command="{Binding CancelCommand}"
                     HorizontalAlignment="Center"
                     Foreground="{DynamicResource TextMutedBrush}"

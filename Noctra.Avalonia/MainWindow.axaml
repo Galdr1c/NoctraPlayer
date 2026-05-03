@@ -4,6 +4,7 @@
         xmlns:models="using:Noctra.Models"
         xmlns:views="using:Noctra.Avalonia.Views"
         xmlns:controls="using:Noctra.Avalonia.Controls"
+        xmlns:loc="using:Noctra.Avalonia.Localization"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         xmlns:b="using:Noctra.Avalonia.Behaviors"
         x:Class="Noctra.Avalonia.MainWindow"
@@ -157,7 +158,7 @@
         <Setter Property="Width" Value="300"/>
         <Setter Property="Padding" Value="12,6"/>
 
-        <Setter Property="Watermark" Value="Film, dizi veya kanal ara..."/>
+        <Setter Property="Watermark" Value="{loc:Translate Shell.Search.Placeholder}"/>
       </Style>
 
       <!-- Avalonia TextBox focus kenarlığını ezmek için özel PART_BorderElement kuralı -->
@@ -185,7 +186,7 @@
                  Grid.Column="1" HorizontalAlignment="Right"
                  Text="{Binding SearchQuery, Mode=TwoWay}"
                  Margin="0,0,12,0"
-                 KeyDown="SearchInput_KeyDown" Cursor="Hand" ToolTip.Tip="Ara">
+                 KeyDown="SearchInput_KeyDown" Cursor="Hand" ToolTip.Tip="{loc:Translate Shell.Search.Tooltip}">
           <TextBox.InnerLeftContent>
             <Border Width="38" Height="34" CornerRadius="8" VerticalAlignment="Center" HorizontalAlignment="Center">
                <materialIcons:MaterialIcon Kind="Magnify" Width="18" Height="18" 
@@ -230,7 +231,7 @@
                         </Border>
                         <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
                           <TextBlock Text="{Binding Name}" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
-                          <TextBlock Text="Dizi" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+                          <TextBlock Text="{loc:Translate Shell.Series.Type}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                         </StackPanel>
                       </Grid>
                     </Button>
@@ -244,7 +245,7 @@
         <!-- Header Actions -->
         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
           <!-- Settings Button -->
-          <Button Classes="SettingsGearButton" Click="SettingsButton_Click" Cursor="Hand" ToolTip.Tip="Ayarlar"
+          <Button Classes="SettingsGearButton" Click="SettingsButton_Click" Cursor="Hand" ToolTip.Tip="{loc:Translate Shell.Settings.Tooltip}"
                   Width="48" Height="48" Background="Transparent" BorderThickness="0" CornerRadius="24">
             <materialIcons:MaterialIcon x:Name="SettingsGearIcon" Kind="CogOutline" Width="22" Height="22" RenderTransformOrigin="50%,50%">
               <materialIcons:MaterialIcon.Transitions>
@@ -275,58 +276,58 @@
                   Background="Transparent" BorderThickness="0"
                   Width="44" Height="44" Padding="0"
                   HorizontalAlignment="Left" Margin="8,0,0,16"
-                  Cursor="Hand" ToolTip.Tip="Menü">
+                      Cursor="Hand" ToolTip.Tip="{loc:Translate Shell.Menu.Tooltip}">
             <materialIcons:MaterialIcon x:Name="HamburgerIcon" Kind="Menu" Width="22" Height="22"
                                         Foreground="{DynamicResource TextPrimaryBrush}"/>
           </Button>
 
           <!-- Nav Section Label -->
-          <TextBlock x:Name="NavLabel1" Text="ANA MENÜ" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="24,0,24,8" LetterSpacing="2" IsVisible="False"/>
+                    <TextBlock x:Name="NavLabel1" Text="{loc:Translate Shell.Nav.Main}" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="24,0,24,8" LetterSpacing="2" IsVisible="False"/>
 
           <!-- Home -->
-          <Button x:Name="NavHomeBtn" Classes="navItem" Click="NavigateHome_Click" ToolTip.Tip="Ana Sayfa"
+                    <Button x:Name="NavHomeBtn" Classes="navItem" Click="NavigateHome_Click" ToolTip.Tip="{loc:Translate Shell.Nav.Home}"
                   Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Home}}">
             <Panel>
               <Border Classes="ActiveIndicator" />
               <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
                 <materialIcons:MaterialIcon Kind="HomeVariantOutline" />
-                <TextBlock x:Name="NavHomeText" Text="Ana Sayfa" VerticalAlignment="Center" IsVisible="False"/>
+                        <TextBlock x:Name="NavHomeText" Text="{loc:Translate Shell.Nav.Home}" VerticalAlignment="Center" IsVisible="False"/>
               </StackPanel>
             </Panel>
           </Button>
 
           <!-- Live TV -->
-          <Button x:Name="NavLiveBtn" Classes="navItem" Click="NavigateLive_Click" ToolTip.Tip="Canlı TV"
+                    <Button x:Name="NavLiveBtn" Classes="navItem" Click="NavigateLive_Click" ToolTip.Tip="{loc:Translate Shell.Nav.Live}"
                   Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Live}}">
             <Panel>
               <Border Classes="ActiveIndicator" />
               <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
                 <materialIcons:MaterialIcon Kind="Television" />
-                <TextBlock x:Name="NavLiveText" Text="Canlı TV" VerticalAlignment="Center" IsVisible="False"/>
+                        <TextBlock x:Name="NavLiveText" Text="{loc:Translate Shell.Nav.Live}" VerticalAlignment="Center" IsVisible="False"/>
               </StackPanel>
             </Panel>
           </Button>
 
           <!-- Movies -->
-          <Button x:Name="NavMoviesBtn" Classes="navItem" Click="NavigateMovies_Click" ToolTip.Tip="Filmler"
+                    <Button x:Name="NavMoviesBtn" Classes="navItem" Click="NavigateMovies_Click" ToolTip.Tip="{loc:Translate Shell.Nav.Movies}"
                   Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Movies}}">
             <Panel>
               <Border Classes="ActiveIndicator" />
               <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
                 <materialIcons:MaterialIcon Kind="Filmstrip"/>
-                <TextBlock x:Name="NavMoviesText" Text="Filmler" VerticalAlignment="Center" IsVisible="False"/>
+                        <TextBlock x:Name="NavMoviesText" Text="{loc:Translate Shell.Nav.Movies}" VerticalAlignment="Center" IsVisible="False"/>
               </StackPanel>
             </Panel>
           </Button>
 
           <!-- Series -->
-          <Button x:Name="NavSeriesBtn" Classes="navItem" Click="NavigateSeries_Click" ToolTip.Tip="Diziler"
+                    <Button x:Name="NavSeriesBtn" Classes="navItem" Click="NavigateSeries_Click" ToolTip.Tip="{loc:Translate Shell.Nav.Series}"
                   Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Series}}">
             <Panel>
               <Border Classes="ActiveIndicator" />
               <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
                 <materialIcons:MaterialIcon Kind="TelevisionPlay" />
-                <TextBlock x:Name="NavSeriesText" Text="Diziler" VerticalAlignment="Center" IsVisible="False"/>
+                        <TextBlock x:Name="NavSeriesText" Text="{loc:Translate Shell.Nav.Series}" VerticalAlignment="Center" IsVisible="False"/>
               </StackPanel>
             </Panel>
           </Button>
@@ -334,46 +335,46 @@
           <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="8,12"/>
 
           <!-- Nav Section Label 2 -->
-          <TextBlock x:Name="NavLabel2" Text="KÜTÜPHANE" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="24,0,24,8" LetterSpacing="2" IsVisible="False"/>
+                    <TextBlock x:Name="NavLabel2" Text="{loc:Translate Shell.Nav.Library}" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="24,0,24,8" LetterSpacing="2" IsVisible="False"/>
 
           <!-- My List -->
-          <Button x:Name="NavMyListBtn" Classes="navItem" Click="NavigateMyList_Click" ToolTip.Tip="Listem"
+                    <Button x:Name="NavMyListBtn" Classes="navItem" Click="NavigateMyList_Click" ToolTip.Tip="{loc:Translate Shell.Nav.MyList}"
                   Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.MyList}}">
             <Panel>
               <Border Classes="ActiveIndicator" />
               <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
                 <materialIcons:MaterialIcon Kind="BookmarkOutline" />
-                <TextBlock x:Name="NavMyListText" Text="Listem" VerticalAlignment="Center" IsVisible="False"/>
+                        <TextBlock x:Name="NavMyListText" Text="{loc:Translate Shell.Nav.MyList}" VerticalAlignment="Center" IsVisible="False"/>
               </StackPanel>
             </Panel>
           </Button>
 
           <!-- Favorites -->
-          <Button x:Name="NavFavBtn" Classes="navItem" Click="NavigateFavorites_Click" ToolTip.Tip="Favoriler"
+                    <Button x:Name="NavFavBtn" Classes="navItem" Click="NavigateFavorites_Click" ToolTip.Tip="{loc:Translate Shell.Nav.Favorites}"
                   Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Favorites}}">
             <Panel>
               <Border Classes="ActiveIndicator" />
               <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
                 <materialIcons:MaterialIcon Kind="HeartOutline" />
-                <TextBlock x:Name="NavFavText" Text="Favoriler" VerticalAlignment="Center" IsVisible="False"/>
+                        <TextBlock x:Name="NavFavText" Text="{loc:Translate Shell.Nav.Favorites}" VerticalAlignment="Center" IsVisible="False"/>
               </StackPanel>
             </Panel>
           </Button>
 
           <!-- History -->
-          <Button x:Name="NavHistoryBtn" Classes="navItem" Click="NavigateHistory_Click" ToolTip.Tip="Geçmiş"
+                    <Button x:Name="NavHistoryBtn" Classes="navItem" Click="NavigateHistory_Click" ToolTip.Tip="{loc:Translate Shell.Nav.History}"
                   Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.History}}">
             <Panel>
               <Border Classes="ActiveIndicator" />
               <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
                 <materialIcons:MaterialIcon Kind="History" />
-                <TextBlock x:Name="NavHistoryText" Text="Geçmiş" VerticalAlignment="Center" IsVisible="False"/>
+                        <TextBlock x:Name="NavHistoryText" Text="{loc:Translate Shell.Nav.History}" VerticalAlignment="Center" IsVisible="False"/>
               </StackPanel>
             </Panel>
           </Button>
 
           <!-- Downloads -->
-          <Button x:Name="NavDownloadsBtn" Classes="navItem" Click="NavigateDownloads_Click" ToolTip.Tip="İndirilenler"
+                    <Button x:Name="NavDownloadsBtn" Classes="navItem" Click="NavigateDownloads_Click" ToolTip.Tip="{loc:Translate Shell.Nav.Downloads}"
                   Classes.active="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter={x:Static vm:AppView.Downloads}}">
             <Panel>
               <Border Classes="ActiveIndicator" />
@@ -391,7 +392,7 @@
                        <Ellipse Fill="White" Width="4" Height="4" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False"/>
                     </Border>
                   </Panel>
-                  <TextBlock x:Name="NavDownloadsText" Text="İndirilenler" VerticalAlignment="Center" IsVisible="False"/>
+                            <TextBlock x:Name="NavDownloadsText" Text="{loc:Translate Shell.Nav.Downloads}" VerticalAlignment="Center" IsVisible="False"/>
                 </StackPanel>
                 
                 <!-- Expanded mode badge -->
@@ -565,7 +566,7 @@
                           <TextBlock Text="{Binding SelectedSeries.Name}" FontSize="52" FontWeight="Black" 
                                      Foreground="{DynamicResource TextPrimaryBrush}" LetterSpacing="-1"/>
                         </Viewbox>
-                        <TextBlock Text="İndirilen Bölümler" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"
+                        <TextBlock Text="{loc:Translate Series.Detail.DownloadedEpisodes}" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"
                                    IsVisible="{Binding IsDownloadedSeriesDetailMode}"/>
                       </StackPanel>
 
@@ -574,7 +575,7 @@
                         <TextBlock Text="{Binding SelectedSeriesYears}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="SemiBold"
                                   IsVisible="{Binding SelectedSeriesYears, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
 
-                        <TextBlock Text="•" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" VerticalAlignment="Center" Margin="8,0">
+                        <TextBlock Text=" • " Foreground="{DynamicResource TextMutedBrush}" FontSize="15" VerticalAlignment="Center" Margin="8,0">
                           <TextBlock.IsVisible>
                             <MultiBinding Converter="{x:Static BoolConverters.And}">
                               <Binding Path="SelectedSeriesYears" Converter="{StaticResource StringNotEmptyToBoolConverter}"/>
@@ -589,7 +590,7 @@
                         <TextBlock Text="{Binding SelectedSeriesGenres}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="Medium"
                                   IsVisible="{Binding SelectedSeriesGenres, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
 
-                        <TextBlock Text="•" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" VerticalAlignment="Center" Margin="8,0">
+                        <TextBlock Text=" • " Foreground="{DynamicResource TextMutedBrush}" FontSize="15" VerticalAlignment="Center" Margin="8,0">
                           <TextBlock.IsVisible>
                             <MultiBinding Converter="{x:Static BoolConverters.And}">
                               <Binding Path="SelectedSeriesGenres" Converter="{StaticResource StringNotEmptyToBoolConverter}"/>
@@ -613,8 +614,8 @@
 
                       <!-- Seasons & Episodes Stats -->
                       <StackPanel Orientation="Horizontal" Margin="0,12,0,0" Spacing="16" IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
-                        <TextBlock Text="{Binding SelectedSeries.SeasonCountSafe, StringFormat='{}{0} Sezon'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="Medium"/>
-                        <TextBlock Text="{Binding SelectedSeries.TotalEpisodesCount, StringFormat='{}{0} Bölüm'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="Medium"/>
+                        <TextBlock Text="{Binding SelectedSeries.SeasonCountSafe, Converter={StaticResource StringFormatConverter}, ConverterParameter='Series.Seasons.Format'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="Medium"/>
+                        <TextBlock Text="{Binding SelectedSeries.TotalEpisodesCount, Converter={StaticResource StringFormatConverter}, ConverterParameter='Series.Episodes.Format'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="15" FontWeight="Medium"/>
                       </StackPanel>
                     </StackPanel>
 
@@ -627,7 +628,7 @@
                                   IsVisible="{Binding SelectedSeriesOverview, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
 
                         <!-- Cast -->
-                        <TextBlock Text="{Binding SelectedSeriesCast, StringFormat='Oyuncular: {0}'}" FontSize="14" 
+                        <TextBlock Text="{Binding SelectedSeriesCast, Converter={StaticResource StringFormatConverter}, ConverterParameter='Series.Detail.Cast'}" FontSize="14" 
                                   Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,16,0,0"
                                   IsVisible="{Binding SelectedSeriesCast, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
                       </StackPanel>
@@ -646,7 +647,7 @@
                                     Padding="16,8" CornerRadius="8" Focusable="False">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Play" Width="18" Height="18" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                    <TextBlock Text="Oynat" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{loc:Translate Series.Play}" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                         </Border>
@@ -667,7 +668,7 @@
                                 IsVisible="{Binding SelectedSeriesTrailerUrl, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <materialIcons:MaterialIcon Kind="Youtube" Width="18" Height="18" Foreground="{DynamicResource AccentBrush}"/>
-                                <TextBlock Text="Fragmanı İzle" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <TextBlock Text="{loc:Translate Series.WatchTrailer}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
 
@@ -705,11 +706,11 @@
                     </StackPanel.IsVisible>
                     <controls:PremiumSpinner Width="56" Height="56"
                                              HorizontalAlignment="Center"/>
-                    <TextBlock Text="Bölümler yükleniyor..."
+                    <TextBlock Text="{loc:Translate Series.Episodes.Loading}"
                                FontSize="15" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextMutedBrush}"
                                TextAlignment="Center"/>
-                    <TextBlock Text="İçerikler arka planda yükleniyor. Bölümler hazır olduğunda otomatik görünecektir."
+                    <TextBlock Text="{loc:Translate Series.Episodes.LoadingDetail}"
                                FontSize="12" Opacity="0.6"
                                Foreground="{DynamicResource TextMutedBrush}"
                                TextAlignment="Center"/>
@@ -734,7 +735,7 @@
                           </ListBox.ItemsPanel>
                           <ListBox.ItemTemplate>
                               <DataTemplate>
-                                  <TextBlock Text="{Binding SeasonNumber, StringFormat='Sezon {0}'}" 
+                                  <TextBlock Text="{Binding SeasonNumber, Converter={StaticResource StringFormatConverter}, ConverterParameter='Series.Seasons.Format'}" 
                                              FontSize="18" FontWeight="SemiBold" 
                                              VerticalAlignment="Center"/>
                               </DataTemplate>
@@ -829,10 +830,10 @@
                               Background="{DynamicResource Surface1Brush}" BorderThickness="0" Margin="0,0,0,12"
                               Command="{Binding DownloadSelectedSeasonCommand}"
                               IsVisible="{Binding !IsDownloadedSeriesDetailMode}"
-                              ToolTip.Tip="Aktif sezondaki tüm bölümleri indirme kuyruğuna ekle">
+                              ToolTip.Tip="{loc:Translate Series.Detail.DownloadSeason.Tooltip}">
                           <StackPanel Orientation="Horizontal" Spacing="8">
                               <materialIcons:MaterialIcon Kind="DownloadMultipleOutline" Width="18" Height="18" Foreground="{DynamicResource AccentBrush}"/>
-                              <TextBlock Text="Sezonu İndir" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                              <TextBlock Text="{loc:Translate Series.Detail.DownloadSeason}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
                           </StackPanel>
                       </Button>
                       </Grid>
@@ -879,7 +880,7 @@
                                                              IsVisible="{Binding EpisodeMetaText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
 
                                                   <!-- Status Badge (Verified Style) -->
-                                                  <Border IsVisible="{Binding IsCompleted}" VerticalAlignment="Center" ToolTip.Tip="İzlendi" Background="Transparent">
+                                                  <Border IsVisible="{Binding IsCompleted}" VerticalAlignment="Center" ToolTip.Tip="{loc:Translate Series.Episode.Watched}" Background="Transparent">
                                                       <materialIcons:MaterialIcon Kind="CheckCircle" Width="22" Height="22" Foreground="{DynamicResource AccentBrush}"/>
                                                   </Border>                                              </StackPanel>
                                               <TextBlock Text="{Binding TmdbEpisodeName}" 
@@ -894,8 +895,8 @@
                                                   Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).DownloadEpisodeCommand}"
                                                   CommandParameter="{Binding}"
                                                   IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).IsDownloadedSeriesDetailMode, Converter={StaticResource InverseBoolConverter}}"
-                                                  ToolTip.Tip="Bölümü İndir">
-                                              <materialIcons:MaterialIcon Kind="DownloadOutline" Width="22" Height="22" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.6"/>
+                                                  ToolTip.Tip="{loc:Translate Series.Episode.Download}">
+                                              <materialIcons:MaterialIcon Kind="DownloadOutline" Width="22" Height="22" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.6" ToolTip.Tip="{loc:Translate Player.Overlay.Download.Tooltip}"/>
                                           </Button>
                                       </Grid>
                                   </Border>
@@ -974,7 +975,7 @@
                               Width="48" Height="48"
                               IsVisible="{Binding !IsLiveContent}"
                               Background="Transparent" BorderThickness="0"
-                              Classes="pipButton" ToolTip.Tip="10 sn Geri">
+                              Classes="pipButton" ToolTip.Tip="{loc:Translate Player.Overlay.Backward}">
                           <materialIcons:MaterialIcon Kind="Rewind10" Width="18" Height="18" Foreground="White" Opacity="0.9"/>
                       </Button>
 
@@ -984,7 +985,7 @@
                               Width="48" Height="48"
                               IsVisible="{Binding IsLiveContent}"
                               Background="Transparent" BorderThickness="0"
-                              Classes="pipButton" ToolTip.Tip="Önceki Kanal">
+                              Classes="pipButton" ToolTip.Tip="{loc:Translate Player.Overlay.PreviousChannel}">
                           <materialIcons:MaterialIcon Kind="SkipPrevious" Width="18" Height="18" Foreground="White" Opacity="0.9"/>
                       </Button>
 
@@ -992,7 +993,7 @@
                       <Button Command="{Binding PlayPauseCommand}"
                               Width="80" Height="80"
                               Background="Transparent" BorderThickness="0"
-                              Classes="pipButton" ToolTip.Tip="Oynat/Duraklat">
+                              Classes="pipButton" ToolTip.Tip="{loc:Translate Player.Overlay.PlayPause.Tooltip}">
                           <Grid>
                               <materialIcons:MaterialIcon Kind="Pause" 
                                                           Width="36" Height="36" Foreground="White" 
@@ -1008,7 +1009,7 @@
                               Width="48" Height="48"
                               IsVisible="{Binding !IsLiveContent}"
                               Background="Transparent" BorderThickness="0"
-                              Classes="pipButton" ToolTip.Tip="10 sn İleri">
+                              Classes="pipButton" ToolTip.Tip="10 sn Ãƒâ€Ã‚Â°leri">
                            <materialIcons:MaterialIcon Kind="FastForward10" Width="18" Height="18" Foreground="White" Opacity="0.9"/>
                       </Button>
 
@@ -1018,7 +1019,7 @@
                               Width="48" Height="48"
                               IsVisible="{Binding IsLiveContent}"
                               Background="Transparent" BorderThickness="0"
-                              Classes="pipButton" ToolTip.Tip="Sonraki Kanal">
+                              Classes="pipButton" ToolTip.Tip="{loc:Translate Player.Overlay.NextChannel}">
                           <materialIcons:MaterialIcon Kind="SkipNext" Width="18" Height="18" Foreground="White" Opacity="0.9"/>
                       </Button>
                   </StackPanel>
@@ -1063,7 +1064,7 @@
                             DataContext="{Binding #OverlayControl.DataContext}" x:DataType="vm:PlayerViewModel"
                             IsVisible="{Binding IsNextEpisodePromptVisible}" ZIndex="3000">
                       <Grid RowDefinitions="Auto,Auto,Auto">
-                        <TextBlock Text="Sonraki B&#246;l&#252;m" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                        <TextBlock Text="{loc:Translate Player.Overlay.NextEpisode}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
                         <StackPanel Grid.Row="1" Margin="0,0,0,12">
                           <TextBlock Text="{Binding NextEpisode.Name}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
@@ -1071,7 +1072,7 @@
                                 Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" FontWeight="Bold" Padding="16,10" BorderThickness="0" HorizontalAlignment="Stretch" Cursor="Hand">
                           <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
                             <materialIcons:MaterialIcon Kind="Play" Width="14" Height="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="&#350;imdi &#304;zle" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Text="{loc:Translate Player.NextEpisode.WatchNow}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                           </StackPanel>
                         </Button>
                       </Grid>
@@ -1105,7 +1106,7 @@
                                                       Width="48" Height="48"
                                                       Foreground="{DynamicResource AccentBrush}"
                                                       HorizontalAlignment="Center"/>
-                          <TextBlock Text="Nereden Devam Etmek İstersin?"
+                          <TextBlock Text="{loc:Translate Player.Resume.Title}"
                                      FontSize="19" FontWeight="Bold"
                                      Foreground="{DynamicResource TextPrimaryBrush}"
                                      HorizontalAlignment="Center"/>
@@ -1119,7 +1120,7 @@
                                                         Foreground="{DynamicResource TextMutedBrush}"
                                                         VerticalAlignment="Center"/>
                             <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                              <TextBlock Text="Bıraktığın yer:" 
+                              <TextBlock Text="{loc:Translate Player.Resume.LastPosition}" 
                                          Foreground="{DynamicResource TextMutedBrush}" 
                                          FontSize="14"/>
                               <TextBlock Text="{Binding ResumePositionText}"
@@ -1149,7 +1150,7 @@
                               </Button.Background>
                               <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
                                 <materialIcons:MaterialIcon Kind="Play" Width="18" Height="18" Foreground="White"/>
-                                <TextBlock Text="Kaldığım Yerden Devam Et"
+                                <TextBlock Text="{loc:Translate Player.Resume.Continue}"
                                            Foreground="White" FontSize="15" FontWeight="SemiBold"
                                            VerticalAlignment="Center"/>
                               </StackPanel>
@@ -1176,7 +1177,7 @@
                                   <materialIcons:MaterialIcon Kind="Play" Width="18" Height="18"
                                                               Foreground="{DynamicResource TextMutedBrush}"
                                                               VerticalAlignment="Center"/>
-                                  <TextBlock Text="Kaldığım Yerden Devam Et"
+                                  <TextBlock Text="{loc:Translate Player.Resume.Continue}"
                                              Foreground="{DynamicResource TextMutedBrush}"
                                              FontSize="15" FontWeight="SemiBold"
                                              VerticalAlignment="Center"/>
@@ -1205,7 +1206,7 @@
                                   CornerRadius="8" Cursor="Hand">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
                               <materialIcons:MaterialIcon Kind="SkipBackward" Width="18" Height="18"/>
-                              <TextBlock Text="Baştan Başla" VerticalAlignment="Center"/>
+                              <TextBlock Text="{loc:Translate Player.Resume.StartOver}" VerticalAlignment="Center"/>
                             </StackPanel>
                           </Button>
 
@@ -1219,9 +1220,9 @@
                               <materialIcons:MaterialIcon Kind="Crown" Width="14" Height="14"
                                                           Foreground="{DynamicResource AccentLightBrush}"/>
                               <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="Premium" 
+                                <TextBlock Text="{loc:Translate Common.Premium}" 
                                            FontSize="12" Foreground="{DynamicResource AccentLightBrush}"/>
-                                <TextBlock Text="'a geç, kaldığın yerden devam et."
+                                <TextBlock Text="{loc:Translate Player.Resume.UpgradeNote}"
                                            FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
                               </StackPanel>
                             </StackPanel>
@@ -1296,7 +1297,7 @@
                   <Run Text="{Binding FilteredChannels.Count, Mode=OneWay}"/>
                   <Run Text="/"/>
                   <Run Text="{Binding Channels.Count, Mode=OneWay}"/>
-                  <Run Text=" Kanal"/>
+                  <Run Text="{loc:Translate Common.Channels}"/>
                 </TextBlock>
               </StackPanel>
             </Border>

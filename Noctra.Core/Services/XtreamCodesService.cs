@@ -19,15 +19,17 @@ public class XtreamCodesService : IXtreamCodesService
     };
 
     private readonly HttpClient _httpClient;
+    private readonly ILocalizationService _localizationService;
     private static readonly ConcurrentDictionary<string, CachedAuthState> AuthCache = new(StringComparer.Ordinal);
     private static readonly TimeSpan SuccessAuthTtl = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan FailedAuthTtl = TimeSpan.FromSeconds(30);
     private static DateTimeOffset _lastCleanup = DateTimeOffset.UtcNow;
     private static readonly object CleanupLock = new();
 
-    public XtreamCodesService(HttpClient httpClient)
+    public XtreamCodesService(HttpClient httpClient, ILocalizationService localizationService)
     {
         _httpClient = httpClient;
+        _localizationService = localizationService;
     }
 
     public async Task<bool> AuthenticateAsync(string baseUrl, string username, string password, CancellationToken cancellationToken = default)
@@ -81,7 +83,7 @@ public class XtreamCodesService : IXtreamCodesService
 
         if (!authenticated)
         {
-            throw new InvalidOperationException("Xtream kimlik dogrulamasi basarisiz.");
+            throw new InvalidOperationException(_localizationService.GetString("Xtream.Error.AuthFailed"));
         }
 
         // 1. Kategorileri Çek
@@ -284,7 +286,7 @@ public class XtreamCodesService : IXtreamCodesService
 
         if (!authenticated)
         {
-            throw new InvalidOperationException("Xtream kimlik dogrulamasi basarisiz. Kullanici adi/sifre veya sunucu bilgisi hatali olabilir.");
+            throw new InvalidOperationException(_localizationService.GetString("Xtream.Error.AuthFailedDetail"));
         }
 
         var liveCategoriesTask = GetJsonAsync<List<XtreamCategoryDto>>(
@@ -410,7 +412,7 @@ public class XtreamCodesService : IXtreamCodesService
         }
     }
 
-    private static List<Channel> MapLiveChannels(
+    private List<Channel> MapLiveChannels(
         IEnumerable<XtreamLiveStreamDto>? streams,
         string baseUrl,
         string username,
@@ -423,7 +425,7 @@ public class XtreamCodesService : IXtreamCodesService
             .Where(s => s.StreamId > 0)
             .Select(s => new Channel
             {
-                Name = SafeName(s.Name, "Canli Kanal"),
+                Name = SafeName(s.Name, _localizationService.GetString("Xtream.Channel.DefaultLive")),
                 StreamUrl = $"{baseUrl}/live/{Uri.EscapeDataString(username)}/{Uri.EscapeDataString(password)}/{s.StreamId}.ts",
                 LogoUrl = s.StreamIcon,
                 GroupTitle = ResolveCategory(s.CategoryId, s.CategoryName, categories, "Live"),
@@ -433,7 +435,7 @@ public class XtreamCodesService : IXtreamCodesService
             .ToList();
     }
 
-    private static List<Channel> MapVodChannels(
+    private List<Channel> MapVodChannels(
         IEnumerable<XtreamVodStreamDto>? streams,
         string baseUrl,
         string username,
@@ -462,7 +464,7 @@ public class XtreamCodesService : IXtreamCodesService
             .ToList();
     }
 
-    private static List<Channel> MapSeriesAsEntries(
+    private List<Channel> MapSeriesAsEntries(
         IEnumerable<XtreamSeriesDto>? series,
         IReadOnlyDictionary<string, string> categories)
     {
@@ -476,7 +478,7 @@ public class XtreamCodesService : IXtreamCodesService
 
                 return new Channel
                 {
-                    Name = SafeName(s.Name, "Dizi"),
+                    Name = SafeName(s.Name, _localizationService.GetString("Xtream.Channel.DefaultSeries")),
                     // ← ID'yi URL'e göm — lazy load için anahtar
                     StreamUrl = $"xtream-series://{s.SeriesId}",
                     LogoUrl = s.Cover,
@@ -588,7 +590,7 @@ public class XtreamCodesService : IXtreamCodesService
         return channels;
     }
 
-    private static IEnumerable<Channel> MapEpisodeArray(
+    private IEnumerable<Channel> MapEpisodeArray(
         JsonElement episodeArray,
         XtreamSeriesDto series,
         string? seasonKey,
@@ -632,9 +634,9 @@ public class XtreamCodesService : IXtreamCodesService
         }
     }
 
-    private static string BuildSeriesPrefix(string? seriesName, string? seasonKey, int? episodeNum)
+    private string BuildSeriesPrefix(string? seriesName, string? seasonKey, int? episodeNum)
     {
-        var safeName = SafeName(seriesName, "Dizi");
+        var safeName = SafeName(seriesName, _localizationService.GetString("Xtream.Channel.DefaultSeries"));
         if (int.TryParse(seasonKey, out var season) && episodeNum.HasValue)
         {
             return $"{safeName} S{season:00}E{episodeNum.Value:00} -";

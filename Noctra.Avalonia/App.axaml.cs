@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Noctra.Avalonia.Localization;
 using Noctra.Avalonia.Services;
 using Noctra.Avalonia.Views;
 using Noctra.Data;
@@ -64,7 +65,12 @@ public partial class App : Application
             ApplyApplicationLanguage(settings.Settings.Language);
             themeService.SetTheme(settings.Settings.IsDarkTheme);
             
-            settings.SettingsChanged += () => 
+            var localizationService = Services.GetRequiredService<ILocalizationService>();
+            localizationService.SetLanguage(settings.Settings.Language ?? "tr");
+            LocalizationSource.Instance.Initialize(localizationService);
+            StartupDiagnostics.Log("Localization initialized.");
+
+            settings.SettingsChanged += () =>
             {
                 Dispatcher.UIThread.Post(() =>
                 {
@@ -72,6 +78,7 @@ public partial class App : Application
                     {
                         ApplyApplicationLanguage(settings.Settings.Language);
                         themeService.SetTheme(settings.Settings.IsDarkTheme);
+                        localizationService.SetLanguage(settings.Settings.Language ?? "tr");
                     }
                     catch (Exception ex)
                     {
@@ -298,15 +305,36 @@ public partial class App : Application
                 sp.GetRequiredService<IDbContextFactory<AppDbContext>>(),
                 sp.GetRequiredService<HttpClient>(),
                 sp.GetRequiredService<ISettingsService>(),
+                sp.GetRequiredService<ILocalizationService>(),
                 sp.GetService<ILogger<EpgService>>()
             ));
         services.AddTransient<IMetadataService, MetadataService>();
-        services.AddSingleton<IXtreamCodesService, XtreamCodesService>();
-        services.AddTransient<IStalkerPortalService, StalkerPortalService>();
+        services.AddSingleton<IXtreamCodesService, XtreamCodesService>(sp => 
+            new XtreamCodesService(
+                sp.GetRequiredService<HttpClient>(),
+                sp.GetRequiredService<ILocalizationService>()
+            ));
+        services.AddTransient<IStalkerPortalService, StalkerPortalService>(sp => 
+            new StalkerPortalService(
+                sp.GetRequiredService<HttpClient>(),
+                sp.GetRequiredService<ILocalizationService>()
+            ));
         services.AddTransient<ICacheService, CacheService>();
 
         // Domain services changed to Singleton/Transient because they manually manage DB Context lifetimes
-        services.AddSingleton<IPlaylistService, PlaylistService>();
+        services.AddSingleton<IPlaylistService, PlaylistService>(sp => 
+            new PlaylistService(
+                sp.GetRequiredService<IDbContextFactory<AppDbContext>>(),
+                sp.GetRequiredService<IM3UParser>(),
+                sp.GetRequiredService<IMediaService>(),
+                sp.GetRequiredService<IPlaylistOrganizerService>(),
+                sp.GetRequiredService<LanguageDetectionService>(),
+                sp.GetRequiredService<EpgSourceResolver>(),
+                sp.GetRequiredService<IEpgService>(),
+                sp.GetRequiredService<HttpClient>(),
+                sp.GetRequiredService<ISettingsService>(),
+                sp.GetRequiredService<ILocalizationService>()
+            ));
         services.AddSingleton<IPlaylistOrganizerService, PlaylistOrganizerService>();
         services.AddSingleton<IMediaService, MediaService>();
         services.AddSingleton<IChannelService, ChannelService>();
@@ -315,10 +343,18 @@ public partial class App : Application
         services.AddSingleton<IAvatarService, AvatarService>();
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<IAppEditionService, AppEditionService>();
-        services.AddSingleton<IContentDownloadService, ContentDownloadService>();
+        services.AddSingleton<IContentDownloadService, ContentDownloadService>(sp => 
+            new ContentDownloadService(
+                sp.GetRequiredService<ISettingsService>(),
+                sp.GetRequiredService<IDbContextFactory<AppDbContext>>(),
+                sp.GetRequiredService<HttpClient>(),
+                sp.GetRequiredService<ILocalizationService>(),
+                sp.GetService<ILogger<ContentDownloadService>>()
+            ));
         services.AddSingleton<ILicenseService, LicenseService>();
         services.AddSingleton<IPackageIdentityService, PackageIdentityService>();
         services.AddSingleton<LanguageDetectionService>();
+        services.AddSingleton<ILocalizationService, LocalizationService>();
         services.AddSingleton<EpgSourceResolver>();
         services.AddSingleton<INetworkService, NetworkService>();
         services.AddSingleton<IUpdateService, UpdateService>();
@@ -330,7 +366,12 @@ public partial class App : Application
         services.AddSingleton<IDialogService, AvaloniaDialogService>();
         services.AddSingleton<IThemeService, AvaloniaThemeService>();
         services.AddSingleton<AvaloniaImageCacheService>();
-        services.AddSingleton<IVideoPlayerService, VideoPlayerService>();
+        services.AddSingleton<IVideoPlayerService, VideoPlayerService>(sp => 
+            new VideoPlayerService(
+                sp.GetRequiredService<IDispatcherService>(),
+                sp.GetRequiredService<ISettingsService>(),
+                sp.GetRequiredService<ILocalizationService>()
+            ));
         services.AddSingleton<ISecurityService, SecurityService>();
         services.AddSingleton<IProfileService, ProfileService>();
         services.AddTransient<WatermarkViewModel>();
@@ -349,7 +390,8 @@ public partial class App : Application
                 sp.GetRequiredService<ILicenseService>(),
                 sp.GetRequiredService<MainViewModel>(),
                 sp.GetService<IWatchHistoryService>(),
-                sp.GetRequiredService<Noctra.Services.Interfaces.IStalkerPortalService>()
+                sp.GetRequiredService<Noctra.Services.Interfaces.IStalkerPortalService>(),
+                sp.GetRequiredService<ILocalizationService>()
             ));
         
         services.AddTransient<SettingsViewModel>();

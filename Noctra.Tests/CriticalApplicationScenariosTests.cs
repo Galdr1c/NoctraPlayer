@@ -716,7 +716,9 @@ namespace Noctra.Tests
         [Fact]
         public void FreeTier_ProfileLimit_BlocksAtExactLimit()
         {
-            var license = new LicenseService();
+            var editionMock = new Mock<IAppEditionService>();
+            editionMock.Setup(m => m.IsFreeEdition).Returns(true);
+            var license = new LicenseService(editionMock.Object);
             license.SetTierForTesting(SubscriptionTier.Free);
 
             // Free limit = 5
@@ -727,7 +729,9 @@ namespace Noctra.Tests
         [Fact]
         public void FreeTier_ProfileLimit_AllowsOneBelowLimit()
         {
-            var license = new LicenseService();
+            var editionMock = new Mock<IAppEditionService>();
+            editionMock.Setup(m => m.IsFreeEdition).Returns(true);
+            var license = new LicenseService(editionMock.Object);
             license.SetTierForTesting(SubscriptionTier.Free);
 
             Assert.True(license.IsWithinLimit(LicenseService.Limits.Profiles, 4),
@@ -737,7 +741,9 @@ namespace Noctra.Tests
         [Fact]
         public void FreeTier_PremiumFeature_AccessDenied()
         {
-            var license = new LicenseService();
+            var editionMock = new Mock<IAppEditionService>();
+            editionMock.Setup(m => m.IsFreeEdition).Returns(true);
+            var license = new LicenseService(editionMock.Object);
             license.SetTierForTesting(SubscriptionTier.Free);
 
             Assert.False(license.IsFeatureAvailable(LicenseService.Features.AdFree));
@@ -748,7 +754,9 @@ namespace Noctra.Tests
         [Fact]
         public void PremiumTier_ProfileLimit_BlocksAtExactLimit()
         {
-            var license = new LicenseService();
+            var editionMock = new Mock<IAppEditionService>();
+            editionMock.Setup(m => m.IsFreeEdition).Returns(true);
+            var license = new LicenseService(editionMock.Object);
             license.SetTierForTesting(SubscriptionTier.Premium);
 
             // Premium limit = 12
@@ -761,7 +769,9 @@ namespace Noctra.Tests
         [Fact]
         public void SubscriptionDowngrade_FeaturesRevoked()
         {
-            var license = new LicenseService();
+            var editionMock = new Mock<IAppEditionService>();
+            editionMock.Setup(m => m.IsFreeEdition).Returns(true);
+            var license = new LicenseService(editionMock.Object);
             license.ActivatePremium();
             Assert.True(license.IsFeatureAvailable(LicenseService.Features.AdFree));
 
@@ -1015,7 +1025,8 @@ namespace Noctra.Tests
         [Fact]
         public async Task CheckDuplicateAccount_DetectsDuplicates_RegardlessOfEncryptionOutput()
         {
-            var svc = new ProfileService(_contextFactory, null!, new LicenseService());
+            var editionMock = new Mock<IAppEditionService>();
+            var svc = new ProfileService(_contextFactory, null!, new LicenseService(editionMock.Object));
             
             // 1. Seed existing M3U
             var m3uAccount = await SeedAccountAsync("Original M3U", "http://test.m3u");

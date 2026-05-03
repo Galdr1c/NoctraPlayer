@@ -26,6 +26,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IDiagnosticReportService _diagnosticService;
     private readonly ILicenseService _licenseService;
     private readonly IUpdateService _updateService;
+    private readonly ILocalizationService _localizationService;
     private CancellationTokenSource? _epgRefreshWatchCts;
     private int _isRefreshOperationRunning;
 
@@ -144,7 +145,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<EpgUrlItem> _customEpgUrls = new();
 
-    // ============ Gizlilik / Geçmiş ============
+    // ============ _localizationService.GetString("Settings.Privacy.Title") ============
 
     [ObservableProperty]
     private bool _saveWatchHistory;
@@ -216,7 +217,7 @@ public partial class SettingsViewModel : ObservableObject
         IDbContextFactory<AppDbContext> contextFactory,
         IDiagnosticReportService diagnosticService,
         ILicenseService licenseService,
-        IUpdateService updateService)
+        IUpdateService updateService, ILocalizationService localizationService)
     {
         _settingsService = settingsService;
         _epgService = epgService;
@@ -229,6 +230,7 @@ public partial class SettingsViewModel : ObservableObject
         _diagnosticService = diagnosticService;
         _licenseService = licenseService;
         _updateService = updateService;
+        _localizationService = localizationService;
         
         _mainViewModel.PropertyChanged += MainViewModel_PropertyChanged;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
@@ -246,7 +248,7 @@ public partial class SettingsViewModel : ObservableObject
     public bool IsPremium => _licenseService.IsPremium;
 
     [ObservableProperty]
-    private string _updateStatusText = "Güncel";
+    private string _updateStatusText = string.Empty;
 
     [ObservableProperty]
     private bool _isUpdateAvailable;
@@ -262,7 +264,7 @@ public partial class SettingsViewModel : ObservableObject
         if (IsCheckingUpdates) return;
 
         IsCheckingUpdates = true;
-        UpdateStatusText = "Kontrol ediliyor...";
+        UpdateStatusText = _localizationService.GetString("Settings.Update.Checking");
         IsUpdateAvailable = false;
         _latestUpdate = null;
 
@@ -275,16 +277,16 @@ public partial class SettingsViewModel : ObservableObject
             {
                 _latestUpdate = update;
                 IsUpdateAvailable = true;
-                UpdateStatusText = $"Yeni Sürüm: v{update.Version}";
+                UpdateStatusText = string.Format(_localizationService.GetString("Settings.Update.NewVersionFormat"), update.Version);
             }
             else
             {
-                UpdateStatusText = "Uygulama güncel";
+                UpdateStatusText = _localizationService.GetString("Settings.Update.UpToDate");
             }
         }
         catch (Exception)
         {
-            UpdateStatusText = "Kontrol edilemedi";
+            UpdateStatusText = _localizationService.GetString("Settings.Update.CheckFailed");
         }
         finally
         {
@@ -298,8 +300,8 @@ public partial class SettingsViewModel : ObservableObject
         if (_latestUpdate == null) return;
 
         var confirmed = await _dialogService.ShowConfirmationAsync(
-            "Güncelleme",
-            $"v{_latestUpdate.Version} sürümünü şimdi indirmek istiyor musunuz?\n\nDeğişiklikler:\n{_latestUpdate.Changelog}"
+            _localizationService.GetString("Settings.Update.Title"),
+            string.Format(_localizationService.GetString("Settings.Update.ConfirmationFormat"), _latestUpdate.Version, _latestUpdate.Changelog)
         );
 
         if (confirmed)
@@ -368,24 +370,24 @@ public partial class SettingsViewModel : ObservableObject
                 var account = _mainViewModel.CurrentProfile.ProviderAccount;
                 ProviderName = account.Name;
                 ProviderUrl = GetProviderBaseUrl(account.Url);
-                ProviderUsername = account.Username ?? "Yok";
+                ProviderUsername = account.Username ?? _localizationService.GetString("Common.None");
                 
                 // Mask password
                 var pass = account.Password;
-                ProviderPassword = !string.IsNullOrEmpty(pass) ? new string('*', 10) : "Yok";
+                ProviderPassword = !string.IsNullOrEmpty(pass) ? new string('*', 10) : _localizationService.GetString("Common.None");
                 
                 ExpirationDate = account.ExpirationDate;
                 
                 if (ExpirationDate.HasValue)
                 {
                     var daysLeft = (ExpirationDate.Value - DateTime.UtcNow).TotalDays;
-                    if (daysLeft < 0) ExpirationStatus = "Süresi Dolmuş";
-                    else if (daysLeft < 7) ExpirationStatus = $"{Math.Ceiling(daysLeft)} Gün Kaldı (Yakında Bitiyor)";
-                    else ExpirationStatus = $"{Math.Ceiling(daysLeft)} Gün Kaldı";
+                    if (daysLeft < 0) ExpirationStatus = _localizationService.GetString("Settings.Expiration.Expired");
+                    else if (daysLeft < 7) ExpirationStatus = string.Format(_localizationService.GetString("Settings.Expiration.SoonFormat"), Math.Ceiling(daysLeft));
+                    else ExpirationStatus = string.Format(_localizationService.GetString("Settings.Expiration.RemainingFormat"), Math.Ceiling(daysLeft));
                 }
                 else
                 {
-                    ExpirationStatus = "Bilinmiyor";
+                    ExpirationStatus = _localizationService.GetString("Common.Unknown");
                 }
             }
         }
@@ -592,7 +594,7 @@ public partial class SettingsViewModel : ObservableObject
         };
         
         await _settingsService.SaveAsync();
-        StatusMessage = "Ayarlar kaydedildi";
+        StatusMessage = _localizationService.GetString("Settings.Status.Saved");
     }
 
     [ObservableProperty]
@@ -621,13 +623,13 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (CustomEpgUrls.Count >= AppSettings.EPG_URL_LIMIT)
         {
-            StatusMessage = $"En fazla {AppSettings.EPG_URL_LIMIT} adet özel EPG ekleyebilirsiniz.";
+            StatusMessage = string.Format(_localizationService.GetString("Settings.Error.EpgLimitFormat"), AppSettings.EPG_URL_LIMIT);
             return;
         }
 
         if (!IsPremium && CustomEpgUrls.Count >= AppSettings.EPG_URL_FREE_LIMIT)
         {
-            StatusMessage = $"Ücretsiz sürümde en fazla {AppSettings.EPG_URL_FREE_LIMIT} özel EPG kaynağı eklenebilir. Daha fazlası için Premium'a geçin.";
+            StatusMessage = string.Format(_localizationService.GetString("Settings.Error.EpgFreeLimitFormat"), AppSettings.EPG_URL_FREE_LIMIT);
             return;
         }
 
@@ -650,7 +652,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             if (updateStatusMessage)
             {
-                StatusMessage = "[Istatistik] EPG verileri okunuyor...";
+                StatusMessage = _localizationService.GetString("Settings.Status.EpgReading");
             }
 
             using var db = await _contextFactory.CreateDbContextAsync();
@@ -720,23 +722,23 @@ public partial class SettingsViewModel : ObservableObject
                 var isWarning = EpgLastError.Contains("eşleşen yayın bilgisi bulunamadı") || EpgLastError.Contains("0 program");
                 if (isWarning)
                 {
-                    StatusMessage = "[İstatistik] EPG istatistikleri güncellendi";
+                    StatusMessage = _localizationService.GetString("Settings.Status.EpgUpdated");
                 }
                 else
                 {
-                    StatusMessage = "[İstatistik] EPG hatası bulundu";
+                    StatusMessage = _localizationService.GetString("Settings.Status.EpgError");
                 }
             }
             else if (updateStatusMessage)
             {
-                StatusMessage = "[Istatistik] EPG istatistikleri guncellendi";
+                StatusMessage = _localizationService.GetString("Settings.Status.EpgUpdated");
             }
         }
         catch (Exception ex)
         {
             if (updateStatusMessage)
             {
-                StatusMessage = $"[Istatistik] {UserFriendlyErrorMessage.FromException(ex)}";
+                StatusMessage = string.Format(_localizationService.GetString("Settings.Status.Stats.ErrorFormat"), UserFriendlyErrorMessage.FromException(ex));
             }
         }
     }
@@ -751,7 +753,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             if (updateStatusMessage)
             {
-                StatusMessage = "[İstatistik] Kanal listesi verileri okunuyor...";
+                StatusMessage = _localizationService.GetString("Settings.Status.ChannelsReading");
             }
 
             using var db = await _contextFactory.CreateDbContextAsync();
@@ -791,7 +793,7 @@ public partial class SettingsViewModel : ObservableObject
 
             if (updateStatusMessage)
             {
-                StatusMessage = "[İstatistik] Kanal listesi istatistikleri güncellendi";
+                StatusMessage = _localizationService.GetString("Settings.Status.ChannelsUpdated");
             }
         }
         catch
@@ -799,7 +801,7 @@ public partial class SettingsViewModel : ObservableObject
             ChannelListLastUpdated = null;
             if (updateStatusMessage)
             {
-                StatusMessage = "[İstatistik] Kanal listesi istatistikleri okunamadı";
+                StatusMessage = _localizationService.GetString("Settings.Status.Channel.Error");
             }
         }
     }
@@ -807,7 +809,7 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task RefreshChannelListNowAsync()
     {
-        if (!TryBeginRefreshOperation("Kanal listesi yenileniyor"))
+        if (!TryBeginRefreshOperation(_localizationService.GetString("Settings.Refresh.Channel.Started")))
         {
             return;
         }
@@ -815,18 +817,18 @@ public partial class SettingsViewModel : ObservableObject
         try
         {
             _mainViewModel.IsGlobalLoading = true;
-            _mainViewModel.GlobalLoadingMessage = "Kanal listesi yenileniyor...";
+            _mainViewModel.GlobalLoadingMessage = _localizationService.GetString("Settings.Refresh.Channel.Started");
 
-            SetProgressStatus("Kanal", 12, "Kanal listesi yenileniyor...");
+            SetProgressStatus("Kanal", 12, _localizationService.GetString("Settings.Refresh.Channel.Started"));
             await _mainViewModel.RefreshSelectedPlaylistAsync();
 
-            SetProgressStatus("Kanal", 60, "Kanal listesi verileri güncelleniyor...");
-            _mainViewModel.GlobalLoadingMessage = "Kanal listesi verileri güncelleniyor...";
+            SetProgressStatus("Kanal", 60, _localizationService.GetString("Settings.Refresh.Channel.UpdatingData"));
+            _mainViewModel.GlobalLoadingMessage = _localizationService.GetString("Settings.Refresh.Channel.UpdatingData");
             await ScanChannelListStatsCoreAsync(updateStatusMessage: false);
 
             // Kanal listesi yenilenirken bitiş süresini de güncelle
-            SetProgressStatus("Kanal", 80, "Hesap bilgileri kontrol ediliyor...");
-            _mainViewModel.GlobalLoadingMessage = "Hesap bilgileri kontrol ediliyor...";
+            SetProgressStatus("Kanal", 80, _localizationService.GetString("Settings.Refresh.Channel.CheckingAccount"));
+            _mainViewModel.GlobalLoadingMessage = _localizationService.GetString("Settings.Refresh.Channel.CheckingAccount");
             await _mainViewModel.RefreshCurrentProfileExpirationAsync();
             LoadProfileInfo();
 
@@ -840,18 +842,18 @@ public partial class SettingsViewModel : ObservableObject
                 var afterCount = await _playlistService.GetChannelCountAsync(_mainViewModel.SelectedPlaylist?.Id ?? 0);
                 if (afterCount == 0)
                 {
-                    SetProgressStatus("Kanal", 100, "Uyarı: Liste indirildi ancak içerik bulunamadı (0 kanal)");
+                    SetProgressStatus("Kanal", 100, _localizationService.GetString("Settings.Refresh.Channel.Warning.NoContent"));
                 }
                 else
                 {
-                    SetProgressStatus("Kanal", 100, "Kanal listesi yenileme tamamlandı");
+                    SetProgressStatus("Kanal", 100, _localizationService.GetString("Settings.Refresh.Channel.Completed"));
                 }
             }
         }
         catch (Exception ex)
         {
             ChannelListLastError = UserFriendlyErrorMessage.FromException(ex);
-            SetProgressStatus("Kanal", RefreshProgressPercent, UserFriendlyErrorMessage.WithPrefix("Kanal listesi yenileme hatası", ex));
+            SetProgressStatus("Kanal", RefreshProgressPercent, UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Settings.Refresh.Channel.Error"), ex));
         }
         finally
         {
@@ -867,16 +869,16 @@ public partial class SettingsViewModel : ObservableObject
         // Önce ayarları kaydet ki arka plan görevi yeni URL'yi görebilsin
         await SaveSettingsAsync();
 
-        if (!TryBeginRefreshOperation("EPG yenileme başlatılıyor"))
+        if (!TryBeginRefreshOperation(_localizationService.GetString("Settings.Refresh.Epg.Started")))
         {
             return;
         }
 
-        SetProgressStatus("EPG", 8, "EPG yenileme arka planda başlatıldı...");
+        SetProgressStatus("EPG", 8, _localizationService.GetString("Settings.Refresh.Epg.Started"));
         var started = _mainViewModel.ForceRefreshEpgInBackground();
         if (!started)
         {
-            SetProgressStatus("EPG", 8, "Başka bir yenileme işlemi zaten devam ediyor...");
+            SetProgressStatus("EPG", 8, _localizationService.GetString("Settings.Refresh.Epg.InProgress"));
             EndRefreshOperation();
             return;
         }
@@ -929,7 +931,7 @@ public partial class SettingsViewModel : ObservableObject
                         
                         if (LastEpgUpdate.HasValue && LastEpgUpdate.Value >= startedAt)
                         {
-                            SetProgressStatus("EPG", 100, "EPG yenileme tamamlandı");
+                            SetProgressStatus("EPG", 100, _localizationService.GetString("Settings.Refresh.Epg.Completed"));
                             return;
                         }
                     }
@@ -940,14 +942,14 @@ public partial class SettingsViewModel : ObservableObject
                         
                         if (isWarning)
                         {
-                            SetProgressStatus("EPG", 100, "EPG yenileme tamamlandı");
+                            SetProgressStatus("EPG", 100, _localizationService.GetString("Settings.Refresh.Epg.Completed"));
                         }
                         else
                         {
                             SetProgressStatus(
                                 "EPG",
                                 100,
-                                $"EPG yenileme hatası: {EpgLastError}");
+                                string.Format(_localizationService.GetString("Settings.Refresh.Epg.ErrorFormat"), EpgLastError));
                         }
                         return;
                     }
@@ -958,14 +960,14 @@ public partial class SettingsViewModel : ObservableObject
                 }
                 catch (Exception ex)
                 {
-                    SetProgressStatus("EPG", RefreshProgressPercent, UserFriendlyErrorMessage.WithPrefix("EPG izleme hatası", ex));
+                    SetProgressStatus("EPG", RefreshProgressPercent, UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Settings.Refresh.Epg.WatchingError"), ex));
                     return;
                 }
             }
 
             if (DateTime.UtcNow >= timeoutAt)
             {
-                SetProgressStatus("EPG", RefreshProgressPercent, "EPG yenileme zaman aşımına uğradı (10 dk)");
+                SetProgressStatus("EPG", RefreshProgressPercent, _localizationService.GetString("Settings.Refresh.Epg.Timeout"));
             }
         }
         finally
@@ -978,13 +980,13 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (Interlocked.Exchange(ref _isRefreshOperationRunning, 1) == 1)
         {
-            StatusMessage = $"[Yenileme] Başka bir işlem devam ediyor. Önce mevcut yenilemenin bitmesini bekleyin.";
+            StatusMessage = _localizationService.GetString("Settings.Refresh.OperationInProgress");
             return false;
         }
 
         RefreshProgressPercent = 0;
         ChannelListLastError = null;
-        StatusMessage = $"[Yenileme] {operationLabel}";
+        StatusMessage = string.Format(_localizationService.GetString("Settings.Status.Refresh.Label"), operationLabel);
         return true;
     }
 
@@ -1042,7 +1044,7 @@ public partial class SettingsViewModel : ObservableObject
     {
         _settingsService.ResetToDefaults();
         LoadSettings();
-        StatusMessage = "Ayarlar varsayılanına sıfırlandı";
+        StatusMessage = _localizationService.GetString("Settings.Status.Reset");
     }
 
     [RelayCommand]
@@ -1052,20 +1054,20 @@ public partial class SettingsViewModel : ObservableObject
         if (!profileId.HasValue) return;
 
         var confirmed = await _dialogService.ShowConfirmationAsync(
-            "Geçmişi Temizle",
-            "Tüm izleme geçmişiniz silinecek. Bu işlem geri alınamaz. Devam etmek istiyor musunuz?");
+            _localizationService.GetString("Settings.Privacy.Clear.Title"),
+            _localizationService.GetString("Settings.Privacy.Clear.Confirm"));
 
         if (confirmed)
         {
             try
             {
                 await _watchHistoryService.DeleteProfileHistoryAsync(profileId.Value);
-                StatusMessage = "İzleme geçmişi temizlendi";
+                StatusMessage = _localizationService.GetString("Settings.Privacy.Clear.Success");
                 _mainViewModel.ResetWatchHistoryUI();
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Hata: {ex.Message}";
+                StatusMessage = string.Format(_localizationService.GetString("Common.ErrorFormat"), ex.Message);
             }
         }
     }

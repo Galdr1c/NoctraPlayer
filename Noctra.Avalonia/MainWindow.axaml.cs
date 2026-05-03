@@ -14,6 +14,7 @@ using Noctra.Services.Interfaces;
 using Noctra.Core.Services;
 using Noctra.ViewModels;
 using Noctra.Avalonia.Services;
+using Noctra.Avalonia.Localization;
 using System;
 
 namespace Noctra.Avalonia;
@@ -150,7 +151,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            _mainViewModel.StatusMessage = $"Ayarlar açılamadı: {ex.Message}";
+            _mainViewModel.StatusMessage = $"{LocalizationSource.Instance["Settings.Error.OpenFailed"]}: {ex.Message}";
             StartupDiagnostics.LogException("Failed to open SettingsWindow.", ex);
         }
     }
@@ -242,7 +243,7 @@ public partial class MainWindow : Window
         {
             StartupDiagnostics.LogException("Media playback failed in MainWindow_OnMediaSelected.", ex);
             PlayerArea.IsVisible = false;
-            _mainViewModel.StatusMessage = UserFriendlyErrorMessage.WithPrefix("İçerik oynatılamadı", ex);
+            _mainViewModel.StatusMessage = UserFriendlyErrorMessage.WithPrefix(LocalizationSource.Instance["Player.Error.PlaybackFailed"], ex);
         }
     }
 
@@ -542,14 +543,14 @@ public partial class MainWindow : Window
         HamburgerIcon.Kind = visible ? Material.Icons.MaterialIconKind.MenuOpen : Material.Icons.MaterialIconKind.Menu;
 
         // Navigasyon tooltiplerini menü kapalıyken göster, açıkken gizle
-        NavHomeBtn.SetValue(ToolTip.TipProperty, visible ? null : "Ana Sayfa");
-        NavLiveBtn.SetValue(ToolTip.TipProperty, visible ? null : "Canlı TV");
-        NavMoviesBtn.SetValue(ToolTip.TipProperty, visible ? null : "Filmler");
-        NavSeriesBtn.SetValue(ToolTip.TipProperty, visible ? null : "Diziler");
-        NavMyListBtn.SetValue(ToolTip.TipProperty, visible ? null : "Listem");
-        NavFavBtn.SetValue(ToolTip.TipProperty, visible ? null : "Favoriler");
-        NavHistoryBtn.SetValue(ToolTip.TipProperty, visible ? null : "Geçmiş");
-        NavDownloadsBtn.SetValue(ToolTip.TipProperty, visible ? null : "İndirilenler");
+        NavHomeBtn.SetValue(ToolTip.TipProperty, visible ? null : LocalizationSource.Instance["Shell.Nav.Home"]);
+        NavLiveBtn.SetValue(ToolTip.TipProperty, visible ? null : LocalizationSource.Instance["Shell.Nav.Live"]);
+        NavMoviesBtn.SetValue(ToolTip.TipProperty, visible ? null : LocalizationSource.Instance["Shell.Nav.Movies"]);
+        NavSeriesBtn.SetValue(ToolTip.TipProperty, visible ? null : LocalizationSource.Instance["Shell.Nav.Series"]);
+        NavMyListBtn.SetValue(ToolTip.TipProperty, visible ? null : LocalizationSource.Instance["Shell.Nav.MyList"]);
+        NavFavBtn.SetValue(ToolTip.TipProperty, visible ? null : LocalizationSource.Instance["Shell.Nav.Favorites"]);
+        NavHistoryBtn.SetValue(ToolTip.TipProperty, visible ? null : LocalizationSource.Instance["Shell.Nav.History"]);
+        NavDownloadsBtn.SetValue(ToolTip.TipProperty, visible ? null : LocalizationSource.Instance["Shell.Nav.Downloads"]);
 
         UpdateDownloadBadgeVisibility();
     }

@@ -2,6 +2,7 @@ using Moq;
 using Moq.Protected;
 using Noctra.Models;
 using Noctra.Services;
+using Noctra.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,13 +19,19 @@ namespace Noctra.Tests
     {
         private readonly Mock<HttpMessageHandler> _handlerMock;
         private readonly HttpClient _httpClient;
+        private readonly Mock<ILocalizationService> _localizationServiceMock;
         private readonly XtreamCodesService _service;
 
         public XtreamCodesServiceIntegrationTests()
         {
             _handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
             _httpClient = new HttpClient(_handlerMock.Object);
-            _service = new XtreamCodesService(_httpClient);
+            _localizationServiceMock = new Mock<ILocalizationService>();
+            
+            // Setup default localization behavior
+            _localizationServiceMock.Setup(l => l.GetString(It.IsAny<string>())).Returns<string>(k => k);
+
+            _service = new XtreamCodesService(_httpClient, _localizationServiceMock.Object);
         }
 
         [Fact]

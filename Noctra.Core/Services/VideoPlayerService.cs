@@ -13,6 +13,7 @@ public class VideoPlayerService : IVideoPlayerService
     private MediaPlayer? _mediaPlayer;
     private readonly IDispatcherService _dispatcherService;
     private readonly ISettingsService _settingsService;
+    private readonly ILocalizationService _localizationService;
     private bool _disposed;
     private int _currentVolume = 100;
     private string _lastUserAgent;
@@ -75,10 +76,11 @@ public class VideoPlayerService : IVideoPlayerService
     private int GetLiveCaching() => GetNetworkCaching() - 1000;
     private int GetFileCaching() => 1500;
 
-    public VideoPlayerService(IDispatcherService dispatcherService, ISettingsService settingsService)
+    public VideoPlayerService(IDispatcherService dispatcherService, ISettingsService settingsService, ILocalizationService localizationService)
     {
         _dispatcherService = dispatcherService;
         _settingsService = settingsService;
+        _localizationService = localizationService;
         
         // Initialize volume from settings
         _currentVolume = _settingsService.Settings.DefaultVolume;
@@ -414,7 +416,7 @@ public class VideoPlayerService : IVideoPlayerService
         _mediaPlayer.EncounteredError += (s, e) => 
         {
             LogDebug("Event: EncounteredError");
-            _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, "Video oynatma hatası oluştu"));
+            _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, _localizationService.GetString("VideoPlayer.Error.PlaybackGeneric")));
         };
             
         _mediaPlayer.Buffering += (sender, e) =>
@@ -727,7 +729,7 @@ public class VideoPlayerService : IVideoPlayerService
                 }
                 else if (errorOccurred)
                 {
-                    _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, "Stream bağlantısı kurulamadı. URL'yi kontrol edin."));
+                    _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, _localizationService.GetString("VideoPlayer.Error.ConnectionFailed")));
                     return;
                 }
 
@@ -736,12 +738,12 @@ public class VideoPlayerService : IVideoPlayerService
             }
             catch (UriFormatException)
             {
-                _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, "Geçersiz stream URL'si."));
+                _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, _localizationService.GetString("VideoPlayer.Error.InvalidUrl")));
                 return;
             }
             catch (Exception ex)
             {
-                var message = UserFriendlyErrorMessage.WithPrefix("Oynatma baslatilamadi", ex);
+                var message = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("VideoPlayer.Error.PlaybackStartFailed"), ex);
                 _dispatcherService.BeginInvoke(() => ErrorOccurred?.Invoke(this, message));
                 return;
             }

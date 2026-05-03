@@ -48,9 +48,11 @@ namespace Noctra.Tests
             var mockSettingsService = new Mock<ISettingsService>();
             mockSettingsService.Setup(s => s.Settings).Returns(new AppSettings { EpgTimeOffsetHours = 3 });
 
-            var httpClient = new HttpClient();
+            var mockLocalizationService = new Mock<ILocalizationService>();
+            mockLocalizationService.Setup(l => l.GetString(It.IsAny<string>())).Returns<string>(k => k);
 
-            var epgService = new EpgService(mockContextFactory.Object, httpClient, mockSettingsService.Object);
+            var httpClient = new HttpClient();
+            var epgService = new EpgService(mockContextFactory.Object, httpClient, mockSettingsService.Object, mockLocalizationService.Object);
             // Act
             var from = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             var to = new DateTime(2023, 1, 1, 23, 59, 59, DateTimeKind.Utc);
@@ -91,9 +93,11 @@ namespace Noctra.Tests
             var mockSettingsService = new Mock<ISettingsService>();
             mockSettingsService.Setup(s => s.Settings).Returns(new AppSettings { EpgTimeOffsetHours = -5 });
 
-            var httpClient = new HttpClient();
+            var mockLocalizationService = new Mock<ILocalizationService>();
+            mockLocalizationService.Setup(l => l.GetString(It.IsAny<string>())).Returns<string>(k => k);
 
-            var epgService = new EpgService(mockContextFactory.Object, httpClient, mockSettingsService.Object);
+            var httpClient = new HttpClient();
+            var epgService = new EpgService(mockContextFactory.Object, httpClient, mockSettingsService.Object, mockLocalizationService.Object);
             // Act
             var from = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             var to = new DateTime(2023, 1, 1, 23, 59, 59, DateTimeKind.Utc);

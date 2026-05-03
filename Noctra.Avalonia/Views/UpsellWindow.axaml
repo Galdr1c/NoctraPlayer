@@ -4,9 +4,10 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        xmlns:loc="using:Noctra.Avalonia.Localization"
         mc:Ignorable="d"
         x:CompileBindings="False"
-        Title="Premium'a Yükselt" Height="650" Width="900"
+        Title="{Binding [Upsell.Title], Source={x:Static loc:LocalizationSource.Instance}}" Height="650" Width="900"
         WindowStartupLocation="CenterScreen"
         ShowInTaskbar="False"
         SystemDecorations="None"
@@ -87,12 +88,12 @@
                 <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,30">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8" Margin="0,0,0,8">
                         <materialIcons:MaterialIcon Kind="Crown" Width="20" Height="20" Foreground="{DynamicResource AccentLightBrush}"/>
-                        <TextBlock Text="PREMIUM" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentLightBrush}"/>
+                        <TextBlock Text="{Binding [Upsell.Badge], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentLightBrush}"/>
                     </StackPanel>
 
-                    <TextBlock Text="Sınırları Kaldırın" FontSize="36" FontWeight="Bold"
+                    <TextBlock Text="{Binding [Upsell.Headline], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="36" FontWeight="Bold"
                                Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Tüm özelliklere erişin ve Noctra deneyiminizi yükseltin"
+                    <TextBlock Text="{Binding [Upsell.Subheadline], Source={x:Static loc:LocalizationSource.Instance}}"
                                FontSize="16" Foreground="{DynamicResource TextMutedBrush}"
                                HorizontalAlignment="Center" Margin="0,8,0,0"/>
                 </StackPanel>
@@ -108,25 +109,25 @@
                     <!-- FREE CARD -->
                     <Border Grid.Column="0" Background="{DynamicResource Surface0Brush}" CornerRadius="12" Padding="24">
                         <StackPanel>
-                            <TextBlock Text="Ücretsiz" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="Temel Kullanım" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20"/>
+                            <TextBlock Text="{Binding [Upsell.Free.Title], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Text="{Binding [Upsell.Free.Subtitle], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20"/>
 
                             <StackPanel Margin="0,0,0,8" Spacing="8">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                    <TextBlock Text="5 Profil Desteği" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="{Binding [Upsell.Free.Feature1], Source={x:Static loc:LocalizationSource.Instance}}" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                    <TextBlock Text="2 Özel EPG Kaynağı" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="{Binding [Upsell.Free.Feature2], Source={x:Static loc:LocalizationSource.Instance}}" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                    <TextBlock Text="Manuel EPG Yenileme" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="{Binding [Upsell.Free.Feature3], Source={x:Static loc:LocalizationSource.Instance}}" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource TextMutedBrush}"/>
-                                    <TextBlock Text="Noctra Filigranı &amp; Reklamlar" Foreground="{DynamicResource TextMutedBrush}"/>
+                                    <TextBlock Text="{Binding [Upsell.Free.Feature4], Source={x:Static loc:LocalizationSource.Instance}}" Foreground="{DynamicResource TextMutedBrush}"/>
                                 </StackPanel>
                             </StackPanel>
                         </StackPanel>
@@ -140,44 +141,44 @@
                         <StackPanel>
                             <Grid>
                                 <StackPanel>
-                                    <TextBlock Text="Premium" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="Ömür Boyu Lisans" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20"/>
+                                    <TextBlock Text="{Binding [Upsell.Premium.Title], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
+                                    <TextBlock Text="{Binding [Upsell.Premium.Subtitle], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20"/>
                                 </StackPanel>
                                 <Border HorizontalAlignment="Right" VerticalAlignment="Top"
                                         Background="{DynamicResource AccentBrush}" CornerRadius="4" Padding="8,4">
-                                    <TextBlock Text="ÖNERİLEN" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                                    <TextBlock Text="{Binding [Upsell.Premium.Recommended], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="10" FontWeight="Bold" Foreground="White"/>
                                 </Border>
                             </Grid>
                             
                             <StackPanel Margin="0,0,0,8" Spacing="8">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="12 Farklı Profil" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding [Upsell.Premium.Feature1], Source={x:Static loc:LocalizationSource.Instance}}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="Otomatik EPG Güncelleme" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding [Upsell.Premium.Feature2], Source={x:Static loc:LocalizationSource.Instance}}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="10 Özel EPG Kaynağı" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding [Upsell.Premium.Feature3], Source={x:Static loc:LocalizationSource.Instance}}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="Kaldığın Yerden İzleme" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding [Upsell.Premium.Feature4], Source={x:Static loc:LocalizationSource.Instance}}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="Uyku Zamanlayıcısı" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding [Upsell.Premium.Feature5], Source={x:Static loc:LocalizationSource.Instance}}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
                                 </StackPanel>
 
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="Filigransız &amp; Reklamsız İzleme" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding [Upsell.Premium.Feature6], Source={x:Static loc:LocalizationSource.Instance}}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="Daha Fazlası..." Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding [Upsell.Premium.Feature7], Source={x:Static loc:LocalizationSource.Instance}}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
                                 </StackPanel>
                             </StackPanel>
                         </StackPanel>
@@ -190,12 +191,12 @@
                             Classes="BuyBtn">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                             <materialIcons:MaterialIcon Kind="Crown" Width="20" Height="20" Foreground="White" Margin="0,0,8,0"/>
-                            <TextBlock Text="Premium Satın Al" FontSize="18" FontWeight="Bold" Foreground="White"/>
-                            <TextBlock Text=" - 499.50 TL (Tek Sefer)" FontSize="16" FontWeight="Normal" Foreground="White" Opacity="0.9"/>
+                            <TextBlock Text="{Binding [Upsell.Action.Buy], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="18" FontWeight="Bold" Foreground="White"/>
+                            <TextBlock Text="{Binding [Upsell.Action.Buy.Price], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="16" FontWeight="Normal" Foreground="White" Opacity="0.9"/>
                         </StackPanel>
                     </Button>
 
-                    <Button Content="Hayır, teşekkürler" Click="ContinueFree_Click"
+                    <Button Content="{Binding [Upsell.Action.Dismiss], Source={x:Static loc:LocalizationSource.Instance}}" Click="ContinueFree_Click"
                             Classes="DismissBtn" Margin="0,20,0,0"
                             HorizontalAlignment="Center"/>
                 </StackPanel>
@@ -203,7 +204,7 @@
 
             <!-- Close Button -->
             <Button Click="Close_Click" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="20"
-                    Classes="CloseButtonStyle" ToolTip.Tip="Kapat"/>
+                    Classes="CloseButtonStyle" ToolTip.Tip="{Binding [Upsell.Action.Close], Source={x:Static loc:LocalizationSource.Instance}}"/>
         </Grid>
     </Border>
 </Window>

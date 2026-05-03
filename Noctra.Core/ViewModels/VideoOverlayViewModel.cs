@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Noctra.Services.Interfaces;
 using System.Timers;
@@ -10,6 +10,7 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
     private readonly IVideoPlayerService _playerService;
     private readonly INetworkService _networkService;
     private readonly IDispatcherService _dispatcherService;
+    private readonly ILocalizationService _localizationService;
     private readonly System.Timers.Timer _autoHideTimer;
     [ObservableProperty]
     private bool _isVisible;
@@ -54,7 +55,7 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
     private string _channelName = string.Empty;
 
     [ObservableProperty]
-    private string _connectionStatus = "Bağlanıyor...";
+    private string _connectionStatus = string.Empty;
 
     [ObservableProperty]
     private string _networkStatus = "Offline";
@@ -80,11 +81,12 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
     private bool _isUpdatingFromService;
     private readonly System.Timers.Timer _volumeToastTimer;
 
-    public VideoOverlayViewModel(IVideoPlayerService playerService, INetworkService networkService, IDispatcherService dispatcherService)
+    public VideoOverlayViewModel(IVideoPlayerService playerService, INetworkService networkService, IDispatcherService dispatcherService, ILocalizationService localizationService)
     {
         _playerService = playerService;
         _networkService = networkService;
         _dispatcherService = dispatcherService;
+        _localizationService = localizationService;
         
         // Timer for auto-hide
         _autoHideTimer = new System.Timers.Timer(3000); // 3 seconds
@@ -101,6 +103,7 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
         InitializeClock();
 
         // Initialize network status
+        ConnectionStatus = _localizationService.GetString("Player.Status.Connecting");
         NetworkStatus = _networkService.CurrentNetworkStatus;
         _networkService.NetworkStatusChanged += OnNetworkStatusChanged;
         

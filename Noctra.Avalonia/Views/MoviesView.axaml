@@ -6,6 +6,7 @@
              xmlns:models="using:Noctra.Models"
              xmlns:controls="using:Noctra.Avalonia.Controls"
              xmlns:views="using:Noctra.Avalonia.Views"
+             xmlns:loc="using:Noctra.Avalonia.Localization"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="600"
              x:Class="Noctra.Avalonia.Views.MoviesView"
@@ -14,7 +15,7 @@
                       ScrollChanged="MoviesView_ScrollChanged">
           <StackPanel Margin="24">
             <Grid Margin="0,0,0,24" ColumnDefinitions="*,Auto">
-              <TextBlock Text="Filmler" FontSize="24" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+              <TextBlock Text="{loc:Translate Movies.Title}" FontSize="24" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
               <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
                 <ComboBox Width="260" Height="45" ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}" Theme="{StaticResource ModernComboBox}">
                   <ComboBox.ItemTemplate>
@@ -22,7 +23,7 @@
                       <Grid ColumnDefinitions="Auto,*">
                         <Button Grid.Column="0" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).HideGroupCommand}"
                                 CommandParameter="{Binding}" Padding="6" Margin="0,0,8,0" Background="Transparent" BorderThickness="0" CornerRadius="16" Cursor="Hand"
-                                ToolTip.Tip="Kategoriyi Gizle">
+                                ToolTip.Tip="{loc:Translate Live.HideCategory.Tooltip}">
                           <materialIcons:MaterialIcon Kind="EyeOffOutline" Width="16" Height="16" Foreground="{DynamicResource TextMutedBrush}"/>
                         </Button>
                         <TextBlock Grid.Column="1" Text="{Binding}" VerticalAlignment="Center"/>
@@ -30,7 +31,7 @@
                     </DataTemplate>
                   </ComboBox.ItemTemplate>
                 </ComboBox>
-                <Button Content="Tümü" Width="80" Height="45" Click="ClearGroupSelection_Click" Theme="{StaticResource FilterButtonStyle}"/>
+                <Button Content="{loc:Translate Live.All}" Width="80" Height="45" Click="ClearGroupSelection_Click" Theme="{StaticResource FilterButtonStyle}"/>
                 <ComboBox Width="240" Height="45" ItemsSource="{Binding SortOptions}" SelectedValue="{Binding SelectedSortOrder}" SelectedValueBinding="{Binding Key}" DisplayMemberBinding="{Binding Value}" Theme="{StaticResource ModernComboBox}"/>
               </StackPanel>
             </Grid>
@@ -49,11 +50,11 @@
                         IsVisible="{Binding IsContentLoading}">
                 <controls:PremiumSpinner Width="56" Height="56"
                                          HorizontalAlignment="Center"/>
-                <TextBlock Text="Filmler yükleniyor..."
+                <TextBlock Text="{loc:Translate Movies.Loading}"
                            FontSize="15" FontWeight="SemiBold"
                            Foreground="{DynamicResource TextMutedBrush}"
                            TextAlignment="Center"/>
-                <TextBlock Text="Bu işlem liste büyüklüğüne göre birkaç saniye sürebilir."
+                <TextBlock Text="{loc:Translate Live.LoadingDetail}"
                            FontSize="12" Opacity="0.6"
                            Foreground="{DynamicResource TextMutedBrush}"
                            TextAlignment="Center"/>
@@ -65,10 +66,10 @@
                         IsVisible="{Binding ShowEmptyChannels}">
                 <materialIcons:MaterialIcon Kind="Filmstrip" Width="64" Height="64"
                                             Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5"/>
-                <TextBlock Text="Film bulunamadı" FontSize="20" LetterSpacing="1"
+                <TextBlock Text="{loc:Translate Movies.Empty.Title}" FontSize="20" LetterSpacing="1"
                            FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"
                            TextAlignment="Center" Margin="0,14,0,6"/>
-                <TextBlock Text="Bu filtrede gösterilecek film yok."
+                <TextBlock Text="{loc:Translate Live.Empty.Description}"
                            FontSize="14" Foreground="{DynamicResource TextMutedBrush}"
                            TextAlignment="Center"/>
             </StackPanel>

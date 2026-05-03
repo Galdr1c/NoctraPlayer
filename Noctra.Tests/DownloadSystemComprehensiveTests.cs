@@ -108,7 +108,7 @@ namespace Noctra.Tests
             var epg = new FakeEpgService();
             var metadata = new FakeMetadataService();
 
-            PlayerVM = new PlayerViewModel(VideoService, epg, metadata, media, DownloadService, network, dispatcher, settings, license, null!, history, new FakeStalkerPortalService());
+            PlayerVM = new PlayerViewModel(VideoService, epg, metadata, media, DownloadService, network, dispatcher, settings, license, null!, history, new FakeStalkerPortalService(), new Moq.Mock<ILocalizationService>().Object);
             
             // We pass nulls for services not relevant to these tests to avoid huge fake classes.
             // MainViewModel handles nulls or doesn't use them during pure instantiation.
@@ -134,6 +134,7 @@ namespace Noctra.Tests
                 null!, // tmdb sync
                 license,
                 null!, // update service
+                new Moq.Mock<ILocalizationService>().Object,
                 null   // logger
             );
         }

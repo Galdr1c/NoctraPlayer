@@ -84,6 +84,8 @@ namespace Noctra.Tests
     internal sealed class ScenarioLicenseService : ILicenseService
     {
         public bool IsPremium { get; set; } = true;
+        public bool CanUpgradeToPremium => !IsPremium;
+        public bool IsEditionLockedPremium => false;
         public SubscriptionTier CurrentTier => IsPremium ? SubscriptionTier.Premium : SubscriptionTier.Free;
         public bool IsFeatureAvailable(string feature) => IsPremium;
         public event Action? SubscriptionChanged;
@@ -149,6 +151,10 @@ namespace Noctra.Tests
         public ScenarioContext(bool isPremium = true)
         {
             License.IsPremium = isPremium;
+            var localizationMock = new Moq.Mock<ILocalizationService>();
+            localizationMock.Setup(l => l.GetString(Moq.It.IsAny<string>())).Returns((string s) => s);
+            localizationMock.Setup(l => l.GetString("Player.Status.Unstable")).Returns("kararsız");
+
             VM = new PlayerViewModel(
                 VideoService,
                 new FakeEpgService(),
@@ -161,7 +167,8 @@ namespace Noctra.Tests
                 License,
                 null!,  // MainViewModel — not needed for these tests
                 WatchHistory,
-                new FakeStalkerPortalService());
+                new FakeStalkerPortalService(),
+                localizationMock.Object);
         }
 
         // ─── Yardımcı Reflection ─────────────────────────────────────────────

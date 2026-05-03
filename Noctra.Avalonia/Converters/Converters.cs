@@ -11,6 +11,7 @@ using Avalonia.Platform;
 using Noctra.Models;
 using Noctra.ViewModels;
 using Material.Icons;
+using Noctra.Avalonia.Localization;
 
 namespace Noctra.Avalonia.Converters;
 
@@ -510,7 +511,7 @@ public class BitrateDisplayConverter : IValueConverter
     {
         if (value is not int bitrate || bitrate <= 0)
         {
-            return "Bilinmiyor";
+            return LocalizationSource.Instance["Common.Unknown"];
         }
 
         if (bitrate >= 1_000_000) return $"{bitrate / 1_000_000.0:F2} Mbps";
@@ -526,8 +527,8 @@ public class BoolToStringConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        var trueText = "Yes";
-        var falseText = "No";
+        var trueText = LocalizationSource.Instance["Common.Yes"];
+        var falseText = LocalizationSource.Instance["Common.No"];
 
         if (parameter is string param)
         {
@@ -1368,16 +1369,56 @@ public class TimeSpanToCountdownConverter : IValueConverter
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is not TimeSpan ts || ts <= TimeSpan.Zero)
-            return "Siliniyor...";
+            return LocalizationSource.Instance["Profile.Deletion.Deleting"];
 
         if (ts.TotalDays >= 1)
-            return $"{(int)ts.TotalDays}g {ts.Hours}s kaldı\nSilinecek";
+            return string.Format(LocalizationSource.Instance["Profile.Deletion.DaysLeftFormat"], (int)ts.TotalDays, ts.Hours);
 
         if (ts.TotalHours >= 1)
-            return $"{(int)ts.TotalHours}s {ts.Minutes}dk kaldı\nSilinecek";
+            return string.Format(LocalizationSource.Instance["Profile.Deletion.HoursLeftFormat"], (int)ts.TotalHours, ts.Minutes);
 
-        return $"{ts.Minutes}dk kaldı\nSilinecek";
+        return string.Format(LocalizationSource.Instance["Profile.Deletion.MinutesLeftFormat"], ts.Minutes);
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
+}
+
+public class StringFormatConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (parameter == null) return value?.ToString();
+
+        var format = parameter.ToString();
+        if (string.IsNullOrEmpty(format)) return value?.ToString();
+
+        // If format looks like a localization key, try to translate it
+        // Keys usually don't have spaces and often contain dots
+        if (!format.Contains(' ') && format.Contains('.'))
+        {
+            var translated = LocalizationSource.Instance[format];
+            if (translated != format)
+            {
+                format = translated;
+            }
+        }
+
+        try
+        {
+            // Handle collection count automatically
+            if (value is ICollection collection)
+            {
+                return string.Format(culture, format, collection.Count);
+            }
+
+            return string.Format(culture, format, value);
+        }
+        catch
+        {
+            return value?.ToString() ?? string.Empty;
+        }
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => null;
 }

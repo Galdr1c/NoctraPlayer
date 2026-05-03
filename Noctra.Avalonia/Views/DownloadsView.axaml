@@ -8,6 +8,7 @@
              xmlns:converters="using:Noctra.Avalonia.Converters"
              xmlns:behaviors="using:Noctra.Avalonia.Behaviors"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:loc="using:Noctra.Avalonia.Localization"
              mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
              x:Class="Noctra.Avalonia.Views.DownloadsView"
              x:DataType="vm:MainViewModel">
@@ -160,7 +161,7 @@
       
       <!-- Title Section -->
       <StackPanel Spacing="4" Margin="0,0,0,24">
-        <TextBlock Text="İndirilenler" FontSize="28" FontWeight="ExtraBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+        <TextBlock Text="{loc:Translate Downloads.Title}" FontSize="28" FontWeight="ExtraBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
         <TextBlock Text="{Binding TotalDownloadsInfoText}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}"/>
       </StackPanel>
 
@@ -184,7 +185,7 @@
         </TabControl.ItemsPanel>
 
         <!-- TABS CONTENT: LIBRARY -->
-        <TabItem Classes="downloadTab" Header="Kütüphane">
+        <TabItem Classes="downloadTab" Header="{loc:Translate Downloads.Tabs.Library}">
           <StackPanel>
         
         <!-- Storage Quota Section -->
@@ -197,7 +198,7 @@
             
             <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center" Spacing="12">
               <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Text="Cihaz Depolama" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                <TextBlock Text="{loc:Translate Downloads.Storage.Title}" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
                 <TextBlock Grid.Column="1" Text="{Binding StorageUsageDetailText}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
               </Grid>
               
@@ -229,19 +230,19 @@
               <WrapPanel Orientation="Horizontal">
                 <StackPanel Orientation="Horizontal" Margin="0,0,12,0" Spacing="6">
                   <Border Width="10" Height="10" CornerRadius="2" Background="{DynamicResource AccentLightBrush}"/>
-                  <TextBlock Text="Disk Doluluğu" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
+                  <TextBlock Text="{loc:Translate Downloads.Storage.Other}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,12,0" Spacing="6">
                   <Border Width="10" Height="10" CornerRadius="2" Background="{DynamicResource AccentBrush}"/>
-                  <TextBlock Text="Noctra" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
+                  <TextBlock Text="{loc:Translate Downloads.Storage.Noctra}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,12,0" Spacing="6">
                   <Border Width="10" Height="10" CornerRadius="2" Background="{DynamicResource AccentBrush}" Opacity="0.5"/>
-                  <TextBlock Text="İndirilmesi Devam Edenler" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
+                  <TextBlock Text="{loc:Translate Downloads.Storage.Pending}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <Border Width="10" Height="10" CornerRadius="2" BorderThickness="1" BorderBrush="{DynamicResource TextMutedBrush}" Opacity="0.3"/>
-                  <TextBlock Text="Boş Alan" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
+                  <TextBlock Text="{loc:Translate Downloads.Storage.Free}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
                 </StackPanel>
               </WrapPanel>
 
@@ -249,7 +250,7 @@
               <Border Background="#33FF4444" CornerRadius="6" Padding="10,6" IsVisible="{Binding ShowStorageWarning}">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <materialIcons:MaterialIcon Kind="AlertCircleOutline" Width="14" Height="14" Foreground="#FFFF4444"/>
-                  <TextBlock Text="Dikkat: Disk doluluğu %90'ı geçti. Yeni indirmeler başarısız olabilir." 
+                  <TextBlock Text="{loc:Translate Downloads.Storage.Warning}" 
                              Foreground="#FFFF4444" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
                 </StackPanel>
               </Border>
@@ -257,10 +258,10 @@
 
             <!-- Actions -->
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12" Margin="24,0,0,0">
-              <Button Content="Tümünü Sil" Command="{Binding DeleteAllDownloadsCommand}"
+              <Button Content="{loc:Translate Downloads.Action.DeleteAll}" Command="{Binding DeleteAllDownloadsCommand}"
                       Classes="dangerHover"
                       Padding="16,8" CornerRadius="6" FontSize="12"/>
-              <Button Content="Klasörü Aç" Command="{Binding OpenDownloadsFolderCommand}"
+              <Button Content="{loc:Translate Downloads.Action.OpenFolder}" Command="{Binding OpenDownloadsFolderCommand}"
                       Padding="16,8" Background="{DynamicResource SurfaceLightBrush}" BorderThickness="0" Foreground="{DynamicResource TextPrimaryBrush}" CornerRadius="6" FontSize="12"/>
             </StackPanel>
           </Grid>
@@ -271,9 +272,9 @@
           <ComboBox Grid.Column="1" Theme="{StaticResource ModernComboBox}" 
                     Width="200" HorizontalAlignment="Right"
                     SelectedIndex="{Binding SelectedDownloadSortOrder}">
-            <ComboBoxItem Content="Son İndirilen"/>
-            <ComboBoxItem Content="İsim (A-Z)"/>
-            <ComboBoxItem Content="Boyut (Büyük)"/>
+            <ComboBoxItem Content="{loc:Translate Downloads.Sort.Recent}"/>
+            <ComboBoxItem Content="{loc:Translate Downloads.Sort.Name}"/>
+            <ComboBoxItem Content="{loc:Translate Downloads.Sort.Size}"/>
           </ComboBox>
         </Grid>
 
@@ -281,13 +282,13 @@
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,60"
                     IsVisible="{Binding ShowDownloadsEmptyState}">
           <materialIcons:MaterialIcon Kind="DownloadOffOutline" Width="64" Height="64" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5"/>
-          <TextBlock Text="İndirilen içerik yok" FontSize="20" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,16,0,4" TextAlignment="Center"/>
-          <TextBlock Text="İndirdiğiniz dizi ve filmler burada görünecek." FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
+          <TextBlock Text="{loc:Translate Downloads.Empty.Title}" FontSize="20" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,16,0,4" TextAlignment="Center"/>
+          <TextBlock Text="{loc:Translate Downloads.Empty.Description}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
         </StackPanel>
 
         <!-- Series Section -->
         <StackPanel Spacing="8" Margin="0,0,0,32" IsVisible="{Binding DownloadedSeriesItems.Count, Converter={StaticResource CountToVisibilityConverter}}">
-          <TextBlock Text="Diziler" FontSize="20" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+          <TextBlock Text="{loc:Translate History.Series}" FontSize="20" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
           <ItemsControl ItemsSource="{Binding DownloadedSeriesItems}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:Series">
@@ -303,7 +304,7 @@
                       
                       <StackPanel Grid.Column="1" Margin="16,0" VerticalAlignment="Center" Spacing="4">
                         <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                        <TextBlock Text="{Binding SeasonCountSafe, StringFormat='Sezon {0}'}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                        <TextBlock Text="{Binding SeasonCountSafe, Converter={StaticResource StringFormatConverter}, ConverterParameter='Series.Seasons.Format'}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
                       </StackPanel>
   
                       <!-- Info -->
@@ -327,7 +328,7 @@
 
         <!-- Movies Section -->
         <StackPanel Spacing="8" IsVisible="{Binding DownloadedVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-          <TextBlock Text="Filmler" FontSize="20" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+          <TextBlock Text="{loc:Translate History.Movies}" FontSize="20" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
           <ItemsControl ItemsSource="{Binding DownloadedVodChannels}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:Channel">
@@ -343,7 +344,7 @@
                       
                       <StackPanel Grid.Column="1" Margin="16,0" VerticalAlignment="Center" Spacing="4">
                         <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                        <TextBlock Text="Film" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                        <TextBlock Text="{loc:Translate Common.Movie}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
                       </StackPanel>
   
                       <!-- Info -->
@@ -377,7 +378,7 @@
       <TabItem Classes="downloadTab">
         <TabItem.Header>
           <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBlock Text="İndirme Merkezi" VerticalAlignment="Center"/>
+            <TextBlock Text="{loc:Translate Downloads.Tabs.Center}" VerticalAlignment="Center"/>
             <Border IsVisible="{Binding ActiveDownloadCount, Converter={StaticResource CountToVisibilityConverter}}"
                     Background="{DynamicResource AccentBrush}" CornerRadius="10" Padding="6,1" VerticalAlignment="Center">
               <TextBlock Text="{Binding ActiveDownloadCount}" Foreground="White" FontSize="10" FontWeight="Bold"/>
@@ -391,9 +392,9 @@
           <Grid ColumnDefinitions="Auto,Auto,*">
             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,24,0">
               <materialIcons:MaterialIcon Kind="Speedometer" Foreground="{DynamicResource AccentBrush}"/>
-              <TextBlock Text="{Binding ActiveDownloadsTotalSpeedText, StringFormat='{}Toplam Hız: {0}'}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+              <TextBlock Text="{Binding ActiveDownloadsTotalSpeedText, Converter={StaticResource StringFormatConverter}, ConverterParameter='Downloads.Stats.Speed.Format'}" VerticalAlignment="Center" FontWeight="SemiBold"/>
             </StackPanel>
-            <TextBlock Grid.Column="1" Text="{Binding ActiveDownloadCount, StringFormat='{}Aktif İndirme: {0}'}" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1" Text="{Binding ActiveDownloadCount, Converter={StaticResource StringFormatConverter}, ConverterParameter='Downloads.Stats.Active.Format'}" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
           </Grid>
         </Border>
 
@@ -401,12 +402,12 @@
         <StackPanel Spacing="16" Margin="0,0,0,40" IsVisible="{Binding ActiveDownloadingItems.Count, Converter={StaticResource CountToVisibilityConverter}}">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel Orientation="Horizontal" Spacing="12">
-              <TextBlock Text="Devam Eden" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+              <TextBlock Text="{loc:Translate Downloads.Ongoing.Title}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
               <Border Background="{DynamicResource SurfaceLightBrush}" CornerRadius="10" Padding="8,1" VerticalAlignment="Center">
-                <TextBlock Text="{Binding ActiveDownloadingItems.Count, StringFormat='{}{0} aktif'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12"/>
+                <TextBlock Text="{Binding ActiveDownloadingItems.Count, Converter={StaticResource StringFormatConverter}, ConverterParameter='Downloads.Ongoing.Count.Format'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12"/>
               </Border>
             </StackPanel>
-            <Button Grid.Column="1" Content="Tümünü Durdur" Command="{Binding StopAllDownloadsCommand}"
+            <Button Grid.Column="1" Content="{loc:Translate Downloads.Action.StopAll}" Command="{Binding StopAllDownloadsCommand}"
                     Padding="12,6" Background="{DynamicResource SurfaceLightBrush}" BorderThickness="0" Foreground="{DynamicResource TextPrimaryBrush}" CornerRadius="6" FontSize="12"/>
           </Grid>
 
@@ -466,8 +467,8 @@
         <!-- Queue SECTION -->
         <StackPanel Spacing="16" IsVisible="{Binding QueuedDownloadItems.Count, Converter={StaticResource CountToVisibilityConverter}}">
           <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="Sıradakiler" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-            <Button Grid.Column="1" Content="Kuyruğu Temizle" Command="{Binding ClearQueueCommand}"
+            <TextBlock Text="{loc:Translate Downloads.Queue.Title}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+            <Button Grid.Column="1" Content="{loc:Translate Downloads.Action.ClearQueue}" Command="{Binding ClearQueueCommand}"
                     Padding="12,6" Background="{DynamicResource SurfaceLightBrush}" BorderThickness="0" Foreground="{DynamicResource TextPrimaryBrush}" CornerRadius="6" FontSize="12"/>
           </Grid>
 

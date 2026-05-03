@@ -23,7 +23,9 @@ namespace Noctra.Tests
         [Fact]
         public void IsFeatureAvailable_UnknownFeature_ReturnsFalse()
         {
-            var service = new LicenseService();
+            var editionMock = new Moq.Mock<Noctra.Services.Interfaces.IAppEditionService>();
+            editionMock.Setup(m => m.IsFreeEdition).Returns(true);
+            var service = new LicenseService(editionMock.Object);
             service.SetTierForTesting(SubscriptionTier.Premium);
 
             // Var olmayan feature → switch default → false
@@ -33,7 +35,9 @@ namespace Noctra.Tests
         [Fact]
         public void IsFeatureAvailable_EmptyString_ReturnsFalse()
         {
-            var service = new LicenseService();
+            var editionMock = new Moq.Mock<Noctra.Services.Interfaces.IAppEditionService>();
+            editionMock.Setup(m => m.IsFreeEdition).Returns(true);
+            var service = new LicenseService(editionMock.Object);
             service.SetTierForTesting(SubscriptionTier.Premium);
             Assert.False(service.IsFeatureAvailable(string.Empty));
         }
@@ -47,7 +51,9 @@ namespace Noctra.Tests
         [Fact]
         public void IsFeatureAvailable_ResumePlayback_FreeTier_ReturnsFalse()
         {
-            var service = new LicenseService();
+            var editionMock = new Moq.Mock<Noctra.Services.Interfaces.IAppEditionService>();
+            editionMock.Setup(m => m.IsFreeEdition).Returns(true);
+            var service = new LicenseService(editionMock.Object);
             service.SetTierForTesting(SubscriptionTier.Free);
 
             Assert.False(service.IsFeatureAvailable(LicenseService.Features.ResumePlayback));
@@ -56,7 +62,9 @@ namespace Noctra.Tests
         [Fact]
         public void IsFeatureAvailable_ResumePlayback_PremiumTier_ReturnsTrue()
         {
-            var service = new LicenseService();
+            var editionMock = new Moq.Mock<Noctra.Services.Interfaces.IAppEditionService>();
+            editionMock.Setup(m => m.IsFreeEdition).Returns(true);
+            var service = new LicenseService(editionMock.Object);
             service.SetTierForTesting(SubscriptionTier.Premium);
 
             Assert.True(service.IsFeatureAvailable(LicenseService.Features.ResumePlayback));
@@ -70,7 +78,9 @@ namespace Noctra.Tests
         [InlineData(LicenseService.Features.EpgAutoRefresh)]
         public void IsFeatureAvailable_AllPremiumFeatures_FreeTier_ReturnFalse(string feature)
         {
-            var service = new LicenseService();
+            var editionMock = new Moq.Mock<Noctra.Services.Interfaces.IAppEditionService>();
+            editionMock.Setup(m => m.IsFreeEdition).Returns(true);
+            var service = new LicenseService(editionMock.Object);
             service.SetTierForTesting(SubscriptionTier.Free);
             Assert.False(service.IsFeatureAvailable(feature));
         }
@@ -80,7 +90,9 @@ namespace Noctra.Tests
         [Fact]
         public void IsWithinLimit_Profiles_AtExactLimit_ReturnsFalse()
         {
-            var service = new LicenseService();
+            var editionMock = new Moq.Mock<Noctra.Services.Interfaces.IAppEditionService>();
+            editionMock.Setup(m => m.IsFreeEdition).Returns(true);
+            var service = new LicenseService(editionMock.Object);
             service.SetTierForTesting(SubscriptionTier.Free);
 
             // Free tier profil limiti = 5; count=5 -> false (limit aşıldı / doldu)
@@ -90,7 +102,9 @@ namespace Noctra.Tests
         [Fact]
         public void IsWithinLimit_Profiles_OneBelowLimit_ReturnsTrue()
         {
-            var service = new LicenseService();
+            var editionMock = new Moq.Mock<Noctra.Services.Interfaces.IAppEditionService>();
+            editionMock.Setup(m => m.IsFreeEdition).Returns(true);
+            var service = new LicenseService(editionMock.Object);
             service.SetTierForTesting(SubscriptionTier.Free);
 
             Assert.True(service.IsWithinLimit(LicenseService.Limits.Profiles, 4));
@@ -101,7 +115,9 @@ namespace Noctra.Tests
         [Fact]
         public void IsWithinLimit_Premium_EnforcesUpperLimits()
         {
-            var service = new LicenseService();
+            var editionMock = new Moq.Mock<Noctra.Services.Interfaces.IAppEditionService>();
+            editionMock.Setup(m => m.IsFreeEdition).Returns(true);
+            var service = new LicenseService(editionMock.Object);
             service.SetTierForTesting(SubscriptionTier.Premium);
 
             // Premium limit = 12 Profiles
@@ -114,7 +130,9 @@ namespace Noctra.Tests
         [Fact]
         public void DeactivatePremium_SetsBackToFree_AndNotifies()
         {
-            var service = new LicenseService();
+            var editionMock = new Moq.Mock<Noctra.Services.Interfaces.IAppEditionService>();
+            editionMock.Setup(m => m.IsFreeEdition).Returns(true);
+            var service = new LicenseService(editionMock.Object);
             service.ActivatePremium();
             Assert.True(service.IsPremium); // ön koşul
 
@@ -131,7 +149,9 @@ namespace Noctra.Tests
         [Fact]
         public void DeactivatePremium_WhenAlreadyFree_DoesNotThrow()
         {
-            var service = new LicenseService();
+            var editionMock = new Moq.Mock<Noctra.Services.Interfaces.IAppEditionService>();
+            editionMock.Setup(m => m.IsFreeEdition).Returns(true);
+            var service = new LicenseService(editionMock.Object);
             // Zaten Free — exception olmamalı
             var ex = Record.Exception(() => service.DeactivatePremium());
             Assert.Null(ex);
@@ -142,7 +162,9 @@ namespace Noctra.Tests
         [Fact]
         public void SubscriptionChanged_NotifiesAllSubscribers()
         {
-            var service = new LicenseService();
+            var editionMock = new Moq.Mock<Noctra.Services.Interfaces.IAppEditionService>();
+            editionMock.Setup(m => m.IsFreeEdition).Returns(true);
+            var service = new LicenseService(editionMock.Object);
             int callCount = 0;
 
             service.SubscriptionChanged += () => callCount++;
@@ -159,7 +181,9 @@ namespace Noctra.Tests
         [Fact]
         public void SetTierForTesting_SwitchesTierWithoutFiringEvent()
         {
-            var service = new LicenseService();
+            var editionMock = new Moq.Mock<Noctra.Services.Interfaces.IAppEditionService>();
+            editionMock.Setup(m => m.IsFreeEdition).Returns(true);
+            var service = new LicenseService(editionMock.Object);
             bool notified = false;
             service.SubscriptionChanged += () => notified = true;
 
@@ -175,7 +199,9 @@ namespace Noctra.Tests
         [Fact]
         public void IsPremium_ConsistentWithCurrentTier()
         {
-            var service = new LicenseService();
+            var editionMock = new Moq.Mock<Noctra.Services.Interfaces.IAppEditionService>();
+            editionMock.Setup(m => m.IsFreeEdition).Returns(true);
+            var service = new LicenseService(editionMock.Object);
 
             service.SetTierForTesting(SubscriptionTier.Free);
             Assert.False(service.IsPremium);

@@ -17,7 +17,7 @@ public partial class ProfilesViewModel : ObservableObject
     private readonly IProfileService _profileService;
     private readonly IDialogService _dialogService;
     private readonly IDispatcherService _dispatcherService;
-    private readonly ILicenseService _licenseService;
+    private readonly ILicenseService _licenseService; private readonly ILocalizationService _localizationService;
     private System.Timers.Timer? _countdownRefreshTimer;
     
     [ObservableProperty]
@@ -47,12 +47,12 @@ public partial class ProfilesViewModel : ObservableObject
         IProfileService profileService,
         IDialogService dialogService,
         IDispatcherService dispatcherService,
-        ILicenseService licenseService)
+        ILicenseService licenseService, ILocalizationService localizationService)
     {
         _profileService = profileService;
         _dialogService = dialogService;
         _dispatcherService = dispatcherService;
-        _licenseService = licenseService;
+        _licenseService = licenseService; _localizationService = localizationService;
     }
 
     public void RefreshProfiles()
@@ -80,7 +80,7 @@ public partial class ProfilesViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Profil yükleme hatası: {ex.Message}");
+            
             Profiles = new ObservableCollection<Profile>();
             IsManageMode = false;
         }
@@ -140,8 +140,8 @@ public partial class ProfilesViewModel : ObservableObject
             return;
         }
 
-        // Premium değilse, upsell ekranını tetiklemek için buton görünmeye devam eder 
-        // (ancak yukarıdaki 12 sınırı burada da geçerlidir).
+        // _localizationService.GetString("Profiles.Upsell.Notice") 
+        
         if (_licenseService.CurrentTier == SubscriptionTier.Premium)
         {
             ShowAddButton = Profiles.Count < TierLimits.Premium.MaxProfiles;
@@ -187,7 +187,7 @@ public partial class ProfilesViewModel : ObservableObject
             }
             else
             {
-                await _dialogService.ShowErrorAsync("Sınır", $"Maksimum {TierLimits.Premium.MaxProfiles} profil oluşturabilirsiniz.");
+                await _dialogService.ShowErrorAsync(_localizationService.GetString("Profiles.Error.LimitTitle"), string.Format(_localizationService.GetString("Profiles.Error.LimitFormat"), TierLimits.Premium.MaxProfiles));
             }
             return;
         }
@@ -220,8 +220,8 @@ public partial class ProfilesViewModel : ObservableObject
         if (profile == null) return;
         
         // 1. Confirmation
-        var confirmed = await _dialogService.ShowConfirmationAsync("Profil Sil", 
-            $"'{profile.Name}' profilini silmek istediğinize emin misiniz?");
+        var confirmed = await _dialogService.ShowConfirmationAsync(_localizationService.GetString("Profiles.Delete.Title"), 
+            string.Format(_localizationService.GetString("Profiles.Delete.ConfirmationFormat"), profile.Name));
             
         if (!confirmed) return;
 
@@ -246,7 +246,7 @@ public partial class ProfilesViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            await _dialogService.ShowErrorAsync("Hata", "Profil silinirken bir hata oluştu.", ex);
+            await _dialogService.ShowErrorAsync(_localizationService.GetString("Common.Error"), _localizationService.GetString("Profiles.Delete.Error"), ex);
         }
     }
 

@@ -61,4 +61,5 @@
   <converters:PinDotConverter x:Key="PinDotConverter" />
   <converters:UrgencyToColorConverter x:Key="UrgencyToColorConverter" />
   <converters:TimeSpanToCountdownConverter x:Key="TimeSpanToCountdownConverter" />
+  <converters:StringFormatConverter x:Key="StringFormatConverter" />
 </ResourceDictionary>

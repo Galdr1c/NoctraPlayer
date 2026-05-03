@@ -70,6 +70,7 @@ namespace Noctra.Tests
                 _tmdbServiceMock.Object,
                 _licenseServiceMock.Object,
                 _updateServiceMock.Object,
+                new Mock<ILocalizationService>().Object,
                 _loggerMock.Object
             );
         }

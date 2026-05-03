@@ -9,6 +9,7 @@ using Noctra.Services;
 using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
 using Xunit;
+using Moq;
 
 namespace Noctra.Tests
 {
@@ -153,6 +154,8 @@ namespace Noctra.Tests
     internal sealed class FakeLicenseService : ILicenseService
     {
         public bool IsPremium { get; set; }
+        public bool CanUpgradeToPremium => !IsPremium;
+        public bool IsEditionLockedPremium => false;
         public SubscriptionTier CurrentTier => IsPremium ? SubscriptionTier.Premium : SubscriptionTier.Free;
         public bool IsFeatureAvailable(string feature) => IsPremium;
         public void SetTierForTesting(SubscriptionTier tier) { IsPremium = tier == SubscriptionTier.Premium; }
@@ -209,6 +212,13 @@ namespace Noctra.Tests
         public PlayerTestContext(bool isPremium = false)
         {
             License.IsPremium = isPremium;
+            var localizationMock = new Mock<ILocalizationService>();
+            localizationMock.Setup(l => l.GetString(It.IsAny<string>())).Returns((string s) => s);
+            localizationMock.Setup(l => l.GetString("Player.Sleep.EndContent.Episode")).Returns("Bu Bölüm Bitince");
+            localizationMock.Setup(l => l.GetString("Player.Sleep.EndContent.Movie")).Returns("Bu Film Bitince");
+            localizationMock.Setup(l => l.GetString("Player.Sleep.EndDescription.Episode")).Returns("Bölüm");
+            localizationMock.Setup(l => l.GetString("Player.Sleep.EndDescription.Movie")).Returns("Film");
+
             VM = new PlayerViewModel(
                 VideoService,
                 new FakeEpgService(),
@@ -221,7 +231,8 @@ namespace Noctra.Tests
                 License,
                 null!,  // MainViewModel — not needed for these tests
                 WatchHistory,
-                new FakeStalkerPortalService());
+                new FakeStalkerPortalService(),
+                localizationMock.Object);
         }
 
         private T? InvokePrivate<T>(string method, params object?[] args)

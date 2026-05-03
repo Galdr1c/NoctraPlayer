@@ -5,11 +5,12 @@
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:loc="using:Noctra.Avalonia.Localization"
         mc:Ignorable="d"
         x:Class="Noctra.Avalonia.Views.ProfilesWindow"
         x:Name="ProfilesWindowRoot"
         x:CompileBindings="False"
-        Title="Kim izliyor?"
+        Title="{loc:Translate Profiles.Title}"
         Width="1100" Height="750"
         WindowStartupLocation="CenterScreen"
         SystemDecorations="None"
@@ -254,7 +255,7 @@
                         </Grid>
 
                         <!-- Label -->
-                        <TextBlock x:Name="AddLabel" Grid.Row="1" Text="Profil Ekle"
+                        <TextBlock x:Name="AddLabel" Grid.Row="1" Text="{loc:Translate Profiles.AddProfile}"
                                    Foreground="{DynamicResource TextMutedBrush}"
                                    FontSize="15" FontWeight="Medium"
                                    HorizontalAlignment="Center"/>
@@ -352,11 +353,11 @@
                     
                     <!-- Settings Button -->
                     <Button Classes="SettingsButtonStyle" Click="SettingsButton_Click" 
-                            ToolTip.Tip="Ayarlar" Margin="0,0,8,0"/>
+                            ToolTip.Tip="{loc:Translate Profiles.Settings.Tooltip}" Margin="0,0,8,0"/>
 
                     <!-- Close Button -->
                     <Button Classes="CloseButtonStyle" Click="Close_Click"
-                            ToolTip.Tip="Kapat"/>
+                            ToolTip.Tip="{loc:Translate Profiles.Close.Tooltip}"/>
                 </StackPanel>
             </Grid>
 
@@ -368,10 +369,10 @@
                     <StackPanel Margin="0,40" VerticalAlignment="Center" HorizontalAlignment="Center">
 
                         <!-- Titles -->
-                        <TextBlock Text="Kim izliyor?"
+                        <TextBlock Text="{loc:Translate Profiles.Title}"
                                    FontSize="64" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"
                                    HorizontalAlignment="Center"/>
-                        <TextBlock Text="Profil seçin"
+                        <TextBlock Text="{loc:Translate Profiles.SelectProfile}"
                                    FontSize="18" Foreground="{DynamicResource TextMutedBrush}"
                                    HorizontalAlignment="Center" Margin="0,12,0,56"/>
                         <!-- Profile Grid (Unified Flow) -->
@@ -413,14 +414,25 @@
 
                     <!-- FOOTER -->
                     <StackPanel HorizontalAlignment="Stretch">
-                        <Button x:Name="ManageProfilesButton"
-                                Content="{Binding IsManageMode, Converter={StaticResource BoolToStringConverter}, ConverterParameter='Bitti|Profilleri Yönet'}"
-                                Command="{Binding ToggleManageModeCommand}"
-                                Classes="ManageModeButtonStyle"
-                                HorizontalAlignment="Center"
-                                IsVisible="{Binding Profiles.Count, Converter={StaticResource CountToVisibilityConverter}}"
-                                Tag="{Binding IsManageMode}">
-                        </Button>
+                        <Panel HorizontalAlignment="Center">
+                            <!-- MANAGE MODE BUTTON -->
+                            <Button x:Name="ManageProfilesButton"
+                                    Content="{loc:Translate Profiles.ManageMode.Manage}"
+                                    Command="{Binding ToggleManageModeCommand}"
+                                    Classes="ManageModeButtonStyle"
+                                    IsVisible="{Binding !IsManageMode}"
+                                    IsEnabled="{Binding Profiles.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                            </Button>
+                            
+                            <!-- DONE BUTTON -->
+                            <Button x:Name="DoneProfilesButton"
+                                    Content="{loc:Translate Profiles.ManageMode.Done}"
+                                    Command="{Binding ToggleManageModeCommand}"
+                                    Classes="ManageModeButtonStyle"
+                                    IsVisible="{Binding IsManageMode}"
+                                    Tag="True"> 
+                            </Button>
+                        </Panel>
                     </StackPanel>
 
                 </StackPanel>

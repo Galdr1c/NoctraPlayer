@@ -1,15 +1,18 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using Noctra.Models;
+using Noctra.Services.Interfaces;
 
 namespace Noctra.ViewModels;
 
 public partial class ProfileLoadingViewModel : ObservableObject
 {
+    private readonly ILocalizationService _localizationService;
+
     [ObservableProperty]
     private Profile? _profile;
 
     [ObservableProperty]
-    private string _statusMessage = "Lütfen bekleyin...";
+    private string _statusMessage = string.Empty;
 
     [ObservableProperty]
     private string _loadingWarningMessage = string.Empty;
@@ -29,8 +32,10 @@ public partial class ProfileLoadingViewModel : ObservableObject
     [ObservableProperty]
     private string _avatar = "default";
 
-    public ProfileLoadingViewModel()
+    public ProfileLoadingViewModel(ILocalizationService localizationService)
     {
+        _localizationService = localizationService;
+        StatusMessage = _localizationService.GetString("Common.PleaseWait");
     }
 
     public void SetProfile(Profile profile)

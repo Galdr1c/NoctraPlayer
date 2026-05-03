@@ -1,9 +1,19 @@
 using System.Net;
+using Noctra.Services.Interfaces;
 
 namespace Noctra.Services;
 
 public static class UserFriendlyErrorMessage
 {
+    private static ILocalizationService? _localizationService;
+
+    public static void Initialize(ILocalizationService localizationService)
+    {
+        _localizationService = localizationService;
+    }
+
+    private static string GetString(string key, string fallback) => _localizationService?.GetString(key) ?? fallback;
+
     private const string DefaultMessage = "Bilinmeyen bir hata oluştu. Lütfen tekrar deneyin.";
 
     public static string WithPrefix(string prefix, Exception? ex, string? fallback = null)
@@ -12,7 +22,7 @@ public static class UserFriendlyErrorMessage
     public static string WithPrefix(string prefix, string? message, string? fallback = null)
     {
         var resolved = string.IsNullOrWhiteSpace(message)
-            ? (fallback ?? DefaultMessage)
+            ? (fallback ?? GetString("Error.Common.Default", DefaultMessage))
             : message.Trim();
 
         if (string.IsNullOrWhiteSpace(prefix))
@@ -37,19 +47,19 @@ public static class UserFriendlyErrorMessage
 
         if (baseException is TimeoutException or TaskCanceledException)
         {
-            return "Sunucu zaman aşımına uğradı veya yanıt vermiyor. Bağlantı adresini kontrol edin.";
+            return GetString("Error.Network.Timeout", "Sunucu zaman aşımına uğradı veya yanıt vermiyor. Bağlantı adresini kontrol edin.");
         }
 
         if (baseException is HttpRequestException http)
         {
             if (http.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
             {
-                return "Kimlik doğrulama hatası. Bilgilerinizi kontrol edip tekrar deneyin.";
+                return GetString("Error.Http.Auth", "Kimlik doğrulama hatası. Bilgilerinizi kontrol edip tekrar deneyin.");
             }
 
             if (http.StatusCode == HttpStatusCode.NotFound)
             {
-                return "İçerik bulunamadı. Kaynak güncel olmayabilir. (404)";
+                return GetString("Error.Http.NotFound", "İçerik bulunamadı. Kaynak güncel olmayabilir. (404)");
             }
 
             if (http.StatusCode is HttpStatusCode.BadGateway
@@ -57,20 +67,20 @@ public static class UserFriendlyErrorMessage
                 or HttpStatusCode.GatewayTimeout
                 or HttpStatusCode.InternalServerError)
             {
-                return $"Sunucuya şu anda ulaşılamıyor. Biraz sonra tekrar deneyin. ({(int)http.StatusCode})";
+                return string.Format(GetString("Error.Http.ServerUnreachableFormat", "Sunucuya şu anda ulaşılamıyor. Biraz sonra tekrar deneyin. ({0})"), (int)http.StatusCode);
             }
 
-            return "Ağ hatası oluştu. Bağlantınızı kontrol edip tekrar deneyin.";
+            return GetString("Error.Network.Generic", "Ağ hatası oluştu. Bağlantınızı kontrol edip tekrar deneyin.");
         }
 
         if (baseException is UnauthorizedAccessException)
         {
-            return "Erişim izni hatası. Dosya izinlerini kontrol edip tekrar deneyin.";
+            return GetString("Error.System.Access", "Erişim izni hatası. Dosya izinlerini kontrol edip tekrar deneyin.");
         }
 
         if (baseException is InvalidDataException)
         {
-            return "Dosya doğrulama hatası. İçeriği yeniden indirip tekrar deneyin.";
+            return GetString("Error.System.DataValidation", "Dosya doğrulama hatası. İçeriği yeniden indirip tekrar deneyin.");
         }
 
         if (baseException is InvalidOperationException invalidOpEx)
@@ -80,32 +90,32 @@ public static class UserFriendlyErrorMessage
             {
                 return invalidOpEx.Message;
             }
-            return "İşlem beklendiği gibi tamamlanamadı. Kaynak veri eksik veya hatalı olabilir.";
+            return GetString("Error.System.InvalidOperation", "İşlem beklendiği gibi tamamlanamadı. Kaynak veri eksik veya hatalı olabilir.");
         }
 
         if (baseException is NullReferenceException || baseException.GetType().Name == "ArgumentNullException")
         {
-            return "Geçersiz veri veya eksik bilgi ile karşılaşıldı. Lütfen işlemi tekrar deneyin.";
+            return GetString("Error.System.NullOrMissing", "Geçersiz veri veya eksik bilgi ile karşılaşıldı. Lütfen işlemi tekrar deneyin.");
         }
 
         if (baseException is FormatException)
         {
-            return "Veri okunamadı. EPG veya kanal listenizin formatı hatalı olabilir.";
+            return GetString("Error.Format.Generic", "Veri okunamadı. EPG veya kanal listenizin formatı hatalı olabilir.");
         }
 
         if (baseException is IOException ioEx)
         {
-            return FromText(ioEx.Message, "Dosya işlemi sırasında hata oluştu. Disk alanını ve dosya erişimini kontrol edin.");
+            return FromText(ioEx.Message, GetString("Error.System.IO", "Dosya işlemi sırasında hata oluştu. Disk alanını ve dosya erişimini kontrol edin."));
         }
 
         if (baseException.GetType().Name == "SocketException")
         {
-            return "Sunucuya bağlanılamadı (DNS veya Ağ hatası). Bağlantı adresini kontrol edin.";
+            return GetString("Error.Network.Socket", "Sunucuya bağlanılamadı (DNS veya Ağ hatası). Bağlantı adresini kontrol edin.");
         }
 
         if (baseException.GetType().Name == "AuthenticationException" || baseException.Message.Contains("SSL") || baseException.Message.Contains("certificate"))
         {
-            return "SSL/Güvenlik sertifikası hatası. 'https://' yerine 'http://' kullanmayı deneyin.";
+            return GetString("Error.Security.Ssl", "SSL/Güvenlik sertifikası hatası. 'https://' yerine 'http://' kullanmayı deneyin.");
         }
 
         return FromText(baseException.Message, $"Bilinmeyen bir hata oluştu: {baseException.Message}");
@@ -131,7 +141,7 @@ public static class UserFriendlyErrorMessage
                 "sunucudan yanit alinamadi",
                 "baglanti kesildi"))
         {
-            return "Ağ bağlantısı kesildi. Lütfen tekrar deneyin.";
+            return GetString("Error.Network.Disconnected", "Ağ bağlantısı kesildi. Lütfen tekrar deneyin.");
         }
 
         if (ContainsAny(normalized,
@@ -140,7 +150,7 @@ public static class UserFriendlyErrorMessage
                 "zaman asimi",
                 "taskcanceledexception"))
         {
-            return "Ağ zaman aşımına uğradı. Bağlantınızı kontrol edip tekrar deneyin.";
+            return GetString("Error.Network.Timeout", "Ağ zaman aşımına uğradı. Bağlantınızı kontrol edip tekrar deneyin.");
         }
 
         if (ContainsAny(normalized,
@@ -151,17 +161,17 @@ public static class UserFriendlyErrorMessage
                 "kimlik dogrulama basarisiz",
                 "token yenilenemedi"))
         {
-            return "Kimlik doğrulama hatası. Bilgilerinizi kontrol edip tekrar deneyin.";
+            return GetString("Error.Http.Auth", "Kimlik doğrulama hatası. Bilgilerinizi kontrol edip tekrar deneyin.");
         }
 
         if (ContainsAny(normalized, "404", "not found", "bulunamadi"))
         {
-            return "İçerik bulunamadı. Kaynak güncel olmayabilir. (404)";
+            return GetString("Error.Http.NotFound", "İçerik bulunamadı. Kaynak güncel olmayabilir. (404)");
         }
 
         if (ContainsAny(normalized, "500", "502", "503", "504", "server error", "sunucu"))
         {
-            return "Sunucu hatası oluştu. Biraz sonra tekrar deneyin.";
+            return GetString("Error.Http.ServerUnreachableFormat", "Sunucu hatası oluştu. Biraz sonra tekrar deneyin.").Replace(" ({0})", "");
         }
 
         if (ContainsAny(normalized,
@@ -171,7 +181,7 @@ public static class UserFriendlyErrorMessage
                 "desteklenmeyen dosya formati",
                 "sifreli veri yok"))
         {
-            return "Dosya doğrulama hatası. İçeriği yeniden indirip tekrar deneyin.";
+            return GetString("Error.System.DataValidation", "Dosya doğrulama hatası. İçeriği yeniden indirip tekrar deneyin.");
         }
 
         if (ContainsAny(normalized,
@@ -180,7 +190,7 @@ public static class UserFriendlyErrorMessage
                 "not enough space",
                 "there is not enough space"))
         {
-            return "Yetersiz depolama alanı. Lütfen disk alanını kontrol edip tekrar deneyin.";
+            return GetString("Error.System.StorageFull", "Yetersiz depolama alanı. Lütfen disk alanını kontrol edip tekrar deneyin.");
         }
 
         if (ContainsAny(normalized,
@@ -188,17 +198,17 @@ public static class UserFriendlyErrorMessage
                 "file is being used",
                 "dosya kullanimda"))
         {
-            return "Dosya başka bir işlem tarafından kullanılıyor. Biraz sonra tekrar deneyin.";
+            return GetString("Error.System.FileInUse", "Dosya başka bir işlem tarafından kullanılıyor. Biraz sonra tekrar deneyin.");
         }
 
         if (ContainsAny(normalized, "ag baglantisi bulunamadi", "network"))
         {
-            return "Ağ hatası oluştu. Bağlantınızı kontrol edip tekrar deneyin.";
+            return GetString("Error.Network.Generic", "Ağ hatası oluştu. Bağlantınızı kontrol edip tekrar deneyin.");
         }
 
         if (ContainsAny(normalized, "0 program", "0 programs", "program bulunamadi"))
         {
-            return "EPG kaynağı yüklendi ancak mevcut kanallarınızla eşleşen yayın bilgisi bulunamadı.";
+            return GetString("Error.Epg.NoMatch", "EPG kaynağı yüklendi ancak mevcut kanallarınızla eşleşen yayın bilgisi bulunamadı.");
         }
 
         if (ContainsAny(normalized,
@@ -211,7 +221,7 @@ public static class UserFriendlyErrorMessage
                 "unrecognized element",
                 "unexpected token"))
         {
-            return "Veri formatı okunamadı. EPG veya kanal listenizin bağlantısını kontrol edin.";
+            return GetString("Error.Format.ConnectionCheck", "Veri formatı okunamadı. EPG veya kanal listenizin bağlantısını kontrol edin.");
         }
 
         if (ContainsAny(normalized,
@@ -225,7 +235,7 @@ public static class UserFriendlyErrorMessage
                 "exception of type",
                 "an error occurred"))
         {
-            return "Sistemde anlık bir hata oluştu. Lütfen işlemi tekrar deneyin.";
+            return GetString("Error.System.Generic", "Sistemde anlık bir hata oluştu. Lütfen işlemi tekrar deneyin.");
         }
 
         return defaultMessage;

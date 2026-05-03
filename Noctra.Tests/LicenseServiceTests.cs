@@ -10,7 +10,9 @@ namespace Noctra.Tests
 
         public LicenseServiceTests()
         {
-            _licenseService = new LicenseService();
+            var editionMock = new Moq.Mock<Noctra.Services.Interfaces.IAppEditionService>();
+            editionMock.Setup(m => m.IsFreeEdition).Returns(true);
+            _licenseService = new LicenseService(editionMock.Object);
         }
 
         [Fact]

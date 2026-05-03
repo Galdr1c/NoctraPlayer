@@ -5,10 +5,11 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:Noctra.ViewModels"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        xmlns:loc="using:Noctra.Avalonia.Localization"
         mc:Ignorable="d"
         x:DataType="vm:EditChannelViewModel"
         x:CompileBindings="False"
-        Title="Kanal Düzenle" Height="600" Width="500"
+        Title="{loc:Translate Channels.Edit.Title}" Height="600" Width="500"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
         SystemDecorations="None"
@@ -86,7 +87,7 @@
 
             <!-- Title Bar -->
             <Grid Grid.Row="0" Background="Transparent" PointerPressed="DragBar_PointerPressed">
-                <TextBlock Text="Kanal Düzenle"
+                <TextBlock Text="{loc:Translate Channels.Edit.Title}"
                            Foreground="{DynamicResource TextPrimaryBrush}"
                            FontSize="16" FontWeight="SemiBold"
                            VerticalAlignment="Center"
@@ -105,19 +106,19 @@
                     <!-- Metadata Search Section -->
                     <Border Background="{DynamicResource Surface1Brush}" CornerRadius="8" Padding="16" Margin="0,0,0,24">
                         <StackPanel>
-                            <TextBlock Text="Otomatik Bilgi Getir (TMDb)" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" Margin="0,0,0,8"/>
+                            <TextBlock Text="{loc:Translate Channels.Edit.TmdbSearch}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" Margin="0,0,0,8"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBox Text="{Binding MetadataSearchQuery}"
-                                         Watermark="Film veya Dizi adı ara..."/>
+                                         Watermark="{loc:Translate Channels.Edit.TmdbPlaceholder}"/>
                                 <Button Grid.Column="1" Command="{Binding SearchMetadataCommand}"
                                         Classes="EditPrimaryBtn"
                                         Margin="8,0,0,0"
                                         Padding="16,10"
-                                        Content="Ara"/>
+                                        Content="{loc:Translate Channels.Edit.Search}"/>
                             </Grid>
 
                             <!-- Search Results List -->
@@ -140,7 +141,7 @@
                                                     <TextBlock Text="{Binding Title}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold"/>
                                                     <TextBlock Text="{Binding ReleaseDate}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12"/>
                                                 </StackPanel>
-                                                <TextBlock Grid.Column="2" Text="Seç" Foreground="{DynamicResource AccentBrush}"
+                                                <TextBlock Grid.Column="2" Text="{loc:Translate Channels.Edit.Select}" Foreground="{DynamicResource AccentBrush}"
                                                            VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13"/>
                                             </Grid>
                                         </Button>
@@ -150,20 +151,20 @@
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Text="Kanal Adı" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                    <TextBlock Text="{loc:Translate Channels.Edit.Name}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                     <TextBox Text="{Binding Name}" Margin="0,0,0,16"/>
 
-                    <TextBlock Text="Grup" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                    <TextBlock Text="{loc:Translate Channels.Edit.Group}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                     <TextBox Text="{Binding GroupTitle}" Margin="0,0,0,16"/>
 
-                    <TextBlock Text="Kanal Türü" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                    <TextBlock Text="{loc:Translate Channels.Edit.Type}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                     <ComboBox SelectedItem="{Binding Type}" ItemsSource="{Binding ChannelTypes}" Margin="0,0,0,16"
                               HorizontalAlignment="Stretch"/>
 
-                    <TextBlock Text="Logo URL" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                    <TextBlock Text="{loc:Translate Channels.Edit.LogoUrl}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                     <TextBox Text="{Binding LogoUrl}" Margin="0,0,0,16"/>
 
-                    <TextBlock Text="EPG ID (TvgId)" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                    <TextBlock Text="{loc:Translate Channels.Edit.TvgId}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                     <TextBox Text="{Binding TvgId}" Margin="0,0,0,16"/>
 
                 </StackPanel>
@@ -172,9 +173,9 @@
             <!-- Footer -->
             <Border Grid.Row="2" Background="{DynamicResource Surface1Brush}" Padding="16" CornerRadius="0,0,8,8">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="İptal" Command="{Binding CancelCommand}" Click="Cancel_Click"
+                    <Button Content="{loc:Translate Profiles.Add.Cancel}" Command="{Binding CancelCommand}" Click="Cancel_Click"
                             Classes="EditSecondaryBtn" Margin="0,0,12,0" Width="100" Height="40"/>
-                    <Button Content="Kaydet" Command="{Binding SaveCommand}"
+                    <Button Content="{loc:Translate Profiles.Add.Save}" Command="{Binding SaveCommand}"
                             Classes="EditPrimaryBtn" Width="100" Height="40"/>
                 </StackPanel>
             </Border>
@@ -185,7 +186,7 @@
                     <StackPanel>
                         <materialIcons:MaterialIcon Kind="TimerSand" Width="32" Height="32" HorizontalAlignment="Center"
                                                     Foreground="{DynamicResource TextPrimaryBrush}"/>
-                        <TextBlock Text="İşleniyor..." Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,16,0,0"/>
+                        <TextBlock Text="{loc:Translate Channels.Edit.Processing}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,16,0,0"/>
                     </StackPanel>
                 </Border>
             </Grid>

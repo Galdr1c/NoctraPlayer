@@ -20,6 +20,7 @@ namespace Noctra.Services;
 public class StalkerPortalService : IStalkerPortalService
 {
     private readonly HttpClient _httpClient;
+    private readonly ILocalizationService _localizationService;
 
     private static readonly ConcurrentDictionary<string, CachedTokenState>    TokenCache  = new(StringComparer.Ordinal);
     private static readonly ConcurrentDictionary<string, SemaphoreSlim>       TokenLocks  = new(StringComparer.Ordinal);
@@ -39,9 +40,10 @@ public class StalkerPortalService : IStalkerPortalService
         "/portal.php",
     ];
 
-    public StalkerPortalService(HttpClient httpClient)
+    public StalkerPortalService(HttpClient httpClient, ILocalizationService localizationService)
     {
         _httpClient = httpClient;
+        _localizationService = localizationService;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -144,7 +146,7 @@ public class StalkerPortalService : IStalkerPortalService
                      : categoryType == "series" ? ChannelType.Series
                      : ChannelType.VOD;
 
-        return BuildChannels(items, baseUrl, chanType, genreMap);
+        return BuildChannels(items, baseUrl, chanType, genreMap, _localizationService);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -174,20 +176,20 @@ public class StalkerPortalService : IStalkerPortalService
 
         var normalizedPortalUrl = NormalizePortalUrl(portalUrl);
         if (string.IsNullOrWhiteSpace(normalizedPortalUrl))
-            throw new InvalidOperationException("Geçersiz veya boş bir Stalker Portal adresi girdiniz.");
+            throw new InvalidOperationException(_localizationService.GetString("Stalker.Error.InvalidUrl"));
 
         if (string.IsNullOrWhiteSpace(macAddress))
-            throw new InvalidOperationException("MAC adresi boş olamaz.");
+            throw new InvalidOperationException(_localizationService.GetString("Stalker.Error.MacRequired"));
 
         var (normalizedUrl, endpoint, initialToken) =
             await ResolveEndpointParallelAsync(normalizedPortalUrl, macAddress, cancellationToken);
         if (endpoint == null)
-            throw new InvalidOperationException("Stalker Portal endpoint bulunamadı. URL veya MAC adresini kontrol edin.");
+            throw new InvalidOperationException(_localizationService.GetString("Stalker.Error.EndpointNotFound"));
 
         var token = await GetOrCreateTokenAsync(
             normalizedUrl, endpoint, macAddress, initialToken, cancellationToken);
         if (string.IsNullOrWhiteSpace(token))
-            throw new InvalidOperationException("Stalker Portal handshake başarısız. MAC adresini kontrol edin.");
+            throw new InvalidOperationException(_localizationService.GetString("Stalker.Error.HandshakeFailed"));
 
         Log($"Auth ready in {sw.ElapsedMilliseconds}ms");
 
@@ -244,7 +246,7 @@ public class StalkerPortalService : IStalkerPortalService
             var fallback = await LoadAllWithGenreStarAsync(
                 endpoint, token, macAddress, includeVod, cancellationToken);
             var fakeCategory = new StalkerCategory
-                { Id = "*", Name = "Tüm İçerikler", Type = "itv" };
+                { Id = "*", Name = _localizationService.GetString("Stalker.Category.AllContent"), Type = "itv" };
             var filteredFallback = await onCategoriesDiscovered(new List<StalkerCategory> { fakeCategory }, prioritizeAction);
             if (filteredFallback.Count > 0)
             {
@@ -310,7 +312,7 @@ public class StalkerPortalService : IStalkerPortalService
                     {
                         var channels = BuildChannels(
                             items, baseUrl, GetChanType(category.Type),
-                            new Dictionary<string, string> { [category.Id] = category.Name });
+                            new Dictionary<string, string> { [category.Id] = category.Name }, _localizationService);
 
                         var loaded = Interlocked.Increment(ref loadedCategories);
                         var total  = Interlocked.Add(ref totalChannelCount, channels.Count);
@@ -601,7 +603,7 @@ public class StalkerPortalService : IStalkerPortalService
             new StalkerCategory
             {
                 Id = "*",
-                Name = "Tüm Diziler",
+                Name = _localizationService.GetString("Stalker.Category.AllSeries"),
                 Type = "series",
                 Count = 0
             }
@@ -1063,14 +1065,14 @@ public class StalkerPortalService : IStalkerPortalService
         var channels = new List<Channel>();
 
         channels.AddRange(BuildChannels(liveItemsTask.Result, baseUrl, ChannelType.Live,
-            liveGenreTask.Result.ToDictionary(c => c.Id, c => c.Name)));
+            liveGenreTask.Result.ToDictionary(c => c.Id, c => c.Name), _localizationService));
 
         if (includeVod)
         {
             channels.AddRange(BuildChannels(vodItemsTask!.Result, baseUrl, ChannelType.VOD,
-                vodGenreTask!.Result.ToDictionary(c => c.Id, c => c.Name)));
+                vodGenreTask!.Result.ToDictionary(c => c.Id, c => c.Name), _localizationService));
             channels.AddRange(BuildChannels(serItemsTask!.Result, baseUrl, ChannelType.Series,
-                serGenreTask!.Result.ToDictionary(c => c.Id, c => c.Name)));
+                serGenreTask!.Result.ToDictionary(c => c.Id, c => c.Name), _localizationService));
         }
 
         return channels;
@@ -1084,7 +1086,8 @@ public class StalkerPortalService : IStalkerPortalService
         IReadOnlyCollection<StalkerListItem> items,
         string baseUrl,
         ChannelType channelType,
-        IReadOnlyDictionary<string, string> genreMap)
+        IReadOnlyDictionary<string, string> genreMap,
+        ILocalizationService localizationService)
     {
         if (items.Count == 0) return [];
         var channels = new List<Channel>(items.Count);
@@ -1109,7 +1112,7 @@ public class StalkerPortalService : IStalkerPortalService
                     : channelType == ChannelType.Live ? "Live"
                     : channelType == ChannelType.Series ? "Series" : "VOD");
 
-            var name = string.IsNullOrWhiteSpace(item.Name) ? "İsimsiz Kanal" : item.Name.Trim();
+            var name = string.IsNullOrWhiteSpace(item.Name) ? localizationService.GetString("Common.Unknown") : item.Name.Trim();
 
             channels.Add(new Channel
             {
@@ -1178,7 +1181,7 @@ public class StalkerPortalService : IStalkerPortalService
         {
             var snippet = trimmedBody.Length > 100 ? trimmedBody.Substring(0, 100) : trimmedBody;
             Log($"[StalkerService] HTML response instead of JSON (Snippet: {snippet})");
-            throw new InvalidOperationException($"Sunucu geçerli bir JSON yanıtı yerine HTML hata sayfası döndürdü. (Bkz log)");
+            throw new InvalidOperationException(_localizationService.GetString("AddProfile.Error.ServerError"));
         }
 
         try

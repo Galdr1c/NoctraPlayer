@@ -8,6 +8,7 @@ public partial class PinEntryViewModel : ObservableObject
 {
     private readonly ISecurityService _securityService;
     private readonly string _pinHash;
+    private readonly ILocalizationService _localizationService;
     private const int MaxAttempts = 5;
     private int _attemptCount;
 
@@ -44,13 +45,14 @@ public partial class PinEntryViewModel : ObservableObject
         string pinHash,
         string profileName,
         string profileAvatar,
-        string purpose)
+        string purpose, ILocalizationService localizationService)
     {
         _securityService = securityService;
         _pinHash = pinHash;
         ProfileName = profileName;
         ProfileAvatar = profileAvatar;
         Purpose = purpose;
+        _localizationService = localizationService;
     }
 
     [RelayCommand]
@@ -96,8 +98,8 @@ public partial class PinEntryViewModel : ObservableObject
             {
                 int remaining = MaxAttempts - _attemptCount;
                 ErrorMessage = remaining == 1
-                    ? "Yanlış PIN. Son deneme hakkınız."
-                    : $"Yanlış PIN. {remaining} deneme hakkınız kaldı.";
+                    ? _localizationService.GetString("PinEntry.Error.WrongPinLast")
+                    : string.Format(_localizationService.GetString("PinEntry.Error.WrongPinRemainingFormat"), remaining);
             }
         }
     }
@@ -106,7 +108,7 @@ public partial class PinEntryViewModel : ObservableObject
     {
         IsLocked = true;
         LockSecondsRemaining = 30;
-        ErrorMessage = "Çok fazla yanlış deneme.";
+        ErrorMessage = _localizationService.GetString("PinEntry.Error.TooManyAttempts");
 
         _ = Task.Run(async () =>
         {

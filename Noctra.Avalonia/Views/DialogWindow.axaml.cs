@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Noctra.Avalonia.Localization;
 
 namespace Noctra.Avalonia.Views;
 
@@ -16,7 +17,7 @@ public partial class DialogWindow : Window
     public bool Result { get; private set; }
 
     public DialogWindow()
-        : this("Bilgi", string.Empty, DialogMode.Information)
+        : this(LocalizationSource.Instance["Dialog.Information"], string.Empty, DialogMode.Information)
     {
     }
 
@@ -29,10 +30,10 @@ public partial class DialogWindow : Window
 
         (PrimaryButtonText, SecondaryButtonText, ShowSecondary) = mode switch
         {
-            DialogMode.Confirmation => ("EVET", "HAYIR", true),
-            DialogMode.Error => ("TAMAM", string.Empty, false),
-            DialogMode.Warning => ("TAMAM", "İPTAL", true),
-            _ => ("TAMAM", string.Empty, false)
+            DialogMode.Confirmation => (LocalizationSource.Instance["Dialog.Yes"], LocalizationSource.Instance["Dialog.No"], true),
+            DialogMode.Error => (LocalizationSource.Instance["Dialog.Ok"], string.Empty, false),
+            DialogMode.Warning => (LocalizationSource.Instance["Dialog.Ok"], LocalizationSource.Instance["Dialog.Cancel"], true),
+            _ => (LocalizationSource.Instance["Dialog.Ok"], string.Empty, false)
         };
 
         InitializeComponent();

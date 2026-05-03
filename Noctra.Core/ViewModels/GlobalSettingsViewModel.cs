@@ -5,8 +5,9 @@ using Noctra.Services;
 using Noctra.Core.Services;
 using Noctra.Models;
 using System;
-
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Noctra.ViewModels;
@@ -23,6 +24,7 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     private readonly ILicenseService _licenseService;
     private readonly IProfileService _profileService;
     private readonly IEpgService _epgService;
+    private readonly ILocalizationService _localizationService;
 
     [ObservableProperty]
     private string _cacheSizeString = "0 B";
@@ -31,7 +33,7 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     private string _currentVersion = "1.0.0";
 
     [ObservableProperty]
-    private string _updateStatusText = "Güncel";
+    private string _updateStatusText = string.Empty;
 
     [ObservableProperty]
     private bool _isUpdateAvailable;
@@ -115,7 +117,8 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         IDiagnosticReportService diagnosticService,
         ILicenseService licenseService,
         IProfileService profileService,
-        IEpgService epgService)
+        IEpgService epgService,
+        ILocalizationService localizationService)
     {
         _themeService = themeService;
         _dialogService = dialogService;
@@ -127,8 +130,10 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         _licenseService = licenseService;
         _profileService = profileService;
         _epgService = epgService;
+        _localizationService = localizationService;
         
         CurrentVersion = _updateService.CurrentVersion;
+        UpdateStatusText = _localizationService.GetString("Settings.Update.UpToDate");
         _settingsService.SettingsChanged += OnSettingsService_Changed;
         
         LoadSettings();
@@ -185,7 +190,7 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         if (IsCheckingUpdates) return;
 
         IsCheckingUpdates = true;
-        UpdateStatusText = "Kontrol ediliyor...";
+        UpdateStatusText = _localizationService.GetString("GlobalSettings.Update.Checking");
         IsUpdateAvailable = false;
         _latestUpdate = null;
 
@@ -198,16 +203,16 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
             {
                 _latestUpdate = update;
                 IsUpdateAvailable = true;
-                UpdateStatusText = $"Yeni Sürüm: v{update.Version}";
+                UpdateStatusText = string.Format(_localizationService.GetString("GlobalSettings.Update.NewVersionFormat"), update.Version);
             }
             else
             {
-                UpdateStatusText = "Uygulama güncel";
+                UpdateStatusText = _localizationService.GetString("GlobalSettings.Update.Latest");
             }
         }
         catch
         {
-            UpdateStatusText = "Kontrol başarısız";
+            UpdateStatusText = _localizationService.GetString("GlobalSettings.Update.Failed");
         }
         finally
         {
@@ -227,8 +232,8 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         if (_latestUpdate == null) return;
 
         var confirmed = await _dialogService.ShowConfirmationAsync(
-            "Güncelleme",
-            $"v{_latestUpdate.Version} sürümünü şimdi indirmek istiyor musunuz?\n\nDeğişiklikler:\n{_latestUpdate.Changelog}"
+            _localizationService.GetString("GlobalSettings.Update.ConfirmTitle"),
+            string.Format(_localizationService.GetString("GlobalSettings.Update.ConfirmMessageFormat"), _latestUpdate.Version, _latestUpdate.Changelog)
         );
 
         if (confirmed)
@@ -241,13 +246,8 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     private async Task ClearCacheAsync()
     {
         var confirmed = await _dialogService.ShowConfirmationAsync(
-            "Veri ve Önbellek Temizliği",
-            "Bu işlem şunları gerçekleştirecek:\n\n" +
-            "• Tüm resim ve geçici dosya önbelleği silinecek\n" +
-            "• Veritabanındaki tüm yayın akışı (EPG) verileri temizlenecek\n" +
-            "• Silinmiş profillere ait artık yerel ayar dosyaları silinecek\n" +
-            "• Veritabanı sıkıştırılarak disk alanı geri kazanılacak\n\n" +
-            "Devam etmek istiyor musunuz?"
+            _localizationService.GetString("GlobalSettings.Cache.Clear.ConfirmTitle"),
+            _localizationService.GetString("GlobalSettings.Cache.Clear.ConfirmMessage")
         );
 
         if (confirmed)
@@ -276,22 +276,22 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
                 // Update size string
                 await UpdateCacheSizeAsync();
                 
-                var successMsg = "Önbellek ve geçici veriler başarıyla temizlendi.";
+                var successMsg = _localizationService.GetString("GlobalSettings.Cache.Clear.SuccessMessage");
                 if (cleanedSettings > 0)
                 {
-                    successMsg += $"\n{cleanedSettings} adet artık profil ayar dosyası silindi.";
+                    successMsg += string.Format(_localizationService.GetString("GlobalSettings.Cache.Clear.OrphanedSuffix"), cleanedSettings);
                 }
                 
                 await _dialogService.ShowMessageAsync(
-                    "Başarılı",
+                    _localizationService.GetString("GlobalSettings.Cache.Clear.SuccessTitle"),
                     successMsg
                 );
             }
             catch (Exception ex)
             {
                 await _dialogService.ShowErrorAsync(
-                    "Hata",
-                    "Temizleme işlemi sırasında bir hata oluştu",
+                    _localizationService.GetString("GlobalSettings.Cache.Clear.ErrorTitle"),
+                    _localizationService.GetString("GlobalSettings.Cache.Clear.ErrorMessage"),
                     ex
                 );
             }

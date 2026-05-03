@@ -16,6 +16,7 @@ public class EpgService : IEpgService
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly HttpClient _httpClient;
     private readonly ISettingsService _settingsService;
+    private readonly ILocalizationService _localizationService;
     private readonly ILogger<EpgService>? _logger;
     private readonly SemaphoreSlim _loadSemaphore = new(1, 1);
     
@@ -23,11 +24,12 @@ public class EpgService : IEpgService
     public DateTime? LastUpdated { get; private set; }
     public string? LastError { get; private set; }
 
-    public EpgService(IDbContextFactory<AppDbContext> contextFactory, HttpClient httpClient, ISettingsService settingsService, ILogger<EpgService>? logger = null)
+    public EpgService(IDbContextFactory<AppDbContext> contextFactory, HttpClient httpClient, ISettingsService settingsService, ILocalizationService localizationService, ILogger<EpgService>? logger = null)
     {
         _contextFactory = contextFactory;
         _httpClient = httpClient;
         _settingsService = settingsService;
+        _localizationService = localizationService;
         _logger = logger;
     }
 
@@ -57,7 +59,7 @@ public class EpgService : IEpgService
             LastError = null; // Clear previous error
             if (string.IsNullOrEmpty(epgUrl)) return 0;
 
-            progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Downloading, Message = "EPG dosyası indiriliyor...", ProgressPercent = 5 });
+            progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Downloading, Message = _localizationService.GetString("Epg.Progress.Downloading"), ProgressPercent = 5 });
 
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
             
@@ -92,10 +94,10 @@ public class EpgService : IEpgService
 
             if (dataStream is GZipStream)
             {
-                progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Decompressing, Message = "Sıkıştırılmış dosya açılıyor...", ProgressPercent = 15 });
+                progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Decompressing, Message = _localizationService.GetString("Epg.Progress.Decompressing"), ProgressPercent = 15 });
             }
 
-            progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Parsing, Message = "EPG içeriği analiz ediliyor...", ProgressPercent = 20 });
+            progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Parsing, Message = _localizationService.GetString("Epg.Progress.Parsing"), ProgressPercent = 20 });
 
             var settings = new System.Xml.XmlReaderSettings 
             { 
@@ -112,7 +114,7 @@ public class EpgService : IEpgService
 
             if (channelsForMapping != null)
             {
-                progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Matching, Message = "Kanallar eşleştiriliyor...", ProgressPercent = 25 });
+                progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Matching, Message = _localizationService.GetString("Epg.Progress.Matching"), ProgressPercent = 25 });
                 foreach (var channel in channelsForMapping)
                 {
                     var idStr = channel.Id.ToString();
@@ -314,7 +316,7 @@ public class EpgService : IEpgService
                                 progress?.Report(new EpgProgressInfo 
                                 { 
                                     Status = EpgLoadStatus.Saving, 
-                                    Message = $"{totalLoaded:N0} program kaydediliyor...", 
+                                    Message = string.Format(_localizationService.GetString("Epg.Progress.SavingFormat"), totalLoaded), 
                                     ProgressPercent = Math.Min(98, 30 + (totalLoaded / 5000.0 * 5.0)),
                                     LoadedCount = totalLoaded
                                 });
@@ -341,7 +343,7 @@ public class EpgService : IEpgService
 
             IsLoaded = true;
             LastUpdated = DateTime.UtcNow;
-            progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Completed, Message = "Tamamlandı", ProgressPercent = 100, LoadedCount = totalLoaded });
+            progress?.Report(new EpgProgressInfo { Status = EpgLoadStatus.Completed, Message = _localizationService.GetString("Common.Completed"), ProgressPercent = 100, LoadedCount = totalLoaded });
             return totalLoaded;
         }
         catch (Exception ex)
