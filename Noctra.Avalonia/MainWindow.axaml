@@ -10,7 +10,7 @@
         x:Class="Noctra.Avalonia.MainWindow"
         x:Name="RootWindow"
         x:DataType="vm:MainViewModel"
-        Icon="avares://Noctra.Avalonia/Assets/Logo.png"
+        Icon="avares://Noctra.Avalonia/Assets/Favicon.png"
         Title="Noctra"
         TransparencyLevelHint="None"
         Width="1400" Height="800"
@@ -177,7 +177,7 @@
             Padding="24,0" PointerPressed="HeaderBar_PointerPressed" Focusable="True">
       <Grid ColumnDefinitions="Auto,*,Auto">
         <!-- Spacer for Logo removal -->
-        <Border Width="1" Height="32" Margin="8,0,0,0"/>
+        <Border Width="1" Height="64" Margin="8,0,0,0"/>
 
         <!-- New Expanding Search -->
         <TextBox x:Name="HeaderSearchBox" Classes="headerSearch" 
@@ -1317,7 +1317,7 @@
             <StackPanel Spacing="24">
                 <controls:PremiumSpinner Width="80" Height="80">
                     <!-- Pulsing App Logo in Center -->
-                    <Image Source="avares://Noctra.Avalonia/Assets/Logo.png" 
+                    <Image Source="avares://Noctra.Avalonia/Assets/LogoGray.png" 
                            Width="32" Height="32"
                            VerticalAlignment="Center" HorizontalAlignment="Center"
                            RenderTransformOrigin="50%,50%">

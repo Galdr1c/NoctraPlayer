@@ -6,7 +6,8 @@
         xmlns:loc="using:Noctra.Avalonia.Localization"
         mc:Ignorable="d" d:DesignWidth="450" d:DesignHeight="300"
         x:Class="Noctra.Avalonia.Views.SplashWindow"
-        Title="Noctra IPTV"
+        Icon="avares://Noctra.Avalonia/Assets/Favicon.png"
+        Title="Noctra"
         Width="450" Height="350"
         WindowStartupLocation="CenterScreen"
         SystemDecorations="None"
@@ -29,8 +30,8 @@
                 <Panel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
                     <controls:PremiumSpinner>
                         <!-- Pulsing App Logo in Center -->
-                        <Image Source="avares://Noctra.Avalonia/Assets/Logo.png" 
-                               Width="32" Height="32"
+                        <Image Source="avares://Noctra.Avalonia/Assets/Logo2.png" 
+                               Width="100" Height="100"
                                VerticalAlignment="Center" HorizontalAlignment="Center"
                                RenderTransformOrigin="50%,50%">
                             <Image.RenderTransform>

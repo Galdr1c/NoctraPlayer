@@ -13,7 +13,7 @@
   <Properties>
     <DisplayName>$(NoctraAppDisplayName)</DisplayName>
     <PublisherDisplayName>$(StorePublisherDisplayName)</PublisherDisplayName>
-    <Logo>Assets\StoreLogo.png</Logo>
+    <Logo>Assets\StoreLogo2.png</Logo>
     <Description>Noctra packaged desktop application for Microsoft Store submission.</Description>
   </Properties>
 
@@ -46,7 +46,7 @@
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
       </uap:VisualElements>
       <Extensions>
-        <desktop:Extension Category="windows.fullTrustProcess" Executable="$targetnametoken$.exe" />
+        <desktop:Extension Categsory="windows.fullTrustProcess" Executable="$targetnametoken$.exe" />
       </Extensions>
     </Application>
   </Applications>
