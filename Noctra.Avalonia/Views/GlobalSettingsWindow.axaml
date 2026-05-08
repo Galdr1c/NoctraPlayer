@@ -457,17 +457,11 @@
                                             </Grid.ColumnDefinitions>
 
                                             <!-- App Icon -->
-                                            <Border Width="64" Height="64"
-                                                    Background="{DynamicResource PrimaryGradientBrush}"
-                                                    CornerRadius="12"
-                                                    Margin="0,0,20,0">
-                                                <TextBlock Text="TV"
-                                                         FontSize="32"
-                                                         FontWeight="Bold"
-                                                         Foreground="White"
-                                                         HorizontalAlignment="Center"
-                                                         VerticalAlignment="Center"/>
-                                            </Border>
+                                            <Image Source="avares://Noctra.Avalonia/Assets/LogoGray.png"
+                                                   Width="64"
+                                                   Height="64"
+                                                   Stretch="Uniform"
+                                                   Margin="0,0,20,0"/>
 
                                             <!-- App Info -->
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
@@ -536,17 +530,11 @@
                             <StackPanel>
                                 <Grid ColumnDefinitions="Auto,*,Auto">
                                     <!-- App Icon -->
-                                    <Border Width="64" Height="64"
-                                            Background="{DynamicResource PrimaryGradientBrush}"
-                                            CornerRadius="12"
-                                            Margin="0,0,20,0">
-                                        <TextBlock Text="TV"
-                                                   FontSize="32"
-                                                   FontWeight="Bold"
-                                                   Foreground="White"
-                                                   HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center"/>
-                                    </Border>
+                                    <Image Source="avares://Noctra.Avalonia/Assets/Logo.png"
+                                           Width="64"
+                                           Height="64"
+                                           Stretch="Uniform"
+                                           Margin="0,0,20,0"/>
                                     
                                     <!-- App Info -->
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">

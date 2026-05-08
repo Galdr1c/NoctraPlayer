@@ -649,6 +649,7 @@
     "Epg.Progress.Matching": "Matching channels...",
     "Epg.Progress.SavingFormat": "Saving {0:N0} programs...",
     "Common.Completed": "Completed",
+    "Common.Close": "Close",
     "Download.Error.ProfileNotFound": "Profile not found.",
     "Download.Error.InvalidUrl": "Download URL is invalid.",
     "Download.Status.AlreadyDownloaded": "Content already downloaded locally.",

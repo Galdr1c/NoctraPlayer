@@ -10,7 +10,7 @@
         x:Class="Noctra.Avalonia.MainWindow"
         x:Name="RootWindow"
         x:DataType="vm:MainViewModel"
-        Icon="avares://Noctra.Avalonia/Assets/Favicon.png"
+        Icon="avares://Noctra.Avalonia/Assets/Logo.png"
         Title="Noctra"
         TransparencyLevelHint="None"
         Width="1400" Height="800"

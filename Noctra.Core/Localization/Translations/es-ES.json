@@ -649,6 +649,7 @@
     "Epg.Progress.Matching": "Emparejando canales...",
     "Epg.Progress.SavingFormat": "Guardando {0:N0} programas...",
     "Common.Completed": "Completado",
+    "Common.Close": "Cerrar",
     "Download.Error.ProfileNotFound": "Perfil no encontrado.",
     "Download.Error.InvalidUrl": "La URL de descarga no es válida.",
     "Download.Status.AlreadyDownloaded": "Contenido ya descargado localmente.",

@@ -649,6 +649,7 @@
     "Epg.Progress.Matching": "Kanäle werden zugeordnet...",
     "Epg.Progress.SavingFormat": "{0:N0} Programme werden gespeichert...",
     "Common.Completed": "Abgeschlossen",
+    "Common.Close": "Schließen",
     "Download.Error.ProfileNotFound": "Profil nicht gefunden.",
     "Download.Error.InvalidUrl": "Download-URL ist ungültig.",
     "Download.Status.AlreadyDownloaded": "Inhalt bereits lokal heruntergeladen.",

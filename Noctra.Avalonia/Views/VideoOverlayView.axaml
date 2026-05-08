@@ -425,21 +425,21 @@
                                 </Grid>
 
                                 <Grid>
-                                    <Border Background="{Binding SleepTimerMode, Converter={StaticResource SleepModeToBackgroundConverter}, ConverterParameter=EndOfEpisode}" CornerRadius="8">
-                                        <Button Command="{Binding SetSleepTimerCommand}" 
-                                                CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.EndOfEpisode}" 
-                                                IsEnabled="{Binding IsPremium}"
-                                                Classes="listItemBtn">
-                                            <Grid ColumnDefinitions="Auto,*">
-                                                <materialIcons:MaterialIcon Kind="CheckCircleOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}"/>
-                                                <StackPanel Grid.Column="1" Margin="12,0,0,0">
-                                                    <TextBlock Text="{Binding EndOfContentText}" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding EndOfContentDescription}" FontSize="11" Opacity="0.6" Foreground="{DynamicResource TextMutedBrush}" Margin="0,2,0,0"/>
-                                                </StackPanel>
-                                            </Grid>
-                                        </Button>
-                                    </Border>
-                                    <materialIcons:MaterialIcon Kind="Lock" Width="18" Height="18" 
+                                <Border Background="{Binding SleepTimerMode, Converter={StaticResource SleepModeToBackgroundConverter}, ConverterParameter=EndOfEpisode}" CornerRadius="8">
+                                    <Button Command="{Binding SetSleepTimerCommand}" 
+                                            CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.EndOfEpisode}" 
+                                            IsEnabled="{Binding IsPremium}"
+                                            Classes="listItemBtn">
+                                        <Grid ColumnDefinitions="Auto,*">
+                                            <materialIcons:MaterialIcon Kind="CheckCircleOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}"/>
+                                            <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                                                <TextBlock Text="{Binding EndOfContentText}" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding EndOfContentDescription}" FontSize="11" Opacity="0.6" Foreground="{DynamicResource TextMutedBrush}" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Button>
+                                </Border>
+                                <materialIcons:MaterialIcon Kind="Lock" Width="18" Height="18" 
                                                                 Foreground="{DynamicResource TextMutedBrush}" 
                                                                 IsVisible="{Binding !IsPremium}" 
                                                                 HorizontalAlignment="Right" VerticalAlignment="Center"
@@ -767,26 +767,30 @@
                                     <Border Height="1" Width="40" HorizontalAlignment="Left" Background="{DynamicResource Surface1Brush}" Opacity="0.5"/>
                                 </StackPanel>
                                 
-                                <Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20" Margin="0,0,0,24">
+                                <Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20" Margin="0,0,0,24" IsVisible="{Binding StreamQuality, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}">
+                                    <TextBlock Text="{Binding StreamInfo}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+                                </Border>
+
+                                <Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20" Margin="0,0,0,24" IsVisible="{Binding StreamQuality, Converter={StaticResource NullToVisibilityConverter}}">
                                     <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto">
                                         <TextBlock Grid.Row="0" Text="{loc:Translate Player.Quality.Resolution}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Margin="0,0,40,12"/>
-                                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding StreamQuality.ResolutionLabel, FallbackValue='-'}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" FontWeight="Bold" Margin="0,0,0,12"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding QualityResolutionText}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" FontWeight="Bold" Margin="0,0,0,12"/>
                                         <TextBlock Grid.Row="1" Text="{loc:Translate Player.Quality.Fps}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Margin="0,0,40,12"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding StreamQuality.Fps, StringFormat='{}{0} FPS', FallbackValue='-'}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" FontWeight="Bold" Margin="0,0,0,12"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding QualityFpsText}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" FontWeight="Bold" Margin="0,0,0,12"/>
                                         <TextBlock Grid.Row="2" Text="{loc:Translate Player.Quality.Codec}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Margin="0,0,40,12"/>
-                                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding StreamQuality.VideoCodec, FallbackValue='-'}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" FontWeight="Bold" Margin="0,0,0,12"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding QualityVideoCodecText}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" FontWeight="Bold" Margin="0,0,0,12"/>
                                         <TextBlock Grid.Row="3" Text="{loc:Translate Player.Quality.Bitrate}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Margin="0,0,40,0"/>
-                                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding StreamQuality.VideoBitrate, Converter={StaticResource BitrateDisplayConverter}, FallbackValue={loc:Translate Common.Unknown}}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" FontWeight="Bold"/>
+                                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding QualityVideoBitrateText}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" FontWeight="Bold"/>
                                     </Grid>
                                 </Border>
                                 
-                                <StackPanel Margin="0,0,0,12">
+                                <StackPanel Margin="0,0,0,12" IsVisible="{Binding StreamQuality, Converter={StaticResource NullToVisibilityConverter}}">
                                     <TextBlock Text="{loc:Translate Player.Quality.Audio}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1.5" Margin="0,0,0,8"/>
                                     <Border Height="1" Width="30" HorizontalAlignment="Left" Background="{DynamicResource Surface1Brush}" Opacity="0.5"/>
                                 </StackPanel>
                                 
-                                <Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20">
-                                    <TextBlock Text="{Binding StreamQuality.AudioDetailLabel, FallbackValue={loc:Translate Common.Unknown}}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
+                                <Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20" IsVisible="{Binding StreamQuality, Converter={StaticResource NullToVisibilityConverter}}">
+                                    <TextBlock Text="{Binding QualityAudioText}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
                                 </Border>
                                 
                                 <StackPanel IsVisible="{Binding !IsLiveContent}">

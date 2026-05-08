@@ -96,12 +96,12 @@ namespace Noctra.Tests
             
             // Scenario 1: Series
             ctx.VM.IsSeriesContent = true;
-            Assert.Equal("Bu Bölüm Bitince", ctx.VM.EndOfContentText);
+            Assert.Equal("Bölüm bitince", ctx.VM.EndOfContentText);
             Assert.Contains("Bölüm", ctx.VM.EndOfContentDescription);
 
             // Scenario 2: Movie (VOD)
             ctx.VM.IsSeriesContent = false;
-            Assert.Equal("Bu Film Bitince", ctx.VM.EndOfContentText);
+            Assert.Equal("Film bitince", ctx.VM.EndOfContentText);
             Assert.Contains("Film", ctx.VM.EndOfContentDescription);
         }
 

@@ -222,6 +222,7 @@ namespace Noctra.Tests
                 new SyncDispatcher(),
                 Settings,
                 License,
+                new LocalizationService(),
                 null!,  // MainViewModel — not needed for these tests
                 WatchHistory,
                 new FakeStalkerPortalService());

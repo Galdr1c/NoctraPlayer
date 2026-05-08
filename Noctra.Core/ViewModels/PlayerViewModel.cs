@@ -72,15 +72,15 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     public string SleepTimerLabel => SleepTimerMode switch
     {
-        SleepTimerOption.Minutes15    => $"Uyku: 15 dk",
-        SleepTimerOption.Minutes30    => $"Uyku: 30 dk",
-        SleepTimerOption.Minutes60    => $"Uyku: 60 dk",
-        SleepTimerOption.EndOfEpisode => IsSeriesContent ? "Bölüm Bitince Kapanır" : "Film Bitince Kapanır",
-        _                           => "Uyku Zamanlayıcısı"
+        SleepTimerOption.Minutes15 => string.Format(_localizationService.GetString("Player.Sleep.LabelFormat"), 15),
+        SleepTimerOption.Minutes30 => string.Format(_localizationService.GetString("Player.Sleep.LabelFormat"), 30),
+        SleepTimerOption.Minutes60 => string.Format(_localizationService.GetString("Player.Sleep.LabelFormat"), 60),
+        SleepTimerOption.EndOfEpisode => _localizationService.GetString(IsSeriesContent ? "Player.Sleep.EndOfEpisode" : "Player.Sleep.EndOfMovie"),
+        _ => _localizationService.GetString("Player.Overlay.SleepTimer.Tooltip")
     };
 
-    public string EndOfContentText => IsSeriesContent ? "Bu Bölüm Bitince" : "Bu Film Bitince";
-    public string EndOfContentDescription => IsSeriesContent ? "Bölüm tamamlanınca oynatma durur" : "Film tamamlanınca oynatma durur";
+    public string EndOfContentText => _localizationService.GetString(IsSeriesContent ? "Player.Sleep.EndContent.Episode" : "Player.Sleep.EndContent.Movie");
+    public string EndOfContentDescription => _localizationService.GetString(IsSeriesContent ? "Player.Sleep.EndDescription.Episode" : "Player.Sleep.EndDescription.Movie");
 
     private readonly IVideoPlayerService _videoPlayerService;
     private readonly IEpgService _epgService;
@@ -90,6 +90,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private readonly INetworkService _networkService;
     private readonly ISettingsService _settingsService;
     private readonly ILicenseService _licenseService;
+    private readonly ILocalizationService _localizationService;
     private readonly MainViewModel _mainViewModel;
     private int _playRequestVersion;
     private bool _isPreferenceApplied;
@@ -434,6 +435,26 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private Models.StreamQualityInfo? _streamQuality;
 
+    public string QualityResolutionText => StreamQuality?.Height > 0
+        ? StreamQuality.ResolutionLabel
+        : _localizationService.GetString("Common.Unknown");
+
+    public string QualityFpsText => StreamQuality?.Fps > 0
+        ? $"{StreamQuality.Fps} FPS"
+        : _localizationService.GetString("Common.Unknown");
+
+    public string QualityVideoCodecText => !string.IsNullOrWhiteSpace(StreamQuality?.VideoCodecDisplay)
+        ? StreamQuality.VideoCodecDisplay
+        : _localizationService.GetString("Common.Unknown");
+
+    public string QualityVideoBitrateText => StreamQuality?.VideoBitrate > 0
+        ? FormatBitrate(StreamQuality.VideoBitrate)
+        : _localizationService.GetString("Common.Unknown");
+
+    public string QualityAudioText => !string.IsNullOrWhiteSpace(StreamQuality?.AudioDetailLabel)
+        ? StreamQuality.AudioDetailLabel
+        : _localizationService.GetString("Common.Unknown");
+
     public bool HasTopQualityBadgesReady =>
         StreamQuality != null &&
         StreamQuality.Height > 0 &&
@@ -554,6 +575,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         IDispatcherService dispatcherService,
         ISettingsService settingsService,
         ILicenseService licenseService,
+        ILocalizationService localizationService,
         MainViewModel mainViewModel,
         IWatchHistoryService? watchHistoryService,
         IStalkerPortalService stalkerPortalService)
@@ -567,9 +589,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _dispatcherService = dispatcherService;
         _settingsService = settingsService;
         _licenseService = licenseService;
+        _localizationService = localizationService;
         _mainViewModel = mainViewModel;
         _watchHistoryService = watchHistoryService;
         _stalkerPortalService = stalkerPortalService;
+        _localizationService.LanguageChanged += OnLanguageChanged;
 
         // Initialize Network Status
 
@@ -919,6 +943,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     partial void OnStreamQualityChanged(StreamQualityInfo? value)
     {
         OnPropertyChanged(nameof(HasTopQualityBadgesReady));
+        OnPropertyChanged(nameof(QualityResolutionText));
+        OnPropertyChanged(nameof(QualityFpsText));
+        OnPropertyChanged(nameof(QualityVideoCodecText));
+        OnPropertyChanged(nameof(QualityVideoBitrateText));
+        OnPropertyChanged(nameof(QualityAudioText));
         UpdateStreamInfoFromQuality();
     }
 
@@ -929,6 +958,18 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(CanShowDownloadButton));
         OnPropertyChanged(nameof(CanDownloadCurrentContent));
         DownloadCurrentContentCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnIsSeriesContentChanged(bool value)
+    {
+        if (SleepTimerMode == SleepTimerOption.EndOfEpisode)
+        {
+            SleepTimerCountdown = _localizationService.GetString(IsSeriesContent ? "Player.Sleep.EndOfEpisode" : "Player.Sleep.EndOfMovie");
+        }
+
+        OnPropertyChanged(nameof(SleepTimerLabel));
+        OnPropertyChanged(nameof(EndOfContentText));
+        OnPropertyChanged(nameof(EndOfContentDescription));
     }
 
     partial void OnIsDownloadedPlaybackChanged(bool value)
@@ -1019,7 +1060,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         }
 
         StreamQuality = null;
-        StreamInfo = "Kalite tespit ediliyor...";
+        StreamInfo = _localizationService.GetString("Player.Status.QualityDetecting");
         try
         {
             string resolvedStreamUrl;
@@ -1050,7 +1091,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 var portalUrl = _mainViewModel?.CurrentProfile?.ProviderAccount?.Url ?? string.Empty;
                 var macAddress = _mainViewModel?.CurrentProfile?.ProviderAccount?.Username ?? string.Empty;
 
-                StreamInfo = "Video bağlantısı alınıyor...";
+                StreamInfo = _localizationService.GetString("Player.Status.FetchingVideoUrl");
                 
                 var stalkerResolvedUrl = await _stalkerPortalService.CreateLinkAsync(
                     portalUrl,
@@ -1308,11 +1349,18 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     {
         if (StreamQuality == null)
         {
-            StreamInfo = "Kalite tespit ediliyor...";
+            StreamInfo = _localizationService.GetString("Player.Status.QualityDetecting");
             return;
         }
 
         StreamInfo = StreamQuality.ResolutionLabel;
+    }
+
+    private static string FormatBitrate(int bitrate)
+    {
+        if (bitrate >= 1_000_000) return $"{bitrate / 1_000_000.0:F2} Mbps";
+        if (bitrate >= 1_000) return $"{bitrate / 1_000.0:F1} Kbps";
+        return $"{bitrate} bps";
     }
 
     private void RestartAutoHideTimer()
@@ -1453,7 +1501,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     {
         if (mode != SleepTimerOption.Off && IsLiveContent)
         {
-            _ = ShowOverlayMessageAsync("Uyku zamanlayıcısı canlı yayında kullanılamaz.");
+            _ = ShowOverlayMessageAsync(_localizationService.GetString("Player.Error.SleepTimerLive"));
             return;
         }
 
@@ -1476,7 +1524,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 StartCountdownTimer(TimeSpan.FromMinutes(60));
                 break;
             case SleepTimerOption.EndOfEpisode:
-                SleepTimerCountdown = "Bölüm Bitince";
+                SleepTimerCountdown = _localizationService.GetString(IsSeriesContent ? "Player.Sleep.EndOfEpisode" : "Player.Sleep.EndOfMovie");
                 break;
         }
     }
@@ -1532,7 +1580,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         SleepTimerMode = SleepTimerOption.Off;
         SleepTimerCountdown = string.Empty;
 
-        _ = ShowOverlayMessageAsync("Uyku zamanlayıcısı: Oynatma durduruldu 🌙");
+        _ = ShowOverlayMessageAsync(_localizationService.GetString("Player.Status.SleepTimerStopped"));
     }
 
     private void UpdateMediaInfo()
@@ -3445,6 +3493,27 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         });
     }
 
+    private void OnLanguageChanged()
+    {
+        _dispatcherService.BeginInvoke(() =>
+        {
+            if (SleepTimerMode == SleepTimerOption.EndOfEpisode)
+            {
+                SleepTimerCountdown = _localizationService.GetString(IsSeriesContent ? "Player.Sleep.EndOfEpisode" : "Player.Sleep.EndOfMovie");
+            }
+
+            OnPropertyChanged(nameof(SleepTimerLabel));
+            OnPropertyChanged(nameof(EndOfContentText));
+            OnPropertyChanged(nameof(EndOfContentDescription));
+            OnPropertyChanged(nameof(QualityResolutionText));
+            OnPropertyChanged(nameof(QualityFpsText));
+            OnPropertyChanged(nameof(QualityVideoCodecText));
+            OnPropertyChanged(nameof(QualityVideoBitrateText));
+            OnPropertyChanged(nameof(QualityAudioText));
+            UpdateStreamInfoFromQuality();
+        });
+    }
+
     public void Dispose()
     {
         _autoHideTimer?.Dispose();
@@ -3463,6 +3532,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         {
             _networkService.NetworkStatusChanged -= OnNetworkStatusChanged;
         }
+        _localizationService.LanguageChanged -= OnLanguageChanged;
     }
 }
 
