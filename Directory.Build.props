@@ -1,0 +1,22 @@
+<Project>
+
+  <!-- ===== Noctra Version & Metadata Defaults ===== -->
+  <!-- These can be overridden via CLI: dotnet build -p:NoctraVersionPrefix=1.2.0 -->
+  <PropertyGroup>
+    <NoctraVersionPrefix Condition="'$(NoctraVersionPrefix)' == ''">1.0.0</NoctraVersionPrefix>
+    <NoctraPackageVersion Condition="'$(NoctraPackageVersion)' == ''">$(NoctraVersionPrefix).0</NoctraPackageVersion>
+    <NoctraAuthors Condition="'$(NoctraAuthors)' == ''">Noctra</NoctraAuthors>
+    <NoctraCompany Condition="'$(NoctraCompany)' == ''">Noctra</NoctraCompany>
+
+    <!-- Edition: Free | Premium  (set by build script for Store builds) -->
+    <NoctraEdition Condition="'$(NoctraEdition)' == ''">Free</NoctraEdition>
+    <NoctraEditionDisplayName Condition="'$(NoctraEditionDisplayName)' == ''">Noctra</NoctraEditionDisplayName>
+    <NoctraAppDisplayName Condition="'$(NoctraAppDisplayName)' == ''">Noctra</NoctraAppDisplayName>
+
+    <!-- Premium Store cross-references (updated from store-profiles.json by build script) -->
+    <NoctraPremiumStoreProductId Condition="'$(NoctraPremiumStoreProductId)' == ''">9PREMIUMPLACEHOLDER</NoctraPremiumStoreProductId>
+    <NoctraPremiumStoreLaunchUri Condition="'$(NoctraPremiumStoreLaunchUri)' == ''">ms-windows-store://pdp/?productid=9PREMIUMPLACEHOLDER</NoctraPremiumStoreLaunchUri>
+    <NoctraPremiumStoreWebUri Condition="'$(NoctraPremiumStoreWebUri)' == ''">https://apps.microsoft.com/detail/9PREMIUMPLACEHOLDER</NoctraPremiumStoreWebUri>
+  </PropertyGroup>
+
+</Project>

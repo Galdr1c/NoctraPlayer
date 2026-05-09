@@ -46,7 +46,7 @@
         <uap:SplashScreen Image="Assets\Logo150x150.png" />
       </uap:VisualElements>
       <Extensions>
-        <desktop:Extension Categsory="windows.fullTrustProcess" Executable="$targetnametoken$.exe" />
+        <desktop:Extension Category="windows.fullTrustProcess" Executable="$targetnametoken$.exe" />
       </Extensions>
     </Application>
   </Applications>
