@@ -1,4 +1,4 @@
-{
+﻿{
     "GlobalSettings.Title": "Ayarlar",
     "GlobalSettings.Appearance.Title": "Görünüm",
     "GlobalSettings.Theme.Title": "Tema",
@@ -305,6 +305,8 @@
     "History.Series": "Diziler",
     "History.Movies": "Filmler",
     "History.Remove": "Geçmişten Sil",
+    "Context.MyList.Toggle": "Listem'e Ekle / Çıkar",
+    "Context.Favorite.Toggle": "Favorilere Ekle / Çıkar",
     "History.Empty.Title": "Geçmiş boş",
     "History.Empty.Description": "İzlediğiniz içerikler burada listelenecek.",
     "Favorites.Title": "Favoriler",

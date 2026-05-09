@@ -1,4 +1,4 @@
-{
+﻿{
     "GlobalSettings.Title": "Einstellungen",
     "GlobalSettings.Appearance.Title": "Erscheinungsbild",
     "GlobalSettings.Theme.Title": "Thema",
@@ -305,6 +305,8 @@
     "History.Series": "Serien",
     "History.Movies": "Filme",
     "History.Remove": "Aus Verlauf entfernen",
+    "Context.MyList.Toggle": "Zu Meine Liste hinzufügen / entfernen",
+    "Context.Favorite.Toggle": "Zu Favoriten hinzufügen / entfernen",
     "History.Empty.Title": "Verlauf ist leer",
     "History.Empty.Description": "Inhalte, die Sie ansehen, werden hier aufgelistet.",
     "Favorites.Title": "Favoriten",

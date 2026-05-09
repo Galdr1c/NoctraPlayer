@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Noctra.Models;
 using Noctra.Services;
@@ -1587,20 +1587,24 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     {
         UpdateDurationFromService(force: true);
 
+        var offText = _localizationService.GetString("Player.Track.Off");
+        var audioFallbackFormat = _localizationService.GetString("Player.Track.AudioFallback");
+        var subtitleFallbackFormat = _localizationService.GetString("Player.Track.SubtitleFallback");
+
         var audioTracks = _videoPlayerService.AudioTracks
             .Where(t => t.Id >= 0 && !IsDisabledTrackLabel(t.Name))
-            .Select(t => new TrackOption(t.Id, NormalizeTrackName(t.Name, $"Ses {t.Id}")))
+            .Select(t => new TrackOption(t.Id, NormalizeTrackName(t.Name, string.Format(audioFallbackFormat, t.Id))))
             .ToList();
 
         var subtitleTracks = _videoPlayerService.SubtitleTracks
             .Select(t => IsDisabledTrackLabel(t.Name)
-                ? new TrackOption(t.Id, "Kapalı")
-                : new TrackOption(t.Id, NormalizeTrackName(t.Name, $"Altyazı {t.Id}")))
+                ? new TrackOption(t.Id, offText)
+                : new TrackOption(t.Id, NormalizeTrackName(t.Name, string.Format(subtitleFallbackFormat, t.Id))))
             .ToList();
 
-        if (!subtitleTracks.Any(t => string.Equals(t.Name, "Kapalı", StringComparison.OrdinalIgnoreCase)))
+        if (!subtitleTracks.Any(t => string.Equals(t.Name, offText, StringComparison.OrdinalIgnoreCase)))
         {
-            subtitleTracks.Add(new TrackOption(-1, "Kapalı"));
+            subtitleTracks.Add(new TrackOption(-1, offText));
         }
 
         _dispatcherService.Invoke(() => 

@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui"
+﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Noctra.ViewModels"
         xmlns:models="using:Noctra.Models"
@@ -1009,7 +1009,7 @@
                               Width="48" Height="48"
                               IsVisible="{Binding !IsLiveContent}"
                               Background="Transparent" BorderThickness="0"
-                              Classes="pipButton" ToolTip.Tip="10 sn Ãƒâ€Ã‚Â°leri">
+                              Classes="pipButton" ToolTip.Tip="{loc:Translate Player.Overlay.Forward}">
                            <materialIcons:MaterialIcon Kind="FastForward10" Width="18" Height="18" Foreground="White" Opacity="0.9"/>
                       </Button>
 
@@ -1035,7 +1035,7 @@
                           IsVisible="{Binding #PiPCentralControls.IsVisible}"
                           ZIndex="6000"
                           Classes="pipButton"
-                          ToolTip.Tip="Tam ekrana dön">
+                          ToolTip.Tip="{loc:Translate Player.Overlay.Fullscreen.Tooltip}">
                       <materialIcons:MaterialIcon Kind="ArrowExpand" Width="18" Height="18" Foreground="White" Opacity="0.9"/>
                   </Button>
 

@@ -5,6 +5,7 @@
              xmlns:vm="using:Noctra.ViewModels"
              xmlns:converters="using:Noctra.Avalonia.Converters"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:loc="using:Noctra.Avalonia.Localization"
              x:Class="Noctra.Avalonia.Controls.VodCard"
              x:Name="VodCardControl"
              x:DataType="models:Channel"
@@ -28,11 +29,11 @@
     
     <Button.ContextFlyout>
       <MenuFlyout>
-        <MenuItem Header="Listem'e Ekle/Çıkar" Click="Context_AddToMyList_Click"
+        <MenuItem Header="{loc:Translate Context.MyList.Toggle}" Click="Context_AddToMyList_Click"
                   IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
-        <MenuItem Header="Favorilere Ekle/Çıkar" Click="Context_ToggleFavorite_Click"
+        <MenuItem Header="{loc:Translate Context.Favorite.Toggle}" Click="Context_ToggleFavorite_Click"
                   IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
-        <MenuItem Header="Geçmişten Sil" Click="Context_RemoveFromHistory_Click"
+        <MenuItem Header="{loc:Translate History.Remove}" Click="Context_RemoveFromHistory_Click"
                   IsVisible="{Binding #VodCardControl.ShowHistoryMenu}">
           <MenuItem.Icon>
             <materialIcons:MaterialIcon Kind="DeleteOutline" />
