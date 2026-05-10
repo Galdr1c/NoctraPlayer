@@ -7,6 +7,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 
 ## [Unreleased]
+### 🛠️ M3U/Xtream Parser Düzeltmeleri ve Saf Kategori Yapısı (2026-05-10)
+- [Düzeltildi] M3U listelerinde `tvg-name` ve `group-title` gibi nitelikler okunurken, içeriğinde boşluk karakteri (Örn: `TR/ S-SPORT`) bulunan isimlerin yanlışlıkla kesilerek silinmesi sorunu giderildi. Tırnak işaretli ("") tüm nitelikler artık içlerindeki boşluk ve virgüllerle birlikte %100 eksiksiz ayrıştırılıyor.
+- [Değişti] Kullanıcı talebi üzerine, sağlayıcı (provider) kategorilerini değiştiren, Türkçeleştiren veya kanal adına bakarak ("Haber", "Spor" vb.) otomatik gruplandırma yapan "Kategori Normalizasyon" sistemi (`PlaylistOrganizerService`) tamamen kapatıldı. Artık sağlayıcıdan gelen `group-title` (Örn: "TR/ DIZI", "SPORTS") isimleri hiçbir müdahale yapılmadan olduğu gibi ekrana yansıtılıyor.
+
+
 ### 🏪 Microsoft Store Free/Premium Çift Uygulama Altyapısı (2026-05-01)
 - [Yeni] Aynı kod tabanından iki ayrı Microsoft Store paketi üretmek için `Free` ve `Premium` edition modeli eklendi.
 - [Yeni] `Noctra.Packaging` altında Store paketleme altyapısı, manifest, görsel varlıklar ve çoklu profil konfigürasyonu (`store-profiles.json`) oluşturuldu.

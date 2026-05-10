@@ -13,58 +13,6 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
     // Quality tiers (lower index = higher quality)
     private static readonly string[] QualityOrder = { "4k", "uhd", "2160p", "1080p", "fhd", "hd", "720p", "sd", "480p" };
 
-    // Category detection rules
-    private static readonly Dictionary<string, string[]> CategoryRules = new()
-    {
-        ["Spor"] = ["spor", "sport", "futbol", "basketbol", "bein", "espn", "eurosport", "s sport", "tivibu spor", "nba", "premier league"],
-        ["Haber"] = ["news", "haber", "cnn", "bbc news", "nbc", "fox news", "ntv", "haberturk", "tgrt haber", "a haber"],
-        ["Çocuk"] = ["kids", "çocuk", "cartoon", "disney", "nickelodeon", "baby", "minika", "trt çocuk"],
-        ["Filmler"] = ["movie", "film", "sinema", "cinema", "box office"],
-        ["Diziler"] = ["series", "dizi", "tv show", "kanal d", "show tv", "star tv", "atv"],
-        ["Belgesel"] = ["documentary", "belgesel", "discovery", "nat geo", "national geographic", "animal planet", "history"],
-        ["Müzik"] = ["music", "müzik", "mtv", "vevo", "kral", "power"],
-        ["Eğlence"] = ["entertainment", "eğlence", "show", "komedi", "comedy"]
-    };
-
-    // Group name normalization map
-    private static readonly Dictionary<string, string> GroupMapping = new(StringComparer.OrdinalIgnoreCase)
-    {
-        // Turkish variations
-        ["Spor"] = "Spor",
-        ["Sports"] = "Spor",
-        ["Sport"] = "Spor",
-
-        ["Haber"] = "Haber",
-        ["News"] = "Haber",
-
-        ["Çocuk"] = "Çocuk",
-        ["Kids"] = "Çocuk",
-        ["Children"] = "Çocuk",
-
-        ["Movies"] = "Filmler",
-        ["Film"] = "Filmler",
-        ["Sinema"] = "Filmler",
-        ["Films"] = "Filmler",
-
-        ["Series"] = "Diziler",
-        ["Tv Shows"] = "Diziler",
-        ["Dizi"] = "Diziler",
-
-        ["Documentary"] = "Belgesel",
-        ["Belgesel"] = "Belgesel",
-
-        ["Music"] = "Müzik",
-        ["Müzik"] = "Müzik",
-
-        ["Entertainment"] = "Eğlence",
-        ["Eğlence"] = "Eğlence",
-
-        ["General"] = "Uncategorized",
-        ["Genel"] = "Uncategorized",
-        ["Uncategorized"] = "Uncategorized",
-        ["undefined"] = "Uncategorized",
-        [""] = "Uncategorized"
-    };
 
     /// <summary>
     /// Tam organizasyon pipeline'ı
@@ -145,36 +93,11 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
     /// </summary>
     public void AutoCategorize(List<Channel> channels)
     {
+        // Categorization rules have been disabled by request.
+        // If a channel lacks a group title, we just mark it as "Uncategorized"
         foreach (var channel in channels)
         {
-            if (!string.IsNullOrEmpty(channel.GroupTitle) &&
-                channel.GroupTitle != "Uncategorized" &&
-                channel.GroupTitle != "undefined")
-            {
-                continue; // Already categorized
-            }
-
-            var nameLower = channel.Name?.ToLowerInvariant() ?? string.Empty;
-
-            var matched = false;
-            foreach (var (category, keywords) in CategoryRules)
-            {
-                if (keywords.Any(kw => nameLower.Contains(kw)))
-                {
-                    // Prevent Live channels from being categorized as Filmler based on name
-                    // (Filmler is usually reserved for VOD, while Diziler includes major TV channels)
-                    if (channel.Type == Models.ChannelType.Live && category == "Filmler")
-                    {
-                        continue;
-                    }
-
-                    channel.GroupTitle = category;
-                    matched = true;
-                    break;
-                }
-            }
-
-            if (!matched)
+            if (string.IsNullOrEmpty(channel.GroupTitle) || channel.GroupTitle == "undefined")
             {
                 channel.GroupTitle = "Uncategorized";
             }
@@ -262,15 +185,7 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
     /// </summary>
     public void NormalizeGroupNames(List<Channel> channels)
     {
-        foreach (var channel in channels)
-        {
-            var group = channel.GroupTitle?.Trim() ?? "";
-
-            if (GroupMapping.TryGetValue(group, out var normalized))
-            {
-                channel.GroupTitle = normalized;
-            }
-        }
+        // Normalization has been disabled. Categories will be preserved exactly as provided.
     }
 
     /// <summary>

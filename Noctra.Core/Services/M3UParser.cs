@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
@@ -197,27 +197,27 @@ public partial class M3UParser : IM3UParser
         // tvg-id çıkar
         var tvgIdMatch = TvgIdRegex().Match(line);
         if (tvgIdMatch.Success)
-            channel.TvgId = tvgIdMatch.Groups[1].Value;
+            channel.TvgId = tvgIdMatch.Groups[1].Success ? tvgIdMatch.Groups[1].Value : tvgIdMatch.Groups[2].Value;
 
         // tvg-name çıkar
         var tvgNameMatch = TvgNameRegex().Match(line);
         if (tvgNameMatch.Success)
-            channel.TvgName = tvgNameMatch.Groups[1].Value;
+            channel.TvgName = tvgNameMatch.Groups[1].Success ? tvgNameMatch.Groups[1].Value : tvgNameMatch.Groups[2].Value;
 
         // tvg-logo çıkar
         var tvgLogoMatch = TvgLogoRegex().Match(line);
         if (tvgLogoMatch.Success)
-            channel.LogoUrl = tvgLogoMatch.Groups[1].Value;
+            channel.LogoUrl = tvgLogoMatch.Groups[1].Success ? tvgLogoMatch.Groups[1].Value : tvgLogoMatch.Groups[2].Value;
 
         // tvg-country çıkar
         var tvgCountryMatch = TvgCountryRegex().Match(line);
         if (tvgCountryMatch.Success)
-            channel.Country = tvgCountryMatch.Groups[1].Value.ToUpperInvariant();
+            channel.Country = (tvgCountryMatch.Groups[1].Success ? tvgCountryMatch.Groups[1].Value : tvgCountryMatch.Groups[2].Value).ToUpperInvariant();
 
         // group-title çıkar
         var groupMatch = GroupTitleRegex().Match(line);
         if (groupMatch.Success)
-            channel.GroupTitle = groupMatch.Groups[1].Value;
+            channel.GroupTitle = groupMatch.Groups[1].Success ? groupMatch.Groups[1].Value : groupMatch.Groups[2].Value;
 
         // Kanal adını çıkar
         var lastCommaIndex = line.LastIndexOf(',');
@@ -344,19 +344,19 @@ public partial class M3UParser : IM3UParser
     private static partial Regex VodPatternYear(); // (1990) veya 1990 gibi yılları yakalar
 
     // Regex pattern'ları (Lenient versions)
-    [GeneratedRegex(@"tvg-id\s*=\s*""?([^""\s,]*)""?", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"tvg-id\s*=\s*(?:""([^""]*)""|([^""\s,]+))", RegexOptions.IgnoreCase)]
     private static partial Regex TvgIdRegex();
 
-    [GeneratedRegex(@"tvg-name\s*=\s*""?([^""\s,]*)""?", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"tvg-name\s*=\s*(?:""([^""]*)""|([^""\s,]+))", RegexOptions.IgnoreCase)]
     private static partial Regex TvgNameRegex();
 
-    [GeneratedRegex(@"tvg-logo\s*=\s*""?([^""\s,]*)""?", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"tvg-logo\s*=\s*(?:""([^""]*)""|([^""\s,]+))", RegexOptions.IgnoreCase)]
     private static partial Regex TvgLogoRegex();
 
-    [GeneratedRegex(@"tvg-country\s*=\s*""?([^""\s,]*)""?", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"tvg-country\s*=\s*(?:""([^""]*)""|([^""\s,]+))", RegexOptions.IgnoreCase)]
     private static partial Regex TvgCountryRegex();
 
-    [GeneratedRegex(@"group-title\s*=\s*""?([^""]*)""?", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"group-title\s*=\s*(?:""([^""]*)""|([^""\s,]+))", RegexOptions.IgnoreCase)]
     private static partial Regex GroupTitleRegex();
 
     [GeneratedRegex(@"[a-zA-Z0-9_-]+\s*=\s*""[^""]*""|[a-zA-Z0-9_-]+\s*=\s*[^""\s,]+", RegexOptions.IgnoreCase)]

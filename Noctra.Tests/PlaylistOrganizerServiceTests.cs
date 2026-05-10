@@ -138,68 +138,28 @@ public class PlaylistOrganizerServiceTests
     // B — AutoCategorize
     // =========================================================================
 
-    [Theory]
-    [InlineData("BeIN Sports 1",      "Spor")]
-    [InlineData("S Sport 2",          "Spor")]
-    [InlineData("NBA TV",             "Spor")]
-    [InlineData("CNN Türk",           "Haber")]
-    [InlineData("NTV",                "Haber")]
-    [InlineData("Fox News",           "Haber")]
-    [InlineData("Disney Channel",     "Çocuk")]
-    [InlineData("Nickelodeon",        "Çocuk")]
-    [InlineData("Cartoon Network",    "Çocuk")]
-    [InlineData("Discovery Channel",  "Belgesel")]
-    [InlineData("National Geographic","Belgesel")]
-    [InlineData("MTV",                "Müzik")]
-    [InlineData("Kral Pop",           "Müzik")]
-    [InlineData("Kanal D",            "Diziler")]
-    [InlineData("Show TV",            "Diziler")]
-    public void AutoCategorize_LiveChannel_AssignsCorrectCategory(string channelName, string expectedCategory)
-    {
-        var ch = Live(channelName, null); // group null → kategorisiz
-        _sut.AutoCategorize(new List<Channel> { ch });
-        Assert.Equal(expectedCategory, ch.GroupTitle);
-    }
-
     [Fact]
-    public void AutoCategorize_AlreadyCategorized_NotOverwritten()
+    public void AutoCategorize_EmptyGroup_AssignsUncategorized()
     {
-        var ch = Live("CNN Türk", "Özel"); // önceden belirlenmiş grup
-        _sut.AutoCategorize(new List<Channel> { ch });
-        Assert.Equal("Özel", ch.GroupTitle); // değişmemeli
-    }
-
-    [Fact]
-    public void AutoCategorize_UnknownChannel_AssignsUncategorized()
-    {
-        var ch = Live("XYZ Bilinmeyen Kanal", null);
+        var ch = Live("Test Kanal", null); 
         _sut.AutoCategorize(new List<Channel> { ch });
         Assert.Equal("Uncategorized", ch.GroupTitle);
     }
 
     [Fact]
-    public void AutoCategorize_LiveChannelWithFilmKeyword_NotCategorizedAsFilmler()
+    public void AutoCategorize_AlreadyCategorized_NotOverwritten()
     {
-        // Live tip kanallar "film" kelimesi içerse de Filmler kategorisine düşmemeli
-        var ch = new Channel { Name = "Film Festival TV", Type = ChannelType.Live, GroupTitle = null, StreamUrl = "http://x/1" };
+        var ch = Live("CNN Türk", "Özel"); 
         _sut.AutoCategorize(new List<Channel> { ch });
-        Assert.NotEqual("Filmler", ch.GroupTitle);
+        Assert.Equal("Özel", ch.GroupTitle); 
     }
 
     [Fact]
-    public void AutoCategorize_VodChannelWithFilmKeyword_AssignedFilmler()
-    {
-        var ch = Vod("Aksiyon Film Paketi", null);
-        _sut.AutoCategorize(new List<Channel> { ch });
-        Assert.Equal("Filmler", ch.GroupTitle);
-    }
-
-    [Fact]
-    public void AutoCategorize_UndefinedGroup_Recategorized()
+    public void AutoCategorize_UndefinedGroup_AssignsUncategorized()
     {
         var ch = Live("TRT Spor", "undefined");
         _sut.AutoCategorize(new List<Channel> { ch });
-        Assert.Equal("Spor", ch.GroupTitle);
+        Assert.Equal("Uncategorized", ch.GroupTitle);
     }
 
     // =========================================================================
@@ -207,48 +167,14 @@ public class PlaylistOrganizerServiceTests
     // =========================================================================
 
     [Theory]
-    [InlineData("Sports",        "Spor")]
-    [InlineData("Sport",         "Spor")]
-    [InlineData("Spor",          "Spor")]
-    [InlineData("News",          "Haber")]
+    [InlineData("Sports",        "Sports")]
     [InlineData("Haber",         "Haber")]
-    [InlineData("Kids",          "Çocuk")]
-    [InlineData("Children",      "Çocuk")]
-    [InlineData("Movies",        "Filmler")]
-    [InlineData("Film",          "Filmler")]
-    [InlineData("Sinema",        "Filmler")]
-    [InlineData("Films",         "Filmler")]
-    [InlineData("Series",        "Diziler")]
-    [InlineData("Dizi",          "Diziler")]
-    [InlineData("Tv Shows",      "Diziler")]
-    [InlineData("Documentary",   "Belgesel")]
-    [InlineData("Music",         "Müzik")]
-    [InlineData("Entertainment", "Eğlence")]
-    [InlineData("General",       "Uncategorized")]
-    [InlineData("Uncategorized", "Uncategorized")]
-    [InlineData("undefined",     "Uncategorized")]
-    [InlineData("",              "Uncategorized")]
-    public void NormalizeGroupNames_KnownVariant_MapsToStandardTurkish(string input, string expected)
+    [InlineData("Kids",          "Kids")]
+    public void NormalizeGroupNames_Disabled_DoesNotModifyGroupTitle(string input, string expected)
     {
         var ch = Live("Test Kanal", input);
         _sut.NormalizeGroupNames(new List<Channel> { ch });
         Assert.Equal(expected, ch.GroupTitle);
-    }
-
-    [Fact]
-    public void NormalizeGroupNames_UnknownGroup_Unchanged()
-    {
-        var ch = Live("Test Kanal", "Özel Paket");
-        _sut.NormalizeGroupNames(new List<Channel> { ch });
-        Assert.Equal("Özel Paket", ch.GroupTitle);
-    }
-
-    [Fact]
-    public void NormalizeGroupNames_CaseInsensitive_Sports()
-    {
-        var ch = Live("ESPN", "SPORTS");
-        _sut.NormalizeGroupNames(new List<Channel> { ch });
-        Assert.Equal("Spor", ch.GroupTitle);
     }
 
     // =========================================================================
@@ -383,7 +309,7 @@ public class PlaylistOrganizerServiceTests
         var result = _sut.Organize(channels);
         Assert.Equal(2, result.Count);
         var cnn = result.First(c => c.Name == "CNN Türk");
-        Assert.Equal("Haber", cnn.GroupTitle);
+        Assert.Equal("Uncategorized", cnn.GroupTitle);
     }
 
     [Fact]
