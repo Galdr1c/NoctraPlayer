@@ -10,9 +10,7 @@ namespace Noctra.Services;
 /// </summary>
 public partial class PlaylistOrganizerService : IPlaylistOrganizerService
 {
-    // Quality tiers (lower index = higher quality)
     private static readonly string[] QualityOrder = { "4k", "uhd", "2160p", "1080p", "fhd", "hd", "720p", "sd", "480p" };
-
 
     /// <summary>
     /// Tam organizasyon pipeline'ı
@@ -34,16 +32,10 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
         // Stage 2: Remove duplicates (keeps highest quality)
         var organized = RemoveDuplicates(channels);
 
-        // Stage 3: Auto-categorize uncategorized channels
-        AutoCategorize(organized);
-
-        // Stage 4: Normalize group names
-        NormalizeGroupNames(organized);
-
-        // Stage 4: Smart sort
+        // Stage 3: Smart sort
         organized = SmartSort(organized);
 
-        // Stage 5: Enrich metadata (TvgId generation)
+        // Stage 4: Enrich metadata (TvgId generation)
         EnrichMetadata(organized);
 
         System.Diagnostics.Debug.WriteLine(
@@ -103,6 +95,7 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
             }
         }
     }
+
 
     /// <summary>
     /// Canlı TV kategorilerine yanlışlıkla karışmış dizi (Series) gruplarını tespit edip tipini düzeltir.
@@ -189,15 +182,17 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
     }
 
     /// <summary>
-    /// Tip → Grup → Kanal numarası → Alfabetik sıralama
+    /// Tip → Adult Filtresi → Grup → Kanal numarası → Alfabetik sıralama
     /// </summary>
+
     public List<Channel> SmartSort(List<Channel> channels)
     {
         return channels
-            .OrderBy(c => c.Type) // Live -> VOD -> Series (or based on enum order)
-            .ThenBy(c => c.GroupTitle ?? "zzz") // Uncategorized last
-            .ThenBy(c => GetChannelNumber(c.Name) ?? int.MaxValue) // Numbered channels first
-            .ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase) // Alphabetical
+            .OrderBy(c => c.Type) // Live -> VOD -> Series
+            .ThenBy(c => IsAdultContent(c.GroupTitle) ? 1 : 0) // Adult kategoriler en sona
+            .ThenBy(c => c.GroupTitle ?? "zzz") // Alfabetik grup (Uncategorized sonlarda)
+            .ThenBy(c => GetChannelNumber(c.Name) ?? int.MaxValue) // Numaralı kanallar öne
+            .ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase) // Alfabetik kanal adı
             .ToList();
     }
 
@@ -342,6 +337,12 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
         return null;
     }
 
+    private static bool IsAdultContent(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        return AdultContentRegex().IsMatch(text);
+    }
+
     /// <summary>
     /// Kanal adından EPG ID üretir
     /// "|TR| Show TV HD" → "ShowTV"
@@ -361,4 +362,7 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
 
     [GeneratedRegex(@"\b(4k|uhd|2160p|1080p|fhd|hd|720p|sd|480p)\b", RegexOptions.IgnoreCase)]
     private static partial Regex QualityTagRegex();
+
+    [GeneratedRegex(@"(?:\b|_)(adult|xxx|porn|sexy|18\+| \+18|pink|redlight|erotik|erotic|lust|hentai|brazzers|bangbros|babes|realitykings|digitalplayground|naughtyamerica|passion|penthouse|hustler|playboy|blue movie|hardcore|softcore|x-rated|sex|cam|strip|fetish|bondage|bdsm|amateur|milf|gay|lesbian|pornstar|yetişkin|mature)(?:\b|_)", RegexOptions.IgnoreCase)]
+    private static partial Regex AdultContentRegex();
 }

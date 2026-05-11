@@ -19,16 +19,6 @@ public interface IPlaylistOrganizerService
     List<Channel> RemoveDuplicates(List<Channel> channels);
 
     /// <summary>
-    /// Kategorisiz kanalları otomatik kategorize eder
-    /// </summary>
-    void AutoCategorize(List<Channel> channels);
-
-    /// <summary>
-    /// Grup isimlerini normalleştirir (SPOR → Spor, News → Haber)
-    /// </summary>
-    void NormalizeGroupNames(List<Channel> channels);
-
-    /// <summary>
     /// Akıllı sıralama: Grup → Numara → Alfabe
     /// </summary>
     List<Channel> SmartSort(List<Channel> channels);

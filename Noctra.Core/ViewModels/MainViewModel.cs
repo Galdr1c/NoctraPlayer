@@ -2342,10 +2342,15 @@ public partial class MainViewModel : ObservableObject
 
         var preferred = new List<string>();
         var others = new List<string>();
+        var adult = new List<string>();
 
         foreach (var group in groups)
         {
-            if (IsCountryPreferredGroup(group, preferredCountry))
+            if (IsAdultGroup(group))
+            {
+                adult.Add(group);
+            }
+            else if (IsCountryPreferredGroup(group, preferredCountry))
             {
                 preferred.Add(group);
             }
@@ -2355,8 +2360,22 @@ public partial class MainViewModel : ObservableObject
             }
         }
 
-        preferred.AddRange(others);
-        return preferred;
+        // Sort each segment alphabetically for better UX
+        preferred.Sort(StringComparer.OrdinalIgnoreCase);
+        others.Sort(StringComparer.OrdinalIgnoreCase);
+        adult.Sort(StringComparer.OrdinalIgnoreCase);
+
+        var result = new List<string>();
+        result.AddRange(preferred);
+        result.AddRange(others);
+        result.AddRange(adult);
+        return result;
+    }
+
+    private static bool IsAdultGroup(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return false;
+        return AdultContentRegex().IsMatch(name);
     }
 
     private void EnsurePreferredDefaultGroupSelected()
@@ -2372,21 +2391,13 @@ public partial class MainViewModel : ObservableObject
         }
 
         var preferredCountry = GetPreferredCountryCodeFromLanguage(_settingsService.Settings.Language);
-        if (string.IsNullOrWhiteSpace(preferredCountry))
-        {
-            return;
-        }
-
         var preferred = Groups.FirstOrDefault(g => IsCountryPreferredGroup(g, preferredCountry));
-        if (string.IsNullOrWhiteSpace(preferred))
-        {
-            return;
-        }
 
         _suppressFilterRefresh = true;
         try
         {
-            SelectedGroup = preferred;
+            // Eğer dil koduyla eşleşen grup yoksa, listenin en başındaki (Adult olmayan) grubu seç
+            SelectedGroup = preferred ?? Groups.FirstOrDefault();
         }
         finally
         {
@@ -7776,6 +7787,9 @@ public partial class MainViewModel : ObservableObject
             onComplete?.Invoke();
         });
     }
+
+    [GeneratedRegex(@"(?:\b|_)(adult|xxx|porn|sexy|18\+| \+18|pink|redlight|erotik|erotic|lust|hentai|brazzers|bangbros|babes|realitykings|digitalplayground|naughtyamerica|passion|penthouse|hustler|playboy|blue movie|hardcore|softcore|x-rated|sex|cam|strip|fetish|bondage|bdsm|amateur|milf|gay|lesbian|pornstar|yetişkin|mature)(?:\b|_)", RegexOptions.IgnoreCase)]
+    private static partial Regex AdultContentRegex();
 }
 
 

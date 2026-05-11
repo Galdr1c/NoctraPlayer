@@ -7,9 +7,13 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 
 ## [Unreleased]
-### 🛠️ M3U/Xtream Parser Düzeltmeleri ve Saf Kategori Yapısı (2026-05-10)
-- [Düzeltildi] M3U listelerinde `tvg-name` ve `group-title` gibi nitelikler okunurken, içeriğinde boşluk karakteri (Örn: `TR/ S-SPORT`) bulunan isimlerin yanlışlıkla kesilerek silinmesi sorunu giderildi. Tırnak işaretli ("") tüm nitelikler artık içlerindeki boşluk ve virgüllerle birlikte %100 eksiksiz ayrıştırılıyor.
-- [Değişti] Kullanıcı talebi üzerine, sağlayıcı (provider) kategorilerini değiştiren, Türkçeleştiren veya kanal adına bakarak ("Haber", "Spor" vb.) otomatik gruplandırma yapan "Kategori Normalizasyon" sistemi (`PlaylistOrganizerService`) tamamen kapatıldı. Artık sağlayıcıdan gelen `group-title` (Örn: "TR/ DIZI", "SPORTS") isimleri hiçbir müdahale yapılmadan olduğu gibi ekrana yansıtılıyor.
+### 🛠️ M3U Ayrıştırma ve Kategori Yönetimi Optimizasyonu (2026-05-11)
+- [Düzeltildi] **M3U Ayrıştırma Hatası**: Tırnak içindeki boşluklu ve özel karakterli `tvg-name`, `group-title` gibi alanların eksik veya hatalı ayrıştırılması sorunu giderildi (Örn: "TR/ S-SPORT 1" artık tam olarak okunabiliyor).
+- [Değişti] **Orijinal Kategori Koruma**: Playlist sağlayıcısından gelen kategori isimlerinin (Group Title) otomatik temizlenmesi ve zorla normalleştirilmesi kaldırıldı. Artık sağlayıcının belirlediği orijinal isimler korunuyor.
+- [Yeni] **Gelişmiş Adult İçerik Yönetimi**:
+    *   Adult içerikleri tespit etmek için kapsamlı, çok dilli (TR, EN vb.) ve esnek bir Regex sistemi devreye alındı.
+    *   Adult kategorileri (Adult, XXX, Yetişkin vb.) kanal listesinin ve kategori yan menüsünün **en altına** taşınarak kullanım kolaylığı sağlandı.
+- [Düzeltildi] **Varsayılan Kategori Seçimi**: Uygulama açılışında veya profil değişiminde, uygun dil kategorisi bulunamazsa listenin başındaki ilk (Adult olmayan) kategori artık otomatik olarak seçiliyor.
 
 
 ### 🏪 Microsoft Store Free/Premium Çift Uygulama Altyapısı (2026-05-01)
