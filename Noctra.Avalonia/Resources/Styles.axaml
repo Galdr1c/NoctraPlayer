@@ -734,11 +734,12 @@
                                           Margin="{TemplateBinding Padding}"
                                           HorizontalAlignment="Left"
                                           VerticalAlignment="Center"/>
-                        <Path Grid.Column="1"
-                              Fill="{DynamicResource TextPrimaryBrush}"
-                              HorizontalAlignment="Center"
-                              VerticalAlignment="Center"
-                              Data="M 0 0 L 4 4 L 8 0 Z"/>
+                        <materialIcons:MaterialIcon Grid.Column="1"
+                                                    Kind="ChevronDown"
+                                                    Width="18" Height="18"
+                                                    Foreground="{DynamicResource TextPrimaryBrush}"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"/>
                         <Popup x:Name="PART_Popup"
                                IsLightDismissEnabled="True"
                                IsOpen="{TemplateBinding IsDropDownOpen, Mode=TwoWay}"

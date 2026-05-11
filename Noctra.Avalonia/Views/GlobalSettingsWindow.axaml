@@ -201,12 +201,11 @@
                                                            HorizontalAlignment="Right"
                                                            VerticalAlignment="Top"
                                                            Margin="8">
-                                                        <Path Data="M9,16.2L4.8,12l-1.4,1.4L9,19L21,7l-1.4-1.4L9,16.2z"
-                                                              Fill="White"
-                                                              Stretch="Uniform"
-                                                              Width="14" Height="14"
-                                                              HorizontalAlignment="Center"
-                                                              VerticalAlignment="Center"/>
+                                                        <materialIcons:MaterialIcon Kind="Check"
+                                                                                   Foreground="White"
+                                                                                   Width="14" Height="14"
+                                                                                   HorizontalAlignment="Center"
+                                                                                   VerticalAlignment="Center"/>
                                                     </Border>
                                                 </Grid>
                                             </Border>
@@ -251,12 +250,11 @@
                                                            VerticalAlignment="Top"
                                                            Margin="8"
                                                            IsVisible="False">
-                                                        <Path Data="M9,16.2L4.8,12l-1.4,1.4L9,19L21,7l-1.4-1.4L9,16.2z"
-                                                              Fill="White"
-                                                              Stretch="Uniform"
-                                                              Width="14" Height="14"
-                                                              HorizontalAlignment="Center"
-                                                              VerticalAlignment="Center"/>
+                                                        <materialIcons:MaterialIcon Kind="Check"
+                                                                                   Foreground="White"
+                                                                                   Width="14" Height="14"
+                                                                                   HorizontalAlignment="Center"
+                                                                                   VerticalAlignment="Center"/>
                                                     </Border>
                                                 </Grid>
                                             </Border>
