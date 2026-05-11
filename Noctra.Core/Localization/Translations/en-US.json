@@ -1,4 +1,4 @@
-﻿{
+{
     "GlobalSettings.Title": "Settings",
     "GlobalSettings.Appearance.Title": "Appearance",
     "GlobalSettings.Theme.Title": "Theme",
@@ -271,6 +271,7 @@
     "Profiles.Account.Settings": "Account Settings",
     "Profiles.Account.M3uLink": "M3U Link",
     "Profiles.Account.ServerUrl": "Server URL",
+    "Profiles.Account.ServerUrlPlaceholder": "http://server-address.com:8080",
     "Profiles.Account.MacAddress": "MAC Address",
     "Profiles.Account.Username": "Username",
     "Profiles.Account.UsernamePlaceholder": "Username",

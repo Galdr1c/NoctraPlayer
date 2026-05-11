@@ -1,4 +1,4 @@
-﻿{
+{
     "GlobalSettings.Title": "Ayarlar",
     "GlobalSettings.Appearance.Title": "Görünüm",
     "GlobalSettings.Theme.Title": "Tema",
@@ -271,6 +271,7 @@
     "Profiles.Account.Settings": "Hesap Ayarları",
     "Profiles.Account.M3uLink": "M3U Link",
     "Profiles.Account.ServerUrl": "Sunucu URL",
+    "Profiles.Account.ServerUrlPlaceholder": "http://server-address.com:8080",
     "Profiles.Account.MacAddress": "MAC Adresi",
     "Profiles.Account.Username": "Kullanıcı Adı",
     "Profiles.Account.UsernamePlaceholder": "Kullanıcı adı",

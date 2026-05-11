@@ -271,6 +271,7 @@
     "Profiles.Account.Settings": "Paramètres du compte",
     "Profiles.Account.M3uLink": "Lien M3U",
     "Profiles.Account.ServerUrl": "URL du serveur",
+    "Profiles.Account.ServerUrlPlaceholder": "http://server-address.com:8080",
     "Profiles.Account.MacAddress": "Adresse MAC",
     "Profiles.Account.Username": "Nom d'utilisateur",
     "Profiles.Account.UsernamePlaceholder": "Nom d'utilisateur",
