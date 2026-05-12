@@ -6327,41 +6327,56 @@ public partial class MainViewModel : ObservableObject
                 .SelectMany(s => s.Episodes.OrderBy(e => e.EpisodeNumber))
                 .ToList();
             
+            // Find the last episode that was watched
             var lastWatched = allEpisodes.LastOrDefault(e => e.LastWatched.HasValue);
+            
             if (lastWatched != null)
             {
-                var nextIndex = allEpisodes.IndexOf(lastWatched) + 1;
-                if (nextIndex < allEpisodes.Count)
-                {
-                    var next = allEpisodes[nextIndex];
-                    SelectedSeriesContinueEpisode = next;
-                    SelectedSeriesContinueText = string.Format(CultureInfo.CurrentCulture,
-                        _localizationService.GetString("Series.Continue.NextFormat"),
-                        next.Season?.SeasonNumber ?? 1,
-                        next.EpisodeNumber);
-                }
-                else
+                // If the last watched episode is not completed, suggest resuming it
+                if (!lastWatched.IsCompleted)
                 {
                     SelectedSeriesContinueEpisode = lastWatched;
                     SelectedSeriesContinueText = string.Format(CultureInfo.CurrentCulture,
-                        _localizationService.GetString("Series.Continue.WatchAgainFormat"),
+                        _localizationService.GetString("Series.Continue.StartFromFormat"),
                         lastWatched.Season?.SeasonNumber ?? 1,
                         lastWatched.EpisodeNumber);
                 }
-            }
-            else if (allEpisodes.Count > 0)
-            {
-                var first = allEpisodes[0];
-                SelectedSeriesContinueEpisode = first;
-                SelectedSeriesContinueText = string.Format(CultureInfo.CurrentCulture,
-                    _localizationService.GetString("Series.Continue.StartFromFormat"),
-                    first.Season?.SeasonNumber ?? 1,
-                    first.EpisodeNumber);
+                else
+                {
+                    // If completed, suggest the next one
+                    var nextIndex = allEpisodes.IndexOf(lastWatched) + 1;
+                    if (nextIndex < allEpisodes.Count)
+                    {
+                        var next = allEpisodes[nextIndex];
+                        SelectedSeriesContinueEpisode = next;
+                        SelectedSeriesContinueText = string.Format(CultureInfo.CurrentCulture,
+                            _localizationService.GetString("Series.Continue.NextFormat"),
+                            next.Season?.SeasonNumber ?? 1,
+                            next.EpisodeNumber);
+                    }
+                    else
+                    {
+                        // All watched, suggest rewatching the last one
+                        SelectedSeriesContinueEpisode = lastWatched;
+                        SelectedSeriesContinueText = string.Format(CultureInfo.CurrentCulture,
+                            _localizationService.GetString("Series.Continue.WatchAgainFormat"),
+                            lastWatched.Season?.SeasonNumber ?? 1,
+                            lastWatched.EpisodeNumber);
+                    }
+                }
             }
             else
             {
-                SelectedSeriesContinueEpisode = null;
-                SelectedSeriesContinueText = null;
+                // No history, start from the beginning
+                var first = allEpisodes.FirstOrDefault();
+                if (first != null)
+                {
+                    SelectedSeriesContinueEpisode = first;
+                    SelectedSeriesContinueText = string.Format(CultureInfo.CurrentCulture,
+                        _localizationService.GetString("Series.Continue.NextFormat"),
+                        first.Season?.SeasonNumber ?? 1,
+                        first.EpisodeNumber);
+                }
             }
 
             // Set first season by default
