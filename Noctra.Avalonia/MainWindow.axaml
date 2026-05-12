@@ -1,4 +1,4 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Noctra.ViewModels"
         xmlns:models="using:Noctra.Models"
@@ -1263,7 +1263,8 @@
                   <DoubleTransition Property="Opacity" Duration="0:0:0.25"/>
                 </Transitions>
               </TextBlock.Transitions>
-            </TextBlock>            <TextBlock Text="{Binding ChannelLoadingStats}" 
+            </TextBlock>
+                        <TextBlock Text="{Binding ChannelLoadingStats}" 
                        IsVisible="{Binding IsChannelLoading}" 
                        FontSize="11" Foreground="{DynamicResource TextMutedBrush}" 
                        VerticalAlignment="Center" Margin="8,0,0,0"/>
@@ -1271,34 +1272,36 @@
 
           <!-- Right: Badges -->
           <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
-            <!-- Connection Health Badge -->
+            <!-- Enhanced Connection Health Badge -->
             <Border IsVisible="{Binding ConnectionQuality, Converter={StaticResource ConnectionHealthToVisibilityConverter}}"
-                    CornerRadius="4" Padding="8,3" Background="#0AFFFFFF" BorderBrush="#1AFFFFFF" BorderThickness="1">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <!-- Dot indicator scaled by quality -->
-                <Ellipse Width="8" Height="8" VerticalAlignment="Center"
-                         Fill="{Binding ConnectionQuality, Converter={StaticResource ConnectionHealthToBrushConverter}}">
-                  <Ellipse.Transitions>
-                    <Transitions>
-                      <BrushTransition Property="Fill" Duration="0:0:0.5"/>
-                    </Transitions>
-                  </Ellipse.Transitions>
-                </Ellipse>
-                <TextBlock Text="{Binding ConnectionStatusText}" FontSize="10" FontWeight="SemiBold" 
-                           Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
-              </StackPanel>
-            </Border>
-
-            <!-- Channel Counter Badge -->
-            <Border CornerRadius="4" Padding="8,3" Background="{DynamicResource Surface1Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <materialIcons:MaterialIcon Kind="Television" Width="12" Height="12" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
-                <TextBlock FontSize="10" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center">
-                  <Run Text="{Binding FilteredChannels.Count, Mode=OneWay}"/>
-                  <Run Text="/"/>
-                  <Run Text="{Binding Channels.Count, Mode=OneWay}"/>
-                  <Run Text="{loc:Translate Common.Channels}"/>
-                </TextBlock>
+                    CornerRadius="20" Padding="10,4" 
+                    Background="{DynamicResource Surface1Brush}" 
+                    BorderBrush="{DynamicResource BorderBrush}" 
+                    BorderThickness="1">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Grid>
+                  <!-- Soft Glow -->
+                  <Ellipse Width="12" Height="12" 
+                           Fill="{Binding ConnectionQuality, Converter={StaticResource ConnectionHealthToBrushConverter}}" 
+                           Opacity="0.4"
+                           VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <Ellipse.Effect>
+                      <BlurEffect Radius="6"/>
+                    </Ellipse.Effect>
+                  </Ellipse>
+                  <!-- Inner Dot -->
+                  <Ellipse Width="7" Height="7" VerticalAlignment="Center" HorizontalAlignment="Center"
+                           Fill="{Binding ConnectionQuality, Converter={StaticResource ConnectionHealthToBrushConverter}}">
+                    <Ellipse.Transitions>
+                      <Transitions>
+                        <BrushTransition Property="Fill" Duration="0:0:0.5"/>
+                      </Transitions>
+                    </Ellipse.Transitions>
+                  </Ellipse>
+                </Grid>
+                <TextBlock Text="{Binding ConnectionStatusText}" FontSize="11" FontWeight="Bold" 
+                           Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"
+                           LetterSpacing="0.3"/>
               </StackPanel>
             </Border>
           </StackPanel>

@@ -125,7 +125,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsPiPControlsVisible))]
     private bool _isPiPControlsForceVisible;
 
-    public bool IsPiPControlsVisible => IsPiPMode && _isPiPControlsForceVisible;
+    public bool IsPiPControlsVisible => IsPiPMode && IsPiPControlsForceVisible;
+
+    private Timer? _unreachableWarningTimer;
 
     partial void OnIsPiPModeChanged(bool value)
     {
@@ -242,6 +244,16 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private bool _isPlaying;
+
+    partial void OnIsPlayingChanged(bool value)
+    {
+        if (value)
+        {
+            _unreachableWarningTimer?.Dispose();
+            _unreachableWarningTimer = null;
+            PlayerLoadingWarningMessage = string.Empty;
+        }
+    }
 
     [ObservableProperty]
     private int _volume = 100;
@@ -3203,10 +3215,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _dispatcherService.Invoke(() =>
             PlayerLoadingWarningMessage = _localizationService.GetString("Player.Warning.SlowConnection"));
 
+        _unreachableWarningTimer?.Dispose();
         _unreachableWarningTimer = new Timer(_ =>
         {
             if (IsPlaying || !IsVisible) return;
-            PlayerLoadingWarningMessage = _localizationService.GetString("Player.Warning.Unreachable");
+            _dispatcherService.Invoke(() => PlayerLoadingWarningMessage = _localizationService.GetString("Player.Warning.Unreachable"));
         }, null, 15000, Timeout.Infinite);
 
         await Task.Delay(7_000);
@@ -3531,6 +3544,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _autoHideTimer?.Dispose();
         _clockTimer?.Dispose();
         _watchHistoryTimer?.Dispose();
+        _unreachableWarningTimer?.Dispose();
 
         _sleepCountdownCts?.Cancel();
         _sleepCountdownCts?.Dispose();
