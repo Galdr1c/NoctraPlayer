@@ -105,6 +105,50 @@
             <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}"/>
         </Style>
 
+        <!-- Side Panel Styles -->
+        <Style Selector="Grid.sidePanel">
+            <Setter Property="Width" Value="400"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="ZIndex" Value="1000"/>
+            <Setter Property="RenderTransform" Value="translateX(400px)"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.35" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="Grid.sidePanel[IsVisible=True]">
+            <Setter Property="RenderTransform" Value="translateX(0)"/>
+        </Style>
+
+        <Style Selector="Border.panelContent">
+            <Setter Property="Background" Value="#E61A1A1A"/>
+            <Setter Property="BorderThickness" Value="1,0,0,0"/>
+            <Setter Property="BorderBrush" Value="#26FFFFFF"/>
+            <Setter Property="BoxShadow" Value="-10 0 50 0 #66000000"/>
+            <Setter Property="ClipToBounds" Value="True"/>
+        </Style>
+
+        <Style Selector="TextBlock.panelTitle">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="LetterSpacing" Value="1.5"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+
+        <Style Selector="Border.panelTitleUnderline">
+            <Setter Property="Height" Value="2"/>
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Margin" Value="0,-12,0,12"/>
+            <Setter Property="Opacity" Value="0.8"/>
+            <Setter Property="CornerRadius" Value="1"/>
+        </Style>
+
         <Style Selector="Expander">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -182,7 +226,7 @@
                             ToolTip.Tip="{loc:Translate Player.Overlay.Back}">
                         <materialIcons:MaterialIcon Kind="ArrowLeft" Width="24" Height="24" Foreground="White"/>
                     </Button>
-                    <TextBlock Text="{Binding CurrentChannel.Name}" FontSize="20" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" LetterSpacing="0.2"/>
+                    <TextBlock Text="{Binding CurrentChannel.Name}" FontSize="20" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" LetterSpacing="0.2" TextTrimming="CharacterEllipsis" MaxWidth="600"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="16">
@@ -195,105 +239,112 @@
             </Grid>
 
             <!-- 3. Bottom Control Bar -->
-            <Border VerticalAlignment="Bottom" Padding="32,80,32,24">
+            <Border VerticalAlignment="Bottom" Padding="32,80,32,32">
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
                         <GradientStop Color="#00000000" Offset="0.0"/>
-                        <GradientStop Color="#B3000000" Offset="0.4"/>
-                        <GradientStop Color="#E6000000" Offset="0.7"/>
-                        <GradientStop Color="#FF000000" Offset="1.0"/>
+                        <GradientStop Color="#99000000" Offset="0.3"/>
+                        <GradientStop Color="#CC000000" Offset="0.6"/>
+                        <GradientStop Color="#F2000000" Offset="1.0"/>
                     </LinearGradientBrush>
                 </Border.Background>
                 <Grid RowDefinitions="Auto,Auto">
                     <!-- Timeline Slider with Hover Preview -->
-                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                    <Grid Grid.Row="0" Margin="0,0,0,8">
                         <Slider x:Name="TimelineSlider" 
                                 Minimum="0" Maximum="{Binding Duration}" Value="{Binding Position}"
                                 IsVisible="{Binding !IsLiveContent}" Foreground="{DynamicResource AccentBrush}" 
                                 Focusable="False" 
                                 PointerMoved="TimelineSlider_PointerMoved"
                                 PointerEntered="TimelineSlider_PointerEntered"
-                                PointerExited="TimelineSlider_PointerExited"/>
+                                PointerExited="TimelineSlider_PointerExited"
+                                Height="32" Padding="0"/>
                         
                         <Popup x:Name="HoverTimePopup" IsOpen="False" IsHitTestVisible="False"
                                PlacementTarget="{Binding #TimelineSlider}"
-                               Placement="Top" VerticalOffset="-8">
-                            <Border Background="#CC000000" CornerRadius="100" Padding="12,6" BorderBrush="#33FFFFFF" BorderThickness="1">
-                                <TextBlock x:Name="HoverTimeText" Foreground="White" FontSize="12" FontWeight="Bold"/>
+                               Placement="Top" VerticalOffset="-4">
+                            <Border Background="#E6000000" CornerRadius="4" Padding="10,5" BorderBrush="#33FFFFFF" BorderThickness="1">
+                                <TextBlock x:Name="HoverTimeText" Foreground="White" FontSize="11" FontWeight="Bold"/>
                             </Border>
                         </Popup>
                     </Grid>
 
                     <!-- Live Stream EPG Info -->
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,16"
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left" Margin="8,0,0,16"
                                 IsVisible="{Binding IsLiveContent}">
-                        <Border Background="#E50914" CornerRadius="4" Padding="8,2" Margin="0,0,12,0" VerticalAlignment="Center">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Ellipse Width="6" Height="6" Fill="White" VerticalAlignment="Center">
+                        <Border Background="{DynamicResource ErrorBrush}" CornerRadius="4" Padding="10,4" Margin="0,0,16,0" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Ellipse Width="8" Height="8" Fill="White" VerticalAlignment="Center">
                                     <Ellipse.Styles>
                                         <Style Selector="Ellipse">
                                             <Style.Animations>
                                                 <Animation Duration="0:0:1" IterationCount="INFINITE" PlaybackDirection="Alternate">
                                                     <KeyFrame Cue="0%"><Setter Property="Opacity" Value="1"/></KeyFrame>
-                                                    <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.2"/></KeyFrame>
+                                                    <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.3"/></KeyFrame>
                                                 </Animation>
                                             </Style.Animations>
                                         </Style>
                                     </Ellipse.Styles>
                                 </Ellipse>
-                                <TextBlock Text="{loc:Translate Player.Overlay.Live}" FontSize="11" FontWeight="Black" Foreground="White" VerticalAlignment="Center" LetterSpacing="0.5"/>
+                                <TextBlock Text="{loc:Translate Player.Overlay.Live}" FontSize="12" FontWeight="Black" Foreground="White" VerticalAlignment="Center" LetterSpacing="1"/>
                             </StackPanel>
                         </Border>
-                        <TextBlock Text="{Binding CurrentProgram.Title}" Foreground="#E6FFFFFF" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"
-                                   IsVisible="{Binding CurrentProgram.Title, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
-                        <TextBlock Text="{Binding CurrentProgram.TimeRange, StringFormat='{} &#8226; {0}'}" Foreground="#B3FFFFFF" FontSize="14" Margin="8,0,0,0" VerticalAlignment="Center"
-                                   IsVisible="{Binding HasCurrentProgramInfo}"/>
+                        <StackPanel VerticalAlignment="Center" Spacing="2">
+                            <TextBlock Text="{Binding CurrentProgram.Title}" Foreground="White" FontSize="16" FontWeight="Bold" 
+                                       IsVisible="{Binding CurrentProgram.Title, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+                            <TextBlock Text="{Binding CurrentProgram.TimeRange}" Foreground="{DynamicResource TextMutedBrush}" FontSize="13" FontWeight="Medium"
+                                       IsVisible="{Binding HasCurrentProgramInfo}"/>
+                        </StackPanel>
                     </StackPanel>
 
                     <!-- Transport Controls -->
-                    <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto">
-                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="16">
+                    <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="12">
                             <Button Command="{Binding SkipBackwardCommand}" CommandParameter="10" Classes="iconBtn" IsVisible="{Binding !IsLiveContent}" ToolTip.Tip="{loc:Translate Player.Overlay.Backward}">
-                                <materialIcons:MaterialIcon Kind="Rewind10" Width="24" Height="24" Foreground="#E6FFFFFF"/>
+                                <materialIcons:MaterialIcon Kind="Rewind10" Width="22" Height="22" Foreground="#E6FFFFFF"/>
                             </Button>
                             <Button Click="PlayPreviousLiveChannel_Click" Classes="iconBtn" IsVisible="{Binding IsLiveContent}" ToolTip.Tip="{loc:Translate Player.Overlay.PreviousChannel}">
-                                <materialIcons:MaterialIcon Kind="SkipPrevious" Width="20" Height="20" Foreground="#E6FFFFFF"/>
+                                <materialIcons:MaterialIcon Kind="SkipPrevious" Width="18" Height="18" Foreground="#E6FFFFFF"/>
                             </Button>
                             <Button Command="{Binding PlayPauseCommand}" Classes="iconBtn">
                                 <Grid>
-                                    <materialIcons:MaterialIcon Kind="Pause" Width="24" Height="24" Foreground="White" IsVisible="{Binding IsPlaying}"/>
-                                    <materialIcons:MaterialIcon Kind="Play" Width="24" Height="24" Foreground="White" IsVisible="{Binding IsPlaying, Converter={StaticResource InverseBoolConverter}}"/>
+                                    <materialIcons:MaterialIcon Kind="Pause" Width="28" Height="28" Foreground="White" IsVisible="{Binding IsPlaying}"/>
+                                    <materialIcons:MaterialIcon Kind="Play" Width="28" Height="28" Foreground="White" IsVisible="{Binding IsPlaying, Converter={StaticResource InverseBoolConverter}}"/>
                                 </Grid>
                             </Button>
                             <Button Command="{Binding SkipForwardCommand}" CommandParameter="10" Classes="iconBtn" IsVisible="{Binding !IsLiveContent}" ToolTip.Tip="{loc:Translate Player.Overlay.Forward}">
-                                <materialIcons:MaterialIcon Kind="FastForward10" Width="24" Height="24" Foreground="#E6FFFFFF"/>
+                                <materialIcons:MaterialIcon Kind="FastForward10" Width="22" Height="22" Foreground="#E6FFFFFF"/>
                             </Button>
                             <Button Click="PlayNextLiveChannel_Click" Classes="iconBtn" IsVisible="{Binding IsLiveContent}" ToolTip.Tip="{loc:Translate Player.Overlay.NextChannel}">
-                                <materialIcons:MaterialIcon Kind="SkipNext" Width="20" Height="20" Foreground="#E6FFFFFF"/>
+                                <materialIcons:MaterialIcon Kind="SkipNext" Width="18" Height="18" Foreground="#E6FFFFFF"/>
                             </Button>
                             <Button Command="{Binding ToggleLiveFavoriteCommand}" 
                                     Classes="iconBtn" 
                                     IsVisible="{Binding IsLiveContent}" 
                                     ToolTip.Tip="{loc:Translate Player.Overlay.Favorite.Tooltip}">
                                 <materialIcons:MaterialIcon Kind="{Binding IsCurrentChannelFavorite, Converter={StaticResource BoolToFavoriteIconConverter}}" 
-                                                           Width="20" Height="20" Foreground="#E6FFFFFF"/>
+                                                           Width="18" Height="18" Foreground="#E6FFFFFF"/>
                             </Button>
-                            <Button Command="{Binding ToggleMuteCommand}" Classes="iconBtn" Margin="4,0,0,0" ToolTip.Tip="{loc:Translate Player.Overlay.Mute.Tooltip}">
-                                <Grid>
-                                    <materialIcons:MaterialIcon Kind="VolumeOff" Width="20" Height="20" Foreground="#E6FFFFFF" IsVisible="{Binding IsMuted}"/>
-                                    <materialIcons:MaterialIcon Kind="VolumeHigh" Width="20" Height="20" Foreground="#E6FFFFFF" IsVisible="{Binding IsMuted, Converter={StaticResource InverseBoolConverter}}"/>
-                                </Grid>
-                            </Button>
-                            <Slider x:Name="VolumeSlider" Width="80" Margin="8,0,0,0" VerticalAlignment="Center"
-                                    Minimum="0" Maximum="100" Value="{Binding Volume}" Foreground="{DynamicResource AccentBrush}" Focusable="False"/>
+                            
+                            <StackPanel Orientation="Horizontal" Spacing="4" Margin="4,0,0,0">
+                                <Button Command="{Binding ToggleMuteCommand}" Classes="iconBtn" ToolTip.Tip="{loc:Translate Player.Overlay.Mute.Tooltip}">
+                                    <Grid>
+                                        <materialIcons:MaterialIcon Kind="VolumeOff" Width="18" Height="18" Foreground="#E6FFFFFF" IsVisible="{Binding IsMuted}"/>
+                                        <materialIcons:MaterialIcon Kind="VolumeHigh" Width="18" Height="18" Foreground="#E6FFFFFF" IsVisible="{Binding IsMuted, Converter={StaticResource InverseBoolConverter}}"/>
+                                    </Grid>
+                                </Button>
+                                <Slider x:Name="VolumeSlider" Width="70" VerticalAlignment="Center"
+                                        Minimum="0" Maximum="100" Value="{Binding Volume}" Foreground="{DynamicResource AccentBrush}" Focusable="False"/>
+                            </StackPanel>
+
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0" IsVisible="{Binding !IsLiveContent}">
-                                <TextBlock Text="{Binding PositionText}" Foreground="#E6FFFFFF" FontSize="13" FontWeight="Medium"/>
-                                <TextBlock Text=" / " Foreground="#80FFFFFF" FontSize="13" FontWeight="Medium" Margin="4,0"/>
-                                <TextBlock Text="{Binding DurationText}" Foreground="#B3FFFFFF" FontSize="13" FontWeight="Medium"/>
+                                <TextBlock Text="{Binding PositionText}" Foreground="#E6FFFFFF" FontSize="13" FontWeight="SemiBold"/>
+                                <TextBlock Text="/" Foreground="#66FFFFFF" FontSize="13" FontWeight="SemiBold" Margin="4,0"/>
+                                <TextBlock Text="{Binding DurationText}" Foreground="#B3FFFFFF" FontSize="13" FontWeight="SemiBold"/>
                             </StackPanel>
                         </StackPanel>
 
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="12">
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="8">
                             <Button Command="{Binding OpenEpisodesCommand}" Classes="iconBtn" IsVisible="{Binding IsSeriesContent}" ToolTip.Tip="{loc:Translate Player.Overlay.Episodes.Tooltip}"><materialIcons:MaterialIcon Kind="Animation" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
                             <Button Command="{Binding PlayNextEpisodeCommand}" Classes="iconBtn" IsVisible="{Binding IsSeriesContent}" ToolTip.Tip="{loc:Translate Player.Overlay.NextEpisode.Tooltip}"><materialIcons:MaterialIcon Kind="StepForward" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
                             <Button Command="{Binding DownloadCurrentContentCommand}" Classes="iconBtn" IsVisible="{Binding CanShowDownloadButton}" IsEnabled="{Binding CanDownloadCurrentContent}" ToolTip.Tip="{loc:Translate Player.Overlay.Download.Tooltip}"><materialIcons:MaterialIcon Kind="Download" Width="20" Height="20" Foreground="#E6FFFFFF"/></Button>
@@ -339,16 +390,17 @@
             </Border>
 
             <!-- Sleep Timer Panel -->
-            <Grid x:Name="SleepTimerPanel" Width="320" HorizontalAlignment="Right" IsVisible="{Binding IsSleepTimerPanelOpen}">
-                <Grid.Transitions><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" Easing="CubicEaseOut"/></Transitions></Grid.Transitions>
-                <Border Background="{DynamicResource SurfaceBrush}" BorderThickness="0"><Border.BoxShadow><BoxShadows>0 0 40 0 #A6000000</BoxShadows></Border.BoxShadow>
+            <Grid x:Name="SleepTimerPanel" Classes="sidePanel" IsVisible="{Binding IsSleepTimerPanelOpen}">
+                <Border Classes="panelContent">
                     <Grid RowDefinitions="Auto,*">
-                        <Grid Grid.Row="0" Margin="32,40,32,24" ColumnDefinitions="*,Auto">
+                        <Grid Grid.Row="0" Margin="32,48,32,24" ColumnDefinitions="*,Auto">
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="{loc:Translate Player.Sleep.Title}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1.5" Margin="0,0,0,16"/>
-                                <Border Height="1" Width="100" HorizontalAlignment="Left" Background="{DynamicResource Surface1Brush}" Margin="0,-8,0,8" Opacity="0.5"/>
+                                <TextBlock Text="{loc:Translate Player.Sleep.Title}" Classes="panelTitle"/>
+                                <Border Classes="panelTitleUnderline"/>
                             </StackPanel>
-                            <Button Grid.Column="1" Command="{Binding ClosePanelsCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0"><materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}" ToolTip.Tip="{loc:Translate Common.Close}"/></Button>
+                            <Button Grid.Column="1" Command="{Binding ClosePanelsCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0">
+                                <materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            </Button>
                         </Grid>
                         <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Padding="32,0,32,40">
                             <StackPanel Spacing="8">
@@ -425,21 +477,21 @@
                                 </Grid>
 
                                 <Grid>
-                                <Border Background="{Binding SleepTimerMode, Converter={StaticResource SleepModeToBackgroundConverter}, ConverterParameter=EndOfEpisode}" CornerRadius="8">
-                                    <Button Command="{Binding SetSleepTimerCommand}" 
-                                            CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.EndOfEpisode}" 
-                                            IsEnabled="{Binding IsPremium}"
-                                            Classes="listItemBtn">
-                                        <Grid ColumnDefinitions="Auto,*">
-                                            <materialIcons:MaterialIcon Kind="CheckCircleOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}"/>
-                                            <StackPanel Grid.Column="1" Margin="12,0,0,0">
-                                                <TextBlock Text="{Binding EndOfContentText}" VerticalAlignment="Center"/>
-                                                <TextBlock Text="{Binding EndOfContentDescription}" FontSize="11" Opacity="0.6" Foreground="{DynamicResource TextMutedBrush}" Margin="0,2,0,0"/>
-                                            </StackPanel>
-                                        </Grid>
-                                    </Button>
-                                </Border>
-                                <materialIcons:MaterialIcon Kind="Lock" Width="18" Height="18" 
+                                    <Border Background="{Binding SleepTimerMode, Converter={StaticResource SleepModeToBackgroundConverter}, ConverterParameter=EndOfEpisode}" CornerRadius="8">
+                                        <Button Command="{Binding SetSleepTimerCommand}" 
+                                                CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.EndOfEpisode}" 
+                                                IsEnabled="{Binding IsPremium}"
+                                                Classes="listItemBtn">
+                                            <Grid ColumnDefinitions="Auto,*">
+                                                <materialIcons:MaterialIcon Kind="CheckCircleOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}"/>
+                                                <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                                                    <TextBlock Text="{Binding EndOfContentText}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding EndOfContentDescription}" FontSize="11" Opacity="0.6" Foreground="{DynamicResource TextMutedBrush}" Margin="0,2,0,0"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Button>
+                                    </Border>
+                                    <materialIcons:MaterialIcon Kind="Lock" Width="18" Height="18" 
                                                                 Foreground="{DynamicResource TextMutedBrush}" 
                                                                 IsVisible="{Binding !IsPremium}" 
                                                                 HorizontalAlignment="Right" VerticalAlignment="Center"
@@ -460,17 +512,17 @@
             </Grid>
 
             <!-- Info Panel -->
-            <Grid x:Name="InfoPanel" Width="420" HorizontalAlignment="Right" IsVisible="{Binding IsInfoPanelOpen}">
-                <Grid.Transitions><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" Easing="CubicEaseOut"/></Transitions></Grid.Transitions>
-                <Border Background="{DynamicResource SurfaceBrush}" BorderThickness="0" ClipToBounds="True">
-                    <Border.BoxShadow><BoxShadows>0 0 40 0 #A6000000</BoxShadows></Border.BoxShadow>
+            <Grid x:Name="InfoPanel" Classes="sidePanel" IsVisible="{Binding IsInfoPanelOpen}">
+                <Border Classes="panelContent">
                     <Grid RowDefinitions="Auto,*">
-                        <Grid Grid.Row="0" Margin="32,40,32,24" ColumnDefinitions="*,Auto">
+                        <Grid Grid.Row="0" Margin="32,48,32,24" ColumnDefinitions="*,Auto">
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="{loc:Translate Player.Info.Title}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1.5" Margin="0,0,0,16"/>
-                                <Border Height="1" Width="60" HorizontalAlignment="Left" Background="{DynamicResource Surface1Brush}" Margin="0,-8,0,8" Opacity="0.5"/>
+                                <TextBlock Text="{loc:Translate Player.Info.Title}" Classes="panelTitle"/>
+                                <Border Classes="panelTitleUnderline"/>
                             </StackPanel>
-                            <Button Grid.Column="1" Command="{Binding OpenInfoPanelCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0"><materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}" ToolTip.Tip="{loc:Translate Common.Close}"/></Button>
+                            <Button Grid.Column="1" Command="{Binding OpenInfoPanelCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0">
+                                <materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            </Button>
                         </Grid>
                         <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                             <Grid Margin="32,0,32,40">
@@ -527,16 +579,17 @@
             </Grid>
 
             <!-- Audio Settings -->
-            <Grid x:Name="AudioSettingsPanel" Width="400" HorizontalAlignment="Right" IsVisible="{Binding IsAudioSettingsOpen}">
-                <Grid.Transitions><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" Easing="CubicEaseOut"/></Transitions></Grid.Transitions>
-                <Border Background="{DynamicResource SurfaceBrush}" BorderThickness="0"><Border.BoxShadow><BoxShadows>0 0 40 0 #A6000000</BoxShadows></Border.BoxShadow>
+            <Grid x:Name="AudioSettingsPanel" Classes="sidePanel" IsVisible="{Binding IsAudioSettingsOpen}">
+                <Border Classes="panelContent">
                     <Grid RowDefinitions="Auto,*">
-                        <Grid Grid.Row="0" Margin="32,40,32,24" ColumnDefinitions="*,Auto">
+                        <Grid Grid.Row="0" Margin="32,48,32,24" ColumnDefinitions="*,Auto">
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="{loc:Translate Player.Settings.Title}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1.5" Margin="0,0,0,16"/>
-                                <Border Height="1" Width="100" HorizontalAlignment="Left" Background="{DynamicResource Surface1Brush}" Margin="0,-8,0,8" Opacity="0.5"/>
+                                <TextBlock Text="{loc:Translate Player.Settings.Title}" Classes="panelTitle"/>
+                                <Border Classes="panelTitleUnderline"/>
                             </StackPanel>
-                            <Button Grid.Column="1" Command="{Binding ClosePanelsCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0"><materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}" ToolTip.Tip="{loc:Translate Common.Close}"/></Button>
+                            <Button Grid.Column="1" Command="{Binding ClosePanelsCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0">
+                                <materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            </Button>
                         </Grid>
                         <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Visible">
                             <StackPanel Margin="32,0,32,40">
@@ -619,34 +672,20 @@
             </Grid>
 
             <!-- Episodes Panel -->
-            <Grid x:Name="EpisodesPanel" Width="400" HorizontalAlignment="Right" IsVisible="{Binding IsEpisodesPanelOpen}" ZIndex="1000">
-                <Grid.Transitions><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" Easing="CubicEaseOut"/></Transitions></Grid.Transitions>
-                
-                <Border Background="{DynamicResource SurfaceBrush}" BorderThickness="0" ClipToBounds="True">
-                    <Border.BoxShadow><BoxShadows>0 0 40 0 #A6000000</BoxShadows></Border.BoxShadow>
-                    
+            <Grid x:Name="EpisodesPanel" Classes="sidePanel" IsVisible="{Binding IsEpisodesPanelOpen}">
+                <Border Classes="panelContent">
                     <Grid RowDefinitions="Auto,*">
-                        <!-- Standardized Header -->
-                        <Grid Grid.Row="0" Margin="32,40,32,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            
-                            <StackPanel Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="{loc:Translate Player.Episodes.Title}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1.5" Margin="0,0,0,16"/>
-                                <Border Height="1" Width="70" HorizontalAlignment="Left" Background="{DynamicResource Surface1Brush}" Margin="0,-8,0,8" Opacity="0.5"/>
+                        <Grid Grid.Row="0" Margin="32,48,32,16" ColumnDefinitions="*,Auto">
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{loc:Translate Player.Episodes.Title}" Classes="panelTitle"/>
+                                <Border Classes="panelTitleUnderline"/>
                             </StackPanel>
-                            <Button Grid.Row="0" Grid.Column="1" Command="{Binding ClosePanelsCommand}" Classes="panelCloseBtn" VerticalAlignment="Center" Margin="16,0,0,16" ToolTip.Tip="{loc:Translate Common.Close}">
+                            <Button Grid.Column="1" Command="{Binding ClosePanelsCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0">
                                 <materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}"/>
                             </Button>
                         </Grid>
 
-                        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Padding="16,0,12,40">
+                        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Padding="24,0,16,40">
                             <ItemsControl ItemsSource="{Binding EpisodeSeasons}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="models:Season">
@@ -667,7 +706,7 @@
                                             <ItemsControl ItemsSource="{Binding Episodes}" Margin="0,4,0,0">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate x:DataType="models:Episode">
-                                                        <Button Margin="8,0,24,12" Classes="episodeCardBtn" Command="{Binding #OverlayRoot.DataContext.PlayEpisodeFromOverlayCommand}" CommandParameter="{Binding}" PointerPressed="EpisodeCardBtn_PointerPressed">
+                                                        <Button Margin="0,0,16,12" Classes="episodeCardBtn" Command="{Binding #OverlayRoot.DataContext.PlayEpisodeFromOverlayCommand}" CommandParameter="{Binding}" PointerPressed="EpisodeCardBtn_PointerPressed">
                                                             <Panel>
                                                                 <Border Name="CardBackground" Background="{DynamicResource Surface1Brush}" CornerRadius="10" ClipToBounds="True" BorderThickness="1.5">
                                                                     <Border.BorderBrush>
@@ -749,16 +788,17 @@
             </Grid>
 
             <!-- Quality Panel -->
-            <Grid x:Name="QualitySettingsPanel" Width="400" HorizontalAlignment="Right" IsVisible="{Binding IsQualitySettingsOpen}">
-                <Grid.Transitions><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" Easing="CubicEaseOut"/></Transitions></Grid.Transitions>
-                <Border Background="{DynamicResource SurfaceBrush}" BorderThickness="0"><Border.BoxShadow><BoxShadows>0 0 40 0 #A6000000</BoxShadows></Border.BoxShadow>
+            <Grid x:Name="QualitySettingsPanel" Classes="sidePanel" IsVisible="{Binding IsQualitySettingsOpen}">
+                <Border Classes="panelContent">
                     <Grid RowDefinitions="Auto,*">
-                        <Grid Grid.Row="0" Margin="32,40,32,24" ColumnDefinitions="*,Auto">
+                        <Grid Grid.Row="0" Margin="32,48,32,24" ColumnDefinitions="*,Auto">
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="{loc:Translate Player.Quality.Title}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" LetterSpacing="1.5" Margin="0,0,0,16"/>
-                                <Border Height="1" Width="80" HorizontalAlignment="Left" Background="{DynamicResource Surface1Brush}" Margin="0,-8,0,8" Opacity="0.5"/>
+                                <TextBlock Text="{loc:Translate Player.Quality.Title}" Classes="panelTitle"/>
+                                <Border Classes="panelTitleUnderline"/>
                             </StackPanel>
-                            <Button Grid.Column="1" Command="{Binding ClosePanelsCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0"><materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}" ToolTip.Tip="{loc:Translate Common.Close}"/></Button>
+                            <Button Grid.Column="1" Command="{Binding ClosePanelsCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0">
+                                <materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            </Button>
                         </Grid>
                         <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Padding="32,0,32,40">
                             <StackPanel>
@@ -822,66 +862,62 @@
             <materialIcons:MaterialIcon Kind="ArrowLeft" Width="28" Height="28" Foreground="White"/>
         </Button>
         
-        <Border x:Name="VolumeToast" Background="#99000000" CornerRadius="8" Padding="16,8" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,40,0,0" IsHitTestVisible="False" ZIndex="1000" IsVisible="{Binding $parent[UserControl].IsVolumeToastVisible}" Opacity="{Binding $parent[UserControl].IsVolumeToastVisible, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=OpacityOnly}">
+        <Border x:Name="VolumeToast" Background="#CC000000" CornerRadius="12" Padding="20,12" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,60,0,0" IsHitTestVisible="False" ZIndex="1100" IsVisible="{Binding $parent[UserControl].IsVolumeToastVisible}" Opacity="{Binding $parent[UserControl].IsVolumeToastVisible, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=OpacityOnly}">
             <Border.Transitions><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.2"/></Transitions></Border.Transitions>
-            <StackPanel Orientation="Horizontal" Spacing="8"><materialIcons:MaterialIcon Kind="VolumeOff" Width="18" Height="18" Foreground="White" IsVisible="{Binding IsMuted}"/><materialIcons:MaterialIcon Kind="VolumeHigh" Width="18" Height="18" Foreground="White" IsVisible="{Binding IsMuted, Converter={StaticResource InverseBoolConverter}}"/><TextBlock Text="{loc:Translate Player.Muted}" FontSize="14" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center" IsVisible="{Binding IsMuted}"/><TextBlock Text="{Binding Volume, StringFormat='{}{0}%'}" FontSize="14" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" IsVisible="{Binding IsMuted, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/></StackPanel>
-        </Border>
-
-        <Border x:Name="SeekToast" Background="#99000000" CornerRadius="8" Padding="16,8" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,40,0,0" IsHitTestVisible="False" ZIndex="1000" IsVisible="{Binding $parent[UserControl].IsSeekToastVisible}" Opacity="{Binding $parent[UserControl].IsSeekToastVisible, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=OpacityOnly}">
-            <Border.Transitions><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.2"/></Transitions></Border.Transitions>
-            <StackPanel Orientation="Horizontal" Spacing="6"><materialIcons:MaterialIcon Kind="ClockFast" Width="18" Height="18" Foreground="White" Opacity="0.8"/><TextBlock Text="{Binding $parent[UserControl].SeekToastText}" FontSize="14" FontWeight="Bold" Foreground="White"/></StackPanel>
-        </Border>
-
-        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" ZIndex="950" IsVisible="{Binding IsBuffering}">
-            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                <!-- Dot 1: Peak at 0% and 100% -->
-                <Ellipse Width="10" Height="10" Fill="{DynamicResource AccentBrush}" Opacity="0.35">
-                    <Ellipse.Styles>
-                        <Style Selector="Ellipse">
-                            <Style.Animations>
-                                <Animation Duration="0:0:1.0" IterationCount="INFINITE">
-                                    <KeyFrame Cue="0%"><Setter Property="Opacity" Value="1"/></KeyFrame>
-                                    <KeyFrame Cue="33%"><Setter Property="Opacity" Value="0.35"/></KeyFrame>
-                                    <KeyFrame Cue="66%"><Setter Property="Opacity" Value="0.35"/></KeyFrame>
-                                    <KeyFrame Cue="100%"><Setter Property="Opacity" Value="1"/></KeyFrame>
-                                </Animation>
-                            </Style.Animations>
-                        </Style>
-                    </Ellipse.Styles>
-                </Ellipse>
-                <!-- Dot 2: Peak at 33% -->
-                <Ellipse Width="10" Height="10" Fill="{DynamicResource AccentBrush}" Opacity="0.35">
-                    <Ellipse.Styles>
-                        <Style Selector="Ellipse">
-                            <Style.Animations>
-                                <Animation Duration="0:0:1.0" IterationCount="INFINITE">
-                                    <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0.35"/></KeyFrame>
-                                    <KeyFrame Cue="33%"><Setter Property="Opacity" Value="1"/></KeyFrame>
-                                    <KeyFrame Cue="66%"><Setter Property="Opacity" Value="0.35"/></KeyFrame>
-                                    <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.35"/></KeyFrame>
-                                </Animation>
-                            </Style.Animations>
-                        </Style>
-                    </Ellipse.Styles>
-                </Ellipse>
-                <!-- Dot 3: Peak at 66%, symmetric and smooth -->
-                <Ellipse Width="10" Height="10" Fill="{DynamicResource AccentBrush}" Opacity="0.35">
-                    <Ellipse.Styles>
-                        <Style Selector="Ellipse">
-                            <Style.Animations>
-                                <Animation Duration="0:0:1.0" IterationCount="INFINITE">
-                                    <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0.35"/></KeyFrame>
-                                    <KeyFrame Cue="33%"><Setter Property="Opacity" Value="0.35"/></KeyFrame>
-                                    <KeyFrame Cue="66%"><Setter Property="Opacity" Value="1"/></KeyFrame>
-                                    <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.35"/></KeyFrame>
-                                </Animation>
-                            </Style.Animations>
-                        </Style>
-                    </Ellipse.Styles>
-                </Ellipse>
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <materialIcons:MaterialIcon Kind="VolumeOff" Width="22" Height="22" Foreground="White" IsVisible="{Binding IsMuted}"/>
+                <materialIcons:MaterialIcon Kind="VolumeHigh" Width="22" Height="22" Foreground="White" IsVisible="{Binding IsMuted, Converter={StaticResource InverseBoolConverter}}"/>
+                <TextBlock Text="{loc:Translate Player.Muted}" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" IsVisible="{Binding IsMuted}"/>
+                <TextBlock Text="{Binding Volume, StringFormat='{}{0}%'}" FontSize="16" FontWeight="Black" Foreground="White" VerticalAlignment="Center" IsVisible="{Binding IsMuted, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
             </StackPanel>
-            <TextBlock Text="{loc:Translate Common.Loading}" Foreground="White" FontSize="13" HorizontalAlignment="Center" Margin="0,12,0,0"/>
-            <TextBlock Text="{Binding PlayerLoadingWarningMessage}" Foreground="#FFA500" FontSize="13" HorizontalAlignment="Center" TextWrapping="Wrap" MaxWidth="350" TextAlignment="Center" Margin="0,8,0,0" IsVisible="{Binding PlayerLoadingWarningMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
-        </StackPanel>
+        </Border>
+
+        <Border x:Name="SeekToast" Background="#CC000000" CornerRadius="12" Padding="20,12" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,160" IsHitTestVisible="False" ZIndex="1100" IsVisible="{Binding $parent[UserControl].IsSeekToastVisible}" Opacity="{Binding $parent[UserControl].IsSeekToastVisible, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=OpacityOnly}">
+            <Border.Transitions><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.2"/></Transitions></Border.Transitions>
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <materialIcons:MaterialIcon Kind="ClockFast" Width="22" Height="22" Foreground="{DynamicResource AccentBrush}"/>
+                <TextBlock Text="{Binding $parent[UserControl].SeekToastText}" FontSize="18" FontWeight="Black" Foreground="White" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Buffering Overlay -->
+        <Border Background="#4D000000" IsVisible="{Binding IsBuffering}" IsHitTestVisible="False" ZIndex="950">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Grid Width="60" Height="60">
+                    <Arc Stroke="{DynamicResource AccentBrush}" StrokeThickness="4" StartAngle="0" SweepAngle="90" Width="50" Height="50">
+                        <Arc.RenderTransform>
+                            <RotateTransform Angle="0"/>
+                        </Arc.RenderTransform>
+                        <Arc.Styles>
+                            <Style Selector="Arc">
+                                <Style.Animations>
+                                    <Animation Duration="0:0:1" IterationCount="INFINITE">
+                                        <KeyFrame Cue="0%"><Setter Property="RotateTransform.Angle" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="100%"><Setter Property="RotateTransform.Angle" Value="360"/></KeyFrame>
+                                    </Animation>
+                                </Style.Animations>
+                            </Style>
+                        </Arc.Styles>
+                    </Arc>
+                    <Arc Stroke="{DynamicResource AccentBrush}" StrokeThickness="4" StartAngle="180" SweepAngle="90" Width="50" Height="50" Opacity="0.5">
+                        <Arc.RenderTransform>
+                            <RotateTransform Angle="0"/>
+                        </Arc.RenderTransform>
+                        <Arc.Styles>
+                            <Style Selector="Arc">
+                                <Style.Animations>
+                                    <Animation Duration="0:0:1" IterationCount="INFINITE">
+                                        <KeyFrame Cue="0%"><Setter Property="RotateTransform.Angle" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="100%"><Setter Property="RotateTransform.Angle" Value="360"/></KeyFrame>
+                                    </Animation>
+                                </Style.Animations>
+                            </Style>
+                        </Arc.Styles>
+                    </Arc>
+                </Grid>
+                <TextBlock Text="{loc:Translate Common.Loading}" Foreground="White" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,24,0,0" LetterSpacing="1"/>
+                <TextBlock Text="{Binding PlayerLoadingWarningMessage}" Foreground="{DynamicResource WarningBrush}" FontSize="13" HorizontalAlignment="Center" TextWrapping="Wrap" MaxWidth="350" TextAlignment="Center" Margin="0,12,0,0" IsVisible="{Binding PlayerLoadingWarningMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </UserControl>
