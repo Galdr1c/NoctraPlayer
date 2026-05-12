@@ -242,6 +242,8 @@ public partial class SettingsViewModel : ObservableObject
         _ = ScanChannelListStatsCoreAsync(updateStatusMessage: false);
         _ = ScanEpgStatsCoreAsync(updateStatusMessage: false);
         _ = _mainViewModel.RefreshCurrentProfileExpirationAsync();
+
+        _ = _mainViewModel.RefreshCurrentProfileExpirationAsync();
     }
 
     public string CurrentVersion => _updateService.CurrentVersion;
@@ -251,10 +253,14 @@ public partial class SettingsViewModel : ObservableObject
     private string _updateStatusText = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsIdle))]
     private bool _isUpdateAvailable;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsIdle))]
     private bool _isCheckingUpdates;
+
+    public bool IsIdle => !IsUpdateAvailable && !IsCheckingUpdates;
 
     private UpdateInfo? _latestUpdate;
 

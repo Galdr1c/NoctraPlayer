@@ -36,10 +36,14 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     private string _updateStatusText = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsIdle))]
     private bool _isUpdateAvailable;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsIdle))]
     private bool _isCheckingUpdates;
+
+    public bool IsIdle => !IsUpdateAvailable && !IsCheckingUpdates;
 
     [ObservableProperty]
     private string _developerPassword = string.Empty;
