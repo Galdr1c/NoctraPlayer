@@ -455,7 +455,7 @@
                                             </Grid.ColumnDefinitions>
 
                                             <!-- App Icon -->
-                                            <Image Source="avares://Noctra.Avalonia/Assets/LogoGray.png"
+                                            <Image Source="avares://Noctra.Avalonia/Assets/Logo150x150.png"
                                                    Width="64"
                                                    Height="64"
                                                    Stretch="Uniform"
@@ -528,7 +528,7 @@
                             <StackPanel>
                                 <Grid ColumnDefinitions="Auto,*,Auto">
                                     <!-- App Icon -->
-                                    <Image Source="avares://Noctra.Avalonia/Assets/Logo.png"
+                                    <Image Source="avares://Noctra.Avalonia/Assets/LogoGray.png"
                                            Width="64"
                                            Height="64"
                                            Stretch="Uniform"

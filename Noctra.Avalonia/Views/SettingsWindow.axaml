@@ -569,7 +569,7 @@
                                             </StackPanel>
                                             <Border Grid.Column="1" Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="12,4" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding HiddenLiveGroups.Count, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Channels.Hidden.CountFormat'}" 
-                                                           Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" FontSize="14"/>
+                                                           Foreground="{DynamicResource TextMutedBrush}" FontWeight="Bold" FontSize="11" LetterSpacing="0.5"/>
                                             </Border>
                                         </Grid>
                                     </Expander.Header>
@@ -616,7 +616,7 @@
                                             </StackPanel>
                                             <Border Grid.Column="1" Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="12,4" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding HiddenMovieGroups.Count, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Channels.Hidden.CountFormat'}" 
-                                                           Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" FontSize="14"/>
+                                                           Foreground="{DynamicResource TextMutedBrush}" FontWeight="Bold" FontSize="11" LetterSpacing="0.5"/>
                                             </Border>
                                         </Grid>
                                     </Expander.Header>
@@ -663,7 +663,7 @@
                                             </StackPanel>
                                             <Border Grid.Column="1" Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="12,4" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding HiddenSeriesGroups.Count, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Channels.Hidden.CountFormat'}" 
-                                                           Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" FontSize="14"/>
+                                                           Foreground="{DynamicResource TextMutedBrush}" FontWeight="Bold" FontSize="11" LetterSpacing="0.5"/>
                                             </Border>
                                         </Grid>
                                     </Expander.Header>
@@ -1132,7 +1132,7 @@
 
                                             <Grid ColumnDefinitions="Auto,*">
                                                 <!-- App Icon -->
-                                                <Image Source="avares://Noctra.Avalonia/Assets/LogoGray.png"
+                                                <Image Source="avares://Noctra.Avalonia/Assets/Logo150x150.png"
                                                        Width="64"
                                                        Height="64"
                                                        Stretch="Uniform"
@@ -1169,7 +1169,7 @@
                                     <StackPanel>
                                         <Grid ColumnDefinitions="Auto,*,Auto">
                                             <!-- App Icon -->
-                                            <Image Source="avares://Noctra.Avalonia/Assets/Logo.png"
+                                            <Image Source="avares://Noctra.Avalonia/Assets/LogoGray.png"
                                                    Width="64"
                                                    Height="64"
                                                    Stretch="Uniform"
