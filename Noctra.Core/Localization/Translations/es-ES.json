@@ -1,4 +1,4 @@
-﻿{
+{
     "GlobalSettings.Title": "Configuración",
     "GlobalSettings.Appearance.Title": "Apariencia",
     "GlobalSettings.Theme.Title": "Tema",
@@ -779,5 +779,9 @@
     "Download.Status.Error": "Error de descarga",
     "Main.Status.CategoryProgressFormat": "{0} / {1} categorías",
     "Main.Status.CategoryLoadedFormat": "{0} / {1} categorías \u2022 {2}",
-    "Main.Error.UnsupportedProfileFormat": "Tipo de perfil no compatible: {0}"
+    "Main.Error.UnsupportedProfileFormat": "Tipo de perfil no compatible: {0}",
+    "Player.Status.ReconnectingFormat": "Reconectando... ({0}/{1})",
+    "Player.Status.Reconnecting": "Reconectando...",
+    "Player.Warning.SlowConnection": "La conexión está tardando más de lo habitual...",
+    "Player.Warning.Unreachable": "Es posible que no se pueda acceder a la transmisión. Prueba con otro canal."
 }

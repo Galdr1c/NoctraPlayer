@@ -1,4 +1,4 @@
-﻿{
+{
     "GlobalSettings.Title": "Einstellungen",
     "GlobalSettings.Appearance.Title": "Erscheinungsbild",
     "GlobalSettings.Theme.Title": "Thema",
@@ -779,5 +779,9 @@
     "Download.Status.Error": "Download-Fehler",
     "Main.Status.CategoryProgressFormat": "{0} / {1} Kategorien",
     "Main.Status.CategoryLoadedFormat": "{0} / {1} Kategorien \u2022 {2}",
-    "Main.Error.UnsupportedProfileFormat": "Nicht unterstützter Profiltyp: {0}"
+    "Main.Error.UnsupportedProfileFormat": "Nicht unterstützter Profiltyp: {0}",
+    "Player.Status.ReconnectingFormat": "Verbindung wird wiederhergestellt... ({0}/{1})",
+    "Player.Status.Reconnecting": "Verbindung wird wiederhergestellt...",
+    "Player.Warning.SlowConnection": "Die Verbindung dauert länger als gewöhnlich...",
+    "Player.Warning.Unreachable": "Der Stream ist möglicherweise nicht erreichbar. Versuchen Sie einen anderen Kanal."
 }

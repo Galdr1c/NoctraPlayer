@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Noctra.Models;
 using Noctra.Services;
@@ -154,7 +154,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private string _channelLogo = string.Empty;
 
     [ObservableProperty]
-    private string _connectionStatus = "Bağlanıyor...";
+    private string _connectionStatus = string.Empty;
 
     [ObservableProperty]
     private string _streamInfo = string.Empty;
@@ -205,7 +205,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     public bool HasCurrentProgramInfo =>
         CurrentProgram != null &&
         !string.IsNullOrWhiteSpace(CurrentProgram.Title) &&
-        !string.Equals(CurrentProgram.Title, "Program bilgisi yok", StringComparison.OrdinalIgnoreCase);
+        !string.Equals(CurrentProgram.Title, _localizationService.GetString("Player.Epg.NoInfo"), StringComparison.OrdinalIgnoreCase);
     
     [ObservableProperty]
     private string _overlaySecondaryText = string.Empty;
@@ -358,11 +358,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         var message = VideoFillMode switch
         {
-            FillMode.Fit => "UYDUR (FIT)",
-            FillMode.Fill => "DOLDUR (FILL 16:9)",
-            FillMode.Stretch => "GENİŞLET (STRETCH 16:9)",
-            FillMode.Original => "ORİJİNAL (ORIGINAL)",
-            _ => "UYDUR (FIT)"
+            FillMode.Fit => _localizationService.GetString("Player.FillMode.Fit"),
+            FillMode.Fill => _localizationService.GetString("Player.FillMode.Fill"),
+            FillMode.Stretch => _localizationService.GetString("Player.FillMode.Stretch"),
+            FillMode.Original => _localizationService.GetString("Player.FillMode.Original"),
+            _ => _localizationService.GetString("Player.FillMode.Fit")
         };
         _ = ShowOverlayMessageAsync(message);
     }
@@ -497,7 +497,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         !IsDownloadInProgress &&
         !string.IsNullOrWhiteSpace(CurrentChannel?.StreamUrl);
 
-    public string DownloadButtonText => IsDownloadInProgress ? "Indiriliyor..." : "Indir";
+    public string DownloadButtonText => IsDownloadInProgress 
+        ? _localizationService.GetString("Player.Download.Downloading") 
+        : _localizationService.GetString("Player.Download.Download");
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSeriesPlotVisible))]
@@ -596,7 +598,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _localizationService.LanguageChanged += OnLanguageChanged;
 
         // Initialize Network Status
-
+        ConnectionStatus = _localizationService.GetString("Player.Status.Connecting");
         UpdateNetworkStatus(_networkService.CurrentNetworkStatus);
         _networkService.NetworkStatusChanged += OnNetworkStatusChanged;
 
@@ -719,7 +721,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                     if (_prematureEndRecoveryCount >= MaxPrematureEndRecoveries)
                     {
                         LogDebug($"VM: PREMATURE END recovery limit reached ({MaxPrematureEndRecoveries}). Giving up.");
-                        ConnectionStatus = "Yayın kararsız — bağlantı sorunlu.";
+                        ConnectionStatus = _localizationService.GetString("Player.Status.Unstable");
                         return;
                     }
 
@@ -1019,7 +1021,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         // Kullanıcıya bölümlere gitmesi gerektiğini belirten bir hata fırlatıyoruz.
         if (channel.StreamUrl != null && channel.StreamUrl.StartsWith("stalker-series://"))
         {
-            throw new InvalidOperationException("Bu bir dizi klasörüdür. Lütfen bölümleri görmek için dizinin detayına gidin.");
+            throw new InvalidOperationException(_localizationService.GetString("Player.Error.SeriesFolder"));
         }
 
         var requestVersion = Interlocked.Increment(ref _playRequestVersion);
@@ -1101,7 +1103,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                     epNum);
 
                 if (string.IsNullOrEmpty(stalkerResolvedUrl))
-                    throw new InvalidOperationException("Bu bölümün video bağlantısı Stalker sunucusundan alınamadı.");
+                    throw new InvalidOperationException(_localizationService.GetString("Player.Error.StalkerVideoUrl"));
 
                 resolvedStreamUrl = stalkerResolvedUrl;
             }
@@ -1337,10 +1339,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         var now = DateTime.UtcNow;
         return new EpgProgram 
         { 
-            Title = "Program bilgisi yok",
+            Title = _localizationService.GetString("Player.Epg.NoInfo"),
             StartTime = now,
             EndTime = now.AddHours(1),
-            Description = "Yayın için program bilgisi bulunamadı."
+            Description = _localizationService.GetString("Player.Status.NoEpgInfo")
         };
     }
 
@@ -2538,7 +2540,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         }
 
         IsDownloadInProgress = true;
-        DownloadStatusMessage = "Indirme baslatiliyor...";
+        DownloadStatusMessage = _localizationService.GetString("Download.Status.Starting");
         RestartAutoHideTimer();
 
         try
@@ -2549,7 +2551,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            DownloadStatusMessage = UserFriendlyErrorMessage.WithPrefix("Indirme hatasi", ex);
+            DownloadStatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Download.Status.Error"), ex);
         }
         finally
         {
@@ -3158,7 +3160,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                     return;
                 }
 
-                var msg = $"{remaining} saniye içinde yeniden denenecek...";
+                var msg = string.Format(_localizationService.GetString("Player.Status.RetryInSeconds"), remaining);
                 _dispatcherService.Invoke(() => PlayerLoadingWarningMessage = msg);
             }
 
@@ -3169,8 +3171,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             // Yeniden deneniyor
             _dispatcherService.Invoke(() =>
             {
-                PlayerLoadingWarningMessage = $"Yeniden bağlanılıyor... ({attempt + 1}/{maxAttempts})";
-                ConnectionStatus = "Tekrar bağlanılıyor...";
+                PlayerLoadingWarningMessage = string.Format(_localizationService.GetString("Player.Status.ReconnectingFormat"), attempt + 1, maxAttempts);
+                ConnectionStatus = _localizationService.GetString("Player.Status.Reconnecting");
                 IsBuffering = true;
                 BufferingProgress = 0;
             });
@@ -3199,7 +3201,13 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             return;
 
         _dispatcherService.Invoke(() =>
-            PlayerLoadingWarningMessage = "Bağlantı normalden uzun sürüyor...");
+            PlayerLoadingWarningMessage = _localizationService.GetString("Player.Warning.SlowConnection"));
+
+        _unreachableWarningTimer = new Timer(_ =>
+        {
+            if (IsPlaying || !IsVisible) return;
+            PlayerLoadingWarningMessage = _localizationService.GetString("Player.Warning.Unreachable");
+        }, null, 15000, Timeout.Infinite);
 
         await Task.Delay(7_000);
 
@@ -3207,7 +3215,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             return;
 
         _dispatcherService.Invoke(() =>
-            PlayerLoadingWarningMessage = "Yayına erişilemiyor olabilir. Başka bir kanal deneyin.");
+            PlayerLoadingWarningMessage = _localizationService.GetString("Player.Warning.Unreachable"));
     }
 
     private bool IsHealthCheckCancelled(Channel channel, int requestVersion)

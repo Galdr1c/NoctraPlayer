@@ -780,5 +780,9 @@
     "Main.Status.CategoryProgressFormat": "{0} / {1} categories",
     "Main.Status.CategoryLoadedFormat": "{0} / {1} categories \u2022 {2}",
     "Main.Error.UnsupportedProfileFormat": "Unsupported profile type: {0}",
+    "Player.Status.ReconnectingFormat": "Reconnecting... ({0}/{1})",
+    "Player.Status.Reconnecting": "Reconnecting...",
+    "Player.Warning.SlowConnection": "Connection is taking longer than usual...",
+    "Player.Warning.Unreachable": "Stream might be unreachable. Try another channel.",
     "Localization.Tests.FallbackEnglishOnly": "__EN_FALLBACK_ONLY__"
 }

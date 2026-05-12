@@ -1,4 +1,4 @@
-﻿{
+{
     "GlobalSettings.Title": "Paramètres",
     "GlobalSettings.Appearance.Title": "Apparence",
     "GlobalSettings.Theme.Title": "Thème",
@@ -779,5 +779,9 @@
     "Download.Status.Error": "Erreur de téléchargement",
     "Main.Status.CategoryProgressFormat": "{0} / {1} catégories",
     "Main.Status.CategoryLoadedFormat": "{0} / {1} catégories \u2022 {2}",
-    "Main.Error.UnsupportedProfileFormat": "Type de profil non pris en charge : {0}"
+    "Main.Error.UnsupportedProfileFormat": "Type de profil non pris en charge : {0}",
+    "Player.Status.ReconnectingFormat": "Reconnexion... ({0}/{1})",
+    "Player.Status.Reconnecting": "Reconnexion...",
+    "Player.Warning.SlowConnection": "La connexion prend plus de temps que d'habitude...",
+    "Player.Warning.Unreachable": "Le flux est peut-être inaccessible. Essayez une autre chaîne."
 }

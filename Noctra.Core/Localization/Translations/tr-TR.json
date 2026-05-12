@@ -779,5 +779,9 @@
     "Download.Status.Error": "İndirme hatası",
     "Main.Status.CategoryProgressFormat": "{0} / {1} kategori",
     "Main.Status.CategoryLoadedFormat": "{0} / {1} kategori \u2022 {2}",
-    "Main.Error.UnsupportedProfileFormat": "Desteklenmeyen profil tipi: {0}"
+    "Main.Error.UnsupportedProfileFormat": "Desteklenmeyen profil tipi: {0}",
+    "Player.Status.ReconnectingFormat": "Yeniden bağlanılıyor... ({0}/{1})",
+    "Player.Status.Reconnecting": "Tekrar bağlanılıyor...",
+    "Player.Warning.SlowConnection": "Bağlantı normalden uzun sürüyor...",
+    "Player.Warning.Unreachable": "Yayına erişilemiyor olabilir. Başka bir kanal deneyin."
 }
