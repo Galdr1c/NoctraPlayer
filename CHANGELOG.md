@@ -7,6 +7,13 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 
 ## [Unreleased]
+### 🛡️ Gelişmiş İzleme Koruması ve Rewatch Desteği (2026-05-12)
+- [Yeni] **Gelişmiş Koruma Kalkanı (Safety Net v2+)**: "Baştan Başla" seçeneği tıklandığında progress koruma penceresi 15 saniyeden **60 saniyeye** çıkarıldı. Bu sayede özellikle Free sürümde mecbur kalınan baştan başlatma aksiyonunda, yanlışlıkla veya kısa süreli girişlerde mevcut ilerlemenin silinmesi engellendi.
+- [Düzeltildi] **Akıllı Resume Mantığı**: "Continue" butonunun, bir bölüm bittikten sonra veya rewatch sırasında sürekli bir sonraki bölüme atlamasına neden olan "kalıcı tamamlandı" (Sticky Completed) hatası giderildi.
+- [Yeni] **Tamamlanma Durumu Sıfırlama**: "Baştan Başla" komutu artık ilgili bölümün "Tamamlandı" (Completed) işaretini geçici olarak kaldırarak yeni bir izleme süreci başlatılmasına olanak tanıyor.
+- [Geliştirme] **WatchHistory Altyapısı**: `TrackWatchAsync` metoduna eklenen `allowReset` parametresi ile manuel "Start Over" aksiyonları veritabanı seviyesinde desteklenir hale getirildi.
+- [Test] **Birim Test Güncellemeleri**: `FakeWatchHistoryService` ve `CapturingWatchHistoryService` mock sınıfları yeni arayüz mimarisine göre güncellendi.
+
 ### 🛠️ M3U Ayrıştırma ve Kategori Yönetimi Optimizasyonu (2026-05-11)
 - [Düzeltildi] **M3U Ayrıştırma Hatası**: Tırnak içindeki boşluklu ve özel karakterli `tvg-name`, `group-title` gibi alanların eksik veya hatalı ayrıştırılması sorunu giderildi (Örn: "TR/ S-SPORT 1" artık tam olarak okunabiliyor).
 - [Değişti] **Orijinal Kategori Koruma**: Playlist sağlayıcısından gelen kategori isimlerinin (Group Title) otomatik temizlenmesi ve zorla normalleştirilmesi kaldırıldı. Artık sağlayıcının belirlediği orijinal isimler korunuyor.

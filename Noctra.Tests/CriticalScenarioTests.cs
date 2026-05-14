@@ -125,7 +125,7 @@ namespace Noctra.Tests
 
         public Task TrackWatchAsync(int profileId, int? channelId, int? episodeId,
             TimeSpan position, bool completed = false, TimeSpan? duration = null,
-            TimeSpan? incrementDelta = null, CancellationToken ct = default)
+            TimeSpan? incrementDelta = null, bool allowReset = false, CancellationToken ct = default)
         {
             Calls.Add(new Call(profileId, channelId, episodeId, position, completed, duration));
             return Task.CompletedTask;

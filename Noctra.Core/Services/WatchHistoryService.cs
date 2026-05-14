@@ -21,7 +21,16 @@ public class WatchHistoryService : IWatchHistoryService
         _settingsService = settingsService;
     }
 
-    public async Task TrackWatchAsync(int profileId, int? channelId, int? episodeId, TimeSpan position, bool completed = false, TimeSpan? duration = null, TimeSpan? incrementDelta = null, CancellationToken ct = default)
+    public async Task TrackWatchAsync(
+        int profileId,
+        int? channelId,
+        int? episodeId,
+        TimeSpan position,
+        bool completed = false,
+        TimeSpan? duration = null,
+        TimeSpan? incrementDelta = null,
+        bool allowReset = false,
+        CancellationToken ct = default)
     {
         if (_settingsService?.Settings != null && !_settingsService.Settings.SaveWatchHistory)
         {
@@ -63,7 +72,8 @@ public class WatchHistoryService : IWatchHistoryService
                 context.WatchHistories.Add(history);
             }
 
-            var isCompletedNow = history.Completed || completed;
+            // If we are starting over, allow resetting the completed status and position
+            var isCompletedNow = allowReset ? completed : (history.Completed || completed);
             
             if (isCompletedNow)
             {
@@ -105,6 +115,7 @@ public class WatchHistoryService : IWatchHistoryService
                         history.Completed,
                         duration,
                         watchedAt,
+                        allowReset,
                         ct);
                 }
             }
@@ -139,6 +150,7 @@ public class WatchHistoryService : IWatchHistoryService
         bool completed,
         TimeSpan? duration,
         DateTime watchedAt,
+        bool allowReset,
         CancellationToken ct)
     {
         var series = episode.Season?.Series;
@@ -166,7 +178,9 @@ public class WatchHistoryService : IWatchHistoryService
                 p.EpisodeNumber == episodeNumber &&
                 ((tmdbId.HasValue && p.TmdbId == tmdbId.Value) || p.SeriesKey == seriesKey), ct);
 
-        var isCompletedNow = (existing?.Completed ?? false) || completed;
+        // If we are starting over, allow resetting the completed status and position
+        var isCompletedNow = allowReset ? completed : ((existing?.Completed ?? false) || completed);
+        
         var finalStoppedAt = isCompletedNow && duration.HasValue
             ? duration.Value
             : stoppedAt;

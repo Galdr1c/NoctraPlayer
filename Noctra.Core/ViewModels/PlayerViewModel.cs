@@ -1276,9 +1276,13 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 ? 0 
                 : (DateTime.UtcNow - _sessionPlaybackStartTimeUtc).TotalSeconds;
 
-            if (currentPosition.TotalSeconds < 15 && sessionDurationSeconds < 15)
+            // ENHANCED SAFETY NET: If we explicitly chose "Start from Beginning", 
+            // increase the protection window to 60 seconds to avoid accidental wipes of previous long progress.
+            var safetyThreshold = _isStartingOver ? 60 : 15;
+
+            if (currentPosition.TotalSeconds < safetyThreshold && sessionDurationSeconds < safetyThreshold)
             {
-                LogDebug($"FlushWatchHistoryAsync: Skipping early near-zero save (Safety Net). Session: {sessionDurationSeconds:F1}s, Pos: {currentPosition.TotalSeconds:F1}s");
+                LogDebug($"FlushWatchHistoryAsync: Skipping early near-zero save (Safety Net). StartingOver: {_isStartingOver}, Session: {sessionDurationSeconds:F1}s, Pos: {currentPosition.TotalSeconds:F1}s");
                 return;
             }
 
@@ -1289,7 +1293,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 currentPosition,
                 isCompleted,
                 currentDuration,
-                incrementDelta
+                incrementDelta,
+                _isStartingOver
             );
 
             if (isEpisodePlayback && CurrentEpisode != null)
@@ -2905,9 +2910,12 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         }
     }
 
+    private bool _isStartingOver;
+
     [RelayCommand]
     private void ResumeFromPosition()
     {
+        _isStartingOver = false;
         IsResumeDialogVisible = false;
         _resumeDialogTcs?.TrySetResult(true);
         _resumeDialogTcs = null;
@@ -2916,6 +2924,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void StartFromBeginning()
     {
+        _isStartingOver = true;
         IsResumeDialogVisible = false;
         _resumeDialogTcs?.TrySetResult(false);
         _resumeDialogTcs = null;
