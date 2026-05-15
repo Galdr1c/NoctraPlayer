@@ -46,6 +46,15 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     public bool IsIdle => !IsUpdateAvailable && !IsCheckingUpdates;
 
     [ObservableProperty]
+    private string _promoCodeInput = string.Empty;
+
+    [ObservableProperty]
+    private string _promoCodeStatus = string.Empty;
+
+    [ObservableProperty]
+    private bool _isApplyingPromoCode;
+
+    [ObservableProperty]
     private string _developerPassword = string.Empty;
 
     [ObservableProperty]
@@ -139,6 +148,7 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         CurrentVersion = _updateService.CurrentVersion;
         UpdateStatusText = _localizationService.GetString("Settings.Update.UpToDate");
         _settingsService.SettingsChanged += OnSettingsService_Changed;
+        _licenseService.SubscriptionChanged += OnLicenseSubscriptionChanged;
         
         LoadSettings();
         _ = UpdateCacheSizeAsync();
@@ -147,6 +157,22 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     public bool IsPremium => _licenseService.IsPremium;
     public bool IsFreeEdition => !_licenseService.IsEditionLockedPremium;
     public bool CanTogglePremiumForTesting => IsDeveloperModeActive && !_licenseService.IsEditionLockedPremium;
+
+    public string PremiumStatusText
+    {
+        get
+        {
+            if (!_licenseService.IsPremium)
+            {
+                return "Free sürüm aktif";
+            }
+
+            var expiresAt = _licenseService.PromoPremiumExpiresAtUtc;
+            return expiresAt.HasValue
+                ? $"Premium {expiresAt.Value.ToLocalTime():dd.MM.yyyy HH:mm} tarihine kadar aktif"
+                : "Premium aktif";
+        }
+    }
 
     [RelayCommand]
     private void ReportBug()
@@ -162,6 +188,15 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     private void OnSettingsService_Changed()
     {
         LoadSettings();
+        OnPropertyChanged(nameof(IsPremium));
+        OnPropertyChanged(nameof(PremiumStatusText));
+    }
+
+    private void OnLicenseSubscriptionChanged()
+    {
+        OnPropertyChanged(nameof(IsPremium));
+        OnPropertyChanged(nameof(PremiumStatusText));
+        PromoCodeStatus = PremiumStatusText;
     }
 
     private void LoadSettings()
@@ -228,6 +263,36 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     private async Task ShowUpsell()
     {
         await _dialogService.ShowUpsellAsync();
+    }
+
+    [RelayCommand]
+    private async Task ApplyPromoCodeAsync()
+    {
+        if (IsApplyingPromoCode)
+        {
+            return;
+        }
+
+        IsApplyingPromoCode = true;
+        try
+        {
+            var result = await _licenseService.ApplyPromoCodeAsync(PromoCodeInput);
+            PromoCodeStatus = result.Message;
+            if (result.Success)
+            {
+                PromoCodeInput = string.Empty;
+                OnPropertyChanged(nameof(IsPremium));
+                OnPropertyChanged(nameof(PremiumStatusText));
+            }
+        }
+        catch (Exception ex)
+        {
+            PromoCodeStatus = $"Promosyon kodu uygulanamadı: {ex.Message}";
+        }
+        finally
+        {
+            IsApplyingPromoCode = false;
+        }
     }
 
     [RelayCommand]
@@ -319,6 +384,11 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         if (_settingsService != null)
         {
             _settingsService.SettingsChanged -= OnSettingsService_Changed;
+        }
+        
+        if (_licenseService != null)
+        {
+            _licenseService.SubscriptionChanged -= OnLicenseSubscriptionChanged;
         }
 
         if (_settings != null)

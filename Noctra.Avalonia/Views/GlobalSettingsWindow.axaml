@@ -586,6 +586,84 @@
                         </Border>
                     </Panel>
 
+                    
+                            <!-- Promo Code Section in Appearance -->
+                            <Border Padding="20,16" Margin="0,0,0,16" CornerRadius="12">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                        <GradientStop Color="#1A6D28D9" Offset="0.0"/>
+                                        <GradientStop Color="#08B7A6F6" Offset="1.0"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                
+                                <Border BorderBrush="{DynamicResource Surface0Brush}" CornerRadius="12" Padding="20">
+                                    <Panel>
+                                        <!-- Background Watermark Icon -->
+                                        <materialIcons:MaterialIcon Kind="TicketPercentOutline" 
+                                                                    Width="120" Height="120" 
+                                                                    Foreground="{DynamicResource AccentBrush}" 
+                                                                    Opacity="0.05"
+                                                                    HorizontalAlignment="Right" 
+                                                                    VerticalAlignment="Top"
+                                                                    Margin="0,-20,-20,0"/>
+                                                                    
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,8">
+                                                <Border Background="{DynamicResource AccentBrush}" Opacity="0.9" Padding="6" CornerRadius="8">
+                                                    <materialIcons:MaterialIcon Kind="GiftOutline" Width="20" Height="20" Foreground="White"/>
+                                                </Border>
+                                                <TextBlock Text="Promosyon Kodu" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <TextBlock Text="Elinde promosyon kodu mu var? Kodu gir ve Premium özelliklerin tadını çıkar!" 
+                                                       FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20"/>
+                                            
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBox Text="{Binding PromoCodeInput, Mode=TwoWay}" 
+                                                         Watermark="Kodu buraya yapıştır... Örn: NOC-8KQ2-MP7A" 
+                                                         Padding="16,12"
+                                                         CornerRadius="10"
+                                                         BorderThickness="1"
+                                                         BorderBrush="{DynamicResource BorderBrush}"
+                                                         Background="{DynamicResource Surface1Brush}"
+                                                         VerticalContentAlignment="Center"
+                                                         FontSize="15"
+                                                         LetterSpacing="1"/>
+                                                <Button Grid.Column="1"
+                                                        Command="{Binding ApplyPromoCodeCommand}"
+                                                        IsEnabled="{Binding !IsApplyingPromoCode}"
+                                                        Background="{DynamicResource AccentBrush}"
+                                                        Foreground="White"
+                                                        CornerRadius="10"
+                                                        Padding="24,10"
+                                                        Margin="12,0,0,0"
+                                                        Cursor="Hand"
+                                                        VerticalAlignment="Stretch">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <materialIcons:MaterialIcon Kind="AutoAwesome" Width="18" Height="18" IsVisible="{Binding !IsApplyingPromoCode}"/>
+                                                        <materialIcons:MaterialIcon Kind="Refresh" Width="18" Height="18" Classes="Rotating" IsVisible="{Binding IsApplyingPromoCode}"/>
+                                                        <TextBlock Text="Kodu Kullan" FontWeight="Bold" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Button>
+                                            </Grid>
+                                            
+                                            <!-- Sonuç Mesajları -->
+                                            <StackPanel Margin="0,12,0,0" Spacing="4">
+                                                <TextBlock Text="{Binding PromoCodeStatus}" 
+                                                           FontSize="13" FontWeight="Bold" 
+                                                           Foreground="{DynamicResource AccentBrush}" 
+                                                           TextWrapping="Wrap"
+                                                           IsVisible="{Binding PromoCodeStatus, Converter={StaticResource StringToVisibilityConverter}}"/>
+                                                <TextBlock Text="{Binding PremiumStatusText}" 
+                                                           FontSize="13" FontWeight="SemiBold" 
+                                                           Foreground="{DynamicResource SuccessBrush}" 
+                                                           TextWrapping="Wrap"
+                                                           IsVisible="{Binding PremiumStatusText, Converter={StaticResource StringToVisibilityConverter}}"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Panel>
+                                </Border>
+                            </Border>
+                            
                     <!-- UPDATE SECTION (Enhanced Modern Card) -->
                     <Border Background="{DynamicResource Surface0Brush}" 
                             CornerRadius="12" 

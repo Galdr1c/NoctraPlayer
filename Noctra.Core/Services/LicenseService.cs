@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
@@ -6,13 +7,40 @@ using Noctra.Services.Interfaces;
 namespace Noctra.Services;
 
 /// <summary>
-/// License service implementation
-/// Free and Premium Store packages are edition-driven.
+/// License service implementation.
+/// Free/Premium Store paketleri edition-driven çalışır; promosyon kodları Free sürümde süreli Premium açar.
 /// </summary>
 public class LicenseService : ObservableObject, ILicenseService
 {
     private SubscriptionInfo _currentSubscription = new();
     private readonly IAppEditionService _appEditionService;
+    private readonly ISettingsService _settingsService;
+    private readonly HttpClient _httpClient;
+    private bool _manualPremiumOverride;
+
+    /// <summary>
+    /// Developer: Uzak JSON adresini burada sabitleyebilir veya settings.json içindeki
+    /// promoCodeConfigUrl alanı / NOCTRA_PROMO_CODES_URL environment değişkeni ile verebilirsin.
+    /// Beklenen JSON:
+    /// { "codes": [ { "code": "NOC-8KQ2-MP7A", "durationDays": 7, "isActive": true } ] }
+    /// </summary>
+    private const string DefaultRemotePromoCodesUrl = "";
+
+    /// <summary>
+    /// Developer: Yerel/fallback promosyon kodları. İstersen süreleri buradan değiştirebilirsin.
+    /// </summary>
+    private static readonly IReadOnlyList<PromoCodeDefinition> DeveloperPromoCodes = new[]
+    {
+        new PromoCodeDefinition { Code = "NOC-8KQ2-MP7A", DurationDays = 7, IsActive = true, Description = "7 günlük Premium" },
+        new PromoCodeDefinition { Code = "NOC-T4Z9-P6XD", DurationDays = 30, IsActive = true, Description = "30 günlük Premium" }
+    };
+
+    private static readonly JsonSerializerOptions PromoJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        ReadCommentHandling = JsonCommentHandling.Skip,
+        AllowTrailingCommas = true
+    };
 
     // ==========================================
     // FEATURE NAMES
@@ -35,19 +63,35 @@ public class LicenseService : ObservableObject, ILicenseService
     }
 
     public LicenseService(IAppEditionService appEditionService)
+        : this(appEditionService, new EphemeralSettingsService(), new HttpClient())
+    {
+    }
+
+    public LicenseService(IAppEditionService appEditionService, ISettingsService settingsService, HttpClient httpClient)
     {
         _appEditionService = appEditionService;
-        _currentSubscription.Tier = _appEditionService.IsPremiumEdition
-            ? SubscriptionTier.Premium
-            : SubscriptionTier.Free;
+        _settingsService = settingsService;
+        _httpClient = httpClient;
+        _settingsService.SettingsChanged += OnSettingsChanged;
+        SyncSubscriptionFromSettings(notify: false);
     }
 
     // ==========================================
     // LEGACY PROPERTIES (backward compat)
     // ==========================================
-    public bool IsPremium => _currentSubscription.IsPremiumOrHigher;
+    public bool IsPremium
+    {
+        get
+        {
+            SyncSubscriptionFromSettings(notify: false);
+            return _currentSubscription.IsPremiumOrHigher;
+        }
+    }
+
     public bool CanUpgradeToPremium => _appEditionService.IsFreeEdition;
     public bool IsEditionLockedPremium => _appEditionService.IsPremiumEdition;
+    public DateTime? PromoPremiumExpiresAtUtc => _settingsService.Settings.PromoPremiumExpiresAtUtc;
+    public string? ActivePromoCode => _settingsService.Settings.ActivePromoCode;
 
     public void ActivatePremium()
     {
@@ -56,11 +100,13 @@ public class LicenseService : ObservableObject, ILicenseService
             return;
         }
 
+        _manualPremiumOverride = true;
+        _settingsService.Settings.PromoPremiumExpiresAtUtc = null;
+        _settingsService.Settings.ActivePromoCode = null;
         _currentSubscription.Tier = SubscriptionTier.Premium;
-        OnPropertyChanged(nameof(IsPremium));
-        OnPropertyChanged(nameof(CurrentTier));
-        OnPropertyChanged(nameof(CanUpgradeToPremium));
-        SubscriptionChanged?.Invoke();
+        _currentSubscription.ExpiresAt = null;
+        _currentSubscription.IsTrialPeriod = false;
+        RaiseSubscriptionChanged();
     }
 
     public void DeactivatePremium()
@@ -70,11 +116,13 @@ public class LicenseService : ObservableObject, ILicenseService
             return;
         }
 
+        _manualPremiumOverride = false;
+        _settingsService.Settings.PromoPremiumExpiresAtUtc = null;
+        _settingsService.Settings.ActivePromoCode = null;
         _currentSubscription.Tier = SubscriptionTier.Free;
-        OnPropertyChanged(nameof(IsPremium));
-        OnPropertyChanged(nameof(CurrentTier));
-        OnPropertyChanged(nameof(CanUpgradeToPremium));
-        SubscriptionChanged?.Invoke();
+        _currentSubscription.ExpiresAt = null;
+        _currentSubscription.IsTrialPeriod = false;
+        RaiseSubscriptionChanged();
     }
 
     public string GetPriceText()
@@ -83,19 +131,226 @@ public class LicenseService : ObservableObject, ILicenseService
     }
 
     // ==========================================
+    // PROMO CODE SYSTEM
+    // ==========================================
+    public async Task<PromoCodeRedemptionResult> ApplyPromoCodeAsync(string promoCode)
+    {
+        if (_appEditionService.IsPremiumEdition)
+        {
+            return PromoCodeRedemptionResult.Fail("Bu paket zaten kalıcı Premium sürüm.");
+        }
+
+        var normalizedCode = NormalizePromoCode(promoCode);
+        if (string.IsNullOrWhiteSpace(normalizedCode))
+        {
+            return PromoCodeRedemptionResult.Fail("Lütfen promosyon kodunu girin.");
+        }
+
+        var codes = await LoadPromoCodesAsync();
+        var matchedCode = codes.FirstOrDefault(code =>
+            NormalizePromoCode(code.Code).Equals(normalizedCode, StringComparison.OrdinalIgnoreCase));
+
+        if (matchedCode == null)
+        {
+            return PromoCodeRedemptionResult.Fail("Promosyon kodu bulunamadı veya geçersiz.");
+        }
+
+        if (!matchedCode.IsActive)
+        {
+            return PromoCodeRedemptionResult.Fail("Bu promosyon kodu aktif değil.");
+        }
+
+        if (matchedCode.DurationDays <= 0)
+        {
+            return PromoCodeRedemptionResult.Fail("Bu promosyon kodu için geçerli süre tanımlanmamış.");
+        }
+
+        if (matchedCode.ValidUntilUtc.HasValue && matchedCode.ValidUntilUtc.Value <= DateTime.UtcNow)
+        {
+            return PromoCodeRedemptionResult.Fail("Bu promosyon kodunun kullanım süresi dolmuş.");
+        }
+
+        var settings = _settingsService.Settings;
+        settings.RedeemedPromoCodes ??= new List<string>();
+        if (!matchedCode.AllowReuse && settings.RedeemedPromoCodes.Any(code =>
+                NormalizePromoCode(code).Equals(normalizedCode, StringComparison.OrdinalIgnoreCase)))
+        {
+            return PromoCodeRedemptionResult.Fail("Bu promosyon kodu daha önce bu cihazda kullanılmış.");
+        }
+
+        _manualPremiumOverride = false;
+
+        var startDate = settings.PromoPremiumExpiresAtUtc.HasValue && settings.PromoPremiumExpiresAtUtc.Value > DateTime.UtcNow
+            ? settings.PromoPremiumExpiresAtUtc.Value
+            : DateTime.UtcNow;
+        var expiresAt = startDate.AddDays(matchedCode.DurationDays);
+
+        settings.ActivePromoCode = normalizedCode;
+        settings.PromoPremiumExpiresAtUtc = expiresAt;
+        if (!settings.RedeemedPromoCodes.Any(code => NormalizePromoCode(code).Equals(normalizedCode, StringComparison.OrdinalIgnoreCase)))
+        {
+            settings.RedeemedPromoCodes.Add(normalizedCode);
+        }
+
+        await _settingsService.SaveAsync();
+        SyncSubscriptionFromSettings(notify: true);
+
+        return PromoCodeRedemptionResult.Ok(
+            $"Promosyon kodu uygulandı. Premium {FormatLocalDate(expiresAt)} tarihine kadar aktif.",
+            expiresAt,
+            matchedCode.DurationDays);
+    }
+
+    private async Task<IReadOnlyList<PromoCodeDefinition>> LoadPromoCodesAsync()
+    {
+        var remoteUrl = GetRemotePromoCodesUrl();
+        if (!string.IsNullOrWhiteSpace(remoteUrl))
+        {
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+                using var response = await _httpClient.GetAsync(remoteUrl, cts.Token);
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync(cts.Token);
+                var remoteCodes = ParsePromoCodeJson(json);
+                if (remoteCodes.Count > 0)
+                {
+                    return remoteCodes;
+                }
+            }
+            catch
+            {
+                // Uzak yapılandırma okunamazsa yerel/fallback kodlar devreye girer.
+            }
+        }
+
+        return DeveloperPromoCodes;
+    }
+
+    private static List<PromoCodeDefinition> ParsePromoCodeJson(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new List<PromoCodeDefinition>();
+        }
+
+        var trimmed = json.TrimStart();
+        if (trimmed.StartsWith("[", StringComparison.Ordinal))
+        {
+            return JsonSerializer.Deserialize<List<PromoCodeDefinition>>(json, PromoJsonOptions) ?? new List<PromoCodeDefinition>();
+        }
+
+        var config = JsonSerializer.Deserialize<PromoCodeConfiguration>(json, PromoJsonOptions);
+        return config?.Codes ?? new List<PromoCodeDefinition>();
+    }
+
+    private string GetRemotePromoCodesUrl()
+    {
+        var envUrl = Environment.GetEnvironmentVariable("NOCTRA_PROMO_CODES_URL");
+        if (!string.IsNullOrWhiteSpace(envUrl))
+        {
+            return envUrl.Trim();
+        }
+
+        var settingsUrl = _settingsService.Settings.PromoCodeConfigUrl;
+        if (!string.IsNullOrWhiteSpace(settingsUrl))
+        {
+            return settingsUrl.Trim();
+        }
+
+        return DefaultRemotePromoCodesUrl;
+    }
+
+    private void OnSettingsChanged()
+    {
+        SyncSubscriptionFromSettings(notify: true);
+    }
+
+    private void SyncSubscriptionFromSettings(bool notify)
+    {
+        var oldTier = _currentSubscription.Tier;
+        var oldExpiresAt = _currentSubscription.ExpiresAt;
+        var oldIsTrial = _currentSubscription.IsTrialPeriod;
+
+        if (_appEditionService.IsPremiumEdition)
+        {
+            _currentSubscription.Tier = SubscriptionTier.Premium;
+            _currentSubscription.ExpiresAt = null;
+            _currentSubscription.IsTrialPeriod = false;
+        }
+        else if (_manualPremiumOverride)
+        {
+            _currentSubscription.Tier = SubscriptionTier.Premium;
+            _currentSubscription.ExpiresAt = null;
+            _currentSubscription.IsTrialPeriod = false;
+        }
+        else
+        {
+            var promoExpiresAt = _settingsService.Settings.PromoPremiumExpiresAtUtc;
+            if (promoExpiresAt.HasValue && promoExpiresAt.Value > DateTime.UtcNow)
+            {
+                _currentSubscription.Tier = SubscriptionTier.Premium;
+                _currentSubscription.ExpiresAt = promoExpiresAt;
+                _currentSubscription.IsTrialPeriod = true;
+            }
+            else
+            {
+                _currentSubscription.Tier = SubscriptionTier.Free;
+                _currentSubscription.ExpiresAt = null;
+                _currentSubscription.IsTrialPeriod = false;
+            }
+        }
+
+        if (notify && (oldTier != _currentSubscription.Tier || oldExpiresAt != _currentSubscription.ExpiresAt || oldIsTrial != _currentSubscription.IsTrialPeriod))
+        {
+            RaiseSubscriptionChanged();
+        }
+    }
+
+    private void RaiseSubscriptionChanged()
+    {
+        OnPropertyChanged(nameof(IsPremium));
+        OnPropertyChanged(nameof(CurrentTier));
+        OnPropertyChanged(nameof(CanUpgradeToPremium));
+        OnPropertyChanged(nameof(PromoPremiumExpiresAtUtc));
+        OnPropertyChanged(nameof(ActivePromoCode));
+        SubscriptionChanged?.Invoke();
+    }
+
+    private static string NormalizePromoCode(string? code)
+    {
+        return string.IsNullOrWhiteSpace(code)
+            ? string.Empty
+            : code.Trim().Replace(" ", string.Empty).ToUpperInvariant();
+    }
+
+    private static string FormatLocalDate(DateTime utcDate)
+    {
+        return utcDate.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
+    }
+
+    // ==========================================
     // NEW TIER SYSTEM
     // ==========================================
 
     public SubscriptionInfo GetCurrentSubscription()
     {
+        SyncSubscriptionFromSettings(notify: false);
         return _currentSubscription;
     }
 
-    public SubscriptionTier CurrentTier => _currentSubscription.Tier;
+    public SubscriptionTier CurrentTier
+    {
+        get
+        {
+            SyncSubscriptionFromSettings(notify: false);
+            return _currentSubscription.Tier;
+        }
+    }
 
     public bool IsFeatureAvailable(string featureName)
     {
-        var tier = _currentSubscription.Tier;
+        var tier = CurrentTier;
 
         return featureName switch
         {
@@ -109,7 +364,7 @@ public class LicenseService : ObservableObject, ILicenseService
 
     public bool IsWithinLimit(string limitName, int currentCount)
     {
-        var tier = _currentSubscription.Tier;
+        var tier = CurrentTier;
 
         int maxAllowed = limitName switch
         {
@@ -127,7 +382,7 @@ public class LicenseService : ObservableObject, ILicenseService
 
     public int GetLimit(string limitName)
     {
-        var tier = _currentSubscription.Tier;
+        var tier = CurrentTier;
 
         return limitName switch
         {
@@ -178,18 +433,12 @@ public class LicenseService : ObservableObject, ILicenseService
 
     public async Task RefreshSubscriptionStatusAsync()
     {
-        _currentSubscription.Tier = _appEditionService.IsPremiumEdition
-            ? SubscriptionTier.Premium
-            : _currentSubscription.Tier;
-
-        OnPropertyChanged(nameof(IsPremium));
-        OnPropertyChanged(nameof(CurrentTier));
-        OnPropertyChanged(nameof(CanUpgradeToPremium));
+        SyncSubscriptionFromSettings(notify: true);
         await Task.CompletedTask;
     }
 
     /// <summary>
-    /// Debug/test iÃ§in tier'Ä± manuel ayarla (Event fÄ±rlatmaz)
+    /// Debug/test için tier'ı manuel ayarla (Event fırlatmaz)
     /// </summary>
     public void SetTierForTesting(SubscriptionTier tier)
     {
@@ -198,9 +447,28 @@ public class LicenseService : ObservableObject, ILicenseService
             return;
         }
 
+        _manualPremiumOverride = tier == SubscriptionTier.Premium;
         _currentSubscription.Tier = tier;
+        _currentSubscription.ExpiresAt = null;
+        _currentSubscription.IsTrialPeriod = false;
         OnPropertyChanged(nameof(IsPremium));
         OnPropertyChanged(nameof(CurrentTier));
         OnPropertyChanged(nameof(CanUpgradeToPremium));
+    }
+
+    private sealed class EphemeralSettingsService : ISettingsService
+    {
+        public AppSettings Settings { get; } = new();
+        public event Action? SettingsChanged;
+        public Task LoadAsync() => Task.CompletedTask;
+        public Task LoadProfileSettingsAsync(int profileId) => Task.CompletedTask;
+        public Task<AppSettings?> PeekProfileSettingsAsync(int profileId) => Task.FromResult<AppSettings?>(Settings);
+        public Task SaveAsync()
+        {
+            SettingsChanged?.Invoke();
+            return Task.CompletedTask;
+        }
+        public void ResetToDefaults() => SettingsChanged?.Invoke();
+        public Task<int> CleanOrphanedSettingsAsync(IEnumerable<int> activeProfileIds) => Task.FromResult(0);
     }
 }

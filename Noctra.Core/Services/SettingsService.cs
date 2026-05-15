@@ -117,6 +117,10 @@ public class SettingsService : ISettingsService
         target.HardwareAcceleration = source.HardwareAcceleration;
         target.Analytics = source.Analytics;
         target.AutoSelectLastProfile = source.AutoSelectLastProfile;
+        target.PromoCodeConfigUrl = source.PromoCodeConfigUrl;
+        target.ActivePromoCode = source.ActivePromoCode;
+        target.PromoPremiumExpiresAtUtc = source.PromoPremiumExpiresAtUtc;
+        target.RedeemedPromoCodes = source.RedeemedPromoCodes?.ToList() ?? new List<string>();
     }
 
     public async Task<AppSettings?> PeekProfileSettingsAsync(int profileId)

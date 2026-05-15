@@ -143,6 +143,30 @@ public class AppSettings
     public bool HardwareAcceleration { get; set; } = true;
     public bool Analytics { get; set; } = false;
 
+
+    // ============ Promosyon Kodu / Süreli Premium ============
+
+    /// <summary>
+    /// Developer tarafından sağlanabilecek uzak promosyon kodu JSON adresi.
+    /// Boşsa LicenseService içindeki yerel/fallback kodlar kullanılır.
+    /// </summary>
+    public string? PromoCodeConfigUrl { get; set; }
+
+    /// <summary>
+    /// Kullanılan son aktif promosyon kodu.
+    /// </summary>
+    public string? ActivePromoCode { get; set; }
+
+    /// <summary>
+    /// Promosyon ile açılan Premium bitiş zamanı (UTC). Null ise aktif promosyon yoktur.
+    /// </summary>
+    public DateTime? PromoPremiumExpiresAtUtc { get; set; }
+
+    /// <summary>
+    /// Aynı kodun bu cihazda tekrar tekrar kullanılmasını önlemek için yerel kullanım listesi.
+    /// </summary>
+    public List<string> RedeemedPromoCodes { get; set; } = new();
+
     // ============ Senkronizasyon Ayarlari ============
 
     /// <summary>

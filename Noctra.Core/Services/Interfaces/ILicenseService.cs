@@ -11,6 +11,10 @@ public interface ILicenseService
     bool IsPremium { get; }
     bool CanUpgradeToPremium { get; }
     bool IsEditionLockedPremium { get; }
+    DateTime? PromoPremiumExpiresAtUtc => null;
+    string? ActivePromoCode => null;
+    Task<PromoCodeRedemptionResult> ApplyPromoCodeAsync(string promoCode) =>
+        Task.FromResult(PromoCodeRedemptionResult.Fail("Promosyon kodu bu lisans servisinde desteklenmiyor."));
     void ActivatePremium();
     void DeactivatePremium();
     string GetPriceText();
