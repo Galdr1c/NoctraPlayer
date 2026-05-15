@@ -783,5 +783,12 @@
     "Player.Status.ReconnectingFormat": "Reconnexion... ({0}/{1})",
     "Player.Status.Reconnecting": "Reconnexion...",
     "Player.Warning.SlowConnection": "La connexion prend plus de temps que d'habitude...",
-    "Player.Warning.Unreachable": "Le flux est peut-être inaccessible. Essayez une autre chaîne."
+    "Player.Warning.Unreachable": "Le flux est peut-être inaccessible. Essayez une autre chaîne.",
+    "GlobalSettings.Promo.Title": "Code promo",
+    "GlobalSettings.Promo.Description": "Avez-vous un code promo ? Entrez le code et profitez des fonctionnalités Premium !",
+    "GlobalSettings.Promo.Apply": "Appliquer le code",
+    "GlobalSettings.Promo.Placeholder": "Collez le code ici...",
+    "GlobalSettings.Promo.Status.Free": "Version gratuite active",
+    "GlobalSettings.Promo.Status.Premium": "Premium actif",
+    "GlobalSettings.Promo.Status.PremiumFormat": "Premium actif jusqu'au {0}"
 }

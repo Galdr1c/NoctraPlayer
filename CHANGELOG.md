@@ -7,6 +7,16 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 
 ## [Unreleased]
+### 🎟️ Promosyon Kodu Sistemi ve Uzaktan Yapılandırma (2026-05-15)
+- [Yeni] **Uzaktan Promosyon Sistemi**: Promosyon kodları artık sadece uzak bir URL (Gist vb.) üzerinden doğrulanıyor. Yerel mock veriler tamamen kaldırıldı.
+- [Yeni] **.env Desteği**: `NOCTRA_PROMO_CODES_URL` değişkenini `.env` dosyasından otomatik yükleyen mekanizma eklendi.
+- [Geliştirme] **Localization**: Promosyon sistemi tüm dillerde (TR, EN, DE, ES, FR) tam çeviri desteğine kavuşturuldu.
+- [Yeni] **Dinamik Geri Bildirim**: Başarılı (Yeşil) ve Hatalı (Kırmızı) durum mesajları için `BooleanToSuccessWarningBrushConverter` eklendi.
+- [Geliştirme] **UX İyileştirmeleri**: 
+    - Giriş alanı boşken "Uygula" butonu otomatik pasif hale getirildi.
+    - Premium olmayan kullanıcılarda "Free sürüm aktif" gibi gereksiz durum metinleri gizlendi.
+    - Status mesajları `UserFriendlyErrorMessage` standartlarına uygun hale getirildi.
+
 ### 🛡️ Gelişmiş İzleme Koruması ve Rewatch Desteği (2026-05-12)
 - [Yeni] **Gelişmiş Koruma Kalkanı (Safety Net v2+)**: "Baştan Başla" seçeneği tıklandığında progress koruma penceresi 15 saniyeden **60 saniyeye** çıkarıldı. Bu sayede özellikle Free sürümde mecbur kalınan baştan başlatma aksiyonunda, yanlışlıkla veya kısa süreli girişlerde mevcut ilerlemenin silinmesi engellendi.
 - [Düzeltildi] **Akıllı Resume Mantığı**: "Continue" butonunun, bir bölüm bittikten sonra veya rewatch sırasında sürekli bir sonraki bölüme atlamasına neden olan "kalıcı tamamlandı" (Sticky Completed) hatası giderildi.

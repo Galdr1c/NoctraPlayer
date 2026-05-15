@@ -783,5 +783,12 @@
     "Player.Status.ReconnectingFormat": "Yeniden bağlanılıyor... ({0}/{1})",
     "Player.Status.Reconnecting": "Tekrar bağlanılıyor...",
     "Player.Warning.SlowConnection": "Bağlantı normalden uzun sürüyor...",
-    "Player.Warning.Unreachable": "Yayına erişilemiyor olabilir. Başka bir kanal deneyin."
+    "Player.Warning.Unreachable": "Yayına erişilemiyor olabilir. Başka bir kanal deneyin.",
+    "GlobalSettings.Promo.Title": "Promosyon Kodu",
+    "GlobalSettings.Promo.Description": "Elinde promosyon kodu mu var? Kodu gir ve Premium özelliklerin tadını çıkar!",
+    "GlobalSettings.Promo.Apply": "Kodu Kullan",
+    "GlobalSettings.Promo.Placeholder": "Kodu buraya yapıştır...",
+    "GlobalSettings.Promo.Status.Free": "Free sürüm aktif",
+    "GlobalSettings.Promo.Status.Premium": "Premium aktif",
+    "GlobalSettings.Promo.Status.PremiumFormat": "Premium {0} tarihine kadar aktif"
 }

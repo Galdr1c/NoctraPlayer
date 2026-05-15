@@ -46,12 +46,17 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     public bool IsIdle => !IsUpdateAvailable && !IsCheckingUpdates;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ApplyPromoCodeCommand))]
     private string _promoCodeInput = string.Empty;
 
     [ObservableProperty]
     private string _promoCodeStatus = string.Empty;
 
     [ObservableProperty]
+    private bool _isPromoCodeStatusSuccess;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ApplyPromoCodeCommand))]
     private bool _isApplyingPromoCode;
 
     [ObservableProperty]
@@ -164,13 +169,16 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         {
             if (!_licenseService.IsPremium)
             {
-                return "Free sürüm aktif";
+                return string.Empty;
             }
 
             var expiresAt = _licenseService.PromoPremiumExpiresAtUtc;
-            return expiresAt.HasValue
-                ? $"Premium {expiresAt.Value.ToLocalTime():dd.MM.yyyy HH:mm} tarihine kadar aktif"
-                : "Premium aktif";
+            if (expiresAt.HasValue)
+            {
+                return string.Format(_localizationService.GetString("GlobalSettings.Promo.Status.PremiumFormat"), expiresAt.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm"));
+            }
+
+            return _localizationService.GetString("GlobalSettings.Promo.Status.Premium");
         }
     }
 
@@ -197,6 +205,7 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsPremium));
         OnPropertyChanged(nameof(PremiumStatusText));
         PromoCodeStatus = PremiumStatusText;
+        IsPromoCodeStatusSuccess = IsPremium;
     }
 
     private void LoadSettings()
@@ -265,7 +274,9 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         await _dialogService.ShowUpsellAsync();
     }
 
-    [RelayCommand]
+    private bool CanApplyPromoCode => !IsApplyingPromoCode && !string.IsNullOrWhiteSpace(PromoCodeInput);
+
+    [RelayCommand(CanExecute = nameof(CanApplyPromoCode))]
     private async Task ApplyPromoCodeAsync()
     {
         if (IsApplyingPromoCode)
@@ -278,6 +289,7 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         {
             var result = await _licenseService.ApplyPromoCodeAsync(PromoCodeInput);
             PromoCodeStatus = result.Message;
+            IsPromoCodeStatusSuccess = result.Success;
             if (result.Success)
             {
                 PromoCodeInput = string.Empty;
@@ -288,6 +300,7 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             PromoCodeStatus = $"Promosyon kodu uygulanamadı: {ex.Message}";
+            IsPromoCodeStatusSuccess = false;
         }
         finally
         {

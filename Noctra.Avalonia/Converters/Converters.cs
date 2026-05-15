@@ -1422,3 +1422,22 @@ public class StringFormatConverter : IValueConverter
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => null;
 }
+
+public class BooleanToSuccessWarningBrushConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var isSuccess = value is bool b && b;
+        var resourceKey = isSuccess ? "SuccessBrush" : "WarningBrush";
+
+        if (Application.Current?.TryGetResource(resourceKey, out var resource) == true && resource is IBrush brush)
+        {
+            return brush;
+        }
+
+        return isSuccess ? Brushes.Green : Brushes.Red;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => null;
+}

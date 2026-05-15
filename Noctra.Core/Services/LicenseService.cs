@@ -12,6 +12,42 @@ namespace Noctra.Services;
 /// </summary>
 public class LicenseService : ObservableObject, ILicenseService
 {
+    static LicenseService()
+    {
+        LoadDotEnv();
+    }
+
+    private static void LoadDotEnv()
+    {
+        try
+        {
+            var root = AppContext.BaseDirectory;
+            while (!string.IsNullOrEmpty(root) && !File.Exists(Path.Combine(root, ".env")) && !File.Exists(Path.Combine(root, "Noctra.sln")))
+            {
+                root = Path.GetDirectoryName(root);
+            }
+
+            var envPath = Path.Combine(root ?? string.Empty, ".env");
+            if (File.Exists(envPath))
+            {
+                foreach (var line in File.ReadAllLines(envPath))
+                {
+                    var parts = line.Split('=', 2, StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length == 2)
+                    {
+                        var key = parts[0].Trim();
+                        var value = parts[1].Trim();
+                        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(key)))
+                        {
+                            Environment.SetEnvironmentVariable(key, value);
+                        }
+                    }
+                }
+            }
+        }
+        catch { /* Silently fail */ }
+    }
+
     private SubscriptionInfo _currentSubscription = new();
     private readonly IAppEditionService _appEditionService;
     private readonly ISettingsService _settingsService;
@@ -24,16 +60,8 @@ public class LicenseService : ObservableObject, ILicenseService
     /// Beklenen JSON:
     /// { "codes": [ { "code": "NOC-8KQ2-MP7A", "durationDays": 7, "isActive": true } ] }
     /// </summary>
-    private const string DefaultRemotePromoCodesUrl = "";
+    private const string DefaultRemotePromoCodesUrl = "https://gist.githubusercontent.com/Galdr1c/da2f7dde1641623bf62e78c414fdd54c/raw/noctra_promo_codes.json";
 
-    /// <summary>
-    /// Developer: Yerel/fallback promosyon kodları. İstersen süreleri buradan değiştirebilirsin.
-    /// </summary>
-    private static readonly IReadOnlyList<PromoCodeDefinition> DeveloperPromoCodes = new[]
-    {
-        new PromoCodeDefinition { Code = "NOC-8KQ2-MP7A", DurationDays = 7, IsActive = true, Description = "7 günlük Premium" },
-        new PromoCodeDefinition { Code = "NOC-T4Z9-P6XD", DurationDays = 30, IsActive = true, Description = "30 günlük Premium" }
-    };
 
     private static readonly JsonSerializerOptions PromoJsonOptions = new()
     {
@@ -220,11 +248,11 @@ public class LicenseService : ObservableObject, ILicenseService
             }
             catch
             {
-                // Uzak yapılandırma okunamazsa yerel/fallback kodlar devreye girer.
+                // Uzak yapılandırma okunamazsa boş liste döner.
             }
         }
 
-        return DeveloperPromoCodes;
+        return new List<PromoCodeDefinition>();
     }
 
     private static List<PromoCodeDefinition> ParsePromoCodeJson(string json)
@@ -250,12 +278,6 @@ public class LicenseService : ObservableObject, ILicenseService
         if (!string.IsNullOrWhiteSpace(envUrl))
         {
             return envUrl.Trim();
-        }
-
-        var settingsUrl = _settingsService.Settings.PromoCodeConfigUrl;
-        if (!string.IsNullOrWhiteSpace(settingsUrl))
-        {
-            return settingsUrl.Trim();
         }
 
         return DefaultRemotePromoCodesUrl;

@@ -784,5 +784,12 @@
     "Player.Status.Reconnecting": "Reconnecting...",
     "Player.Warning.SlowConnection": "Connection is taking longer than usual...",
     "Player.Warning.Unreachable": "Stream might be unreachable. Try another channel.",
+    "GlobalSettings.Promo.Title": "Promotion Code",
+    "GlobalSettings.Promo.Description": "Do you have a promotion code? Enter the code and enjoy Premium features!",
+    "GlobalSettings.Promo.Apply": "Apply Code",
+    "GlobalSettings.Promo.Placeholder": "Paste code here...",
+    "GlobalSettings.Promo.Status.Free": "Free version active",
+    "GlobalSettings.Promo.Status.Premium": "Premium active",
+    "GlobalSettings.Promo.Status.PremiumFormat": "Premium active until {0}",
     "Localization.Tests.FallbackEnglishOnly": "__EN_FALLBACK_ONLY__"
 }

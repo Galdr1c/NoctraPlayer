@@ -587,7 +587,7 @@
                     </Panel>
 
                     
-                            <!-- Promo Code Section in Appearance -->
+                            <!-- Global Promo Code Section -->
                             <Border Padding="20,16" Margin="0,0,0,16" CornerRadius="12">
                                 <Border.Background>
                                     <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
@@ -612,14 +612,14 @@
                                                 <Border Background="{DynamicResource AccentBrush}" Opacity="0.9" Padding="6" CornerRadius="8">
                                                     <materialIcons:MaterialIcon Kind="GiftOutline" Width="20" Height="20" Foreground="White"/>
                                                 </Border>
-                                                <TextBlock Text="Promosyon Kodu" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{loc:Translate GlobalSettings.Promo.Title}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                                             </StackPanel>
-                                            <TextBlock Text="Elinde promosyon kodu mu var? Kodu gir ve Premium özelliklerin tadını çıkar!" 
+                                            <TextBlock Text="{loc:Translate GlobalSettings.Promo.Description}" 
                                                        FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20"/>
                                             
                                             <Grid ColumnDefinitions="*,Auto">
                                                 <TextBox Text="{Binding PromoCodeInput, Mode=TwoWay}" 
-                                                         Watermark="Kodu buraya yapıştır... Örn: NOC-8KQ2-MP7A" 
+                                                         Watermark="{loc:Translate GlobalSettings.Promo.Placeholder}" 
                                                          Padding="16,12"
                                                          CornerRadius="10"
                                                          BorderThickness="1"
@@ -630,7 +630,6 @@
                                                          LetterSpacing="1"/>
                                                 <Button Grid.Column="1"
                                                         Command="{Binding ApplyPromoCodeCommand}"
-                                                        IsEnabled="{Binding !IsApplyingPromoCode}"
                                                         Background="{DynamicResource AccentBrush}"
                                                         Foreground="White"
                                                         CornerRadius="10"
@@ -641,7 +640,7 @@
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                                         <materialIcons:MaterialIcon Kind="AutoAwesome" Width="18" Height="18" IsVisible="{Binding !IsApplyingPromoCode}"/>
                                                         <materialIcons:MaterialIcon Kind="Refresh" Width="18" Height="18" Classes="Rotating" IsVisible="{Binding IsApplyingPromoCode}"/>
-                                                        <TextBlock Text="Kodu Kullan" FontWeight="Bold" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{loc:Translate GlobalSettings.Promo.Apply}" FontWeight="Bold" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Button>
                                             </Grid>
@@ -650,7 +649,7 @@
                                             <StackPanel Margin="0,12,0,0" Spacing="4">
                                                 <TextBlock Text="{Binding PromoCodeStatus}" 
                                                            FontSize="13" FontWeight="Bold" 
-                                                           Foreground="{DynamicResource AccentBrush}" 
+                                                           Foreground="{Binding IsPromoCodeStatusSuccess, Converter={StaticResource BooleanToSuccessWarningBrushConverter}}"
                                                            TextWrapping="Wrap"
                                                            IsVisible="{Binding PromoCodeStatus, Converter={StaticResource StringToVisibilityConverter}}"/>
                                                 <TextBlock Text="{Binding PremiumStatusText}" 

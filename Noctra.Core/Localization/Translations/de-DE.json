@@ -783,5 +783,12 @@
     "Player.Status.ReconnectingFormat": "Verbindung wird wiederhergestellt... ({0}/{1})",
     "Player.Status.Reconnecting": "Verbindung wird wiederhergestellt...",
     "Player.Warning.SlowConnection": "Die Verbindung dauert länger als gewöhnlich...",
-    "Player.Warning.Unreachable": "Der Stream ist möglicherweise nicht erreichbar. Versuchen Sie einen anderen Kanal."
+    "Player.Warning.Unreachable": "Der Stream ist möglicherweise nicht erreichbar. Versuchen Sie einen anderen Kanal.",
+    "GlobalSettings.Promo.Title": "Aktionscode",
+    "GlobalSettings.Promo.Description": "Hast du einen Aktionscode? Gib den Code ein und genieße die Premium-Funktionen!",
+    "GlobalSettings.Promo.Apply": "Code anwenden",
+    "GlobalSettings.Promo.Placeholder": "Code hier einfügen...",
+    "GlobalSettings.Promo.Status.Free": "Kostenlose Version aktiv",
+    "GlobalSettings.Promo.Status.Premium": "Premium aktiv",
+    "GlobalSettings.Promo.Status.PremiumFormat": "Premium aktiv bis {0}"
 }
