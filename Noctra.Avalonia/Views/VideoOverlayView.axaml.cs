@@ -17,6 +17,8 @@ public partial class VideoOverlayView : UserControl
         AvaloniaProperty.Register<VideoOverlayView, bool>(nameof(IsVolumeToastVisible));
     public static readonly StyledProperty<bool> IsSeekToastVisibleProperty =
         AvaloniaProperty.Register<VideoOverlayView, bool>(nameof(IsSeekToastVisible));
+    public static readonly StyledProperty<bool> IsDownloadToastVisibleProperty =
+        AvaloniaProperty.Register<VideoOverlayView, bool>(nameof(IsDownloadToastVisible));
     public static readonly StyledProperty<string> SeekToastTextProperty =
         AvaloniaProperty.Register<VideoOverlayView, string>(nameof(SeekToastText), "+0:10");
 
@@ -25,6 +27,7 @@ public partial class VideoOverlayView : UserControl
 
     private readonly DispatcherTimer _volumeToastTimer;
     private readonly DispatcherTimer _seekToastTimer;
+    private readonly DispatcherTimer _downloadToastTimer;
     private PlayerViewModel? _playerViewModel;
     private bool _isTimelinePointerDown;
     private bool _isCommittingSeek;
@@ -39,6 +42,12 @@ public partial class VideoOverlayView : UserControl
     {
         get => GetValue(IsSeekToastVisibleProperty);
         set => SetValue(IsSeekToastVisibleProperty, value);
+    }
+
+    public bool IsDownloadToastVisible
+    {
+        get => GetValue(IsDownloadToastVisibleProperty);
+        set => SetValue(IsDownloadToastVisibleProperty, value);
     }
 
     public string SeekToastText
@@ -69,6 +78,16 @@ public partial class VideoOverlayView : UserControl
         {
             IsSeekToastVisible = false;
             _seekToastTimer.Stop();
+        };
+
+        _downloadToastTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(3000)
+        };
+        _downloadToastTimer.Tick += (_, _) =>
+        {
+            IsDownloadToastVisible = false;
+            _downloadToastTimer.Stop();
         };
     }
 
@@ -345,6 +364,14 @@ public partial class VideoOverlayView : UserControl
         {
             UpdateOverlayCursor(_playerViewModel?.IsVisible == true);
         }
+
+        if (e.PropertyName == nameof(PlayerViewModel.DownloadStatusMessage))
+        {
+            if (!string.IsNullOrEmpty(_playerViewModel?.DownloadStatusMessage))
+            {
+                ShowDownloadToast();
+            }
+        }
     }
 
     private void ShowVolumeToast()
@@ -370,6 +397,14 @@ public partial class VideoOverlayView : UserControl
         IsSeekToastVisible = true;
         _seekToastTimer.Stop();
         _seekToastTimer.Start();
+    }
+
+    private void ShowDownloadToast()
+    {
+        _playerViewModel?.LogDebug($"UI State: Download Toast visible ({_playerViewModel?.DownloadStatusMessage})");
+        IsDownloadToastVisible = true;
+        _downloadToastTimer.Stop();
+        _downloadToastTimer.Start();
     }
 
     private void AudioTrack_Click(object? sender, RoutedEventArgs e)

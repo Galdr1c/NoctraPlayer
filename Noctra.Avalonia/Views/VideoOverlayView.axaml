@@ -18,7 +18,7 @@
              PointerMoved="OverlayRoot_PointerMoved"
              PointerPressed="OverlayRoot_PointerPressed"
              PointerWheelChanged="OverlayRoot_PointerWheelChanged">
-
+    
     <UserControl.Styles>
         <Style Selector="Button.iconBtn">
             <Setter Property="Cursor" Value="Hand"/>
@@ -35,7 +35,7 @@
             </Setter>
         </Style>
         <Style Selector="Button.iconBtn:pointerover">
-            <Setter Property="Background" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Background" Value="#26FFFFFF"/>
             <Setter Property="Opacity" Value="1"/>
         </Style>
         <Style Selector="Button.iconBtn:pressed">
@@ -189,6 +189,8 @@
     </UserControl.Styles>
 
     <Grid Background="Transparent">
+        <ThemeVariantScope RequestedThemeVariant="Dark">
+            <Grid>
 
         <!-- OVERLAY CONTENT -->
         <Grid x:Name="OverlayContent"
@@ -880,6 +882,14 @@
             </StackPanel>
         </Border>
 
+        <Border x:Name="DownloadToast" Background="#CC000000" CornerRadius="12" Padding="20,12" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,220" IsHitTestVisible="False" ZIndex="1100" IsVisible="{Binding $parent[UserControl].IsDownloadToastVisible}" Opacity="{Binding $parent[UserControl].IsDownloadToastVisible, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=OpacityOnly}">
+            <Border.Transitions><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.2"/></Transitions></Border.Transitions>
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <materialIcons:MaterialIcon Kind="Download" Width="22" Height="22" Foreground="{DynamicResource AccentBrush}"/>
+                <TextBlock Text="{Binding DownloadStatusMessage}" FontSize="16" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
         <!-- Buffering Overlay -->
         <Border Background="#4D000000" IsVisible="{Binding IsBuffering}" IsHitTestVisible="False" ZIndex="950">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
@@ -919,5 +929,7 @@
                 <TextBlock Text="{Binding PlayerLoadingWarningMessage}" Foreground="{DynamicResource WarningBrush}" FontSize="13" HorizontalAlignment="Center" TextWrapping="Wrap" MaxWidth="350" TextAlignment="Center" Margin="0,12,0,0" IsVisible="{Binding PlayerLoadingWarningMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
             </StackPanel>
         </Border>
+            </Grid>
+        </ThemeVariantScope>
     </Grid>
 </UserControl>
