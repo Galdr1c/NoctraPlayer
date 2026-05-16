@@ -45,7 +45,10 @@ public class LicenseService : ObservableObject, ILicenseService
                 }
             }
         }
-        catch { /* Silently fail */ }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load .env file: {ex.Message}");
+        }
     }
 
     private SubscriptionInfo _currentSubscription = new();
@@ -60,7 +63,7 @@ public class LicenseService : ObservableObject, ILicenseService
     /// Beklenen JSON:
     /// { "codes": [ { "code": "NOC-8KQ2-MP7A", "durationDays": 7, "isActive": true } ] }
     /// </summary>
-    private const string DefaultRemotePromoCodesUrl = "https://gist.githubusercontent.com/Galdr1c/da2f7dde1641623bf62e78c414fdd54c/raw/noctra_promo_codes.json";
+    private const string DefaultRemotePromoCodesUrl = "";
 
 
     private static readonly JsonSerializerOptions PromoJsonOptions = new()

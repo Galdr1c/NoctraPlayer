@@ -62,7 +62,6 @@
     <Content Include="Assets\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <None Include="..\.env" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\.env')" />
   </ItemGroup>
 
 </Project>
