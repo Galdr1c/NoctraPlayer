@@ -7,6 +7,13 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 
 ## [Unreleased]
+
+### İzleme Koruması Safety Net v3 ve Resume Dialog Kararlılığı (2026-05-18)
+- [Düzeltildi] **Baştan Başla Sonrası Progress Silinmesi (Safety Net v3)**: _isStartingOver durumunda kullanıcı eski _oldResumePosition değerine ulaşana kadar hiçbir progress kaydedilmiyor. FlushWatchHistoryAsync'e Safety Net v3 koruması eklendi.
+- [Düzeltildi] **Devam Et Sonrası Bağlantı Hatasında Progress Silinmesi (Safety Net v3)**: force=true && !IsPlaying && position < 2s && session < 5s koşulunda near-zero save tamamen atlanıyor.
+- [Düzeltildi] **Resume Dialog Pozisyon Metninin Bazen Boş Görünmesi**: MainWindow.axaml.cs constructor'ında ResumeDialog.DataContext = _playerViewModel ile DataContext senkron atanarak çözüldü. Dialog kapanış metodlarında ResumePositionText sıfırlanıyor.
+- [Geliştirme] **State Sızıntısı Önlemi**: PrepareForContentLoading'de _isStartingOver, _oldResumePosition ve _sessionPlaybackStartTimeUtc sıfırlanıyor.
+- [Değişti] **allowReset Devre Dışı**: FlushWatchHistoryAsync'de allowReset her zaman false.
 ### 🧩 PlayerViewModel Dekompozisyonu (God Class Refactoring) ve Test Uyumlaştırması (2026-05-17)
 - [Refactor] **PlayerViewModel Dekompozisyonu (God Class Refactoring)**:
     - 3500+ satırlık devasa `PlayerViewModel` sınıfı, Tek Sorumluluk Prensibi (Single Responsibility Principle) ve temiz kod standartları doğrultusunda 6 ayrı alt katmana/alt bileşene bölünerek dekompoze edildi:

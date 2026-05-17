@@ -472,6 +472,28 @@ public class PlayerEpisodeNavigator
                 ? 0 
                 : (DateTime.UtcNow - _vm._sessionPlaybackStartTimeUtc).TotalSeconds;
 
+            // ── Sorun 2 Koruması: Başarısız resume sonrası near-zero save'i engelle ──
+            // Kullanıcı "Devam Et" dediğinde stream yüklenmezse Position ~0 olur.
+            // force=true ile yapılan Stop() çağrısı bu 0 değerini veritabanına yazarak
+            // eski ilerlemeyi silerdi. Bu guard, sadece force modunda ve oynatma hiç
+            // başlamamışsa kaydı tamamen atlar.
+            if (force && !_vm.IsPlaying && currentPosition.TotalSeconds < 2 && sessionDurationSeconds < 5)
+            {
+                _vm.LogDebug($"FlushWatchHistoryAsync: Force-skip near-zero save (playback never started). Session: {sessionDurationSeconds:F1}s, Pos: {currentPosition.TotalSeconds:F1}s");
+                return;
+            }
+
+            // ── Sorun 1 Koruması: Baştan Başla durumunda eski progress'i koru ──
+            // Kullanıcı "Baştan Başla" dediğinde _isStartingOver=true olur.
+            // Eski _oldResumePosition değerine ulaşana kadar yeni progress
+            // kaydedilmez. Bu sayede eski kaldığı nokta korunur, kullanıcı
+            // yanlışlıkla bastıysa veya kısa süreli giriş yaptıysa progress kaybolmaz.
+            if (_vm._isStartingOver && _vm._oldResumePosition > 0 && currentPosition.TotalSeconds < _vm._oldResumePosition)
+            {
+                _vm.LogDebug($"FlushWatchHistoryAsync: Safety Net v3 (StartOver). Preserving old position {_vm._oldResumePosition:F1}s, current: {currentPosition.TotalSeconds:F1}s, session: {sessionDurationSeconds:F1}s");
+                return;
+            }
+
             var safetyThreshold = _vm._isStartingOver ? 60 : 15;
 
             if (currentPosition.TotalSeconds < safetyThreshold && sessionDurationSeconds < safetyThreshold)
@@ -488,7 +510,11 @@ public class PlayerEpisodeNavigator
                 isCompleted,
                 currentDuration,
                 incrementDelta,
-                _vm._isStartingOver
+                /* allowReset: false - Baştan Başla durumunda eski completed
+                 * durumunu korumak için allowReset asla true olmamalı.       
+                 * Eski mekanizma _isStartingOver'i allowReset olarak geçiyordu,
+                 * bu da eski tamamlanma durumunu sıfırlıyordu.                 */
+                allowReset: false
             );
 
             if (isEpisodePlayback && _vm.CurrentEpisode != null)

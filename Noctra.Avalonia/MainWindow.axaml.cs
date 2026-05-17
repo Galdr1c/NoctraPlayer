@@ -58,6 +58,7 @@ public partial class MainWindow : Window
 
         PlayerOverlayLayer.DataContext = _playerViewModel;
         OverlayControl.DataContext = _playerViewModel;
+        ResumeDialog.DataContext = _playerViewModel;
         NextEpisodePrompt.DataContext = _playerViewModel;
         PiPCentralControls.DataContext = _playerViewModel;
         PiPBottomControls.DataContext = _playerViewModel;

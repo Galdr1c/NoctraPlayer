@@ -677,6 +677,12 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         
         PlayerLoadingWarningMessage = string.Empty;
 
+        // Yeni içerik yüklenirken eski state sızıntısını önle
+        _isStartingOver = false;
+        _oldResumePosition = 0;
+        ResumePositionText = string.Empty;
+        _sessionPlaybackStartTimeUtc = DateTime.MinValue;
+
         OnPropertyChanged(nameof(IsBufferShieldVisible));
     }
 
@@ -925,6 +931,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     public Task<bool> ShowResumeDialogAsync(double positionSeconds)
     {
+        _oldResumePosition = positionSeconds;
         ResumePositionText = TimeSpan.FromSeconds(positionSeconds).ToString(@"hh\:mm\:ss");
         IsPremiumResume = _licenseService.IsFeatureAvailable("resume_playback");
         IsResumeDialogVisible = true;
@@ -946,9 +953,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             _resumeDialogTcs?.TrySetCanceled();
             _resumeDialogTcs = null;
         }
+        ResumePositionText = string.Empty;
     }
 
     internal bool _isStartingOver;
+    internal double _oldResumePosition;
 
     [RelayCommand]
     private void ResumeFromPosition()
@@ -957,6 +966,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         IsResumeDialogVisible = false;
         _resumeDialogTcs?.TrySetResult(true);
         _resumeDialogTcs = null;
+        ResumePositionText = string.Empty;
     }
 
     [RelayCommand]
@@ -966,6 +976,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         IsResumeDialogVisible = false;
         _resumeDialogTcs?.TrySetResult(false);
         _resumeDialogTcs = null;
+        ResumePositionText = string.Empty;
     }
 
     // ── Property / State Changed Interceptions ──────────────────────────────
