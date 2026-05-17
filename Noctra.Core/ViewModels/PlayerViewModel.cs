@@ -660,6 +660,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _pendingResumeSeekAttempts = 0;
         _lastPausedPosition = 0;
         _lastPausedTimeMs = 0;
+        _lastSeekTargetMs = -1;
         _prematureEndRecoveryCount = 0;
         _isIntentionallyPaused = false;
         _lastPrematureEndRecoveryUtc = DateTime.MinValue;

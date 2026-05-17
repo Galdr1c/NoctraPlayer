@@ -8,6 +8,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### 🐛 Seek Slider Tıklama ve Regresyon Düzeltmesi (2026-05-19)
+- [Düzeltildi] **Seek Slider Thumb'ına Tıklayınca Videonun Donup Tekrar Başlaması (Gereksiz HardSeek)**: Slider thumb'ının olduğu yere tıklandığında Seek(Position) VLC'ye gereksiz seek gönderiyor, HTTP akışlarında HardSeekAsync (Stop+500ms+re-open) tetikleniyordu. PlayerPlaybackController.Seek() metoduna _lastKnownValidPosition (VLC'den gelen gerçek pozisyon) bazlı 0.5 saniyelik tolerans koruması eklendi.
+- [Düzeltildi] **Seek Slider'ın Hiçbir Yere Gitmemesi (Regresyon)**: İlk fix'te _vm.Position kullanıldığı için Slider'ın iki yönlü binding'i (Value="{Binding Position}") sebebiyle tüm seek'ler engelleniyordu. Karşılaştırma _vm._lastKnownValidPosition ile yapılacak şekilde düzeltildi.
+- [Geliştirme] **State Sızıntısı Önlemi**: PrepareForContentLoading'de _lastSeekTargetMs = -1 sıfırlanarak yeni içerik yüklenirken eski seek state'inin sızması engellendi.
+
 ### İzleme Koruması Safety Net v3 ve Resume Dialog Kararlılığı (2026-05-18)
 - [Düzeltildi] **Baştan Başla Sonrası Progress Silinmesi (Safety Net v3)**: _isStartingOver durumunda kullanıcı eski _oldResumePosition değerine ulaşana kadar hiçbir progress kaydedilmiyor. FlushWatchHistoryAsync'e Safety Net v3 koruması eklendi.
 - [Düzeltildi] **Devam Et Sonrası Bağlantı Hatasında Progress Silinmesi (Safety Net v3)**: force=true && !IsPlaying && position < 2s && session < 5s koşulunda near-zero save tamamen atlanıyor.

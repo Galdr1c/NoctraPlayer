@@ -696,8 +696,22 @@ public class PlayerPlaybackController
             return;
 
         if (_vm.IsLiveContent) return;
-        EnableSeekBufferShieldSuppression();
+
         var clamped = ClampSeekPosition(position);
+
+        // NOT: _vm.Position KULLANILMIYOR çünkü Slider'ın iki yönlü binding'i
+        // (Value="{Binding Position}") tıklama anında _vm.Position'u zaten
+        // tıklanan değere günceller. Bu yüzden karşılaştırma için VLC'den
+        // gelen son gerçek pozisyon olan _lastKnownValidPosition kullanılır.
+        // Eğer tıklanan pozisyon mevcut oynatma pozisyonuyla aynıysa
+        // (ör. slider thumb'ına tıklandığında) gereksiz seek'i atla.
+        if (Math.Abs(clamped - _vm._lastKnownValidPosition) < 0.5)
+        {
+            _vm.LogDebug($"Seek: Skipping seek, position effectively unchanged ({clamped:F1}s ≈ {_vm._lastKnownValidPosition:F1}s)");
+            return;
+        }
+
+        EnableSeekBufferShieldSuppression();
         ResetSkipSeekCarry();
         ResetSkipOverlayAggregation();
         _vm.Position = clamped;
