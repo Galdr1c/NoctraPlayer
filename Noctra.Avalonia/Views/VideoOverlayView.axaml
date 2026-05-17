@@ -241,7 +241,7 @@
             </Grid>
 
             <!-- 3. Bottom Control Bar -->
-            <Border VerticalAlignment="Bottom" Padding="32,80,32,32">
+            <Border VerticalAlignment="Bottom" Padding="32,80,32,32" CornerRadius="12">
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
                         <GradientStop Color="#00000000" Offset="0.0"/>
@@ -260,12 +260,12 @@
                                 PointerMoved="TimelineSlider_PointerMoved"
                                 PointerEntered="TimelineSlider_PointerEntered"
                                 PointerExited="TimelineSlider_PointerExited"
-                                Height="32" Padding="0"/>
+                                Padding="0"/>       
                         
                         <Popup x:Name="HoverTimePopup" IsOpen="False" IsHitTestVisible="False"
                                PlacementTarget="{Binding #TimelineSlider}"
-                               Placement="Top" VerticalOffset="-4">
-                            <Border Background="#E6000000" CornerRadius="4" Padding="10,5" BorderBrush="#33FFFFFF" BorderThickness="1">
+                               Placement="Top">
+                            <Border Background="#E6000000" CornerRadius="4" Padding="10,5">
                                 <TextBlock x:Name="HoverTimeText" Foreground="White" FontSize="11" FontWeight="Bold"/>
                             </Border>
                         </Popup>
