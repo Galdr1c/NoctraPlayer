@@ -31,6 +31,10 @@ public class PlayerPlaybackController
                 _vm.UpdateMediaInfo();
                 _ = _vm.RefreshTracksWithRetryAsync();
                 _vm.RestartAutoHideTimer();
+
+                // Resume seek: VLC seek tamamlandıysa pending flag'i temizle
+                // Böylece OnVideoPlayerServicePositionChanged pozisyon güncellemelerini bloke etmeyi bırakır
+                TryApplyPendingResumeSeek();
             }
         });
     }
@@ -89,8 +93,22 @@ public class PlayerPlaybackController
 
             if (_vm._pendingResumeSeekPosition > 1)
             {
-                // Resume seek bekleniyor, eski pozisyonları yoksay
-                return;
+                // Resume seek bekleniyor, eski pozisyonları yoksay.
+                // Ama VLC zaten hedef pozisyona yaklaştıysa blokajı kaldır.
+                // Bu, TryApplyPendingResumeSeek'in PlayingChanged ile tetiklenemediği
+                // durumlar (örneğin VLC seek bittiğinde PlayingChanged ikinci kez ateşlenmezse)
+                // için bir safety net görevi görür.
+                if (Math.Abs(pos - _vm._pendingResumeSeekPosition) <= 3.0)
+                {
+                    _vm.LogDebug($"PositionChanged: Resume seek settled at {pos:F1}s (target: {_vm._pendingResumeSeekPosition:F1}s). Clearing pending flag.");
+                    _vm._pendingResumeSeekPosition = 0;
+                    _vm._pendingResumeSeekAttempts = 0;
+                    // Fall through — bu pozisyon güncellemesini uygula
+                }
+                else
+                {
+                    return;
+                }
             }
 
             _vm.Position = pos;
