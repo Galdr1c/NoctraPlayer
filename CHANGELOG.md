@@ -7,6 +7,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 
 ## [Unreleased]
+### 🐛 Volume Toast Spam, ToggleMute Double-Fire ve Stop Sonrası Seek Koruması (2026-05-19)
+- [Düzeltildi] **Volume Toast Log Spam (Binding Loop + Throttle)**: ShowVolumeToast() 400ms throttle ile korundu. Slider sürükleme veya tuş tekrarı sonucu saniyede 80+ toast log'u basılması engellendi.
+- [Düzeltildi] **ToggleMute Çift Tetiklenme (Double-Fire)**: MainWindow_KeyDown (Tunnel) ve OverlayRoot_KeyDown (Bubble) ikisi de Key.M için ToggleMuteCommand çağırıyordu. OverlayRoot_KeyDown'a e.Handled kontrolü eklenerek M tuşuna her basışta mute'in iki kez toggle edilmesi engellendi.
+- [Düzeltildi] **Stop Sonrası Ölü Seek Çağrıları**: Seek() metoduna CurrentChannel == null guard'ı eklendi. Player durdurulduktan sonra gecikmeli seek komutlarının HardSeekAsync tetiklemesi engellendi.
 
 ### 🐛 Seek Slider Tıklama ve Regresyon Düzeltmesi (2026-05-19)
 - [Düzeltildi] **Seek Slider Thumb'ına Tıklayınca Videonun Donup Tekrar Başlaması (Gereksiz HardSeek)**: Slider thumb'ının olduğu yere tıklandığında Seek(Position) VLC'ye gereksiz seek gönderiyor, HTTP akışlarında HardSeekAsync (Stop+500ms+re-open) tetikleniyordu. PlayerPlaybackController.Seek() metoduna _lastKnownValidPosition (VLC'den gelen gerçek pozisyon) bazlı 0.5 saniyelik tolerans koruması eklendi.

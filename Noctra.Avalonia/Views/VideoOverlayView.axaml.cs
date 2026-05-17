@@ -280,7 +280,8 @@ public partial class VideoOverlayView : UserControl
 
     private void OverlayRoot_KeyDown(object? sender, KeyEventArgs e)
     {
-        if (_playerViewModel == null)
+        // MainWindow_KeyDown (Tunnel) zaten işlediyse tekrar işleme
+        if (e.Handled || _playerViewModel == null)
         {
             return;
         }
@@ -347,6 +348,23 @@ public partial class VideoOverlayView : UserControl
         }
     }
     private bool _isInitialVolumeSet;
+    private DateTime _lastVolumeToastShownUtc = DateTime.MinValue;
+    private static readonly TimeSpan VolumeToastThrottleInterval = TimeSpan.FromMilliseconds(400);
+
+    private void ShowVolumeToast()
+    {
+        var now = DateTime.UtcNow;
+        if (now - _lastVolumeToastShownUtc < VolumeToastThrottleInterval)
+        {
+            return;
+        }
+        _lastVolumeToastShownUtc = now;
+
+        _playerViewModel?.LogDebug("UI State: Volume Toast visible");
+        IsVolumeToastVisible = true;
+        _volumeToastTimer.Stop();
+        _volumeToastTimer.Start();
+    }
 
     private void PlayerViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
@@ -374,13 +392,7 @@ public partial class VideoOverlayView : UserControl
         }
     }
 
-    private void ShowVolumeToast()
-    {
-        _playerViewModel?.LogDebug("UI State: Volume Toast visible");
-        IsVolumeToastVisible = true;
-        _volumeToastTimer.Stop();
-        _volumeToastTimer.Start();
-    }
+
 
     private void PlayerViewModel_SkipOverlayRequested(object? sender, PlayerViewModel.SkipOverlayEventArgs e)
     {

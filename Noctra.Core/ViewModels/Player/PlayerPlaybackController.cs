@@ -692,6 +692,9 @@ public class PlayerPlaybackController
         _vm.LogDebug($"Seek invoked with value: {position}");
         _vm._isUserSeeking = false;
 
+        // Stop sonrası ölü seek'leri engelle
+        if (_vm.CurrentChannel == null) return;
+
         if (Interlocked.CompareExchange(ref _vm._recoveryState, 0, 0) != 0)
             return;
 
