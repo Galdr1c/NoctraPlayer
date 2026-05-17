@@ -12,6 +12,13 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - [Düzeltildi] **ToggleMute Çift Tetiklenme (Double-Fire)**: MainWindow_KeyDown (Tunnel) ve OverlayRoot_KeyDown (Bubble) ikisi de Key.M için ToggleMuteCommand çağırıyordu. OverlayRoot_KeyDown'a e.Handled kontrolü eklenerek M tuşuna her basışta mute'in iki kez toggle edilmesi engellendi.
 - [Düzeltildi] **Stop Sonrası Ölü Seek Çağrıları**: Seek() metoduna CurrentChannel == null guard'ı eklendi. Player durdurulduktan sonra gecikmeli seek komutlarının HardSeekAsync tetiklemesi engellendi.
 
+### 💪 Child Mode Sistemi İyileştirmeleri (2026-05-19)
+- [Düzeltildi] **IsOldContent Öncelik Hatası**: KidFriendlyTitles kontrolü IsOldContent'ten ÖNCE taşındı. Artık "Toy Story (1995)", "The Lion King (1994)" gibi bariz çocuk içerikleri yıl bazlı engellemeden (1900-2000) etkilenmiyor.
+- [Düzeltildi] **Blacklist'teki "man" ve "dublaj" Kaldırıldı**: "man" kelimesi Superman, Batman, Spiderman gibi çocuk içeriklerini engelliyordu. "dublaj" ise Türkçe dublajlı çocuk filmlerini bloke ediyordu.
+- [Düzeltildi] **TmdbSyncService Kanal Silme Mantığı Daraltıldı**: Güvensiz içerik tespitinde kanal silme artık GroupTitle bazlı değil, sadece aynı tipteki (Series/VOD) ve isim içeren kanalları hedef alıyor.
+- [Düzeltildi] **PurgeNonCompliantSeriesAsync Öncelik Sırası**: Seri temizleme mantığı ApplyChildFilter ile aynı hizaya getirildi - KidFriendlyTitles artık önce kontrol ediliyor.
+- [Test] **ChildSafetyFilteringTests Güncellendi**: Superman, Batman, Spiderman, Toy Story Dublaj gibi çocuk içeriklerinin güvenli kabul edildiği test senaryoları eklendi (22/22 test geçiyor).
+
 ### 🐛 Seek Slider Tıklama ve Regresyon Düzeltmesi (2026-05-19)
 - [Düzeltildi] **Seek Slider Thumb'ına Tıklayınca Videonun Donup Tekrar Başlaması (Gereksiz HardSeek)**: Slider thumb'ının olduğu yere tıklandığında Seek(Position) VLC'ye gereksiz seek gönderiyor, HTTP akışlarında HardSeekAsync (Stop+500ms+re-open) tetikleniyordu. PlayerPlaybackController.Seek() metoduna _lastKnownValidPosition (VLC'den gelen gerçek pozisyon) bazlı 0.5 saniyelik tolerans koruması eklendi.
 - [Düzeltildi] **Seek Slider'ın Hiçbir Yere Gitmemesi (Regresyon)**: İlk fix'te _vm.Position kullanıldığı için Slider'ın iki yönlü binding'i (Value="{Binding Position}") sebebiyle tüm seek'ler engelleniyordu. Karşılaştırma _vm._lastKnownValidPosition ile yapılacak şekilde düzeltildi.

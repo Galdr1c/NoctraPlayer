@@ -293,10 +293,12 @@ public class TmdbSyncService : ITmdbSyncService
             {
                 _logger?.LogWarning("[TmdbSync] PURGING UNSAFE SERIES '{Name}' (Rating: {Rating}) from child profile", dbSeries.Name, dbSeries.ContentRating);
                 
-                // Delete associated channels
+                // Delete associated channels (sadece Series/VOD tipi kanallar, GroupTitle eşleşmesi DEĞİL)
+                // c.Name.Contains + GroupTitle == daha önce çok geniş eşleşiyordu (örn. "Man" tüm kanalları silebiliyordu)
                 var channelsToDelete = await context.Channels
                     .Where(c => c.PlaylistId == dbSeries.PlaylistId && 
-                               (c.Name.Contains(dbSeries.Name) || c.GroupTitle == dbSeries.GroupTitle))
+                               (c.Type == ChannelType.Series || c.Type == ChannelType.VOD) &&
+                               c.Name.Contains(dbSeries.Name))
                     .ToListAsync(cancellationToken);
                 
                 if (channelsToDelete.Any())

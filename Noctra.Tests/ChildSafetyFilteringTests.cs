@@ -15,6 +15,10 @@ namespace Noctra.Tests
         [InlineData("Pornstar", false)]
         [InlineData("18+ Horror", false)]
         [InlineData("Matrix (1998)", false)] // Old year check
+        [InlineData("Superman", true)]  // 'man' blacklist'ten çıkarıldı, Superman bariz çocuk içeriği
+        [InlineData("Spiderman", true)] // 'man' blacklist'ten çıkarıldı
+        [InlineData("Toy Story Dublaj", true)]  // 'dublaj' blacklist'ten çıkarıldı
+        [InlineData("Lara Croft Dublaj", false)] // 'dublaj' çıktı ama 'lara' hala blacklist'te
         public void ChildSafetyHelper_Keywords_Are_Identified(string input, bool expectedSafe)
         {
             var blacklist = ChildSafetyHelper.GetCriticalBlacklist();

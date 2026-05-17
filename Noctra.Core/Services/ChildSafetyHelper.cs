@@ -21,9 +21,9 @@ public static partial class ChildSafetyHelper
         "xxx", "porn", "erotic", "sex", "porno", "gay", "lesbian", "hardcore", "cinsel", "mature", "18+", "+18", "yeşilçam", "yesilcam", "erotizm", "romantizm", "nostalji", "nostalgia",
         "adult", "sex", "porn", "xxx",
         "9-1-1", "alien", "castlevania", "south park", "family guy", "rick and morty", "the boys", "deadpool", "lucifer", "dexter", "sayko", "sycophant", "syco", "mcgregor", "yerli", "burn",
-        "blood", "kan", "şiddet", "düşman", "düşmanlar", "enemies", "enemy", "crossing", "pazar", "marvel", "marvels", "dc", "man", ".kill", "kill", "anemone", "amar", "avangers", "korku", "korkunç", 
+        "blood", "kan", "şiddet", "düşman", "düşmanlar", "enemies", "enemy", "crossing", "pazar", "marvel", "marvels", "dc", ".kill", "kill", "anemone", "amar", "avangers", "korku", "korkunç", 
         "korku kapanı", "maymunlar cehennemi", "megalodon", "person", "rising", "risk", "embarass", "embarassing", "kadın", "woman"," yaşamaya", "sağ", "batman", "ghost", "lara", "lara croft", "Kabus",
-        "nightmare", "dublaj"
+        "nightmare"
     };
 
     public static string[] GetKidFriendlyTitles() => new[] {

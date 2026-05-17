@@ -1160,12 +1160,23 @@ public partial class PlaylistService : IPlaylistService
             string category = c.GroupTitle ?? string.Empty;
             string title = c.Name ?? string.Empty;
 
-            // 1.5. TARİH BAZLI ENGELLEME (2000 ve öncesi)
-            // Hem isme hem de kategoriye bak (Örn: "1998-14 FILME" kategorisindekiler sızmasın)
+            // 1.5. KID-FRIENDLY CHECK (Öncelik: Bariz çocuk içeriği her durumda geçsin)
+            // IsOldContent kontrolünden ÖNCE gelmeli ki Toy Story (1995) gibi çocuk klasikleri engellenmesin.
+            bool isKidFriendlyByName = ContainsAny(title, kidFriendlyTitles);
+            bool isKidFriendlyByCategory = ContainsAny(category, kidFriendlyTitles);
+            
+            if (isKidFriendlyByName || isKidFriendlyByCategory)
+            {
+                // Bariz çocuk içeriği: ContentRating'e bakılmaksızın izin ver
+                return true;
+            }
+
+            // 1.6. TARİH BAZLI ENGELLEME (2000 ve öncesi)
+            // Bu noktaya geldiyse bariz çocuk içeriği değil, güvenle engelleyebiliriz.
             if (ChildSafetyHelper.IsOldContent(title) || ChildSafetyHelper.IsOldContent(category))
                 return false;
 
-            // 1.6. SERTİFİKA BAZLI FİLTRELEME (Yaş Sınırı - TMDB)
+            // 1.7. SERTİFİKA BAZLI FİLTRELEME (Yaş Sınırı - TMDB)
             // Eğer metadata'dan gelen bir sertifika varsa, kelime bazlı tahminden daha güvenilirdir.
             if (!string.IsNullOrEmpty(c.ContentRating))
             {
@@ -1233,9 +1244,19 @@ public partial class PlaylistService : IPlaylistService
             string category = s.Genre ?? string.Empty;
             string title = s.Name ?? string.Empty;
 
+            // 1.5. KID-FRIENDLY CHECK (Öncelik: Bariz çocuk içeriği her durumda kalsın)
+            bool isKidFriendlyByName = ContainsAny(title, kidFriendlyTitles);
+            bool isKidFriendlyByCategory = ContainsAny(category, kidFriendlyTitles);
+            
+            if (isKidFriendlyByName || isKidFriendlyByCategory)
+            {
+                return false; // Silme, bariz çocuk içeriği
+            }
+
+            // 1.6. TARİH BAZLI ENGELLEME
             if (ChildSafetyHelper.IsOldContent(title) || ChildSafetyHelper.IsOldContent(category)) return true;
 
-            // 1.6. SERTİFİKA BAZLI FİLTRELEME
+            // 1.7. SERTİFİKA BAZLI FİLTRELEME
             if (!string.IsNullOrEmpty(s.ContentRating))
             {
                 if (!ChildSafetyHelper.IsSafeRating(s.ContentRating)) return true; // Tehlikeli -> Sil
