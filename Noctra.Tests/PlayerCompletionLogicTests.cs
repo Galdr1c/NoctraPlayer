@@ -23,9 +23,9 @@ namespace Noctra.Tests
         // ─── IsEpisodeCompleted (reflection) ─────────────────────────────────────────
 
         private static readonly MethodInfo? _isEpisodeCompletedMethod =
-            typeof(PlayerViewModel).GetMethod(
+            typeof(PlayerEpisodeNavigator).GetMethod(
                 "IsEpisodeCompleted",
-                BindingFlags.NonPublic | BindingFlags.Static);
+                BindingFlags.Public | BindingFlags.Static);
 
         private static bool IsEpisodeCompleted(double durationSeconds, double positionSeconds)
         {

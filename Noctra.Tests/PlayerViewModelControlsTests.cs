@@ -228,31 +228,17 @@ namespace Noctra.Tests
                 new FakeStalkerPortalService());
         }
 
-        private T? InvokePrivate<T>(string method, params object?[] args)
-        {
-            var mi = typeof(PlayerViewModel).GetMethod(method, BindingFlags.NonPublic | BindingFlags.Instance);
-            Assert.True(mi != null, $"Instance method '{method}' not found on PlayerViewModel.");
-            return (T?)mi!.Invoke(VM, args);
-        }
-
-        private static T? InvokeStatic<T>(string method, params object?[] args)
-        {
-            var mi = typeof(PlayerViewModel).GetMethod(method, BindingFlags.NonPublic | BindingFlags.Static);
-            Assert.True(mi != null, $"Static method '{method}' not found on PlayerViewModel.");
-            return (T?)mi!.Invoke(null, args);
-        }
-
         public double ParseSkipSeconds(object? parameter) =>
-            InvokeStatic<double>("ParseSkipSeconds", parameter)!;
+            VM.PlaybackController.ParseSkipSeconds(parameter);
 
         public double ClampSeekPosition(double pos) =>
-            InvokePrivate<double>("ClampSeekPosition", pos)!;
+            VM.PlaybackController.ClampSeekPosition(pos);
 
         public bool IsEpisodeCompleted(double duration, double position) =>
-            InvokeStatic<bool>("IsEpisodeCompleted", duration, position)!;
+            PlayerEpisodeNavigator.IsEpisodeCompleted(duration, position);
 
         public void ApplySkipDelta(double delta) =>
-            InvokePrivate<object>("ApplySkipDelta", delta);
+            VM.PlaybackController.ApplySkipDelta(delta);
 
         public static string FormatSkipToast(double seconds)
         {

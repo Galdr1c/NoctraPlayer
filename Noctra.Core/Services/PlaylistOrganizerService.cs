@@ -32,6 +32,9 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
         // Stage 2: Remove duplicates (keeps highest quality)
         var organized = RemoveDuplicates(channels);
 
+        // Stage 2.5: Auto categorize uncategorized channels
+        AutoCategorize(organized);
+
         // Stage 3: Smart sort
         organized = SmartSort(organized);
 

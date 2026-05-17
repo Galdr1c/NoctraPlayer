@@ -18,9 +18,7 @@ namespace Noctra.Tests
 
         private void InvokeApplyDefaultTracks(PlayerTestContext ctx, IReadOnlyList<(int Id, string? Name)> audioTracks, IReadOnlyList<(int Id, string? Name)> subtitleTracks)
         {
-            var mi = typeof(PlayerViewModel).GetMethod("ApplyDefaultTracks", BindingFlags.NonPublic | BindingFlags.Instance);
-            Assert.True(mi != null, "ApplyDefaultTracks method not found.");
-            mi.Invoke(ctx.VM, new object[] { audioTracks, subtitleTracks });
+            ctx.VM.QualityMonitor.ApplyDefaultTracks(audioTracks, subtitleTracks);
         }
 
         [Fact]
@@ -104,8 +102,7 @@ namespace Noctra.Tests
                 (4, "Russian")
             };
 
-            var mi = typeof(PlayerViewModel).GetMethod("FindBestTrackMatch", BindingFlags.NonPublic | BindingFlags.Static);
-            var result = (int)mi!.Invoke(null, new object[] { tracks, lang })!;
+            var result = PlayerQualityMonitor.FindBestTrackMatch(tracks, lang);
 
             Assert.Equal(expectedId, result);
         }

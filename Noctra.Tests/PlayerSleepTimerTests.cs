@@ -68,8 +68,7 @@ namespace Noctra.Tests
 
             // We can't easily wait 15 minutes in a unit test.
             // But we can trigger the private TriggerSleepShutdown via reflection to verify it works.
-            var mi = typeof(PlayerViewModel).GetMethod("TriggerSleepShutdown", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            mi.Invoke(ctx.VM, null);
+            ctx.VM.OverlayManager.TriggerSleepShutdown();
 
             Assert.False(ctx.VideoService.IsPlaying);
             Assert.Equal(PlayerViewModel.SleepTimerOption.Off, ctx.VM.SleepTimerMode);

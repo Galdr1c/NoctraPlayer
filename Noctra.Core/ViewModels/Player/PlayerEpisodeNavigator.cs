@@ -1,0 +1,519 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.IO;
+using Noctra.Models;
+using Noctra.Services;
+using Noctra.Services.Interfaces;
+
+namespace Noctra.ViewModels;
+
+public class PlayerEpisodeNavigator
+{
+    private readonly PlayerViewModel _vm;
+
+    public PlayerEpisodeNavigator(PlayerViewModel vm)
+    {
+        _vm = vm;
+    }
+
+    public void SetCurrentEpisode(Episode? episode, Episode? nextEpisode = null, Series? series = null)
+    {
+        _vm.CurrentEpisode = episode;
+        _vm.CurrentEpisodeIdentity = BuildEpisodeIdentity(episode);
+        _vm.NextEpisode = nextEpisode;
+        _vm._creditsTriggered = false;
+        _vm.IsCreditsZone = false;
+        _vm.IsNextEpisodePromptVisible = false;
+        _vm.IsEpisodesPanelOpen = false;
+        _vm._isPreferenceApplied = false;
+
+        if (episode == null)
+        {
+            _vm._currentSeriesContext = null;
+            _vm.EpisodeSeasons = new List<Season>();
+            _vm.EpisodesPanelTitle = string.Empty;
+            _vm.PlayEpisodeFromOverlayCommand.NotifyCanExecuteChanged();
+            _vm.PlayNextEpisodeCommand.NotifyCanExecuteChanged();
+            _vm.RaisePropertyChanged(nameof(PlayerViewModel.CanDownloadCurrentContent));
+            _vm.DownloadCurrentContentCommand.NotifyCanExecuteChanged();
+            return;
+        }
+
+        _vm._currentSeriesContext = series
+            ?? episode.Season?.Series
+            ?? _vm._currentSeriesContext;
+        RefreshEpisodeBrowserContext(_vm._currentSeriesContext);
+
+        if (episode?.Duration is TimeSpan knownDuration && knownDuration.TotalSeconds > 0)
+        {
+            var seconds = knownDuration.TotalSeconds;
+            if (_vm.Duration <= 0 || Math.Abs(_vm.Duration - seconds) > 1)
+            {
+                _vm.Duration = seconds;
+                _vm.DurationText = TimeSpan.FromSeconds(seconds).ToString(@"hh\:mm\:ss");
+            }
+        }
+
+        _vm.PlayNextEpisodeCommand.NotifyCanExecuteChanged();
+        _vm.PlayEpisodeFromOverlayCommand.NotifyCanExecuteChanged();
+        _vm.RaisePropertyChanged(nameof(PlayerViewModel.CanDownloadCurrentContent));
+        _vm.DownloadCurrentContentCommand.NotifyCanExecuteChanged();
+    }
+
+    public void TryShowNextEpisodePromptAtEnd()
+    {
+        if (_vm._creditsTriggered ||
+            _vm.IsLiveContent ||
+            _vm.CurrentChannel?.Type != ChannelType.Series ||
+            _vm.NextEpisode == null)
+        {
+            return;
+        }
+
+        _vm._creditsTriggered = true;
+        _vm.IsCreditsZone = true;
+        _vm.IsNextEpisodePromptVisible = true;
+
+        if (_vm.SettingsService.Settings.AutoPlayNext)
+        {
+            _ = _vm.PlayNextEpisodeCommand.ExecuteAsync(null);
+        }
+    }
+
+    public void CheckIntroCreditsPosition(double pos)
+    {
+        if (_vm.CurrentEpisode == null || _vm.IsLiveContent || _vm.NextEpisode == null)
+        {
+            return;
+        }
+
+        if (!TryGetCreditsTriggerThreshold(out var triggerAt))
+        {
+            return;
+        }
+
+        var isInCreditsZone = pos >= triggerAt;
+        var exitThreshold = Math.Max(0, triggerAt - 3);
+        var hasExitedCreditsZone = pos < exitThreshold;
+
+        if (_vm._creditsTriggered)
+        {
+            if (hasExitedCreditsZone)
+            {
+                _vm._creditsTriggered = false;
+                _vm.IsCreditsZone = false;
+                _vm.IsNextEpisodePromptVisible = false;
+            }
+            else
+            {
+                _vm.IsCreditsZone = true;
+                _vm.IsNextEpisodePromptVisible = true;
+            }
+
+            return;
+        }
+
+        if (!isInCreditsZone)
+        {
+            return;
+        }
+
+        _vm._creditsTriggered = true;
+        _vm.IsCreditsZone = true;
+        _vm.IsNextEpisodePromptVisible = true;
+    }
+
+    public bool TryGetCreditsTriggerThreshold(out double triggerAt)
+    {
+        triggerAt = 0;
+        if (_vm.CurrentEpisode == null)
+        {
+            return false;
+        }
+
+        var hasDuration = _vm.Duration > 0;
+        var fallbackFiveMinuteTrigger = hasDuration
+            ? Math.Max(0, _vm.Duration - TimeSpan.FromMinutes(3).TotalSeconds)
+            : double.MaxValue;
+
+        if (_vm.CurrentEpisode.CreditsStartSec is double creditsStartSec && creditsStartSec > 0)
+        {
+            triggerAt = hasDuration
+                ? Math.Min(creditsStartSec, fallbackFiveMinuteTrigger)
+                : creditsStartSec;
+            return true;
+        }
+
+        if (!hasDuration)
+        {
+            return false;
+        }
+
+        var tailThreshold = Math.Clamp(
+            _vm.Duration * 0.06, // NextEpisodePromptTailRatio = 0.06
+            25, // NextEpisodePromptMinTailSeconds = 25
+            180); // NextEpisodePromptMaxTailSeconds = 180
+        triggerAt = Math.Min(
+            Math.Max(0, _vm.Duration - tailThreshold),
+            fallbackFiveMinuteTrigger);
+        return true;
+    }
+
+    public async Task PlayNextEpisode()
+    {
+        if (_vm.NextEpisode == null)
+        {
+            return;
+        }
+
+        if (_vm.IsDownloadedPlayback && !IsDownloadedStreamUrl(_vm.NextEpisode.StreamUrl))
+        {
+            _vm.DownloadStatusMessage = "Siradaki bolum indirilmemis.";
+            _vm.RestartAutoHideTimer();
+            return;
+        }
+
+        var nextEpisode = _vm.NextEpisode;
+        _vm.PrepareForContentLoading();
+        _vm.IsNextEpisodePromptVisible = false;
+        _vm.IsCreditsZone = false;
+        _vm._creditsTriggered = false;
+        _vm.RaiseNextEpisodeRequestedEvent(nextEpisode);
+        await Task.CompletedTask;
+    }
+
+    public async Task DownloadCurrentContentAsync()
+    {
+        if (_vm.CurrentChannel == null || !_vm.CanDownloadCurrentContent)
+        {
+            return;
+        }
+
+        if (Interlocked.Exchange(ref _vm._isDownloadActionRunning, 1) == 1)
+        {
+            return;
+        }
+
+        _vm.IsDownloadInProgress = true;
+        _vm.DownloadStatusMessage = _vm.LocalizationService.GetString("Download.Status.Starting");
+        _vm.RestartAutoHideTimer();
+
+        try
+        {
+            var request = BuildDownloadRequest(_vm.CurrentChannel);
+            var result = await _vm.ContentDownloadService.QueueDownloadAsync(request);
+            _vm.DownloadStatusMessage = result.Message;
+        }
+        catch (Exception ex)
+        {
+            _vm.DownloadStatusMessage = UserFriendlyErrorMessage.WithPrefix(_vm.LocalizationService.GetString("Download.Status.Error"), ex);
+        }
+        finally
+        {
+            _vm.IsDownloadInProgress = false;
+            Interlocked.Exchange(ref _vm._isDownloadActionRunning, 0);
+        }
+    }
+
+    public DownloadContentRequest BuildDownloadRequest(Channel channel)
+    {
+        var profileId = _vm.CurrentProfileId ?? 0;
+        var playlistId = channel.PlaylistId > 0
+            ? channel.PlaylistId
+            : _vm._currentSeriesContext?.PlaylistId ?? 0;
+        var audioTracks = _vm.AudioTracks
+            .Select(t => new DownloadTrackOption(t.Id, t.Name))
+            .ToList();
+        var subtitleTracks = _vm.SubtitleTracks
+            .Select(t => new DownloadTrackOption(t.Id, t.Name))
+            .ToList();
+        var poster = channel.CoverUrl ?? channel.LogoUrl;
+
+        if (channel.Type == ChannelType.Series)
+        {
+            return new DownloadContentRequest(
+                profileId,
+                DownloadItemType.SeriesEpisode,
+                _vm.CurrentEpisode?.Name ?? channel.Name,
+                _vm.CurrentEpisode?.StreamUrl ?? channel.StreamUrl,
+                poster,
+                playlistId,
+                channel.Id,
+                _vm.CurrentEpisode?.Id ?? 0,
+                audioTracks,
+                subtitleTracks);
+        }
+
+        return new DownloadContentRequest(
+            profileId,
+            DownloadItemType.Vod,
+            channel.Name,
+            channel.StreamUrl,
+            poster,
+            playlistId,
+            channel.Id,
+            0,
+            audioTracks,
+            subtitleTracks);
+    }
+
+    public void PlayEpisodeFromOverlay(Episode? episode)
+    {
+        if (episode == null)
+        {
+            return;
+        }
+
+        _vm.CurrentEpisode = episode;
+        _vm.CurrentEpisodeIdentity = BuildEpisodeIdentity(episode);
+        _vm.NextEpisode = FindNextEpisodeInBrowser(episode);
+        _vm._creditsTriggered = false;
+        _vm.IsCreditsZone = false;
+        _vm.IsNextEpisodePromptVisible = false;
+        _vm.IsEpisodesPanelOpen = false;
+        _vm.IsLocked = false;
+
+        _vm.PrepareForContentLoading();
+        _vm.RaiseEpisodeRequestedEvent(episode);
+        _vm.RestartAutoHideTimer();
+    }
+
+    public bool CanPlayEpisodeFromOverlay(Episode? episode)
+    {
+        return episode != null &&
+               !string.IsNullOrWhiteSpace(episode.StreamUrl);
+    }
+
+    public void RefreshEpisodeBrowserContext(Series? series)
+    {
+        _vm._currentSeriesContext = series;
+        _vm.EpisodesPanelTitle = series?.Name ?? _vm.CurrentChannel?.Name ?? string.Empty;
+
+        var sourceSeasons = series?.Seasons;
+
+        if (sourceSeasons == null || sourceSeasons.Count == 0)
+        {
+            _vm.EpisodeSeasons = new List<Season>();
+            return;
+        }
+
+        var newSeasons = sourceSeasons
+            .Where(s => s.Episodes != null && s.Episodes.Count > 0)
+            .OrderBy(s => s.SeasonNumber)
+            .ToList();
+
+        foreach (var season in newSeasons)
+        {
+            season.IsExpanded = season.Episodes.Any(e => BuildEpisodeIdentity(e) == _vm.CurrentEpisodeIdentity);
+        }
+
+        _vm.EpisodeSeasons = newSeasons;
+    }
+
+    public Episode? FindNextEpisodeInBrowser(Episode episode)
+    {
+        if (_vm.EpisodeSeasons.Count == 0)
+        {
+            return null;
+        }
+
+        var orderedEpisodes = _vm.EpisodeSeasons
+            .OrderBy(s => s.SeasonNumber)
+            .SelectMany(s => s.Episodes.OrderBy(e => e.EpisodeNumber))
+            .ToList();
+
+        var currentIndex = orderedEpisodes.FindIndex(e =>
+            e.Id > 0 && episode.Id > 0
+                ? e.Id == episode.Id
+                : string.Equals(e.StreamUrl, episode.StreamUrl, StringComparison.OrdinalIgnoreCase));
+
+        if (currentIndex < 0 || currentIndex + 1 >= orderedEpisodes.Count)
+        {
+            return null;
+        }
+
+        return orderedEpisodes[currentIndex + 1];
+    }
+
+    public static string BuildEpisodeIdentity(Episode? episode)
+    {
+        if (episode == null)
+        {
+            return string.Empty;
+        }
+
+        if (episode.Id > 0)
+        {
+            return $"id:{episode.Id}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(episode.StreamUrl))
+        {
+            return $"url:{episode.StreamUrl.Trim()}";
+        }
+
+        return string.Empty;
+    }
+
+    public static bool IsDownloadedStreamUrl(string? streamUrl)
+    {
+        if (string.IsNullOrWhiteSpace(streamUrl))
+        {
+            return false;
+        }
+
+        var normalized = streamUrl.Trim().Trim('"', '\'');
+        if (normalized.Length < 4)
+        {
+            return false;
+        }
+
+        if (normalized.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+        {
+            if (Uri.TryCreate(normalized, UriKind.Absolute, out var fileUri))
+            {
+                return fileUri.IsFile && File.Exists(fileUri.LocalPath);
+            }
+        }
+
+        var isLocal = normalized.StartsWith(@"\\", StringComparison.Ordinal) ||
+                      Regex.IsMatch(normalized, @"^[a-zA-Z]:[\\/]");
+        
+        if (isLocal)
+        {
+            return File.Exists(normalized);
+        }
+
+        if (normalized.StartsWith("/", StringComparison.Ordinal))
+        {
+            return File.Exists(normalized);
+        }
+
+        return false;
+    }
+
+    public static bool LooksLikeDownloadedPlaybackStreamUrl(string? streamUrl)
+    {
+        if (string.IsNullOrWhiteSpace(streamUrl))
+        {
+            return false;
+        }
+
+        if (IsDownloadedStreamUrl(streamUrl))
+        {
+            return true;
+        }
+
+        var normalized = streamUrl.Trim().Trim('"', '\'').ToLowerInvariant();
+        
+        if (normalized.Contains(@"\noctra\downloads\profile_") || normalized.Contains("/noctra/downloads/profile_"))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    public static bool IsEpisodeCompleted(double durationSeconds, double positionSeconds)
+    {
+        if (durationSeconds <= 0 || positionSeconds <= 0)
+        {
+            return false;
+        }
+
+        var percentReached = (positionSeconds / durationSeconds) * 100.0;
+        var remainingSeconds = Math.Max(0, durationSeconds - positionSeconds);
+
+        return percentReached >= 90.0 // EpisodeCompletedPercentThreshold = 90.0
+            || (durationSeconds > 180 && remainingSeconds <= 180); // EpisodeCompletedTailSeconds = 180
+    }
+
+    public async Task TrackWatchHistoryAsync()
+    {
+        if (_vm.WatchHistoryService == null || _vm.CurrentProfileId == null || _vm.CurrentChannel == null || !_vm.IsPlaying)
+            return;
+
+        var nowUtc = DateTime.UtcNow;
+        var delta = _vm._lastWatchHistoryUpdateUtc == DateTime.MinValue 
+            ? TimeSpan.Zero 
+            : nowUtc - _vm._lastWatchHistoryUpdateUtc;
+            
+        _vm._lastWatchHistoryUpdateUtc = nowUtc;
+
+        await FlushWatchHistoryAsync(force: false, incrementDelta: delta);
+    }
+
+    public async Task FlushWatchHistoryAsync(bool force, TimeSpan? incrementDelta = null)
+    {
+        if (_vm.WatchHistoryService == null || _vm.CurrentProfileId == null || _vm.CurrentChannel == null)
+        {
+            return;
+        }
+
+        if (!force && !_vm.IsPlaying)
+        {
+            return;
+        }
+
+        try
+        {
+            var isEpisodePlayback = _vm.CurrentChannel.Type == ChannelType.Series && _vm.CurrentEpisode?.Id > 0;
+            var channelId = !isEpisodePlayback && _vm.CurrentChannel.Id > 0 ? _vm.CurrentChannel.Id : (int?)null;
+            var livePosition = Math.Max(0, _vm.VideoPlayerService.Position);
+            var currentPosition = TimeSpan.FromSeconds(Math.Max(_vm.Position, livePosition));
+            var currentDuration = _vm.Duration > 0 ? TimeSpan.FromSeconds(_vm.Duration) : (TimeSpan?)null;
+            var isCompleted = IsEpisodeCompleted(_vm.Duration, _vm.Position);
+
+            var sessionDurationSeconds = _vm._sessionPlaybackStartTimeUtc == DateTime.MinValue 
+                ? 0 
+                : (DateTime.UtcNow - _vm._sessionPlaybackStartTimeUtc).TotalSeconds;
+
+            var safetyThreshold = _vm._isStartingOver ? 60 : 15;
+
+            if (currentPosition.TotalSeconds < safetyThreshold && sessionDurationSeconds < safetyThreshold)
+            {
+                _vm.LogDebug($"FlushWatchHistoryAsync: Skipping early near-zero save (Safety Net). StartingOver: {_vm._isStartingOver}, Session: {sessionDurationSeconds:F1}s, Pos: {currentPosition.TotalSeconds:F1}s");
+                return;
+            }
+
+            await _vm.WatchHistoryService.TrackWatchAsync(
+                _vm.CurrentProfileId.Value,
+                channelId,
+                isEpisodePlayback ? _vm.CurrentEpisode!.Id : null,
+                currentPosition,
+                isCompleted,
+                currentDuration,
+                incrementDelta,
+                _vm._isStartingOver
+            );
+
+            if (isEpisodePlayback && _vm.CurrentEpisode != null)
+            {
+                var finalCompleted = _vm.CurrentEpisode.IsCompleted || isCompleted;
+                _vm.DispatcherService.BeginInvoke(() =>
+                {
+                    _vm.CurrentEpisode.LastWatched = DateTime.UtcNow;
+                    _vm.CurrentEpisode.WatchedPosition = finalCompleted && currentDuration.HasValue
+                        ? currentDuration.Value
+                        : currentPosition;
+                    _vm.CurrentEpisode.IsCompleted = finalCompleted;
+                    if (currentDuration.HasValue)
+                    {
+                        _vm.CurrentEpisode.Duration = currentDuration.Value;
+                    }
+
+                    RefreshEpisodeBrowserContext(_vm._currentSeriesContext);
+                    _vm.RaiseEpisodeProgressUpdatedEvent(_vm.CurrentEpisode);
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Watch history tracking error: {ex.Message}");
+        }
+    }
+}

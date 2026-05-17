@@ -7,6 +7,25 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 
 ## [Unreleased]
+### 🧩 PlayerViewModel Dekompozisyonu (God Class Refactoring) ve Test Uyumlaştırması (2026-05-17)
+- [Refactor] **PlayerViewModel Dekompozisyonu (God Class Refactoring)**:
+    - 3500+ satırlık devasa `PlayerViewModel` sınıfı, Tek Sorumluluk Prensibi (Single Responsibility Principle) ve temiz kod standartları doğrultusunda 6 ayrı alt katmana/alt bileşene bölünerek dekompoze edildi:
+      - `PlayerPlaybackController` (Oynatma, durdurma, geri/ileri sarma ve arabellek/buffer yönetimi)
+      - `PlayerOverlayManager` (Kontrol paneli görünürlüğü, otomatik gizlenme, hata/durum mesajları ve sleep timer yönetimi)
+      - `PlayerEpisodeNavigator` (Sonraki bölüme geçiş, bölüm tamamlama kriterleri ve izleme ilerleme senkronizasyonu)
+      - `PlayerStallDetector` (Bağlantı sağlığı, ağ durumu kontrolleri ve otomatik kurtarma mekanizmaları)
+      - `PlayerQualityMonitor` (Yayın codec/çözünürlük tespiti ve varsayılan ses/altyazı izi tercihlerinin uygulanması)
+      - `PlayerSettingsAdapter` (Ses seviyesi, sessize alma, ekran doldurma modu ve altyazı genel adaptasyonu)
+    - Devasa dosya boyutunun düşürülmesiyle birlikte kodun bakım kolaylığı, genişletilebilirliği ve anlaşılırlığı en üst düzeye çıkarıldı.
+- [Düzeltildi] **xUnit Test Sürecinin Yeni Mimariye Tam Entegrasyonu**:
+    - `PlayerTestContext` içerisindeki eski yansıma (reflection) tabanlı private/static metot erişim mekanizmaları tamamen temizlendi.
+    - Testlerin, yeni dekompoze sınıfların (`PlaybackController`, `PlayerQualityMonitor`, `PlayerEpisodeNavigator`) güvenli, genel (`public`) metotlarını doğrudan hedef alması sağlandı.
+    - [PlayerCompletionLogicTests.cs](file:///d:/IPTVPlayer/Noctra.Tests/PlayerCompletionLogicTests.cs), [PlayerSleepTimerTests.cs](file:///d:/IPTVPlayer/Noctra.Tests/PlayerSleepTimerTests.cs), [PlayerViewModelControlsTests.cs](file:///d:/IPTVPlayer/Noctra.Tests/PlayerViewModelControlsTests.cs) ve [PlayerViewModelLanguageTests.cs](file:///d:/IPTVPlayer/Noctra.Tests/PlayerViewModelLanguageTests.cs) dosyaları güncellenerek **707 testin 707'si de** başarıyla yeşile döndürüldü.
+- [Düzeltildi] **Playlist Organizasyon Pipeline Eksikliği Giderildi**:
+    - [PlaylistOrganizerService.cs](file:///d:/IPTVPlayer/Noctra.Core/Services/PlaylistOrganizerService.cs) içindeki `Organize` pipeline'ına `AutoCategorize` adımı `Stage 2.5` olarak eklenerek kategorisiz kanalların otomatik olarak "Uncategorized" olarak işaretlenmesi sağlandı ve pipeline entegrasyon testlerinin başarısı korundu.
+- [Temizlik] **Derleme Uyarılarının (CS0169) Sıfırlanması**:
+    - [PlayerStallDetector](file:///d:/IPTVPlayer/Noctra.Core/ViewModels/Player/PlayerStallDetector.cs)'a taşınmış olan `_lastStallCheckTimeMs` ve `_stallCounter` gibi kullanılmayan alanlar `PlayerViewModel` dosyasından temizlenerek 0 uyarılı (clean compile) derleme sağlandı.
+
 ### 🎬 Video Oynatıcı Mimarisi, Bellek ve Katman Optimizasyonları (2026-05-17)
 - [Değişti] **VideoOverlayViewModel Katman Düzenlemesi**:
     - Tamamen arayüze ait olan `VideoOverlayViewModel` sınıfı `Noctra.Core` katmanından `Noctra.Avalonia/ViewModels` (UI katmanı) altına taşındı ve namespace'i güncellendi.
