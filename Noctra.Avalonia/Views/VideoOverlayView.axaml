@@ -859,7 +859,7 @@
         </Grid>
 
         <!-- Overlays -->
-        <Border Background="Black" IsHitTestVisible="True" ZIndex="900" IsVisible="{Binding IsBufferShieldVisible}"/>
+        <Border Background="Black" IsHitTestVisible="True" ZIndex="900" CornerRadius="12" IsVisible="{Binding IsBufferShieldVisible}"/>
         <Button Command="{Binding ClosePlayerCommand}" Classes="iconBtn" Background="#33000000" CornerRadius="8" ZIndex="1001" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="24,24,0,0" IsVisible="{Binding IsBuffering}">
             <materialIcons:MaterialIcon Kind="ArrowLeft" Width="28" Height="28" Foreground="White"/>
         </Button>
@@ -891,7 +891,7 @@
         </Border>
 
         <!-- Buffering Overlay -->
-        <Border Background="#4D000000" IsVisible="{Binding IsBuffering}" IsHitTestVisible="False" ZIndex="950">
+        <Border Background="#4D000000" IsVisible="{Binding IsBuffering}" IsHitTestVisible="False" ZIndex="950" CornerRadius="12">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                 <Grid Width="60" Height="60">
                     <Arc Stroke="{DynamicResource AccentBrush}" StrokeThickness="4" StartAngle="0" SweepAngle="90" Width="50" Height="50">

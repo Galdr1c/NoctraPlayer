@@ -16,7 +16,7 @@
         <TranslateTransform X="{Binding TranslateX}" Y="{Binding TranslateY}"/>
       </Border.RenderTransform>
 
-      <TextBlock Text="Noctra MP - Free"
+      <TextBlock Text="Noctra - Free"
                  FontWeight="SemiBold"
                  FontSize="38"
                  Foreground="White"

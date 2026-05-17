@@ -938,7 +938,7 @@
           <controls:MemoryVideoView x:Name="VideoSurface">
               <controls:MemoryVideoView.OverlayContent>
                   <Grid>
-                      <views:WatermarkView x:Name="PiPWatermark" DataContext="{Binding WatermarkViewModel}" ZIndex="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,100"/>
+                      <views:WatermarkView x:Name="PiPWatermark" ZIndex="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,100"/>
                       <Border x:Name="MouseCaptureLayer"
                               ZIndex="2500"
                               Background="Transparent"
@@ -1086,6 +1086,7 @@
                           x:DataType="vm:PlayerViewModel"
                           Background="#B3000000"
                           ZIndex="6000"
+                          CornerRadius="12"
                           HorizontalAlignment="Stretch"
                           VerticalAlignment="Stretch">
 

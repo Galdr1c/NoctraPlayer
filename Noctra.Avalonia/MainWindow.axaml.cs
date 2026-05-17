@@ -62,6 +62,7 @@ public partial class MainWindow : Window
         NextEpisodePrompt.DataContext = _playerViewModel;
         PiPCentralControls.DataContext = _playerViewModel;
         PiPBottomControls.DataContext = _playerViewModel;
+        PiPWatermark.DataContext = _mainViewModel.WatermarkViewModel;
         VideoSurface.MediaPlayer = _videoPlayerService.GetMediaPlayer();
         _videoPlayerService.MediaPlayerReady += VideoPlayerService_MediaPlayerReady;
         // MiniVideoSurface.MediaPlayer = null;
