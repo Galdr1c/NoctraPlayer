@@ -306,7 +306,13 @@ public class PlayerPlaybackController
                 _vm._isIntentionallyPaused = true;
                 if (treatAsLivePlayback)
                 {
-                    _vm.VideoPlayerService.Pause();
+                    // Canlı yayınlarda VLC'nin SetPause(true) çağrısı birçok
+                    // protokolde (TS, HLS, RTSP) güvenilir şekilde çalışmaz.
+                    // Bunun yerine Stop() ile akışı sonlandırıp duraklatma
+                    // durumunu simüle ediyoruz. Kullanıcı devam etmek
+                    // istediğinde ResumePlaybackAsync içindeki hard restart
+                    // (Stop + PlayAsync) mekanizması akışı yeniden başlatacak.
+                    _vm.VideoPlayerService.Stop();
                     _vm._livePauseRequiresHardRestart = true;
                     return;
                 }
