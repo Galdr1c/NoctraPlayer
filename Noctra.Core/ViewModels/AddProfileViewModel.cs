@@ -1011,27 +1011,31 @@ public partial class AddProfileViewModel : ObservableObject
         }
 
         // Validate PIN
-        if (HasPin && PinCode.Length > 0)
+        if (HasPin)
         {
-            // Must be exactly 4 digits
-            if (PinCode.Length != 4 || !PinCode.All(char.IsDigit))
+            if (PinCode.Length > 0)
             {
-                PinError = _localizationService.GetString("AddProfile.Error.PinLength");
-                return;
-            }
+                // Must be exactly 4 digits
+                if (PinCode.Length != 4 || !PinCode.All(char.IsDigit))
+                {
+                    PinError = _localizationService.GetString("AddProfile.Error.PinLength");
+                    return;
+                }
 
-            // Confirmation must match
-            if (PinCode != PinConfirm)
+                // Confirmation must match
+                if (PinCode != PinConfirm)
+                {
+                    PinError = _localizationService.GetString("AddProfile.Error.PinMismatch");
+                    return;
+                }
+            }
+            else if (string.IsNullOrEmpty(EditingProfile?.PinHash))
             {
-                PinError = _localizationService.GetString("AddProfile.Error.PinMismatch");
+                // No existing PIN and nothing entered — require PIN entry
+                PinError = _localizationService.GetString("AddProfile.Error.PinRequired");
                 return;
             }
-        }
-        else if (HasPin && string.IsNullOrEmpty(EditingProfile?.PinHash))
-        {
-            // New PIN required but nothing entered
-            PinError = _localizationService.GetString("AddProfile.Error.PinRequired");
-            return;
+            // else: HasPin=true, PinCode boş, EditingProfile.PinHash dolu → mevcut PIN korunur
         }
 
         try

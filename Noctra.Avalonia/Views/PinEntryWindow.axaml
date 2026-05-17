@@ -9,7 +9,7 @@
         x:Class="Noctra.Avalonia.Views.PinEntryWindow"
         x:CompileBindings="False"
         Title="{loc:Translate PinEntry.EnterPin}"
-        Width="320" Height="480"
+        Width="320" Height="500"
         WindowStartupLocation="CenterOwner"
         SystemDecorations="None"
         ShowInTaskbar="False"
@@ -143,12 +143,22 @@
                              Fill="{Binding PinLength, Converter={StaticResource PinDotConverter}, ConverterParameter=4}"/>
                 </StackPanel>
 
-                <!-- Error Message -->
+                <!-- Error Message (Lockout sırasında gizlenir — geri sayım gösterilir) -->
                 <TextBlock Text="{Binding ErrorMessage}"
                            FontSize="12" HorizontalAlignment="Center"
                            Foreground="{DynamicResource ErrorBrush}"
                            Height="18" Margin="0,4,0,4"
-                           IsVisible="{Binding ErrorMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+                           IsVisible="{Binding ShowErrorMessage}"/>
+
+                <!-- Lockout Countdown -->
+                <TextBlock FontSize="11" HorizontalAlignment="Center"
+                           Foreground="{DynamicResource WarningBrush}"
+                           Height="16" Margin="0,0,0,2"
+                           IsVisible="{Binding IsLocked}">
+                    <Run Text="{loc:Translate PinEntry.LockoutCountdown}" />
+                    <Run Text="{Binding LockSecondsRemaining}" />
+                    <Run Text="s" />
+                </TextBlock>
 
                 <!-- Keypad -->
                 <UniformGrid Rows="4" Columns="3" Width="180"

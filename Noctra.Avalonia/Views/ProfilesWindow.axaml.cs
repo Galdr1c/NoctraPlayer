@@ -20,11 +20,16 @@ public partial class ProfilesWindow : Window
     private readonly ISettingsService _settingsService;
     private readonly ISecurityService _securityService;
     private readonly IProfileService _profileService;
+    private readonly IDispatcherService _dispatcherService;
     private readonly MainWindow _mainWindow;
     private readonly MainViewModel _mainViewModel;
     private readonly ILocalizationService _localizationService;
     private bool _autoSelectTriggered;
     private int _isAddProfileWindowOpen; // 0 = closed, 1 = open
+
+    // ── Lockout Kalıcılığı ────────────────────────────────────────────
+    // Pencere kapansa bile lockout süresi boyunca PIN girişini engeller.
+    private readonly Dictionary<int, DateTime> _profileLockouts = new();
 
     public bool DisableAutoSelect { get; set; }
 
@@ -36,6 +41,7 @@ public partial class ProfilesWindow : Window
             ((App)Application.Current!).Services.GetRequiredService<ISettingsService>(),
             ((App)Application.Current!).Services.GetRequiredService<ISecurityService>(),
             ((App)Application.Current!).Services.GetRequiredService<IProfileService>(),
+            ((App)Application.Current!).Services.GetRequiredService<IDispatcherService>(),
             ((App)Application.Current!).Services.GetRequiredService<MainWindow>(),
             ((App)Application.Current!).Services.GetRequiredService<MainViewModel>(),
             ((App)Application.Current!).Services.GetRequiredService<ILocalizationService>())
@@ -49,6 +55,7 @@ public partial class ProfilesWindow : Window
         ISettingsService settingsService,
         ISecurityService securityService,
         IProfileService profileService,
+        IDispatcherService dispatcherService,
         MainWindow mainWindow,
         MainViewModel mainViewModel,
         ILocalizationService localizationService)
@@ -60,6 +67,7 @@ public partial class ProfilesWindow : Window
         _settingsService = settingsService;
         _securityService = securityService;
         _profileService = profileService;
+        _dispatcherService = dispatcherService;
         _mainWindow = mainWindow;
         _mainViewModel = mainViewModel;
         _localizationService = localizationService;
@@ -78,13 +86,36 @@ public partial class ProfilesWindow : Window
         if (string.IsNullOrEmpty(profile.PinHash))
             return true;
 
+        // Lockout kalıcılık kontrolü — profil hala kilitliyse PIN penceresini açma
+        // Eski lockout kayıtlarını temizle
+        var now = DateTime.UtcNow;
+        var expiredKeys = _profileLockouts.Where(kvp => kvp.Value <= now).Select(kvp => kvp.Key).ToList();
+        foreach (var key in expiredKeys)
+            _profileLockouts.Remove(key);
+
+        if (_profileLockouts.TryGetValue(profile.Id, out var lockoutEnd) && lockoutEnd > now)
+        {
+            var remaining = (int)(lockoutEnd - now).TotalSeconds;
+            await _dialogService.ShowMessageAsync(
+                _localizationService.GetString("PinEntry.Error.LockedTitle"),
+                string.Format(_localizationService.GetString("PinEntry.Error.ProfileLockedFormat"), remaining));
+            return false;
+        }
+
         var pinVm = new PinEntryViewModel(
             _securityService,
+            _dispatcherService,
             profile.PinHash,
             profile.Name,
             profile.Avatar,
             _localizationService.GetString(purposeKey),
             _localizationService);
+
+        // Lockout kalıcılık — lockout başladığında süreyi kaydet
+        pinVm.LockoutTriggered += (_, lockoutUntil) =>
+        {
+            _profileLockouts[profile.Id] = lockoutUntil;
+        };
 
         var pinWindow = new PinEntryWindow(pinVm);
         bool? result = null;

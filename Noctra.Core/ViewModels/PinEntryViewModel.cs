@@ -7,6 +7,7 @@ namespace Noctra.ViewModels;
 public partial class PinEntryViewModel : ObservableObject
 {
     private readonly ISecurityService _securityService;
+    private readonly IDispatcherService _dispatcherService;
     private readonly string _pinHash;
     private readonly ILocalizationService _localizationService;
     private const int MaxAttempts = 5;
@@ -16,9 +17,11 @@ public partial class PinEntryViewModel : ObservableObject
     private string _enteredPin = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowErrorMessage))]
     private string _errorMessage = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowErrorMessage))]
     private bool _isLocked;
 
     [ObservableProperty]
@@ -36,18 +39,31 @@ public partial class PinEntryViewModel : ObservableObject
     public int PinLength => EnteredPin.Length;
 
     /// <summary>
+    /// Lockout aktifken ErrorMessage'i gizle (UI overlap'ı önler)
+    /// </summary>
+    public bool ShowErrorMessage => !IsLocked && !string.IsNullOrEmpty(ErrorMessage);
+
+    /// <summary>
     /// true = doğru PIN, false = iptal, null = "şifremi unuttum"
     /// </summary>
     public event EventHandler<bool?>? PinResult;
 
+    /// <summary>
+    /// Lockout başladığında tetiklenir — ProfilesWindow lockout'u kalıcı hale getirir.
+    /// Parametre: lockout'un biteceği UTC zaman.
+    /// </summary>
+    public event EventHandler<DateTime>? LockoutTriggered;
+
     public PinEntryViewModel(
         ISecurityService securityService,
+        IDispatcherService dispatcherService,
         string pinHash,
         string profileName,
         string profileAvatar,
         string purpose, ILocalizationService localizationService)
     {
         _securityService = securityService;
+        _dispatcherService = dispatcherService;
         _pinHash = pinHash;
         ProfileName = profileName;
         ProfileAvatar = profileAvatar;
@@ -110,17 +126,28 @@ public partial class PinEntryViewModel : ObservableObject
         LockSecondsRemaining = 30;
         ErrorMessage = _localizationService.GetString("PinEntry.Error.TooManyAttempts");
 
+        // ProfilesWindow'a lockout başladığını bildir (kalıcılık için)
+        LockoutTriggered?.Invoke(this, DateTime.UtcNow.AddSeconds(30));
+
+        int countdown = 30;
+
         _ = Task.Run(async () =>
         {
-            while (LockSecondsRemaining > 0)
+            while (countdown > 0)
             {
                 await Task.Delay(1000);
-                LockSecondsRemaining--;
+                countdown--;
+                // Yerel değişken kullan — race condition'u önle
+                var captured = countdown;
+                _dispatcherService.BeginInvoke(() => LockSecondsRemaining = captured);
             }
 
-            IsLocked = false;
-            _attemptCount = 0;
-            ErrorMessage = string.Empty;
+            _dispatcherService.BeginInvoke(() =>
+            {
+                IsLocked = false;
+                _attemptCount = 0;
+                ErrorMessage = string.Empty;
+            });
         });
     }
 
