@@ -1,9 +1,10 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Noctra.Services.Interfaces;
-using System.Timers;
+using Avalonia.Threading;
+using System;
 
-namespace Noctra.ViewModels;
+namespace Noctra.Avalonia.ViewModels;
 
 public partial class VideoOverlayViewModel : ObservableObject, IDisposable
 {
@@ -11,7 +12,7 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
     private readonly INetworkService _networkService;
     private readonly IDispatcherService _dispatcherService;
     private readonly ILocalizationService _localizationService;
-    private readonly System.Timers.Timer _autoHideTimer;
+    private readonly DispatcherTimer _autoHideTimer;
     [ObservableProperty]
     private bool _isVisible;
 
@@ -79,7 +80,7 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
     private bool _isVolumeToastVisible;
 
     private bool _isUpdatingFromService;
-    private readonly System.Timers.Timer _volumeToastTimer;
+    private readonly DispatcherTimer _volumeToastTimer;
     private string _networkStatusRaw = "Unknown";
 
     public VideoOverlayViewModel(IVideoPlayerService playerService, INetworkService networkService, IDispatcherService dispatcherService, ILocalizationService localizationService)
@@ -90,14 +91,16 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
         _localizationService = localizationService;
         
         // Timer for auto-hide
-        _autoHideTimer = new System.Timers.Timer(3000); // 3 seconds
-        _autoHideTimer.Elapsed += AutoHideTimer_Elapsed;
-        _autoHideTimer.AutoReset = false;
+        _autoHideTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(3000) }; // 3 seconds
+        _autoHideTimer.Tick += AutoHideTimer_Tick;
 
         // Timer for volume toast
-        _volumeToastTimer = new System.Timers.Timer(2000); // 2 seconds
-        _volumeToastTimer.Elapsed += (s, e) => _dispatcherService.Invoke(() => IsVolumeToastVisible = false);
-        _volumeToastTimer.AutoReset = false;
+        _volumeToastTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2000) }; // 2 seconds
+        _volumeToastTimer.Tick += (s, e) => 
+        {
+            IsVolumeToastVisible = false;
+            _volumeToastTimer.Stop();
+        };
 
         IsVisible = true;
         RestartAutoHideTimer();
@@ -330,11 +333,12 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
         }
     }
 
-    private void AutoHideTimer_Elapsed(object? sender, ElapsedEventArgs e)
+    private void AutoHideTimer_Tick(object? sender, EventArgs e)
     {
+        _autoHideTimer.Stop();
         if (!IsLocked)
         {
-            _dispatcherService.Invoke(() => IsVisible = false);
+            IsVisible = false;
         }
     }
 
@@ -359,15 +363,14 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
     }
 
     // Timer to update clock
-    private System.Timers.Timer? _clockTimer;
+    private DispatcherTimer? _clockTimer;
 
     public void InitializeClock()
     {
-        _clockTimer = new System.Timers.Timer(1000);
-        _clockTimer.Elapsed += (s, e) => 
+        _clockTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000) };
+        _clockTimer.Tick += (s, e) => 
         {
-            var now = DateTime.Now.ToString("HH:mm");
-            _dispatcherService.Invoke(() => CurrentTimeStr = now);
+            CurrentTimeStr = DateTime.Now.ToString("HH:mm");
         };
         _clockTimer.Start();
         CurrentTimeStr = DateTime.Now.ToString("HH:mm");
@@ -376,9 +379,9 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _localizationService.LanguageChanged -= OnLocalizationLanguageChanged;
-        _autoHideTimer?.Dispose();
-        _clockTimer?.Dispose();
-        _volumeToastTimer?.Dispose();
+        _autoHideTimer?.Stop();
+        _clockTimer?.Stop();
+        _volumeToastTimer?.Stop();
         if (_networkService != null)
         {
             _networkService.NetworkStatusChanged -= OnNetworkStatusChanged;

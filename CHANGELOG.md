@@ -7,6 +7,22 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 
 ## [Unreleased]
+### 🎬 Video Oynatıcı Mimarisi, Bellek ve Katman Optimizasyonları (2026-05-17)
+- [Değişti] **VideoOverlayViewModel Katman Düzenlemesi**:
+    - Tamamen arayüze ait olan `VideoOverlayViewModel` sınıfı `Noctra.Core` katmanından `Noctra.Avalonia/ViewModels` (UI katmanı) altına taşındı ve namespace'i güncellendi.
+    - Arka planda çalışan güvensiz `System.Timers.Timer` yerine, UI iş parçacığında güvenle çalışan `Avalonia.Threading.DispatcherTimer` kullanılarak arayüz çökmeleri engellendi.
+- [Düzeltildi] **Bellek Sızıntılarının (Memory Leak) Engellenmesi**:
+    - `PlayerViewModel` içerisindeki tüm isimsiz (anonymous) lambda event handler'ları isimli private metodlara (`OnVideoPlayerServicePlayingChanged`, `OnVideoPlayerServiceVolumeChanged`, `OnLicenseServiceSubscriptionChanged`) dönüştürüldü.
+    - `Dispose()` metodu içerisinde bu event'lerin tamamından abonelikler (`-=`) kaldırılarak, singleton servislerden kaynaklanan bellek sızıntıları engellendi.
+- [Düzeltildi] **VideoPlayerService Tanılama ve Güvenlik**:
+    - `LogDebug()` metodu içindeki hardcoded `"d:\IPTVPlayer\vlc_debug_log.txt"` dosya yolu kaldırılarak uygulama dizinine göre dinamik hale getirildi (`BaseDirectory`).
+    - Hata durumunda sessizce yutulan `catch { }` bloğu `System.Diagnostics.Debug.WriteLine` uyarısı verecek şekilde iyileştirildi.
+- [Geliştirme] **UX İyileştirmesi**:
+    - Çok hızlı kaybolan video içi kontrol paneli (overlay) otomatik kapanma süresi `OverlayAutoHideDelayMs` 2.5 saniyeden **5 saniyeye (5000ms)** yükseltilerek daha pürüzsüz bir deneyim sağlandı.
+- [Düzeltildi] **Derleme ve Kararlılık**:
+    - Event handler refactoring'i sırasında oluşan süslü parantez (curly brace) uyuşmazlığı giderilerek projenin %100 başarıyla derlenmesi sağlandı.
+    - `MVVMTK0034` uyarısını gidermek için private alan (`_volume`) yerine public property (`Volume`) kullanıldı.
+
 ### 🎟️ Promosyon Kodu Sistemi ve Uzaktan Yapılandırma (2026-05-15)
 - [Yeni] **Uzaktan Promosyon Sistemi**: Promosyon kodları artık sadece uzak bir URL (Gist vb.) üzerinden doğrulanıyor. Yerel mock veriler tamamen kaldırıldı.
 - [Yeni] **.env Desteği**: `NOCTRA_PROMO_CODES_URL` değişkenini `.env` dosyasından otomatik yükleyen mekanizma eklendi.

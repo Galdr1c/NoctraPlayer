@@ -14,7 +14,7 @@ namespace Noctra.ViewModels;
 /// </summary>
 public partial class PlayerViewModel : ObservableObject, IDisposable
 {
-    private const double OverlayAutoHideDelayMs = 2500;
+    private const double OverlayAutoHideDelayMs = 5000;
     private const double NextEpisodePromptTailRatio = 0.06;
     private const double NextEpisodePromptMinTailSeconds = 25;
     private const double NextEpisodePromptMaxTailSeconds = 180;
@@ -678,239 +678,245 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _watchHistoryTimer.Elapsed += async (s, e) => await TrackWatchHistoryAsync();
         _watchHistoryTimer.AutoReset = true;
 
-        _videoPlayerService.PlayingChanged += (s, playing) => 
+        _videoPlayerService.PlayingChanged += OnVideoPlayerServicePlayingChanged;
+        _videoPlayerService.PlaybackEnded += OnVideoPlayerServicePlaybackEnded;
+        _videoPlayerService.QualityDetected += OnVideoPlayerServiceQualityDetected;
+        _videoPlayerService.BufferingChanged += OnVideoPlayerServiceBufferingChanged;
+        _videoPlayerService.ErrorOccurred += OnVideoPlayerServiceErrorOccurred;
+        _videoPlayerService.PositionChanged += OnVideoPlayerServicePositionChanged;
+        _videoPlayerService.VolumeChanged += OnVideoPlayerServiceVolumeChanged;
+
+        _licenseService.SubscriptionChanged += OnLicenseServiceSubscriptionChanged;
+    }
+
+    private void OnLicenseServiceSubscriptionChanged()
+    {
+        _dispatcherService.BeginInvoke(() => 
         {
-            _dispatcherService.Invoke(() =>
-            {
-                IsPlaying = playing;
-                if (playing) 
-                {
-                    _isContentTransitioning = false;
-                    _isPlaybackEnded = false;
-                    if (BufferingProgress >= 99f)
-                    {
-                        IsBuffering = false;
-                    }
-                    UpdateMediaInfo();
-                    _ = RefreshTracksWithRetryAsync();
-                    RestartAutoHideTimer();
-                }
-            });
-        };
+            OnPropertyChanged(nameof(IsPremium));
+            SetSleepTimerCommand.NotifyCanExecuteChanged();
+        });
+    }
 
-        _videoPlayerService.PlaybackEnded += (_, _) =>
+    private void OnVideoPlayerServicePlayingChanged(object? s, bool playing)
+    {
+        _dispatcherService.Invoke(() =>
         {
-            _dispatcherService.Invoke(() =>
+            IsPlaying = playing;
+            if (playing) 
             {
-                if (_isContentTransitioning) return;
-
-                _isPlaybackEnded = true;
-
-                // Sleep timer: EndOfEpisode modundaysa kapat
-                if (SleepTimerMode == SleepTimerOption.EndOfEpisode)
-                {
-                    _ = Task.Delay(1500).ContinueWith(_ =>
-                        _dispatcherService.BeginInvoke(TriggerSleepShutdown));
-                }
-
-                // Erken bitiş tespiti (Premature End Analysis) & Canlı Yayın Kopması
-                var duration = _videoPlayerService.Duration;
-                var currentPos = Position;
-                
-                // Canlı yayın `EndReached` atıyorsa bu direkt bağlantı kopmasıdır, hemen kurtar.
-                // VOD ise ve bitime 10 saniyeden fazla varsa bu erken bitiştir (kopmadır), kurtar.
-                bool isPrematureEnd = (IsLiveContent) || (!IsLiveContent && duration > 0 && (duration - currentPos) > 10);
-
-                if (isPrematureEnd)
-                {
-                    var now = DateTime.UtcNow;
-                    // Reset counter if it played successfully for at least 30 seconds since the last recovery.
-                    // This prevents giving up on streams that frequently disconnect but still offer 30+ seconds of playback.
-                    if (now - _lastPrematureEndRecoveryUtc > TimeSpan.FromSeconds(30))
-                        _prematureEndRecoveryCount = 0;
-
-                    // Check if we've exceeded max attempts
-                    if (_prematureEndRecoveryCount >= MaxPrematureEndRecoveries)
-                    {
-                        LogDebug($"VM: PREMATURE END recovery limit reached ({MaxPrematureEndRecoveries}). Giving up.");
-                        ConnectionStatus = _localizationService.GetString("Player.Status.Unstable");
-                        return;
-                    }
-
-                    // Cooldown check — prevent rapid-fire recovery
-                    if (now - _lastPrematureEndRecoveryUtc < PrematureEndRecoveryCooldown)
-                    {
-                        LogDebug("VM: PREMATURE END cooldown active, skipping recovery.");
-                        return;
-                    }
-
-                    _prematureEndRecoveryCount++;
-                    _lastPrematureEndRecoveryUtc = now;
-                    var lastValid = _lastKnownValidPosition > 1 ? _lastKnownValidPosition : currentPos;
-                    LogDebug($"VM: PREMATURE END DETECTED. Live: {IsLiveContent}, Pos/Dur: {currentPos}/{duration}s (Valid: {lastValid}). Suspected server truncation. Attempt {_prematureEndRecoveryCount}/{MaxPrematureEndRecoveries}");
-                    
-                    _ = AutoRecoverPrematureEndAsync(lastValid);
-                    return; // Auto-recovering, do not show next episode prompt
-                }
-                
-                TryShowNextEpisodePromptAtEnd();
-            });
-        };
-
-        _videoPlayerService.QualityDetected += (s, quality) =>
-        {
-            _dispatcherService.Invoke(() =>
-            {
-                StreamQuality = quality;
-                UpdateStreamInfoFromQuality();
-            });
-        };
-
-        _videoPlayerService.BufferingChanged += (s, progress) =>
-        {
-            _dispatcherService.Invoke(() =>
-            {
-                BufferingProgress = progress;
-
-                // Ignore stale buffering callbacks while switching content.
-                if (_isContentTransitioning)
-                {
-                    IsBuffering = true;
-                    return;
-                }
-
-                // Keep loading active until playback truly starts and buffering reaches 100.
-                if (_isIntentionallyPaused || IsDownloadedPlayback)
-                {
-                    // For offline files and intentional pauses, VLC still sends Buffering(0) which causes IsBuffering to stuck at true
-                    // if we check !IsPlaying. Thus, only depend on progress < 100f for these cases.
-                    IsBuffering = progress < 100f;
-                }
-                else
-                {
-                    IsBuffering = !IsPlaying || progress < 100f;
-                }
-
-                // Buffering bittiğinde kontrol katmanını mutlaka geri getir.
-                if (!IsBuffering)
-                {
-                    PlayerLoadingWarningMessage = string.Empty;
-
-                    IsVisible = true;
-                    
-                    if (IsPiPMode)
-                    {
-                        IsPiPControlsForceVisible = true;
-                        OnPropertyChanged(nameof(IsPiPControlsVisible));
-                    }
-                    
-                    RestartAutoHideTimer();
-                }
-            });
-        };
-
-        _videoPlayerService.ErrorOccurred += (s, errorMessage) =>
-        {
-            _dispatcherService.Invoke(() =>
-            {
-                PlayerLoadingWarningMessage = string.Empty;
-
-                ConnectionStatus = errorMessage;
-                // Broken/unreachable streams should stay in loading state until user changes content.
-                IsBuffering = true;
-                BufferingProgress = 0;
-            });
-        };
-
-        _videoPlayerService.PositionChanged += (s, pos) =>
-        {
-            _dispatcherService.Invoke(() =>
-            {
-                var nowUtc = DateTime.UtcNow;
-                _lastLivePositionEventAtUtc = nowUtc;
-
-                // Drop tail position events from previous media during transitions.
-                if (_isContentTransitioning)
-                {
-                    return;
-                }
-
-                UpdateDurationFromService();
-                if (IsPlaying && IsBuffering)
+                _isContentTransitioning = false;
+                _isPlaybackEnded = false;
+                if (BufferingProgress >= 99f)
                 {
                     IsBuffering = false;
                 }
+                UpdateMediaInfo();
+                _ = RefreshTracksWithRetryAsync();
+                RestartAutoHideTimer();
+            }
+        });
+    }
 
-                if (!_isUserSeeking)
-                {
-                    Position = pos;
-                    PositionText = TimeSpan.FromSeconds(pos).ToString(@"hh\:mm\:ss");
-
-                    if (pos > 1 && !IsBuffering && !_isContentTransitioning)
-                    {
-                        _lastKnownValidPosition = pos;
-                    }
-
-                    if (!IsLiveContent && Duration > 0)
-                    {
-                        var remaining = Math.Max(0, Duration - pos);
-                        RemainingTime = "-" + TimeSpan.FromSeconds(remaining).ToString(@"hh\:mm\:ss");
-                        CheckIntroCreditsPosition(pos);
-                    }
-
-                    TryApplyPendingResumeSeek();
-                }
-
-                // Heartbeat / Stall Monitor: Oynuyor görünürken ilerlemiyorsa logla
-                if (IsPlaying && !IsBuffering && !_isUserSeeking && !_isContentTransitioning)
-                {
-                    var mediaPlayer = _videoPlayerService.GetMediaPlayer();
-                    var currentTimeMs = mediaPlayer?.Time ?? 0;
-
-                    if (currentTimeMs > 0 && currentTimeMs == _lastStallCheckTimeMs)
-                    {
-                        _stallCounter++;
-                        if (_stallCounter == StallThreshold)
-                        {
-                            LogDebug($"STALL DETECTED: Heartbeat stopped at {pos}s (TimeMs: {currentTimeMs})");
-                        }
-                    }
-                    else
-                    {
-                        _stallCounter = 0;
-                    }
-                    _lastStallCheckTimeMs = currentTimeMs;
-                }
-
-                ReleaseSkipSeekCarryIfSettled(nowUtc, pos);
-                });        };
-
-        // Initialize volume from service
-        Volume = _videoPlayerService.Volume;
-        _volumeBeforeMute = Volume > 0 ? Volume : 50;
-
-        _videoPlayerService.VolumeChanged += (s, vol) =>
+    private void OnVideoPlayerServicePlaybackEnded(object? sender, EventArgs e)
+    {
+        _dispatcherService.Invoke(() =>
         {
-            _dispatcherService.Invoke(() =>
-            {
-                if (_volume != vol)
-                {
-                    _isUpdatingFromService = true;
-                    Volume = vol;
-                    _isUpdatingFromService = false;
-                }
-            });
-        };
+            if (_isContentTransitioning) return;
 
-        // Premium statüsü değiştiğinde UI'ı haberdar et
-        _licenseService.SubscriptionChanged += () =>
-        {
-            _dispatcherService.BeginInvoke(() => 
+            _isPlaybackEnded = true;
+
+            // Sleep timer: EndOfEpisode modundaysa kapat
+            if (SleepTimerMode == SleepTimerOption.EndOfEpisode)
             {
-                OnPropertyChanged(nameof(IsPremium));
-                SetSleepTimerCommand.NotifyCanExecuteChanged();
-            });
-        };
+                _ = Task.Delay(1500).ContinueWith(_ =>
+                    _dispatcherService.BeginInvoke(TriggerSleepShutdown));
+            }
+
+            // Erken bitiş tespiti (Premature End Analysis) & Canlı Yayın Kopması
+            var duration = _videoPlayerService.Duration;
+            var currentPos = Position;
+            
+            // Canlı yayın `EndReached` atıyorsa bu direkt bağlantı kopmasıdır, hemen kurtar.
+            // VOD ise ve bitime 10 saniyeden fazla varsa bu erken bitiştir (kopmadır), kurtar.
+            bool isPrematureEnd = (IsLiveContent) || (!IsLiveContent && duration > 0 && (duration - currentPos) > 10);
+
+            if (isPrematureEnd)
+            {
+                var now = DateTime.UtcNow;
+                // Reset counter if it played successfully for at least 30 seconds since the last recovery.
+                // This prevents giving up on streams that frequently disconnect but still offer 30+ seconds of playback.
+                if (now - _lastPrematureEndRecoveryUtc > TimeSpan.FromSeconds(30))
+                    _prematureEndRecoveryCount = 0;
+
+                // Check if we've exceeded max attempts
+                if (_prematureEndRecoveryCount >= MaxPrematureEndRecoveries)
+                {
+                    LogDebug($"VM: PREMATURE END recovery limit reached ({MaxPrematureEndRecoveries}). Giving up.");
+                    ConnectionStatus = _localizationService.GetString("Player.Status.Unstable");
+                    return;
+                }
+
+                // Cooldown check — prevent rapid-fire recovery
+                if (now - _lastPrematureEndRecoveryUtc < PrematureEndRecoveryCooldown)
+                {
+                    LogDebug("VM: PREMATURE END cooldown active, skipping recovery.");
+                    return;
+                }
+
+                _prematureEndRecoveryCount++;
+                _lastPrematureEndRecoveryUtc = now;
+                var lastValid = _lastKnownValidPosition > 1 ? _lastKnownValidPosition : currentPos;
+                LogDebug($"VM: PREMATURE END DETECTED. Live: {IsLiveContent}, Pos/Dur: {currentPos}/{duration}s (Valid: {lastValid}). Suspected server truncation. Attempt {_prematureEndRecoveryCount}/{MaxPrematureEndRecoveries}");
+                
+                _ = AutoRecoverPrematureEndAsync(lastValid);
+                return; // Auto-recovering, do not show next episode prompt
+            }
+            
+            TryShowNextEpisodePromptAtEnd();
+        });
+    }
+
+    private void OnVideoPlayerServiceQualityDetected(object? s, Models.StreamQualityInfo quality)
+    {
+        _dispatcherService.Invoke(() =>
+        {
+            StreamQuality = quality;
+            UpdateStreamInfoFromQuality();
+        });
+    }
+
+    private void OnVideoPlayerServiceBufferingChanged(object? s, float progress)
+    {
+        _dispatcherService.Invoke(() =>
+        {
+            BufferingProgress = progress;
+
+            // Ignore stale buffering callbacks while switching content.
+            if (_isContentTransitioning)
+            {
+                IsBuffering = true;
+                return;
+            }
+
+            // Keep loading active until playback truly starts and buffering reaches 100.
+            if (_isIntentionallyPaused || IsDownloadedPlayback)
+            {
+                // For offline files and intentional pauses, VLC still sends Buffering(0) which causes IsBuffering to stuck at true
+                // if we check !IsPlaying. Thus, only depend on progress < 100f for these cases.
+                IsBuffering = progress < 100f;
+            }
+            else
+            {
+                IsBuffering = !IsPlaying || progress < 100f;
+            }
+
+            // Buffering bittiğinde kontrol katmanını mutlaka geri getir.
+            if (!IsBuffering)
+            {
+                PlayerLoadingWarningMessage = string.Empty;
+
+                IsVisible = true;
+                
+                if (IsPiPMode)
+                {
+                    IsPiPControlsForceVisible = true;
+                    OnPropertyChanged(nameof(IsPiPControlsVisible));
+                }
+                
+                RestartAutoHideTimer();
+            }
+        });
+    }
+
+    private void OnVideoPlayerServiceErrorOccurred(object? s, string errorMessage)
+    {
+        _dispatcherService.Invoke(() =>
+        {
+            PlayerLoadingWarningMessage = string.Empty;
+
+            ConnectionStatus = errorMessage;
+            // Broken/unreachable streams should stay in loading state until user changes content.
+            IsBuffering = true;
+            BufferingProgress = 0;
+        });
+    }
+
+    private void OnVideoPlayerServicePositionChanged(object? s, double pos)
+    {
+        _dispatcherService.Invoke(() =>
+        {
+            var nowUtc = DateTime.UtcNow;
+            _lastLivePositionEventAtUtc = nowUtc;
+
+            // Drop tail position events from previous media during transitions.
+            if (_isContentTransitioning)
+            {
+                return;
+            }
+
+            UpdateDurationFromService();
+            if (IsPlaying && IsBuffering)
+            {
+                IsBuffering = false;
+            }
+
+            if (!_isUserSeeking)
+            {
+                Position = pos;
+                PositionText = TimeSpan.FromSeconds(pos).ToString(@"hh\:mm\:ss");
+
+                if (pos > 1 && !IsBuffering && !_isContentTransitioning)
+                {
+                    _lastKnownValidPosition = pos;
+                }
+
+                if (!IsLiveContent && Duration > 0)
+                {
+                    var remaining = Math.Max(0, Duration - pos);
+                    RemainingTime = "-" + TimeSpan.FromSeconds(remaining).ToString(@"hh\:mm\:ss");
+                    CheckIntroCreditsPosition(pos);
+                }
+
+                TryApplyPendingResumeSeek();
+            }
+
+            // Heartbeat / Stall Monitor: Oynuyor görünürken ilerlemiyorsa logla
+            if (IsPlaying && !IsBuffering && !_isUserSeeking && !_isContentTransitioning)
+            {
+                var mediaPlayer = _videoPlayerService.GetMediaPlayer();
+                var currentTimeMs = mediaPlayer?.Time ?? 0;
+
+                if (currentTimeMs > 0 && currentTimeMs == _lastStallCheckTimeMs)
+                {
+                    _stallCounter++;
+                    if (_stallCounter == StallThreshold)
+                    {
+                        LogDebug($"STALL DETECTED: Heartbeat stopped at {pos}s (TimeMs: {currentTimeMs})");
+                    }
+                }
+                else
+                {
+                    _stallCounter = 0;
+                }
+                _lastStallCheckTimeMs = currentTimeMs;
+            }
+
+            ReleaseSkipSeekCarryIfSettled(nowUtc, pos);
+        });
+    }
+
+    private void OnVideoPlayerServiceVolumeChanged(object? s, int vol)
+    {
+        _dispatcherService.Invoke(() =>
+        {
+            if (Volume != vol)
+            {
+                _isUpdatingFromService = true;
+                Volume = vol;
+                _isUpdatingFromService = false;
+            }
+        });
     }
 
     partial void OnCurrentChannelChanged(Channel? value)
@@ -3550,6 +3556,22 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        if (_videoPlayerService != null)
+        {
+            _videoPlayerService.PlayingChanged -= OnVideoPlayerServicePlayingChanged;
+            _videoPlayerService.PlaybackEnded -= OnVideoPlayerServicePlaybackEnded;
+            _videoPlayerService.QualityDetected -= OnVideoPlayerServiceQualityDetected;
+            _videoPlayerService.BufferingChanged -= OnVideoPlayerServiceBufferingChanged;
+            _videoPlayerService.ErrorOccurred -= OnVideoPlayerServiceErrorOccurred;
+            _videoPlayerService.PositionChanged -= OnVideoPlayerServicePositionChanged;
+            _videoPlayerService.VolumeChanged -= OnVideoPlayerServiceVolumeChanged;
+        }
+
+        if (_licenseService != null)
+        {
+            _licenseService.SubscriptionChanged -= OnLicenseServiceSubscriptionChanged;
+        }
+
         _autoHideTimer?.Dispose();
         _clockTimer?.Dispose();
         _watchHistoryTimer?.Dispose();
@@ -3558,6 +3580,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _sleepCountdownCts?.Cancel();
         _sleepCountdownCts?.Dispose();
         _sleepCountdownCts = null;
+
 
         if (_settingsService != null)
         {

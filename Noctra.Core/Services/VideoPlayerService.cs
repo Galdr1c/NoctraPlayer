@@ -44,10 +44,14 @@ public class VideoPlayerService : IVideoPlayerService
         try
         {
             lock (_logLock) {
-                System.IO.File.AppendAllText(@"d:\IPTVPlayer\vlc_debug_log.txt", $"[{DateTime.Now:HH:mm:ss.fff}] [VPS] {msg}\n");
+                var logPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "vlc_debug_log.txt");
+                System.IO.File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] [VPS] {msg}\n");
             }
         }
-        catch { }
+        catch (Exception ex) 
+        { 
+            System.Diagnostics.Debug.WriteLine($"[VideoPlayerService] Failed to write log: {ex.Message}");
+        }
         
         System.Diagnostics.Debug.WriteLine($"[VideoPlayerService] {msg}");
     }
