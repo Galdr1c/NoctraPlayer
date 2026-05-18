@@ -9,6 +9,13 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ## [Unreleased]
 
 
+
+### ⚡ UpdateHistoryBucketsAsync - DB GroupBy+Max O(n) -> LastWatchedEpisodeAt O(1) (2026-05-19)
+- [Performans] **Series.LastWatchedEpisodeAt Field Eklendi**: Series modeline `[NotMapped] DateTime? LastWatchedEpisodeAt` property'si eklendi. Episode izlenince otomatik guncellenir.
+- [Performans] **UpdateHistoryBucketsAsync Cache**: Artik _allSeriesCache uzerinde Where(s => s.LastWatchedEpisodeAt.HasValue).OrderByDescending(...) ile calisir. DB sorgusu sadece ilk yuklemede (veya cache yenilenince) calisir.
+- [Performans] **FlushWatchHistoryAsync Entegrasyonu**: Episode izleme kaydedildiginde Series.LastWatchedEpisodeAt degeri otomatik guncellenir. Ana sayfadaki gecmis rail'i aninda guncellenir.
+- [Degisti] **DB Fallback Korundu**: _allSeriesCache yenilendiginde ilk cagrida DB sorgusu calisir ve tum serilerin LastWatchedEpisodeAt degerlerini doldurur. Sonraki cagrilar cache'ten okur.
+- [Kazanim] 100 izlenmis dizi x 30 bolum = 3.000 episode erisimi -> 0 (cache'ten O(n) filtreleme).
 ### ⚡ UpdateContinueWatchingRailAsync - DB Query O(n) -> Cache + 100ms Debounce (2026-05-19)
 - [Performans] **_episodeToSeriesMap Cache Eklendi**: UpdateContinueWatchingRailAsync her cagrilda DB'den tum seri bolumlerini cekmek yerine, sonucu _cachedEpisodeContinue'te (List<Channel>?) saklar. Sadece _isEpisodeContinueDirty = true iken sorgu calisir.
 - [Performans] **100ms Debounce Eklendi**: Ard arda gelen cagrilar 100ms icinde birlesir, yalnizca son cagri DB sorgusu yapar. CancellationTokenSource ile iptal edilen Task.Delay() sayesinde birden fazla paralel sorgu onlenir.

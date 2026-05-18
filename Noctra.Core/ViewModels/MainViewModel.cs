@@ -1896,6 +1896,18 @@ public partial class MainViewModel : ObservableObject
 
     public bool IsDownloadedSeriesDetailMode => _seriesDetailDownloadedOnlyMode;
 
+    internal void UpdateSeriesLastWatchedEpisodeAt(int seriesId, DateTime lastWatchedUtc)
+    {
+        for (int i = 0; i < _allSeriesCache.Count; i++)
+        {
+            if (_allSeriesCache[i].Id == seriesId)
+            {
+                _allSeriesCache[i].LastWatchedEpisodeAt = lastWatchedUtc;
+                break;
+            }
+        }
+    }
+
     private void ResetIncrementalState()
     {
         _currentPage = 0;
@@ -3971,7 +3983,23 @@ public partial class MainViewModel : ObservableObject
         SetItems(HistoryLiveChannels, historySnapshot.Where(c => c.Type == ChannelType.Live));
         SetItems(HistoryVodChannels, historySnapshot.Where(c => c.Type == ChannelType.VOD));
 
-        // Query DB for series with watched episodes instead of iterating in-memory cache
+        // Use cached LastWatchedEpisodeAt when available (populated on episode watch save)
+        var cachedSeries = _allSeriesCache
+            .Where(s => s.LastWatchedEpisodeAt.HasValue)
+            .OrderByDescending(s => s.LastWatchedEpisodeAt)
+            .ToList();
+
+        if (cachedSeries.Count > 0)
+        {
+            SetItems(HistorySeriesItems, cachedSeries, () => {
+                ShowHistoryEmptyState = HistoryLiveChannels.Count == 0
+                                     && HistoryVodChannels.Count == 0
+                                     && HistorySeriesItems.Count == 0;
+            });
+            return;
+        }
+
+        // Fallback: query DB for series with watched episodes
         var playlistId = SelectedPlaylist?.Id ?? 0;
         var watchedSeries = new List<Series>();
         if (playlistId > 0)
@@ -3990,12 +4018,13 @@ public partial class MainViewModel : ObservableObject
                     .OrderByDescending(x => x.LastWatched)
                     .ToListAsync();
 
-                // Match against lightweight cache
+                // Match against lightweight cache and populate LastWatchedEpisodeAt
                 var cacheById = _allSeriesCache.ToDictionary(s => s.Id, s => s);
                 foreach (var ws in watchedSeriesIds)
                 {
                     if (cacheById.TryGetValue(ws.SeriesId, out var series))
                     {
+                        series.LastWatchedEpisodeAt = ws.LastWatched;
                         watchedSeries.Add(series);
                     }
                 }

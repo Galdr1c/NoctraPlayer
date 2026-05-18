@@ -74,6 +74,9 @@ public partial class Series : ObservableObject
     public int TotalEpisodesCount => _seasons?.Sum(s => s.Episodes?.Count ?? 0) ?? 0;
 
     [NotMapped]
+    public DateTime? LastWatchedEpisodeAt { get; set; }
+
+    [NotMapped]
     public string? SeriesInfoText
     {
         get

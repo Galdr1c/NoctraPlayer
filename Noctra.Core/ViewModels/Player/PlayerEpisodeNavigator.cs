@@ -534,6 +534,12 @@ public class PlayerEpisodeNavigator
 
                     RefreshEpisodeBrowserContext(_vm._currentSeriesContext);
                     _vm.RaiseEpisodeProgressUpdatedEvent(_vm.CurrentEpisode);
+
+                    // Update LastWatchedEpisodeAt on the Series for O(n) history sorting
+                    if (_vm._currentSeriesContext?.Id > 0)
+                    {
+                        _vm.MainViewModel.UpdateSeriesLastWatchedEpisodeAt(_vm._currentSeriesContext.Id, DateTime.UtcNow);
+                    }
                 });
             }
         }
