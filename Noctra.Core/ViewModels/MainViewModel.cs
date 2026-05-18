@@ -6511,7 +6511,7 @@ public partial class MainViewModel : ObservableObject
                     }
                     if (string.IsNullOrEmpty(source.Director) && tmdbSeries.Credits?.Crew != null)
                     {
-                        source.Director = tmdbSeries.Credits.Crew.FirstOrDefault(c => c.Job == "Director")?.Name;
+                        source.Director = tmdbSeries.DirectorName;
                     }
                     if (string.IsNullOrEmpty(source.Plot) && !string.IsNullOrEmpty(tmdbSeries.Overview))
                     {
@@ -6609,7 +6609,8 @@ public partial class MainViewModel : ObservableObject
                 }
 
                 // 3. Mark as fetched and Save
-                if (changesMade && dbSeries != null)
+                bool seriesDataFetched = tmdbSeries != null;
+                if ((seriesDataFetched || changesMade) && dbSeries != null)
                 {
                     source.MetadataFetchedAt = DateTime.UtcNow;
                     await db.SaveChangesAsync();

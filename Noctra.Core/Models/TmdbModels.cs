@@ -105,6 +105,9 @@ public class TmdbDetail : TmdbResult
     [JsonPropertyName("credits")]
     public TmdbCredits? Credits { get; set; }
 
+    [JsonPropertyName("created_by")]
+    public List<TmdbCreatedBy>? CreatedBy { get; set; }
+
     [JsonPropertyName("release_dates")]
     public TmdbReleaseDatesResponse? ReleaseDates { get; set; }
 
@@ -122,6 +125,34 @@ public class TmdbDetail : TmdbResult
 
     [JsonPropertyName("networks")]
     public List<TmdbNetwork>? Networks { get; set; }
+
+    /// <summary>
+    /// Gets the director/creator name for this title.
+    /// For TV shows, uses <c>created_by</c> (show creators) first, then falls back to crew with "Creator" job.
+    /// For movies, falls back to crew with "Director" job.
+    /// </summary>
+    public string? DirectorName
+    {
+        get
+        {
+            // TV shows: created_by array has the show creators
+            if (CreatedBy is { Count: > 0 })
+                return CreatedBy[0].Name;
+
+            if (Credits?.Crew != null)
+            {
+                // Some TV shows list creators as "Creator" in crew
+                var creator = Credits.Crew.FirstOrDefault(c => c.Job == "Creator")?.Name;
+                if (!string.IsNullOrEmpty(creator))
+                    return creator;
+
+                // For movies, "Director" job works
+                return Credits.Crew.FirstOrDefault(c => c.Job == "Director")?.Name;
+            }
+
+            return null;
+        }
+    }
 }
 
 public class TmdbWatchProviderResponse
@@ -267,6 +298,24 @@ public class TmdbCrew
     
     [JsonPropertyName("job")]
     public string? Job { get; set; } // Director, Producer, etc.
+}
+
+public class TmdbCreatedBy
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    [JsonPropertyName("credit_id")]
+    public string? CreditId { get; set; }
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("gender")]
+    public int Gender { get; set; }
+
+    [JsonPropertyName("profile_path")]
+    public string? ProfilePath { get; set; }
 }
 
 public class TmdbReleaseDatesResponse

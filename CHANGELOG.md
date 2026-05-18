@@ -7,6 +7,20 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 
 ## [Unreleased]
+### 🐛 TV Dizilerinde Director Alanının Boş Kalması (2026-05-19)
+- [Düzeltildi] **TMDB created_by Desteği (KRİTİK)**: TMDB `/tv/{id}` endpointi dizi yaratıcılarını `crew` içinde "Director" job'ı olarak değil, ayrı `created_by` dizisinde döndürür. `TmdbDetail` modeline `TmdbCreatedBy` sınıfı ve `CreatedBy` property'si eklendi. `DirectorName` helper property'si (`CreatedBy[0].Name` → crew "Creator" job'ı → crew "Director" job'ı) ile TV dizilerinde yönetmen bilgisinin doğru şekilde gelmesi sağlandı. TmdbSyncService, MetadataService ve MainViewModel'deki tüm `c.Job == "Director"` kontrolleri  ile `DirectorName` ile değiştirildi.
+
+### 🐛 MetadataFetchedAt Hiç Kaydedilmiyordu — Sonsuz Döngü (2026-05-19)
+- [Düzeltildi] **MetadataFetchedAt Kayıt Hatası (KRİTİK)**: `MainViewModel` lazy-load bloğunda `MetadataFetchedAt` yalnızca `changesMade == true` koşulunda kaydediliyordu. `changesMade` ise sadece sezon verisi döndüğünde `true` oluyordu. Sezonu olmayan veya sezonu local DB'de bulunan bir dizide TMDB verisi başarıyla çekilmesine rağmen `MetadataFetchedAt` null kalıyor, kullanıcı her detay açışında TMDB API'ye yeniden istek atıyordu. Çözüm: `bool seriesDataFetched = tmdbSeries != null` değişkeni eklendi, koşul `if ((seriesDataFetched || changesMade) && dbSeries != null)` olarak değiştirildi.
+
+### 🐛 Ağ Logoları İçin h50 Geçersiz TMDB Görsel Boyutu — 404 (2026-05-19)
+- [Düzeltildi] **h50 → w92 (KRİTİK)**: TMDB logo boyutları yalnızca `w45`, `w92`, `w154`, `w185`, `w300`, `w500`, `original` destekler. `h50` geçersiz olduğu için tüm `NetworkLogoUrl` değerleri 404 dönüyor ve ağ logoları kırık görünüyordu. `MetadataService.cs` içindeki 3 satırda (339, 350, 365) `h50` → `w92` ile değiştirildi.
+
+### 🐛 FetchDetailsAsync videos Append-to-Response Eksikliği — Fragman Yok (2026-05-19)
+- [Düzeltildi] **FetchDetailsAsync videos Eklendi (UYARI)**: `FetchDetailsAsync` metodunda `append_to_response` parametresinde `videos` eksikti. Film için `"credits,release_dates,watch/providers"`, TV için `"credits,content_ratings,watch/providers"` kullanılıyordu. Bu nedenle `EditChannelViewModel` ve multi-search akışında hiçbir zaman fragman (trailer) URL'si dönmüyordu. Çözüm: Her iki append string'ine de `videos` eklendi.
+
+### 🐛 CheckAndPurgeUnsafeSeriesAsync Contains ile Yanlış Kanal Silme (2026-05-19)
+- [Düzeltildi] **Contains → Word-Boundary Match (UYARI)**: `CheckAndPurgeUnsafeSeriesAsync` çocuk profili güvenlik temizliğinde `c.Name.Contains(dbSeries.Name)` kullanıyordu. "Man" adlı bir dizi "Superman", "Batman", "Mandalorian" gibi kanalları da siliyordu. Çözüm: `Contains` yerine tam eşleşme (`==`) ve başlık başı eşleşmesi (`StartsWith` + boşluk/nokta/` - `) kullanıldı. Null/empty `seriesName` güvenlik kontrolü eklendi.
 ### 🐛 Volume Toast Spam, ToggleMute Double-Fire ve Stop Sonrası Seek Koruması (2026-05-19)
 - [Düzeltildi] **Volume Toast Log Spam (Binding Loop + Throttle)**: ShowVolumeToast() 400ms throttle ile korundu. Slider sürükleme veya tuş tekrarı sonucu saniyede 80+ toast log'u basılması engellendi.
 - [Düzeltildi] **ToggleMute Çift Tetiklenme (Double-Fire)**: MainWindow_KeyDown (Tunnel) ve OverlayRoot_KeyDown (Bubble) ikisi de Key.M için ToggleMuteCommand çağırıyordu. OverlayRoot_KeyDown'a e.Handled kontrolü eklenerek M tuşuna her basışta mute'in iki kez toggle edilmesi engellendi.

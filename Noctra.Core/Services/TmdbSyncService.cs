@@ -203,7 +203,7 @@ public class TmdbSyncService : ITmdbSyncService
             // Credits — cast + director
             if (details.Credits != null)
             {
-                var director = details.Credits.Crew?.FirstOrDefault(c => c.Job == "Director")?.Name;
+                var director = details.DirectorName;
                 if (!string.IsNullOrEmpty(director))
                     dbSeries.Director = director;
 
@@ -293,12 +293,19 @@ public class TmdbSyncService : ITmdbSyncService
             {
                 _logger?.LogWarning("[TmdbSync] PURGING UNSAFE SERIES '{Name}' (Rating: {Rating}) from child profile", dbSeries.Name, dbSeries.ContentRating);
                 
-                // Delete associated channels (sadece Series/VOD tipi kanallar, GroupTitle eşleşmesi DEĞİL)
-                // c.Name.Contains + GroupTitle == daha önce çok geniş eşleşiyordu (örn. "Man" tüm kanalları silebiliyordu)
+                // Delete associated channels: exact match or start-of-word match only.
+                // Avoid Contains() — "Man" would incorrectly match "Superman", "Batman", "Mandalorian", etc.
+                var seriesName = dbSeries.Name ?? string.Empty;
+                if (string.IsNullOrEmpty(seriesName))
+                    return true; // Can't safely match; remove series to avoid stale data
+
                 var channelsToDelete = await context.Channels
-                    .Where(c => c.PlaylistId == dbSeries.PlaylistId && 
+                    .Where(c => c.PlaylistId == dbSeries.PlaylistId &&
                                (c.Type == ChannelType.Series || c.Type == ChannelType.VOD) &&
-                               c.Name.Contains(dbSeries.Name))
+                               (c.Name == seriesName ||
+                                c.Name.StartsWith(seriesName + " ") ||
+                                c.Name.StartsWith(seriesName + ".") ||
+                                c.Name.StartsWith(seriesName + " - ")))
                     .ToListAsync(cancellationToken);
                 
                 if (channelsToDelete.Any())

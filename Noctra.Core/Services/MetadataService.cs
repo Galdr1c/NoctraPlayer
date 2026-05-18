@@ -176,7 +176,7 @@ public partial class MetadataService : IMetadataService
             if (details?.Credits != null)
             {
                 // Director
-                var director = details.Credits.Crew.FirstOrDefault(c => c.Job == "Director")?.Name;
+                var director = details.DirectorName;
                 if (!string.IsNullOrEmpty(director))
                     metadata.Director = director;
 
@@ -241,7 +241,7 @@ public partial class MetadataService : IMetadataService
         try
         {
             var endpoint = mediaType == "movie" ? "movie" : "tv";
-            var append = mediaType == "movie" ? "credits,release_dates,watch/providers" : "credits,content_ratings,watch/providers";
+            var append = mediaType == "movie" ? "credits,release_dates,videos,watch/providers" : "credits,content_ratings,videos,watch/providers";
             var url = $"{TMDB_BASE_URL}/{endpoint}/{id}?api_key={_apiKey}&append_to_response={append}&language={languageCode}";
             
             return await _httpClient.GetFromJsonAsync<TmdbDetail>(url, cancellationToken);
@@ -336,7 +336,7 @@ public partial class MetadataService : IMetadataService
                 {
                     metadata.NetworkName = bestProvider.Name;
                     if (!string.IsNullOrEmpty(bestProvider.LogoPath))
-                        metadata.NetworkLogoUrl = $"https://image.tmdb.org/t/p/h50{bestProvider.LogoPath}";
+                        metadata.NetworkLogoUrl = $"https://image.tmdb.org/t/p/w92{bestProvider.LogoPath}";
                     return; // Found a specific streaming provider match
                 }
 
@@ -347,7 +347,7 @@ public partial class MetadataService : IMetadataService
                 {
                     metadata.NetworkName = firstFlatrate.Name;
                     if (!string.IsNullOrEmpty(firstFlatrate.LogoPath))
-                        metadata.NetworkLogoUrl = $"https://image.tmdb.org/t/p/h50{firstFlatrate.LogoPath}";
+                        metadata.NetworkLogoUrl = $"https://image.tmdb.org/t/p/w92{firstFlatrate.LogoPath}";
                     return;
                 }
             }
@@ -362,7 +362,7 @@ public partial class MetadataService : IMetadataService
             {
                 metadata.NetworkName = network.Name;
                 if (!string.IsNullOrEmpty(network.LogoPath))
-                    metadata.NetworkLogoUrl = $"https://image.tmdb.org/t/p/h50{network.LogoPath}";
+                    metadata.NetworkLogoUrl = $"https://image.tmdb.org/t/p/w92{network.LogoPath}";
             }
         }
     }
