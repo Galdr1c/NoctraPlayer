@@ -21,6 +21,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ### 🐛 CheckAndPurgeUnsafeSeriesAsync Contains ile Yanlış Kanal Silme (2026-05-19)
 - [Düzeltildi] **Contains → Word-Boundary Match (UYARI)**: `CheckAndPurgeUnsafeSeriesAsync` çocuk profili güvenlik temizliğinde `c.Name.Contains(dbSeries.Name)` kullanıyordu. "Man" adlı bir dizi "Superman", "Batman", "Mandalorian" gibi kanalları da siliyordu. Çözüm: `Contains` yerine tam eşleşme (`==`) ve başlık başı eşleşmesi (`StartsWith` + boşluk/nokta/` - `) kullanıldı. Null/empty `seriesName` güvenlik kontrolü eklendi.
+### 🔒 TMDB API Key Query Param → Authorization Header (Bearer Token) — Güvenlik (2026-05-19)
+- [Değiştirildi] **API Key Authorization Header'a Taşındı (Güvenlik)**: `MetadataService.cs` içindeki tüm TMDB API çağrıları `?api_key=...` query parametresi yerine `Authorization: Bearer <token>` HTTP header'ı kullanacak şekilde değiştirildi. API key artık URL'de açıkta kalmıyor — proxy logları, HTTP history ve uygulama telemetrisinde görünmez. `SetApiKey` ve `EnsureApiKeyLoaded` metotlarında header otomatik güncelleniyor; key boşalırsa header temizleniyor. 9 TMDB URL şablonundaki `?api_key=` parametresi kaldırıldı.
+
 ### 🐛 Volume Toast Spam, ToggleMute Double-Fire ve Stop Sonrası Seek Koruması (2026-05-19)
 - [Düzeltildi] **Volume Toast Log Spam (Binding Loop + Throttle)**: ShowVolumeToast() 400ms throttle ile korundu. Slider sürükleme veya tuş tekrarı sonucu saniyede 80+ toast log'u basılması engellendi.
 - [Düzeltildi] **ToggleMute Çift Tetiklenme (Double-Fire)**: MainWindow_KeyDown (Tunnel) ve OverlayRoot_KeyDown (Bubble) ikisi de Key.M için ToggleMuteCommand çağırıyordu. OverlayRoot_KeyDown'a e.Handled kontrolü eklenerek M tuşuna her basışta mute'in iki kez toggle edilmesi engellendi.
