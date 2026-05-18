@@ -32,6 +32,7 @@ public class RemoteImage : Image
     private static readonly ConcurrentDictionary<string, Task<Bitmap?>> InFlightLoads = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, byte> FailedUrlLog = new(StringComparer.OrdinalIgnoreCase);
     private static readonly LinkedList<string> CacheLruList = new();
+    private static readonly Dictionary<string, LinkedListNode<string>> NodeMap = new(StringComparer.OrdinalIgnoreCase);
     private static readonly object CacheLock = new();
     private static readonly SemaphoreSlim HttpDownloadGate = new(8, 8);
     private const int MaxCacheEntries = 1500;
@@ -167,8 +168,11 @@ public class RemoteImage : Image
             if (Cache.TryGetValue(normalizedUrl, out var cached))
             {
                 // LRU usage update
-                CacheLruList.Remove(normalizedUrl);
-                CacheLruList.AddLast(normalizedUrl);
+                if (NodeMap.TryGetValue(normalizedUrl, out var lruNode))
+                {
+                    CacheLruList.Remove(lruNode);
+                    NodeMap[normalizedUrl] = CacheLruList.AddLast(normalizedUrl);
+                }
 
                 SetSourceOnUiThread(cached);
                 return;
@@ -452,16 +456,21 @@ public class RemoteImage : Image
         {
             if (Cache.ContainsKey(url))
             {
-                CacheLruList.Remove(url);
-                CacheLruList.AddLast(url);
+                if (NodeMap.TryGetValue(url, out var lruNode))
+                {
+                    CacheLruList.Remove(lruNode);
+                    NodeMap[url] = CacheLruList.AddLast(url);
+                }
                 return;
             }
 
             // Evict if limit reached
             while (Cache.Count >= MaxCacheEntries && CacheLruList.First != null)
             {
-                var oldest = CacheLruList.First.Value;
+                var oldestNode = CacheLruList.First;
+                var oldest = oldestNode.Value;
                 CacheLruList.RemoveFirst();
+                NodeMap.Remove(oldest);
                 if (Cache.TryRemove(oldest, out var evicted))
                 {
                     evicted?.Dispose();
@@ -470,7 +479,7 @@ public class RemoteImage : Image
 
             if (Cache.TryAdd(url, bitmap))
             {
-                CacheLruList.AddLast(url);
+                NodeMap[url] = CacheLruList.AddLast(url);
             }
         }
     }
