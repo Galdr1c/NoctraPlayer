@@ -7,6 +7,12 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 
 ## [Unreleased]
+### 🐛 _filterCts Her Tuş Vuruşunda Sızdırıyordu — WaitHandle Sızıntısı (2026-05-19)
+- [Düzeltildi] **CTS.Dispose() Eklendi (KRİTİK)**: `OnSearchTextChanged` ve `ScheduleImmediateFilter` metodlarında `_filterCts?.Cancel()` çağrılıyor ancak `_filterCts?.Dispose()` çağrılmıyordu. `CancellationTokenSource` kernel `WaitHandle` + unmanaged kaynak tutar — hızlı yazımda her karakter 1 sızdırılan nesne demekti. `_slowLoadingWarnCts`'teki doğru desen (`Cancel()` → `Dispose()` → `new CTS()`) `_filterCts`'e de uygulandı: iki noktada da `_filterCts?.Cancel();` sonrası `_filterCts?.Dispose();` eklendi.
+
+### 🐛 RemoteImage LRU Cache'te Evict Edilen Bitmap'ler Dispose Edilmiyordu — Native Heap Sızıntısı (2026-05-19)
+- [Düzeltildi] **Bitmap.Dispose() Eklendi (KRİTİK)**: `RemoteImage.AddToCache` metodunda LRU sınırı (1500) aşıldığında eski bitmap `ConcurrentDictionary`'den çıkarılıyor ancak `bitmap.Dispose()` asla çağrılmıyordu. `Avalonia.Bitmap` `IDisposable` implement eden ve native/unmanaged bellek tutan bir sınıf — GC görmez, sürekli birikir. Çözüm: `Cache.TryRemove(oldest, out var evicted)` sonrası `evicted?.Dispose()` ile evict döngüsünde native belleğin serbest bırakılması sağlandı.
+
 ### 🐛 TV Dizilerinde Director Alanının Boş Kalması (2026-05-19)
 - [Düzeltildi] **TMDB created_by Desteği (KRİTİK)**: TMDB `/tv/{id}` endpointi dizi yaratıcılarını `crew` içinde "Director" job'ı olarak değil, ayrı `created_by` dizisinde döndürür. `TmdbDetail` modeline `TmdbCreatedBy` sınıfı ve `CreatedBy` property'si eklendi. `DirectorName` helper property'si (`CreatedBy[0].Name` → crew "Creator" job'ı → crew "Director" job'ı) ile TV dizilerinde yönetmen bilgisinin doğru şekilde gelmesi sağlandı. TmdbSyncService, MetadataService ve MainViewModel'deki tüm `c.Job == "Director"` kontrolleri  ile `DirectorName` ile değiştirildi.
 

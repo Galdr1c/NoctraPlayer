@@ -2277,6 +2277,7 @@ public partial class MainViewModel : ObservableObject
     {
         // Debounce logic
         _filterCts?.Cancel();
+        _filterCts?.Dispose();
         _filterCts = new CancellationTokenSource();
         var token = _filterCts.Token;
 
@@ -2500,6 +2501,7 @@ public partial class MainViewModel : ObservableObject
     public void ScheduleImmediateFilter()
     {
         _filterCts?.Cancel();
+        _filterCts?.Dispose();
         _filterCts = new CancellationTokenSource();
         var token = _filterCts.Token;
 

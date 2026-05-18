@@ -462,7 +462,10 @@ public class RemoteImage : Image
             {
                 var oldest = CacheLruList.First.Value;
                 CacheLruList.RemoveFirst();
-                Cache.TryRemove(oldest, out _);
+                if (Cache.TryRemove(oldest, out var evicted))
+                {
+                    evicted?.Dispose();
+                }
             }
 
             if (Cache.TryAdd(url, bitmap))
