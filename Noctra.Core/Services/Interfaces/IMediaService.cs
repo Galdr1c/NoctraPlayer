@@ -25,12 +25,21 @@ public interface IMediaService
     Task AggregateContentAsync(int playlistId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets all aggregated series for a specific playlist
+    /// Gets all aggregated series for a specific playlist (with seasons and episodes)
     /// </summary>
     /// <param name="playlistId">ID of the playlist</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of series with their seasons and episodes</returns>
     Task<List<Series>> GetSeriesAsync(int playlistId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets a lightweight list of series for a specific playlist (no seasons/episodes).
+    /// Use for list views that only need summary fields (Name, CoverUrl, Rating, etc.).
+    /// </summary>
+    /// <param name="playlistId">ID of the playlist</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of series with summary fields only</returns>
+    Task<List<Series>> GetSeriesListAsync(int playlistId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Updates series metadata or status (Favorite, InMyList)

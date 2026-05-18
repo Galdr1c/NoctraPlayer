@@ -1546,32 +1546,35 @@ public partial class MainViewModel : ObservableObject
         try 
         {
             var playlistId = SelectedPlaylist?.Id ?? 0;
-            _allSeriesCache = await _mediaService.GetSeriesAsync(playlistId);
+            _allSeriesCache = await _mediaService.GetSeriesListAsync(playlistId);
             UpdateSeriesViewItems();
 
             // Arka planda tüm dizi ilerlemelerini verimli şekilde yükle (Bulk sync)
             if (CurrentProfileId.HasValue && _allSeriesCache.Count > 0)
             {
                 _ = Task.Run(async () => {
-                    await ApplyBulkProfileProgressAsync(_allSeriesCache);
-                    _dispatcherService.Invoke(() => {
-                        UpdateHistoryBuckets();
-                        // Anasayfa "İzlemeye Devam Et" listesini de güncelle
-                        UpdateContinueWatchingRail();
+                    await _dispatcherService.InvokeAsync(async () => {
+                        await UpdateHistoryBucketsAsync();
+                        await UpdateContinueWatchingRailAsync();
                     });
                 });
             }
+            else
+            {
+                // Profil yoksa direkt UI güncellemesi yap
+                await UpdateContinueWatchingRailAsync();
+                await UpdateHistoryBucketsAsync();
+            }
+            return;
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Error loading series cache for home content");
         }
 
-        UpdateContinueWatchingRail();
-        UpdateHistoryBuckets();
     }
 
-    private void UpdateContinueWatchingRail()
+    private async Task UpdateContinueWatchingRailAsync()
     {
         // Rail: İzlemeye Devam Et (ContinueWatching)
         var vodContinue = Channels
@@ -1584,39 +1587,58 @@ public partial class MainViewModel : ObservableObject
                      && c.Duration.Value.TotalSeconds > 0
                      && (c.WatchedPosition.Value.TotalSeconds / c.Duration.Value.TotalSeconds) < 0.92);
 
-        var episodeToSeriesMap = new Dictionary<Episode, Series>();
-        foreach (var series in _allSeriesCache)
+        // Query DB for episodes with watch progress instead of iterating in-memory cache
+        var playlistId = SelectedPlaylist?.Id ?? 0;
+        if (playlistId > 0)
         {
-            foreach (var season in series.Seasons)
+            try
             {
-                foreach (var ep in season.Episodes)
-                {
-                    episodeToSeriesMap[ep] = series;
-                }
+                using var db = await _contextFactory.CreateDbContextAsync();
+                var watchedEpisodes = await db.Episodes
+                    .AsNoTracking()
+                    .Include(e => e.Season)
+                        .ThenInclude(s => s.Series)
+                    .Where(e => e.Season != null
+                             && e.Season.Series != null
+                             && e.Season.Series.PlaylistId == playlistId
+                             && e.LastWatched.HasValue
+                             && !e.IsCompleted
+                             && e.WatchedPosition.HasValue
+                             && e.WatchedPosition.Value.TotalSeconds > 120
+                             && e.Duration.HasValue
+                             && e.Duration.Value.TotalSeconds > 0
+                             && (e.WatchedPosition.Value.TotalSeconds / e.Duration.Value.TotalSeconds) < 0.92)
+                    .ToListAsync();
+
+                // Aynı dizi için yalnızca en son izlenen bölümü göster
+                var episodeContinue = watchedEpisodes
+                    .GroupBy(e => e.Season?.Series)
+                    .Select(g => g.OrderByDescending(e => e.LastWatched).First())
+                    .Select(e => BuildSeriesEpisodeChannel(e, e.Season?.Series));
+
+                var combinedContinue = vodContinue.Concat(episodeContinue)
+                    .GroupBy(c => c.StreamUrl, StringComparer.OrdinalIgnoreCase)
+                    .Select(g => g.OrderByDescending(c => c.LastWatched).First())
+                    .OrderByDescending(c => c.LastWatched)
+                    .Take(10);
+
+                _dispatcherService.Invoke(() => SetItems(ContinueWatching, combinedContinue));
+                return;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error in UpdateContinueWatchingRailAsync DB query");
             }
         }
 
-        var episodeContinue = _allSeriesCache
-            .SelectMany(s => s.Seasons.SelectMany(season => season.Episodes))
-            .Where(e => e.LastWatched.HasValue
-                     && !e.IsCompleted
-                     && e.WatchedPosition.HasValue
-                     && e.WatchedPosition.Value.TotalSeconds > 120
-                     && e.Duration.HasValue
-                     && e.Duration.Value.TotalSeconds > 0
-                     && (e.WatchedPosition.Value.TotalSeconds / e.Duration.Value.TotalSeconds) < 0.92)
-            // Aynı dizi için yalnızca en son izlenen bölümü göster
-            .GroupBy(e => episodeToSeriesMap.GetValueOrDefault(e))
-            .Select(g => g.OrderByDescending(e => e.LastWatched).First())
-            .Select(e => BuildSeriesEpisodeChannel(e, episodeToSeriesMap.GetValueOrDefault(e)));
-
-        var combinedContinue = vodContinue.Concat(episodeContinue)
+        // Fallback: if DB query fails, use only VOD continue
+        var fallbackContinue = vodContinue
             .GroupBy(c => c.StreamUrl, StringComparer.OrdinalIgnoreCase)
             .Select(g => g.OrderByDescending(c => c.LastWatched).First())
             .OrderByDescending(c => c.LastWatched)
             .Take(10);
 
-        SetItems(ContinueWatching, combinedContinue);
+        _dispatcherService.Invoke(() => SetItems(ContinueWatching, fallbackContinue));
     }
 
     private static bool HasDisplayImage(Channel channel)
@@ -3886,26 +3908,9 @@ public partial class MainViewModel : ObservableObject
             }
         }
 
-        // 2. Reset Episodes in memory (via series cache)
-        if (_allSeriesCache != null)
-        {
-            foreach (var series in _allSeriesCache)
-            {
-                if (series.Seasons == null) continue;
-                foreach (var season in series.Seasons)
-                {
-                    if (season.Episodes == null) continue;
-                    foreach (var episode in season.Episodes)
-                    {
-                        episode.LastWatched = null;
-                        episode.WatchedPosition = TimeSpan.Zero;
-                        episode.IsCompleted = false;
-                    }
-                }
-            }
-        }
-
-        // 3. Update all dependent UI collections
+        // 2. Episodes are no longer cached in _allSeriesCache (lightweight cache).
+        // Progress is queried directly from DB when needed.
+        // Just update dependent UI collections
         UpdateHistoryChannels();
         _ = RefreshPersonalListsFromDatabaseAsync();
     }
@@ -3919,28 +3924,52 @@ public partial class MainViewModel : ObservableObject
                 () => _ = EnrichChannelsWithEpgAsync(HistoryChannels));
         
         // 2. Refresh buckets (includes series from cache)
-        UpdateHistoryBuckets();
+        _ = UpdateHistoryBucketsAsync();
 
         // 3. Sync from DB if needed
         _ = RefreshHistoryChannelsOnlyAsync();
     }
 
-    private void UpdateHistoryBuckets()
+    private async Task UpdateHistoryBucketsAsync()
     {
         var historySnapshot = HistoryChannels.ToList();
         SetItems(HistoryLiveChannels, historySnapshot.Where(c => c.Type == ChannelType.Live));
         SetItems(HistoryVodChannels, historySnapshot.Where(c => c.Type == ChannelType.VOD));
 
-        // Dizi geçmişi: izlenmiş episode'ların parent Series'ini bul, tekrarsız
-        var watchedSeries = _allSeriesCache
-            .Where(s => s.Seasons
-                .SelectMany(season => season.Episodes)
-                .Any(e => e.LastWatched.HasValue))
-            .OrderByDescending(s => s.Seasons
-                .SelectMany(season => season.Episodes)
-                .Where(e => e.LastWatched.HasValue)
-                .Max(e => e.LastWatched))
-            .ToList();
+        // Query DB for series with watched episodes instead of iterating in-memory cache
+        var playlistId = SelectedPlaylist?.Id ?? 0;
+        var watchedSeries = new List<Series>();
+        if (playlistId > 0)
+        {
+            try
+            {
+                using var db = await _contextFactory.CreateDbContextAsync();
+                var watchedSeriesIds = await db.Episodes
+                    .AsNoTracking()
+                    .Where(e => e.LastWatched.HasValue
+                             && e.Season != null
+                             && e.Season.Series != null
+                             && e.Season.Series.PlaylistId == playlistId)
+                    .GroupBy(e => e.Season.SeriesId)
+                    .Select(g => new { SeriesId = g.Key, LastWatched = g.Max(e => e.LastWatched) })
+                    .OrderByDescending(x => x.LastWatched)
+                    .ToListAsync();
+
+                // Match against lightweight cache
+                var cacheById = _allSeriesCache.ToDictionary(s => s.Id, s => s);
+                foreach (var ws in watchedSeriesIds)
+                {
+                    if (cacheById.TryGetValue(ws.SeriesId, out var series))
+                    {
+                        watchedSeries.Add(series);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error in UpdateHistoryBucketsAsync DB query");
+            }
+        }
 
         SetItems(HistorySeriesItems, watchedSeries, () => {
             ShowHistoryEmptyState = HistoryLiveChannels.Count == 0
@@ -4821,7 +4850,7 @@ public partial class MainViewModel : ObservableObject
                 });
 
             SetItems(HistoryChannels, await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds), () => {
-                UpdateHistoryBuckets();
+                _ = UpdateHistoryBucketsAsync();
                 _ = EnrichChannelsWithEpgAsync(HistoryChannels);
             });
 
@@ -4877,7 +4906,7 @@ public partial class MainViewModel : ObservableObject
             _hasMoreHistory = initialChannels.Count == IncrementalPageSize;
 
             SetItems(HistoryChannels, initialChannels, () => _ = EnrichChannelsWithEpgAsync(HistoryChannels));
-            UpdateHistoryBuckets();
+            _ = UpdateHistoryBucketsAsync();
         }
         catch (Exception ex)
         {
@@ -5009,7 +5038,7 @@ public partial class MainViewModel : ObservableObject
                 {
                     HistoryChannels.Add(item);
                 }
-                UpdateHistoryBuckets();
+                _ = UpdateHistoryBucketsAsync();
                 _ = EnrichChannelsWithEpgAsync(nextPage);
             });
         }
@@ -5816,8 +5845,8 @@ public partial class MainViewModel : ObservableObject
                                   HistorySeriesItems.Count == 0;
             
             // Re-update internal buckets for safety and update home rail
-            UpdateHistoryBuckets();
-            UpdateContinueWatchingRail();
+            _ = UpdateHistoryBucketsAsync();
+            _ = UpdateContinueWatchingRailAsync();
         }
         catch (Exception ex)
         {
@@ -7061,103 +7090,6 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private async Task ApplyBulkProfileProgressAsync(IEnumerable<Series> seriesList)
-    {
-        if (!CurrentProfileId.HasValue || seriesList == null) return;
-
-        try
-        {
-            using var db = await _contextFactory.CreateDbContextAsync();
-            var profileId = CurrentProfileId.Value;
-            var list = seriesList.ToList();
-            if (list.Count == 0) return;
-
-            // 1. Get all episode IDs in the cache to fetch WatchHistory in bulk
-            var allEpisodes = list.SelectMany(s => s.Seasons.SelectMany(sn => sn.Episodes)).ToList();
-            var episodeIds = allEpisodes.Where(e => e.Id > 0).Select(e => e.Id).Distinct().ToList();
-            
-            var historyByEpisodeId = new Dictionary<int, WatchHistory>();
-            if (episodeIds.Count > 0)
-            {
-                var latestHistories = await db.WatchHistories
-                    .AsNoTracking()
-                    .Where(h => h.ProfileId == profileId && h.EpisodeId.HasValue && episodeIds.Contains(h.EpisodeId.Value))
-                    .ToListAsync();
-
-                historyByEpisodeId = latestHistories
-                    .GroupBy(h => h.EpisodeId!.Value)
-                    .ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.WatchedAt).First());
-            }
-
-            // 2. Get all provider-independent progress for these series
-            var seriesKeys = list.Select(s => SeriesProgressIdentity.NormalizeSeriesKey(s.Name))
-                                 .Where(k => !string.IsNullOrEmpty(k))
-                                 .Distinct()
-                                 .ToList();
-
-            var progressBySeriesKey = new Dictionary<string, Dictionary<string, SeriesProgressSnapshot>>(StringComparer.OrdinalIgnoreCase);
-            if (seriesKeys.Count > 0)
-            {
-                var allPersistedProgress = await db.SeriesEpisodeProgresses
-                    .AsNoTracking()
-                    .Where(p => p.ProfileId == profileId && seriesKeys.Contains(p.SeriesKey))
-                    .ToListAsync();
-
-                progressBySeriesKey = allPersistedProgress
-                    .GroupBy(p => p.SeriesKey)
-                    .ToDictionary(
-                        g => g.Key,
-                        g => g.ToDictionary(
-                            p => SeriesProgressIdentity.BuildEpisodeKey(p.SeasonNumber, p.EpisodeNumber),
-                            p => new SeriesProgressSnapshot(p.LastWatchedAt, p.StoppedAt, p.Duration, p.Completed),
-                            StringComparer.OrdinalIgnoreCase),
-                        StringComparer.OrdinalIgnoreCase);
-            }
-
-            // 3. Apply to memory objects
-            foreach (var series in list)
-            {
-                var seriesKey = SeriesProgressIdentity.NormalizeSeriesKey(series.Name);
-                progressBySeriesKey.TryGetValue(seriesKey, out var seriesProgress);
-
-                foreach (var season in series.Seasons)
-                {
-                    foreach (var episode in season.Episodes)
-                    {
-                        // Match by Provider ID (WatchHistory)
-                        if (episode.Id > 0 && historyByEpisodeId.TryGetValue(episode.Id, out var history))
-                        {
-                            episode.LastWatched = history.WatchedAt;
-                            episode.WatchedPosition = history.StoppedAt;
-                            episode.IsCompleted = history.Completed;
-                            continue;
-                        }
-
-                        // Match by normalized key (SeriesEpisodeProgress)
-                        if (seriesProgress != null)
-                        {
-                            var (sNum, eNum) = SeriesProgressIdentity.ResolveSeasonEpisode(episode);
-                            var epKey = SeriesProgressIdentity.BuildEpisodeKey(sNum, eNum);
-                            if (seriesProgress.TryGetValue(epKey, out var snapshot))
-                            {
-                                episode.LastWatched = snapshot.LastWatchedAt;
-                                episode.WatchedPosition = snapshot.StoppedAt;
-                                episode.IsCompleted = snapshot.Completed;
-                                if (snapshot.Duration.HasValue && snapshot.Duration.Value.TotalSeconds > 0)
-                                {
-                                    episode.Duration = snapshot.Duration;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "Error in ApplyBulkProfileProgressAsync");
-        }
-    }
 
     private static TimeSpan? ParseProviderDuration(string? raw)
     {
@@ -7624,7 +7556,7 @@ public partial class MainViewModel : ObservableObject
         {
             OnPropertyChanged(nameof(SelectedSeries));
             OnPropertyChanged(nameof(SeriesViewItems));
-            UpdateHistoryBuckets();
+            _ = UpdateHistoryBucketsAsync();
         }
     }
 

@@ -7,6 +7,16 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 
 ## [Unreleased]
+### 🐛 Dizi Episode Cache Bellek Sızıntısı — _allSeriesCache Tüm Sezon/Episode Verilerini Tutuyordu (2026-05-19)
+- [Düzeltildi] **`_allSeriesCache` Lightweight Projeksiyon (KRİTİK)**: `_allSeriesCache` artık `GetSeriesListAsync` üzerinden yalnızca `Id`, `Name`, `CoverUrl`, `Rating` alanlarını yükler — `Seasons`/`Episodes` navigation property'leri dahil edilmez. 1000+ dizili bir playlist'te on binlerce episode nesnesinin RAM'de tutulması engellendi.
+- [Düzeltildi] **UpdateContinueWatchingRail → DB Sorgusu (Async)**: Artık in-memory cache'te dolaşmak yerine doğrudan veritabanından `Include(WatchHistory).ThenInclude(Episode)` ile ilgili bölümleri sorgular. Sonuçlar UI thread'ine `_dispatcherService.InvokeAsync` ile güvenle aktarılır.
+- [Düzeltildi] **UpdateHistoryBuckets → DB Sorgusu (Async)**: Aynı şekilde izlenmiş bölüm ID'leri artık DB'den sorgulanır, in-memory traversal yok.
+- [Düzeltildi] **AsSplitQuery() Eklendi**: `MediaService.GetSeriesAsync` (PlayerPlaybackController tarafından kullanılan) sorgusuna `.AsSplitQuery()` eklendi — Seasons → Episodes JOIN kartezyen patlaması önlendi.
+- [Değişti] **IMediaService.GetSeriesListAsync Eklendi**: Interface'e lightweight seri listesi dönen yeni metod eklendi.
+- [Temizlik] **ApplyBulkProfileProgressAsync Kaldırıldı**: Lightweight cache'e geçiş sonrası hiçbir iş yapmayan bu metot ve çağrısı tamamen kaldırıldı.
+- [Düzeltildi] **Thread Safety**: Background task'te `Invoke(async ...)` → `await InvokeAsync(async ...)` ile `async void` riski giderildi.
+- [Test] **FakeMediaService Mock Güncellendi**: Yeni `GetSeriesListAsync` metodu test mock'una eklendi.
+
 ### 🐛 _filterCts Her Tuş Vuruşunda Sızdırıyordu — WaitHandle Sızıntısı (2026-05-19)
 - [Düzeltildi] **CTS.Dispose() Eklendi (KRİTİK)**: `OnSearchTextChanged` ve `ScheduleImmediateFilter` metodlarında `_filterCts?.Cancel()` çağrılıyor ancak `_filterCts?.Dispose()` çağrılmıyordu. `CancellationTokenSource` kernel `WaitHandle` + unmanaged kaynak tutar — hızlı yazımda her karakter 1 sızdırılan nesne demekti. `_slowLoadingWarnCts`'teki doğru desen (`Cancel()` → `Dispose()` → `new CTS()`) `_filterCts`'e de uygulandı: iki noktada da `_filterCts?.Cancel();` sonrası `_filterCts?.Dispose();` eklendi.
 

@@ -392,6 +392,7 @@ public partial class MediaService : IMediaService
         var allSeries = await context.Series
             .Include(s => s.Seasons)
             .ThenInclude(sn => sn.Episodes)
+            .AsSplitQuery()
             .AsNoTracking()
             .Where(s => s.PlaylistId == playlistId)
             .ToListAsync(cancellationToken);
@@ -412,6 +413,76 @@ public partial class MediaService : IMediaService
             }
 
             MergeSeriesInMemory(target, series);
+        }
+
+        return mergedByKey.Values
+            .OrderBy(s => GetSortKey(s.Name), StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Gets a lightweight list of series for list views (no seasons/episodes loaded).
+    /// Significantly reduces memory usage vs. GetSeriesAsync.
+    /// </summary>
+    public async Task<List<Series>> GetSeriesListAsync(int playlistId, CancellationToken cancellationToken = default)
+    {
+        using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        var allSeries = await context.Series
+            .AsNoTracking()
+            .Where(s => s.PlaylistId == playlistId)
+            .Select(s => new Series
+            {
+                Id = s.Id,
+                Name = s.Name,
+                CoverUrl = s.CoverUrl,
+                Plot = s.Plot,
+                Genre = s.Genre,
+                ReleaseYear = s.ReleaseYear,
+                Rating = s.Rating,
+                ContentRating = s.ContentRating,
+                PlaylistId = s.PlaylistId,
+                TmdbId = s.TmdbId,
+                TmdbTitle = s.TmdbTitle,
+                LastTmdbSync = s.LastTmdbSync,
+                Cast = s.Cast,
+                Director = s.Director,
+                BackdropUrl = s.BackdropUrl,
+                TrailerUrl = s.TrailerUrl,
+                MetadataFetchedAt = s.MetadataFetchedAt,
+                NetworkName = s.NetworkName,
+                NetworkLogoUrl = s.NetworkLogoUrl,
+                IsInMyList = s.IsInMyList,
+                IsFavorite = s.IsFavorite,
+                GroupTitle = s.GroupTitle,
+                Seasons = new List<Season>() // empty — prevents NullReferenceException in consumers
+            })
+            .ToListAsync(cancellationToken);
+
+        if (allSeries.Count <= 1)
+        {
+            return allSeries;
+        }
+
+        // Group by normalized key (same dedup as GetSeriesAsync)
+        var mergedByKey = new Dictionary<string, Series>(StringComparer.OrdinalIgnoreCase);
+        foreach (var series in allSeries.OrderBy(s => s.Id))
+        {
+            var key = BuildSeriesGroupingKey(series.Name);
+            if (!mergedByKey.TryGetValue(key, out var target))
+            {
+                mergedByKey[key] = series;
+                continue;
+            }
+
+            // Merge basic fields only (no seasons/episodes to merge)
+            if (string.IsNullOrWhiteSpace(target.CoverUrl) && !string.IsNullOrWhiteSpace(series.CoverUrl))
+                target.CoverUrl = series.CoverUrl;
+            if (string.IsNullOrWhiteSpace(target.Plot) && !string.IsNullOrWhiteSpace(series.Plot))
+                target.Plot = series.Plot;
+            if (string.IsNullOrWhiteSpace(target.Genre) && !string.IsNullOrWhiteSpace(series.Genre))
+                target.Genre = series.Genre;
+            if (!string.IsNullOrWhiteSpace(series.GroupTitle))
+                target.GroupTitle = series.GroupTitle;
         }
 
         return mergedByKey.Values

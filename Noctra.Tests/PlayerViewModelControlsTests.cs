@@ -112,6 +112,7 @@ namespace Noctra.Tests
         public void RaiseAggregationCompleted(int playlistId) => OnAggregationCompleted?.Invoke(playlistId);
         public Task AggregateContentAsync(int playlistId, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<List<Series>> GetSeriesAsync(int playlistId, CancellationToken cancellationToken = default) => Task.FromResult(new List<Series>());
+        public Task<List<Series>> GetSeriesListAsync(int playlistId, CancellationToken cancellationToken = default) => Task.FromResult(new List<Series>());
         public Task UpdateSeriesAsync(Series series, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
