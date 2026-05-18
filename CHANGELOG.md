@@ -8,6 +8,12 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+
+### ⚡ UpdateContinueWatchingRailAsync - DB Query O(n) -> Cache + 100ms Debounce (2026-05-19)
+- [Performans] **_episodeToSeriesMap Cache Eklendi**: UpdateContinueWatchingRailAsync her cagrilda DB'den tum seri bolumlerini cekmek yerine, sonucu _cachedEpisodeContinue'te (List<Channel>?) saklar. Sadece _isEpisodeContinueDirty = true iken sorgu calisir.
+- [Performans] **100ms Debounce Eklendi**: Ard arda gelen cagrilar 100ms icinde birlesir, yalnizca son cagri DB sorgusu yapar. CancellationTokenSource ile iptal edilen Task.Delay() sayesinde birden fazla paralel sorgu onlenir.
+- [Degisti] **Cache Invalidation**: _allSeriesCache yenilendiginde, ClearProfileState ve ResetUIForRefresh cagrildiginda cache temizlenir.
+- [Kazanim] Ana sayfaya her donuste veya profil degisiminde tekrarlanan DB Include+ThenInclude sorgusu (tum seriler x sezonlar x bolumler ic ice) -> sadece izleme kaydedilince calisir.
 ### ⚡ LRU Cache LinkedList.Remove(url) O(n) → NodeMap O(1) (2026-05-19)
 - [Performans] **Dictionary ile Node Referansı Eklendi**: RemoteImage LRU cache'te her cache hit'te `LinkedList<string>.Remove(url)` (değer bazlı linear scan — O(n)) yerine `Dictionary<string, LinkedListNode<string>>` üzerinden `LinkedList.Remove(node)` (O(1)) kullanıldı. Hit/Touch, eviction ve yeni ekleme olmak üzere 5 farklı LRU operasyonu güncellendi.
 - [Kazanım] 1.500 max cache entry ile her cache hit'te 1.500 string karşılaştırması → ~0 (sabit süre).

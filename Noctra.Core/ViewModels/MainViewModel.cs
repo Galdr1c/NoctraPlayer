@@ -917,6 +917,8 @@ public partial class MainViewModel : ObservableObject
         _liveGroupsCache.Clear();
         _vodGroupsCache.Clear();
         _seriesGroupsCache.Clear();
+        _isEpisodeContinueDirty = true;
+        _cachedEpisodeContinue = null;
 
         // Clear collections
         SetItems(Playlists, Enumerable.Empty<Playlist>());
@@ -977,6 +979,8 @@ public partial class MainViewModel : ObservableObject
         _liveGroupsCache.Clear();
         _vodGroupsCache.Clear();
         _seriesGroupsCache.Clear();
+        _isEpisodeContinueDirty = true;
+        _cachedEpisodeContinue = null;
 
         // Clear UI collections
         SetItems(Channels, Enumerable.Empty<Channel>());
@@ -1548,7 +1552,8 @@ public partial class MainViewModel : ObservableObject
         {
             var playlistId = SelectedPlaylist?.Id ?? 0;
             _allSeriesCache = await _mediaService.GetSeriesListAsync(playlistId);
-            UpdateSeriesViewItems();
+
+            _isEpisodeContinueDirty = true; // Series data refreshed, invalidate cache            UpdateSeriesViewItems();
 
             // Arka planda tüm dizi ilerlemelerini verimli şekilde yükle (Bulk sync)
             if (CurrentProfileId.HasValue && _allSeriesCache.Count > 0)
@@ -1577,7 +1582,21 @@ public partial class MainViewModel : ObservableObject
 
     private async Task UpdateContinueWatchingRailAsync()
     {
-        // Rail: İzlemeye Devam Et (ContinueWatching)
+        // Debounce: cancel any pending execution within 100ms
+        _continueWatchingDebounceCts?.Cancel();
+        _continueWatchingDebounceCts?.Dispose();
+        _continueWatchingDebounceCts = new CancellationTokenSource();
+        var token = _continueWatchingDebounceCts.Token;
+        try
+        {
+            await Task.Delay(100, token);
+        }
+        catch (OperationCanceledException)
+        {
+            return; // Debounced away -- a more recent call will take over
+        }
+
+        // Rail: Izlemeye Devam Et (ContinueWatching) -- VOD part is always fresh (in-memory Channels)
         var vodContinue = Channels
             .Where(c => c.Type == ChannelType.VOD
                      && c.LastWatched.HasValue
@@ -1588,7 +1607,20 @@ public partial class MainViewModel : ObservableObject
                      && c.Duration.Value.TotalSeconds > 0
                      && (c.WatchedPosition.Value.TotalSeconds / c.Duration.Value.TotalSeconds) < 0.92);
 
-        // Query DB for episodes with watch progress instead of iterating in-memory cache
+        // Use cached episode-continue if not dirty (avoids the slow DB query with Include/ThenInclude)
+        if (!_isEpisodeContinueDirty && _cachedEpisodeContinue != null)
+        {
+            var combinedContinue = vodContinue.Concat(_cachedEpisodeContinue)
+                .GroupBy(c => c.StreamUrl, StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.OrderByDescending(c => c.LastWatched).First())
+                .OrderByDescending(c => c.LastWatched)
+                .Take(10);
+
+            _dispatcherService.Invoke(() => SetItems(ContinueWatching, combinedContinue));
+            return;
+        }
+
+        // Query DB for episodes with watch progress
         var playlistId = SelectedPlaylist?.Id ?? 0;
         if (playlistId > 0)
         {
@@ -1611,11 +1643,16 @@ public partial class MainViewModel : ObservableObject
                              && (e.WatchedPosition.Value.TotalSeconds / e.Duration.Value.TotalSeconds) < 0.92)
                     .ToListAsync();
 
-                // Aynı dizi için yalnızca en son izlenen bölümü göster
+                // Ayni dizi icin yalnizca en son izlenen bolumu goster
                 var episodeContinue = watchedEpisodes
                     .GroupBy(e => e.Season?.Series)
                     .Select(g => g.OrderByDescending(e => e.LastWatched).First())
-                    .Select(e => BuildSeriesEpisodeChannel(e, e.Season?.Series));
+                    .Select(e => BuildSeriesEpisodeChannel(e, e.Season?.Series))
+                    .ToList();
+
+                // Cache for subsequent calls
+                _cachedEpisodeContinue = episodeContinue;
+                _isEpisodeContinueDirty = false;
 
                 var combinedContinue = vodContinue.Concat(episodeContinue)
                     .GroupBy(c => c.StreamUrl, StringComparer.OrdinalIgnoreCase)
@@ -1823,6 +1860,9 @@ public partial class MainViewModel : ObservableObject
     private int _isThrottledLoadPending = 0;
     private bool _needsThrottledLoad;
     private bool _seriesDetailDownloadedOnlyMode;
+    private List<Channel>? _cachedEpisodeContinue;
+    private bool _isEpisodeContinueDirty = true;
+    private CancellationTokenSource? _continueWatchingDebounceCts;
     private async Task ThrottledLoadChannelsAsync(int playlistId)
     {
         lock (this)
