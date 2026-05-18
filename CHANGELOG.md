@@ -7,6 +7,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 
 ## [Unreleased]
+### ⚡ GetChannelGroupMetadataAsync 50K Satır Yüklemesi → SQL GROUP BY (2026-05-19)
+- [Performans] **GROUP BY ile RAM Kullanımı Düşürüldü**: GetChannelGroupMetadataAsync artık tüm kanalları (50K satır) RAM'e çekip HashSet ile gruplamak yerine, doğrudan SQL GROUP BY GroupTitle, Type sorgusu kullanarak sadece eşsiz (GroupTitle, Type) kombinasyonlarını (tipik olarak 200-500 satır) yükler.
+- [Değişti] **TotalCount ayrı COUNT sorgusuna çekildi**: Toplam kanal sayısı artık ayrı bir hafif COUNT() sorgusu ile alınır.
+
 ### 🐛 Dizi Episode Cache Bellek Sızıntısı — _allSeriesCache Tüm Sezon/Episode Verilerini Tutuyordu (2026-05-19)
 - [Düzeltildi] **`_allSeriesCache` Lightweight Projeksiyon (KRİTİK)**: `_allSeriesCache` artık `GetSeriesListAsync` üzerinden yalnızca `Id`, `Name`, `CoverUrl`, `Rating` alanlarını yükler — `Seasons`/`Episodes` navigation property'leri dahil edilmez. 1000+ dizili bir playlist'te on binlerce episode nesnesinin RAM'de tutulması engellendi.
 - [Düzeltildi] **UpdateContinueWatchingRail → DB Sorgusu (Async)**: Artık in-memory cache'te dolaşmak yerine doğrudan veritabanından `Include(WatchHistory).ThenInclude(Episode)` ile ilgili bölümleri sorgular. Sonuçlar UI thread'ine `_dispatcherService.InvokeAsync` ile güvenle aktarılır.

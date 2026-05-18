@@ -942,25 +942,30 @@ public partial class PlaylistService : IPlaylistService
     {
         using var context = await _contextFactory.CreateDbContextAsync();
         
-        // Tek query ile sadece gerekli iki kolonu alıyoruz (GroupTitle ve Type)
-        // SQL tarafındaki yükü minimize edip, gruplandırmayı RAM'de HashSet ile saliselik yapıyoruz.
-        var data = await context.Channels
+        // Toplam kanal sayısı (GroupTitle null/boş olanlar dahil) — hafif COUNT sorgusu
+        var totalCount = await context.Channels
             .AsNoTracking()
             .Where(c => c.PlaylistId == playlistId)
-            .Select(c => new { c.GroupTitle, c.Type })
+            .CountAsync();
+
+        // SELECT GroupTitle, Type, COUNT(*) FROM Channels
+        // WHERE PlaylistId=? AND GroupTitle IS NOT NULL AND GroupTitle != ''
+        // GROUP BY GroupTitle, Type
+        // Tüm satırları çekmek yerine sadece eşsiz (GroupTitle, Type) kombinasyonlarını alır.
+        var groupData = await context.Channels
+            .AsNoTracking()
+            .Where(c => c.PlaylistId == playlistId && c.GroupTitle != null && c.GroupTitle != "")
+            .GroupBy(c => new { c.GroupTitle, c.Type })
+            .Select(g => new { GroupTitle = g.Key.GroupTitle!, g.Key.Type })
             .ToListAsync();
 
-        var totalCount = data.Count;
-        
         var allGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var liveGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var vodGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var seriesGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var item in data)
+        foreach (var item in groupData)
         {
-            if (string.IsNullOrWhiteSpace(item.GroupTitle)) continue;
-            
             var group = item.GroupTitle.Trim();
             allGroups.Add(group);
             
