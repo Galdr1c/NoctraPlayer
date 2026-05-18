@@ -16,6 +16,7 @@ using System.Collections.ObjectModel;
 using Noctra.Core.Services;
 using System.Diagnostics;
 using System.Collections.Concurrent;
+using Noctra.Core.Collections;
 
 namespace Noctra.ViewModels;
 
@@ -80,25 +81,25 @@ public partial class MainViewModel : ObservableObject
     private AppView _activeView = AppView.Home;
 
     [ObservableProperty]
-    private ObservableCollection<Channel> _continueWatching = new();
+    private BatchObservableCollection<Channel> _continueWatching = new();
 
     private List<Series> _allSeriesCache = new();
 
     [ObservableProperty]
-    private ObservableCollection<Series> _seriesViewItems = new();
+    private BatchObservableCollection<Series> _seriesViewItems = new();
 
 
     [ObservableProperty]
-    private ObservableCollection<Playlist> _playlists = new();
+    private BatchObservableCollection<Playlist> _playlists = new();
 
     [ObservableProperty]
-    private ObservableCollection<Channel> _channels = new();
+    private BatchObservableCollection<Channel> _channels = new();
 
     [ObservableProperty]
-    private ObservableCollection<Channel> _filteredChannels = new();
+    private BatchObservableCollection<Channel> _filteredChannels = new();
 
     [ObservableProperty]
-    private ObservableCollection<string> _groups = new();
+    private BatchObservableCollection<string> _groups = new();
 
     private int _historyPage = 0;
     private bool _hasMoreHistory = true;
@@ -185,7 +186,7 @@ public partial class MainViewModel : ObservableObject
     private string _searchQuery = string.Empty;
 
     [ObservableProperty]
-    private ObservableCollection<object> _searchResults = new();
+    private BatchObservableCollection<object> _searchResults = new();
 
     [ObservableProperty]
     private bool _isLoading;
@@ -1860,8 +1861,8 @@ public partial class MainViewModel : ObservableObject
         _currentPage = 0;
         _hasMoreChannels = true;
         _isLoadingMoreChannels = false;
-        Channels.Clear();
-        FilteredChannels.Clear();
+        Channels = new BatchObservableCollection<Channel>();
+        FilteredChannels = new BatchObservableCollection<Channel>();
         OnPropertyChanged(nameof(IsContentLoading));
         OnPropertyChanged(nameof(ShowEmptyChannels));
     }
@@ -1872,7 +1873,7 @@ public partial class MainViewModel : ObservableObject
         _hasMoreSeriesItems = true;
         _isLoadingMoreSeriesItems = false;
         _seriesFilteredSource = new List<Series>();
-        SeriesViewItems.Clear();
+        SeriesViewItems = new BatchObservableCollection<Series>();
         OnPropertyChanged(nameof(IsContentLoading));
         OnPropertyChanged(nameof(ShowEmptyChannels));
     }
@@ -1966,13 +1967,10 @@ public partial class MainViewModel : ObservableObject
 
             _dispatcherService.Invoke(() =>
             {
-                foreach (var item in page)
+                FilteredChannels.AddRange(page);
+                if (!ReferenceEquals(Channels, FilteredChannels))
                 {
-                    FilteredChannels.Add(item);
-                    if (!ReferenceEquals(Channels, FilteredChannels))
-                    {
-                        Channels.Add(item);
-                    }
+                    Channels.AddRange(page);
                 }
                 
                 // Fire and forget EPG enrichment for the new page
@@ -2052,10 +2050,7 @@ public partial class MainViewModel : ObservableObject
             _currentSeriesPage++;
             _hasMoreSeriesItems = page.Count == IncrementalPageSize;
 
-            foreach (var item in page)
-            {
-                SeriesViewItems.Add(item);
-            }
+            SeriesViewItems.AddRange(page);
             OnPropertyChanged(nameof(IsContentLoading));
             OnPropertyChanged(nameof(ShowEmptyChannels));
 
@@ -2449,7 +2444,7 @@ public partial class MainViewModel : ObservableObject
             _ => _allGroupsCache.Where(g => !s.HiddenLiveGroups.Contains(g) && !s.HiddenMovieGroups.Contains(g) && !s.HiddenSeriesGroups.Contains(g)).ToList()
         };
 
-        _dispatcherService.Invoke(() => Groups = new ObservableCollection<string>(nextGroups));
+        _dispatcherService.Invoke(() => Groups = new BatchObservableCollection<string>(nextGroups));
 
         if (!string.IsNullOrWhiteSpace(SelectedGroup) && !Groups.Contains(SelectedGroup))
         {
@@ -3573,40 +3568,40 @@ public partial class MainViewModel : ObservableObject
     }
 
     [ObservableProperty]
-    private ObservableCollection<object> _myList = new();
+    private BatchObservableCollection<object> _myList = new();
 
     [ObservableProperty]
-    private ObservableCollection<object> _favoriteChannels = new();
+    private BatchObservableCollection<object> _favoriteChannels = new();
 
     [ObservableProperty]
-    private ObservableCollection<Channel> _historyChannels = new();
+    private BatchObservableCollection<Channel> _historyChannels = new();
 
     [ObservableProperty]
-    private ObservableCollection<Channel> _historyLiveChannels = new();
+    private BatchObservableCollection<Channel> _historyLiveChannels = new();
 
     [ObservableProperty]
-    private ObservableCollection<Series> _historySeriesItems = new();
+    private BatchObservableCollection<Series> _historySeriesItems = new();
 
     [ObservableProperty]
-    private ObservableCollection<Channel> _historyVodChannels = new();
+    private BatchObservableCollection<Channel> _historyVodChannels = new();
 
     [ObservableProperty]
-    private ObservableCollection<Series> _downloadedSeriesItems = new();
+    private BatchObservableCollection<Series> _downloadedSeriesItems = new();
 
     [ObservableProperty]
-    private ObservableCollection<Channel> _downloadedVodChannels = new();
+    private BatchObservableCollection<Channel> _downloadedVodChannels = new();
 
     [ObservableProperty]
-    private ObservableCollection<DownloadItem> _activeDownloadItems = new();
+    private BatchObservableCollection<DownloadItem> _activeDownloadItems = new();
 
     [ObservableProperty]
-    private ObservableCollection<DownloadItem> _activeDownloadingItems = new();
+    private BatchObservableCollection<DownloadItem> _activeDownloadingItems = new();
 
     [ObservableProperty]
-    private ObservableCollection<DownloadItem> _queuedDownloadItems = new();
+    private BatchObservableCollection<DownloadItem> _queuedDownloadItems = new();
 
     [ObservableProperty]
-    private ObservableCollection<DownloadItem> _completedDownloadItems = new();
+    private BatchObservableCollection<DownloadItem> _completedDownloadItems = new();
 
     [ObservableProperty]
     private int _activeDownloadCount;
@@ -3639,26 +3634,26 @@ public partial class MainViewModel : ObservableObject
     private string _downloadFreeDiskSpaceText = "-";
 
     [ObservableProperty]
-    private ObservableCollection<Channel> _searchLiveChannels = new();
+    private BatchObservableCollection<Channel> _searchLiveChannels = new();
 
     [ObservableProperty]
-    private ObservableCollection<Series> _searchSeriesChannels = new();
+    private BatchObservableCollection<Series> _searchSeriesChannels = new();
 
 
     [ObservableProperty]
-    private ObservableCollection<Channel> _searchVodChannels = new();
+    private BatchObservableCollection<Channel> _searchVodChannels = new();
 
     [ObservableProperty]
     private string _searchSuggestion = string.Empty;
 
     [ObservableProperty]
-    private ObservableCollection<Channel> _searchSimilarLiveChannels = new();
+    private BatchObservableCollection<Channel> _searchSimilarLiveChannels = new();
 
     [ObservableProperty]
-    private ObservableCollection<Series> _searchSimilarSeriesChannels = new();
+    private BatchObservableCollection<Series> _searchSimilarSeriesChannels = new();
 
     [ObservableProperty]
-    private ObservableCollection<Channel> _searchSimilarVodChannels = new();
+    private BatchObservableCollection<Channel> _searchSimilarVodChannels = new();
 
     [ObservableProperty]
     private bool _showSearchSimilarSection;
@@ -7723,17 +7718,13 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private void SetItems<T>(ObservableCollection<T> collection, IEnumerable<T> items, Action? onComplete = null)
+    private void SetItems<T>(BatchObservableCollection<T> collection, IEnumerable<T> items, Action? onComplete = null)
     {
         if (items == null) return;
         var list = items.ToList();
         _dispatcherService.Invoke(() =>
         {
-            collection.Clear();
-            foreach (var item in list)
-            {
-                collection.Add(item);
-            }
+            collection.ReplaceAll(list);
             onComplete?.Invoke();
         });
     }

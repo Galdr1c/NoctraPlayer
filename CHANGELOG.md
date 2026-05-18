@@ -7,6 +7,12 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 
 ## [Unreleased]
+### 🟠 N+1 UI Render Performansı — Clear+foreach Add → BatchObservableCollection (2026-05-19)
+- [Performans] **BatchObservableCollection<T> Eklendi**: SetItems metodunda Clear() + foreach Add() pattern'i ReplaceAll() ile değiştirildi — 100 elemanlı sayfada 101 CollectionChanged event → 1 Reset event.
+- [Performans] **AddRange() ile Page Yükleme Optimizasyonu**: LoadMoreChannelsAsync ve LoadMoreSeriesAsync'te foreach Add() yerine AddRange(page) kullanıldı.
+- [Performans] **Incremental State Reset**: ResetIncrementalState ve ResetSeriesIncrementalState'te Clear() yerine yeni BatchObservableCollection<>() ataması yapıldı.
+- [Değişti] **21 ObservableCollection → BatchObservableCollection**: Tüm UI koleksiyonları BatchObservableCollection tipine dönüştürüldü.
+- [Yeni] **Noctra.Core/Collections/BatchObservableCollection.cs**: AddRange() ve ReplaceAll() metotları ile tek NotifyCollectionChangedAction.Reset bildirimi gönderen koleksiyon sınıfı eklendi.
 ### ⚡ GetChannelGroupMetadataAsync 50K Satır Yüklemesi → SQL GROUP BY (2026-05-19)
 - [Performans] **GROUP BY ile RAM Kullanımı Düşürüldü**: GetChannelGroupMetadataAsync artık tüm kanalları (50K satır) RAM'e çekip HashSet ile gruplamak yerine, doğrudan SQL GROUP BY GroupTitle, Type sorgusu kullanarak sadece eşsiz (GroupTitle, Type) kombinasyonlarını (tipik olarak 200-500 satır) yükler.
 - [Değişti] **TotalCount ayrı COUNT sorgusuna çekildi**: Toplam kanal sayısı artık ayrı bir hafif COUNT() sorgusu ile alınır.
