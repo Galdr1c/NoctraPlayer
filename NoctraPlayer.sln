@@ -1,0 +1,40 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Noctra.Core", "Noctra.Core\Noctra.Core.csproj", "{4B1FD5E4-7148-4500-A92A-1932DD1DFE10}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Noctra.Avalonia", "Noctra.Avalonia\Noctra.Avalonia.csproj", "{E01F0865-06B0-44F1-B640-28FEC4EEE0ED}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Noctra.Tests", "Noctra.Tests\Noctra.Tests.csproj", "{4AC86359-8420-40DC-B117-264DEFC8EEB6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NoctraProviderTester", "Tester\NoctraProviderTester.csproj", "{5B2E5407-7AE1-49AF-A8E7-6E8765F16FC0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4B1FD5E4-7148-4500-A92A-1932DD1DFE10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4B1FD5E4-7148-4500-A92A-1932DD1DFE10}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4B1FD5E4-7148-4500-A92A-1932DD1DFE10}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4B1FD5E4-7148-4500-A92A-1932DD1DFE10}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E01F0865-06B0-44F1-B640-28FEC4EEE0ED}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E01F0865-06B0-44F1-B640-28FEC4EEE0ED}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E01F0865-06B0-44F1-B640-28FEC4EEE0ED}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E01F0865-06B0-44F1-B640-28FEC4EEE0ED}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4AC86359-8420-40DC-B117-264DEFC8EEB6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4AC86359-8420-40DC-B117-264DEFC8EEB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4AC86359-8420-40DC-B117-264DEFC8EEB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4AC86359-8420-40DC-B117-264DEFC8EEB6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5B2E5407-7AE1-49AF-A8E7-6E8765F16FC0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B2E5407-7AE1-49AF-A8E7-6E8765F16FC0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5B2E5407-7AE1-49AF-A8E7-6E8765F16FC0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5B2E5407-7AE1-49AF-A8E7-6E8765F16FC0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
