@@ -96,7 +96,7 @@ public partial class MainViewModel : ObservableObject
     private BatchObservableCollection<Channel> _channels = new();
 
     [ObservableProperty]
-    private BatchObservableCollection<Channel> _filteredChannels = new();
+    private BatchObservableCollection<Channel> _filteredChannels = new(c => !IsDummyChannel(c));
 
     [ObservableProperty]
     private BatchObservableCollection<string> _groups = new();
@@ -209,8 +209,8 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _isChannelLoading;
 
-    public bool IsContentLoading => IsChannelLoading && (ActiveView == AppView.Series ? SeriesViewItems.Count == 0 : !FilteredChannels.Any(c => !IsDummyChannel(c)));
-    public bool ShowEmptyChannels => !IsChannelLoading && (ActiveView == AppView.Series ? SeriesViewItems.Count == 0 : !FilteredChannels.Any(c => !IsDummyChannel(c)));
+    public bool IsContentLoading => IsChannelLoading && (ActiveView == AppView.Series ? SeriesViewItems.Count == 0 : FilteredChannels.CountedItemCount == 0);
+    public bool ShowEmptyChannels => !IsChannelLoading && (ActiveView == AppView.Series ? SeriesViewItems.Count == 0 : FilteredChannels.CountedItemCount == 0);
 
     private static bool IsDummyChannel(Channel c) =>
         c.StreamUrl != null && (c.StreamUrl.StartsWith("xtream-dummy://") || c.StreamUrl.StartsWith("stalker-dummy://"));
@@ -1862,7 +1862,7 @@ public partial class MainViewModel : ObservableObject
         _hasMoreChannels = true;
         _isLoadingMoreChannels = false;
         Channels = new BatchObservableCollection<Channel>();
-        FilteredChannels = new BatchObservableCollection<Channel>();
+        FilteredChannels = new BatchObservableCollection<Channel>(c => !IsDummyChannel(c));
         OnPropertyChanged(nameof(IsContentLoading));
         OnPropertyChanged(nameof(ShowEmptyChannels));
     }

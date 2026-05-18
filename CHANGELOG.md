@@ -7,7 +7,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 
 ## [Unreleased]
-### 🟠 N+1 UI Render Performansı — Clear+foreach Add → BatchObservableCollection (2026-05-19)
+
+### ⚡ IsContentLoading / ShowEmptyChannels - Any() O(n) -> CountedItemCount O(1) (2026-05-19)
+- [Performans] **CountedItemCount O(1) Sayac Eklendi**: IsContentLoading ve ShowEmptyChannels property'lerindeki FilteredChannels.Any(c => !IsDummyChannel(c)) O(n) taramasi kaldirildi. Yerine BatchObservableCollection'in CountedItemCount ozelligi (O(1) sayac) kullanildi.
+- [Performans] **BatchObservableCollection Predicate Destegi**: Koleksiyona istege bagli Func<T,bool>? countPredicate parametresi eklendi. InsertItem, RemoveItem, ClearItems, SetItem override'lari ve AddRange/ReplaceAll metotlari sayaci otomatik gunceller.
+- [Degisti] **_filteredChannels Predicate ile Yapilandirildi**: _filteredChannels field'i ve ResetIncrementalState'teki yeni atamalar artik c => !IsDummyChannel(c) predicate'ini tasir.
+- [Kazanim] 5.000 kanal x 24 property degisimi = 120.000 nesne kontrolu -> 0 (sabit sure).
+
+### ⚡ N+1 UI Render Performansı — Clear+foreach Add → BatchObservableCollection (2026-05-19)
 - [Performans] **BatchObservableCollection<T> Eklendi**: SetItems metodunda Clear() + foreach Add() pattern'i ReplaceAll() ile değiştirildi — 100 elemanlı sayfada 101 CollectionChanged event → 1 Reset event.
 - [Performans] **AddRange() ile Page Yükleme Optimizasyonu**: LoadMoreChannelsAsync ve LoadMoreSeriesAsync'te foreach Add() yerine AddRange(page) kullanıldı.
 - [Performans] **Incremental State Reset**: ResetIncrementalState ve ResetSeriesIncrementalState'te Clear() yerine yeni BatchObservableCollection<>() ataması yapıldı.
@@ -134,7 +141,6 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     *   Adult kategorileri (Adult, XXX, Yetişkin vb.) kanal listesinin ve kategori yan menüsünün **en altına** taşınarak kullanım kolaylığı sağlandı.
 - [Düzeltildi] **Varsayılan Kategori Seçimi**: Uygulama açılışında veya profil değişiminde, uygun dil kategorisi bulunamazsa listenin başındaki ilk (Adult olmayan) kategori artık otomatik olarak seçiliyor.
 
-
 ### 🏪 Microsoft Store Free/Premium Çift Uygulama Altyapısı (2026-05-01)
 - [Yeni] Aynı kod tabanından iki ayrı Microsoft Store paketi üretmek için `Free` ve `Premium` edition modeli eklendi.
 - [Yeni] `Noctra.Packaging` altında Store paketleme altyapısı, manifest, görsel varlıklar ve çoklu profil konfigürasyonu (`store-profiles.json`) oluşturuldu.
@@ -150,7 +156,6 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - [Düzeltildi] **Kategori Temizliği**: Yenileme sırasında eski kategorilerin UI'da asılı kalması sorunu, sunucu yanıtı sonrası tetiklenen `ResetUIForRefresh` ve `DeleteAllChannelsForRefreshAsync` mekanizmalarıyla tamamen çözüldü.
 - [Düzeltildi] **Veri Kaybı Önleme (Data Loss Prevention)**: Xtream ve Stalker profillerinde yapılan tam yenilemelerde (Full Refresh) Favoriler, İzleme Geçmişi ve "Listem" verilerinin sıfırlanması sorunu giderildi. Bellek içi yedekleme (`_refreshBackups`) mekanizması ile kullanıcı verileri parmak izi bazlı korunuyor ve yükleme sırasında otomatik olarak geri yükleniyor.
 - [Düzeltildi] **Veri Çakışması**: Yeni "placeholder" (dummy) kanallar eklenmeden önce eski kanalların DB'den temizlenmesi sağlandı, böylece eski ve yeni verilerin üst üste binmesi engellendi.
-
 
 ### Sağlayıcı Odaklı Metadata ve Kod Temizliği (2026-04-01)
 - [Değişti] TMDB/search fallback artık yalnızca `M3U` profilleriyle sınırlandı. `Xtream` ve `Stalker` içerikleri artık sadece sağlayıcıdan gelen metadata ile çalışıyor.
@@ -304,7 +309,6 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - Lisans ve özellik kısıtlama mantığı (`LicenseService`) elden geçirilerek mevcut uygulama yetenekleriyle %100 uyumlu hale getirildi. 
   - Fake/olmayan özellikler (Multiview, Timeshift vb.) kaldırıldı; herkese açık olanlar (Alt yazı/Ses kanalı seçimi, Favoriler vb.) doğru kategorilere tasnif edildi.
   - `UpsellWindow` üzerinde gerçek Free/Premium farkları net ve şeffaf bir şekilde yansıtıldı.
-
 
 ### ✨ Yeni Özellikler
 - **Çoklu Özel EPG Desteği** (2026-03-25):
@@ -830,7 +834,6 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 | `VideoOverlayView.axaml` | Bilgi paneli (About) görsel hataları giderildi ve kontroller iyileştirildi. |
 | `SettingsWindow.axaml` | Sekme kontrolleri için görsel ve etkileşim iyileştirmeleri yapıldı. |
 
-
 ---
 
 ## v30.8 – Akıllı Dil Eşleştirme (2026-03-06)
@@ -932,7 +935,6 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 | `PlayerViewModel.cs` | Seri metadata yükleme ve panel veri tutarlılığı iyileştirildi. |
 
 ---
-
 
 ## v30.2 – Premium Video Oynatıcı ve Global Tema Modernizasyonu (2026-03-05)
 
@@ -1298,7 +1300,6 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     *   **Standardize ProgressBar**: Uygulama genelindeki tüm sahte ilerleme çubukları kaldırılarak, temanın ana renklerine (`AccentBrush`) tam uyumlu, modern ve native Avalonia `ProgressBar` bileşenine geçildi.
     *   **Stabilite ve Hata Giderme**: XAML katmanındaki sözdizimi hataları, `InvalidCastException` çökmesi ve kartların büyümesi sırasında yaşanan kesilme (clipping) sorunları giderildi.
 
-
 - **M3U Bağlantı Analizi ve Stalker Sınırsız Senkronizasyon** (2026-02-26 15:00):
     - **Stalker Full Sync (Sınırsız)**: Stalker portalları için önceki "Hızlı Yükleme" limitleri (15-50 sayfa) tamamen kaldırıldı. Artık 100.000+ içerikli devasa portallar bile tek seferde, eksiksiz olarak senkronize edilir.
     - **Paralel Çekim Optimizasyonu**: Çok sayıda sayfayı (örn: 7000+ sayfa VOD) internet hızını sonuna kadar kullanarak çekebilmek için paralel ağ isteği kapasitesi (Semaphore) artırıldı.
@@ -1311,7 +1312,6 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - **Kararlı Spinner Animasyonu**: `PremiumSpinner` animasyonu, en yüksek uyumluluk için kararlı XAML tabanlı sisteme güncellendi. Akıcı dönüş ve stabilite optimize edildi.
     - **UI Temizliği**: Ana ekranda bulunan eski iskelet yükleme (skeleton loading) animasyonları, kullanıcı deneyimini basitleştirmek adına tamamen kaldırıldı.
     - **Dinamik Ölçeklendirme**: Spinner kontrolü, `TemplateBinding` ve geliştirilmiş XAML yapısı sayesinde farklı boyutlarda (30px'ten 100px+'e kadar) bozulmadan ve merkezini koruyarak dönecek şekilde güncellendi.
-
 
 - **Akıllı Kanal Eşleştirme ve beIN Sports Şifre Çözücü** (2026-02-26 16:00):
     - **Atomic EPG Clear (Sıfırlanma Koruması)**: EPG yenileme sırasında verilerin en başta silinip (0'lanma), indirme başarısız olunca boş kalması sorunu giderildi. Artık eski veriler, sadece yeni veriler başarıyla indirilip kaydedilmeye başlandığı anda siliniyor.
@@ -1372,7 +1372,6 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
     - **Akıllı Önceliklendirme (Priority Queue)**: Kullanıcı henüz inmemiş bir kategoriye tıkladığında, arka plandaki yükleme kuyruğuna müdahale edilerek o kategori 1. sıraya alınır ve ilk boş işçi (worker) tarafından saniyeler içinde indirilir.
     - **Endpoint Çözümleme Düzeltmesi**: `/c/` gibi HTML sarmalayıcı URL'lerin yanlışlıkla API zannedilip format hatası (FormatException/InvalidOperationException) vermesi kökten çözüldü. Sistem URL'i analiz ederek `/server/load.php` gibi gerçek API uçlarını (endpoint) bulur.
     - **Gelişmiş Hata Raporlama**: Stalker hataları "İşlem beklendiği gibi tamamlanamadı" şeklindeki genel hatalar arkasına saklanmayıp, "MAC adresi hatalı", "URL geçersiz" gibi net şekilde UI'a yansıtılır hale getirildi.
-
 
 - **VLC Oynatıcı ve MKV/Canlı TV Performans Optimizasyonu** (2026-02-25 15:55):
     - **Modern Donanım Hızlandırma**: Windows 11 ve modern GPU'lar için `dxva2` yerine `d3d11va` (Direct3D11 Video Acceleration) API'sine geçildi. H.265/HEVC ve VP9 içeriklerdeki (MKV) takılmalar ve "artifact" sorunları giderildi.
@@ -1561,7 +1560,6 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
   - **M3U Dizilerinin Kaybolma Hatası:** Gelişmiş temizleme algoritmasının, dizi bölümlerinin de (S01E01 vb.) isminden temizlenmesine sebep olduğu ve bu nedenle kütüphane oluşturucunun tüm bölümleri "aynı kanal" sanarak (Deduplication) sildiği tespit edildi. Benzerlik anahtarı (Similarity Key) üretim mantığı, eğer kanal bir "Dizi" ise `S01E01` imzasını anahtara ekleyecek şekilde güncellendi. Diziler artık kaybolmuyor ve tüm bölümleriyle listeleniyor.
   - **Base64 Logo Hatası (Görsel Adlı Diziler):** Xtream veya M3U içindeki logolar base64 resim formatında (örn: `data:image/jpeg;base64,/9j/...`) geldiğinde, içerdiği virgüller (`,`) nedeniyle M3U Ayrıştırıcı (Parser) kanal adını yanlış okuyup devasa base64 metnini kanal adı sanıyordu. Bu olağanüstü hata `M3UParser.cs` içindeki regex ayıklayıcısı yeniden yazılarak kökten çözüldü. Artık kanalların isimleri logolarından kusursuzca ayrıştırılacak.
   - **Açılışta %100 Ses Toast Hatası:** Canlı TV ve Diziler açılırken ses barı 100% olarak ekranın ortasında beliriyordu. Kütüphane bağlama özellikleri sırasında ilk ses atamasının UI Toast Popup'ı tetiklemesinin önüne geçildi.
-
 
 - **Gelişmiş Arama Deneyimi ve Sidebar Modernizasyonu** (2026-02-27):
     - **Genişleyen Arama Çubuğu**: Header kısmındaki arama butonu, üzerine gelindiğinde veya tıklandığında 200px'den 340px'e pürüzsüzce genişleyen (`WidthTransition`) modern bir `TextBox` ile değiştirildi.
@@ -1979,6 +1977,4 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
       - URL geçerliliği ve sunucu yanıt süresi (Ping) kontrolü eklendi.
       - Hata durumlarında detaylı bilgi (404 Bulunamadı, 401 Yetkisiz vb.) gösterimi eklendi.
       - Bağlantı kalitesine göre renkli ikonlar (Yeşil/Sarı/Kırmızı) entegre edildi.
-
-
 
