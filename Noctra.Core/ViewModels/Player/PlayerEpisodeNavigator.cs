@@ -520,25 +520,59 @@ public class PlayerEpisodeNavigator
             if (isEpisodePlayback && _vm.CurrentEpisode != null)
             {
                 var finalCompleted = _vm.CurrentEpisode.IsCompleted || isCompleted;
+                var watchedAtUtc = DateTime.UtcNow;
                 _vm.DispatcherService.BeginInvoke(() =>
                 {
-                    _vm.CurrentEpisode.LastWatched = DateTime.UtcNow;
-                    _vm.CurrentEpisode.WatchedPosition = finalCompleted && currentDuration.HasValue
-                        ? currentDuration.Value
-                        : currentPosition;
-                    _vm.CurrentEpisode.IsCompleted = finalCompleted;
-                    if (currentDuration.HasValue)
+                    try
                     {
-                        _vm.CurrentEpisode.Duration = currentDuration.Value;
+                        _vm.CurrentEpisode.LastWatched = watchedAtUtc;
+                        _vm.CurrentEpisode.WatchedPosition = finalCompleted && currentDuration.HasValue
+                            ? currentDuration.Value
+                            : currentPosition;
+                        _vm.CurrentEpisode.IsCompleted = finalCompleted;
+                        if (currentDuration.HasValue && currentDuration.Value.TotalSeconds > 0)
+                        {
+                            _vm.CurrentEpisode.Duration = currentDuration.Value;
+                        }
+
+                        RefreshEpisodeBrowserContext(_vm._currentSeriesContext);
+                        _vm.RaiseEpisodeProgressUpdatedEvent(_vm.CurrentEpisode);
+
+                        // Update LastWatchedEpisodeAt on the Series for O(n) history sorting
+                        if (_vm._currentSeriesContext?.Id > 0)
+                        {
+                            _vm.MainViewModel.UpdateSeriesLastWatchedEpisodeAt(_vm._currentSeriesContext.Id, watchedAtUtc);
+                        }
                     }
-
-                    RefreshEpisodeBrowserContext(_vm._currentSeriesContext);
-                    _vm.RaiseEpisodeProgressUpdatedEvent(_vm.CurrentEpisode);
-
-                    // Update LastWatchedEpisodeAt on the Series for O(n) history sorting
-                    if (_vm._currentSeriesContext?.Id > 0)
+                    catch (Exception ex)
                     {
-                        _vm.MainViewModel.UpdateSeriesLastWatchedEpisodeAt(_vm._currentSeriesContext.Id, DateTime.UtcNow);
+                        System.Diagnostics.Debug.WriteLine($"Episode UI progress update error: {ex.Message}");
+                    }
+                });
+            }
+            else if (!isEpisodePlayback && _vm.CurrentChannel is { Type: ChannelType.VOD } vodChannel)
+            {
+                var finalCompleted = vodChannel.IsCompleted || isCompleted;
+                var watchedAtUtc = DateTime.UtcNow;
+                _vm.DispatcherService.BeginInvoke(() =>
+                {
+                    try
+                    {
+                        vodChannel.LastWatched = watchedAtUtc;
+                        vodChannel.WatchedPosition = finalCompleted && currentDuration.HasValue
+                            ? currentDuration.Value
+                            : currentPosition;
+                        vodChannel.IsCompleted = finalCompleted;
+                        if (currentDuration.HasValue && currentDuration.Value.TotalSeconds > 0)
+                        {
+                            vodChannel.Duration = currentDuration.Value;
+                        }
+
+                        _vm.MainViewModel.RefreshContinueWatchingRail(episodeContinueDirty: false);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"VOD UI progress update error: {ex.Message}");
                     }
                 });
             }

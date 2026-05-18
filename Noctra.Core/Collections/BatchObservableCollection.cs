@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 
 namespace Noctra.Core.Collections;
 
@@ -60,6 +61,7 @@ public class BatchObservableCollection<T> : ObservableCollection<T>
             UpdateCountedCountOnAdd(item);
         }
 
+        RaiseCountNotifications();
         OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
     }
 
@@ -82,6 +84,7 @@ public class BatchObservableCollection<T> : ObservableCollection<T>
             UpdateCountedCountOnAdd(item);
         }
 
+        RaiseCountNotifications();
         OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
     }
 
@@ -89,6 +92,7 @@ public class BatchObservableCollection<T> : ObservableCollection<T>
     {
         base.InsertItem(index, item);
         UpdateCountedCountOnAdd(item);
+        OnPropertyChanged(new PropertyChangedEventArgs(nameof(CountedItemCount)));
     }
 
     protected override void RemoveItem(int index)
@@ -96,12 +100,14 @@ public class BatchObservableCollection<T> : ObservableCollection<T>
         var item = Items[index];
         base.RemoveItem(index);
         UpdateCountedCountOnRemove(item);
+        OnPropertyChanged(new PropertyChangedEventArgs(nameof(CountedItemCount)));
     }
 
     protected override void ClearItems()
     {
         base.ClearItems();
         _countedItemCount = 0;
+        OnPropertyChanged(new PropertyChangedEventArgs(nameof(CountedItemCount)));
     }
 
     protected override void SetItem(int index, T item)
@@ -110,6 +116,14 @@ public class BatchObservableCollection<T> : ObservableCollection<T>
         base.SetItem(index, item);
         UpdateCountedCountOnRemove(oldItem);
         UpdateCountedCountOnAdd(item);
+        OnPropertyChanged(new PropertyChangedEventArgs(nameof(CountedItemCount)));
+    }
+
+    private void RaiseCountNotifications()
+    {
+        OnPropertyChanged(new PropertyChangedEventArgs(nameof(Count)));
+        OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
+        OnPropertyChanged(new PropertyChangedEventArgs(nameof(CountedItemCount)));
     }
 
     private void UpdateCountedCountOnAdd(T item)

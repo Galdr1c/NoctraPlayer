@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Noctra.Models;
 using System.Net.Http;
@@ -1553,7 +1553,9 @@ public partial class MainViewModel : ObservableObject
             var playlistId = SelectedPlaylist?.Id ?? 0;
             _allSeriesCache = await _mediaService.GetSeriesListAsync(playlistId);
 
-            _isEpisodeContinueDirty = true; // Series data refreshed, invalidate cache            UpdateSeriesViewItems();
+            _isEpisodeContinueDirty = true;
+            _cachedEpisodeContinue = null;
+            UpdateSeriesViewItems();
 
             // Arka planda tüm dizi ilerlemelerini verimli şekilde yükle (Bulk sync)
             if (CurrentProfileId.HasValue && _allSeriesCache.Count > 0)
@@ -1593,90 +1595,134 @@ public partial class MainViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            return; // Debounced away -- a more recent call will take over
-        }
-
-        // Rail: Izlemeye Devam Et (ContinueWatching) -- VOD part is always fresh (in-memory Channels)
-        var vodContinue = Channels
-            .Where(c => c.Type == ChannelType.VOD
-                     && c.LastWatched.HasValue
-                     && !c.IsCompleted
-                     && c.WatchedPosition.HasValue
-                     && c.WatchedPosition.Value.TotalSeconds > 120
-                     && c.Duration.HasValue
-                     && c.Duration.Value.TotalSeconds > 0
-                     && (c.WatchedPosition.Value.TotalSeconds / c.Duration.Value.TotalSeconds) < 0.92);
-
-        // Use cached episode-continue if not dirty (avoids the slow DB query with Include/ThenInclude)
-        if (!_isEpisodeContinueDirty && _cachedEpisodeContinue != null)
-        {
-            var combinedContinue = vodContinue.Concat(_cachedEpisodeContinue)
-                .GroupBy(c => c.StreamUrl, StringComparer.OrdinalIgnoreCase)
-                .Select(g => g.OrderByDescending(c => c.LastWatched).First())
-                .OrderByDescending(c => c.LastWatched)
-                .Take(10);
-
-            _dispatcherService.Invoke(() => SetItems(ContinueWatching, combinedContinue));
             return;
         }
 
-        // Query DB for episodes with watch progress
         var playlistId = SelectedPlaylist?.Id ?? 0;
-        if (playlistId > 0)
+        var profileId = CurrentProfileId;
+
+        if (playlistId <= 0 || !profileId.HasValue)
         {
-            try
-            {
-                using var db = await _contextFactory.CreateDbContextAsync();
-                var watchedEpisodes = await db.Episodes
-                    .AsNoTracking()
-                    .Include(e => e.Season)
-                        .ThenInclude(s => s.Series)
-                    .Where(e => e.Season != null
-                             && e.Season.Series != null
-                             && e.Season.Series.PlaylistId == playlistId
-                             && e.LastWatched.HasValue
-                             && !e.IsCompleted
-                             && e.WatchedPosition.HasValue
-                             && e.WatchedPosition.Value.TotalSeconds > 120
-                             && e.Duration.HasValue
-                             && e.Duration.Value.TotalSeconds > 0
-                             && (e.WatchedPosition.Value.TotalSeconds / e.Duration.Value.TotalSeconds) < 0.92)
-                    .ToListAsync();
-
-                // Ayni dizi icin yalnizca en son izlenen bolumu goster
-                var episodeContinue = watchedEpisodes
-                    .GroupBy(e => e.Season?.Series)
-                    .Select(g => g.OrderByDescending(e => e.LastWatched).First())
-                    .Select(e => BuildSeriesEpisodeChannel(e, e.Season?.Series))
-                    .ToList();
-
-                // Cache for subsequent calls
-                _cachedEpisodeContinue = episodeContinue;
-                _isEpisodeContinueDirty = false;
-
-                var combinedContinue = vodContinue.Concat(episodeContinue)
-                    .GroupBy(c => c.StreamUrl, StringComparer.OrdinalIgnoreCase)
-                    .Select(g => g.OrderByDescending(c => c.LastWatched).First())
-                    .OrderByDescending(c => c.LastWatched)
-                    .Take(10);
-
-                _dispatcherService.Invoke(() => SetItems(ContinueWatching, combinedContinue));
-                return;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Error in UpdateContinueWatchingRailAsync DB query");
-            }
+            _dispatcherService.Invoke(() => SetItems(ContinueWatching, Enumerable.Empty<Channel>()));
+            return;
         }
 
-        // Fallback: if DB query fails, use only VOD continue
-        var fallbackContinue = vodContinue
-            .GroupBy(c => c.StreamUrl, StringComparer.OrdinalIgnoreCase)
-            .Select(g => g.OrderByDescending(c => c.LastWatched).First())
-            .OrderByDescending(c => c.LastWatched)
-            .Take(10);
+        try
+        {
+            using var db = await _contextFactory.CreateDbContextAsync();
 
-        _dispatcherService.Invoke(() => SetItems(ContinueWatching, fallbackContinue));
+            // VOD: Read from WatchHistories instead of in-memory Channels collection
+            var vodRows = await db.WatchHistories
+                .AsNoTracking()
+                .Include(h => h.Channel)
+                .Where(h => h.ProfileId == profileId.Value
+                         && h.ChannelId.HasValue
+                         && h.Channel != null
+                         && h.Channel.PlaylistId == playlistId
+                         && h.Channel.Type == ChannelType.VOD)
+                .OrderByDescending(h => h.WatchedAt)
+                .Take(100)
+                .ToListAsync();
+
+            var vodContinue = vodRows
+                .Where(h => h.Channel != null)
+                .Select(h =>
+                {
+                    var channel = h.Channel!;
+                    channel.LastWatched = h.WatchedAt;
+                    channel.WatchedPosition = h.StoppedAt;
+                    channel.IsCompleted = h.Completed;
+                    return channel;
+                })
+                .Where(c => IsContinueWatchingCandidate(c.WatchedPosition, c.Duration, c.IsCompleted))
+                .ToList();
+
+            List<Channel> episodeContinue;
+
+            if (!_isEpisodeContinueDirty && _cachedEpisodeContinue != null)
+            {
+                episodeContinue = _cachedEpisodeContinue;
+            }
+            else
+            {
+                var episodeRows = await db.WatchHistories
+                    .AsNoTracking()
+                    .Include(h => h.Episode)
+                        .ThenInclude(e => e!.Season)
+                            .ThenInclude(s => s!.Series)
+                    .Where(h => h.ProfileId == profileId.Value
+                             && h.EpisodeId.HasValue
+                             && h.Episode != null
+                             && h.Episode.Season != null
+                             && h.Episode.Season.Series != null
+                             && h.Episode.Season.Series.PlaylistId == playlistId)
+                    .OrderByDescending(h => h.WatchedAt)
+                    .Take(200)
+                    .ToListAsync();
+
+                episodeContinue = episodeRows
+                    .Where(h => h.Episode != null
+                             && h.Episode.Season != null
+                             && h.Episode.Season.Series != null
+                             && IsContinueWatchingCandidate(h.StoppedAt, h.Episode.Duration, h.Completed))
+                    .GroupBy(h => h.Episode!.Season!.SeriesId)
+                    .Select(g => g.OrderByDescending(h => h.WatchedAt).First())
+                    .Select(h =>
+                    {
+                        var episode = h.Episode!;
+                        episode.LastWatched = h.WatchedAt;
+                        episode.WatchedPosition = h.StoppedAt;
+                        episode.IsCompleted = h.Completed;
+
+                        return BuildSeriesEpisodeChannel(episode, episode.Season?.Series);
+                    })
+                    .ToList();
+
+                _cachedEpisodeContinue = episodeContinue;
+                _isEpisodeContinueDirty = false;
+            }
+
+            var combinedContinue = vodContinue
+                .Concat(episodeContinue)
+                .Where(c => IsContinueWatchingCandidate(c.WatchedPosition, c.Duration, c.IsCompleted))
+                .GroupBy(c => string.IsNullOrWhiteSpace(c.StreamUrl)
+                    ? $"{c.Type}:{c.Id}:{c.Name}"
+                    : c.StreamUrl,
+                    StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.OrderByDescending(c => c.LastWatched).First())
+                .OrderByDescending(c => c.LastWatched)
+                .Take(10)
+                .ToList();
+
+            _dispatcherService.Invoke(() => SetItems(ContinueWatching, combinedContinue));
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error updating Continue Watching rail");
+            _dispatcherService.Invoke(() => SetItems(ContinueWatching, Enumerable.Empty<Channel>()));
+        }
+    }
+
+    private static bool IsContinueWatchingCandidate(TimeSpan? watchedPosition, TimeSpan? duration, bool completed)
+    {
+        if (completed)
+        {
+            return false;
+        }
+
+        if (!watchedPosition.HasValue || watchedPosition.Value.TotalSeconds <= 120)
+        {
+            return false;
+        }
+
+        // Bazi VOD streamlerde duration yok/0 geliyor.
+        // Duration yok diye karti dusurmeyelim.
+        if (!duration.HasValue || duration.Value.TotalSeconds <= 0)
+        {
+            return true;
+        }
+
+        return watchedPosition.Value.TotalSeconds / duration.Value.TotalSeconds < 0.92;
     }
 
     private static bool HasDisplayImage(Channel channel)
@@ -1906,6 +1952,20 @@ public partial class MainViewModel : ObservableObject
                 break;
             }
         }
+
+        RefreshContinueWatchingRail(episodeContinueDirty: true);
+        _ = UpdateHistoryBucketsAsync();
+    }
+
+    internal void RefreshContinueWatchingRail(bool episodeContinueDirty = true)
+    {
+        if (episodeContinueDirty)
+        {
+            _isEpisodeContinueDirty = true;
+            _cachedEpisodeContinue = null;
+        }
+
+        _ = UpdateContinueWatchingRailAsync();
     }
 
     private void ResetIncrementalState()
