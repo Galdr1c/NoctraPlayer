@@ -5218,17 +5218,22 @@ public partial class MainViewModel : ObservableObject
 
         SearchSuggestion = ComputeBestSuggestion(rawQuery, candidateNames);
 
+        // Precompute ID sets for O(1) deduplication instead of O(n*m) Any()
+        var liveIds = new HashSet<int>(SearchLiveChannels.Select(x => x.Id));
+        var seriesIds = new HashSet<int>(SearchSeriesChannels.Select(x => x.Id));
+        var vodIds = new HashSet<int>(SearchVodChannels.Select(x => x.Id));
+
         var similarLive = Channels
             .Where(c => c.Type == ChannelType.Live)
             .Where(c => IsLikelySimilar(rawQuery, c.Name))
-            .Where(c => !SearchLiveChannels.Any(x => x.Id == c.Id))
+            .Where(c => !liveIds.Contains(c.Id))
             .OrderByDescending(HasDisplayImage)
             .Take(12)
             .ToList();
 
         var similarSeries = seriesSnapshot
             .Where(s => IsLikelySimilar(rawQuery, s.Name))
-            .Where(s => !SearchSeriesChannels.Any(x => x.Id == s.Id))
+            .Where(s => !seriesIds.Contains(s.Id))
             .OrderByDescending(HasDisplayImage)
             .Take(12)
             .ToList();
@@ -5236,7 +5241,7 @@ public partial class MainViewModel : ObservableObject
         var similarVod = Channels
             .Where(c => c.Type == ChannelType.VOD)
             .Where(c => IsLikelySimilar(rawQuery, c.Name))
-            .Where(c => !SearchVodChannels.Any(x => x.Id == c.Id))
+            .Where(c => !vodIds.Contains(c.Id))
             .OrderByDescending(HasDisplayImage)
             .Take(12)
             .ToList();

@@ -8,6 +8,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### ⚡ Arama Deduplication O(n×m) → HashSet O(n+m) (2026-05-19)
+- [Performans] **HashSet ile O(1) Deduplication**: Benzer sonuçların filtrelenmesinde kullanılan `.Where(c => !SearchLiveChannels.Any(x => x.Id == c.Id))` (iç içe Any → O(n×m)) pattern'i `HashSet<int>.Contains()` (O(1)) ile değiştirildi. Live, VOD ve Series için 3 kez tekrarlanan deduplication işlemi toplu HashSet precomputation ile O(n+m)'e indirildi.
+- [Kazanım] 5.000 kanallı arama sonucunda her aday için tüm arama listesini taramak yerine sabit süreli Contains kontrolü — tahmini ~150.000 karşılaştırma → ~0.
+
 ### ⚡ IsContentLoading / ShowEmptyChannels - Any() O(n) -> CountedItemCount O(1) (2026-05-19)
 - [Performans] **CountedItemCount O(1) Sayac Eklendi**: IsContentLoading ve ShowEmptyChannels property'lerindeki FilteredChannels.Any(c => !IsDummyChannel(c)) O(n) taramasi kaldirildi. Yerine BatchObservableCollection'in CountedItemCount ozelligi (O(1) sayac) kullanildi.
 - [Performans] **BatchObservableCollection Predicate Destegi**: Koleksiyona istege bagli Func<T,bool>? countPredicate parametresi eklendi. InsertItem, RemoveItem, ClearItems, SetItem override'lari ve AddRange/ReplaceAll metotlari sayaci otomatik gunceller.
