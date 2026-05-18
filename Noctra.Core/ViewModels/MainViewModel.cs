@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Noctra.Models;
 using System.Net.Http;
@@ -1632,6 +1632,12 @@ public partial class MainViewModel : ObservableObject
                     channel.LastWatched = h.WatchedAt;
                     channel.WatchedPosition = h.StoppedAt;
                     channel.IsCompleted = h.Completed;
+                    if ((!channel.Duration.HasValue || channel.Duration.Value.TotalSeconds <= 0) &&
+                        channel.WatchedPosition.HasValue &&
+                        channel.WatchedPosition.Value.TotalSeconds > 0)
+                    {
+                        channel.Duration = channel.WatchedPosition.Value + TimeSpan.FromMinutes(30);
+                    }
                     return channel;
                 })
                 .Where(c => IsContinueWatchingCandidate(c.WatchedPosition, c.Duration, c.IsCompleted))
@@ -4024,22 +4030,12 @@ public partial class MainViewModel : ObservableObject
 
     public void UpdateHistoryChannels()
     {
-        // 1. Update Channels history
-            SetItems(HistoryChannels, Channels
-                .Where(c => c.LastWatched.HasValue)
-                .OrderByDescending(c => c.LastWatched),
-                () => _ = EnrichChannelsWithEpgAsync(HistoryChannels));
-        
-        // 2. Refresh buckets (includes series from cache)
-        _ = UpdateHistoryBucketsAsync();
-
-        // 3. Sync from DB if needed
         _ = RefreshHistoryChannelsOnlyAsync();
     }
 
-    private async Task UpdateHistoryBucketsAsync()
+    private async Task UpdateHistoryBucketsAsync(IEnumerable<Channel>? sourceChannels = null)
     {
-        var historySnapshot = HistoryChannels.ToList();
+        var historySnapshot = (sourceChannels ?? HistoryChannels).ToList();
         SetItems(HistoryLiveChannels, historySnapshot.Where(c => c.Type == ChannelType.Live));
         SetItems(HistoryVodChannels, historySnapshot.Where(c => c.Type == ChannelType.VOD));
 
@@ -5030,7 +5026,7 @@ public partial class MainViewModel : ObservableObject
             _hasMoreHistory = initialChannels.Count == IncrementalPageSize;
 
             SetItems(HistoryChannels, initialChannels, () => _ = EnrichChannelsWithEpgAsync(HistoryChannels));
-            _ = UpdateHistoryBucketsAsync();
+            _ = UpdateHistoryBucketsAsync(initialChannels);
         }
         catch (Exception ex)
         {

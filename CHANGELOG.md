@@ -8,7 +8,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
-
+### 🐛 VOD Kayıtlarının Ana Sayfa ve Geçmişte Görünmeme Sorunu (2026-05-18)
+- [Düzeltildi] **UpdateContinueWatchingRailAsync Duration Fallback**: M3U üzerinden gelen VOD içerikleri genellikle bir 'Duration' değerine sahip olmadığı için `IsContinueWatchingCandidate` filtresine takılıp ana sayfadan dışlanıyordu. Geçmiş sayfasındakine benzer bir +30 dakikalık varsayılan "Duration Fallback" mantığı eklenerek yarım kalan filmlerin (VOD) "İzlemeye Devam Et" (ContinueWatching) kartlarında görünmesi sağlandı.
+- [Düzeltildi] **UpdateHistoryBucketsAsync Race Condition (Yarış Durumu)**: History sekmesinde VOD'ların eksik olması sorunu çözüldü. Veritabanından gelen verilerin UI listesine asenkron eklenmesi (`SetItems` dispatcher invoke) ile aynı anda `UpdateHistoryBucketsAsync`'in henüz güncellenmemiş UI dizisinden okuma yapmaya çalışıp boş/eksik liste oluşturması problemi giderildi. Artık veritabanından gelen (`initialChannels`) array'i doğrudan bucket fonksiyonuna parametre olarak yollanıyor.
+- [Düzeltildi] **UpdateHistoryChannels İyileştirmesi**: Metodun geçici olarak o an aktif olan görünüme göre filtrelenmiş (örn: Sadece Series) `Channels` verisiyle listeyi doldurup daha sonra DB'den gelecek taze veriye kadar ekranda "eksik tipte (VOD) kartlar" göstermesi bug'ı giderildi. Mantık doğrudan `RefreshHistoryChannelsOnlyAsync` fonksiyonuna delege edildi.
 
 ### ⚡ UpdateHistoryBucketsAsync - DB GroupBy+Max O(n) -> LastWatchedEpisodeAt O(1) (2026-05-19)
 - [Performans] **Series.LastWatchedEpisodeAt Field Eklendi**: Series modeline `[NotMapped] DateTime? LastWatchedEpisodeAt` property'si eklendi. Episode izlenince otomatik guncellenir.
