@@ -141,7 +141,7 @@ namespace Noctra.Tests
 
     internal sealed class FakeSettingsService : ISettingsService
     {
-        public AppSettings Settings { get; } = new AppSettings { DefaultVolume = 80 };
+        public AppSettings Settings { get; } = new AppSettings { DefaultVolume = 100 };
         public event Action? SettingsChanged;
         public Task SaveAsync() => Task.CompletedTask;
         public Task LoadAsync() => Task.CompletedTask;
@@ -227,6 +227,8 @@ namespace Noctra.Tests
                 null!,  // MainViewModel — not needed for these tests
                 WatchHistory,
                 new FakeStalkerPortalService());
+
+            VM.CurrentChannel = new Channel { Id = 1, Name = "Test Channel", StreamUrl = "http://test.ts", Type = ChannelType.VOD };
         }
 
         public double ParseSkipSeconds(object? parameter) =>
@@ -619,6 +621,7 @@ namespace Noctra.Tests
             var ctx = new PlayerTestContext();
             ctx.VM.IsLiveContent = false;
             ctx.VM.Duration = 3600;
+            ctx.VM._lastKnownValidPosition = 10.0;
 
             ctx.VM.SeekCommand.Execute(0.0);
 

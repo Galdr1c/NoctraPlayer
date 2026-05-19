@@ -8,6 +8,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### 🐛 Resume Dialog Arkasında Eski Videonun Başlaması - Playback Race Condition (2026-05-19)
+- [Düzeltildi] **Playback Intent Token Sistemi**: Kullanıcı yeni içerik seçtiği anda `BeginPlaybackIntent` ile mevcut resume dialog, eski URL çözümleme, health-check retry ve gecikmiş VLC başlatma akışları geçersiz kılınır.
+- [Düzeltildi] **MainWindow Resume Akışı Guard Edildi**: Resume dialog gösterilmeden önce token oluşturulur; dialog beklerken kullanıcı başka içeriğe geçerse eski akış `OperationCanceledException` ile sessizce kapanır ve `PlayChannelAsync` çağrılmaz.
+- [Düzeltildi] **PlayChannelAsync Pre-Play Kontrolü**: Stalker link üretimi veya stream URL çözümleme tamamlandıktan sonra, VLC `PlayAsync` çağrısından hemen önce istek hâlâ güncel mi kontrol edilir. Böylece eski içerik yeni dialog açıkken arkada başlayamaz.
+- [Düzeltildi] **VideoPlayerService Cancellation Sertleştirildi**: `PlayAsync` ve `HardSeekAsync` artık generation/cancellation token'ı ilk `await` öncesinde oluşturur; `InitializeAsync`, TCP teardown veya media parse sırasında iptal edilen eski istekler sonradan medya atayıp oynatamaz.
+- [Düzeltildi] **Back/Close İptali**: Player kapatma/geri çıkma işlemi `_playRequestVersion` değerini artırarak bekleyen playback görevlerini anında geçersiz kılar.
+- [Kazanım] Resume dialog açıkken, başka içeriğe geçerken veya video yüklenmeden geri çıkarken eski film/dizi arka planda başlamaz.
+
 ### 🐛 İzleme Pozisyonu Kaybolması - Resume Dialog Boş Dakika Sorunu (2026-05-19)
 - [Düzeltildi] **MainWindow.OnClosed Flush Eklendi**: Uygulama kapanırken izleme pozisyonu (`WatchedPosition`) veritabanına kaydedilmeden kayboluyordu. `OnClosed` event handler'ına `FlushWatchHistoryAsync(force: true)` çağrısı eklendi.
 - [Düzeltildi] **PlayChannelAsync Flush Eklendi**: Kanal değiştirirken önceki içeriğin izleme pozisyonu flush edilmiyordu. `PlayerPlaybackController.PlayChannelAsync` metodunun başına önceki içeriğin pozisyonunu kaydetmek için flush çağrısı eklendi.

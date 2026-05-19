@@ -146,7 +146,7 @@ public class PlayerPlaybackController
         });
     }
 
-    public async Task PlayChannelAsync(Channel channel, double? startPosition = null)
+    public async Task PlayChannelAsync(Channel channel, double? startPosition = null, int? existingRequestVersion = null)
     {
         _vm.LogDebug($"PlayChannelAsync: Id={channel.Id}, Name={channel.Name}, Type={channel.Type}, StreamUrl={channel.StreamUrl}, StartPos={startPosition}");
 
@@ -155,7 +155,15 @@ public class PlayerPlaybackController
             throw new InvalidOperationException(_vm.LocalizationService.GetString("Player.Error.SeriesFolder"));
         }
 
-        // Flush previous content's watch position before switching
+        // Create or reuse the request token before any await. Otherwise an older selection
+        // can resume after a newer resume dialog is already on screen and start
+        // playback in the background. MainWindow creates this token before showing
+        // the resume dialog; direct callers can let this method create one.
+        var requestVersion = existingRequestVersion.HasValue && _vm.IsPlaybackIntentCurrent(existingRequestVersion.Value)
+            ? existingRequestVersion.Value
+            : _vm.BeginPlaybackIntent(stopCurrentPlayback: true);
+
+        // Flush previous content's watch position before switching.
         try
         {
             await _vm.FlushWatchHistoryAsync(force: true);
@@ -165,9 +173,11 @@ public class PlayerPlaybackController
             _vm.LogDebug($"PlayChannelAsync: Failed to flush watch history: {ex.Message}");
         }
 
-        var requestVersion = Interlocked.Increment(ref _vm._playRequestVersion);
-
-        _vm.VideoPlayerService.Stop();
+        if (!_vm.IsPlaybackIntentCurrent(requestVersion))
+        {
+            _vm.LogDebug($"PlayChannelAsync: request {requestVersion} cancelled after history flush.");
+            return;
+        }
 
         _vm._isContentTransitioning = true;
         _vm._isPreferenceApplied = false;
@@ -249,6 +259,12 @@ public class PlayerPlaybackController
                     throw new InvalidOperationException("Kanal akış adresi bulunamadı.");
                 resolvedStreamUrl = await _vm.ContentDownloadService.ResolvePlayableUrlAsync(channel.StreamUrl);
             }
+
+            if (!_vm.IsPlaybackIntentCurrent(requestVersion, channel))
+            {
+                _vm.LogDebug($"PlayChannelAsync: request {requestVersion} cancelled before VLC PlayAsync.");
+                return;
+            }
             
             if (startPosition.HasValue && startPosition.Value > 0 && !_vm.IsDownloadedPlayback && resolvedStreamUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
@@ -262,6 +278,12 @@ public class PlayerPlaybackController
         }
         catch
         {
+            if (!_vm.IsPlaybackIntentCurrent(requestVersion, channel))
+            {
+                _vm.LogDebug($"PlayChannelAsync: stale request {requestVersion} failed after cancellation; suppressing error.");
+                return;
+            }
+
             if (requestVersion == _vm._playRequestVersion && _vm.CurrentChannel?.Id == channel.Id)
             {
                 _vm.IsBuffering = false;
@@ -383,6 +405,19 @@ public class PlayerPlaybackController
 
     public async Task ResumePlaybackAsync(string streamUrl, bool hasLoadedMedia)
     {
+        var requestVersion = Volatile.Read(ref _vm._playRequestVersion);
+        var channelId = _vm.CurrentChannel?.Id;
+
+        bool IsStillCurrent()
+            => channelId.HasValue &&
+               _vm.IsPlaybackIntentCurrent(requestVersion) &&
+               _vm.CurrentChannel?.Id == channelId.Value;
+
+        if (!IsStillCurrent())
+        {
+            return;
+        }
+
         var treatAsLivePlayback =
             _vm.IsLiveContent ||
             _vm.CurrentChannel?.Type == ChannelType.Live ||
@@ -398,17 +433,22 @@ public class PlayerPlaybackController
             {
                 _vm.VideoPlayerService.Stop();
                 await Task.Delay(120);
+                if (!IsStillCurrent()) return;
+
                 _vm.IsBuffering = true;
                 _vm.BufferingProgress = 0;
                 await _vm.VideoPlayerService.PlayAsync(streamUrl);
+                if (!IsStillCurrent()) return;
                 _vm._livePauseRequiresHardRestart = false;
             }
             else if (hasLoadedMedia)
             {
+                if (!IsStillCurrent()) return;
                 _vm.VideoPlayerService.Resume();
             }
             else
             {
+                if (!IsStillCurrent()) return;
                 _vm.IsBuffering = true;
                 _vm.BufferingProgress = 0;
                 await _vm.VideoPlayerService.PlayAsync(streamUrl);
@@ -420,10 +460,12 @@ public class PlayerPlaybackController
         {
             if (hasLoadedMedia)
             {
+                if (!IsStillCurrent()) return;
                 _vm.VideoPlayerService.Resume();
             }
             else
             {
+                if (!IsStillCurrent()) return;
                 _vm._pendingResumeSeekPosition = 0;
                 _vm._pendingResumeSeekAttempts = 0;
                 await _vm.VideoPlayerService.PlayAsync(streamUrl);
@@ -437,8 +479,10 @@ public class PlayerPlaybackController
         
         if (hasLoadedMedia)
         {
+            if (!IsStillCurrent()) return;
             _vm.VideoPlayerService.Resume();
             await Task.Delay(220);
+            if (!IsStillCurrent()) return;
 
             var resumePlayer = _vm.VideoPlayerService.GetMediaPlayer();
             var resumedMs = resumePlayer?.Time ?? 0;
@@ -463,6 +507,7 @@ public class PlayerPlaybackController
 
             if (!_vm.IsDownloadedPlayback && streamUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
+                if (!IsStillCurrent()) return;
                 _vm.LogDebug($"ResumePlaybackAsync: Significant drift detected, using HardSeekAsync for HTTP stream to {targetPosition}s");
                 _vm._pendingResumeSeekPosition = 0;
                 _vm._pendingResumeSeekAttempts = 0;
@@ -480,6 +525,7 @@ public class PlayerPlaybackController
         {
             if (!_vm.IsDownloadedPlayback && streamUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
+                if (!IsStillCurrent()) return;
                 _vm.LogDebug($"ResumePlaybackAsync: Fresh play for HTTP stream, passing startTime={targetPosition}s to PlayAsync");
                 _vm._pendingResumeSeekPosition = 0;
                 _vm._pendingResumeSeekAttempts = 0;
@@ -489,6 +535,7 @@ public class PlayerPlaybackController
             }
             else
             {
+                if (!IsStillCurrent()) return;
                 _vm._pendingResumeSeekPosition = targetPosition;
                 _vm._pendingResumeSeekAttempts = 0;
                 await _vm.VideoPlayerService.PlayAsync(streamUrl);
@@ -498,7 +545,7 @@ public class PlayerPlaybackController
         for (var attempt = 0; attempt < 12; attempt++)
         {
             await Task.Delay(220 + (attempt * 60));
-            if (_vm.IsLiveContent || _vm.CurrentChannel == null)
+            if (!IsStillCurrent() || _vm.IsLiveContent || _vm.CurrentChannel == null)
             {
                 return;
             }
@@ -513,6 +560,7 @@ public class PlayerPlaybackController
                 _vm.VideoPlayerService.Position = targetPosition;
             }
             await Task.Delay(120);
+            if (!IsStillCurrent()) return;
 
             var currentTimeMs = mediaPlayer?.Time ?? 0;
             if (currentTimeMs > 0 && currentTimeMs + 1200 >= targetTimeMs)
@@ -537,13 +585,21 @@ public class PlayerPlaybackController
 
     public async Task EnsurePlaybackStartedAsync(string streamUrl)
     {
-        if (_vm.IsPlaying || _vm.CurrentChannel == null || _vm.IsLiveContent)
+        var requestVersion = Volatile.Read(ref _vm._playRequestVersion);
+        var channelId = _vm.CurrentChannel?.Id;
+
+        bool IsStillCurrent()
+            => channelId.HasValue &&
+               _vm.IsPlaybackIntentCurrent(requestVersion) &&
+               _vm.CurrentChannel?.Id == channelId.Value;
+
+        if (_vm.IsPlaying || !IsStillCurrent() || _vm.IsLiveContent)
         {
             return;
         }
 
         await Task.Delay(280);
-        if (_vm.IsPlaying)
+        if (_vm.IsPlaying || !IsStillCurrent())
         {
             return;
         }
@@ -643,6 +699,10 @@ public class PlayerPlaybackController
     public async Task Stop()
     {
         _vm.LogDebug("UI Action: Stop clicked");
+        // User-driven close/back must invalidate pending async PlayChannelAsync,
+        // ResumePlaybackAsync and health-check retry paths immediately.
+        Interlocked.Increment(ref _vm._playRequestVersion);
+        _vm.CancelResumeDialog();
         _vm._isContentTransitioning = false;
         _vm._isPlaybackEnded = false;
         ResetSeekInteractionState();
@@ -811,7 +871,15 @@ public class PlayerPlaybackController
 
     public async Task EnsurePlaybackResumedAfterEndedSeekAsync(double targetPosition)
     {
-        if (!_vm._isPlaybackEnded || _vm.IsLiveContent || _vm.CurrentChannel == null)
+        var requestVersion = Volatile.Read(ref _vm._playRequestVersion);
+        var channelId = _vm.CurrentChannel?.Id;
+
+        bool IsStillCurrent()
+            => channelId.HasValue &&
+               _vm.IsPlaybackIntentCurrent(requestVersion) &&
+               _vm.CurrentChannel?.Id == channelId.Value;
+
+        if (!_vm._isPlaybackEnded || _vm.IsLiveContent || !IsStillCurrent())
         {
             return;
         }
@@ -823,8 +891,10 @@ public class PlayerPlaybackController
 
         try
         {
+            if (!IsStillCurrent()) return;
             _vm.VideoPlayerService.Resume();
             await Task.Delay(180);
+            if (!IsStillCurrent()) return;
 
             if (_vm.IsPlaying)
             {
@@ -837,6 +907,7 @@ public class PlayerPlaybackController
             {
                 existingPlayer.Play();
                 await Task.Delay(180);
+                if (!IsStillCurrent()) return;
                 if (_vm.IsPlaying)
                 {
                     _vm._isPlaybackEnded = false;
@@ -845,12 +916,13 @@ public class PlayerPlaybackController
             }
 
             var streamUrl = _vm.CurrentChannel?.StreamUrl;
-            if (string.IsNullOrWhiteSpace(streamUrl))
+            if (string.IsNullOrWhiteSpace(streamUrl) || !IsStillCurrent())
             {
                 return;
             }
 
             await _vm.VideoPlayerService.PlayAsync(streamUrl);
+            if (!IsStillCurrent()) return;
             SetPlaybackPosition(targetPosition);
 
             _vm._isPlaybackEnded = false;

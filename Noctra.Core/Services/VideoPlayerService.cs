@@ -443,11 +443,26 @@ public class VideoPlayerService : IVideoPlayerService
     {
         LogDebug($"PlayAsync Called -> URL: {url}, StartTime: {startTimeSeconds}s");
         CurrentUrl = url;
-        
+
+        // Allocate the generation and cancellation token before any await. If the user
+        // backs out or selects another item while InitializeAsync/TCP teardown is pending,
+        // Stop() can cancel this token and this call will not start stale media later.
+        Interlocked.Exchange(ref _retryCount, 0);
+        var generation = Interlocked.Increment(ref _playGeneration);
+        _playCts?.Cancel();
+        _playCts?.Dispose();
+        _playCts = new CancellationTokenSource();
+        var playToken = _playCts.Token;
 
         if (!_isInitialized)
         {
             await InitializeAsync();
+        }
+
+        if (playToken.IsCancellationRequested || generation != Interlocked.Read(ref _playGeneration))
+        {
+            LogDebug($"PlayAsync cancelled before media player access. generation={generation}");
+            return;
         }
 
         if (_mediaPlayer == null)
@@ -462,15 +477,20 @@ public class VideoPlayerService : IVideoPlayerService
         {
             LogDebug("Stopping active player stream...");
             _mediaPlayer.Stop();
-            await Task.Delay(1200); // Allow TCP FIN to reach server
+            try
+            {
+                await Task.Delay(1200, playToken); // Allow TCP FIN to reach server
+            }
+            catch (OperationCanceledException) { }
+            catch (ObjectDisposedException) { }
+
+            if (playToken.IsCancellationRequested || generation != Interlocked.Read(ref _playGeneration))
+            {
+                LogDebug($"PlayAsync cancelled after active stream stop. generation={generation}");
+                return;
+            }
         }
         
-        Interlocked.Exchange(ref _retryCount, 0);
-        var generation = Interlocked.Increment(ref _playGeneration);
-        _playCts?.Cancel();
-        _playCts?.Dispose();
-        _playCts = new CancellationTokenSource();
-        var playToken = _playCts.Token;
         StopQualityMonitoring();
         lock (_qualitySync)
         {
@@ -486,7 +506,15 @@ public class VideoPlayerService : IVideoPlayerService
 
         LogDebug($"HardSeekAsync Called -> URL: {url}, StartTime: {seconds}s");
 
+        Interlocked.Exchange(ref _retryCount, 0); // İstenirse retry devrede kalabilir
+        var generation = Interlocked.Increment(ref _playGeneration);
+        _playCts?.Cancel();
+        _playCts?.Dispose();
+        _playCts = new CancellationTokenSource();
+        var playToken = _playCts.Token;
+
         if (!_isInitialized) await InitializeAsync();
+        if (playToken.IsCancellationRequested || generation != Interlocked.Read(ref _playGeneration)) return;
         if (_mediaPlayer == null) return;
 
         // Explicitly terminate the connection and wait before reopening.
@@ -495,15 +523,18 @@ public class VideoPlayerService : IVideoPlayerService
         {
             LogDebug("Stopping active player stream for HardSeek...");
             _mediaPlayer.Stop();
-            await Task.Delay(500); // Seek için 500ms yeterli (kanal değişimi 1200ms kullanır)
-        }
+            try
+            {
+                await Task.Delay(500, playToken); // Seek için 500ms yeterli (kanal değişimi 1200ms kullanır)
+            }
+            catch (OperationCanceledException) { }
+            catch (ObjectDisposedException) { }
 
-        Interlocked.Exchange(ref _retryCount, 0); // İstenirse retry devrede kalabilir
-        var generation = Interlocked.Increment(ref _playGeneration);
-        _playCts?.Cancel();
-        _playCts?.Dispose();
-        _playCts = new CancellationTokenSource();
-        var playToken = _playCts.Token;
+            if (playToken.IsCancellationRequested || generation != Interlocked.Read(ref _playGeneration))
+            {
+                return;
+            }
+        }
         
         StopQualityMonitoring();
         lock (_qualitySync)
@@ -674,6 +705,13 @@ public class VideoPlayerService : IVideoPlayerService
                     media.AddOption($":freetype-fontsize={_lastSubtitleFontSize}");
                 }
 
+                if (cancellationToken.IsCancellationRequested || generation != Interlocked.Read(ref _playGeneration))
+                {
+                    LogDebug($"PlayWithRetryAsync cancelled before media assignment. generation={generation}");
+                    media.Dispose();
+                    return;
+                }
+
                 if (_mediaPlayer == null) 
                 {
                     media.Dispose();
@@ -683,6 +721,15 @@ public class VideoPlayerService : IVideoPlayerService
                 var oldMedia = _mediaPlayer.Media;
                 _mediaPlayer.Media = media;
                 oldMedia?.Dispose();
+
+                if (cancellationToken.IsCancellationRequested || generation != Interlocked.Read(ref _playGeneration))
+                {
+                    LogDebug($"PlayWithRetryAsync cancelled after media assignment, before Play(). generation={generation}");
+                    _mediaPlayer.Media = null;
+                    media.Dispose();
+                    return;
+                }
+
                 media.Dispose(); // LibVLC increments ref count, so we must release our local handle
 
                 // Hata event'ini dinle

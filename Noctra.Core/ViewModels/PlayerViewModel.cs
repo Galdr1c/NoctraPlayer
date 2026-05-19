@@ -655,6 +655,70 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         OverlaySecondaryText = string.Join(" • ", parts);
     }
 
+    /// <summary>
+    /// Starts a new user playback intent and invalidates every pending async playback path
+    /// (resume dialogs, delayed VLC starts, health-check retries, stale URL resolution, etc.).
+    /// Call this as soon as the user selects another content item, before showing any resume dialog.
+    /// </summary>
+    public int BeginPlaybackIntent(bool stopCurrentPlayback = true)
+    {
+        var requestVersion = Interlocked.Increment(ref _playRequestVersion);
+        LogDebug($"BeginPlaybackIntent: requestVersion={requestVersion}, stopCurrentPlayback={stopCurrentPlayback}");
+
+        CancelResumeDialog();
+        _watchHistoryTimer.Stop();
+        _pendingResumeSeekPosition = 0;
+        _pendingResumeSeekAttempts = 0;
+        _lastPausedPosition = 0;
+        _lastPausedTimeMs = 0;
+        _lastSeekTargetMs = -1;
+        _prematureEndRecoveryCount = 0;
+        _isPlaybackEnded = false;
+        _isContentTransitioning = false;
+        _isIntentionallyPaused = false;
+        _livePauseRequiresHardRestart = false;
+        PlayerLoadingWarningMessage = string.Empty;
+
+        if (stopCurrentPlayback)
+        {
+            try
+            {
+                VideoPlayerService.Stop();
+            }
+            catch (Exception ex)
+            {
+                LogDebug($"BeginPlaybackIntent: VideoPlayerService.Stop failed: {ex.Message}");
+            }
+        }
+
+        IsPlaying = false;
+        IsBuffering = false;
+        BufferingProgress = 0;
+        OnPropertyChanged(nameof(IsBufferShieldVisible));
+
+        return requestVersion;
+    }
+
+    public bool IsPlaybackIntentCurrent(int requestVersion)
+        => requestVersion == Volatile.Read(ref _playRequestVersion);
+
+    internal bool IsPlaybackIntentCurrent(int requestVersion, Channel? channel)
+    {
+        if (!IsPlaybackIntentCurrent(requestVersion))
+        {
+            return false;
+        }
+
+        // Before PlayChannelAsync assigns CurrentChannel, it may still point to the previous item.
+        // Once it is assigned, a different channel means this request is stale.
+        if (channel != null && CurrentChannel != null && CurrentChannel.Id != channel.Id)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
     internal void PrepareForContentLoading()
     {
         CancelResumeDialog();
@@ -937,6 +1001,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     public Task<bool> ShowResumeDialogAsync(double positionSeconds)
     {
+        // A new dialog replaces any older unanswered dialog. This prevents an old
+        // selection flow from being completed after the user has already selected
+        // a different content item.
+        CancelResumeDialog();
+
         _oldResumePosition = positionSeconds;
         ResumePositionText = positionSeconds > 0 
             ? TimeSpan.FromSeconds(positionSeconds).ToString(@"hh\:mm\:ss")
@@ -955,13 +1024,17 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     public void CancelResumeDialog()
     {
+        var pendingDialog = _resumeDialogTcs;
+        _resumeDialogTcs = null;
+
         if (IsResumeDialogVisible)
         {
             IsResumeDialogVisible = false;
-            _resumeDialogTcs?.TrySetCanceled();
-            _resumeDialogTcs = null;
         }
+
+        pendingDialog?.TrySetCanceled();
         ResumePositionText = string.Empty;
+        _oldResumePosition = 0;
     }
 
     internal bool _isStartingOver;
@@ -1289,8 +1362,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     public void SetCurrentEpisode(Episode? episode, Episode? nextEpisode = null, Series? series = null)
         => EpisodeNavigator.SetCurrentEpisode(episode, nextEpisode, series);
 
-    public Task PlayChannelAsync(Channel channel, double? startPosition = null)
-        => PlaybackController.PlayChannelAsync(channel, startPosition);
+    public Task PlayChannelAsync(Channel channel, double? startPosition = null, int? existingRequestVersion = null)
+        => PlaybackController.PlayChannelAsync(channel, startPosition, existingRequestVersion);
 
     private static string FormatBitrate(int bitrate)
     {

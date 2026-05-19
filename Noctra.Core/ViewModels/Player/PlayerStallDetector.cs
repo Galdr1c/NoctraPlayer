@@ -82,7 +82,13 @@ public class PlayerStallDetector
             try
             {
                 var resolvedUrl = await _vm.ContentDownloadService.ResolvePlayableUrlAsync(channel.StreamUrl);
+                if (IsHealthCheckCancelled(channel, requestVersion))
+                    return;
+
                 await _vm.VideoPlayerService.PlayAsync(resolvedUrl);
+
+                if (IsHealthCheckCancelled(channel, requestVersion))
+                    return;
 
                 _vm.DispatcherService.Invoke(() => _vm.PlayerLoadingWarningMessage = string.Empty);
             }
