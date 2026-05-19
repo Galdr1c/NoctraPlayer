@@ -193,6 +193,11 @@ public partial class MainWindow : Window
 
         try
         {
+            // Every media click gets a playback-intent token before any resume dialog
+            // or async URL resolution. Selecting another item or closing the player
+            // invalidates this token, so stale flows cannot start video in the background.
+            var playbackIntentVersion = _playerViewModel.BeginPlaybackIntent(stopCurrentPlayback: true);
+
             _playerViewModel.CurrentProfileId = _mainViewModel.CurrentProfileId;
             if (channel.Type == ChannelType.Series && _mainViewModel.CurrentEpisodePlaybackContext == null)
             {
@@ -220,6 +225,11 @@ public partial class MainWindow : Window
             var timeoutTask = Task.Delay(1000);
             var readyTask = VideoSurface.WaitForHandleReadyAsync();
             await Task.WhenAny(readyTask, timeoutTask);
+
+            if (!_playerViewModel.IsPlaybackIntentCurrent(playbackIntentVersion))
+            {
+                return;
+            }
             
             _playerViewModel.UserInteractionCommand.Execute(null);
 
@@ -227,6 +237,11 @@ public partial class MainWindow : Window
 
             // --- RESUME DIALOG KONTROLÜ ---
             var resumePosition = ResolveResumePosition(channel);
+            if (!_playerViewModel.IsPlaybackIntentCurrent(playbackIntentVersion))
+            {
+                return;
+            }
+
             if (resumePosition > 120)
             {
                 bool shouldResume;
@@ -240,6 +255,11 @@ public partial class MainWindow : Window
                     return;
                 }
 
+                if (!_playerViewModel.IsPlaybackIntentCurrent(playbackIntentVersion))
+                {
+                    return;
+                }
+
                 if (shouldResume)
                 {
                     finalStartPos = resumePosition;
@@ -248,7 +268,18 @@ public partial class MainWindow : Window
             }
             // --- RESUME DIALOG KONTROLÜ SONU ---
 
-            await _playerViewModel.PlayChannelAsync(channel, finalStartPos);
+            if (!_playerViewModel.IsPlaybackIntentCurrent(playbackIntentVersion))
+            {
+                return;
+            }
+
+            await _playerViewModel.PlayChannelAsync(channel, finalStartPos, playbackIntentVersion);
+
+            if (!_playerViewModel.IsPlaybackIntentCurrent(playbackIntentVersion))
+            {
+                return;
+            }
+
             Dispatcher.UIThread.Post(() => OverlayControl.Focus(), DispatcherPriority.Input);
         }
         catch (Exception ex)

@@ -77,6 +77,17 @@ public partial class MainViewModel : ObservableObject
     private CancellationTokenSource? _slowLoadingWarnCts;
     private readonly ILocalizationService _localizationService;
 
+    // Guards media-selection flows before they reach MainWindow playback.
+    // This prevents rapid Live/VOD/Series clicks from completing out of order
+    // after an async URL/context lookup and starting an older item.
+    private int _mediaSelectionVersion;
+
+    private int BeginMediaSelectionIntent()
+        => Interlocked.Increment(ref _mediaSelectionVersion);
+
+    private bool IsMediaSelectionIntentCurrent(int selectionVersion)
+        => selectionVersion == Volatile.Read(ref _mediaSelectionVersion);
+
     [ObservableProperty]
     private AppView _activeView = AppView.Home;
 
@@ -2729,6 +2740,8 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void SelectChannel(Channel channel)
     {
+        var selectionVersion = BeginMediaSelectionIntent();
+
         if (channel.Type == ChannelType.Series)
         {
             TryPrepareEpisodePlaybackContext(channel);
@@ -2748,8 +2761,10 @@ public partial class MainViewModel : ObservableObject
                 }
                 else
                 {
-                    // Fire and forget deep DB fallback
-                    _ = RefreshLivePlaybackContextAsync(channel);
+                    // Fire and forget deep DB fallback. Keep the selection token so
+                    // a slow DB lookup cannot overwrite the live zapping context
+                    // after the user has already moved to another channel.
+                    _ = RefreshLivePlaybackContextAsync(channel, selectionVersion);
                 }
             }
             else
@@ -2758,6 +2773,11 @@ public partial class MainViewModel : ObservableObject
             }
         }
         
+        if (!IsMediaSelectionIntentCurrent(selectionVersion))
+        {
+            return;
+        }
+
         SelectedChannel = channel;
         
         // Update last watched
@@ -2769,7 +2789,7 @@ public partial class MainViewModel : ObservableObject
         OnMediaSelected?.Invoke(channel);
     }
 
-    private async Task RefreshLivePlaybackContextAsync(Channel targetChannel)
+    private async Task RefreshLivePlaybackContextAsync(Channel targetChannel, int selectionVersion)
     {
         try
         {
@@ -2785,7 +2805,10 @@ public partial class MainViewModel : ObservableObject
                 
             if (!playlistExists)
             {
-                _livePlaybackContext = null;
+                if (IsMediaSelectionIntentCurrent(selectionVersion) && SelectedChannel?.Id == targetChannel.Id)
+                {
+                    _livePlaybackContext = null;
+                }
                 return;
             }
 
@@ -2798,22 +2821,35 @@ public partial class MainViewModel : ObservableObject
 
             if (groupChannels.Count == 0)
             {
-                 _livePlaybackContext = null;
-                 return;
+                if (IsMediaSelectionIntentCurrent(selectionVersion) && SelectedChannel?.Id == targetChannel.Id)
+                {
+                    _livePlaybackContext = null;
+                }
+                return;
             }
 
-            _livePlaybackContext = SelectedSortOrder switch
+            var liveContext = SelectedSortOrder switch
             {
                 ChannelSortOrder.NameAsc => groupChannels.OrderBy(c => c.Name).ToList(),
                 ChannelSortOrder.NameDesc => groupChannels.OrderByDescending(c => c.Name).ToList(),
                 ChannelSortOrder.OldestFirst => groupChannels.OrderBy(c => c.Id).ToList(),
                 _ => groupChannels.OrderByDescending(c => c.Id).ToList()
             };
+
+            if (!IsMediaSelectionIntentCurrent(selectionVersion) || SelectedChannel?.Id != targetChannel.Id)
+            {
+                return;
+            }
+
+            _livePlaybackContext = liveContext;
         }
         catch (Exception ex)
         {
             _logger?.LogDebug($"RefreshLivePlaybackContextAsync failed: {ex.Message}");
-            _livePlaybackContext = null;
+            if (IsMediaSelectionIntentCurrent(selectionVersion) && SelectedChannel?.Id == targetChannel.Id)
+            {
+                _livePlaybackContext = null;
+            }
         }
     }
 
@@ -6292,11 +6328,19 @@ public partial class MainViewModel : ObservableObject
     {
         if (media == null) return;
 
+        var selectionVersion = BeginMediaSelectionIntent();
+
         SearchQuery = string.Empty;
 
         if (media is Channel channel)
         {
-            channel.StreamUrl = await ResolvePreferredStreamUrlAsync(channel.StreamUrl);
+            var resolvedStreamUrl = await ResolvePreferredStreamUrlAsync(channel.StreamUrl);
+            if (!IsMediaSelectionIntentCurrent(selectionVersion))
+            {
+                return;
+            }
+
+            channel.StreamUrl = resolvedStreamUrl;
 
             if (channel.Type == ChannelType.Series)
             {
@@ -6324,6 +6368,11 @@ public partial class MainViewModel : ObservableObject
                             groupChannels = await db.Channels
                                 .Where(c => c.PlaylistId == channel.PlaylistId && c.Type == ChannelType.Live && c.GroupTitle == channel.GroupTitle)
                                 .ToListAsync();
+
+                            if (!IsMediaSelectionIntentCurrent(selectionVersion))
+                            {
+                                return;
+                            }
                         }
 
                         _livePlaybackContext = SelectedSortOrder switch
@@ -6339,6 +6388,11 @@ public partial class MainViewModel : ObservableObject
                 {
                     _livePlaybackContext = null;
                 }
+            }
+
+            if (!IsMediaSelectionIntentCurrent(selectionVersion))
+            {
+                return;
             }
 
             SelectedChannel = channel;
@@ -6368,6 +6422,11 @@ public partial class MainViewModel : ObservableObject
                 {
                     _logger?.LogDebug($"EnsureSeriesEpisodes failed: {ex.Message}");
                 }
+            }
+
+            if (!IsMediaSelectionIntentCurrent(selectionVersion))
+            {
+                return;
             }
 
             _seriesDetailDownloadedOnlyMode = ActiveView == AppView.Downloads;

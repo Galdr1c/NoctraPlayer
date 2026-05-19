@@ -8,6 +8,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### 🐛 Canlı Kanal Hızlı Geçiş Koruması - Media Selection Race Guard (2026-05-19)
+- [Düzeltildi] **MainViewModel Media Selection Intent**: `SelectMedia` ve `SelectChannel` akışlarına seçim token'ı eklendi. Böylece hızlı Live/VOD/Series tıklamalarında eski async URL/context çözümlemesi sonradan tamamlanıp yeni seçimin üstüne yazamaz.
+- [Düzeltildi] **Live Zapping Context Guard**: Canlı kanallarda `RefreshLivePlaybackContextAsync` fire-and-forget DB fallback'i artık seçim token'ı ve seçili kanal kontrolü yapıyor; eski kanalın yavaş tamamlanan grup sorgusu `Next/Previous` kanal listesini bozamaz.
+- [Kazanım] Canlı kanallar arasında hızlı hızlı geçişte yalnızca en son seçilen kanal oynatılır; eski seçimlerin arka planda stream başlatması veya canlı geçiş context'ini geri alması engellenir.
+
 ### 🐛 Resume Dialog Arkasında Eski Videonun Başlaması - Playback Race Condition (2026-05-19)
 - [Düzeltildi] **Playback Intent Token Sistemi**: Kullanıcı yeni içerik seçtiği anda `BeginPlaybackIntent` ile mevcut resume dialog, eski URL çözümleme, health-check retry ve gecikmiş VLC başlatma akışları geçersiz kılınır.
 - [Düzeltildi] **MainWindow Resume Akışı Guard Edildi**: Resume dialog gösterilmeden önce token oluşturulur; dialog beklerken kullanıcı başka içeriğe geçerse eski akış `OperationCanceledException` ile sessizce kapanır ve `PlayChannelAsync` çağrılmaz.
