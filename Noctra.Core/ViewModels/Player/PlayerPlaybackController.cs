@@ -155,6 +155,16 @@ public class PlayerPlaybackController
             throw new InvalidOperationException(_vm.LocalizationService.GetString("Player.Error.SeriesFolder"));
         }
 
+        // Flush previous content's watch position before switching
+        try
+        {
+            await _vm.FlushWatchHistoryAsync(force: true);
+        }
+        catch (Exception ex)
+        {
+            _vm.LogDebug($"PlayChannelAsync: Failed to flush watch history: {ex.Message}");
+        }
+
         var requestVersion = Interlocked.Increment(ref _vm._playRequestVersion);
 
         _vm.VideoPlayerService.Stop();

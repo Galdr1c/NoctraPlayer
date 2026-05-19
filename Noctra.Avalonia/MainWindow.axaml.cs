@@ -101,6 +101,16 @@ public partial class MainWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        // Flush watch position before closing
+        try
+        {
+            _playerViewModel.FlushWatchHistoryAsync(force: true).GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.LogException("Failed to flush watch history on window close", ex);
+        }
+
         _mainViewModel.OnMediaSelected -= MainViewModel_OnMediaSelected;
         _mainViewModel.PropertyChanged -= MainViewModel_PropertyChanged;
         _mainViewModel.RequestEditChannel -= MainViewModel_RequestEditChannel;

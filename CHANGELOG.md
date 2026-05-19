@@ -8,6 +8,12 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### 🐛 İzleme Pozisyonu Kaybolması - Resume Dialog Boş Dakika Sorunu (2026-05-19)
+- [Düzeltildi] **MainWindow.OnClosed Flush Eklendi**: Uygulama kapanırken izleme pozisyonu (`WatchedPosition`) veritabanına kaydedilmeden kayboluyordu. `OnClosed` event handler'ına `FlushWatchHistoryAsync(force: true)` çağrısı eklendi.
+- [Düzeltildi] **PlayChannelAsync Flush Eklendi**: Kanal değiştirirken önceki içeriğin izleme pozisyonu flush edilmiyordu. `PlayerPlaybackController.PlayChannelAsync` metodunun başına önceki içeriğin pozisyonunu kaydetmek için flush çağrısı eklendi.
+- [Düzeltildi] **ResumePositionText Fallback**: Resume dialog'da pozisyon 0 olsa bile UI'da boş görünmemesi için "00:00:00" fallback değeri eklendi.
+- [Kazanım] Kullanıcılar film/dizi izlerken uygulamayı kapatsalar veya başka içeriğe geçseler bile izleme pozisyonları düzgün kaydediliyor. "İzlemeye Devam Et" kartlarında dakika bilgisi artık her zaman görünüyor.
+
 ### 🐛 Oynatıcı Ses Seviyesi ve Muted Durumu Senkronizasyon Sorunu (2026-05-19)
 - [Düzeltildi] **ViewModel Başlangıç Eşitlemesi**: `PlayerViewModel` oluşturulurken, ses seviyesi (`DefaultVolume`) ve sessiz durumu (`IsMuted`) kayıtlı ayarlardan çekilerek ViewModel özelliklerine yüklendi. Böylece oynatıcı açıldığı ilk saniyeden itibaren arayüzdeki slider ve sessiz ikonu tam olarak doğru durumu yansıtır hale getirildi.
 - [Düzeltildi] **VLC Oynatıcı Mute Entegrasyonu**: `VideoPlayerService` yeni bir akış başlatırken VLC'nin `_mediaPlayer.Mute` durumunu ayarlardaki `IsMuted` değerine göre set etmiyordu. `Opening` ve `Playing` olay yöneticilerinde ses seviyesinin yanı sıra mute durumu da asenkron ses cihazı açıldığında uygulanacak şekilde güncellendi.

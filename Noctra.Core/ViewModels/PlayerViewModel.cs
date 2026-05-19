@@ -938,7 +938,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     public Task<bool> ShowResumeDialogAsync(double positionSeconds)
     {
         _oldResumePosition = positionSeconds;
-        ResumePositionText = TimeSpan.FromSeconds(positionSeconds).ToString(@"hh\:mm\:ss");
+        ResumePositionText = positionSeconds > 0 
+            ? TimeSpan.FromSeconds(positionSeconds).ToString(@"hh\:mm\:ss")
+            : "00:00:00";
         IsPremiumResume = _licenseService.IsFeatureAvailable("resume_playback");
         IsResumeDialogVisible = true;
         _resumeDialogTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
