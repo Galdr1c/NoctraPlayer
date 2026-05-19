@@ -13,7 +13,6 @@ internal sealed class Program
         try
         {
             StartupDiagnostics.Initialize();
-            StartupDiagnostics.Log($"Program.Main entered. BaseDirectory={AppContext.BaseDirectory}");
 
             var envPath = Path.Combine(AppContext.BaseDirectory, ".env");
             if (File.Exists(envPath))
@@ -33,11 +32,9 @@ internal sealed class Program
         try
         {
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
-            StartupDiagnostics.Log("Application lifetime ended normally.");
         }
         catch (Exception ex)
         {
-            StartupDiagnostics.LogException("Fatal exception in Program.Main", ex);
             throw;
         }
     }

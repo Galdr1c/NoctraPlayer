@@ -187,7 +187,6 @@ public class XtreamCodesService : IXtreamCodesService
         var url = BuildApiUrl(normalizedBaseUrl, username, password,
             "get_series_info", ("series_id", seriesId.ToString()));
 
-        StartupDiagnostics.Log($"[Xtream] Calling GetSeriesInfo: {url.Replace(password, "REDACTED")}");
 
         try
         {
@@ -242,29 +241,24 @@ public class XtreamCodesService : IXtreamCodesService
                         detail.Episodes[seasonProp.Name] = ParseEpisodeArray(seasonProp.Value, seasonProp.Name, detail.Cover);
                         count++;
                     }
-                    StartupDiagnostics.Log($"[Xtream] Processed {count} seasons from OBJECT episodes block.");
                 }
                 else if (episodes.ValueKind == JsonValueKind.Array)
                 {
                     // Fallback for single-season series or servers that return a flat array
                     detail.Episodes["1"] = ParseEpisodeArray(episodes, "1", detail.Cover);
-                    StartupDiagnostics.Log("[Xtream] Processed episodes from ARRAY fallback block.");
                 }
                 else
                 {
-                    StartupDiagnostics.Log($"[Xtream] UNKNOWN episodes block format: {episodes.ValueKind}");
                 }
             }
             else
             {
-                StartupDiagnostics.Log("[Xtream] NO 'episodes' property found in series info response.");
             }
 
             return detail;
         }
         catch (Exception ex)
         {
-            StartupDiagnostics.Log($"[Xtream] GetSeriesInfo failed for {seriesId} (URL: {url.Replace(password, "REDACTED")}): {ex.Message}");
             return null;
         }
     }

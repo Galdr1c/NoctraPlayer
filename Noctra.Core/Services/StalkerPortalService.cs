@@ -1348,19 +1348,6 @@ public class StalkerPortalService : IStalkerPortalService
     private static void Log(string msg)
     {
         System.Diagnostics.Debug.WriteLine($"[Stalker] {msg}");
-        try
-        {
-            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var logPath = Path.Combine(localAppData, "Noctra", "logs", "startup.log");
-            var directory = Path.GetDirectoryName(logPath);
-            if (directory != null && !Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-            var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [StalkerService] {msg}{Environment.NewLine}";
-            File.AppendAllText(logPath, line, System.Text.Encoding.UTF8);
-        }
-        catch { /* Loglama hatası ana akışı bozmamalı */ }
     }
 
     // ═══════════════════════════════════════════════════════════

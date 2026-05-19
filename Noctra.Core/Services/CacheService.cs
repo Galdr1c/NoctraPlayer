@@ -73,8 +73,6 @@ public class CacheService : ICacheService
                 {
                     try
                     {
-                        // Don't delete the active startup.log if possible, 
-                        // but actually StartupDiagnostics might hold a lock anyway.
                         File.Delete(file);
                     }
                     catch

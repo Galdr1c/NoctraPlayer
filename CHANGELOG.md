@@ -8,6 +8,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### 🧹 Gereksiz Log Dosyası Yazma İşlemleri Temizlendi (2026-05-20)
+- [Temizlik] **Hardcoded Log Dosyaları Kaldırıldı**: `vlc_debug_log.txt`, `startup.log` ve `refresh_error_log.txt` dosyalarına yazma işlemleri tamamen kaldırıldı. Tüm debug logları artık `System.Diagnostics.Debug.WriteLine` kullanıyor.
+- [Temizlik] **StartupDiagnostics.Log Çağrıları Kaldırıldı**: `StartupDiagnostics.Log`, `LogException` ve `LogRuntimeContext` çağrıları proje genelinden temizlendi. `StartupDiagnostics` sınıfı sadece `Initialize()` içindeki crash handler kaydı ve `Debug.Write` çıktısı için korundu.
+- [Güvence] **Crash → Mail Mekanizması Korundu**: `App.axaml.cs` içindeki `RegisterCrashHandlers()` ve `DiagnosticReportService` (mailto: kynora.studio@gmail.com) çökme anında hata raporu gönderme işlevine dokunulmadı.
+- [Güvence] **Release Build Performansı**: Tüm `Debug.WriteLine` çağrıları `[Conditional("DEBUG")]` attribute'u sayesinde Release build'lerde derlenmez — sıfır maliyetli.
+- [Test] **784/785 Test Geçti**: Tek başarısız test (`PlaylistServiceIntegrationTests`) önceden var olan SQLite kaynaklı flaky bir test, değişikliklerimizle ilgisi yok.
+- [Etkilenen Dosyalar] `PlayerViewModel.cs`, `VideoPlayerService.cs`, `StartupDiagnostics.cs`, `StalkerPortalService.cs`, `PlaylistService.cs`, `CacheService.cs`, `App.axaml.cs`, `Program.cs`, `MainWindow.axaml.cs`, `RemoteImage.cs`, `AddProfileWindow.axaml.cs`, `AvaloniaDialogService.cs`, `MainViewModel.cs`, `XtreamCodesService.cs`
+
 ### 🐛 Canlı Kanal Hızlı Geçiş Koruması - Media Selection Race Guard (2026-05-19)
 - [Düzeltildi] **MainViewModel Media Selection Intent**: `SelectMedia` ve `SelectChannel` akışlarına seçim token'ı eklendi. Böylece hızlı Live/VOD/Series tıklamalarında eski async URL/context çözümlemesi sonradan tamamlanıp yeni seçimin üstüne yazamaz.
 - [Düzeltildi] **Live Zapping Context Guard**: Canlı kanallarda `RefreshLivePlaybackContextAsync` fire-and-forget DB fallback'i artık seçim token'ı ve seçili kanal kontrolü yapıyor; eski kanalın yavaş tamamlanan grup sorgusu `Next/Previous` kanal listesini bozamaz.

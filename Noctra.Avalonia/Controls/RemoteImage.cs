@@ -622,6 +622,5 @@ public class RemoteImage : Image
             return;
         }
 
-        StartupDiagnostics.Log($"[RemoteImage] Failed: {reason} | {url}");
     }
 }

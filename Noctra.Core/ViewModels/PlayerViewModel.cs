@@ -460,15 +460,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private readonly System.Timers.Timer _clockTimer;
     internal readonly System.Timers.Timer _watchHistoryTimer;
 
-    private static readonly object _logLock = new object();
     internal void LogDebug(string msg) {
-        Task.Run(() => {
-            try {
-                lock (_logLock) {
-                    File.AppendAllText(@"d:\IPTVPlayer\vlc_debug_log.txt", $"[{DateTime.Now:HH:mm:ss.fff}] [PVM] {msg}\n");
-                }
-            } catch { }
-        });
+        System.Diagnostics.Debug.WriteLine($"[PVM] {msg}");
     }
 
     public int? CurrentProfileId { get; set; }

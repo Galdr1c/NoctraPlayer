@@ -38,21 +38,8 @@ public class VideoPlayerService : IVideoPlayerService
     private int? _restoredAudioTrack;
     private int? _restoredSpu;
 
-    private static readonly object _logLock = new object();
     private void LogDebug(string msg)
     {
-        try
-        {
-            lock (_logLock) {
-                var logPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "vlc_debug_log.txt");
-                System.IO.File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] [VPS] {msg}\n");
-            }
-        }
-        catch (Exception ex) 
-        { 
-            System.Diagnostics.Debug.WriteLine($"[VideoPlayerService] Failed to write log: {ex.Message}");
-        }
-        
         System.Diagnostics.Debug.WriteLine($"[VideoPlayerService] {msg}");
     }
 

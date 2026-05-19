@@ -856,17 +856,10 @@ public partial class PlaylistService : IPlaylistService
         return playlist;
     }
 
-    private static async Task LogDetailedErrorAsync(string context, Exception ex)
+    private static Task LogDetailedErrorAsync(string context, Exception ex)
     {
-        try
-        {
-            var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Noctra", "Logs");
-            Directory.CreateDirectory(appDataPath);
-            var logPath = Path.Combine(appDataPath, "refresh_error_log.txt");
-            var content = $"\n--- [{DateTime.Now}] {context} ---\n{ex}\n-----------------------------------\n";
-            await File.AppendAllTextAsync(logPath, content);
-        }
-        catch { /* Ignore logging errors */ }
+        System.Diagnostics.Debug.WriteLine($"[RefreshError] {context}: {ex}");
+        return Task.CompletedTask;
     }
     public async Task DeleteAsync(int playlistId)
     {

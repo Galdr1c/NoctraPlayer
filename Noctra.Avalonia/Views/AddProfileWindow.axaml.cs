@@ -98,8 +98,6 @@ public partial class AddProfileWindow : Window
         }
         catch (Exception ex)
         {
-            StartupDiagnostics.LogException("Failed to open AvatarPickerWindow.", ex);
-
             var dialogService = ((App)Application.Current!).Services.GetService<IDialogService>();
             if (dialogService != null)
             {

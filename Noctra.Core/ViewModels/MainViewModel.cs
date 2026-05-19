@@ -6870,7 +6870,6 @@ public partial class MainViewModel : ObservableObject
         if (IsCurrentProviderType(ProfileType.XtreamCodes))
         {
             await TryLazyLoadXtreamEpisodesAsync(series, db);
-            StartupDiagnostics.Log($"[SelectMedia] After lazy load for '{series.Name}': {series.Seasons.Count} seasons, {series.Seasons.Sum(s => s.Episodes.Count)} episodes.");
             return;
         }
 
@@ -7138,7 +7137,6 @@ public partial class MainViewModel : ObservableObject
                             c.StreamUrl.StartsWith("xtream-series://"))
                 .ToListAsync();
 
-            StartupDiagnostics.Log($"[Xtream-LazyLoad] Exact name match failed. Checking normalized keys across {allSeriesChannels.Count} channels.");
             
             var targetKey = SeriesInfoParser.NormalizeKey(series.Name);
             seriesChannel = allSeriesChannels.FirstOrDefault(c =>
@@ -7147,11 +7145,9 @@ public partial class MainViewModel : ObservableObject
 
         if (seriesChannel == null)
         {
-             StartupDiagnostics.Log($"[Xtream-LazyLoad] FAILED: No matching channel found for series '{series.Name}'");
              return;
         }
 
-        StartupDiagnostics.Log($"[Xtream-LazyLoad] Match found: {seriesChannel.Name} -> {seriesChannel.StreamUrl}");
 
         var idStr = seriesChannel.StreamUrl.Replace("xtream-series://", "");
         if (!long.TryParse(idStr, out var xtreamSeriesId)) return;
@@ -7171,7 +7167,6 @@ public partial class MainViewModel : ObservableObject
 
         if (detail == null)
         {
-            StartupDiagnostics.Log($"[Xtream-LazyLoad] FAILED: GetSeriesInfoAsync returned null for ID {xtreamSeriesId}");
             return;
         }
 

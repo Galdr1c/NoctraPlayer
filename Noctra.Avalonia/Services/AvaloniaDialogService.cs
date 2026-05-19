@@ -135,12 +135,10 @@ public sealed class AvaloniaDialogService : IDialogService
                 }
 
                 builder.Show();
-                StartupDiagnostics.Log($"Notification shown via Windows toast. RuntimeMode={_packageIdentityService.RuntimeMode}");
                 return;
             }
             catch (Exception ex)
             {
-                StartupDiagnostics.LogException("Windows toast notification failed", ex);
             }
         }
 

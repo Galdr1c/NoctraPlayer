@@ -30,9 +30,7 @@ public partial class App : Application
         try
         {
             RegisterCrashHandlers();
-            StartupDiagnostics.Log("App.Initialize started.");
             AvaloniaXamlLoader.Load(this);
-            StartupDiagnostics.Log("AvaloniaXamlLoader.Load completed.");
 
             ServicePointManager.DefaultConnectionLimit = 100;
             ServicePointManager.MaxServicePointIdleTime = 1000;
@@ -41,14 +39,8 @@ public partial class App : Application
             var services = new ServiceCollection();
             ConfigureServices(services);
             Services = services.BuildServiceProvider();
-            StartupDiagnostics.Log("DI container built.");
 
             var packageIdentity = Services.GetRequiredService<IPackageIdentityService>();
-            StartupDiagnostics.LogRuntimeContext(
-                packageIdentity.RuntimeMode,
-                packageIdentity.PackageFullName,
-                packageIdentity.PackageFamilyName,
-                AppContext.BaseDirectory);
 
             using var scope = Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -58,7 +50,6 @@ public partial class App : Application
             // ApplySchemaFixupsAsync(db).GetAwaiter().GetResult(); 
             // We will call this inside OnFrameworkInitializationCompleted's background task
             
-            StartupDiagnostics.Log("Database check completed.");
 
             var settings = scope.ServiceProvider.GetRequiredService<ISettingsService>();
             var themeService = Services.GetRequiredService<IThemeService>();
@@ -68,7 +59,6 @@ public partial class App : Application
             var localizationService = Services.GetRequiredService<ILocalizationService>();
             localizationService.SetLanguage(settings.Settings.Language ?? "tr");
             LocalizationSource.Instance.Initialize(localizationService);
-            StartupDiagnostics.Log("Localization initialized.");
 
             settings.SettingsChanged += () =>
             {
@@ -80,17 +70,14 @@ public partial class App : Application
                         themeService.SetTheme(settings.Settings.IsDarkTheme);
                         localizationService.SetLanguage(settings.Settings.Language ?? "tr");
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        StartupDiagnostics.LogException("Error applying settings change", ex);
                     }
                 });
             };
-            StartupDiagnostics.Log("Theme applied.");
         }
         catch (Exception ex)
         {
-            StartupDiagnostics.LogException("Fatal exception in App.Initialize", ex);
             throw;
         }
     }
@@ -99,7 +86,6 @@ public partial class App : Application
     {
         try
         {
-            StartupDiagnostics.Log("OnFrameworkInitializationCompleted entered.");
 
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
@@ -113,12 +99,10 @@ public partial class App : Application
                     var startupStopwatch = System.Diagnostics.Stopwatch.StartNew();
                     try
                     {
-                        StartupDiagnostics.Log("Background warmup started.");
                         
                         // 1. Warmup Settings (Lazy load trigger)
                         var settingsService = Services.GetRequiredService<ISettingsService>();
                         _ = settingsService.Settings; 
-                        StartupDiagnostics.Log("Settings warmed up.");
 
                         // 2. Warmup EF Core (Triggers first-time model compilation)
                         using (var scope = Services.CreateScope())
@@ -129,7 +113,6 @@ public partial class App : Application
                             await ApplySchemaFixupsAsync(db);
                             
                             await db.Profiles.AnyAsync();
-                            StartupDiagnostics.Log("EF Core warmed up (Schema fixups applied).");
                         }
 
                         // 2.1 Purge profiles with expired deletion countdown
@@ -137,15 +120,12 @@ public partial class App : Application
                         {
                             var profileService = Services.GetRequiredService<IProfileService>();
                             await profileService.PurgeExpiredProfilesAsync();
-                            StartupDiagnostics.Log("Expired profile purge completed.");
                         }
                         catch (Exception ex)
                         {
-                            StartupDiagnostics.LogException("Failed to purge expired profiles", ex);
                         }
 
                         // 2.5 TMDB Sync Service is now on-demand (no background processing)
-                        StartupDiagnostics.Log("TMDB Sync Service ready (on-demand mode).");
 
                         // 3. Resolve MainWindow/ProfilesWindow early
                         var profilesWindow = await Dispatcher.UIThread.InvokeAsync(() => 
@@ -155,7 +135,6 @@ public partial class App : Application
                             return win;
                         });
                         
-                        StartupDiagnostics.Log("ProfilesWindow resolved.");
 
                         // 4. Update Check (Silent)
                         if (settingsService.Settings.AutoUpdate)
@@ -199,12 +178,10 @@ public partial class App : Application
                             desktop.MainWindow = profilesWindow;
                             profilesWindow.Show();
                             splashWindow.Close();
-                            StartupDiagnostics.Log("Transitioned from Splash to ProfilesWindow.");
                         });
                     }
                     catch (Exception ex)
                     {
-                        StartupDiagnostics.LogException("Startup warmup failed", ex);
                         
                         // Fallback: Just try to open the app anyway if warmup fails
                         await Dispatcher.UIThread.InvokeAsync(() =>
@@ -241,14 +218,12 @@ public partial class App : Application
                                         var profileSettings = await settingsService.PeekProfileSettingsAsync(profile.Id);
                                         if (profileSettings?.ClearHistoryOnExit == true)
                                         {
-                                            StartupDiagnostics.Log($"Clearing history for profile {profile.Id} on exit...");
                                             await watchHistoryService.DeleteProfileHistoryAsync(profile.Id);
                                         }
                                     }
                                 }
                                 catch (Exception ex)
                                 {
-                                    StartupDiagnostics.LogException("Error during multi-profile history cleanup on exit", ex);
                                 }
                             }).Wait();
                         }
@@ -258,7 +233,6 @@ public partial class App : Application
                     }
                     catch (Exception ex)
                     {
-                        StartupDiagnostics.LogException("Error while disposing video service on exit", ex);
                     }
 
                     if (Services is IDisposable disposableServices)
@@ -269,11 +243,9 @@ public partial class App : Application
                         }
                         catch (Exception ex)
                         {
-                            StartupDiagnostics.LogException("Error while disposing service provider on exit", ex);
                         }
                     }
 
-                    StartupDiagnostics.Log("Desktop exit cleanup completed.");
                 };
             }
 
@@ -281,7 +253,6 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            StartupDiagnostics.LogException("Fatal exception in OnFrameworkInitializationCompleted", ex);
             throw;
         }
     }
@@ -513,9 +484,9 @@ public partial class App : Application
                 UPDATE Series 
                 SET Plot = NULL, Cast = NULL, BackdropUrl = NULL, TrailerUrl = NULL, ContentRating = NULL, MetadataFetchedAt = NULL 
                 WHERE GroupTitle LIKE 'EU %' OR GroupTitle LIKE 'EU|%' OR GroupTitle = 'EU'");
-        } catch (Exception ex) { StartupDiagnostics.Log($"Failed to migrate GroupTitle: {ex.Message}"); }
+        } catch { }
 
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Seasons ADD COLUMN TmdbSeasonId INTEGER;"); } catch (Exception ex) { StartupDiagnostics.Log($"Failed to add TmdbSeasonId: {ex.Message}"); }
+        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Seasons ADD COLUMN TmdbSeasonId INTEGER;"); } catch { }
         
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN Genre TEXT;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN ReleaseYear INTEGER;"); } catch { }
@@ -610,7 +581,6 @@ CREATE TABLE IF NOT EXISTS SeriesEpisodeProgresses (
         }
         catch (Exception ex)
         {
-            StartupDiagnostics.LogException("Failed to enable SQLite foreign keys", ex);
         }
 
         // SQLite WAL mode + performance PRAGMAs
@@ -622,11 +592,9 @@ CREATE TABLE IF NOT EXISTS SeriesEpisodeProgresses (
             await context.Database.ExecuteSqlRawAsync("PRAGMA cache_size=-64000;"); // 64MB cache
             await context.Database.ExecuteSqlRawAsync("PRAGMA temp_store=MEMORY;");
             await context.Database.ExecuteSqlRawAsync("PRAGMA mmap_size=268435456;"); // 256MB mmap
-            StartupDiagnostics.Log("SQLite WAL mode and performance PRAGMAs enabled.");
         }
         catch (Exception ex)
         {
-            StartupDiagnostics.LogException("Failed to enable SQLite WAL mode", ex);
         }
     }
 
@@ -655,7 +623,7 @@ CREATE TABLE IF NOT EXISTS SeriesEpisodeProgresses (
         {
             if (e.ExceptionObject is Exception ex)
             {
-                StartupDiagnostics.LogException("Unhandled Exception", ex);
+
                 
                 // Mailto penceresini açmayı dene
                 var reportService = Services?.GetService<IDiagnosticReportService>();
@@ -677,7 +645,7 @@ CREATE TABLE IF NOT EXISTS SeriesEpisodeProgresses (
 
         TaskScheduler.UnobservedTaskException += (s, e) =>
         {
-            StartupDiagnostics.LogException("Unobserved Task Exception", e.Exception);
+
             e.SetObserved(); // Sürecin ölmesini engelle
             
             // Task hataları çok sık olabilir (özellikle ağ kopmalarında), 

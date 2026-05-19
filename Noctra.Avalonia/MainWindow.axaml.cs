@@ -106,9 +106,8 @@ public partial class MainWindow : Window
         {
             _playerViewModel.FlushWatchHistoryAsync(force: true).GetAwaiter().GetResult();
         }
-        catch (Exception ex)
+        catch
         {
-            StartupDiagnostics.LogException("Failed to flush watch history on window close", ex);
         }
 
         _mainViewModel.OnMediaSelected -= MainViewModel_OnMediaSelected;
@@ -164,7 +163,6 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             _mainViewModel.StatusMessage = $"{LocalizationSource.Instance["Settings.Error.OpenFailed"]}: {ex.Message}";
-            StartupDiagnostics.LogException("Failed to open SettingsWindow.", ex);
         }
     }
 
@@ -284,7 +282,6 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            StartupDiagnostics.LogException("Media playback failed in MainWindow_OnMediaSelected.", ex);
             PlayerArea.IsVisible = false;
             _mainViewModel.StatusMessage = UserFriendlyErrorMessage.WithPrefix(LocalizationSource.Instance["Player.Error.PlaybackFailed"], ex);
         }
@@ -373,9 +370,8 @@ public partial class MainWindow : Window
                     {
                         await _watchHistoryService.CleanupOlderThanDaysAsync(profileId.Value, retentionDays);
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        StartupDiagnostics.LogException("Event-driven history cleanup failed.", ex);
                     }
                 });
             }
@@ -416,9 +412,8 @@ public partial class MainWindow : Window
             var window = new Views.EditChannelWindow(viewModel);
             await window.ShowDialog<bool>(this);
         }
-        catch (Exception ex)
+        catch
         {
-            StartupDiagnostics.LogException("Failed to open EditChannelWindow.", ex);
         }
     }
 
