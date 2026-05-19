@@ -306,6 +306,7 @@ public partial class App : Application
                 sp.GetRequiredService<HttpClient>(),
                 sp.GetRequiredService<ISettingsService>(),
                 sp.GetRequiredService<ILocalizationService>(),
+                sp.GetRequiredService<LanguageDetectionService>(),
                 sp.GetService<ILogger<EpgService>>()
             ));
         services.AddTransient<IMetadataService, MetadataService>();

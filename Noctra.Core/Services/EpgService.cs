@@ -17,6 +17,7 @@ public class EpgService : IEpgService
     private readonly HttpClient _httpClient;
     private readonly ISettingsService _settingsService;
     private readonly ILocalizationService _localizationService;
+    private readonly LanguageDetectionService _languageDetectionService;
     private readonly ILogger<EpgService>? _logger;
     private readonly SemaphoreSlim _loadSemaphore = new(1, 1);
     
@@ -24,12 +25,13 @@ public class EpgService : IEpgService
     public DateTime? LastUpdated { get; private set; }
     public string? LastError { get; private set; }
 
-    public EpgService(IDbContextFactory<AppDbContext> contextFactory, HttpClient httpClient, ISettingsService settingsService, ILocalizationService localizationService, ILogger<EpgService>? logger = null)
+    public EpgService(IDbContextFactory<AppDbContext> contextFactory, HttpClient httpClient, ISettingsService settingsService, ILocalizationService localizationService, LanguageDetectionService languageDetectionService, ILogger<EpgService>? logger = null)
     {
         _contextFactory = contextFactory;
         _httpClient = httpClient;
         _settingsService = settingsService;
         _localizationService = localizationService;
+        _languageDetectionService = languageDetectionService;
         _logger = logger;
     }
 
@@ -360,34 +362,39 @@ public class EpgService : IEpgService
         }
     }
 
-    private static IEnumerable<string> GetNameVariants(string name)
+    private IEnumerable<string> GetNameVariants(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
             yield break;
 
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // 1. Full normalized name
+        // Extract country code from name using LanguageDetectionService
+        var countryCode = _languageDetectionService.DetectCountryFromName(name);
+
+        // 1. Full normalized name WITH country prefix
         var normalizedFull = NormalizeName(name);
-        if (normalizedFull.Length >= 3 && seen.Add(normalizedFull))
-            yield return normalizedFull;
+        if (normalizedFull.Length >= 3)
+        {
+            var withCountry = $"{countryCode}:{normalizedFull}";
+            if (seen.Add(withCountry))
+                yield return withCountry;
+        }
 
-        // NOTE: TryStripLeadingCountryCode removed here intentionally.
-        // Stripping country prefixes (e.g. "FR: beIN SPORTS 1" → "beIN SPORTS 1")
-        // caused cross-country EPG pollution: French, German etc. channels
-        // would receive Turkish EPG data because they shared the same
-        // normalized key ("beinsports1") as the TR variant.
-
-        // 3. Strip parenthesized suffix: "Star TV (TR)" → "Star TV"
+        // 2. Strip parenthesized suffix: "Star TV (TR)" → "Star TV"
         var noParens = System.Text.RegularExpressions.Regex.Replace(name, @"\s*\([^)]*\)\s*$", "").Trim();
         if (noParens != name)
         {
             var v = NormalizeName(noParens);
-            if (v.Length >= 3 && seen.Add(v))
-                yield return v;
+            if (v.Length >= 3)
+            {
+                var withCountry = $"{countryCode}:{v}";
+                if (seen.Add(withCountry))
+                    yield return withCountry;
+            }
         }
 
-        // 4. Strip pipe/slash separators: "TR | Kanal D" → "Kanal D"
+        // 3. Strip pipe/slash separators: "TR | Kanal D" → "Kanal D"
         var separators = new[] { '|', '/', '\\' };
         foreach (var sep in separators)
         {
@@ -398,13 +405,17 @@ public class EpgService : IEpgService
                 if (!string.IsNullOrWhiteSpace(after))
                 {
                     var v = NormalizeName(after);
-                    if (v.Length >= 3 && seen.Add(v))
-                        yield return v;
+                    if (v.Length >= 3)
+                    {
+                        var withCountry = $"{countryCode}:{v}";
+                        if (seen.Add(withCountry))
+                            yield return withCountry;
+                    }
                 }
             }
         }
 
-        // 5. Strip trailing dot-suffix: "KanalD.tr" → "KanalD"
+        // 4. Strip trailing dot-suffix: "KanalD.tr" → "KanalD"
         var dotIdx = name.LastIndexOf('.');
         if (dotIdx > 0)
         {
@@ -412,12 +423,16 @@ public class EpgService : IEpgService
             if (suffix.Length <= 3 && suffix.All(char.IsLetter))
             {
                 var v = NormalizeName(name[..dotIdx]);
-                if (v.Length >= 3 && seen.Add(v))
-                    yield return v;
+                if (v.Length >= 3)
+                {
+                    var withCountry = $"{countryCode}:{v}";
+                    if (seen.Add(withCountry))
+                        yield return withCountry;
+                }
             }
         }
 
-        // 6. Strip trailing country names
+        // 5. Strip trailing country names
         var trailingCountries = new[] { "turkey", "turkiye", "türkiye", "tr", "de", "uk", "us", "fr", "it", "es", "nl", "ru" };
         var lowerName = name.Trim().ToLowerInvariant();
         foreach (var country in trailingCountries)
@@ -426,8 +441,12 @@ public class EpgService : IEpgService
             {
                 var trimmed = name.Trim()[..^(country.Length + 1)].Trim();
                 var v = NormalizeName(trimmed);
-                if (v.Length >= 3 && seen.Add(v))
-                    yield return v;
+                if (v.Length >= 3)
+                {
+                    var withCountry = $"{countryCode}:{v}";
+                    if (seen.Add(withCountry))
+                        yield return withCountry;
+                }
             }
         }
     }

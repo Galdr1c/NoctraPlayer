@@ -8,6 +8,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### 🐛 EPG Ülke Bazlı Eşleştirme - Cross-Country EPG Pollution (2026-05-19)
+- [Düzeltildi] **EPG Cross-Country Pollution**: Farklı ülkelerdeki aynı isimli kanalların (örn: `|TR| NOW HD` ve `|DE| NOW HD`) EPG verilerinin karışması sorunu çözüldü. EPG eşleştirme anahtarlarına ülke prefix'i eklendi (`{CountryCode}:{NormalizedName}` formatı).
+- [Yeni] **LanguageDetectionService.DetectCountryFromName**: Tek kanal adından ülke kodu tespiti için yeni metot eklendi. Uygulama genelinde merkezi ülke tespit sistemi kullanılıyor.
+- [Refactor] **EpgService Ülke Tespiti Birleştirildi**: EPG'deki duplike `ExtractCountryCodeFromName` ve `NormalizeCountryCode` metotları kaldırıldı. `LanguageDetectionService.Tokenize` metodu kullanılarak tüm bracket türleri (`|TR|`, `[DE]`, `(FR)`, `{UK}`, `【TR】`, `〔DE〕`) ve delimiter türleri (`TR:`, `DE-`, `FR/`, `IT|`, `ES>`, `NL»`) desteklenir. Circled letter normalizasyonu (`ⓣⓡ` → `TR`) dahil.
+- [Değişti] **GetNameVariants Instance Method**: Static'ten instance method'a dönüştürüldü, `LanguageDetectionService` dependency injection ile alınıyor.
+- [Test] **32 Test Geçti**: Tüm ülke kodu tespit varyasyonları ve EPG time offset testleri başarılı.
+- [Kazanım] Farklı ülkelerdeki aynı isimli kanallar artık doğru EPG verilerini alır, cross-country EPG karışması tamamen önlendi. Kod duplikasyonu azaltıldı.
+
 ### 🐛 VOD Kayıtlarının Ana Sayfa ve Geçmişte Görünmeme Sorunu (2026-05-18)
 - [Düzeltildi] **UpdateContinueWatchingRailAsync Duration Fallback**: M3U üzerinden gelen VOD içerikleri genellikle bir 'Duration' değerine sahip olmadığı için `IsContinueWatchingCandidate` filtresine takılıp ana sayfadan dışlanıyordu. Geçmiş sayfasındakine benzer bir +30 dakikalık varsayılan "Duration Fallback" mantığı eklenerek yarım kalan filmlerin (VOD) "İzlemeye Devam Et" (ContinueWatching) kartlarında görünmesi sağlandı.
 - [Düzeltildi] **UpdateHistoryBucketsAsync Race Condition (Yarış Durumu)**: History sekmesinde VOD'ların eksik olması sorunu çözüldü. Veritabanından gelen verilerin UI listesine asenkron eklenmesi (`SetItems` dispatcher invoke) ile aynı anda `UpdateHistoryBucketsAsync`'in henüz güncellenmemiş UI dizisinden okuma yapmaya çalışıp boş/eksik liste oluşturması problemi giderildi. Artık veritabanından gelen (`initialChannels`) array'i doğrudan bucket fonksiyonuna parametre olarak yollanıyor.

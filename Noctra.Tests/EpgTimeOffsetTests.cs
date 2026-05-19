@@ -52,7 +52,8 @@ namespace Noctra.Tests
             mockLocalizationService.Setup(l => l.GetString(It.IsAny<string>())).Returns<string>(k => k);
 
             var httpClient = new HttpClient();
-            var epgService = new EpgService(mockContextFactory.Object, httpClient, mockSettingsService.Object, mockLocalizationService.Object);
+            var languageDetectionService = new LanguageDetectionService();
+            var epgService = new EpgService(mockContextFactory.Object, httpClient, mockSettingsService.Object, mockLocalizationService.Object, languageDetectionService);
             // Act
             var from = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             var to = new DateTime(2023, 1, 1, 23, 59, 59, DateTimeKind.Utc);
@@ -97,7 +98,8 @@ namespace Noctra.Tests
             mockLocalizationService.Setup(l => l.GetString(It.IsAny<string>())).Returns<string>(k => k);
 
             var httpClient = new HttpClient();
-            var epgService = new EpgService(mockContextFactory.Object, httpClient, mockSettingsService.Object, mockLocalizationService.Object);
+            var languageDetectionService = new LanguageDetectionService();
+            var epgService = new EpgService(mockContextFactory.Object, httpClient, mockSettingsService.Object, mockLocalizationService.Object, languageDetectionService);
             // Act
             var from = new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             var to = new DateTime(2023, 1, 1, 23, 59, 59, DateTimeKind.Utc);

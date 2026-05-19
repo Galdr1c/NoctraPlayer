@@ -144,6 +144,40 @@ public class LanguageDetectionService
     };
 
     /// <summary>
+    /// Tek bir kanal adından ülke kodunu tespit eder
+    /// </summary>
+    /// <param name="channelName">Kanal adı</param>
+    /// <returns>ISO 3166-1 alpha-2 ülke kodu (varsayılan: "TR")</returns>
+    public string DetectCountryFromName(string? channelName)
+    {
+        if (string.IsNullOrWhiteSpace(channelName)) return "TR";
+
+        // 1) Priority: Try tokens first (prefix markers like TR |, [DE], etc.)
+        var tokens = Tokenize(channelName);
+        foreach (var token in tokens)
+        {
+            if (CountryCodeAliases.TryGetValue(token, out var country))
+            {
+                return country;
+            }
+        }
+
+        // 2) Fallback to patterns
+        foreach (var (country, patterns) in CountryPatterns)
+        {
+            foreach (var pattern in patterns)
+            {
+                if (channelName.Contains(pattern, StringComparison.OrdinalIgnoreCase))
+                {
+                    return country;
+                }
+            }
+        }
+
+        return "TR"; // Default fallback
+    }
+
+    /// <summary>
     /// Kanal listesinden en baskın ülkeyi tespit eder
     /// </summary>
     /// <param name="channelNames">Kanal adları listesi</param>
