@@ -67,6 +67,10 @@ public class PlayerSettingsAdapter
                 _vm.SubtitleFontSize = _vm.SettingsService.Settings.SubtitleFontSize;
                 _vm.SubtitleBackgroundOpacity = _vm.SettingsService.Settings.SubtitleBackgroundOpacity;
                 _vm.SubtitleMargin = _vm.SettingsService.Settings.SubtitleMargin;
+                
+                // Sync volume and mute states!
+                _vm.Volume = _vm.SettingsService.Settings.DefaultVolume;
+                _vm.IsMuted = _vm.SettingsService.Settings.IsMuted;
             }
         });
     }

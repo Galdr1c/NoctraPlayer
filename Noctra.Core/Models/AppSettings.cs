@@ -68,6 +68,11 @@ public class AppSettings
     public int DefaultVolume { get; set; } = 100;
 
     /// <summary>
+    /// Ses kapalı mı (muted)?
+    /// </summary>
+    public bool IsMuted { get; set; } = false;
+
+    /// <summary>
     /// Altyazı varsayılan olarak açık mı? (VOD/Dizi için)
     /// </summary>
     public bool SubtitleEnabled { get; set; } = false;

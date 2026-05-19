@@ -86,7 +86,7 @@ public class VideoPlayerService : IVideoPlayerService
         _settingsService = settingsService;
         _localizationService = localizationService;
         
-        // Initialize volume from settings
+        // Initialize volume and mute from settings
         _currentVolume = _settingsService.Settings.DefaultVolume;
         _lastUserAgent = _settingsService.Settings.UserAgent;
         _lastSubtitleFontSize = _settingsService.Settings.SubtitleFontSize;
@@ -328,8 +328,12 @@ public class VideoPlayerService : IVideoPlayerService
         _mediaPlayer.Opening += (s, e) =>
         {
             LogDebug("Event: Opening");
-            // Set volume as early as possible
-            if (_mediaPlayer != null) _mediaPlayer.Volume = _currentVolume;
+            // Set volume and mute as early as possible
+            if (_mediaPlayer != null)
+            {
+                _mediaPlayer.Volume = _currentVolume;
+                _mediaPlayer.Mute = _settingsService.Settings.IsMuted;
+            }
         };
 
         _mediaPlayer.Playing += (s, e) =>
@@ -346,7 +350,8 @@ public class VideoPlayerService : IVideoPlayerService
                     if (_mediaPlayer != null && _mediaPlayer.IsPlaying)
                     {
                         _mediaPlayer.Volume = _currentVolume;
-                        if (_mediaPlayer.Volume == _currentVolume) break; // Uygulandı!
+                        _mediaPlayer.Mute = _settingsService.Settings.IsMuted;
+                        if (_mediaPlayer.Volume == _currentVolume && _mediaPlayer.Mute == _settingsService.Settings.IsMuted) break; // Uygulandı!
                     }
                     await Task.Delay(100);
                 }
@@ -836,11 +841,30 @@ public class VideoPlayerService : IVideoPlayerService
 
     public bool IsMuted
     {
-        get => _mediaPlayer?.Mute ?? false;
+        get => _mediaPlayer?.Mute ?? _settingsService.Settings.IsMuted;
         set
         {
+            var oldMuted = _mediaPlayer?.Mute ?? _settingsService.Settings.IsMuted;
+            
             if (_mediaPlayer != null)
                 _mediaPlayer.Mute = value;
+            
+            if (oldMuted != value)
+            {
+                _settingsService.Settings.IsMuted = value;
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await Task.Delay(500);
+                        await _settingsService.SaveAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        LogDebug($"Failed to persist mute state: {ex.Message}");
+                    }
+                });
+            }
         }
     }
 

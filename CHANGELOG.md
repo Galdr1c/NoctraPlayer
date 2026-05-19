@@ -8,6 +8,12 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### 🐛 Oynatıcı Ses Seviyesi ve Muted Durumu Senkronizasyon Sorunu (2026-05-19)
+- [Düzeltildi] **ViewModel Başlangıç Eşitlemesi**: `PlayerViewModel` oluşturulurken, ses seviyesi (`DefaultVolume`) ve sessiz durumu (`IsMuted`) kayıtlı ayarlardan çekilerek ViewModel özelliklerine yüklendi. Böylece oynatıcı açıldığı ilk saniyeden itibaren arayüzdeki slider ve sessiz ikonu tam olarak doğru durumu yansıtır hale getirildi.
+- [Düzeltildi] **VLC Oynatıcı Mute Entegrasyonu**: `VideoPlayerService` yeni bir akış başlatırken VLC'nin `_mediaPlayer.Mute` durumunu ayarlardaki `IsMuted` değerine göre set etmiyordu. `Opening` ve `Playing` olay yöneticilerinde ses seviyesinin yanı sıra mute durumu da asenkron ses cihazı açıldığında uygulanacak şekilde güncellendi.
+- [Düzeltildi] **Ayarlar Değişim Adaptasyonu**: `PlayerSettingsAdapter` altındaki `OnSettingsChanged` metoduna ses seviyesi ve mute durumlarının anlık olarak eşitlenmesi eklendi. Böylece oynatıcı açıkken küresel ayarlar penceresinden ses veya mute durumları değiştirildiğinde, oynatıcı arayüzü anlık ve otomatik olarak güncellenir.
+- [Kazanım] Oynatıcı kapatılıp tekrar açıldığında sesin ve sessize alma durumlarının UI ile arka plan arasında %100 senkronize şekilde çalışması sağlandı.
+
 ### 🐛 EPG Ülke Bazlı Eşleştirme - Cross-Country EPG Pollution (2026-05-19)
 - [Düzeltildi] **EPG Cross-Country Pollution**: Farklı ülkelerdeki aynı isimli kanalların (örn: `|TR| NOW HD` ve `|DE| NOW HD`) EPG verilerinin karışması sorunu çözüldü. EPG eşleştirme anahtarlarına ülke prefix'i eklendi (`{CountryCode}:{NormalizedName}` formatı).
 - [Yeni] **LanguageDetectionService.DetectCountryFromName**: Tek kanal adından ülke kodu tespiti için yeni metot eklendi. Uygulama genelinde merkezi ülke tespit sistemi kullanılıyor.

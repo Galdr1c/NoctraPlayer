@@ -541,6 +541,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             SubtitleFontSize = _settingsService.Settings.SubtitleFontSize;
             SubtitleBackgroundOpacity = _settingsService.Settings.SubtitleBackgroundOpacity;
             SubtitleMargin = _settingsService.Settings.SubtitleMargin;
+
+            // Sync initial volume and mute states from settings
+            Volume = _settingsService.Settings.DefaultVolume;
+            IsMuted = _settingsService.Settings.IsMuted;
+            _volumeBeforeMute = Volume > 0 ? Volume : 100;
         }
 
         _settingsService.SettingsChanged += OnSettingsChanged;
