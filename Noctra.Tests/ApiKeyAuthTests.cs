@@ -13,6 +13,7 @@ namespace Noctra.Tests;
 /// Tests verifying TMDB API key is sent via Authorization header (not query param)
 /// after the security fix: ?api_key=... → Authorization: Bearer <token>
 /// </summary>
+[Collection("SequentialTMDBTests")]
 public class ApiKeyAuthTests
 {
     /// <summary>

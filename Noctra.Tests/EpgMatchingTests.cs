@@ -36,12 +36,15 @@ public class EpgMatchingTests
         return (string)m.Invoke(null, new object[] { name })!;
     }
 
+    private static readonly Noctra.Services.EpgService _epgServiceInstance = 
+        new Noctra.Services.EpgService(null!, null!, null!, null!, new Noctra.Services.LanguageDetectionService());
+
     private static List<string> GetNameVariants(string name)
     {
         var m = _epgType.GetMethod("GetNameVariants",
-            BindingFlags.NonPublic | BindingFlags.Static)!;
+            BindingFlags.NonPublic | BindingFlags.Instance)!;
         Assert.NotNull(m);
-        var result = m.Invoke(null, new object[] { name })!;
+        var result = m.Invoke(_epgServiceInstance, new object[] { name })!;
         return ((System.Collections.IEnumerable)result).Cast<string>().ToList();
     }
 
@@ -136,7 +139,7 @@ public class EpgMatchingTests
     public void GetNameVariants_SimpleName_ContainsNormalizedFull()
     {
         var variants = GetNameVariants("TRT 1");
-        Assert.Contains("trt1", variants);
+        Assert.Contains("TR:trt1", variants);
     }
 
     [Fact]
@@ -148,7 +151,7 @@ public class EpgMatchingTests
         Assert.Contains(trVariants, v => v.Contains("kanald"));
 
         var frVariants = GetNameVariants("FR - Kanal D");
-        Assert.Contains(frVariants, v => v.StartsWith("fr"));
+        Assert.Contains(frVariants, v => v.StartsWith("FR:fr", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -172,7 +175,7 @@ public class EpgMatchingTests
     {
         // "KanalD.tr" → domain sonrası kırpılmış varyant
         var variants = GetNameVariants("KanalD.tr");
-        Assert.Contains(variants, v => v.StartsWith("kanald"));
+        Assert.Contains(variants, v => v.Contains("kanald"));
     }
 
     [Fact]
@@ -452,27 +455,30 @@ public class EpgMatchingTests
 
 public class EpgGetNameVariantsRealWorldTests
 {
+    private static readonly Noctra.Services.EpgService _epgServiceInstance = 
+        new Noctra.Services.EpgService(null!, null!, null!, null!, new Noctra.Services.LanguageDetectionService());
+
     private static List<string> GetNameVariants(string name)
     {
         var m = typeof(Noctra.Services.EpgService).GetMethod("GetNameVariants",
-            BindingFlags.NonPublic | BindingFlags.Static)!;
-        return ((System.Collections.IEnumerable)m.Invoke(null, new object[] { name })!)
+            BindingFlags.NonPublic | BindingFlags.Instance)!;
+        return ((System.Collections.IEnumerable)m.Invoke(_epgServiceInstance, new object[] { name })!)
             .Cast<string>().ToList();
     }
 
     // Her test: EPG XML display-name olarak gelecek isim → channelMap'teki normalize isimle eşleşmeli
 
     [Theory]
-    [InlineData("TRT 1",             "trt1")]
-    [InlineData("TRT 1 HD",          "trt1")]
-    [InlineData("Kanal D",           "kanald")]
-    [InlineData("Show TV",           "showtv")]
-    [InlineData("Star TV",           "startv")]
-    [InlineData("FOX",               "fox")]
-    [InlineData("NTV",               "ntv")]
-    [InlineData("ATV",               "atv")]
-    [InlineData("CNN Türk",          "cnnturk")]
-    [InlineData("beIN Sports 1",     "beinsports1")]
+    [InlineData("TRT 1",             "TR:trt1")]
+    [InlineData("TRT 1 HD",          "TR:trt1")]
+    [InlineData("Kanal D",           "TR:kanald")]
+    [InlineData("Show TV",           "TR:showtv")]
+    [InlineData("Star TV",           "TR:startv")]
+    [InlineData("FOX",               "TR:fox")]
+    [InlineData("NTV",               "TR:ntv")]
+    [InlineData("ATV",               "TR:atv")]
+    [InlineData("CNN Türk",          "TR:cnnturk")]
+    [InlineData("beIN Sports 1",     "TR:beinsports1")]
     public void GetNameVariants_ChannelName_ContainsNormalizedForm(string channelName, string expectedNormalized)
     {
         var variants = GetNameVariants(channelName);
@@ -480,10 +486,10 @@ public class EpgGetNameVariantsRealWorldTests
     }
 
     [Theory]
-    [InlineData("TR | TRT 1",        "trt1")]    // pipe prefix
-    [InlineData("TRT 1 (TR)",        "trt1")]    // parantez suffix
-    [InlineData("TRT1.tr",           "trt1")]    // dot suffix
-    [InlineData("TRT 1 Turkey",      "trt1")]    // trailing country
+    [InlineData("TR | TRT 1",        "TR:trt1")]    // pipe prefix
+    [InlineData("TRT 1 (TR)",        "TR:trt1")]    // parantez suffix
+    [InlineData("TRT1.tr",           "TR:trt1")]    // dot suffix
+    [InlineData("TRT 1 Turkey",      "TR:trt1")]    // trailing country
     public void GetNameVariants_DirtyName_ContainsCleanVariant(string dirtyName, string expectedClean)
     {
         var variants = GetNameVariants(dirtyName);
@@ -524,11 +530,14 @@ public class EpgCountryAwareMatchingTests
         return (string)m.Invoke(null, new object[] { name })!;
     }
 
+    private static readonly Noctra.Services.EpgService _epgServiceInstance = 
+        new Noctra.Services.EpgService(null!, null!, null!, null!, new Noctra.Services.LanguageDetectionService());
+
     private static List<string> GetNameVariants(string name)
     {
         var m = _epgType.GetMethod("GetNameVariants",
-            BindingFlags.NonPublic | BindingFlags.Static)!;
-        return ((System.Collections.IEnumerable)m.Invoke(null, new object[] { name })!)
+            BindingFlags.NonPublic | BindingFlags.Instance)!;
+        return ((System.Collections.IEnumerable)m.Invoke(_epgServiceInstance, new object[] { name })!)
             .Cast<string>().ToList();
     }
 
@@ -623,7 +632,7 @@ public class EpgCountryAwareMatchingTests
         }
 
         // EPG kaynağında "beIN Sports 1" geldiğinde → sadece TR'ye eşleşmeli
-        var epgNormalized = NormalizeName("beIN Sports 1");
+        var epgNormalized = "TR:" + NormalizeName("beIN Sports 1");
         Assert.True(channelMap.TryGetValue(epgNormalized, out var matched));
         Assert.Contains("ch-tr-bein1", matched);
         Assert.DoesNotContain("ch-fr-bein1", matched);
@@ -647,7 +656,7 @@ public class EpgCountryAwareMatchingTests
             $"Expected at least 3 distinct keys, got {channelMap.Count}: {string.Join(", ", channelMap.Keys)}");
 
         // Her birinin ayrı ID'si olmalı
-        Assert.DoesNotContain("ch-fr", channelMap[NormalizeName("TR: beIN Sports 1")]);
-        Assert.DoesNotContain("ch-de", channelMap[NormalizeName("TR: beIN Sports 1")]);
+        Assert.DoesNotContain("ch-fr", channelMap["TR:" + NormalizeName("beIN Sports 1")]);
+        Assert.DoesNotContain("ch-de", channelMap["TR:" + NormalizeName("beIN Sports 1")]);
     }
 }
