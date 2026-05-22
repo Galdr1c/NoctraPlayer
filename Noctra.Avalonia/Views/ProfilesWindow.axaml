@@ -10,7 +10,7 @@
         x:Class="Noctra.Avalonia.Views.ProfilesWindow"
         x:Name="ProfilesWindowRoot"
         x:CompileBindings="False"
-        Icon="avares://Noctra.Avalonia/Assets/Logo.png"
+        Icon="avares://Noctra.Avalonia/Assets/Square44x44Logo.targetsize-256.png"
         Title="{loc:Translate Profiles.Title}"
         Width="1100" Height="750"
         WindowStartupLocation="CenterScreen"
@@ -343,7 +343,7 @@
                 
                 <!-- Left: Logo -->
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Image Source="avares://Noctra.Avalonia/Assets/Logo.png" Height="24" Stretch="Uniform" VerticalAlignment="Center"/>
+                    <Image Source="avares://Noctra.Avalonia/Assets/StoreLogo.png" Height="24" Stretch="Uniform" VerticalAlignment="Center"/>
                     <TextBlock Text="Noctra" FontSize="18" FontWeight="SemiBold"
                                Foreground="{DynamicResource TextMutedBrush}"
                                VerticalAlignment="Center" Margin="12,0,0,0"/>

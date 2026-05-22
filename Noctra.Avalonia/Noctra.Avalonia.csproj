@@ -16,6 +16,14 @@
     <FileVersion>$(NoctraPackageVersion)</FileVersion>
     <AssemblyVersion>$(NoctraPackageVersion)</AssemblyVersion>
     <InformationalVersion>$(NoctraVersionPrefix)</InformationalVersion>
+    <ApplicationIcon>Assets\Noctra.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(BuildingStorePackage)' == 'true'">
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <WindowsPackageType>MSIX</WindowsPackageType>
+    <EnableMsixTooling>true</EnableMsixTooling>
   </PropertyGroup>
 
   <ItemGroup>

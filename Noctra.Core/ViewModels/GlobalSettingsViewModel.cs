@@ -188,6 +188,22 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         _diagnosticService.OpenBugReport();
     }
 
+    [RelayCommand]
+    private async Task ShowPrivacyPolicyAsync()
+    {
+        await _dialogService.ShowLegalDocumentAsync(
+            _localizationService.GetString("GlobalSettings.Privacy.Title"),
+            _localizationService.GetString("GlobalSettings.Privacy.Message"));
+    }
+
+    [RelayCommand]
+    private async Task ShowTermsAsync()
+    {
+        await _dialogService.ShowLegalDocumentAsync(
+            _localizationService.GetString("GlobalSettings.Terms.Title"),
+            _localizationService.GetString("GlobalSettings.Terms.Message"));
+    }
+
     private async Task UpdateCacheSizeAsync()
     {
         CacheSizeString = await _cacheService.GetCacheSizeStringAsync();

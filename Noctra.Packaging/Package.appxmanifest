@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
@@ -47,12 +47,17 @@
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
       </uap:VisualElements>
       <Extensions>
-        <desktop:Extension Category="windows.fullTrustProcess" Executable="$targetnametoken$.exe" />
+        <desktop:Extension Category="windows.fullTrustProcess" Executable="Noctra.Avalonia\Noctra.Avalonia.exe" />
       </Extensions>
     </Application>
   </Applications>
 
   <Capabilities>
+    <Capability Name="internetClient" />
     <rescap:Capability Name="runFullTrust" />
   </Capabilities>
 </Package>
+
+
+
+

@@ -469,7 +469,7 @@
                                             </Grid.ColumnDefinitions>
 
                                             <!-- App Icon -->
-                                            <Image Source="avares://Noctra.Avalonia/Assets/Logo150x150.png"
+                                            <Image Source="avares://Noctra.Avalonia/Assets/Square150x150Logo.png"
                                                    Width="64"
                                                    Height="64"
                                                    Stretch="Uniform"
@@ -542,7 +542,7 @@
                             <StackPanel>
                                 <Grid ColumnDefinitions="Auto,*,Auto">
                                     <!-- App Icon -->
-                                    <Image Source="avares://Noctra.Avalonia/Assets/LogoGray.png"
+                                    <Image Source="avares://Noctra.Avalonia/Assets/Square150x150Logo.Gray.png"
                                            Width="64"
                                            Height="64"
                                            Stretch="Uniform"
@@ -742,18 +742,14 @@
                                        HorizontalAlignment="Center"
                                        Margin="0,12,0,0">
                                 <Button Content="{loc:Translate GlobalSettings.Links.Privacy}"
+                                        Command="{Binding ShowPrivacyPolicyCommand}"
                                         Classes="TextLinkButtonStyle"/>
                                 <TextBlock Text=" | " 
                                           Foreground="{DynamicResource BorderBrush}" 
                                           VerticalAlignment="Center"
                                           Margin="8,0"/>
                                 <Button Content="{loc:Translate GlobalSettings.Links.Terms}"
-                                        Classes="TextLinkButtonStyle"/>
-                                <TextBlock Text=" | " 
-                                          Foreground="{DynamicResource BorderBrush}" 
-                                          VerticalAlignment="Center"
-                                          Margin="8,0"/>
-                                <Button Content="{loc:Translate GlobalSettings.Links.Support}"
+                                        Command="{Binding ShowTermsCommand}"
                                         Classes="TextLinkButtonStyle"/>
                             </StackPanel>
 

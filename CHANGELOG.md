@@ -8,6 +8,16 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### 🏪 Microsoft Store Hazırlıkları: Legal Metinler ve Marka Varlıkları (2026-05-22)
+- [Yeni] **Scroll Destekli Legal Penceresi**: `Privacy Policy` ve `Terms of Use` içerikleri için uzun metinleri düzgün gösteren, Noctra stilinde ayrı bir legal pencere eklendi. Küçük bilgi dialog'u yerine kaydırılabilir ve okunabilir bir yapı kullanılıyor.
+- [Değişti] **Footer Linkleri Sadeleştirildi**: Global ayarlar altındaki `Support` linki kaldırıldı; footer artık yalnızca `Privacy Policy | Terms of Use` bağlantılarını gösteriyor.
+- [Yeni] **Store Uyumlu Privacy/Terms Metinleri**: `tr-TR`, `en-US`, `de-DE`, `es-ES`, `fr-FR` çeviri dosyalarına kapsamlı gizlilik politikası ve kullanım şartları eklendi. Metinlerde Noctra'nın içerik, kanal, IPTV aboneliği, yayın linki veya EPG sağlamadığı; kullanıcı sorumluluğu, hak ihlali yasağı, üçüncü taraf kaynaklar, indirme/çevrimdışı kullanım, Premium/Store satın alımı ve promosyon kodu koşulları açıklandı.
+- [Değişti] **Uygulama Logoları Store Asset Standardına Taşındı**: Uygulama içindeki pencere ikonları, splash/loading görselleri, placeholder logoları, ayarlar kartları ve bildirim logosu `Noctra.Packaging\Assets` standardındaki `Square*`, `StoreLogo`, `SplashScreen` dosya setine geçirildi.
+- [Yeni] **Windows Exe İkonu Eklendi**: Store-standard PNG setinden çoklu boyutlu `Noctra.ico` üretildi ve `ApplicationIcon` olarak bağlandı. Windows ses paneli, taskbar ve exe ikonlarının boş/default görünmesi engellendi.
+- [Yeni] **Free Sürüm İçin Gri Logo**: Free kartlarında kullanılmak üzere Store-standard logonun gri versiyonu (`Square150x150Logo.Gray.png`) üretildi ve hem uygulama hem packaging asset setine eklendi.
+- [Paketleme] **Release ve Packaging Asset Eşitlemesi**: `Noctra.ico` ve gri Free logosu hem `Noctra.Avalonia\Assets` hem `Noctra.Packaging\Assets` altında tutuluyor; release build ve MSIX packaging aynı marka varlıklarını kullanıyor.
+- [Doğrulama] **Build ve JSON Kontrolü**: Localization JSON dosyaları parse edildi. `dotnet build NoctraPlayer.sln` ve `dotnet build Noctra.Avalonia\Noctra.Avalonia.csproj -c Release` başarıyla çalıştı.
+
 ### 🧹 Gereksiz Log Dosyası Yazma İşlemleri Temizlendi (2026-05-20)
 - [Temizlik] **Hardcoded Log Dosyaları Kaldırıldı**: `vlc_debug_log.txt`, `startup.log` ve `refresh_error_log.txt` dosyalarına yazma işlemleri tamamen kaldırıldı. Tüm debug logları artık `System.Diagnostics.Debug.WriteLine` kullanıyor.
 - [Temizlik] **StartupDiagnostics.Log Çağrıları Kaldırıldı**: `StartupDiagnostics.Log`, `LogException` ve `LogRuntimeContext` çağrıları proje genelinden temizlendi. `StartupDiagnostics` sınıfı sadece `Initialize()` içindeki crash handler kaydı ve `Debug.Write` çıktısı için korundu.
@@ -2042,4 +2052,3 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
       - URL geçerliliği ve sunucu yanıt süresi (Ping) kontrolü eklendi.
       - Hata durumlarında detaylı bilgi (404 Bulunamadı, 401 Yetkisiz vb.) gösterimi eklendi.
       - Bağlantı kalitesine göre renkli ikonlar (Yeşil/Sarı/Kırmızı) entegre edildi.
-

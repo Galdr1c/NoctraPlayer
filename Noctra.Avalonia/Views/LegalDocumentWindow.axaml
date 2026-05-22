@@ -1,0 +1,98 @@
+<Window x:Class="Noctra.Avalonia.Views.LegalDocumentWindow"
+        xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="using:Noctra.Avalonia.Views"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        x:DataType="views:LegalDocumentWindow"
+        x:CompileBindings="False"
+        Title="{Binding TitleText}"
+        Width="720"
+        Height="640"
+        MinWidth="520"
+        MinHeight="420"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        Topmost="True"
+        SystemDecorations="None"
+        CanResize="True"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        FontFamily="{StaticResource DefaultFontFamily}">
+
+    <Window.Styles>
+        <Style Selector="Button.LegalPrimary">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="24,10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="Button.LegalPrimary:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AccentLightBrush}"/>
+        </Style>
+    </Window.Styles>
+
+    <Border Background="{DynamicResource BackgroundGradientBrush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1.5"
+            CornerRadius="16"
+            ClipToBounds="True"
+            BoxShadow="0 12 32 0 #90000000">
+        <Grid Margin="24" RowDefinitions="Auto,*,Auto">
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,18" PointerPressed="Header_PointerPressed">
+                <materialIcons:MaterialIcon Grid.Column="0"
+                                            Kind="FileDocumentOutline"
+                                            Width="28"
+                                            Height="28"
+                                            Foreground="{DynamicResource AccentLightBrush}"
+                                            VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding TitleText}"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           FontSize="22"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center"
+                           Margin="12,0,0,0"/>
+                <Button Grid.Column="2"
+                        Width="34"
+                        Height="34"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        Click="Close_Click">
+                    <materialIcons:MaterialIcon Kind="Close"
+                                                Width="18"
+                                                Height="18"
+                                                Foreground="{DynamicResource TextMutedBrush}"/>
+                </Button>
+            </Grid>
+
+            <Border Grid.Row="1"
+                    Background="{DynamicResource Surface1Brush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="18">
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <TextBlock Text="{Binding BodyText}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="14"
+                               LineHeight="21"
+                               TextWrapping="Wrap"/>
+                </ScrollViewer>
+            </Border>
+
+            <Button Grid.Row="2"
+                    Content="{Binding CloseButtonText}"
+                    Classes="LegalPrimary"
+                    HorizontalAlignment="Right"
+                    Margin="0,18,0,0"
+                    Click="Close_Click"/>
+        </Grid>
+    </Border>
+</Window>

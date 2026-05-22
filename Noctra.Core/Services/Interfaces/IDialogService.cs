@@ -14,6 +14,11 @@ public interface IDialogService
     Task ShowMessageAsync(string title, string message);
 
     /// <summary>
+    /// Shows a scrollable legal document dialog.
+    /// </summary>
+    Task ShowLegalDocumentAsync(string title, string message);
+
+    /// <summary>
     /// Shows an error dialog with optional exception details
     /// </summary>
     Task ShowErrorAsync(string title, string message, Exception? ex = null);

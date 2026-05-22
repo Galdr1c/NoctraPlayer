@@ -40,8 +40,6 @@ public partial class App : Application
             ConfigureServices(services);
             Services = services.BuildServiceProvider();
 
-            var packageIdentity = Services.GetRequiredService<IPackageIdentityService>();
-
             using var scope = Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Database.EnsureCreated();
@@ -137,7 +135,8 @@ public partial class App : Application
                         
 
                         // 4. Update Check (Silent)
-                        if (settingsService.Settings.AutoUpdate)
+                        var packageIdentity = Services.GetRequiredService<IPackageIdentityService>();
+                        if (!packageIdentity.IsPackaged && settingsService.Settings.AutoUpdate)
                         {
                             _ = Task.Run(async () =>
                             {

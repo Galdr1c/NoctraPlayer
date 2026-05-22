@@ -38,7 +38,7 @@
                         HorizontalAlignment="Center" 
                         Spacing="12"
                         Margin="0,100,0,0">
-              <Image Source="/Assets/LogoGray.png"
+              <Image Source="/Assets/Square150x150Logo.Gray.png"
                      Width="80" Height="80"
                      Opacity="0.6"
                      Margin="0,0,0,10">

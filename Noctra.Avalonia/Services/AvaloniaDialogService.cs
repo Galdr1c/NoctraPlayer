@@ -35,6 +35,13 @@ public sealed class AvaloniaDialogService : IDialogService
         await dialog.ShowDialog(owner);
     }
 
+    public async Task ShowLegalDocumentAsync(string title, string message)
+    {
+        var owner = GetMainWindow();
+        var dialog = new LegalDocumentWindow(title, message);
+        await dialog.ShowDialog(owner);
+    }
+
     public async Task ShowErrorAsync(string title, string message, Exception? ex = null)
     {
         var owner = GetMainWindow();
@@ -128,7 +135,7 @@ public sealed class AvaloniaDialogService : IDialogService
                     .AddText(title)
                     .AddText(message);
 
-                var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Logo.png");
+                var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Square44x44Logo.png");
                 if (File.Exists(logoPath))
                 {
                     builder.AddAppLogoOverride(new Uri(logoPath));

@@ -23,6 +23,10 @@
     <UapAppxPackageBuildMode Condition="'$(UapAppxPackageBuildMode)' == ''">StoreUpload</UapAppxPackageBuildMode>
     <AppxPackageSigningEnabled Condition="'$(AppxPackageSigningEnabled)' == ''">false</AppxPackageSigningEnabled>
     <EntryPointProjectUniqueName>..\Noctra.Avalonia\Noctra.Avalonia.csproj</EntryPointProjectUniqueName>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+    <SelfContained Condition="'$(SelfContained)' == ''">true</SelfContained>
+    <WindowsPackageType Condition="'$(WindowsPackageType)' == ''">MSIX</WindowsPackageType>
+    <EnableMsixTooling Condition="'$(EnableMsixTooling)' == ''">true</EnableMsixTooling>
   </PropertyGroup>
 
   <ItemGroup>
@@ -31,6 +35,13 @@
 
   <ItemGroup>
     <Content Include="Assets\**\*.*" />
+  </ItemGroup>
+
+  <!-- LibVLC native DLL'leri - MSIX paketine dahil et (LibVLCSharp'in exe yanında bulması gerekir) -->
+  <ItemGroup>
+    <Content Include="..\Noctra.Avalonia\bin\$(Platform)\$(Configuration)\net8.0-windows10.0.17763.0\$(RuntimeIdentifier)\libvlc\$(RuntimeIdentifier)\**\*">
+      <Link>libvlc\$(RuntimeIdentifier)\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

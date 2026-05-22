@@ -1146,7 +1146,7 @@
 
                                             <Grid ColumnDefinitions="Auto,*">
                                                 <!-- App Icon -->
-                                                <Image Source="avares://Noctra.Avalonia/Assets/Logo150x150.png"
+                                                <Image Source="avares://Noctra.Avalonia/Assets/Square150x150Logo.png"
                                                        Width="64"
                                                        Height="64"
                                                        Stretch="Uniform"
@@ -1183,7 +1183,7 @@
                                     <StackPanel>
                                         <Grid ColumnDefinitions="Auto,*,Auto">
                                             <!-- App Icon -->
-                                            <Image Source="avares://Noctra.Avalonia/Assets/LogoGray.png"
+                                            <Image Source="avares://Noctra.Avalonia/Assets/Square150x150Logo.Gray.png"
                                                    Width="64"
                                                    Height="64"
                                                    Stretch="Uniform"
@@ -1325,7 +1325,7 @@
                         BoxShadow="0 10 30 5 #80000000">
                     <StackPanel Spacing="24">
                         <controls:PremiumSpinner Width="80" Height="80">
-                            <Image Source="avares://Noctra.Avalonia/Assets/Logo71x71.png"
+                            <Image Source="avares://Noctra.Avalonia/Assets/Square71x71Logo.png"
                                    Width="45" Height="45"
                                    Stretch="Uniform"
                                    VerticalAlignment="Center" HorizontalAlignment="Center"

@@ -10,17 +10,24 @@ namespace Noctra.Services;
 public class UpdateService : IUpdateService
 {
     private readonly HttpClient _httpClient;
+    private readonly IPackageIdentityService? _packageIdentityService;
     private const string UpdateManifestUrl = "https://raw.githubusercontent.com/Galdr1c/IPTVMediaPlayer/main/update.json";
 
     public string CurrentVersion => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
 
-    public UpdateService(HttpClient httpClient)
+    public UpdateService(HttpClient httpClient, IPackageIdentityService? packageIdentityService = null)
     {
         _httpClient = httpClient;
+        _packageIdentityService = packageIdentityService;
     }
 
     public async Task<UpdateInfo?> CheckForUpdatesAsync(CancellationToken cancellationToken = default)
     {
+        if (_packageIdentityService?.IsPackaged == true)
+        {
+            return null;
+        }
+
         try
         {
             // In a real scenario, this would fetch from a real URL.
@@ -43,6 +50,11 @@ public class UpdateService : IUpdateService
 
     public Task<bool> StartUpdateAsync(UpdateInfo updateInfo, CancellationToken cancellationToken = default)
     {
+        if (_packageIdentityService?.IsPackaged == true)
+        {
+            return Task.FromResult(false);
+        }
+
         if (string.IsNullOrWhiteSpace(updateInfo.DownloadUrl))
             return Task.FromResult(false);
 
