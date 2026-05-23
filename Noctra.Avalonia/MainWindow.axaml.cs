@@ -16,6 +16,7 @@ using Noctra.ViewModels;
 using Noctra.Avalonia.Services;
 using Noctra.Avalonia.Localization;
 using System;
+using System.Threading;
 
 namespace Noctra.Avalonia;
 
@@ -28,6 +29,7 @@ public partial class MainWindow : Window
     private readonly PlayerViewModel _playerViewModel;
     private readonly WindowResizeService _windowResizeService;
     private CancellationTokenSource? _imageWarmupCts;
+    private CancellationTokenSource _mediaSelectionCts = new();
 
     public MainWindow()
         : this(
@@ -58,6 +60,7 @@ public partial class MainWindow : Window
 
         PlayerOverlayLayer.DataContext = _playerViewModel;
         OverlayControl.DataContext = _playerViewModel;
+        OverlayControl.EpgChannelSelected += MainWindow_EpgChannelSelected;
         ResumeDialog.DataContext = _playerViewModel;
         NextEpisodePrompt.DataContext = _playerViewModel;
         PiPCentralControls.DataContext = _playerViewModel;
@@ -88,6 +91,29 @@ public partial class MainWindow : Window
             await dialogService.ShowUpsellAsync();
         };
 
+        var playlistService = ((App)Application.Current!).Services.GetRequiredService<IPlaylistService>();
+        _playerViewModel.LiveChannelsLoader = async () =>
+        {
+            var playlistId =
+                _playerViewModel.CurrentChannel?.PlaylistId > 0 ? _playerViewModel.CurrentChannel.PlaylistId :
+                _mainViewModel.SelectedChannel?.PlaylistId > 0 ? _mainViewModel.SelectedChannel.PlaylistId :
+                _mainViewModel.SelectedPlaylist?.Id ?? 0;
+
+            if (playlistId <= 0)
+                return new List<Channel>();
+
+            var activeGroup = !string.IsNullOrWhiteSpace(_mainViewModel.SelectedGroup)
+                ? _mainViewModel.SelectedGroup
+                : _playerViewModel.CurrentChannel?.GroupTitle;
+
+            return await playlistService.GetChannelsFilteredAsync(
+                playlistId,
+                group: activeGroup,
+                type: ChannelType.Live,
+                limit: 500,
+                sortOrder: ChannelSortOrder.NameAsc);
+        };
+
         UpdateDownloadBadgeVisibility();
         }
     private void MainWindow_PositionChanged(object? sender, PixelPointEventArgs e)
@@ -106,13 +132,15 @@ public partial class MainWindow : Window
         {
             _playerViewModel.FlushWatchHistoryAsync(force: true).GetAwaiter().GetResult();
         }
-        catch
+        catch (Exception ex)
         {
+            StartupDiagnostics.LogException("Failed to flush watch history on window close", ex);
         }
 
         _mainViewModel.OnMediaSelected -= MainViewModel_OnMediaSelected;
         _mainViewModel.PropertyChanged -= MainViewModel_PropertyChanged;
         _mainViewModel.RequestEditChannel -= MainViewModel_RequestEditChannel;
+        OverlayControl.EpgChannelSelected -= MainWindow_EpgChannelSelected;
         _playerViewModel.PropertyChanged -= PlayerViewModel_PropertyChanged;
         _playerViewModel.CloseRequested -= PlayerViewModel_CloseRequested;
         _playerViewModel.EpisodeRequested -= PlayerViewModel_EpisodeRequested;
@@ -163,6 +191,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             _mainViewModel.StatusMessage = $"{LocalizationSource.Instance["Settings.Error.OpenFailed"]}: {ex.Message}";
+            StartupDiagnostics.LogException("Failed to open SettingsWindow.", ex);
         }
     }
 
@@ -185,78 +214,63 @@ public partial class MainWindow : Window
     private async void MainViewModel_OnMediaSelected(object? media)
     {
         if (media is not Channel channel)
-        {
             return;
-        }
+
+        // ── 1. Anında preempt: version artır, eski dialog'u kapat ───────────
+        // Bu satır, hâlâ devam eden PlayChannelAsync akışlarının URL çözümleme
+        // sonrasındaki guard'da durmasını sağlar.
+        // PreemptCurrentPlayback() CancelResumeDialog()'u da çağırır.
+        _playerViewModel.PreemptCurrentPlayback();
+
+        // ── 2. Bu handler instance'ını iptal edilebilir yap ─────────────────
+        // Yeni kanal seçildiğinde önceki handler VideoSurface veya
+        // resume dialog await'inde durur.
+        var cts = new CancellationTokenSource();
+        var oldCts = Interlocked.Exchange(ref _mediaSelectionCts, cts);
+        try { oldCts.Cancel(); oldCts.Dispose(); } catch { }
+        var token = cts.Token;
 
         try
         {
-            // Every media click gets a playback-intent token before any resume dialog
-            // or async URL resolution. Selecting another item or closing the player
-            // invalidates this token, so stale flows cannot start video in the background.
-            var playbackIntentVersion = _playerViewModel.BeginPlaybackIntent(stopCurrentPlayback: true);
-
             _playerViewModel.CurrentProfileId = _mainViewModel.CurrentProfileId;
             if (channel.Type == ChannelType.Series && _mainViewModel.CurrentEpisodePlaybackContext == null)
-            {
                 _mainViewModel.TryPrepareEpisodePlaybackContext(channel);
-            }
 
             if (channel.Type == ChannelType.Series && _mainViewModel.CurrentEpisodePlaybackContext != null)
-            {
                 _playerViewModel.SetCurrentEpisode(
                     _mainViewModel.CurrentEpisodePlaybackContext,
                     _mainViewModel.NextEpisodePlaybackContext,
                     _mainViewModel.CurrentSeriesPlaybackContext);
-            }
             else
-            {
                 _playerViewModel.SetCurrentEpisode(null, null);
-            }
 
-            // HideMiniPlayer();
             PlayerArea.IsVisible = true;
             _playerViewModel.IsLocked = false;
-            
-            // Wait for native control to be created by Avalonia before playing.
-            // This prevents LibVLC from falling back to pop-up Direct3D windows.
-            var timeoutTask = Task.Delay(1000);
-            var readyTask = VideoSurface.WaitForHandleReadyAsync();
-            await Task.WhenAny(readyTask, timeoutTask);
 
-            if (!_playerViewModel.IsPlaybackIntentCurrent(playbackIntentVersion))
+            // Native handle hazır olana kadar bekle (iptal edilebilir).
+            try
             {
-                return;
+                await Task.WhenAny(
+                    VideoSurface.WaitForHandleReadyAsync(),
+                    Task.Delay(1000, token));
+                token.ThrowIfCancellationRequested();
             }
-            
+            catch (OperationCanceledException) { return; }
+
             _playerViewModel.UserInteractionCommand.Execute(null);
 
             double? finalStartPos = null;
 
-            // --- RESUME DIALOG KONTROLÜ ---
+            // --- RESUME DIALOG ---
             var resumePosition = ResolveResumePosition(channel);
-            if (!_playerViewModel.IsPlaybackIntentCurrent(playbackIntentVersion))
-            {
-                return;
-            }
-
             if (resumePosition > 120)
             {
                 bool shouldResume;
                 try
                 {
-                    shouldResume = await _playerViewModel.ShowResumeDialogAsync(resumePosition);
+                    shouldResume = await _playerViewModel.ShowResumeDialogAsync(resumePosition, token);
                 }
-                catch (OperationCanceledException)
-                {
-                    // Kullanıcı dialog'u kapatmadan kanal değiştirdi
-                    return;
-                }
-
-                if (!_playerViewModel.IsPlaybackIntentCurrent(playbackIntentVersion))
-                {
-                    return;
-                }
+                catch (OperationCanceledException) { return; }
 
                 if (shouldResume)
                 {
@@ -264,26 +278,23 @@ public partial class MainWindow : Window
                     _playerViewModel.SetResumePosition(resumePosition);
                 }
             }
-            // --- RESUME DIALOG KONTROLÜ SONU ---
 
-            if (!_playerViewModel.IsPlaybackIntentCurrent(playbackIntentVersion))
-            {
-                return;
-            }
+            // Dialog kapandıktan sonra son token kontrolü.
+            token.ThrowIfCancellationRequested();
 
-            await _playerViewModel.PlayChannelAsync(channel, finalStartPos, playbackIntentVersion);
-
-            if (!_playerViewModel.IsPlaybackIntentCurrent(playbackIntentVersion))
-            {
-                return;
-            }
-
+            await _playerViewModel.PlayChannelAsync(channel, finalStartPos);
             Dispatcher.UIThread.Post(() => OverlayControl.Focus(), DispatcherPriority.Input);
+        }
+        catch (OperationCanceledException)
+        {
+            // Yeni kanal seçimi bu handler'ı durdurdu.
         }
         catch (Exception ex)
         {
+            StartupDiagnostics.LogException("Media playback failed in MainWindow_OnMediaSelected.", ex);
             PlayerArea.IsVisible = false;
-            _mainViewModel.StatusMessage = UserFriendlyErrorMessage.WithPrefix(LocalizationSource.Instance["Player.Error.PlaybackFailed"], ex);
+            _mainViewModel.StatusMessage = UserFriendlyErrorMessage.WithPrefix(
+                LocalizationSource.Instance["Player.Error.PlaybackFailed"], ex);
         }
     }
 
@@ -346,6 +357,11 @@ public partial class MainWindow : Window
         _mainViewModel.PlayPreviousLiveChannelCommand.Execute(null);
     }
 
+    private void MainWindow_EpgChannelSelected(object? sender, Views.EpgChannelSelectedRoutedEventArgs e)
+    {
+        _mainViewModel.SelectChannelFromEpgCommand.Execute(e.Channel);
+    }
+
     private void MainViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(MainViewModel.FilteredChannels) or
@@ -370,8 +386,9 @@ public partial class MainWindow : Window
                     {
                         await _watchHistoryService.CleanupOlderThanDaysAsync(profileId.Value, retentionDays);
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        StartupDiagnostics.LogException("Event-driven history cleanup failed.", ex);
                     }
                 });
             }
@@ -412,8 +429,9 @@ public partial class MainWindow : Window
             var window = new Views.EditChannelWindow(viewModel);
             await window.ShowDialog<bool>(this);
         }
-        catch
+        catch (Exception ex)
         {
+            StartupDiagnostics.LogException("Failed to open EditChannelWindow.", ex);
         }
     }
 

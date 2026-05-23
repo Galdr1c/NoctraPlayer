@@ -53,6 +53,7 @@ public class PlayerOverlayManager
             && !_vm.IsQualitySettingsOpen
             && !_vm.IsEpisodesPanelOpen
             && !_vm.IsInfoPanelOpen
+            && !_vm.IsEpgPanelOpen
             && !_vm.IsNextEpisodePromptVisible;
     }
 
@@ -112,12 +113,13 @@ public class PlayerOverlayManager
 
     public void ClosePanels()
     {
-        _vm.IsAudioSettingsOpen = false;
-        _vm.IsQualitySettingsOpen = false;
-        _vm.IsEpisodesPanelOpen = false;
-        _vm.IsInfoPanelOpen = false;
-        _vm.IsSleepTimerPanelOpen = false;
-        _vm.IsLocked = false;
+        _vm.IsAudioSettingsOpen    = false;
+        _vm.IsQualitySettingsOpen  = false;
+        _vm.IsEpisodesPanelOpen    = false;
+        _vm.IsInfoPanelOpen        = false;
+        _vm.IsSleepTimerPanelOpen  = false;
+        _vm.IsEpgPanelOpen         = false;
+        _vm.IsLocked               = false;
         RestartAutoHideTimer();
     }
 

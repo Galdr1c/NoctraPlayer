@@ -91,6 +91,7 @@ namespace Noctra.Tests
         public Task<int> GetTotalProgramCountAsync() => Task.FromResult(0);
         public Task<int> GetDistinctChannelCountAsync() => Task.FromResult(0);
         public Task<Dictionary<int, EpgProgram?>> GetCurrentProgramsAsync(IEnumerable<Channel> channels) => Task.FromResult(new Dictionary<int, EpgProgram?>());
+        public Task<Dictionary<string, List<EpgProgram>>> GetProgramsBulkAsync(IEnumerable<string> channelIds, DateTime fromLocal, DateTime toLocal) => Task.FromResult(new Dictionary<string, List<EpgProgram>>());
         public Task<DateTime?> GetMaxProgramEndTimeAsync() => Task.FromResult<DateTime?>(null);
     }
 

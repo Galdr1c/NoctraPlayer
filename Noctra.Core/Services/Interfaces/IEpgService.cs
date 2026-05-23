@@ -70,6 +70,13 @@ public interface IEpgService
     Task<List<EpgProgram>> GetTodayProgramsAsync(string channelId);
     
     /// <summary>
+    /// Verilen kanallar için zaman penceresi içindeki tüm programları
+    /// tek sorguda getirir (EPG timeline paneli için optimize edilmiş).
+    /// </summary>
+    Task<Dictionary<string, List<EpgProgram>>> GetProgramsBulkAsync(
+        IEnumerable<string> channelIds, DateTime fromLocal, DateTime toLocal);
+
+    /// <summary>
     /// Verilen kanallar için şu anki programları toplu halde getirir (Performans için)
     /// </summary>
     Task<Dictionary<int, EpgProgram?>> GetCurrentProgramsAsync(IEnumerable<Channel> channels);

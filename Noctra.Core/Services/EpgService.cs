@@ -735,6 +735,36 @@ public class EpgService : IEpgService
         IsLoaded = false;
     }
 
+    public async Task<Dictionary<string, List<EpgProgram>>> GetProgramsBulkAsync(
+        IEnumerable<string> channelIds, DateTime fromLocal, DateTime toLocal)
+    {
+        var ids = channelIds.Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
+        if (ids.Count == 0)
+            return [];
+
+        var offset = TimeSpan.FromHours(_settingsService.Settings.EpgTimeOffsetHours);
+        var fromUtc = fromLocal.ToUniversalTime().Add(-offset);
+        var toUtc   = toLocal.ToUniversalTime().Add(-offset);
+
+        using var context = await _contextFactory.CreateDbContextAsync();
+
+        // Tek SQL sorgusu: tüm kanallar için zaman penceresi içindeki programlar
+        var programs = await context.EpgPrograms
+            .AsNoTracking()
+            .Where(p => ids.Contains(p.ChannelId)
+                     && p.EndTime   >= fromUtc
+                     && p.StartTime <= toUtc)
+            .OrderBy(p => p.ChannelId)
+            .ThenBy(p => p.StartTime)
+            .ToListAsync();
+
+        ApplyTimeOffset(programs);
+
+        return programs
+            .GroupBy(p => p.ChannelId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+    }
+
     public async Task<List<EpgProgram>> GetProgramsAsync(string channelId, DateTime from, DateTime to)
     {
         var offset = TimeSpan.FromHours(_settingsService.Settings.EpgTimeOffsetHours);

@@ -2699,6 +2699,16 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// EPG panelinden bir kanala tıklandığında o kanalı doğrudan oynatır.
+    /// </summary>
+    [RelayCommand]
+    private void SelectChannelFromEpg(Channel channel)
+    {
+        if (channel == null) return;
+        SelectChannel(channel);
+    }
+
     [RelayCommand]
     private void PlayNextLiveChannel()
     {
@@ -7916,7 +7926,5 @@ public partial class MainViewModel : ObservableObject
     [GeneratedRegex(@"(?:\b|_)(adult|xxx|porn|sexy|18\+| \+18|pink|redlight|erotik|erotic|lust|hentai|brazzers|bangbros|babes|realitykings|digitalplayground|naughtyamerica|passion|penthouse|hustler|playboy|blue movie|hardcore|softcore|x-rated|sex|cam|strip|fetish|bondage|bdsm|amateur|milf|gay|lesbian|pornstar|yetişkin|mature)(?:\b|_)", RegexOptions.IgnoreCase)]
     private static partial Regex AdultContentRegex();
 }
-
-
 
 

@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Input;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Noctra.ViewModels;
@@ -175,6 +176,7 @@ public partial class VideoOverlayView : UserControl
         {
             _playerViewModel.PropertyChanged -= PlayerViewModel_PropertyChanged;
             _playerViewModel.SkipOverlayRequested -= PlayerViewModel_SkipOverlayRequested;
+            _playerViewModel.PropertyChanged -= PlayerViewModel_EpgPropertyChanged;
         }
 
         _playerViewModel = DataContext as PlayerViewModel;
@@ -183,6 +185,7 @@ public partial class VideoOverlayView : UserControl
             _isInitialVolumeSet = false;
             _playerViewModel.PropertyChanged += PlayerViewModel_PropertyChanged;
             _playerViewModel.SkipOverlayRequested += PlayerViewModel_SkipOverlayRequested;
+            _playerViewModel.PropertyChanged += PlayerViewModel_EpgPropertyChanged;
             UpdateOverlayCursor(_playerViewModel.IsVisible);
         }
         else
@@ -190,6 +193,169 @@ public partial class VideoOverlayView : UserControl
             Cursor = VisibleCursor;
             IsSeekToastVisible = false;
         }
+    }
+
+    /// <summary>
+    /// EPG paneli açıldığında saat başlıklarını ve zaman penceresini günceller.
+    /// </summary>
+    private void PlayerViewModel_EpgPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PlayerViewModel.IsEpgPanelOpen)
+            && _playerViewModel?.IsEpgPanelOpen == true)
+        {
+            InitializeEpgTimeHeader();
+        }
+        else if (e.PropertyName == nameof(PlayerViewModel.EpgFocusRowIndex)
+                 && _playerViewModel?.IsEpgPanelOpen == true)
+        {
+            QueueFocusCurrentEpgRow();
+        }
+    }
+
+    private void InitializeEpgTimeHeader()
+    {
+        // Saat etiketlerini hesapla (pencere: now-2h → now+4h)
+        var now = DateTime.Now;
+        BuildEpgTimeHeader(now);
+        var labels = new[]
+        {
+            this.FindControl<TextBlock>("EpgH_Minus2"),
+            this.FindControl<TextBlock>("EpgH_Minus1"),
+            this.FindControl<TextBlock>("EpgH_Now"),
+            this.FindControl<TextBlock>("EpgH_Plus1"),
+            this.FindControl<TextBlock>("EpgH_Plus2"),
+            this.FindControl<TextBlock>("EpgH_Plus3"),
+        };
+
+        var offsets = new[] { -2, -1, 0, 1, 2, 3 };
+        for (int i = 0; i < labels.Length; i++)
+        {
+            if (labels[i] == null) continue;
+            var t = now.AddHours(offsets[i]);
+            labels[i]!.Text = t.ToString("HH:mm");
+        }
+
+        // Zaman penceresi etiketini güncelle
+        var windowLabel = this.FindControl<TextBlock>("EpgTimeWindowLabel");
+        if (windowLabel != null)
+        {
+            var start = now.AddHours(-PlayerViewModel.EpgPastHours).ToString("HH:mm");
+            var end   = now.AddHours( PlayerViewModel.EpgFutureHours).ToString("HH:mm");
+            windowLabel.Text = $"{start} – {end}";
+        }
+
+        QueueFocusCurrentEpgRow();
+    }
+
+    private void BuildEpgTimeHeader(DateTime now)
+    {
+        var canvas = this.FindControl<Canvas>("EpgTimeHeaderCanvas");
+        if (canvas == null)
+            return;
+
+        canvas.Children.Clear();
+
+        var lineBrush = new SolidColorBrush(Color.Parse("#33FFFFFF"));
+        var halfLineBrush = new SolidColorBrush(Color.Parse("#1AFFFFFF"));
+        var nowBrush = new SolidColorBrush(Color.Parse("#CC7B2FBE"));
+        var accentBrush = new SolidColorBrush(Color.Parse("#7B2FBE"));
+        var totalMinutes = (PlayerViewModel.EpgPastHours + PlayerViewModel.EpgFutureHours) * 60;
+
+        for (var minute = 30; minute < totalMinutes; minute += 30)
+        {
+            var line = new Border
+            {
+                Width = 1,
+                Height = 40,
+                Background = minute % 60 == 0 ? lineBrush : halfLineBrush
+            };
+            Canvas.SetLeft(line, minute * PlayerViewModel.EpgPxPerMinute);
+            canvas.Children.Add(line);
+        }
+
+        for (var hour = -(int)PlayerViewModel.EpgPastHours; hour <= (int)PlayerViewModel.EpgFutureHours; hour++)
+        {
+            if (hour == 0)
+                continue;
+
+            var label = new TextBlock
+            {
+                Text = now.AddHours(hour).ToString("HH:mm"),
+                FontSize = 11,
+                FontWeight = FontWeight.Bold,
+                Foreground = new SolidColorBrush(Color.Parse("#80FFFFFF"))
+            };
+            Canvas.SetLeft(label, (hour + PlayerViewModel.EpgPastHours) * 60 * PlayerViewModel.EpgPxPerMinute + 4);
+            Canvas.SetTop(label, 16);
+            canvas.Children.Add(label);
+        }
+
+        var nowLine = new Border
+        {
+            Width = 1.5,
+            Height = 40,
+            Background = nowBrush,
+            ZIndex = 10
+        };
+        Canvas.SetLeft(nowLine, PlayerViewModel.EpgNowPixelPos);
+        canvas.Children.Add(nowLine);
+
+        var nowBadge = new Border
+        {
+            Width = 26,
+            Height = 18,
+            CornerRadius = new CornerRadius(4),
+            Background = accentBrush,
+            ZIndex = 11,
+            Child = new TextBlock
+            {
+                                Text = "SIMDI",
+                FontSize = 7,
+                FontWeight = FontWeight.Bold,
+                Foreground = Brushes.White,
+                HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center,
+                VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
+            }
+        };
+        Canvas.SetLeft(nowBadge, PlayerViewModel.EpgNowPixelPos - 13);
+        Canvas.SetTop(nowBadge, 5);
+        canvas.Children.Add(nowBadge);
+    }
+
+    private void QueueFocusCurrentEpgRow()
+    {
+        Dispatcher.UIThread.Post(
+            FocusCurrentEpgRow,
+            global::Avalonia.Threading.DispatcherPriority.Loaded);
+        Dispatcher.UIThread.Post(
+            FocusCurrentEpgRow,
+            global::Avalonia.Threading.DispatcherPriority.Background);
+    }
+
+    private void FocusCurrentEpgRow()
+    {
+        var timelineScroll = this.FindControl<ScrollViewer>("EpgTimelineScroll");
+        if (timelineScroll == null)
+            return;
+
+        var targetX = Math.Max(0, PlayerViewModel.EpgNowPixelPos - timelineScroll.Viewport.Width / 2);
+        var targetY = timelineScroll.Offset.Y;
+
+        if (_playerViewModel?.EpgFocusRowIndex >= 0)
+        {
+            const double rowHeight = 68;
+            targetY = Math.Max(0, _playerViewModel.EpgFocusRowIndex * rowHeight - timelineScroll.Viewport.Height / 2 + rowHeight / 2);
+        }
+
+        timelineScroll.Offset = new global::Avalonia.Vector(targetX, targetY);
+
+        var timeHeader = this.FindControl<ScrollViewer>("EpgTimeHeaderScroll");
+        if (timeHeader != null)
+            timeHeader.Offset = new global::Avalonia.Vector(targetX, 0);
+
+        var namesScroll = this.FindControl<ScrollViewer>("EpgNamesScroll");
+        if (namesScroll != null)
+            namesScroll.Offset = new global::Avalonia.Vector(0, targetY);
     }
 
     private void OverlayRoot_PointerMoved(object? sender, PointerEventArgs e)
@@ -512,5 +678,71 @@ public partial class VideoOverlayView : UserControl
         // which prevents the Expander header from incorrectly toggling
         // when an episode card is clicked.
         e.Handled = true;
+    }
+
+    // ── EPG Panel ──────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// EPG timeline kanal satırına tıklandığında çağrılır.
+    /// DataContext içindeki EpgPanelRow.Channel bilgisine göre MainViewModel'ı tetikler.
+    /// </summary>
+    private void EpgChannelRow_PointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        var point = e.GetCurrentPoint(this);
+        if (point.Properties.PointerUpdateKind != PointerUpdateKind.LeftButtonReleased)
+            return;
+
+        if (sender is Control { DataContext: Noctra.ViewModels.EpgPanelRow row })
+        {
+            _playerViewModel?.ToggleEpgPanelCommand.Execute(null); // paneli kapat
+            // MainWindow handler'ına yönlendir
+            RaiseEvent(new EpgChannelSelectedRoutedEventArgs(EpgChannelSelectedEvent, row.Channel));
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>
+    /// EPG horizontal scroll (timeline) değişince time-header scroll'unu senkronize eder.
+    /// </summary>
+    private void EpgTimelineScroll_ScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        var timeHeader = this.FindControl<ScrollViewer>("EpgTimeHeaderScroll");
+        var namesScroll = this.FindControl<ScrollViewer>("EpgNamesScroll");
+        var timelineScroll = this.FindControl<ScrollViewer>("EpgTimelineScroll");
+
+        if (timelineScroll == null) return;
+
+        if (timeHeader != null)
+            timeHeader.Offset = new global::Avalonia.Vector(timelineScroll.Offset.X, 0);
+
+        if (namesScroll != null)
+            namesScroll.Offset = new global::Avalonia.Vector(0, timelineScroll.Offset.Y);
+    }
+}
+
+// ── EPG Routed Event ───────────────────────────────────────────────────────
+
+public class EpgChannelSelectedRoutedEventArgs : global::Avalonia.Interactivity.RoutedEventArgs
+{
+    public Noctra.Models.Channel Channel { get; }
+    public EpgChannelSelectedRoutedEventArgs(
+        global::Avalonia.Interactivity.RoutedEvent @event,
+        Noctra.Models.Channel channel)
+        : base(@event)
+    {
+        Channel = channel;
+    }
+}
+
+public partial class VideoOverlayView
+{
+    public static readonly global::Avalonia.Interactivity.RoutedEvent<EpgChannelSelectedRoutedEventArgs> EpgChannelSelectedEvent =
+        global::Avalonia.Interactivity.RoutedEvent.Register<VideoOverlayView, EpgChannelSelectedRoutedEventArgs>(
+            "EpgChannelSelected", global::Avalonia.Interactivity.RoutingStrategies.Bubble);
+
+    public event EventHandler<EpgChannelSelectedRoutedEventArgs>? EpgChannelSelected
+    {
+        add    => AddHandler(EpgChannelSelectedEvent, value);
+        remove => RemoveHandler(EpgChannelSelectedEvent, value);
     }
 }

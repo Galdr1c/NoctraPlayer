@@ -8,6 +8,18 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### 📺 Oynatıcı İçi EPG Timeline Paneli ve UI Düzeltmeleri (2026-05-23)
+- [Yeni] **Canlı Yayın Program Rehberi Paneli**: Oynatıcı overlay'ine canlı yayınlarda görünen `Program Rehberi` butonu ve yatay/dikey kaydırılabilir EPG timeline paneli eklendi. Panel açıldığında aktif grubun kanalları listelenir, aktif kanal satırına odaklanılır ve zaman çizelgesi otomatik olarak `ŞİMDİ` konumuna kaydırılır.
+- [Yeni] **EPG Timeline Veri Modeli**: `EpgPanelRow` ve `EpgProgramBlock` modelleri eklendi. Program bloklarının `PixelLeft`, `PixelWidth`, `ProgressPixelWidth`, okunabilir başlık genişliği ve NOW çizgisi pozisyonları Core tarafında hesaplanarak AXAML tarafı sade binding ile çalışacak hale getirildi.
+- [Performans] **Toplu EPG Program Sorgusu**: `IEpgService.GetProgramsBulkAsync` ve `EpgService` implementasyonu eklendi. EPG paneli artık her kanal için ayrı sorgu yapmak yerine tüm görünen kanalların programlarını tek `ChannelId IN (...)` sorgusuyla çeker.
+- [Değişti] **Aktif Grup Odaklı Kanal Listesi**: EPG paneli tüm canlı kanalları göstermek yerine kullanıcının açık olan canlı grubundaki kanalları yükler. Kanal eşleştirmede `TvgId`, `TvgName`, kanal adı ve dahili kanal ID fallback zinciri kullanılır.
+- [Düzeltildi] **EPG Paneli Kanal Seçimi**: Timeline satırına tıklayınca ilgili canlı kanala geçiş yapılır. Seçim `VideoOverlayView` routed event'i üzerinden `MainWindow` ve `MainViewModel.SelectChannelFromEpgCommand` akışına bağlandı.
+- [Düzeltildi] **Header ve NOW Çizgisi Senkronu**: Üstteki saat header'ı ve alttaki program satırları aynı bind edilebilir `EpgCanvasPixelWidth` ölçeğine taşındı. Eski statik saat çizgileri kaldırıldı; saat etiketleri, grid çizgileri ve `ŞİMDİ` badge'i runtime'da tek kaynaktan çiziliyor ve yatay scroll ile senkron ilerliyor.
+- [Düzeltildi] **Program Yazılarının Üst Üste Binmesi**: Program kartlarında saat aralığı ve ekstra ilerleme barı kaldırıldı. Uzun program adları tek satır, kırpılmış ve kart sınırını taşırmayacak şekilde düzenlendi; çok dar bloklarda başlık gizlenerek üst üste binme engellendi.
+- [Düzeltildi] **EPG Güncellik Uyarısı**: EPG verisi boşsa veya son program bitiş zamanı geçmişte kalmışsa panelde `EPG güncel değil. Lütfen EPG'yi güncelleyin.` uyarısı gösterilir.
+- [Düzeltildi] **Panel Kapanma ve Auto-Hide Davranışı**: `PlayerOverlayManager` kapanma/auto-hide kontrollerine EPG paneli eklendi; EPG açıkken overlay yanlışlıkla otomatik kapanmaz.
+- [Test] **Build ve Test Doğrulaması**: `dotnet build NoctraPlayer.sln` başarılı çalıştı. `dotnet test Noctra.Tests\Noctra.Tests.csproj --no-build` sonucu `785/785` test geçti.
+
 ### 🏪 Microsoft Store Hazırlıkları: Legal Metinler ve Marka Varlıkları (2026-05-22)
 - [Yeni] **Scroll Destekli Legal Penceresi**: `Privacy Policy` ve `Terms of Use` içerikleri için uzun metinleri düzgün gösteren, Noctra stilinde ayrı bir legal pencere eklendi. Küçük bilgi dialog'u yerine kaydırılabilir ve okunabilir bir yapı kullanılıyor.
 - [Değişti] **Footer Linkleri Sadeleştirildi**: Global ayarlar altındaki `Support` linki kaldırıldı; footer artık yalnızca `Privacy Policy | Terms of Use` bağlantılarını gösteriyor.

@@ -63,4 +63,12 @@
   <converters:TimeSpanToCountdownConverter x:Key="TimeSpanToCountdownConverter" />
   <converters:StringFormatConverter x:Key="StringFormatConverter" />
   <converters:BooleanToSuccessWarningBrushConverter x:Key="BooleanToSuccessWarningBrushConverter" />
+  <!-- EPG Timeline Converters -->
+  <converters:DoubleToLeftMarginConverter    x:Key="DoubleToLeftMarginConverter" />
+  <converters:BoolToEpgBlockColorConverter   x:Key="BoolToEpgBlockColorConverter" />
+  <converters:BoolToEpgBorderColorConverter  x:Key="BoolToEpgBorderColorConverter" />
+  <converters:BoolToSelectionBrushConverter  x:Key="BoolToSelectionBrushConverter" />
+  <converters:BoolToOpacityConverter         x:Key="BoolToOpacityConverter" />
+  <converters:BoolToTranslateYConverter      x:Key="BoolToTranslateYConverter" />
+  <converters:BoolToEpgPanelMarginConverter  x:Key="BoolToEpgPanelMarginConverter" />
 </ResourceDictionary>

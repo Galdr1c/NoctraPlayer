@@ -1441,3 +1441,123 @@ public class BooleanToSuccessWarningBrushConverter : IValueConverter
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => null;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EPG Timeline Converters
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// <summary>
+/// double pixelLeft → Thickness(pixelLeft, 0, 0, 0)
+/// EPG program bloklarını Canvas yerine Grid+Margin ile mutlak konumlandırır.
+/// </summary>
+public class DoubleToLeftMarginConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is double d ? new Thickness(Math.Max(0, d), 0, 0, 0) : new Thickness(0);
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
+
+/// <summary>
+/// bool isCurrentProgram → Color (şu an yayında ise vurgulu, değilse nötr)
+/// </summary>
+public class BoolToEpgBlockColorConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is true
+            ? Color.FromArgb(50, 123, 47, 190)   // Accent rengi yarı saydam
+            : Color.FromArgb(30, 255, 255, 255);  // Beyaz çok şeffaf
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
+
+/// <summary>
+/// bool isCurrentProgram → Border sol çizgi rengi
+/// </summary>
+public class BoolToEpgBorderColorConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is true
+            ? Color.FromArgb(220, 123, 47, 190)   // Accent tam opak
+            : Color.FromArgb(25, 255, 255, 255);  // Çok şeffaf
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
+
+/// <summary>
+/// bool isCurrentChannel → hafif vurgu fırçası (şu an izlenen kanal için satır arkaplanı)
+/// </summary>
+public class BoolToSelectionBrushConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is true
+            ? new SolidColorBrush(Color.FromArgb(20, 123, 47, 190))
+            : new SolidColorBrush(Colors.Transparent);
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
+
+/// <summary>
+/// bool + parameter(opacity) → double opacity (past programs soluk görünür)
+/// ConverterParameter="0.45" → isPast=true ise 0.45, false ise 1.0
+/// </summary>
+public class BoolToOpacityConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is not bool b) return 1.0;
+        if (!b) return 1.0;
+        if (parameter is string s && double.TryParse(s, System.Globalization.NumberStyles.Float,
+            CultureInfo.InvariantCulture, out var d))
+            return d;
+        return 0.45;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
+
+/// <summary>
+/// bool + parameter(translateY_px) → TranslateY RenderTransform string
+/// IsEpgPanelOpen=false → "translateY(480px)", true → "translateY(0)"
+/// </summary>
+public class BoolToTranslateYConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var isOpen = value is true;
+        return isOpen ? "translateY(0)" : $"translateY({parameter ?? 480}px)";
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}
+
+/// <summary>
+/// bool isOpen + ConverterParameter=panelHeight →
+///   false: Margin(0, panelHeight, 0, -panelHeight)  panel ekran altında
+///   true:  Margin(0, 0, 0, 0)                        panel görünür
+/// ThicknessTransition ile kayma animasyonu çalışır.
+/// </summary>
+public class BoolToEpgPanelMarginConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var isOpen = value is true;
+        if (isOpen) return new Thickness(0);
+
+        double h = 480;
+        if (parameter is string s && double.TryParse(s, System.Globalization.NumberStyles.Float,
+            CultureInfo.InvariantCulture, out var parsed))
+            h = parsed;
+
+        return new Thickness(0, h, 0, -h);
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotImplementedException();
+}

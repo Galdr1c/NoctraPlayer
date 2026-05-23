@@ -131,7 +131,40 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     public bool IsPiPControlsVisible => IsPiPMode && IsPiPControlsForceVisible;
 
-    internal Timer? _unreachableWarningTimer;
+    // ── EPG Timeline Panel ──────────────────────────────────────────────────
+    [ObservableProperty] private bool _isEpgPanelOpen;
+    [ObservableProperty] private bool _isEpgLoading;
+    [ObservableProperty] private int _epgFocusRowIndex = -1;
+    [ObservableProperty] private bool _isEpgUpdateRequired;
+    [ObservableProperty] private string _epgStatusMessage = string.Empty;
+
+    /// <summary>
+    /// EPG paneli için zaman penceresi sabitleri.
+    /// Pencere: şimdiki zaman - 2 saat → + 4 saat (6 saatlik pencere, 3 px/dk).
+    /// "NOW" çizgisi: 2 * 60 * 3 = 360 px sola yerleştirilir.
+    /// </summary>
+    public const double EpgPxPerMinute  = 3.0;
+    public const double EpgPastHours    = 6.0;
+    public const double EpgFutureHours  = 12.0;
+    public const double EpgNowPixelPos  = EpgPastHours * 60 * EpgPxPerMinute;
+    public const double EpgCanvasWidth  = (EpgPastHours + EpgFutureHours) * 60 * EpgPxPerMinute;
+    public double EpgCanvasPixelWidth => EpgCanvasWidth;
+
+    /// <summary>
+    /// Ekranın mevcut zamanında NOW çizgisinin piksel pozisyonunu döndürür.
+    /// Panel açıldığında hesaplanır; otomatik güncellenmez (yeterince doğru).
+    /// </summary>
+    public double EpgNowLineLeft => EpgNowPixelPos;
+    public double EpgNowBadgeLeft => EpgNowPixelPos - 13;
+
+    public System.Collections.ObjectModel.ObservableCollection<EpgPanelRow> EpgRows { get; }
+        = new System.Collections.ObjectModel.ObservableCollection<EpgPanelRow>();
+
+    /// <summary>
+    /// MainWindow tarafından set edilir; EPG paneli açıldığında canlı kanal listesini sağlar.
+    /// </summary>
+    public Func<Task<List<Models.Channel>>>? LiveChannelsLoader { get; set; }
+    // ────────────────────────────────────────────────────────────────────────
 
     partial void OnIsPiPModeChanged(bool value)
     {
@@ -457,6 +490,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     internal DateTime _sessionPlaybackStartTimeUtc = DateTime.MinValue;
 
     internal readonly System.Threading.Timer _autoHideTimer;
+    internal System.Threading.Timer? _unreachableWarningTimer;
     private readonly System.Timers.Timer _clockTimer;
     internal readonly System.Timers.Timer _watchHistoryTimer;
 
@@ -691,6 +725,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         return requestVersion;
     }
+
+    public int PreemptCurrentPlayback() => BeginPlaybackIntent();
 
     public bool IsPlaybackIntentCurrent(int requestVersion)
         => requestVersion == Volatile.Read(ref _playRequestVersion);
@@ -985,6 +1021,180 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         RestartAutoHideTimer();
     }
 
+    // ── EPG Panel Commands ──────────────────────────────────────────────────
+
+    [RelayCommand]
+    private async Task ToggleEpgPanel()
+    {
+        LogDebug("UI Action: ToggleEpgPanel clicked");
+        if (IsEpgPanelOpen)
+        {
+            IsEpgPanelOpen = false;
+            return;
+        }
+
+        // Diğer panel/kilitleri kapat
+        IsAudioSettingsOpen    = false;
+        IsQualitySettingsOpen  = false;
+        IsInfoPanelOpen        = false;
+        IsEpisodesPanelOpen    = false;
+        IsSleepTimerPanelOpen  = false;
+        IsLocked               = true;
+        IsEpgPanelOpen         = true;
+
+        await LoadEpgPanelAsync();
+    }
+
+    /// <summary>
+    /// Canlı kanal listesini yükler ve EPG verilerini hesaplar.
+    /// Her kanal için PixelLeft/PixelWidth önceden hesaplanır; AXAML'de saf binding.
+    /// </summary>
+    internal async Task LoadEpgPanelAsync()
+    {
+        if (LiveChannelsLoader == null)
+        {
+            LogDebug("EPG Panel: LiveChannelsLoader is null, cannot load channels.");
+            return;
+        }
+
+        IsEpgLoading = true;
+        EpgFocusRowIndex = -1;
+        IsEpgUpdateRequired = false;
+        EpgStatusMessage = string.Empty;
+        EpgRows.Clear();
+
+        try
+        {
+            var channels = await LiveChannelsLoader();
+            if (channels == null || channels.Count == 0)
+            {
+                IsEpgUpdateRequired = true;
+                EpgStatusMessage = "Bu grupta canlı kanal bulunamadı.";
+                IsEpgLoading = false;
+                return;
+            }
+
+            var windowStart = DateTime.Now.AddHours(-EpgPastHours);
+            var windowEnd   = DateTime.Now.AddHours(EpgFutureHours);
+            var nowUtc      = DateTime.UtcNow;
+
+            // EPG ID'lerini topla (TvgId → fallback Name)
+            var epgIds = channels
+                .SelectMany(c => new[]
+                {
+                    c.TvgId,
+                    c.TvgName,
+                    c.Name,
+                    c.Id > 0 ? c.Id.ToString() : null
+                })
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .OfType<string>()
+                .Distinct()
+                .ToList();
+
+            // Tek sorguda tüm kanalların programlarını çek
+            var programsMap = await _epgService.GetProgramsBulkAsync(epgIds, windowStart, windowEnd);
+            var maxProgramEndUtc = await _epgService.GetMaxProgramEndTimeAsync();
+
+            if (programsMap.Count == 0 || maxProgramEndUtc == null || maxProgramEndUtc.Value <= DateTime.UtcNow)
+            {
+                IsEpgUpdateRequired = true;
+                EpgStatusMessage = "EPG güncel değil. Lütfen EPG'yi güncelleyin.";
+            }
+
+            var rows = new List<EpgPanelRow>(channels.Count);
+            var focusRowIndex = -1;
+            foreach (var channel in channels)
+            {
+                List<EpgProgram>? programs = null;
+                foreach (var epgId in new[]
+                {
+                    channel.TvgId,
+                    channel.TvgName,
+                    channel.Name,
+                    channel.Id > 0 ? channel.Id.ToString() : null
+                })
+                {
+                    if (!string.IsNullOrWhiteSpace(epgId) && programsMap.TryGetValue(epgId, out programs))
+                        break;
+                }
+
+                programs ??= [];
+
+                var blocks = programs
+                    .Select(p =>
+                    {
+                        var pStart  = p.StartTime.ToLocalTime();
+                        var pEnd    = p.EndTime.ToLocalTime();
+                        var clipped = pStart < windowStart;
+                        var leftMin = Math.Max(0, (pStart - windowStart).TotalMinutes);
+                        var widthMin = clipped
+                            ? (pEnd - windowStart).TotalMinutes
+                            : (pEnd - pStart).TotalMinutes;
+
+                        return new EpgProgramBlock
+                        {
+                            Program          = p,
+                            PixelLeft        = leftMin * EpgPxPerMinute,
+                            PixelWidth       = Math.Max(24, widthMin * EpgPxPerMinute),
+                            IsCurrentProgram = p.IsNowPlaying,
+                            IsClippedLeft    = clipped,
+                            IsPast           = p.EndTime < nowUtc
+                        };
+                    })
+                    .OrderBy(b => b.PixelLeft)
+                    .ToList();
+
+                var isCurrentChannel = CurrentChannel?.Id == channel.Id;
+                if (isCurrentChannel)
+                    focusRowIndex = rows.Count;
+
+                rows.Add(new EpgPanelRow
+                {
+                    Channel          = channel,
+                    Blocks           = blocks,
+                    IsCurrentChannel = isCurrentChannel
+                });
+            }
+
+            // UI thread'e taşı
+            _dispatcherService.BeginInvoke(() =>
+            {
+                foreach (var row in rows)
+                    EpgRows.Add(row);
+
+                EpgFocusRowIndex = focusRowIndex;
+            });
+        }
+        catch (Exception ex)
+        {
+            LogDebug($"EPG Panel: Load failed — {ex.Message}");
+        }
+        finally
+        {
+            IsEpgLoading = false;
+        }
+    }
+
+    partial void OnIsEpgPanelOpenChanged(bool value)
+    {
+        if (value)
+        {
+            _autoHideTimer.Change(System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
+            IsVisible = true;
+            return;
+        }
+        EpgRows.Clear();
+        EpgFocusRowIndex = -1;
+        IsEpgUpdateRequired = false;
+        EpgStatusMessage = string.Empty;
+        IsLocked = false;
+        PlaybackController.CancelSeekBufferShieldSuppression();
+        RestartAutoHideTimer();
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+
     // ── Resume Dialog ───────────────────────────────────────────────────────
     private TaskCompletionSource<bool>? _resumeDialogTcs;
 
@@ -1007,6 +1217,13 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         IsResumeDialogVisible = true;
         _resumeDialogTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         return _resumeDialogTcs.Task;
+    }
+
+    public async Task<bool> ShowResumeDialogAsync(double positionSeconds, CancellationToken cancellationToken)
+    {
+        var dialogTask = ShowResumeDialogAsync(positionSeconds);
+        using var registration = cancellationToken.Register(CancelResumeDialog);
+        return await dialogTask.ConfigureAwait(false);
     }
 
     public void SetResumePosition(double seconds)
