@@ -353,7 +353,7 @@
                             <Button Command="{Binding ToggleEpgPanelCommand}"
                                     Classes="iconBtn"
                                     IsVisible="{Binding IsLiveContent}"
-                                    ToolTip.Tip="Program Rehberi (EPG)">
+                                    ToolTip.Tip="{loc:Translate Player.Epg.GuideTooltip}">
                                 <Grid>
                                     <materialIcons:MaterialIcon Kind="CalendarClock" Width="20" Height="20" Foreground="#E6FFFFFF"
                                                                IsVisible="{Binding IsEpgPanelOpen, Converter={StaticResource InverseBoolConverter}}"/>
@@ -415,6 +415,7 @@
                   VerticalAlignment="Bottom"
                   Height="480"
                   ZIndex="800"
+                  ClipToBounds="True"
                   IsVisible="{Binding IsEpgPanelOpen}"
                   Margin="{Binding IsEpgPanelOpen, Converter={StaticResource BoolToEpgPanelMarginConverter}, ConverterParameter=480}">
                 <Grid.Transitions>
@@ -447,7 +448,7 @@
                                 <materialIcons:MaterialIcon Kind="CalendarClock"
                                                            Width="18" Height="18"
                                                            Foreground="{DynamicResource AccentBrush}"/>
-                                <TextBlock Text="PROGRAM REHBERİ"
+                                <TextBlock Text="{loc:Translate Player.Epg.GuideTitle}"
                                            FontSize="11" FontWeight="Black"
                                            Foreground="{DynamicResource AccentBrush}"
                                            LetterSpacing="2"
@@ -498,7 +499,7 @@
                                              Foreground="{DynamicResource AccentBrush}"
                                              Background="#1AFFFFFF"
                                              VerticalAlignment="Center"/>
-                                <TextBlock Text="Yükleniyor..."
+                                <TextBlock Text="{loc:Translate Common.Loading}"
                                            FontSize="12"
                                            Foreground="{DynamicResource TextMutedBrush}"
                                            VerticalAlignment="Center"/>
@@ -516,47 +517,31 @@
                     </Border>
 
                     <!-- ── İçerik: Frozen kanal isimleri + Timeline ── -->
-                    <Grid Grid.Row="1" RowDefinitions="40,*" ColumnDefinitions="200,*">
-                        <!-- Header: kanal sütunu -->
-                        <Border Grid.Row="0" Grid.Column="0"
-                                Background="#131313"
-                                BorderBrush="#1AFFFFFF"
-                                BorderThickness="0,0,1,1"
-                                ZIndex="10">
-                            <TextBlock Text="KANAL"
-                                       FontSize="9" FontWeight="Black"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       LetterSpacing="1.5"
-                                       VerticalAlignment="Center"
-                                       HorizontalAlignment="Center"/>
-                        </Border>
+                    <Grid Grid.Row="1" ColumnDefinitions="200,*" ClipToBounds="True">
 
-                        <!-- Header: saat çizelgesi -->
-                        <Border Grid.Row="0" Grid.Column="1"
-                                Background="#131313"
-                                BorderBrush="#1AFFFFFF"
-                                BorderThickness="0,0,0,1">
-                            <ScrollViewer x:Name="EpgTimeHeaderScroll"
-                                          HorizontalScrollBarVisibility="Hidden"
-                                          VerticalScrollBarVisibility="Disabled"
+                        <!-- Sol sütun: Zaman başlığı hizalayıcı + Frozen kanal isimleri -->
+                        <Grid RowDefinitions="40,*"
+                              Background="#0D0D0D"
+                              ZIndex="10"
+                              ClipToBounds="True">
+                            <Border Grid.Row="0"
+                                    Background="#131313"
+                                    BorderBrush="#1AFFFFFF"
+                                    BorderThickness="0,0,1,1">
+                                <TextBlock Text="{loc:Translate Player.Epg.ChannelHeader}"
+                                           FontSize="9" FontWeight="Black"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           LetterSpacing="1.5"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Center"/>
+                            </Border>
+
+                            <ScrollViewer Grid.Row="1"
+                                          x:Name="EpgNamesScroll"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          VerticalScrollBarVisibility="Hidden"
                                           IsHitTestVisible="False">
-                                <Canvas x:Name="EpgTimeHeaderCanvas"
-                                        Width="{Binding EpgCanvasPixelWidth}"
-                                        Height="40"/>
-                            </ScrollViewer>
-                        </Border>
-
-                        <!-- Tek ortak dikey scroll: sol kanal bilgisi + sağ program satırları birlikte kayar -->
-                        <ScrollViewer Grid.Row="1" Grid.ColumnSpan="2"
-                                      x:Name="EpgRowsScroll"
-                                      HorizontalScrollBarVisibility="Disabled"
-                                      VerticalScrollBarVisibility="Auto">
-                            <Grid ColumnDefinitions="200,*">
-                                <!-- Sol kanal sütunu -->
-                                <ItemsControl Grid.Column="0"
-                                              ItemsSource="{Binding EpgRows}"
-                                              Background="#0D0D0D"
-                                              ZIndex="10">
+                                <ItemsControl ItemsSource="{Binding EpgRows}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:EpgPanelRow">
                                             <Border Height="68"
@@ -593,18 +578,35 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
 
-                                <!-- Sağ timeline: sadece yatay scroll -->
-                                <ScrollViewer Grid.Column="1"
-                                              x:Name="EpgTimelineScroll"
-                                              HorizontalScrollBarVisibility="Auto"
+                        <!-- Sağ sütun: Saat başlığı + Timeline -->
+                        <Grid Grid.Column="1" RowDefinitions="40,*" ClipToBounds="True">
+                            <Border Grid.Row="0"
+                                    Background="#131313"
+                                    BorderBrush="#1AFFFFFF"
+                                    BorderThickness="0,0,0,1">
+                                <ScrollViewer x:Name="EpgTimeHeaderScroll"
+                                              HorizontalScrollBarVisibility="Hidden"
                                               VerticalScrollBarVisibility="Disabled"
-                                              ScrollChanged="EpgTimelineScroll_ScrollChanged">
-                                    <Grid Width="{Binding EpgCanvasPixelWidth}">
-                                        <ItemsControl ItemsSource="{Binding EpgRows}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate x:DataType="vm:EpgPanelRow">
-                                                    <Grid Height="68">
+                                              IsHitTestVisible="False">
+                                    <Canvas x:Name="EpgTimeHeaderCanvas"
+                                            Width="{Binding EpgCanvasPixelWidth}"
+                                            Height="40"/>
+                                </ScrollViewer>
+                            </Border>
+
+                            <ScrollViewer Grid.Row="1"
+                                          x:Name="EpgTimelineScroll"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          VerticalScrollBarVisibility="Auto"
+                                          ScrollChanged="EpgTimelineScroll_ScrollChanged">
+                                <Grid Width="{Binding EpgCanvasPixelWidth}">
+                                    <ItemsControl ItemsSource="{Binding EpgRows}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:EpgPanelRow">
+                                                <Grid Height="68">
                                                     <!-- Satır arkaplanı -->
                                                     <Border Background="{Binding IsCurrentChannel,
                                                                 Converter={StaticResource BoolToSelectionBrushConverter}}"
@@ -620,7 +622,7 @@
                                                             IsVisible="{Binding IsCurrentChannel, Converter={StaticResource InverseBoolConverter}}"/>
 
                                                     <!-- Boş EPG etiketi -->
-                                                    <TextBlock Text="Program bilgisi yok"
+                                                    <TextBlock Text="{loc:Translate Player.Epg.NoInfo}"
                                                                FontSize="11"
                                                                Foreground="{DynamicResource TextMutedBrush}"
                                                                VerticalAlignment="Center"
@@ -690,14 +692,13 @@
                                                             Margin="{Binding NowLineLeft, Converter={StaticResource DoubleToLeftMarginConverter}}"
                                                             IsHitTestVisible="False"
                                                             ZIndex="10"/>
-                                                    </Grid>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </Grid>
-                                </ScrollViewer>
-                            </Grid>
-                        </ScrollViewer>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </ScrollViewer>
+                        </Grid>
                     </Grid>
                 </Grid>
             </Grid>

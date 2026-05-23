@@ -50,6 +50,7 @@ public class MemoryVideoView : NativeControlHost
     private Window? _overlayWindow;
     private Window? _rootWindow;
     private bool _isAttached;
+    private bool _overlayPositionUpdateQueued;
     private DispatcherTimer? _focusCheckTimer;
     private readonly uint _currentProcessId = (uint)Environment.ProcessId;
     private OverlayFocusController _focusController = null!;
@@ -207,7 +208,7 @@ public class MemoryVideoView : NativeControlHost
                 if (_overlayWindow == null) CreateOverlayWindow();
                 if (_overlayWindow != null)
                 {
-                    UpdateOverlayPosition();
+                    QueueOverlayPositionUpdate();
                     _overlayWindow.Show();
                 }
             },
@@ -233,6 +234,7 @@ public class MemoryVideoView : NativeControlHost
         }
 
         // Initial update
+        QueueOverlayPositionUpdate();
         OnLayoutUpdated(this, EventArgs.Empty);
     }
 
@@ -278,11 +280,17 @@ public class MemoryVideoView : NativeControlHost
         {
             _focusController?.OnLayoutChanged(this.IsEffectivelyVisible);
         }
+
+        if (e.Property.Name is "WindowState" or "ClientSize")
+        {
+            QueueOverlayPositionUpdate();
+        }
     }
 
     private void OnLayoutUpdated(object? sender, EventArgs e)
     {
         _focusController?.OnLayoutChanged(this.IsEffectivelyVisible);
+        QueueOverlayPositionUpdate();
     }
 
     private void FocusCheckTimer_Tick(object? sender, EventArgs e)
@@ -304,7 +312,7 @@ public class MemoryVideoView : NativeControlHost
     private void HandleWindowMovement()
     {
         if (_overlayWindow == null) return;
-        UpdateOverlayPosition();
+        QueueOverlayPositionUpdate();
     }
 
     private void CreateOverlayWindow()
@@ -346,6 +354,20 @@ public class MemoryVideoView : NativeControlHost
         };
 
         _overlayWindow.Show(_rootWindow);
+        QueueOverlayPositionUpdate();
+    }
+
+    private void QueueOverlayPositionUpdate()
+    {
+        if (_overlayPositionUpdateQueued)
+            return;
+
+        _overlayPositionUpdateQueued = true;
+        Dispatcher.UIThread.Post(() =>
+        {
+            _overlayPositionUpdateQueued = false;
+            UpdateOverlayPosition();
+        }, DispatcherPriority.Render);
     }
 
     private void UpdateOverlayPosition()
@@ -355,15 +377,31 @@ public class MemoryVideoView : NativeControlHost
         try 
         {
             var topLeft = this.PointToScreen(new Point(0, 0));
+            var width = Math.Max(0, Bounds.Width);
+            var height = Math.Max(0, Bounds.Height);
+
+            if (width <= 0 || height <= 0)
+                return;
             
             if (_overlayWindow.Position != topLeft)
                 _overlayWindow.Position = topLeft;
                 
-            if (_overlayWindow.Width != Bounds.Width)
-                _overlayWindow.Width = Bounds.Width;
+            if (Math.Abs(_overlayWindow.Width - width) > 0.5)
+                _overlayWindow.Width = width;
                 
-            if (_overlayWindow.Height != Bounds.Height)
-                _overlayWindow.Height = Bounds.Height;
+            if (Math.Abs(_overlayWindow.Height - height) > 0.5)
+                _overlayWindow.Height = height;
+
+            _overlayWindow.InvalidateMeasure();
+            _overlayWindow.InvalidateArrange();
+
+            if (_overlayWindow.Content is Control content)
+            {
+                content.Width = width;
+                content.Height = height;
+                content.InvalidateMeasure();
+                content.InvalidateArrange();
+            }
         }
         catch (Exception)
         {

@@ -801,7 +801,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     {
         if (CurrentChannel == null || !IsLiveContent || CurrentProgram == null) return;
 
-        bool isFallback = CurrentProgram.Title == "Program bilgisi yok";
+        bool isFallback = string.Equals(CurrentProgram.Title, _localizationService.GetString("Player.Epg.NoInfo"), StringComparison.OrdinalIgnoreCase);
 
         if (DateTime.UtcNow > CurrentProgram.EndTime || isFallback)
         {
@@ -1069,7 +1069,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             if (channels == null || channels.Count == 0)
             {
                 IsEpgUpdateRequired = true;
-                EpgStatusMessage = "Bu grupta canlı kanal bulunamadı.";
+                EpgStatusMessage = _localizationService.GetString("Player.Epg.NoLiveChannelsInGroup");
                 IsEpgLoading = false;
                 return;
             }
@@ -1099,7 +1099,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             if (programsMap.Count == 0 || maxProgramEndUtc == null || maxProgramEndUtc.Value <= DateTime.UtcNow)
             {
                 IsEpgUpdateRequired = true;
-                EpgStatusMessage = "EPG güncel değil. Lütfen EPG'yi güncelleyin.";
+                EpgStatusMessage = _localizationService.GetString("Player.Epg.UpdateRequired");
             }
 
             var rows = new List<EpgPanelRow>(channels.Count);

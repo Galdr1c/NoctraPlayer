@@ -3,11 +3,13 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Data;
 using Avalonia.Interactivity;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Noctra.Avalonia.Localization;
 using Noctra.ViewModels;
 
 namespace Noctra.Avalonia.Views;
@@ -300,6 +302,19 @@ public partial class VideoOverlayView : UserControl
         Canvas.SetLeft(nowLine, PlayerViewModel.EpgNowPixelPos);
         canvas.Children.Add(nowLine);
 
+        var nowLabel = new TextBlock
+        {
+            FontSize = 7,
+            FontWeight = FontWeight.Bold,
+            Foreground = Brushes.White,
+            HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center,
+            VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
+        };
+        nowLabel.Bind(TextBlock.TextProperty, new Binding("[Player.Epg.Now]")
+        {
+            Source = LocalizationSource.Instance
+        });
+
         var nowBadge = new Border
         {
             Width = 26,
@@ -307,15 +322,7 @@ public partial class VideoOverlayView : UserControl
             CornerRadius = new CornerRadius(4),
             Background = accentBrush,
             ZIndex = 11,
-            Child = new TextBlock
-            {
-                                Text = "SIMDI",
-                FontSize = 7,
-                FontWeight = FontWeight.Bold,
-                Foreground = Brushes.White,
-                HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center,
-                VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center
-            }
+            Child = nowLabel
         };
         Canvas.SetLeft(nowBadge, PlayerViewModel.EpgNowPixelPos - 13);
         Canvas.SetTop(nowBadge, 5);
@@ -335,25 +342,27 @@ public partial class VideoOverlayView : UserControl
     private void FocusCurrentEpgRow()
     {
         var timelineScroll = this.FindControl<ScrollViewer>("EpgTimelineScroll");
-        var rowsScroll = this.FindControl<ScrollViewer>("EpgRowsScroll");
-        if (timelineScroll == null || rowsScroll == null)
+        if (timelineScroll == null)
             return;
 
         var targetX = Math.Max(0, PlayerViewModel.EpgNowPixelPos - timelineScroll.Viewport.Width / 2);
-        var targetY = rowsScroll.Offset.Y;
+        var targetY = timelineScroll.Offset.Y;
 
         if (_playerViewModel?.EpgFocusRowIndex >= 0)
         {
             const double rowHeight = 68;
-            targetY = Math.Max(0, _playerViewModel.EpgFocusRowIndex * rowHeight - rowsScroll.Viewport.Height / 2 + rowHeight / 2);
+            targetY = Math.Max(0, _playerViewModel.EpgFocusRowIndex * rowHeight - timelineScroll.Viewport.Height / 2 + rowHeight / 2);
         }
 
-        timelineScroll.Offset = new global::Avalonia.Vector(targetX, 0);
-        rowsScroll.Offset = new global::Avalonia.Vector(0, targetY);
+        timelineScroll.Offset = new global::Avalonia.Vector(targetX, targetY);
 
         var timeHeader = this.FindControl<ScrollViewer>("EpgTimeHeaderScroll");
         if (timeHeader != null)
             timeHeader.Offset = new global::Avalonia.Vector(targetX, 0);
+
+        var namesScroll = this.FindControl<ScrollViewer>("EpgNamesScroll");
+        if (namesScroll != null)
+            namesScroll.Offset = new global::Avalonia.Vector(0, targetY);
     }
 
     private void OverlayRoot_PointerMoved(object? sender, PointerEventArgs e)
@@ -705,13 +714,18 @@ public partial class VideoOverlayView : UserControl
     private void EpgTimelineScroll_ScrollChanged(object? sender, ScrollChangedEventArgs e)
     {
         var timeHeader = this.FindControl<ScrollViewer>("EpgTimeHeaderScroll");
+        var namesScroll = this.FindControl<ScrollViewer>("EpgNamesScroll");
         var timelineScroll = this.FindControl<ScrollViewer>("EpgTimelineScroll");
 
         if (timelineScroll == null) return;
 
         if (timeHeader != null)
             timeHeader.Offset = new global::Avalonia.Vector(timelineScroll.Offset.X, 0);
+
+        if (namesScroll != null)
+            namesScroll.Offset = new global::Avalonia.Vector(0, timelineScroll.Offset.Y);
     }
+
 }
 
 // ── EPG Routed Event ───────────────────────────────────────────────────────

@@ -8,6 +8,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### EPG Panel Resize, Scroll ve Localization Düzeltmeleri (2026-05-23)
+- [Düzeltildi] **Maximize/Restore Sonrası Overlay Ölçü Senkronu**: Ana pencere büyütülüp tekrar küçültüldüğünde EPG panelinin kapatma butonu, sağ dikey scroll'u ve alt yatay scroll'u eski büyük ekran konumunda kalabiliyordu. `MemoryVideoView` overlay ölçü güncellemesi render kuyruğuna alındı; `WindowState`, `ClientSize` ve layout değişimlerinde overlay içerik boyutu yeniden hizalanıyor.
+- [Düzeltildi] **EPG Sol Kanal Listesi ve Program Satırları Scroll Senkronu**: Kanal logo/isim sütununun sağdaki program timeline'ından bağımsız yukarı-aşağı kayması engellendi. Dikey scroll sağ timeline üzerinden yönetiliyor, sol kanal listesi aynı offset ile pasif şekilde senkron kalıyor.
+- [Düzeltildi] **EPG Header ve Timeline Scroll Senkronu**: Üst saat başlığı yatay scroll'da program bloklarıyla birlikte ilerliyor; panel açıldığında aktif kanal satırı ve `ŞİMDİ` konumu aynı scroll sistemiyle odaklanıyor.
+- [Yeni] **EPG Panel Çok Dil Desteği**: EPG buton tooltip'i, panel başlığı, kanal başlığı, yükleniyor metni, boş EPG bilgisi, `ŞİMDİ/NOW` rozeti ve EPG güncellik uyarıları localization sistemine taşındı.
+- [Yeni] **EPG Çeviri Anahtarları**: `tr-TR`, `en-US`, `de-DE`, `es-ES`, `fr-FR` sözlüklerine `Player.Epg.*` anahtarları eklendi.
+- [Doğrulama] `dotnet build NoctraPlayer.sln` başarılı. `dotnet test Noctra.Tests\Noctra.Tests.csproj --no-build` sonucu `785/785` test geçti.
+
 ### 📺 Oynatıcı İçi EPG Timeline Paneli ve UI Düzeltmeleri (2026-05-23)
 - [Yeni] **Canlı Yayın Program Rehberi Paneli**: Oynatıcı overlay'ine canlı yayınlarda görünen `Program Rehberi` butonu ve yatay/dikey kaydırılabilir EPG timeline paneli eklendi. Panel açıldığında aktif grubun kanalları listelenir, aktif kanal satırına odaklanılır ve zaman çizelgesi otomatik olarak `ŞİMDİ` konumuna kaydırılır.
 - [Yeni] **EPG Timeline Veri Modeli**: `EpgPanelRow` ve `EpgProgramBlock` modelleri eklendi. Program bloklarının `PixelLeft`, `PixelWidth`, `ProgressPixelWidth`, okunabilir başlık genişliği ve NOW çizgisi pozisyonları Core tarafında hesaplanarak AXAML tarafı sade binding ile çalışacak hale getirildi.
