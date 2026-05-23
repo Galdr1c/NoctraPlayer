@@ -4211,8 +4211,7 @@ public partial class MainViewModel : ObservableObject
             var downloadRoot = ResolveGlobalDownloadRoot();
             if (Directory.Exists(downloadRoot))
             {
-                var videoExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                    { ".mkv", ".mp4", ".avi", ".ts", ".m4v", ".mov", ".nctra" };
+                var videoExtensions = GetDownloadVideoExtensions();
 
                 var allFiles = Directory.EnumerateFiles(downloadRoot, "*.*", SearchOption.AllDirectories)
                     .Where(f => videoExtensions.Contains(Path.GetExtension(f)))
@@ -4253,6 +4252,8 @@ public partial class MainViewModel : ObservableObject
                         });
                     }
                 }
+
+                CleanupStaleDownloadFolders(downloadRoot, videoExtensions);
             }
         }
         catch (Exception ex)
@@ -4515,6 +4516,181 @@ public partial class MainViewModel : ObservableObject
         return parts.Length >= 2 ? parts[^2] : "Unknown";
     }
 
+    private static HashSet<string> GetDownloadVideoExtensions()
+        => new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".mkv",
+            ".mp4",
+            ".avi",
+            ".ts",
+            ".m4v",
+            ".mov",
+            ".mpg",
+            ".mpeg",
+            ".webm",
+            ".nctra"
+        };
+
+    private static bool IsLocalFilesystemPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        var normalized = path.Trim().Trim('"', '\'');
+        if (normalized.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+        {
+            return Uri.TryCreate(normalized, UriKind.Absolute, out var uri) && uri.IsFile;
+        }
+
+        return normalized.StartsWith(@"\\", StringComparison.Ordinal)
+               || Regex.IsMatch(normalized, @"^[a-zA-Z]:[\\/]");
+    }
+
+    private static string NormalizeLocalFilesystemPath(string path)
+    {
+        var normalized = path.Trim().Trim('"', '\'');
+        if (normalized.StartsWith("file://", StringComparison.OrdinalIgnoreCase)
+            && Uri.TryCreate(normalized, UriKind.Absolute, out var uri)
+            && uri.IsFile)
+        {
+            return uri.LocalPath;
+        }
+
+        return normalized;
+    }
+
+    private void CleanupStaleDownloadFolders(string downloadRoot, HashSet<string> videoExtensions)
+    {
+        if (!Directory.Exists(downloadRoot))
+        {
+            return;
+        }
+
+        try
+        {
+            var seriesRoots = Directory
+                .EnumerateDirectories(downloadRoot, "*", SearchOption.AllDirectories)
+                .Where(IsSeriesRootDirectory)
+                .OrderByDescending(d => d.Length)
+                .ToList();
+
+            foreach (var seriesRoot in seriesRoots)
+            {
+                if (!Directory.Exists(seriesRoot))
+                {
+                    continue;
+                }
+
+                var hasVideoFile = Directory
+                    .EnumerateFiles(seriesRoot, "*.*", SearchOption.AllDirectories)
+                    .Any(f => videoExtensions.Contains(Path.GetExtension(f)));
+
+                if (!hasVideoFile)
+                {
+                    TryDeleteDownloadDirectoryTree(seriesRoot);
+                }
+            }
+
+            TryDeleteEmptyDownloadDirectoriesBottomUp(downloadRoot);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "Stale download folder cleanup failed.");
+        }
+    }
+
+    private static bool IsSeriesRootDirectory(string directory)
+    {
+        var parent = Directory.GetParent(directory);
+        if (parent == null)
+        {
+            return false;
+        }
+
+        var parentName = parent.Name;
+        return string.Equals(parentName, "Series", StringComparison.OrdinalIgnoreCase)
+               || string.Equals(parentName, "Diziler", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void TryDeleteDownloadDirectoryTree(string? directory)
+    {
+        if (string.IsNullOrWhiteSpace(directory)
+            || !Directory.Exists(directory)
+            || !IsPathInsideDownloadRoot(directory)
+            || PathsEqual(directory, ResolveGlobalDownloadRoot()))
+        {
+            return;
+        }
+
+        try
+        {
+            Directory.Delete(directory, true);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "Failed to delete download directory tree: {Directory}", directory);
+        }
+    }
+
+    private void TryDeleteEmptyDownloadParents(string? startDirectory)
+    {
+        var root = ResolveGlobalDownloadRoot();
+        var current = startDirectory;
+        while (!string.IsNullOrWhiteSpace(current)
+               && Directory.Exists(current)
+               && IsPathInsideDownloadRoot(current)
+               && !PathsEqual(current, root))
+        {
+            try
+            {
+                if (Directory.EnumerateFileSystemEntries(current).Any())
+                {
+                    return;
+                }
+
+                Directory.Delete(current, false);
+                current = Path.GetDirectoryName(current);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogDebug(ex, "Failed to delete empty download parent directory: {Directory}", current);
+                return;
+            }
+        }
+    }
+
+    private void TryDeleteEmptyDownloadDirectoriesBottomUp(string directory)
+    {
+        if (!Directory.Exists(directory))
+        {
+            return;
+        }
+
+        foreach (var child in Directory.EnumerateDirectories(directory).ToList())
+        {
+            TryDeleteEmptyDownloadDirectoriesBottomUp(child);
+        }
+
+        TryDeleteEmptyDownloadParents(directory);
+    }
+
+    private bool IsPathInsideDownloadRoot(string path)
+    {
+        var root = ResolveGlobalDownloadRoot();
+        var fullPath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var fullRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return fullPath.StartsWith(fullRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+               || PathsEqual(fullPath, fullRoot);
+    }
+
+    private static bool PathsEqual(string left, string right)
+        => string.Equals(
+            Path.GetFullPath(left).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+            Path.GetFullPath(right).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+            StringComparison.OrdinalIgnoreCase);
+
     private async Task RefreshDownloadsFromServiceAsync(int profileId)
     {
         try
@@ -4708,7 +4884,8 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            var filesToDelete = new List<string>();
+            var filesToDelete = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var seriesDirectoriesToDelete = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             if (media is Series series)
             {
@@ -4716,21 +4893,52 @@ public partial class MainViewModel : ObservableObject
                 {
                     foreach (var ep in season.Episodes)
                     {
-                        if (!string.IsNullOrEmpty(ep.StreamUrl) && File.Exists(ep.StreamUrl))
-                            filesToDelete.Add(ep.StreamUrl);
+                        if (IsLocalFilesystemPath(ep.StreamUrl))
+                        {
+                            var localPath = NormalizeLocalFilesystemPath(ep.StreamUrl!);
+                            filesToDelete.Add(localPath);
+                            var seasonDir = Path.GetDirectoryName(localPath);
+                            var seriesDir = seasonDir == null ? null : Path.GetDirectoryName(seasonDir);
+                            if (!string.IsNullOrWhiteSpace(seriesDir))
+                            {
+                                seriesDirectoriesToDelete.Add(seriesDir);
+                            }
+                        }
                     }
                 }
             }
             else if (media is Channel channel)
             {
-                if (!string.IsNullOrEmpty(channel.StreamUrl) && File.Exists(channel.StreamUrl))
-                    filesToDelete.Add(channel.StreamUrl);
+                if (IsLocalFilesystemPath(channel.StreamUrl))
+                {
+                    filesToDelete.Add(NormalizeLocalFilesystemPath(channel.StreamUrl!));
+                }
             }
 
             // 1. Delete Files
             foreach (var file in filesToDelete)
             {
-                try { File.Delete(file); } catch { /* ignore */ }
+                try
+                {
+                    if (File.Exists(file) && IsPathInsideDownloadRoot(file))
+                    {
+                        File.Delete(file);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogDebug(ex, "Failed to delete downloaded file: {File}", file);
+                }
+            }
+
+            foreach (var dir in seriesDirectoriesToDelete)
+            {
+                TryDeleteDownloadDirectoryTree(dir);
+            }
+
+            foreach (var file in filesToDelete)
+            {
+                TryDeleteEmptyDownloadParents(Path.GetDirectoryName(file));
             }
 
             // 2. Delete from DB

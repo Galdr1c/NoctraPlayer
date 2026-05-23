@@ -242,9 +242,9 @@ public class SettingsService : ISettingsService
     {
         return await Task.Run(() =>
         {
-            if (activeProfileIds == null || !activeProfileIds.Any())
+            if (activeProfileIds == null)
             {
-                _logger?.LogWarning("[SettingsService] CleanOrphanedSettingsAsync aborted. No active profiles provided, safety guard triggered.");
+                _logger?.LogWarning("[SettingsService] CleanOrphanedSettingsAsync aborted. Active profile list was null.");
                 return 0;
             }
 
@@ -321,5 +321,3 @@ public class SettingsService : ISettingsService
         });
     }
 }
-
-

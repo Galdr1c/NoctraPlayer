@@ -10,16 +10,19 @@ public class ProfileService : IProfileService
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly IContentDownloadService _contentDownloadService;
     private readonly ILicenseService _licenseService;
+    private readonly ISettingsService? _settingsService;
     private const string ProfilesLimitKey = "profiles";
 
     public ProfileService(
         IDbContextFactory<AppDbContext> contextFactory,
         IContentDownloadService contentDownloadService,
-        ILicenseService licenseService)
+        ILicenseService licenseService,
+        ISettingsService? settingsService = null)
     {
         _contextFactory = contextFactory;
         _contentDownloadService = contentDownloadService;
         _licenseService = licenseService;
+        _settingsService = settingsService;
     }
 
     public async Task<Profile?> SaveProfileAsync(ProfileSaveRequest request)
@@ -166,6 +169,8 @@ public class ProfileService : IProfileService
         }
 
         await transaction.CommitAsync();
+
+        await CleanDeletedProfileSettingsAsync();
     }
 
     public async Task<bool> CheckDuplicateAccountAsync(
@@ -188,10 +193,13 @@ public class ProfileService : IProfileService
     public async Task<List<Profile>> GetProfilesAsync()
     {
         await using var db = await _contextFactory.CreateDbContextAsync();
-        return await db.Profiles
+        var profiles = await db.Profiles
             .Include(p => p.ProviderAccount)
             .OrderByDescending(p => p.LastUsed)
             .ToListAsync();
+
+        await CleanDeletedProfileSettingsAsync(profiles.Select(p => p.Id));
+        return profiles;
     }
 
     public async Task UpdateLastUsedAsync(int profileId)
@@ -265,6 +273,27 @@ public class ProfileService : IProfileService
         }
 
         if (expired.Any())
+        {
             await db.SaveChangesAsync();
+            await CleanDeletedProfileSettingsAsync();
+        }
+    }
+
+    private async Task CleanDeletedProfileSettingsAsync(IEnumerable<int>? activeProfileIds = null)
+    {
+        if (_settingsService == null)
+        {
+            return;
+        }
+
+        if (activeProfileIds == null)
+        {
+            await using var db = await _contextFactory.CreateDbContextAsync();
+            activeProfileIds = await db.Profiles
+                .Select(p => p.Id)
+                .ToListAsync();
+        }
+
+        await _settingsService.CleanOrphanedSettingsAsync(activeProfileIds);
     }
 }

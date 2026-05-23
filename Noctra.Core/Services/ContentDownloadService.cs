@@ -248,13 +248,35 @@ public class ContentDownloadService : IContentDownloadService
         DownloadsChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    public Task DeleteProfileDownloadsAsync(
+    public async Task DeleteProfileDownloadsAsync(
         int profileId,
         CancellationToken cancellationToken = default)
     {
-        // Phase 25: Do not delete downloaded contents when a profile is deleted.
-        // The files are global to the device. We simply return.
-        return Task.CompletedTask;
+        if (profileId <= 0)
+        {
+            return;
+        }
+
+        using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        var downloadIds = await db.DownloadItems
+            .Where(d => d.ProfileId == profileId)
+            .Select(d => d.Id)
+            .ToListAsync(cancellationToken);
+
+        foreach (var downloadId in downloadIds)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            _cancelRequestedIds[downloadId] = 1;
+            if (_activeDownloadCts.TryGetValue(downloadId, out var cts))
+            {
+                cts.Cancel();
+            }
+
+            await RemoveDownloadArtifactsAndRecordAsync(downloadId, cancellationToken);
+        }
+
+        CleanupEmptyDownloadDirectories();
+        DownloadsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public async Task CancelDownloadAsync(
@@ -885,23 +907,7 @@ public class ContentDownloadService : IContentDownloadService
             dirToCheck ??= Path.GetDirectoryName(tempPath);
         }
 
-        // Clean up empty parent directory if applicable (e.g., for series folders)
-        if (!string.IsNullOrWhiteSpace(dirToCheck) && Directory.Exists(dirToCheck))
-        {
-            try
-            {
-                var files = Directory.EnumerateFileSystemEntries(dirToCheck).Any();
-                if (!files)
-                {
-                    Directory.Delete(dirToCheck, false);
-                    _logger?.LogInformation("Deleted empty download directory: {Dir}", dirToCheck);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogDebug(ex, "Failed to delete potentially empty directory: {Dir}", dirToCheck);
-            }
-        }
+        TryDeleteEmptyParentDirectories(dirToCheck);
     }
 
     private async Task CleanupMissingCompletedDownloadsAsync(
@@ -1515,5 +1521,87 @@ public class ContentDownloadService : IContentDownloadService
             Thread.Sleep(80);
         }
     }
+
+    private void CleanupEmptyDownloadDirectories()
+    {
+        var root = EnsureGlobalDownloadDirectory(_settingsService.Settings.DownloadPath);
+        foreach (var category in new[] { "Series", "Movies" })
+        {
+            var categoryPath = Path.Combine(root, category);
+            if (Directory.Exists(categoryPath))
+            {
+                TryDeleteEmptyDirectoriesBottomUp(categoryPath);
+            }
+        }
+    }
+
+    private void TryDeleteEmptyParentDirectories(string? startDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(startDirectory))
+        {
+            return;
+        }
+
+        var root = EnsureGlobalDownloadDirectory(_settingsService.Settings.DownloadPath);
+        var current = startDirectory;
+        while (!string.IsNullOrWhiteSpace(current)
+               && Directory.Exists(current)
+               && IsPathInside(current, root)
+               && !PathsEqual(current, root))
+        {
+            try
+            {
+                if (Directory.EnumerateFileSystemEntries(current).Any())
+                {
+                    return;
+                }
+
+                Directory.Delete(current, false);
+                _logger?.LogInformation("Deleted empty download directory: {Dir}", current);
+                current = Path.GetDirectoryName(current);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogDebug(ex, "Failed to delete potentially empty directory: {Dir}", current);
+                return;
+            }
+        }
+    }
+
+    private void TryDeleteEmptyDirectoriesBottomUp(string directory)
+    {
+        try
+        {
+            foreach (var child in Directory.EnumerateDirectories(directory))
+            {
+                TryDeleteEmptyDirectoriesBottomUp(child);
+            }
+
+            if (Directory.Exists(directory)
+                && !Directory.EnumerateFileSystemEntries(directory).Any())
+            {
+                Directory.Delete(directory, false);
+                _logger?.LogInformation("Deleted empty download directory: {Dir}", directory);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "Failed to cleanup empty download directory: {Dir}", directory);
+        }
+    }
+
+    private static bool IsPathInside(string path, string root)
+    {
+        var fullPath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var fullRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return fullPath.StartsWith(fullRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+               || PathsEqual(fullPath, fullRoot);
+    }
+
+    private static bool PathsEqual(string left, string right)
+        => string.Equals(
+            Path.GetFullPath(left).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+            Path.GetFullPath(right).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+            StringComparison.OrdinalIgnoreCase);
 
 }

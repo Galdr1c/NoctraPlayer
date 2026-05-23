@@ -8,6 +8,12 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Profil ve İndirme Klasörü Temizliği (2026-05-23)
+- [Düzeltildi] **Silinen Profil Ayar Dosyaları**: Profil silindiğinde ve profil listesi yüklendiğinde artık veritabanında olmayan profillere ait `Settings/profile_*.json` ve eski `settings_profile_*.json` dosyaları otomatik temizlenir.
+- [Düzeltildi] **Silinen Profil İndirmeleri**: Profil silme işlemi artık o profile ait indirme kayıtlarını, dosyalarını ve boş kalan `Series`/`Movies` klasörlerini temizler.
+- [Düzeltildi] **Silinen Film/Dizi Klasörleri**: İndirilen film veya dizi silindiğinde dosya yolu artık mevcut olmasa bile DB kaydı temizlenir; dizi silmede sezon klasörleri, dizi kök klasörü ve poster gibi artık dosyalar güvenli şekilde kaldırılır.
+- [Temizlik] **Eski Artık İndirme Klasörleri**: İndirme ekranı yenilenirken video dosyası içermeyen eski dizi klasörleri ve boş alt klasörler Noctra indirme kökü dışına çıkmadan temizlenir.
+
 ### EPG Panel Resize, Scroll ve Localization Düzeltmeleri (2026-05-23)
 - [Düzeltildi] **Maximize/Restore Sonrası Overlay Ölçü Senkronu**: Ana pencere büyütülüp tekrar küçültüldüğünde EPG panelinin kapatma butonu, sağ dikey scroll'u ve alt yatay scroll'u eski büyük ekran konumunda kalabiliyordu. `MemoryVideoView` overlay ölçü güncellemesi render kuyruğuna alındı; `WindowState`, `ClientSize` ve layout değişimlerinde overlay içerik boyutu yeniden hizalanıyor.
 - [Düzeltildi] **EPG Sol Kanal Listesi ve Program Satırları Scroll Senkronu**: Kanal logo/isim sütununun sağdaki program timeline'ından bağımsız yukarı-aşağı kayması engellendi. Dikey scroll sağ timeline üzerinden yönetiliyor, sol kanal listesi aynı offset ile pasif şekilde senkron kalıyor.
