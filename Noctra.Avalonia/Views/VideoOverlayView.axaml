@@ -516,31 +516,47 @@
                     </Border>
 
                     <!-- ── İçerik: Frozen kanal isimleri + Timeline ── -->
-                    <Grid Grid.Row="1" ColumnDefinitions="200,*">
+                    <Grid Grid.Row="1" RowDefinitions="40,*" ColumnDefinitions="200,*">
+                        <!-- Header: kanal sütunu -->
+                        <Border Grid.Row="0" Grid.Column="0"
+                                Background="#131313"
+                                BorderBrush="#1AFFFFFF"
+                                BorderThickness="0,0,1,1"
+                                ZIndex="10">
+                            <TextBlock Text="KANAL"
+                                       FontSize="9" FontWeight="Black"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       LetterSpacing="1.5"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Center"/>
+                        </Border>
 
-                        <!-- Sol sütun: Zaman başlığı hizalayıcı + Frozen kanal isimleri -->
-                        <Grid RowDefinitions="40,*"
-                              Background="#0D0D0D"
-                              ZIndex="10">
-                            <!-- Time header hizalayıcı boşluk -->
-                            <Border Grid.Row="0"
-                                    Background="#131313"
-                                    BorderBrush="#1AFFFFFF"
-                                    BorderThickness="0,0,1,1">
-                                <TextBlock Text="KANAL"
-                                           FontSize="9" FontWeight="Black"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           LetterSpacing="1.5"
-                                           VerticalAlignment="Center"
-                                           HorizontalAlignment="Center"/>
-                            </Border>
+                        <!-- Header: saat çizelgesi -->
+                        <Border Grid.Row="0" Grid.Column="1"
+                                Background="#131313"
+                                BorderBrush="#1AFFFFFF"
+                                BorderThickness="0,0,0,1">
+                            <ScrollViewer x:Name="EpgTimeHeaderScroll"
+                                          HorizontalScrollBarVisibility="Hidden"
+                                          VerticalScrollBarVisibility="Disabled"
+                                          IsHitTestVisible="False">
+                                <Canvas x:Name="EpgTimeHeaderCanvas"
+                                        Width="{Binding EpgCanvasPixelWidth}"
+                                        Height="40"/>
+                            </ScrollViewer>
+                        </Border>
 
-                            <!-- Kanal isimleri (yatay scroll yok, dikey = timeline ile sync) -->
-                            <ScrollViewer Grid.Row="1"
-                                          x:Name="EpgNamesScroll"
-                                          HorizontalScrollBarVisibility="Disabled"
-                                          VerticalScrollBarVisibility="Hidden">
-                                <ItemsControl ItemsSource="{Binding EpgRows}">
+                        <!-- Tek ortak dikey scroll: sol kanal bilgisi + sağ program satırları birlikte kayar -->
+                        <ScrollViewer Grid.Row="1" Grid.ColumnSpan="2"
+                                      x:Name="EpgRowsScroll"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      VerticalScrollBarVisibility="Auto">
+                            <Grid ColumnDefinitions="200,*">
+                                <!-- Sol kanal sütunu -->
+                                <ItemsControl Grid.Column="0"
+                                              ItemsSource="{Binding EpgRows}"
+                                              Background="#0D0D0D"
+                                              ZIndex="10">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:EpgPanelRow">
                                             <Border Height="68"
@@ -548,8 +564,7 @@
                                                     BorderThickness="0,0,1,1"
                                                     Background="{Binding IsCurrentChannel,
                                                         Converter={StaticResource BoolToSelectionBrushConverter}}">
-                                                <Grid ColumnDefinitions="52,*" Margin="0,0,0,0">
-                                                    <!-- Kanal logosu -->
+                                                <Grid ColumnDefinitions="52,*">
                                                     <Border Grid.Column="0"
                                                             Width="40" Height="40"
                                                             CornerRadius="6"
@@ -563,7 +578,6 @@
                                                             Stretch="Uniform"/>
                                                     </Border>
 
-                                                    <!-- Kanal adı -->
                                                     <Grid Grid.Column="1"
                                                           VerticalAlignment="Center"
                                                           Margin="6,0,8,0">
@@ -579,39 +593,18 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                            </ScrollViewer>
-                        </Grid>
 
-                        <!-- Sağ sütun: Saat başlığı + Timeline -->
-                        <Grid Grid.Column="1" RowDefinitions="40,*">
-
-                            <!-- ── Saat başlığı (yatay scroll ile sync) ── -->
-                            <Border Grid.Row="0"
-                                    Background="#131313"
-                                    BorderBrush="#1AFFFFFF"
-                                    BorderThickness="0,0,0,1">
-                                <ScrollViewer x:Name="EpgTimeHeaderScroll"
-                                              HorizontalScrollBarVisibility="Hidden"
+                                <!-- Sağ timeline: sadece yatay scroll -->
+                                <ScrollViewer Grid.Column="1"
+                                              x:Name="EpgTimelineScroll"
+                                              HorizontalScrollBarVisibility="Auto"
                                               VerticalScrollBarVisibility="Disabled"
-                                              IsHitTestVisible="False">
-                                    <Canvas x:Name="EpgTimeHeaderCanvas"
-                                            Width="{Binding EpgCanvasPixelWidth}"
-                                            Height="40"/>
-                                </ScrollViewer>
-                            </Border>
-
-                            <!-- ── Program timeline (kaydırılabilir) ── -->
-                            <ScrollViewer Grid.Row="1"
-                                          x:Name="EpgTimelineScroll"
-                                          HorizontalScrollBarVisibility="Auto"
-                                          VerticalScrollBarVisibility="Auto"
-                                          ScrollChanged="EpgTimelineScroll_ScrollChanged">
-                                <Grid Width="{Binding EpgCanvasPixelWidth}">
-                                    <!-- Kanal satırları -->
-                                    <ItemsControl ItemsSource="{Binding EpgRows}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate x:DataType="vm:EpgPanelRow">
-                                                <Grid Height="68">
+                                              ScrollChanged="EpgTimelineScroll_ScrollChanged">
+                                    <Grid Width="{Binding EpgCanvasPixelWidth}">
+                                        <ItemsControl ItemsSource="{Binding EpgRows}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:EpgPanelRow">
+                                                    <Grid Height="68">
                                                     <!-- Satır arkaplanı -->
                                                     <Border Background="{Binding IsCurrentChannel,
                                                                 Converter={StaticResource BoolToSelectionBrushConverter}}"
@@ -697,13 +690,14 @@
                                                             Margin="{Binding NowLineLeft, Converter={StaticResource DoubleToLeftMarginConverter}}"
                                                             IsHitTestVisible="False"
                                                             ZIndex="10"/>
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </Grid>
-                            </ScrollViewer>
-                        </Grid>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
+                                </ScrollViewer>
+                            </Grid>
+                        </ScrollViewer>
                     </Grid>
                 </Grid>
             </Grid>

@@ -335,27 +335,25 @@ public partial class VideoOverlayView : UserControl
     private void FocusCurrentEpgRow()
     {
         var timelineScroll = this.FindControl<ScrollViewer>("EpgTimelineScroll");
-        if (timelineScroll == null)
+        var rowsScroll = this.FindControl<ScrollViewer>("EpgRowsScroll");
+        if (timelineScroll == null || rowsScroll == null)
             return;
 
         var targetX = Math.Max(0, PlayerViewModel.EpgNowPixelPos - timelineScroll.Viewport.Width / 2);
-        var targetY = timelineScroll.Offset.Y;
+        var targetY = rowsScroll.Offset.Y;
 
         if (_playerViewModel?.EpgFocusRowIndex >= 0)
         {
             const double rowHeight = 68;
-            targetY = Math.Max(0, _playerViewModel.EpgFocusRowIndex * rowHeight - timelineScroll.Viewport.Height / 2 + rowHeight / 2);
+            targetY = Math.Max(0, _playerViewModel.EpgFocusRowIndex * rowHeight - rowsScroll.Viewport.Height / 2 + rowHeight / 2);
         }
 
-        timelineScroll.Offset = new global::Avalonia.Vector(targetX, targetY);
+        timelineScroll.Offset = new global::Avalonia.Vector(targetX, 0);
+        rowsScroll.Offset = new global::Avalonia.Vector(0, targetY);
 
         var timeHeader = this.FindControl<ScrollViewer>("EpgTimeHeaderScroll");
         if (timeHeader != null)
             timeHeader.Offset = new global::Avalonia.Vector(targetX, 0);
-
-        var namesScroll = this.FindControl<ScrollViewer>("EpgNamesScroll");
-        if (namesScroll != null)
-            namesScroll.Offset = new global::Avalonia.Vector(0, targetY);
     }
 
     private void OverlayRoot_PointerMoved(object? sender, PointerEventArgs e)
@@ -707,16 +705,12 @@ public partial class VideoOverlayView : UserControl
     private void EpgTimelineScroll_ScrollChanged(object? sender, ScrollChangedEventArgs e)
     {
         var timeHeader = this.FindControl<ScrollViewer>("EpgTimeHeaderScroll");
-        var namesScroll = this.FindControl<ScrollViewer>("EpgNamesScroll");
         var timelineScroll = this.FindControl<ScrollViewer>("EpgTimelineScroll");
 
         if (timelineScroll == null) return;
 
         if (timeHeader != null)
             timeHeader.Offset = new global::Avalonia.Vector(timelineScroll.Offset.X, 0);
-
-        if (namesScroll != null)
-            namesScroll.Offset = new global::Avalonia.Vector(0, timelineScroll.Offset.Y);
     }
 }
 

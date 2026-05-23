@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.Globalization;
 using System.Net.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -323,7 +324,7 @@ public class EpgService : IEpgService
                                     LoadedCount = totalLoaded
                                 });
 
-                                await context.EpgPrograms.AddRangeAsync(programs).ConfigureAwait(false);
+                                await AddProgramsDeduplicatedAsync(context, programs).ConfigureAwait(false);
                                 await context.SaveChangesAsync().ConfigureAwait(false);
                                 programs.Clear();
                             }
@@ -333,7 +334,7 @@ public class EpgService : IEpgService
 
                 if (programs.Any())
                 {
-                    await context.EpgPrograms.AddRangeAsync(programs).ConfigureAwait(false);
+                    await AddProgramsDeduplicatedAsync(context, programs).ConfigureAwait(false);
                     await context.SaveChangesAsync().ConfigureAwait(false);
                 }
             }
@@ -360,6 +361,211 @@ public class EpgService : IEpgService
         {
             _loadSemaphore.Release();
         }
+    }
+
+    private static async Task AddProgramsDeduplicatedAsync(AppDbContext context, List<EpgProgram> programs)
+    {
+        if (programs.Count == 0)
+        {
+            return;
+        }
+
+        var minStart = programs.Min(p => p.StartTime);
+        var maxEnd = programs.Max(p => p.EndTime);
+        var channelIds = programs
+            .Select(p => p.ChannelId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct()
+            .ToList();
+
+        var existingPrograms = channelIds.Count == 0
+            ? new List<EpgProgram>()
+            : await context.EpgPrograms
+                .AsNoTracking()
+                .Where(p => channelIds.Contains(p.ChannelId)
+                         && p.EndTime > minStart
+                         && p.StartTime < maxEnd)
+                .Select(p => new EpgProgram
+                {
+                    ChannelId = p.ChannelId,
+                    Title = p.Title,
+                    StartTime = p.StartTime,
+                    EndTime = p.EndTime
+                })
+                .ToListAsync()
+                .ConfigureAwait(false);
+
+        var exactKeys = new HashSet<string>(existingPrograms.Select(BuildEpgDedupKey), StringComparer.Ordinal);
+        var accepted = new List<EpgProgram>(programs.Count);
+
+        foreach (var program in programs)
+        {
+            if (string.IsNullOrWhiteSpace(program.ChannelId) || program.EndTime <= program.StartTime)
+            {
+                continue;
+            }
+
+            var key = BuildEpgDedupKey(program);
+            if (!exactKeys.Add(key))
+            {
+                continue;
+            }
+
+            if (HasEquivalentOverlappingProgram(program, existingPrograms) ||
+                HasEquivalentOverlappingProgram(program, accepted))
+            {
+                continue;
+            }
+
+            accepted.Add(program);
+        }
+
+        if (accepted.Count > 0)
+        {
+            await context.EpgPrograms.AddRangeAsync(accepted).ConfigureAwait(false);
+        }
+    }
+
+    private static bool HasEquivalentOverlappingProgram(EpgProgram program, IEnumerable<EpgProgram> candidates)
+    {
+        var title = NormalizeEpgTitle(program.Title);
+
+        foreach (var candidate in candidates)
+        {
+            if (!string.Equals(candidate.ChannelId, program.ChannelId, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (!string.Equals(NormalizeEpgTitle(candidate.Title), title, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (GetOverlapRatio(program.StartTime, program.EndTime, candidate.StartTime, candidate.EndTime) >= 0.8)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static List<EpgProgram> DeduplicateProgramList(IEnumerable<EpgProgram> programs)
+    {
+        var exactKeys = new HashSet<string>(StringComparer.Ordinal);
+        var result = new List<EpgProgram>();
+
+        foreach (var program in programs.OrderBy(p => p.StartTime).ThenBy(p => p.EndTime))
+        {
+            var key = BuildEpgDedupKey(program);
+            if (!exactKeys.Add(key))
+            {
+                continue;
+            }
+
+            if (HasEquivalentOverlappingProgram(program, result))
+            {
+                continue;
+            }
+
+            result.Add(program);
+        }
+
+        return result;
+    }
+
+    private static List<EpgProgram> NormalizeProgramTimeline(IEnumerable<EpgProgram> programs)
+    {
+        var result = new List<EpgProgram>();
+
+        foreach (var program in DeduplicateProgramList(programs))
+        {
+            if (program.EndTime <= program.StartTime)
+            {
+                continue;
+            }
+
+            while (result.Count > 0)
+            {
+                var previous = result[^1];
+                if (!string.Equals(previous.ChannelId, program.ChannelId, StringComparison.OrdinalIgnoreCase) ||
+                    previous.EndTime <= program.StartTime)
+                {
+                    break;
+                }
+
+                if (string.Equals(NormalizeEpgTitle(previous.Title), NormalizeEpgTitle(program.Title), StringComparison.Ordinal))
+                {
+                    if (program.EndTime > previous.EndTime)
+                    {
+                        previous.EndTime = program.EndTime;
+                    }
+                    goto NextProgram;
+                }
+
+                if (previous.StartTime < program.StartTime)
+                {
+                    previous.EndTime = program.StartTime;
+                    if (previous.EndTime > previous.StartTime)
+                    {
+                        break;
+                    }
+                }
+
+                result.RemoveAt(result.Count - 1);
+            }
+
+            result.Add(program);
+
+        NextProgram:
+            continue;
+        }
+
+        return result;
+    }
+
+    private static EpgProgram? PickCurrentProgram(IEnumerable<EpgProgram> programs, DateTime now)
+        => NormalizeProgramTimeline(programs)
+            .Where(p => p.StartTime <= now && p.EndTime > now)
+            .OrderByDescending(p => p.StartTime)
+            .ThenBy(p => p.EndTime)
+            .FirstOrDefault();
+
+    private static double GetOverlapRatio(DateTime startA, DateTime endA, DateTime startB, DateTime endB)
+    {
+        var overlapStart = startA > startB ? startA : startB;
+        var overlapEnd = endA < endB ? endA : endB;
+        if (overlapEnd <= overlapStart)
+        {
+            return 0;
+        }
+
+        var shortestDuration = Math.Min((endA - startA).TotalSeconds, (endB - startB).TotalSeconds);
+        return shortestDuration <= 0
+            ? 0
+            : (overlapEnd - overlapStart).TotalSeconds / shortestDuration;
+    }
+
+    private static string BuildEpgDedupKey(EpgProgram program)
+        => string.Join('\u001F',
+            NormalizeEpgChannelId(program.ChannelId),
+            program.StartTime.ToUniversalTime().Ticks.ToString(CultureInfo.InvariantCulture),
+            program.EndTime.ToUniversalTime().Ticks.ToString(CultureInfo.InvariantCulture),
+            NormalizeEpgTitle(program.Title));
+
+    private static string NormalizeEpgChannelId(string? channelId)
+        => (channelId ?? string.Empty).Trim().ToUpperInvariant();
+
+    private static string NormalizeEpgTitle(string? title)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return string.Empty;
+        }
+
+        return string.Join(' ', title.Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+            .ToUpperInvariant();
     }
 
     private IEnumerable<string> GetNameVariants(string name)
@@ -653,30 +859,27 @@ public class EpgService : IEpgService
         var now = DateTime.UtcNow.Add(-offset);
         using var context = await _contextFactory.CreateDbContextAsync();
 
-        // Level 1: Try Primary TvgId
-        if (!string.IsNullOrEmpty(channel.TvgId))
+        foreach (var epgId in GetEpgLookupIds(channel))
         {
-            var program = await context.EpgPrograms
+            var programs = await context.EpgPrograms
                 .AsNoTracking()
-                .Where(p => p.ChannelId == channel.TvgId && p.StartTime <= now && p.EndTime > now)
-                .FirstOrDefaultAsync();
+                .Where(p => p.ChannelId == epgId
+                         && p.EndTime > now.AddHours(-6)
+                         && p.StartTime <= now.AddHours(6))
+                .OrderBy(p => p.StartTime)
+                .ThenBy(p => p.EndTime)
+                .ToListAsync();
 
-            if (program != null) 
+            var program = PickCurrentProgram(programs, now);
+
+            if (program != null)
             {
                 ApplyTimeOffset(program);
                 return program;
             }
         }
 
-        // Level 2: Try Internal Id (Secondary EPG mapped by Name)
-        var internalId = channel.Id.ToString();
-        var programByInternalId = await context.EpgPrograms
-            .AsNoTracking()
-            .Where(p => p.ChannelId == internalId && p.StartTime <= now && p.EndTime > now)
-            .FirstOrDefaultAsync();
-
-        ApplyTimeOffset(programByInternalId);
-        return programByInternalId;
+        return null;
     }
 
     public async Task<Dictionary<int, EpgProgram?>> GetCurrentProgramsAsync(IEnumerable<Channel> channels)
@@ -690,32 +893,40 @@ public class EpgService : IEpgService
 
         if (liveChannels.Count == 0) return results;
 
-        // Collect all possible search IDs (TvgId and ChannelId as string)
-        var tvgIds = liveChannels.Select(c => c.TvgId).Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
-        var internalIds = liveChannels.Select(c => c.Id.ToString()).Distinct().ToList();
-        var allSearchIds = tvgIds.Concat(internalIds).Distinct().ToList();
+        var lookupIdsByChannel = liveChannels.ToDictionary(c => c.Id, GetEpgLookupIds);
+        var allSearchIds = lookupIdsByChannel.Values.SelectMany(ids => ids).Distinct().ToList();
 
         // Optimized bulk query: fetch all current programs for these IDs in one go
         var matchingPrograms = await context.EpgPrograms
             .AsNoTracking()
-            .Where(p => allSearchIds.Contains(p.ChannelId) && p.StartTime <= now && p.EndTime > now)
+            .Where(p => allSearchIds.Contains(p.ChannelId)
+                     && p.EndTime > now.AddHours(-6)
+                     && p.StartTime <= now.AddHours(6))
             .ToListAsync();
+
+        matchingPrograms = matchingPrograms
+            .GroupBy(p => p.ChannelId)
+            .SelectMany(g => NormalizeProgramTimeline(g))
+            .ToList();
 
         foreach (var channel in liveChannels)
         {
             EpgProgram? program = null;
 
-            // Priority 1: Primary TvgId
-            if (!string.IsNullOrEmpty(channel.TvgId))
+            if (lookupIdsByChannel.TryGetValue(channel.Id, out var lookupIds))
             {
-                program = matchingPrograms.FirstOrDefault(p => p.ChannelId == channel.TvgId);
-            }
-
-            // Priority 2: Internal Id mapping
-            if (program == null)
-            {
-                var internalId = channel.Id.ToString();
-                program = matchingPrograms.FirstOrDefault(p => p.ChannelId == internalId);
+                foreach (var lookupId in lookupIds)
+                {
+                    program = matchingPrograms
+                        .Where(p => p.ChannelId == lookupId && p.StartTime <= now && p.EndTime > now)
+                        .OrderByDescending(p => p.StartTime)
+                        .ThenBy(p => p.EndTime)
+                        .FirstOrDefault();
+                    if (program != null)
+                    {
+                        break;
+                    }
+                }
             }
 
             if (program != null)
@@ -727,6 +938,19 @@ public class EpgService : IEpgService
 
         return results;
     }
+
+    private static List<string> GetEpgLookupIds(Channel channel)
+        => new[]
+            {
+                channel.TvgId,
+                channel.TvgName,
+                channel.Name,
+                channel.Id > 0 ? channel.Id.ToString(CultureInfo.InvariantCulture) : null
+            }
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
     public async Task ClearEpgAsync()
     {
@@ -762,7 +986,7 @@ public class EpgService : IEpgService
 
         return programs
             .GroupBy(p => p.ChannelId)
-            .ToDictionary(g => g.Key, g => g.ToList());
+            .ToDictionary(g => g.Key, g => NormalizeProgramTimeline(g));
     }
 
     public async Task<List<EpgProgram>> GetProgramsAsync(string channelId, DateTime from, DateTime to)
@@ -780,7 +1004,7 @@ public class EpgService : IEpgService
             .ToListAsync();
 
         ApplyTimeOffset(programs);
-        return programs;
+        return NormalizeProgramTimeline(programs);
     }
 
     public async Task<List<EpgProgram>> GetUpcomingProgramsAsync(string channelId, int count = 5)
@@ -796,7 +1020,7 @@ public class EpgService : IEpgService
             .ToListAsync();
 
         ApplyTimeOffset(programs);
-        return programs;
+        return NormalizeProgramTimeline(programs);
     }
 
     public async Task<List<EpgProgram>> GetTodayProgramsAsync(string channelId)
@@ -812,7 +1036,7 @@ public class EpgService : IEpgService
             .ToListAsync();
 
         ApplyTimeOffset(programs);
-        return programs;
+        return NormalizeProgramTimeline(programs);
     }
 
     public async Task<int> GetTotalProgramCountAsync()
@@ -934,5 +1158,3 @@ public class EpgService : IEpgService
         return fullDate.Split(' ')[0];
     }
 }
-
-
