@@ -73,6 +73,7 @@ public partial class PlaylistService : IPlaylistService
                 if (existing.ChannelCount > 0)
                 {
                     System.Diagnostics.Debug.WriteLine($"[PlaylistService] Found existing playlist: {existing.Id} with {existing.ChannelCount} channels");
+                    await RepairLinearStreamChannelTypesAsync(context, existing.Id);
                     
                     // YENİ: Child profile ise mevcut kanalları kontrol et ve temizle
                     var profile = await context.Profiles.AsNoTracking().FirstOrDefaultAsync(p => p.Id == profileId);
@@ -175,6 +176,7 @@ public partial class PlaylistService : IPlaylistService
 
         if (existing != null)
         {
+            await RepairLinearStreamChannelTypesAsync(context, existing.Id);
             return existing;
         }
 
@@ -566,6 +568,65 @@ public partial class PlaylistService : IPlaylistService
                 }
             }
         }
+    }
+
+    private static async Task RepairLinearStreamChannelTypesAsync(AppDbContext context, int playlistId)
+    {
+        var candidates = await context.Channels
+            .Where(c => c.PlaylistId == playlistId && c.Type != ChannelType.Live && c.StreamUrl != null)
+            .ToListAsync();
+
+        var repaired = 0;
+        foreach (var channel in candidates)
+        {
+            if (!ShouldForceLiveFromStreamUrl(channel.StreamUrl))
+            {
+                continue;
+            }
+
+            channel.Type = ChannelType.Live;
+            repaired++;
+        }
+
+        if (repaired > 0)
+        {
+            await context.SaveChangesAsync();
+            System.Diagnostics.Debug.WriteLine($"[PlaylistService] Repaired {repaired} linear stream channel type(s) to Live for playlist {playlistId}.");
+        }
+    }
+
+    private static bool ShouldForceLiveFromStreamUrl(string? streamUrl)
+    {
+        if (string.IsNullOrWhiteSpace(streamUrl))
+        {
+            return false;
+        }
+
+        var lowerUrl = streamUrl.Trim().ToLowerInvariant();
+        if (lowerUrl.Contains("/movie/") ||
+            lowerUrl.Contains("/vod/") ||
+            lowerUrl.Contains("/series/") ||
+            lowerUrl.Contains("/tv_show/") ||
+            lowerUrl.Contains("type=vod") ||
+            lowerUrl.Contains("type=movie") ||
+            lowerUrl.Contains("type=series"))
+        {
+            return false;
+        }
+
+        var path = lowerUrl;
+        var q = path.IndexOf('?');
+        if (q >= 0)
+        {
+            path = path[..q];
+        }
+
+        return path.EndsWith(".m3u8") ||
+               path.EndsWith(".ts") ||
+               path.EndsWith(".m3u") ||
+               lowerUrl.Contains("format=m3u8") ||
+               lowerUrl.Contains("extension=m3u8") ||
+               lowerUrl.Contains("extension=ts");
     }
 
     public Task ClearRefreshBackupAsync(int playlistId)

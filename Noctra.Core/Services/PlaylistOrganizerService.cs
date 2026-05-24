@@ -123,6 +123,8 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
                                      groupName.Contains("Dizi", StringComparison.OrdinalIgnoreCase) ||
                                      groupName.Contains("Bölüm", StringComparison.OrdinalIgnoreCase);
 
+            var isMultiGenreGroup = groupName.Contains(';') || groupName.Contains(',');
+
             // "Koleksiyon" veya doğrudan dizi arşivi belirteçleri (BEIN DİZİLER vb. durumlar için)
             var isStrongSeriesCategory = groupName.Contains("DİZİLER", StringComparison.OrdinalIgnoreCase) || 
                                          groupName.Contains("KOLEKSİYON", StringComparison.OrdinalIgnoreCase);
@@ -142,7 +144,7 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
                                    (groupName.Contains(" - ", StringComparison.OrdinalIgnoreCase) && !hasSeriesMarker); // TR - SERIES gibi durumlar genellikle Live'dır.
 
             // Eğer çok güçlü bir Dizi kategorisi ismiyse (MAX DİZİLER gibi), Live keyword'leri olsa bile dizi kabul et.
-            var isSeriesGroupByName = hasSeriesMarker || isStrongSeriesCategory || (hasSeriesKeywords && !hasLiveKeywords);
+            var isSeriesGroupByName = hasSeriesMarker || isStrongSeriesCategory || (hasSeriesKeywords && !hasLiveKeywords && !isMultiGenreGroup);
 
             if (isSeriesGroupByName)
             {
@@ -263,6 +265,8 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
         // 1. Tip önceliği (Dizi/VOD, Live'dan daha değerlidir eğer bunlar duplicate ise)
         if (a.Type != b.Type)
         {
+            if (a.Type == ChannelType.Live && IsLinearStreamUrl(a.StreamUrl) && b.Type != ChannelType.Live) return true;
+            if (b.Type == ChannelType.Live && IsLinearStreamUrl(b.StreamUrl) && a.Type != ChannelType.Live) return false;
             if (a.Type == ChannelType.Series && b.Type != ChannelType.Series) return true;
             if (a.Type == ChannelType.VOD && b.Type == ChannelType.Live) return true;
         }
@@ -276,6 +280,40 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
 
         // 3. Tarih önceliği (Daha yeni eklenen veya güncellenen daha iyidir)
         return a.Id > b.Id;
+    }
+
+    private static bool IsLinearStreamUrl(string? streamUrl)
+    {
+        if (string.IsNullOrWhiteSpace(streamUrl))
+        {
+            return false;
+        }
+
+        var lowerUrl = streamUrl.Trim().ToLowerInvariant();
+        if (lowerUrl.Contains("/movie/") ||
+            lowerUrl.Contains("/vod/") ||
+            lowerUrl.Contains("/series/") ||
+            lowerUrl.Contains("/tv_show/") ||
+            lowerUrl.Contains("type=vod") ||
+            lowerUrl.Contains("type=movie") ||
+            lowerUrl.Contains("type=series"))
+        {
+            return false;
+        }
+
+        var path = lowerUrl;
+        var q = path.IndexOf('?');
+        if (q >= 0)
+        {
+            path = path[..q];
+        }
+
+        return path.EndsWith(".m3u8") ||
+               path.EndsWith(".ts") ||
+               path.EndsWith(".m3u") ||
+               lowerUrl.Contains("format=m3u8") ||
+               lowerUrl.Contains("extension=m3u8") ||
+               lowerUrl.Contains("extension=ts");
     }
 
     private static int GetQualityIndex(string name)

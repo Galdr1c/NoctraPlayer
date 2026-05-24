@@ -87,6 +87,18 @@ public class PlaylistOrganizerServiceTests
     }
 
     [Fact]
+    public void RemoveDuplicates_SameLinearStream_PrefersLiveOverVod()
+    {
+        var live = Live("MovieSmart Turk (576p)", "Movies", "https://example.com/moviesmart/master.m3u8?token=1");
+        var vod = Vod("MovieSmart Turk (576p)", "Movies", "https://example.com/moviesmart/master.m3u8?token=1");
+
+        var result = _sut.RemoveDuplicates(new List<Channel> { live, vod });
+
+        Assert.Single(result);
+        Assert.Equal(ChannelType.Live, result[0].Type);
+    }
+
+    [Fact]
     public void RemoveDuplicates_SeriesEpisodes_EachEpisodePreserved()
     {
         // Farklı bölümler → ayrı key → hepsi korunmalı
@@ -360,6 +372,22 @@ public class PlaylistOrganizerServiceTests
         _sut.FixChannelTypes(channels);
 
         Assert.All(channels, c => Assert.Equal(ChannelType.Series, c.Type));
+    }
+
+    [Theory]
+    [InlineData("Documentary;Series")]
+    [InlineData("Business;Series")]
+    public void FixChannelTypes_IptvOrgMultiGenreSeriesGroup_KeepsLinearChannelsLive(string groupName)
+    {
+        var channels = new List<Channel>
+        {
+            Live("GZT ()", groupName, "https://example.com/gzt/index.m3u8"),
+            Live("CNBC-e", groupName, "https://example.com/cnbce/master.m3u8")
+        };
+
+        _sut.FixChannelTypes(channels);
+
+        Assert.All(channels, c => Assert.Equal(ChannelType.Live, c.Type));
     }
 }
 

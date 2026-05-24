@@ -210,6 +210,55 @@ namespace Noctra.Tests
                 Assert.Equal("Kid Show", dbChannel.Name);
             }
         }
+
+        [Fact]
+        public async Task AddFromChannelsAsync_ExistingPlaylist_RepairsLinearMovieGroupChannelToLive()
+        {
+            // Arrange
+            var service = CreateService();
+            int playlistId;
+
+            using (var context = new AppDbContext(_options))
+            {
+                var playlist = new Playlist
+                {
+                    Name = "IPTV-org TR",
+                    Url = "https://iptv-org.github.io/iptv/countries/tr.m3u",
+                    IsActive = true,
+                    ChannelCount = 1,
+                    CreatedAt = DateTime.UtcNow,
+                    LastUpdated = DateTime.UtcNow
+                };
+
+                context.Playlists.Add(playlist);
+                await context.SaveChangesAsync();
+                playlistId = playlist.Id;
+
+                context.Channels.Add(new Channel
+                {
+                    PlaylistId = playlistId,
+                    Name = "MovieSmart Turk (576p)",
+                    GroupTitle = "Movies",
+                    StreamUrl = "https://example.com/moviesmart/master.m3u8?token=1",
+                    Type = ChannelType.VOD
+                });
+                await context.SaveChangesAsync();
+            }
+
+            // Act
+            await service.AddFromChannelsAsync(
+                "IPTV-org TR",
+                "https://iptv-org.github.io/iptv/countries/tr.m3u",
+                Array.Empty<Channel>());
+
+            // Assert
+            using (var context = new AppDbContext(_options))
+            {
+                var channel = await context.Channels.SingleAsync(c => c.PlaylistId == playlistId);
+                Assert.Equal(ChannelType.Live, channel.Type);
+                Assert.Equal("MovieSmart Turk (576p)", channel.Name);
+            }
+        }
         private PlaylistService CreateService()
         {
             return new PlaylistService(

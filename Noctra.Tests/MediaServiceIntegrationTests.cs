@@ -136,5 +136,46 @@ namespace Noctra.Tests
                 Assert.Equal(2, series.Seasons.First().Episodes.Count);
             }
         }
+
+        [Fact]
+        public async Task AggregateContentAsync_WhenNoSeriesChannels_RemovesStaleSeriesMetadata()
+        {
+            int playlistId = 4;
+            using (var context = new AppDbContext(_options))
+            {
+                context.Playlists.Add(new Playlist { Id = playlistId, Name = "Test 4", IsActive = true });
+                context.Series.Add(new Series
+                {
+                    PlaylistId = playlistId,
+                    Name = "e",
+                    Seasons = new List<Season>
+                    {
+                        new()
+                        {
+                            SeasonNumber = 1,
+                            Episodes = new List<Episode>
+                            {
+                                new() { Name = "e - Ep 1", EpisodeNumber = 1, StreamUrl = "https://example.com/cnbce/master.m3u8" }
+                            }
+                        }
+                    }
+                });
+                context.Channels.Add(new Channel
+                {
+                    PlaylistId = playlistId,
+                    Name = "CNBC-e",
+                    Type = ChannelType.Live,
+                    StreamUrl = "https://example.com/cnbce/master.m3u8"
+                });
+                await context.SaveChangesAsync();
+            }
+
+            await _service.AggregateContentAsync(playlistId);
+
+            using (var context = new AppDbContext(_options))
+            {
+                Assert.Equal(0, await context.Series.CountAsync(s => s.PlaylistId == playlistId));
+            }
+        }
     }
 }

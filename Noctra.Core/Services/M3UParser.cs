@@ -259,6 +259,9 @@ public partial class M3UParser : IM3UParser
         if (lowerUrl.Contains("/movie/") || lowerUrl.Contains("/vod/") || lowerUrl.Contains("type=vod") || lowerUrl.Contains("type=movie"))
             return ChannelType.VOD;
 
+        if (IsLinearStreamUrl(lowerUrl))
+            return ChannelType.Live;
+
         // 2. KESİN CANLI / DÖNGÜ KONTROLÜ (Grup ve İsim bazlı)
         // Eğer grupta veya isimde 7/24, Canlı, Spor belirtileri varsa VOD/Series kontrollerinden ÖNCE ele alalım.
         if (SeriesInfoParser.IsLiveSeries(name) || SeriesInfoParser.IsLiveSeries(groupTitle) ||
@@ -289,28 +292,6 @@ public partial class M3UParser : IM3UParser
             return ChannelType.Series;
         }
 
-        // Sonra VOD (Film) kontrolü
-        if (lowerGroup.Contains("movie") || 
-            lowerGroup.Contains("film") || 
-            lowerGroup.Contains("vod") || 
-            lowerGroup.Contains("cinema") || 
-            lowerGroup.Contains("sinema") ||
-            lowerGroup.Contains("yerli film") ||
-            lowerGroup.Contains("yabanci film") ||
-            lowerGroup.Contains("netflix") ||
-            lowerGroup.Contains("disney") ||
-            lowerGroup.Contains("amazon") ||
-            lowerGroup.Contains("hulu") ||
-            lowerGroup.Contains("apple tv") ||
-            lowerGroup.Contains("blutv") ||
-            lowerGroup.Contains("gain") ||
-            lowerGroup.Contains("exxen") ||
-            lowerGroup.Contains("sinevizyon") ||
-            lowerGroup.Contains("kino"))
-        {
-            return ChannelType.VOD;
-        }
-
         // 4. Başlık ve İsim Analizi
         // Dizi: S01E01, 1x01, Sezon 1, Bölüm 1
         if (SeriesInfoParser.IsSeries(name) ||
@@ -332,7 +313,35 @@ public partial class M3UParser : IM3UParser
             return ChannelType.VOD;
         }
 
-        if (lowerUrl.EndsWith(".m3u8") || lowerUrl.EndsWith(".ts"))
+        if (IsLinearStreamUrl(lowerUrl))
+        {
+            return ChannelType.Live;
+        }
+
+        // 6. Grup Başlığı Analizi - VOD (düşük öncelikli)
+        // NOT: Bu kontrol extension/URL pattern kontrollerinden SONRA gelir.
+        // "Movies" gibi grup isimleri iptv-org gibi kaynaklarda canlı kanal kategorisidir
+        // (örn. MovieSmart Turk, 24/7 film yayını yapan lineer kanal).
+        // Bu noktaya ulaşan URL'ler tanınmayan formattadır (proxy/stream sunucusu, extension'sız).
+        // Bilinen VOD URL pattern'i (/.mp4, /movie/, type=vod vb.) içermeyen URL'ler
+        // canlı yayın olarak sınıflandırılır.
+        if (lowerGroup.Contains("movie") || 
+            lowerGroup.Contains("film") || 
+            lowerGroup.Contains("vod") || 
+            lowerGroup.Contains("cinema") || 
+            lowerGroup.Contains("sinema") ||
+            lowerGroup.Contains("yerli film") ||
+            lowerGroup.Contains("yabanci film") ||
+            lowerGroup.Contains("netflix") ||
+            lowerGroup.Contains("disney") ||
+            lowerGroup.Contains("amazon") ||
+            lowerGroup.Contains("hulu") ||
+            lowerGroup.Contains("apple tv") ||
+            lowerGroup.Contains("blutv") ||
+            lowerGroup.Contains("gain") ||
+            lowerGroup.Contains("exxen") ||
+            lowerGroup.Contains("sinevizyon") ||
+            lowerGroup.Contains("kino"))
         {
             return ChannelType.Live;
         }
@@ -340,6 +349,22 @@ public partial class M3UParser : IM3UParser
         // Varsayılan
         return ChannelType.Live;
     }
+
+    private static bool IsLinearStreamUrl(string lowerUrl)
+    {
+        var path = lowerUrl;
+        var q = path.IndexOf('?');
+        if (q >= 0)
+            path = path[..q];
+
+        return path.EndsWith(".m3u8") ||
+               path.EndsWith(".ts") ||
+               path.EndsWith(".m3u") ||
+               lowerUrl.Contains("format=m3u8") ||
+               lowerUrl.Contains("extension=m3u8") ||
+               lowerUrl.Contains("extension=ts");
+    }
+
     [GeneratedRegex(@"(?:\b|\()((?:19|20)\d{2})(?:\b|\))", RegexOptions.IgnoreCase)]
     private static partial Regex VodPatternYear(); // (1990) veya 1990 gibi yılları yakalar
 
@@ -403,5 +428,4 @@ public partial class M3UParser : IM3UParser
 
     private List<Channel>? _lastPartialChannels;
 }
-
 

@@ -24,7 +24,11 @@ namespace Noctra.Tests
         [InlineData("#EXTINF:-1,Test Series\nhttp://test.com/series/user/pass/123.mp4", ChannelType.Series)]
         [InlineData("#EXTINF:-1 group-title=\"Live TV\",Channel 1\nhttp://example.com/1.ts", ChannelType.Live)]
         [InlineData("#EXTINF:-1 group-title=\"Movies\",Movie 1\nhttp://example.com/movie1.mkv", ChannelType.VOD)]
+        [InlineData("#EXTINF:-1 group-title=\"Movies\",MovieSmart Turk (576p)\nhttps://example.com/moviesmart/index.m3u8", ChannelType.Live)]
+        [InlineData("#EXTINF:-1 group-title=\"Movies\",MovieSmart Turk (576p)\nhttp://playhdnewjj.xyz:8080/recc121412/KVqfhtdJ2nQ7/174", ChannelType.Live)]
         [InlineData("#EXTINF:-1 group-title=\"Series\",Series 1\nhttp://example.com/series1.mp4", ChannelType.Series)]
+        [InlineData("#EXTINF:-1 group-title=\"Documentary;Series\",GZT ()\nhttps://example.com/gzt/index.m3u8", ChannelType.Live)]
+        [InlineData("#EXTINF:-1 group-title=\"Business;Series\",e\nhttps://example.com/cnbce/master.m3u8?token=1", ChannelType.Live)]
         [InlineData("#EXTINF:-1,Game of Thrones S01E01\nhttp://example.com/got.mp4", ChannelType.Series)]
         [InlineData("#EXTINF:-1,Breaking Bad 1x01\nhttp://example.com/bb.mp4", ChannelType.Series)]
         [InlineData("#EXTINF:-1,Avatar (2009) 1080p\nhttp://example.com/avatar.mp4", ChannelType.VOD)]
@@ -73,6 +77,24 @@ http://server.com/series/user/pass/303.mp4";
             var channel3 = channels[2];
             Assert.Contains("Friends", channel3.Name);
             Assert.Equal(ChannelType.Series, channel3.Type);
+        }
+
+        [Fact]
+        public async Task ParseAsync_IptvOrgLinearChannels_PreservesOriginalNames()
+        {
+            var m3u = @"#EXTM3U
+#EXTINF:-1 tvg-id=""CNBCe.tr"" tvg-name=""CNBC-e"" group-title=""Business;Series"",CNBC-e
+https://example.com/cnbce/master.m3u8
+#EXTINF:-1 tvg-id=""GZT.tr"" tvg-name=""GZT ()"" group-title=""Documentary;Series"",GZT ()
+https://example.com/gzt/index.m3u8";
+
+            var channels = await _parser.ParseAsync(m3u);
+
+            Assert.Equal(2, channels.Count);
+            Assert.Equal("CNBC-e", channels[0].Name);
+            Assert.Equal(ChannelType.Live, channels[0].Type);
+            Assert.Equal("GZT ()", channels[1].Name);
+            Assert.Equal(ChannelType.Live, channels[1].Type);
         }
 
         [Fact]

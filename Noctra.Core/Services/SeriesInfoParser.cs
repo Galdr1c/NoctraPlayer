@@ -578,7 +578,7 @@ public static partial class SeriesInfoParser
     private static partial Regex SymbolsRegex();
 
     // Phase 1: Country prefixes like "TR | ", "EN.", "DE:" and bracketed tags like "(FR-)", "(S|UK)", "[VIP]", "|TR|", "{HD}"
-    [GeneratedRegex(@"^\s*(?:(?:[\[\(\{\|][\w\s\|\-\.]{1,10}[\]\)\}\|]\s*)+|(?:[a-z]{2,5}\s*[\-\|:>\.]\s*)+)+", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^\s*(?:(?:[\[\(\{\|]\s*(?:TR|EN|UK|US|EU|CA|AU|DE|FR|ES|IT|PT|NL|AL|CL|AR|RU|PL|GR|SE|DK|VIP|HD|FHD|UHD|4K|S\|[A-Z]{2})\s*[\-\|:>\.]?\s*[\]\)\}\|]\s*)+|(?:(?:TR|EN|UK|US|EU|CA|AU|DE|FR|ES|IT|PT|NL|AL|CL|AR|RU|PL|GR|SE|DK)\s*[\-\|:>\.]\s*)+)+", RegexOptions.IgnoreCase)]
     private static partial Regex CountryPrefixRegex();
 
     [GeneratedRegex(@"^\s*(?:[^|]+?\s*\|\s*)", RegexOptions.IgnoreCase)]

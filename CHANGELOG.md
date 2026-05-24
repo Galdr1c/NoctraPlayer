@@ -8,6 +8,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### IPTV-org Canlı Kanal Türü Düzeltmesi (2026-05-24)
+- [Düzeltildi] **Movies Grup-Öncelik Sıralaması**:  içeren ancak URL'i HLS/TS extension'ı taşımayan (ör. proxy/stream sunucusu) canlı kanallar ( gibi) artık VOD yerine Live olarak sınıflanır. VOD grup adı kontrolü (, ,  vb.) extension/URL pattern kontrollerinden sonraya alındı.
+- [Düzeltildi] **Canlı Kanalların Film/Dizi Sayfalarında Görünmesi**: `iptv-org` ülke M3U listelerinde `group-title="Movies"` veya `Documentary;Series` gibi janr etiketleri içerik tipi sanılıp canlı kanallar VOD/Series olarak kaydedilebiliyordu. HLS/TS stream URL'leri artık bu janr etiketlerinden önce canlı yayın olarak sınıflanır.
+- [Düzeltildi] **Multi-Genre Series Etiketi**: `Business;Series`, `Documentary;Series` gibi çoklu janr gruplarında geçen `Series` kelimesi tek başına dizi arşivi kabul edilmez; lineer kanallar canlı kalır.
+- [Düzeltildi] **Kanal Adı Koruması**: `CNBC-e` adındaki `CNBC-` kısmı artık ülke prefix'i sanılıp silinmez; `GZT ()` gibi iptv-org kanal adları M3U'da geldiği şekilde korunur.
+- [Düzeltildi] **Eski Yanlış VOD Tipi Onarımı**: Önceden `Movies` grubu nedeniyle VOD kaydedilmiş HLS/TS canlı yayınlar (`MovieSmart Turk` gibi), aynı playlist tekrar açıldığında otomatik Live tipine onarılır.
+- [Düzeltildi] **Eski Hatalı Series Metadata Temizliği**: Bir playlist yenilendikten sonra artık Series tipinde kanal kalmadıysa, önceki hatalı sınıflandırmadan kalan Series/episode metadata kayıtları temizlenir.
+
 ### EPG GroupTitle Dil İzolasyonu (2026-05-24)
 - [Düzeltildi] **Farklı Dil EPG Kaynağının Yanlış Kanala Yazılması**: EPG kaynağından açık ülke kodu tespit edildiğinde (`de.xml`, `xmltv-tr`, `germany` vb.), eşleşen kanalın `GroupTitle` ülke kodu farklıysa program kaydı o kanala yazılmaz.
 - [Geliştirildi] **Genişletilmiş Ülke/Dil Token Kapsamı**: `GroupTitle` ve EPG URL tespitinde Avrupa, Amerika, Asya ve Orta Doğu için daha fazla ülke kodu/alias desteklenir; `España` ve `Österreich` gibi diakritikli isimler normalize edilir. Benzer dil aileleri ülke bazında ayrı tutulur (`PT`/`BR`, `DE`/`AT`/`CH`).

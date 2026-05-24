@@ -145,8 +145,20 @@ public class SeriesInfoParserTests
     [InlineData("(TR-) A.B.İ.", "A.B.İ")]
     [InlineData("TR. A.B.İ.", "A.B.İ")]
     [InlineData("US | A.B.İ.", "A.B.İ")]
+    [InlineData("CNBC-e", "CNBC-e")]
+    [InlineData("GZT ()", "GZT ()")]
     public void CleanSeriesName_PreservesAcronymsWithDots(string title, string expected)
     {
         Assert.Equal(expected, SeriesInfoParser.CleanSeriesName(title));
+    }
+
+    [Fact]
+    public void Parse_CnbcE_DoesNotStripCnbcPrefix()
+    {
+        var result = SeriesInfoParser.Parse("CNBC-e");
+
+        Assert.Equal("CNBC-e", result.SeriesName);
+        Assert.Equal(0, result.Season);
+        Assert.Equal(0, result.Episode);
     }
 }

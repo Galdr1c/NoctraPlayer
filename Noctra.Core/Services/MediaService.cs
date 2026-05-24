@@ -38,7 +38,20 @@ public partial class MediaService : IMediaService
                 .Where(c => c.PlaylistId == playlistId && c.Type == ChannelType.Series)
                 .ToListAsync(cancellationToken);
 
-            if (!channels.Any()) return;
+            if (!channels.Any())
+            {
+                var staleSeries = await context.Series
+                    .Where(s => s.PlaylistId == playlistId)
+                    .ToListAsync(cancellationToken);
+
+                if (staleSeries.Count > 0)
+                {
+                    context.Series.RemoveRange(staleSeries);
+                    await context.SaveChangesAsync(cancellationToken);
+                }
+
+                return;
+            }
 
             // Load existing series graph — needed for accurate change tracking of existing entities
             var existingSeries = await context.Series
