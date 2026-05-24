@@ -8,6 +8,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### EPG Ülke Eşleştirme Regression Düzeltmesi (2026-05-24)
+- [Düzeltildi] **DE Kanalların TR EPG ile Eşleşmesi**: `DE: Nicktoons [SAT] [VIP]` gibi ülke prefix'i ve teknik bracket etiketleri birlikte bulunan kanal adlarında `[SAT]`/`[VIP]` erken çıkışı yüzünden `DE:` prefix'inin atlanması engellendi.
+- [Düzeltildi] **EPG Normalize Noise Listesi**: Kanal adı normalizasyonunda yalnızca `tr` değil, desteklenen ülke kodları ve `sat` teknik etiketi de temizlenir. Ülke bilgisi artık kanal adının içinde değil, sadece `{CountryCode}:{NormalizedName}` key prefix'inde kalır.
+- [Test] **Cross-Country Regression Testleri**: `DE: Nicktoons [SAT] [VIP]` senaryosu için ülke tespiti, temiz EPG key üretimi ve `TR:nicktoons` ile `DE:nicktoons` izolasyonu test edildi.
+
 ### Profil ve İndirme Klasörü Temizliği (2026-05-23)
 - [Düzeltildi] **Silinen Profil Ayar Dosyaları**: Profil silindiğinde ve profil listesi yüklendiğinde artık veritabanında olmayan profillere ait `Settings/profile_*.json` ve eski `settings_profile_*.json` dosyaları otomatik temizlenir.
 - [Düzeltildi] **Silinen Profil İndirmeleri**: Profil silme işlemi artık o profile ait indirme kayıtlarını, dosyalarını ve boş kalan `Series`/`Movies` klasörlerini temizler.

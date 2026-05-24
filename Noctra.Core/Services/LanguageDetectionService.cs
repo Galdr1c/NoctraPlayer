@@ -302,10 +302,18 @@ public class LanguageDetectionService
             {
                 if (match.Groups.Count > 1)
                 {
-                    results.Add(match.Groups[1].Value.ToUpperInvariant());
+                    var token = match.Groups[1].Value.ToUpperInvariant();
+                    if (CountryCodeAliases.ContainsKey(token))
+                    {
+                        results.Add(token);
+                    }
                 }
             }
-            return results;
+
+            if (results.Count > 0)
+            {
+                return results;
+            }
         }
 
         var chars = processedName.Select(ch => char.IsLetterOrDigit(ch) ? ch : ' ').ToArray();

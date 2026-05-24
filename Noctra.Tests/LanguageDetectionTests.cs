@@ -108,6 +108,10 @@ namespace Noctra.Tests
         [InlineData("TR.CNN", "TR")]
         [InlineData("TR NOW HD", "TR")]
         [InlineData("|DE|NOW HD", "DE")]
+        [InlineData("DE: nickelodeon [SAT]", "DE")]
+        [InlineData("DE: Nicktoons [SAT] [VIP]", "DE")]
+        [InlineData("DE: Super RTL [SAT] [VIP]", "DE")]
+        [InlineData("TR: Kanal D [HD]", "TR")]
         [InlineData("【TR】Kanal D", "TR")]
         [InlineData("〔DE〕RTL", "DE")]
         [InlineData("Random Channel", "TR")] // Fallback

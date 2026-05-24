@@ -145,13 +145,12 @@ public class EpgMatchingTests
     [Fact]
     public void GetNameVariants_WithCountryPrefix_PreservesCountryInKey()
     {
-        // "TR - Kanal D" → "kanald" varyantı olmalı (TR noise'dan çıkarılır)
-        // Ama "FR - Kanal D" → "frkanald" olmalı (FR noise'da değil)
+        // Country code stays in the key prefix, not inside the normalized channel name.
         var trVariants = GetNameVariants("TR - Kanal D");
-        Assert.Contains(trVariants, v => v.Contains("kanald"));
+        Assert.Contains("TR:kanald", trVariants);
 
         var frVariants = GetNameVariants("FR - Kanal D");
-        Assert.Contains(frVariants, v => v.StartsWith("FR:fr", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("FR:kanald", frVariants);
     }
 
     [Fact]
@@ -541,17 +540,24 @@ public class EpgCountryAwareMatchingTests
             .Cast<string>().ToList();
     }
 
-    // ── NormalizeName: Ülke kodu ayrımı ──────────────────────────────────────
+    private static List<string>? ResolveMappedChannelIds(string normalizedName, Dictionary<string, List<string>> channelMap)
+    {
+        var m = _epgType.GetMethod("ResolveMappedChannelIds",
+            BindingFlags.NonPublic | BindingFlags.Static)!;
+        return (List<string>?)m.Invoke(null, new object[] { normalizedName, channelMap });
+    }
+
+    // ── NormalizeName: ülke kodlarını kanal adından temizler ──────────────────
 
     [Theory]
-    [InlineData("FR: beIN SPORTS 1", "TR: beIN SPORTS 1")]
-    [InlineData("DE: Sport1", "TR: Sport1")]
-    [InlineData("UK: Sky Sports 1", "TR: Sky Sports 1")]
-    public void NormalizeName_DifferentCountries_ProduceDifferentKeys(string channelA, string channelB)
+    [InlineData("FR: beIN SPORTS 1", "beinsports1")]
+    [InlineData("DE: Sport1", "sport1")]
+    [InlineData("UK: Sky Sports 1", "skysports1")]
+    [InlineData("DE: Nicktoons [SAT] [VIP]", "nicktoons")]
+    public void NormalizeName_CountryAndTechnicalTags_Stripped(string channelName, string expected)
     {
-        var keyA = NormalizeName(channelA);
-        var keyB = NormalizeName(channelB);
-        Assert.NotEqual(keyA, keyB);
+        var key = NormalizeName(channelName);
+        Assert.Equal(expected, key);
     }
 
     [Theory]
@@ -559,12 +565,11 @@ public class EpgCountryAwareMatchingTests
     [InlineData("FR: beIN SPORTS 2")]
     [InlineData("DE: Sport1")]
     [InlineData("UK: Sky Sports 1")]
-    public void NormalizeName_NonTRCountry_KeyContainsCountryCode(string channelName)
+    public void NormalizeName_NonTRCountry_DoesNotKeepCountryCode(string channelName)
     {
         var key = NormalizeName(channelName);
-        // İlk 2 karakter ülke kodu olmalı (fr, de, uk vb.)
         var expectedPrefix = channelName[..2].ToLowerInvariant();
-        Assert.StartsWith(expectedPrefix, key);
+        Assert.DoesNotContain(expectedPrefix, key, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -595,6 +600,30 @@ public class EpgCountryAwareMatchingTests
         var trKey = NormalizeName("RTL");
 
         Assert.DoesNotContain(trKey, deVariants);
+    }
+
+    [Fact]
+    public void GetNameVariants_DESatVipSuffix_UsesDECountryAndCleanName()
+    {
+        var deVariants = GetNameVariants("DE: Nicktoons [SAT] [VIP]");
+
+        Assert.Contains("DE:nicktoons", deVariants);
+        Assert.DoesNotContain(deVariants, v => v.StartsWith("TR:", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(deVariants, v => v.Contains("denicktoons", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ResolveMappedChannelIds_TurkishNicktoons_DoesNotMatchDESatVipChannel()
+    {
+        var channelMap = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var variant in GetNameVariants("DE: Nicktoons [SAT] [VIP]"))
+        {
+            channelMap[variant] = new List<string> { "de-nicktoons" };
+        }
+
+        var result = ResolveMappedChannelIds("TR:" + NormalizeName("Nicktoons"), channelMap);
+
+        Assert.Null(result);
     }
 
     [Theory]
