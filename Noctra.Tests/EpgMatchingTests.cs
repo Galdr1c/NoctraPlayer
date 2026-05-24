@@ -548,6 +548,33 @@ public class EpgCountryAwareMatchingTests
         return (List<string>?)m.Invoke(null, new object[] { normalizedName, channelMap });
     }
 
+    private static string? DetectExplicitCountryCode(string? value)
+    {
+        var m = _epgType.GetMethod("DetectExplicitCountryCode",
+            BindingFlags.NonPublic | BindingFlags.Static)!;
+        return (string?)m.Invoke(null, new object?[] { value });
+    }
+
+    private static List<string>? FilterIdsByGroupCountry(
+        List<string>? ids,
+        Dictionary<string, string> internalIdToGroupCountry,
+        string? sourceCountryCode)
+    {
+        var m = _epgType.GetMethod("FilterIdsByGroupCountry",
+            BindingFlags.NonPublic | BindingFlags.Static)!;
+        return (List<string>?)m.Invoke(null, new object?[] { ids, internalIdToGroupCountry, sourceCountryCode });
+    }
+
+    private static bool IsAllowedPrimaryGroupCountryCompatible(
+        string primaryId,
+        string? sourceCountryCode,
+        Dictionary<string, HashSet<string>> groupCountriesByPrimaryId)
+    {
+        var m = _epgType.GetMethod("IsAllowedPrimaryGroupCountryCompatible",
+            BindingFlags.NonPublic | BindingFlags.Static)!;
+        return (bool)m.Invoke(null, new object?[] { primaryId, sourceCountryCode, groupCountriesByPrimaryId })!;
+    }
+
     private static bool HasEquivalentOverlappingProgram(EpgProgram program, IEnumerable<EpgProgram> candidates)
     {
         var m = _epgType.GetMethod("HasEquivalentOverlappingProgram",
@@ -573,6 +600,101 @@ public class EpgCountryAwareMatchingTests
     {
         var key = NormalizeName(channelName);
         Assert.Equal(expected, key);
+    }
+
+    [Theory]
+    [InlineData("DE ✅ ÇOCUK", "DE")]
+    [InlineData("TR | ÇOCUK", "TR")]
+    [InlineData("https://example.com/guides/de.xml", "DE")]
+    [InlineData("https://example.com/xmltv-tr.xml", "TR")]
+    [InlineData("https://example.com/germany/guide.xml.gz", "DE")]
+    [InlineData("PL | DZIECI", "PL")]
+    [InlineData("RO: Copii", "RO")]
+    [InlineData("BG / Kids", "BG")]
+    [InlineData("https://example.com/epg/polska.xml.gz", "PL")]
+    [InlineData("https://example.com/xmltv-espana.xml", "ES")]
+    [InlineData("https://example.com/österreich/guide.xml", "AT")]
+    [InlineData("https://example.com/czechia/guide.xml", "CZ")]
+    [InlineData("https://example.com/brazil/guide.xml", "BR")]
+    [InlineData("https://example.com/portugal/guide.xml", "PT")]
+    public void DetectExplicitCountryCode_GroupTitleAndEpgUrl_ReturnsCountry(string value, string expected)
+    {
+        Assert.Equal(expected, DetectExplicitCountryCode(value));
+    }
+
+    [Fact]
+    public void FilterIdsByGroupCountry_GermanSource_DropsTurkishGroupChannel()
+    {
+        var ids = new List<string> { "tr-cartoon", "de-cartoon" };
+        var groupCountries = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["tr-cartoon"] = "TR",
+            ["de-cartoon"] = "DE"
+        };
+
+        var result = FilterIdsByGroupCountry(ids, groupCountries, "DE");
+
+        Assert.NotNull(result);
+        Assert.Equal(new[] { "de-cartoon" }, result);
+    }
+
+    [Fact]
+    public void FilterIdsByGroupCountry_PortugueseSource_DoesNotMatchBrazilianGroup()
+    {
+        var ids = new List<string> { "pt-sport", "br-sport" };
+        var groupCountries = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["pt-sport"] = "PT",
+            ["br-sport"] = "BR"
+        };
+
+        var result = FilterIdsByGroupCountry(ids, groupCountries, "PT");
+
+        Assert.NotNull(result);
+        Assert.Equal(new[] { "pt-sport" }, result);
+    }
+
+    [Fact]
+    public void FilterIdsByGroupCountry_AustrianSource_DoesNotMatchGermanOrSwissGroup()
+    {
+        var ids = new List<string> { "de-rtl", "at-rtl", "ch-rtl" };
+        var groupCountries = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["de-rtl"] = "DE",
+            ["at-rtl"] = "AT",
+            ["ch-rtl"] = "CH"
+        };
+
+        var result = FilterIdsByGroupCountry(ids, groupCountries, "AT");
+
+        Assert.NotNull(result);
+        Assert.Equal(new[] { "at-rtl" }, result);
+    }
+
+    [Fact]
+    public void FilterIdsByGroupCountry_UnknownSource_KeepsExistingBehavior()
+    {
+        var ids = new List<string> { "tr-cartoon", "de-cartoon" };
+        var groupCountries = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["tr-cartoon"] = "TR",
+            ["de-cartoon"] = "DE"
+        };
+
+        var result = FilterIdsByGroupCountry(ids, groupCountries, null);
+
+        Assert.Same(ids, result);
+    }
+
+    [Fact]
+    public void IsAllowedPrimaryGroupCountryCompatible_GermanSourceRejectsTurkishGroupTvgId()
+    {
+        var groupCountries = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["cartoonnetwork"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "TR" }
+        };
+
+        Assert.False(IsAllowedPrimaryGroupCountryCompatible("cartoonnetwork", "DE", groupCountries));
     }
 
     [Theory]

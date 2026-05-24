@@ -8,6 +8,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### EPG GroupTitle Dil İzolasyonu (2026-05-24)
+- [Düzeltildi] **Farklı Dil EPG Kaynağının Yanlış Kanala Yazılması**: EPG kaynağından açık ülke kodu tespit edildiğinde (`de.xml`, `xmltv-tr`, `germany` vb.), eşleşen kanalın `GroupTitle` ülke kodu farklıysa program kaydı o kanala yazılmaz.
+- [Geliştirildi] **Genişletilmiş Ülke/Dil Token Kapsamı**: `GroupTitle` ve EPG URL tespitinde Avrupa, Amerika, Asya ve Orta Doğu için daha fazla ülke kodu/alias desteklenir; `España` ve `Österreich` gibi diakritikli isimler normalize edilir. Benzer dil aileleri ülke bazında ayrı tutulur (`PT`/`BR`, `DE`/`AT`/`CH`).
+- [Test] **GroupTitle Ülke Filtresi Regression Testleri**: `DE` kaynak verisinin `TR` grup kanalına yazılmaması, bilinmeyen kaynaklarda eski davranışın korunması ve primary `tvg-id` fallback'inin ülke uyumsuzluğunda reddedilmesi test edildi.
+
 ### EPG Kısa Program Blokları UI Düzeltmesi (2026-05-24)
 - [Düzeltildi] **Kısa Programların Üst Üste Binmesi**: EPG timeline'da 5-10 dakikalık programların 24px minimum genişliğe zorlanması kaldırıldı; blok genişliği artık gerçek zaman ölçeğine yakın minimum 2px ile hesaplanır.
 - [Düzeltildi] **Şerit/Kompakt/Okunabilir Render Katmanları**: Çok kısa programlar ince şerit, kısa programlar yazısız kompakt blok, yeterli genişlikteki programlar başlıklı blok olarak çizilir. Böylece çizgi film/film kanallarındaki “barcode” görünümü ve yazı karmaşası azaltıldı.

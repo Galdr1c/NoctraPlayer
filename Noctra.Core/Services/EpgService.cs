@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Globalization;
 using System.Net.Http;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Noctra.Data;
@@ -113,7 +114,10 @@ public class EpgService : IEpgService
             var channelMap = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
             var xmlChannelIdToDbTvgIds = new Dictionary<string, List<string>>();
             var tvgIdToInternalIds = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            var internalIdToGroupCountry = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var allowedPrimaryIdGroupCountries = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
             var allowedPrimaryIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var sourceCountryCode = DetectExplicitCountryCode(epgUrl);
 
             if (channelsForMapping != null)
             {
@@ -121,9 +125,16 @@ public class EpgService : IEpgService
                 foreach (var channel in channelsForMapping)
                 {
                     var idStr = channel.Id.ToString();
+                    var groupCountryCode = DetectExplicitCountryCode(channel.GroupTitle);
+                    if (!string.IsNullOrWhiteSpace(groupCountryCode))
+                    {
+                        internalIdToGroupCountry[idStr] = groupCountryCode;
+                    }
+
                     if (!string.IsNullOrWhiteSpace(channel.TvgId))
                     {
                         allowedPrimaryIds.Add(channel.TvgId!);
+                        AddAllowedPrimaryGroupCountry(allowedPrimaryIdGroupCountries, channel.TvgId!, groupCountryCode);
                         if (!tvgIdToInternalIds.TryGetValue(channel.TvgId!, out var list))
                         {
                             list = new List<string>();
@@ -133,6 +144,7 @@ public class EpgService : IEpgService
                     }
 
                     allowedPrimaryIds.Add(idStr);
+                    AddAllowedPrimaryGroupCountry(allowedPrimaryIdGroupCountries, idStr, groupCountryCode);
 
                     foreach (var variant in GetNameVariants(channel.Name))
                     {
@@ -206,6 +218,7 @@ public class EpgService : IEpgService
                                             foreach (var variant in GetNameVariants(displayName))
                                             {
                                                 var dbChannelIds = ResolveMappedChannelIds(variant, channelMap);
+                                                dbChannelIds = FilterIdsByGroupCountry(dbChannelIds, internalIdToGroupCountry, sourceCountryCode);
                                                 if (dbChannelIds != null && dbChannelIds.Any())
                                                 {
                                                     if (!xmlChannelIdToDbTvgIds.TryGetValue(effectiveXmlId!, out var targetList))
@@ -227,6 +240,12 @@ public class EpgService : IEpgService
                                     // and it matches a TvgId directly in our database
                                     if (!string.IsNullOrWhiteSpace(effectiveXmlId) && tvgIdToInternalIds.TryGetValue(effectiveXmlId, out var byTvgIds))
                                     {
+                                        byTvgIds = FilterIdsByGroupCountry(byTvgIds, internalIdToGroupCountry, sourceCountryCode) ?? [];
+                                        if (byTvgIds.Count == 0)
+                                        {
+                                            continue;
+                                        }
+
                                         if (!xmlChannelIdToDbTvgIds.TryGetValue(effectiveXmlId, out var targetList))
                                         {
                                             targetList = new List<string>();
@@ -258,6 +277,12 @@ public class EpgService : IEpgService
                                 {
                                     continue;
                                 }
+
+                                if (!IsAllowedPrimaryGroupCountryCompatible(channel, sourceCountryCode, allowedPrimaryIdGroupCountries))
+                                {
+                                    continue;
+                                }
+
                                 targetIds.Add(channel);
                             }
                             else
@@ -760,10 +785,10 @@ public class EpgService : IEpgService
             "1080p", "720p", "480p", "2160p", "1080", "720", "576", "live", "vip", "premium",
             "backup", "bkp", "multi", "sub", "ace", "plus", "extra", "max", "sat",
             "turkey", "turkiye", "türkiye", "tr", "tur",
-            "de", "ger", "germany", "deutschland",
-            "gb", "uk", "en", "england",
-            "us", "usa",
-            "fr", "fra", "france",
+            "de", "ger", "germany", "deutschland", "at", "aut", "austria", "osterreich",
+            "gb", "uk", "en", "eng", "england", "britain",
+            "us", "usa", "america", "ca", "can", "canada", "au", "aus", "australia", "nz", "nzl", "zealand",
+            "fr", "fra", "france", "be", "bel", "belgium",
             "it", "ita", "italy", "italia",
             "es", "esp", "spain", "espana",
             "mx", "mex", "mexico",
@@ -772,12 +797,33 @@ public class EpgService : IEpgService
             "pt", "portugal",
             "nl", "nld", "netherlands",
             "ru", "rus", "russia",
+            "pl", "pol", "poland", "polska",
+            "ro", "rom", "romania",
+            "bg", "bgr", "bulgaria",
+            "cz", "cze", "czech", "czechia",
+            "sk", "svk", "slovakia",
+            "hr", "hrv", "croatia",
+            "rs", "srb", "serbia",
+            "si", "svn", "slovenia",
+            "ba", "bih", "bosnia",
+            "mk", "mkd", "macedonia",
+            "ua", "ukr", "ukraine",
+            "by", "blr", "belarus",
             "al", "alb", "albania",
             "ge", "geo", "georgia",
             "gr", "gre", "greece",
             "hu", "hun", "hungary",
+            "no", "nor", "norway",
+            "dk", "dnk", "denmark",
+            "fi", "fin", "finland",
+            "ie", "irl", "ireland",
             "hk", "se", "swe", "sweden",
             "ch", "che", "switzerland",
+            "in", "ind", "india", "pk", "pak", "pakistan",
+            "id", "idn", "indonesia", "my", "mys", "malaysia", "th", "tha", "thailand", "ph", "phl", "philippines",
+            "jp", "jpn", "japan", "kr", "kor", "korea", "cn", "chn", "china", "tw", "twn", "taiwan",
+            "il", "isr", "israel", "ir", "irn", "iran", "sa", "sau", "saudi", "ae", "uae", "qa", "qat", "qatar",
+            "eg", "egy", "egypt", "ma", "mar", "morocco", "tn", "tun", "tunisia",
             "yayin", "kesintisiz",
         };
 
@@ -787,6 +833,159 @@ public class EpgService : IEpgService
 
         return string.Concat(tokens);
     }
+
+    private static void AddAllowedPrimaryGroupCountry(
+        Dictionary<string, HashSet<string>> groupCountriesByPrimaryId,
+        string primaryId,
+        string? groupCountryCode)
+    {
+        if (string.IsNullOrWhiteSpace(primaryId) || string.IsNullOrWhiteSpace(groupCountryCode))
+            return;
+
+        if (!groupCountriesByPrimaryId.TryGetValue(primaryId, out var countries))
+        {
+            countries = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            groupCountriesByPrimaryId[primaryId] = countries;
+        }
+
+        countries.Add(groupCountryCode);
+    }
+
+    private static List<string>? FilterIdsByGroupCountry(
+        List<string>? ids,
+        Dictionary<string, string> internalIdToGroupCountry,
+        string? sourceCountryCode)
+    {
+        var sourceCountry = NormalizeExplicitCountryCode(sourceCountryCode);
+        if (ids == null || ids.Count == 0 || string.IsNullOrWhiteSpace(sourceCountry))
+            return ids;
+
+        var filtered = ids
+            .Where(id =>
+                !internalIdToGroupCountry.TryGetValue(id, out var groupCountry) ||
+                string.Equals(groupCountry, sourceCountry, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        return filtered.Count == 0 ? null : filtered;
+    }
+
+    private static bool IsAllowedPrimaryGroupCountryCompatible(
+        string primaryId,
+        string? sourceCountryCode,
+        Dictionary<string, HashSet<string>> groupCountriesByPrimaryId)
+    {
+        var sourceCountry = NormalizeExplicitCountryCode(sourceCountryCode);
+        if (string.IsNullOrWhiteSpace(primaryId) || string.IsNullOrWhiteSpace(sourceCountry))
+            return true;
+
+        if (!groupCountriesByPrimaryId.TryGetValue(primaryId, out var countries) || countries.Count == 0)
+            return true;
+
+        return countries.Contains(sourceCountry);
+    }
+
+    private static string? DetectExplicitCountryCode(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        var normalizedValue = RemoveDiacritics(value);
+        var tokens = System.Text.RegularExpressions.Regex
+            .Split(normalizedValue, @"[^A-Za-z]+")
+            .Where(token => !string.IsNullOrWhiteSpace(token));
+
+        foreach (var token in tokens)
+        {
+            var countryCode = NormalizeExplicitCountryCode(token);
+            if (!string.IsNullOrWhiteSpace(countryCode))
+                return countryCode;
+        }
+
+        return null;
+    }
+
+    private static string? NormalizeExplicitCountryCode(string? token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            return null;
+
+        return RemoveDiacritics(token).Trim().ToUpperInvariant() switch
+        {
+            "TR" or "TUR" or "TURKEY" or "TURKIYE" => "TR",
+            "DE" or "GER" or "GERMANY" or "DEUTSCHLAND" => "DE",
+            "AT" or "AUT" or "AUSTRIA" or "OSTERREICH" => "AT",
+            "GB" or "UK" or "EN" or "ENG" or "ENGLAND" or "BRITAIN" => "GB",
+            "US" or "USA" or "AMERICA" => "US",
+            "CA" or "CAN" or "CANADA" => "CA",
+            "AU" or "AUS" or "AUSTRALIA" => "AU",
+            "NZ" or "NZL" or "ZEALAND" => "NZ",
+            "FR" or "FRA" or "FRANCE" => "FR",
+            "BE" or "BEL" or "BELGIUM" => "BE",
+            "IT" or "ITA" or "ITALY" or "ITALIA" => "IT",
+            "ES" or "ESP" or "SPAIN" or "ESPANA" => "ES",
+            "NL" or "NLD" or "NETHERLANDS" => "NL",
+            "RU" or "RUS" or "RUSSIA" => "RU",
+            "PL" or "POL" or "POLAND" or "POLSKA" => "PL",
+            "RO" or "ROM" or "ROMANIA" => "RO",
+            "BG" or "BGR" or "BULGARIA" => "BG",
+            "CZ" or "CZE" or "CZECH" or "CZECHIA" => "CZ",
+            "SK" or "SVK" or "SLOVAKIA" => "SK",
+            "HR" or "HRV" or "CROATIA" => "HR",
+            "RS" or "SRB" or "SERBIA" => "RS",
+            "SI" or "SVN" or "SLOVENIA" => "SI",
+            "BA" or "BIH" or "BOSNIA" => "BA",
+            "MK" or "MKD" or "MACEDONIA" => "MK",
+            "UA" or "UKR" or "UKRAINE" => "UA",
+            "BY" or "BLR" or "BELARUS" => "BY",
+            "PT" or "PRT" or "PORTUGAL" => "PT",
+            "BR" or "BRA" or "BRAZIL" => "BR",
+            "MX" or "MEX" or "MEXICO" => "MX",
+            "AR" or "ARG" or "ARGENTINA" => "AR",
+            "AL" or "ALB" or "ALBANIA" => "AL",
+            "GE" or "GEO" or "GEORGIA" => "GE",
+            "GR" or "GRE" or "GREECE" => "GR",
+            "HU" or "HUN" or "HUNGARY" => "HU",
+            "NO" or "NOR" or "NORWAY" => "NO",
+            "DK" or "DNK" or "DENMARK" => "DK",
+            "FI" or "FIN" or "FINLAND" => "FI",
+            "IE" or "IRL" or "IRELAND" => "IE",
+            "HK" => "HK",
+            "SE" or "SWE" or "SWEDEN" => "SE",
+            "CH" or "CHE" or "SWITZERLAND" => "CH",
+            "IN" or "IND" or "INDIA" => "IN",
+            "PK" or "PAK" or "PAKISTAN" => "PK",
+            "ID" or "IDN" or "INDONESIA" => "ID",
+            "MY" or "MYS" or "MALAYSIA" => "MY",
+            "TH" or "THA" or "THAILAND" => "TH",
+            "PH" or "PHL" or "PHILIPPINES" => "PH",
+            "JP" or "JPN" or "JAPAN" => "JP",
+            "KR" or "KOR" or "KOREA" => "KR",
+            "CN" or "CHN" or "CHINA" => "CN",
+            "TW" or "TWN" or "TAIWAN" => "TW",
+            "IL" or "ISR" or "ISRAEL" => "IL",
+            "IR" or "IRN" or "IRAN" => "IR",
+            "SA" or "SAU" or "SAUDI" => "SA",
+            "AE" or "UAE" => "AE",
+            "QA" or "QAT" or "QATAR" => "QA",
+            "EG" or "EGY" or "EGYPT" => "EG",
+            "MA" or "MAR" or "MOROCCO" => "MA",
+            "TN" or "TUN" or "TUNISIA" => "TN",
+            _ => null
+        };
+    }
+
+    private static string RemoveDiacritics(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return string.Empty;
+
+        var normalized = value.Normalize(NormalizationForm.FormD);
+        var chars = normalized
+            .Where(ch => CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark)
+            .ToArray();
+        return new string(chars).Normalize(NormalizationForm.FormC);
+    }
+
     private static List<string>? ResolveMappedChannelIds(string normalizedDisplayName, Dictionary<string, List<string>> channelMap)
     {
         if (string.IsNullOrWhiteSpace(normalizedDisplayName) || normalizedDisplayName.Length < 3)
