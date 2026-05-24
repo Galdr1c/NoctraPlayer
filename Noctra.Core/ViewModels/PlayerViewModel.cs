@@ -1121,7 +1121,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
                 programs ??= [];
 
-                var blocks = programs
+                var displayPrograms = MergeAdjacentSameTitlePrograms(programs);
+
+                var blocks = displayPrograms
                     .Select(p =>
                     {
                         var pStart  = p.StartTime.ToLocalTime();
@@ -1175,6 +1177,76 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             IsEpgLoading = false;
         }
     }
+
+    private static List<EpgProgram> MergeAdjacentSameTitlePrograms(IEnumerable<EpgProgram> programs)
+    {
+        var ordered = programs
+            .Where(p => p.EndTime > p.StartTime)
+            .OrderBy(p => p.StartTime)
+            .ThenBy(p => p.EndTime)
+            .ToList();
+
+        if (ordered.Count <= 1)
+            return ordered;
+
+        var merged = new List<EpgProgram>(ordered.Count);
+        foreach (var program in ordered)
+        {
+            if (merged.Count == 0)
+            {
+                merged.Add(CloneEpgProgram(program));
+                continue;
+            }
+
+            var previous = merged[^1];
+            if (CanMergeEpgPrograms(previous, program))
+            {
+                previous.EndTime = program.EndTime > previous.EndTime ? program.EndTime : previous.EndTime;
+                previous.Description ??= program.Description;
+                previous.Category ??= program.Category;
+                previous.IconUrl ??= program.IconUrl;
+                continue;
+            }
+
+            merged.Add(CloneEpgProgram(program));
+        }
+
+        return merged;
+    }
+
+    private static bool CanMergeEpgPrograms(EpgProgram previous, EpgProgram current)
+    {
+        if (!string.Equals(NormalizeEpgPanelTitle(previous.Title), NormalizeEpgPanelTitle(current.Title), StringComparison.Ordinal))
+            return false;
+
+        if (!string.Equals(previous.ChannelId, current.ChannelId, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var gap = current.StartTime - previous.EndTime;
+        return gap.TotalMinutes <= 1;
+    }
+
+    private static string NormalizeEpgPanelTitle(string? title)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+            return string.Empty;
+
+        return string.Join(' ', title.Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+            .ToUpperInvariant();
+    }
+
+    private static EpgProgram CloneEpgProgram(EpgProgram source)
+        => new()
+        {
+            Id = source.Id,
+            ChannelId = source.ChannelId,
+            Title = source.Title,
+            Description = source.Description,
+            StartTime = source.StartTime,
+            EndTime = source.EndTime,
+            Category = source.Category,
+            IconUrl = source.IconUrl
+        };
 
     partial void OnIsEpgPanelOpenChanged(bool value)
     {

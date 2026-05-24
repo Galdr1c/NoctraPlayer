@@ -13,6 +13,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - [Geliştirildi] **Genişletilmiş Ülke/Dil Token Kapsamı**: `GroupTitle` ve EPG URL tespitinde Avrupa, Amerika, Asya ve Orta Doğu için daha fazla ülke kodu/alias desteklenir; `España` ve `Österreich` gibi diakritikli isimler normalize edilir. Benzer dil aileleri ülke bazında ayrı tutulur (`PT`/`BR`, `DE`/`AT`/`CH`).
 - [Test] **GroupTitle Ülke Filtresi Regression Testleri**: `DE` kaynak verisinin `TR` grup kanalına yazılmaması, bilinmeyen kaynaklarda eski davranışın korunması ve primary `tvg-id` fallback'inin ülke uyumsuzluğunda reddedilmesi test edildi.
 
+### EPG Panel Ardışık Program Birleştirme (2026-05-24)
+- [Düzeltildi] **Aynı Programın Parçalı Görünmesi**: EPG panelinde aynı kanal satırında önceki/şimdiki/sonraki program başlığı aynıysa ve zamanları bitişik/örtüşüyorsa tek timeline bloğu olarak gösterilir. Veritabanı kayıtları değiştirilmez; sadece panel render verisi sadeleştirilir.
+- [Test] **Panel Merge Regression Testleri**: Aynı başlığın birleşmesi, farklı başlığın ayrı kalması ve arada gerçek zaman boşluğu varsa birleşmemesi test edildi.
+
 ### EPG Kısa Program Blokları UI Düzeltmesi (2026-05-24)
 - [Düzeltildi] **Kısa Programların Üst Üste Binmesi**: EPG timeline'da 5-10 dakikalık programların 24px minimum genişliğe zorlanması kaldırıldı; blok genişliği artık gerçek zaman ölçeğine yakın minimum 2px ile hesaplanır.
 - [Düzeltildi] **Şerit/Kompakt/Okunabilir Render Katmanları**: Çok kısa programlar ince şerit, kısa programlar yazısız kompakt blok, yeterli genişlikteki programlar başlıklı blok olarak çizilir. Böylece çizgi film/film kanallarındaki “barcode” görünümü ve yazı karmaşası azaltıldı.

@@ -257,6 +257,13 @@ namespace Noctra.Tests
 
     public class PlayerViewModelControlsTests
     {
+        private static List<EpgProgram> MergeAdjacentSameTitlePrograms(IEnumerable<EpgProgram> programs)
+        {
+            var mi = typeof(PlayerViewModel).GetMethod("MergeAdjacentSameTitlePrograms",
+                BindingFlags.NonPublic | BindingFlags.Static)!;
+            return (List<EpgProgram>)mi.Invoke(null, new object[] { programs })!;
+        }
+
         [Fact]
         public void ToggleMute_WhenNotMuted_SetsMutedAndZeroesVolume()
         {
@@ -279,6 +286,55 @@ namespace Noctra.Tests
 
             Assert.False(ctx.VM.IsMuted);
             Assert.Equal(60, ctx.VM.Volume);
+        }
+
+        [Fact]
+        public void MergeAdjacentSameTitlePrograms_PreviousCurrentNextSameTitle_MergesIntoOne()
+        {
+            var start = new DateTime(2026, 5, 24, 9, 0, 0, DateTimeKind.Utc);
+            var programs = new[]
+            {
+                new EpgProgram { ChannelId = "cartoon", Title = "Kral Sakir", StartTime = start, EndTime = start.AddMinutes(30) },
+                new EpgProgram { ChannelId = "cartoon", Title = "  Kral   Sakir ", StartTime = start.AddMinutes(30), EndTime = start.AddMinutes(60) },
+                new EpgProgram { ChannelId = "cartoon", Title = "KRAL SAKIR", StartTime = start.AddMinutes(60), EndTime = start.AddMinutes(90) }
+            };
+
+            var merged = MergeAdjacentSameTitlePrograms(programs);
+
+            Assert.Single(merged);
+            Assert.Equal(start, merged[0].StartTime);
+            Assert.Equal(start.AddMinutes(90), merged[0].EndTime);
+            Assert.Equal("Kral Sakir", merged[0].Title);
+        }
+
+        [Fact]
+        public void MergeAdjacentSameTitlePrograms_DifferentTitle_DoesNotMerge()
+        {
+            var start = new DateTime(2026, 5, 24, 9, 0, 0, DateTimeKind.Utc);
+            var programs = new[]
+            {
+                new EpgProgram { ChannelId = "cartoon", Title = "Kral Sakir", StartTime = start, EndTime = start.AddMinutes(30) },
+                new EpgProgram { ChannelId = "cartoon", Title = "Gumball", StartTime = start.AddMinutes(30), EndTime = start.AddMinutes(60) }
+            };
+
+            var merged = MergeAdjacentSameTitlePrograms(programs);
+
+            Assert.Equal(2, merged.Count);
+        }
+
+        [Fact]
+        public void MergeAdjacentSameTitlePrograms_SameTitleWithRealGap_DoesNotMerge()
+        {
+            var start = new DateTime(2026, 5, 24, 9, 0, 0, DateTimeKind.Utc);
+            var programs = new[]
+            {
+                new EpgProgram { ChannelId = "cartoon", Title = "Kral Sakir", StartTime = start, EndTime = start.AddMinutes(30) },
+                new EpgProgram { ChannelId = "cartoon", Title = "Kral Sakir", StartTime = start.AddMinutes(35), EndTime = start.AddMinutes(60) }
+            };
+
+            var merged = MergeAdjacentSameTitlePrograms(programs);
+
+            Assert.Equal(2, merged.Count);
         }
 
         [Fact]
