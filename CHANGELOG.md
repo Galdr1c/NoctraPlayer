@@ -5,15 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-
 ## [Unreleased]
+
+### Live/Movies/Series Bos Ekran ve Filtre UI Duzenlemesi (2026-05-24)
+- [Duzeltildi] **Bos Movies/Series Ekraninda Sonsuz Loading**: Film veya dizi icerigi olmayan profillerde `Loading movies...` / `Loading series...` spinner'inin takili kalmasi engellendi. Icerik yukleme gostergesi artik genel kanal arka plan yuklemesi yerine aktif view'in gercek icerik yukleme durumuna gore calisir.
+- [Duzeltildi] **Bos Ekranda Filtre Cubugu**: Live, Movies ve Series ekranlarinda icerik yokken ustteki grup combobox'i, `All` butonu ve siralama filtresi gizlenir; icerik geldiginde tekrar gorunur.
+- [Duzeltildi] **Grup Combobox Gorunurlugu**: Grup secici artik sadece aktif view'de icerik ve gosterilebilir grup varsa gorunur. Grup yokken bos combobox gosterilmez.
+- [Yeni] **Movies/Series Bos Durum Lokalizasyonu**: Movies ve Series bos durum aciklamalari Live metninden ayrildi; `tr-TR`, `en-US`, `de-DE`, `fr-FR`, `es-ES` sozluklerine `Movies.Empty.Description` ve `Series.Empty.Description` anahtarlari eklendi.
+- [Yeni] **Ortak All Cevirisi**: Live/Movies/Series filtrelerindeki `All` butonu `Common.All` anahtarina tasindi ve tum desteklenen dillere eklendi.
+- [Dogrulama] `dotnet build NoctraPlayer.sln` basarili.
 
 ### IPTV-org Canlı Kanal Türü Düzeltmesi (2026-05-24)
 - [Düzeltildi] **Movies Grup-Öncelik Sıralaması**:  içeren ancak URL'i HLS/TS extension'ı taşımayan (ör. proxy/stream sunucusu) canlı kanallar ( gibi) artık VOD yerine Live olarak sınıflanır. VOD grup adı kontrolü (, ,  vb.) extension/URL pattern kontrollerinden sonraya alındı.
 - [Düzeltildi] **Canlı Kanalların Film/Dizi Sayfalarında Görünmesi**: `iptv-org` ülke M3U listelerinde `group-title="Movies"` veya `Documentary;Series` gibi janr etiketleri içerik tipi sanılıp canlı kanallar VOD/Series olarak kaydedilebiliyordu. HLS/TS stream URL'leri artık bu janr etiketlerinden önce canlı yayın olarak sınıflanır.
+- [Düzeltildi] **`group-title=Series` Yanlış Sınıflandırması**: `iptv-org/index.m3u` içinde `Series` de kanal janrı olarak kullanıldığı için, `group-title` içinde `Series` geçmesi artık tek başına dizi tipi sayılmaz; dizi için URL veya bölüm kalıbı gibi açık kanıt gerekir.
+- [Düzeltildi] **Organizasyon Aşamasında Series'e Geri Dönme**: Parser Live olarak işaretlese bile organizer `group-title="Series"` grubunu tekrar Series tipine çevirebiliyordu. Lineer HLS/TS kanallar artık organizer aşamasında da Live kalır.
 - [Düzeltildi] **Multi-Genre Series Etiketi**: `Business;Series`, `Documentary;Series` gibi çoklu janr gruplarında geçen `Series` kelimesi tek başına dizi arşivi kabul edilmez; lineer kanallar canlı kalır.
 - [Düzeltildi] **Kanal Adı Koruması**: `CNBC-e` adındaki `CNBC-` kısmı artık ülke prefix'i sanılıp silinmez; `GZT ()` gibi iptv-org kanal adları M3U'da geldiği şekilde korunur.
-- [Düzeltildi] **Eski Yanlış VOD Tipi Onarımı**: Önceden `Movies` grubu nedeniyle VOD kaydedilmiş HLS/TS canlı yayınlar (`MovieSmart Turk` gibi), aynı playlist tekrar açıldığında otomatik Live tipine onarılır.
+- [Düzeltildi] **Eski Yanlış VOD/Series Tipi Onarımı**: Önceden `Movies`/`Series` grubu nedeniyle VOD veya Series kaydedilmiş HLS/TS canlı yayınlar (`MovieSmart Turk`, `48 Hours` gibi), playlist listelenirken otomatik Live tipine onarılır.
 - [Düzeltildi] **Eski Hatalı Series Metadata Temizliği**: Bir playlist yenilendikten sonra artık Series tipinde kanal kalmadıysa, önceki hatalı sınıflandırmadan kalan Series/episode metadata kayıtları temizlenir.
 
 ### EPG GroupTitle Dil İzolasyonu (2026-05-24)

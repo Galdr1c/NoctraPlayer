@@ -259,6 +259,51 @@ namespace Noctra.Tests
                 Assert.Equal("MovieSmart Turk (576p)", channel.Name);
             }
         }
+
+        [Fact]
+        public async Task GetChannelsFilteredAsync_RepairsExistingLinearMovieGroupChannelBeforeFiltering()
+        {
+            // Arrange
+            var service = CreateService();
+            int playlistId;
+
+            using (var context = new AppDbContext(_options))
+            {
+                var playlist = new Playlist
+                {
+                    Name = "IPTV-org",
+                    Url = "https://iptv-org.github.io/iptv/index.m3u",
+                    IsActive = true,
+                    ChannelCount = 1,
+                    CreatedAt = DateTime.UtcNow,
+                    LastUpdated = DateTime.UtcNow
+                };
+
+                context.Playlists.Add(playlist);
+                await context.SaveChangesAsync();
+                playlistId = playlist.Id;
+
+                context.Channels.Add(new Channel
+                {
+                    PlaylistId = playlistId,
+                    Name = "MovieSmart Turk (576p)",
+                    GroupTitle = "Movies",
+                    StreamUrl = "https://example.com/moviesmart/master.m3u8",
+                    Type = ChannelType.VOD
+                });
+                await context.SaveChangesAsync();
+            }
+
+            // Act
+            var movies = await service.GetChannelsFilteredAsync(playlistId, type: ChannelType.VOD);
+            var live = await service.GetChannelsFilteredAsync(playlistId, type: ChannelType.Live);
+
+            // Assert
+            Assert.Empty(movies);
+            var channel = Assert.Single(live);
+            Assert.Equal("MovieSmart Turk (576p)", channel.Name);
+            Assert.Equal(ChannelType.Live, channel.Type);
+        }
         private PlaylistService CreateService()
         {
             return new PlaylistService(

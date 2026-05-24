@@ -220,16 +220,19 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _isChannelLoading;
 
-    public bool IsContentLoading => IsChannelLoading && (ActiveView == AppView.Series ? SeriesViewItems.Count == 0 : FilteredChannels.CountedItemCount == 0);
-    public bool ShowEmptyChannels => !IsChannelLoading && (ActiveView == AppView.Series ? SeriesViewItems.Count == 0 : FilteredChannels.CountedItemCount == 0);
+    private int CurrentViewItemCount => ActiveView == AppView.Series ? SeriesViewItems.Count : FilteredChannels.CountedItemCount;
+
+    public bool IsContentLoading => IsLoading && CurrentViewItemCount == 0;
+    public bool ShowEmptyChannels => !IsLoading && CurrentViewItemCount == 0;
+    public bool ShowContentFilters => !IsContentLoading && !ShowEmptyChannels;
+    public bool ShowGroupFilter => ShowContentFilters && Groups.Count > 0;
 
     private static bool IsDummyChannel(Channel c) =>
         c.StreamUrl != null && (c.StreamUrl.StartsWith("xtream-dummy://") || c.StreamUrl.StartsWith("stalker-dummy://"));
 
     partial void OnIsChannelLoadingChanged(bool value)
     {
-        OnPropertyChanged(nameof(IsContentLoading));
-        OnPropertyChanged(nameof(ShowEmptyChannels));
+        NotifyContentStateChanged();
     }
 
     partial void OnActiveViewChanged(AppView value)
@@ -243,8 +246,12 @@ public partial class MainViewModel : ObservableObject
             _ => (ChannelType?)null
         };
 
-        OnPropertyChanged(nameof(IsContentLoading));
-        OnPropertyChanged(nameof(ShowEmptyChannels));
+        NotifyContentStateChanged();
+    }
+
+    partial void OnGroupsChanged(BatchObservableCollection<string> value)
+    {
+        NotifyContentStateChanged();
     }
 
     [ObservableProperty]
@@ -588,6 +595,7 @@ public partial class MainViewModel : ObservableObject
             {
                 StatusMessage = _localizationService.GetString("Main.Status.LoadingAccountFailed");
                 IsLoading = false;
+                IsChannelLoading = false;
                 return;
             }
 
@@ -616,6 +624,11 @@ public partial class MainViewModel : ObservableObject
                                             {
                                                 _ = ResumeXtreamProgressiveLoadingAsync(profile, existingPlaylists[0]);
                                             }
+                                            else
+                                            {
+                                                IsChannelLoading = false;
+                                                ChannelLoadingProgress = 100;
+                                            }
                                         }
                                         else
                                         {
@@ -639,11 +652,17 @@ public partial class MainViewModel : ObservableObject
                                                             {
                                                                 await LoadPlaylistsAsync();
                                                                 StatusMessage = _localizationService.GetString("Main.Status.ChannelsReadyOrganizingSeries");
+                                                                IsChannelLoading = false;
+                                                                ChannelLoadingProgress = 100;
                                                             });
                                                         }
                                                         catch (Exception ex)
                                                         {
-                                                            _dispatcherService.BeginInvoke(() => StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Main.Error.M3uLoad"), ex));
+                                                            _dispatcherService.BeginInvoke(() =>
+                                                            {
+                                                                StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Main.Error.M3uLoad"), ex);
+                                                                IsChannelLoading = false;
+                                                            });
                                                         }
                                                     });
                                                     break;
@@ -897,6 +916,7 @@ public partial class MainViewModel : ObservableObject
         {
             StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Main.Error.ProfileLoad"), ex);
             _logger?.LogDebug($"LoadProfile Error: {ex}");
+            IsChannelLoading = false;
         }
         finally
         {
@@ -966,6 +986,7 @@ public partial class MainViewModel : ObservableObject
 
         StatusMessage = string.Empty;
         _prioritizeCategoryAction = null;
+        NotifyContentStateChanged();
     }
 
     private void ResetUIForRefresh()
@@ -999,8 +1020,7 @@ public partial class MainViewModel : ObservableObject
         SetItems(Groups, Enumerable.Empty<string>());
         SetItems(SeriesViewItems, Enumerable.Empty<Series>());
 
-        OnPropertyChanged(nameof(IsContentLoading));
-        OnPropertyChanged(nameof(ShowEmptyChannels));
+        NotifyContentStateChanged();
         
         StatusMessage = _localizationService.GetString("Main.Status.RefreshingChannels");
     }
@@ -1992,8 +2012,7 @@ public partial class MainViewModel : ObservableObject
         _isLoadingMoreChannels = false;
         Channels = new BatchObservableCollection<Channel>();
         FilteredChannels = new BatchObservableCollection<Channel>(c => !IsDummyChannel(c));
-        OnPropertyChanged(nameof(IsContentLoading));
-        OnPropertyChanged(nameof(ShowEmptyChannels));
+        NotifyContentStateChanged();
     }
 
     private void ResetSeriesIncrementalState()
@@ -2003,8 +2022,7 @@ public partial class MainViewModel : ObservableObject
         _isLoadingMoreSeriesItems = false;
         _seriesFilteredSource = new List<Series>();
         SeriesViewItems = new BatchObservableCollection<Series>();
-        OnPropertyChanged(nameof(IsContentLoading));
-        OnPropertyChanged(nameof(ShowEmptyChannels));
+        NotifyContentStateChanged();
     }
 
     public async Task LoadMoreChannelsAsync(CancellationToken cancellationToken = default)
@@ -2105,8 +2123,7 @@ public partial class MainViewModel : ObservableObject
                 // Fire and forget EPG enrichment for the new page
                 _ = EnrichChannelsWithEpgAsync(page);
 
-                OnPropertyChanged(nameof(IsContentLoading));
-                OnPropertyChanged(nameof(ShowEmptyChannels));
+                NotifyContentStateChanged();
             });
 
             var isPersonalView = ActiveView == AppView.MyList || ActiveView == AppView.Favorites;
@@ -2180,8 +2197,7 @@ public partial class MainViewModel : ObservableObject
             _hasMoreSeriesItems = page.Count == IncrementalPageSize;
 
             SeriesViewItems.AddRange(page);
-            OnPropertyChanged(nameof(IsContentLoading));
-            OnPropertyChanged(nameof(ShowEmptyChannels));
+            NotifyContentStateChanged();
 
             // On-demand TMDB enrichment for newly visible series
             var enrichPage = page.Where(s => (s.TmdbId == null && s.LastTmdbSync == null) || s.MetadataFetchedAt == null).ToList();
@@ -2467,6 +2483,16 @@ public partial class MainViewModel : ObservableObject
             _slowLoadingWarnCts = null;
             LoadingWarningMessage = string.Empty;
         }
+
+        NotifyContentStateChanged();
+    }
+
+    private void NotifyContentStateChanged()
+    {
+        OnPropertyChanged(nameof(IsContentLoading));
+        OnPropertyChanged(nameof(ShowEmptyChannels));
+        OnPropertyChanged(nameof(ShowContentFilters));
+        OnPropertyChanged(nameof(ShowGroupFilter));
     }
 
     partial void OnShowOnlyFavoritesChanged(bool value)
@@ -5887,8 +5913,7 @@ public partial class MainViewModel : ObservableObject
             ResetSeriesIncrementalState();
             _seriesFilteredSource.Clear();
             SeriesViewItems.Clear();
-            OnPropertyChanged(nameof(IsContentLoading));
-            OnPropertyChanged(nameof(ShowEmptyChannels));
+            NotifyContentStateChanged();
             return;
         }
 
@@ -5939,6 +5964,7 @@ public partial class MainViewModel : ObservableObject
         _hasMoreSeriesItems = true;
         SeriesViewItems.Clear();
         _ = LoadMoreSeriesAsync();
+        NotifyContentStateChanged();
     }
 
 

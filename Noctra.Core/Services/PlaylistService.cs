@@ -938,6 +938,7 @@ public partial class PlaylistService : IPlaylistService
     public async Task<List<Channel>> GetChannelsAsync(int playlistId)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
+        await RepairLinearStreamChannelTypesAsync(context, playlistId);
         return await context.Channels
             .AsNoTracking()
             .Where(c => c.PlaylistId == playlistId)
@@ -952,6 +953,7 @@ public partial class PlaylistService : IPlaylistService
     public async Task<List<Channel>> GetChannelsFilteredAsync(int playlistId, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, int limit = 1000, ChannelSortOrder sortOrder = ChannelSortOrder.NewestFirst, List<string>? hiddenGroups = null)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
+        await RepairLinearStreamChannelTypesAsync(context, playlistId);
         var query = BuildFilteredChannelQuery(context, playlistId, searchText, group, type, onlyFavorites, hiddenGroups);
 
         return await ApplySort(query, sortOrder)
@@ -961,6 +963,7 @@ public partial class PlaylistService : IPlaylistService
     public async Task<List<Channel>> GetChannelsFilteredPageAsync(int playlistId, int skip, int take, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, ChannelSortOrder sortOrder = ChannelSortOrder.NewestFirst, List<string>? hiddenGroups = null)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
+        await RepairLinearStreamChannelTypesAsync(context, playlistId);
         var query = BuildFilteredChannelQuery(context, playlistId, searchText, group, type, onlyFavorites, hiddenGroups);
 
         return await ApplySort(query, sortOrder)
@@ -984,6 +987,7 @@ public partial class PlaylistService : IPlaylistService
     public async Task<List<string>> GetGroupsByTypeAsync(int playlistId, ChannelType type)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
+        await RepairLinearStreamChannelTypesAsync(context, playlistId);
         return await context.Channels
             .Where(c => c.PlaylistId == playlistId && c.Type == type && !string.IsNullOrEmpty(c.GroupTitle))
             .Select(c => c.GroupTitle!)
@@ -995,6 +999,7 @@ public partial class PlaylistService : IPlaylistService
     public async Task<(int TotalCount, List<string> AllGroups, List<string> LiveGroups, List<string> VodGroups, List<string> SeriesGroups)> GetChannelGroupMetadataAsync(int playlistId)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
+        await RepairLinearStreamChannelTypesAsync(context, playlistId);
         
         // Toplam kanal sayısı (GroupTitle null/boş olanlar dahil) — hafif COUNT sorgusu
         var totalCount = await context.Channels

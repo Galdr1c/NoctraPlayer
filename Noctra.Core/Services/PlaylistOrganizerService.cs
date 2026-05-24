@@ -129,6 +129,14 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
             var isStrongSeriesCategory = groupName.Contains("DİZİLER", StringComparison.OrdinalIgnoreCase) || 
                                          groupName.Contains("KOLEKSİYON", StringComparison.OrdinalIgnoreCase);
 
+            var hasLinearStreamMembers = group.Any(c => IsLinearStreamUrl(c.StreamUrl));
+            var hasExplicitSeriesMembers = group.Any(c => SeriesInfoParser.IsSeries(c.Name));
+            var isAmbiguousLinearSeriesGenre = hasSeriesKeywords &&
+                                               hasLinearStreamMembers &&
+                                               !hasExplicitSeriesMembers &&
+                                               !hasSeriesMarker &&
+                                               !isStrongSeriesCategory;
+
             var hasLiveKeywords = groupName.Contains("SPOR", StringComparison.OrdinalIgnoreCase) || 
                                    groupName.Contains("SPORT", StringComparison.OrdinalIgnoreCase) ||
                                    groupName.Contains("HABER", StringComparison.OrdinalIgnoreCase) ||
@@ -144,7 +152,8 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
                                    (groupName.Contains(" - ", StringComparison.OrdinalIgnoreCase) && !hasSeriesMarker); // TR - SERIES gibi durumlar genellikle Live'dır.
 
             // Eğer çok güçlü bir Dizi kategorisi ismiyse (MAX DİZİLER gibi), Live keyword'leri olsa bile dizi kabul et.
-            var isSeriesGroupByName = hasSeriesMarker || isStrongSeriesCategory || (hasSeriesKeywords && !hasLiveKeywords && !isMultiGenreGroup);
+            var isSeriesGroupByName = !isAmbiguousLinearSeriesGenre &&
+                                      (hasSeriesMarker || isStrongSeriesCategory || (hasSeriesKeywords && !hasLiveKeywords && !isMultiGenreGroup));
 
             if (isSeriesGroupByName)
             {

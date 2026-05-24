@@ -279,20 +279,10 @@ public partial class M3UParser : IM3UParser
             return ChannelType.Live;
         }
 
-        // Önce Series (Dizi) kontrolü
-        if (lowerGroup.Contains("series") || 
-            lowerGroup.Contains("dizi") || 
-            lowerGroup.Contains("tv show") || 
-            lowerGroup.Contains("belgesel serisi") ||
-            lowerGroup.EndsWith(" diz") || 
-            lowerGroup.Contains(" diz ") ||
-            lowerGroup.Contains("staffel") ||
-            lowerGroup.Contains("saison"))
-        {
-            return ChannelType.Series;
-        }
-
         // 4. Başlık ve İsim Analizi
+        // group-title, especially in iptv-org, is a channel genre/category, not the
+        // app content type. Do not classify as Series just because the group says
+        // "Series"; require explicit episode/title evidence or a series URL pattern.
         // Dizi: S01E01, 1x01, Sezon 1, Bölüm 1
         if (SeriesInfoParser.IsSeries(name) ||
             lowerName.Contains("bolum") ||
@@ -428,4 +418,3 @@ public partial class M3UParser : IM3UParser
 
     private List<Channel>? _lastPartialChannels;
 }
-

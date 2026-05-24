@@ -389,6 +389,37 @@ public class PlaylistOrganizerServiceTests
 
         Assert.All(channels, c => Assert.Equal(ChannelType.Live, c.Type));
     }
+
+    [Fact]
+    public void FixChannelTypes_IptvOrgSeriesGenreGroup_KeepsLinearChannelsLive()
+    {
+        var channels = new List<Channel>
+        {
+            Live("13 Teleseries (720p)", "Series", "https://origin.dpsgo.com/ssai/event/f4TrySe8SoiGF8Lu3EIq1g/master.m3u8"),
+            Live("48 Hours", "Series", "https://jmp2.uk/plu-6346937a46f9a2000889073d.m3u8"),
+            Live("5 Cops", "Series", "https://jmp2.uk/plu-5d2c571faeb3e2738ae27933.m3u8"),
+            Live("Acapulco Shore", "Series", "https://jmp2.uk/plu-64dab1f835425100080e1e7b.m3u8"),
+            Live("Always Funny Videos (720p)", "Series", "https://d24l3uppudokci.cloudfront.net/playlist.m3u8")
+        };
+
+        _sut.FixChannelTypes(channels);
+
+        Assert.All(channels, c => Assert.Equal(ChannelType.Live, c.Type));
+    }
+
+    [Fact]
+    public void Organize_IptvOrgSeriesGenreGroup_DoesNotMoveLinearChannelsToSeries()
+    {
+        var channels = new List<Channel>
+        {
+            Live("13 Teleseries (720p)", "Series", "https://origin.dpsgo.com/ssai/event/f4TrySe8SoiGF8Lu3EIq1g/master.m3u8"),
+            Live("48 Hours", "Series", "https://jmp2.uk/plu-6346937a46f9a2000889073d.m3u8")
+        };
+
+        var organized = _sut.Organize(channels);
+
+        Assert.All(organized, c => Assert.Equal(ChannelType.Live, c.Type));
+    }
 }
 
 // =============================================================================
