@@ -699,7 +699,18 @@ public partial class VideoOverlayView : UserControl
         if (point.Properties.PointerUpdateKind != PointerUpdateKind.LeftButtonReleased)
             return;
 
-        if (sender is Control { DataContext: Noctra.ViewModels.EpgPanelRow row })
+        Noctra.ViewModels.EpgPanelRow? row = null;
+        if (sender is Control control)
+        {
+            row = control.DataContext as Noctra.ViewModels.EpgPanelRow
+                  ?? control.GetVisualAncestors()
+                      .OfType<Control>()
+                      .Select(c => c.DataContext)
+                      .OfType<Noctra.ViewModels.EpgPanelRow>()
+                      .FirstOrDefault();
+        }
+
+        if (row != null)
         {
             _playerViewModel?.ToggleEpgPanelCommand.Execute(null); // paneli kapat
             // MainWindow handler'ına yönlendir

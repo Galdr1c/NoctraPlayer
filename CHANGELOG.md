@@ -8,6 +8,11 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### EPG Kısa Program Blokları UI Düzeltmesi (2026-05-24)
+- [Düzeltildi] **Kısa Programların Üst Üste Binmesi**: EPG timeline'da 5-10 dakikalık programların 24px minimum genişliğe zorlanması kaldırıldı; blok genişliği artık gerçek zaman ölçeğine yakın minimum 2px ile hesaplanır.
+- [Düzeltildi] **Şerit/Kompakt/Okunabilir Render Katmanları**: Çok kısa programlar ince şerit, kısa programlar yazısız kompakt blok, yeterli genişlikteki programlar başlıklı blok olarak çizilir. Böylece çizgi film/film kanallarındaki “barcode” görünümü ve yazı karmaşası azaltıldı.
+- [Yeni] **EPG Program Tooltip'i**: Kısa veya yazısız bloklarda program adı hover tooltip ile görülebilir; blok tıklaması kanal seçimini bozmadan çalışır.
+
 ### EPG Kaynak Önceliği ve Program Çakışması Düzeltmeleri (2026-05-24)
 - [Düzeltildi] **Custom/Provider/M3U Üst Üste Yazma**: Manuel EPG yenilemede özel EPG kaynakları başarılı olduktan sonra daha düşük öncelikli Provider veya M3U EPG kaynaklarına geçilmesi engellendi. Birden fazla özel EPG tamamlayıcı olarak yüklenebilir; Provider/M3U başarılı olursa döngü durur.
 - [Düzeltildi] **Farklı Başlıklı Aynı Slot Duplicate'leri**: Aynı kanal ve zaman aralığında yüzde 95+ örtüşen programlar başlık farklı olsa bile eşdeğer kabul edilir. Böylece farklı kaynakların aynı programı farklı dil/kısaltma ile vermesi DB'de üst üste program oluşturmaz.

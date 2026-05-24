@@ -1136,7 +1136,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                         {
                             Program          = p,
                             PixelLeft        = leftMin * EpgPxPerMinute,
-                            PixelWidth       = Math.Max(24, widthMin * EpgPxPerMinute),
+                            PixelWidth       = Math.Max(2, widthMin * EpgPxPerMinute),
                             IsCurrentProgram = p.IsNowPlaying,
                             IsClippedLeft    = clipped,
                             IsPast           = p.EndTime < nowUtc

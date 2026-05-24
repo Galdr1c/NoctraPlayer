@@ -14,7 +14,7 @@ public class EpgProgramBlock
     /// <summary>Timeline canvas içindeki sol kenar konumu (px).</summary>
     public double PixelLeft { get; set; }
 
-    /// <summary>Timeline canvas içindeki genişlik (px), minimum 24px.</summary>
+    /// <summary>Timeline canvas içindeki genişlik (px), gerçek zaman ölçeğine yakın tutulur.</summary>
     public double PixelWidth { get; set; }
 
     /// <summary>Bu program şu an yayında mı?</summary>
@@ -33,9 +33,17 @@ public class EpgProgramBlock
     public double ProgressPixelWidth =>
         IsCurrentProgram ? Program.ProgressPercentage / 100.0 * PixelWidth : 0;
 
-    public double TitleTextWidth => Math.Max(0, PixelWidth - 16);
+    public double TitleTextWidth => Math.Max(0, PixelWidth - 14);
 
-    public bool HasReadableText => PixelWidth >= 84;
+    /// <summary>Çok kısa programlar timeline'da sadece ince şerit olarak gösterilir.</summary>
+    public bool IsStrip => PixelWidth < 6;
+
+    /// <summary>Kısa ama seçilebilir program bloğu; metin gösterilmez, tooltip çalışır.</summary>
+    public bool IsCompact => PixelWidth >= 6 && PixelWidth < 48;
+
+    public bool HasReadableText => PixelWidth >= 48;
+
+    public double VisualHeight => IsStrip ? 28 : 52;
 }
 
 /// <summary>
