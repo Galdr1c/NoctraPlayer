@@ -8,6 +8,12 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### EPG Kaynak Önceliği ve Program Çakışması Düzeltmeleri (2026-05-24)
+- [Düzeltildi] **Custom/Provider/M3U Üst Üste Yazma**: Manuel EPG yenilemede özel EPG kaynakları başarılı olduktan sonra daha düşük öncelikli Provider veya M3U EPG kaynaklarına geçilmesi engellendi. Birden fazla özel EPG tamamlayıcı olarak yüklenebilir; Provider/M3U başarılı olursa döngü durur.
+- [Düzeltildi] **Farklı Başlıklı Aynı Slot Duplicate'leri**: Aynı kanal ve zaman aralığında yüzde 95+ örtüşen programlar başlık farklı olsa bile eşdeğer kabul edilir. Böylece farklı kaynakların aynı programı farklı dil/kısaltma ile vermesi DB'de üst üste program oluşturmaz.
+- [Düzeltildi] **Aynı Başlangıç Zamanı Timeline Normalize**: Aynı `StartTime` ile gelen çakışmalı programlarda daha uzun süreli kayıt korunur; kısa/eksik kayıt timeline'da doğru programı ezemez.
+- [Test] **EPG Overlap Regression Testleri**: Yüksek zaman örtüşmeli farklı başlık duplicate'i ve aynı başlangıçta uzun programın korunması senaryoları test edildi.
+
 ### EPG Ülke Eşleştirme Regression Düzeltmesi (2026-05-24)
 - [Düzeltildi] **DE Kanalların TR EPG ile Eşleşmesi**: `DE: Nicktoons [SAT] [VIP]` gibi ülke prefix'i ve teknik bracket etiketleri birlikte bulunan kanal adlarında `[SAT]`/`[VIP]` erken çıkışı yüzünden `DE:` prefix'inin atlanması engellendi.
 - [Düzeltildi] **EPG Normalize Noise Listesi**: Kanal adı normalizasyonunda yalnızca `tr` değil, desteklenen ülke kodları ve `sat` teknik etiketi de temizlenir. Ülke bilgisi artık kanal adının içinde değil, sadece `{CountryCode}:{NormalizedName}` key prefix'inde kalır.

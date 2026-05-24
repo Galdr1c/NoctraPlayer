@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Noctra.Models;
 using Xunit;
 
 // =============================================================================
@@ -547,6 +548,20 @@ public class EpgCountryAwareMatchingTests
         return (List<string>?)m.Invoke(null, new object[] { normalizedName, channelMap });
     }
 
+    private static bool HasEquivalentOverlappingProgram(EpgProgram program, IEnumerable<EpgProgram> candidates)
+    {
+        var m = _epgType.GetMethod("HasEquivalentOverlappingProgram",
+            BindingFlags.NonPublic | BindingFlags.Static)!;
+        return (bool)m.Invoke(null, new object[] { program, candidates })!;
+    }
+
+    private static List<EpgProgram> NormalizeProgramTimeline(IEnumerable<EpgProgram> programs)
+    {
+        var m = _epgType.GetMethod("NormalizeProgramTimeline",
+            BindingFlags.NonPublic | BindingFlags.Static)!;
+        return (List<EpgProgram>)m.Invoke(null, new object[] { programs })!;
+    }
+
     // ── NormalizeName: ülke kodlarını kanal adından temizler ──────────────────
 
     [Theory]
@@ -624,6 +639,57 @@ public class EpgCountryAwareMatchingTests
         var result = ResolveMappedChannelIds("TR:" + NormalizeName("Nicktoons"), channelMap);
 
         Assert.Null(result);
+    }
+
+    [Fact]
+    public void HasEquivalentOverlappingProgram_HighTimeOverlapDifferentTitle_IsDuplicate()
+    {
+        var start = new DateTime(2026, 5, 24, 12, 0, 0, DateTimeKind.Utc);
+        var existing = new EpgProgram
+        {
+            ChannelId = "nicktoons.de",
+            Title = "SpongeBob Schwammkopf",
+            StartTime = start,
+            EndTime = start.AddMinutes(30)
+        };
+        var incoming = new EpgProgram
+        {
+            ChannelId = "nicktoons.de",
+            Title = "SpongeBob SquarePants",
+            StartTime = start,
+            EndTime = start.AddMinutes(30)
+        };
+
+        Assert.True(HasEquivalentOverlappingProgram(incoming, new[] { existing }));
+    }
+
+    [Fact]
+    public void NormalizeProgramTimeline_SameStartDifferentLength_KeepsLongerProgram()
+    {
+        var start = new DateTime(2026, 5, 24, 12, 0, 0, DateTimeKind.Utc);
+        var programs = new[]
+        {
+            new EpgProgram
+            {
+                ChannelId = "nicktoons.de",
+                Title = "Short title",
+                StartTime = start,
+                EndTime = start.AddMinutes(15)
+            },
+            new EpgProgram
+            {
+                ChannelId = "nicktoons.de",
+                Title = "Longer title",
+                StartTime = start,
+                EndTime = start.AddMinutes(30)
+            }
+        };
+
+        var normalized = NormalizeProgramTimeline(programs);
+
+        var program = Assert.Single(normalized);
+        Assert.Equal("Longer title", program.Title);
+        Assert.Equal(start.AddMinutes(30), program.EndTime);
     }
 
     [Theory]

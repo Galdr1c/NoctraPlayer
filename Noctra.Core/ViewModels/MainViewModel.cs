@@ -3430,6 +3430,12 @@ public partial class MainViewModel : ObservableObject
 
             foreach (var source in epgSources)
             {
+                if (anySuccess && source.Type != EpgSourceType.CustomUrl)
+                {
+                    _logger?.LogDebug("[MainViewModel] Skipping lower-priority EPG source {SourceType}; custom EPG already loaded.", source.Type);
+                    break;
+                }
+
                 try
                 {
                     if (!isBackgroundSync)
@@ -3457,6 +3463,11 @@ public partial class MainViewModel : ObservableObject
                         successfulSourceUrl = source.Url;
                         _logger?.LogDebug($"[MainViewModel] EPG loaded from {source.Type} ({loadedPrograms} programs) - URL: {source.Url}");
                         lastSourceError = null;
+
+                        if (source.Type != EpgSourceType.CustomUrl)
+                        {
+                            break;
+                        }
                     }
                     else
                     {

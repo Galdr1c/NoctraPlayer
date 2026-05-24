@@ -398,7 +398,10 @@ public class EpgService : IEpgService
         var exactKeys = new HashSet<string>(existingPrograms.Select(BuildEpgDedupKey), StringComparer.Ordinal);
         var accepted = new List<EpgProgram>(programs.Count);
 
-        foreach (var program in programs)
+        foreach (var program in programs
+            .OrderBy(p => p.ChannelId, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(p => p.StartTime)
+            .ThenByDescending(p => p.EndTime))
         {
             if (string.IsNullOrWhiteSpace(program.ChannelId) || program.EndTime <= program.StartTime)
             {
@@ -437,12 +440,19 @@ public class EpgService : IEpgService
                 continue;
             }
 
-            if (!string.Equals(NormalizeEpgTitle(candidate.Title), title, StringComparison.Ordinal))
+            var overlapRatio = GetOverlapRatio(
+                program.StartTime,
+                program.EndTime,
+                candidate.StartTime,
+                candidate.EndTime);
+
+            if (overlapRatio >= 0.95)
             {
-                continue;
+                return true;
             }
 
-            if (GetOverlapRatio(program.StartTime, program.EndTime, candidate.StartTime, candidate.EndTime) >= 0.8)
+            if (overlapRatio >= 0.80 &&
+                string.Equals(NormalizeEpgTitle(candidate.Title), title, StringComparison.Ordinal))
             {
                 return true;
             }
@@ -456,7 +466,9 @@ public class EpgService : IEpgService
         var exactKeys = new HashSet<string>(StringComparer.Ordinal);
         var result = new List<EpgProgram>();
 
-        foreach (var program in programs.OrderBy(p => p.StartTime).ThenBy(p => p.EndTime))
+        foreach (var program in programs
+            .OrderBy(p => p.StartTime)
+            .ThenByDescending(p => p.EndTime))
         {
             var key = BuildEpgDedupKey(program);
             if (!exactKeys.Add(key))
@@ -510,6 +522,13 @@ public class EpgService : IEpgService
                     if (previous.EndTime > previous.StartTime)
                     {
                         break;
+                    }
+                }
+                else if (previous.StartTime == program.StartTime)
+                {
+                    if (previous.EndTime >= program.EndTime)
+                    {
+                        goto NextProgram;
                     }
                 }
 
