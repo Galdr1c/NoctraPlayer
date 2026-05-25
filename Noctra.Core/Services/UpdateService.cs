@@ -11,7 +11,7 @@ public class UpdateService : IUpdateService
 {
     private readonly HttpClient _httpClient;
     private readonly IPackageIdentityService? _packageIdentityService;
-    private const string UpdateManifestUrl = "https://raw.githubusercontent.com/Galdr1c/IPTVMediaPlayer/main/update.json";
+    private const string UpdateManifestUrl = "https://raw.githubusercontent.com/Galdr1c/NoctraPlayer/main/update.json";
 
     public string CurrentVersion => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
 
