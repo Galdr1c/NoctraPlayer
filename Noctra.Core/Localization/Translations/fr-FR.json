@@ -806,5 +806,16 @@
     "GlobalSettings.Promo.Placeholder": "Collez le code ici...",
     "GlobalSettings.Promo.Status.Free": "Version gratuite active",
     "GlobalSettings.Promo.Status.Premium": "Premium actif",
-    "GlobalSettings.Promo.Status.PremiumFormat": "Premium actif jusqu'au {0}"
+    "GlobalSettings.Promo.Status.PremiumFormat": "Premium actif jusqu'au {0}",
+    "GlobalSettings.Promo.SuccessFormat": "Code promo appliqué. Premium est actif jusqu'au {0}.",
+    "GlobalSettings.Promo.Error.PremiumEdition": "Ce package est déjà l'édition Premium permanente.",
+    "GlobalSettings.Promo.Error.EmptyCode": "Veuillez saisir un code promo.",
+    "GlobalSettings.Promo.Error.InvalidCode": "Le code promo est introuvable ou non valide.",
+    "GlobalSettings.Promo.Error.Inactive": "Ce code promo n'est pas actif.",
+    "GlobalSettings.Promo.Error.InvalidDuration": "Aucune durée valide n'est définie pour ce code promo.",
+    "GlobalSettings.Promo.Error.Expired": "Ce code promo a expiré.",
+    "GlobalSettings.Promo.Error.AlreadyRedeemed": "Ce code promo a déjà été utilisé sur cet appareil.",
+    "GlobalSettings.Promo.Error.ConfigMissing": "La configuration des codes promo est introuvable. Assurez-vous que l'administrateur de l'application a configuré l'URL des codes promo.",
+    "GlobalSettings.Promo.Error.ConfigLoadFailed": "La configuration des codes promo n'a pas pu être chargée. Vérifiez votre connexion internet et réessayez.",
+    "GlobalSettings.Promo.Error.ApplyFailedFormat": "Impossible d'appliquer le code promo : {0}"
 }

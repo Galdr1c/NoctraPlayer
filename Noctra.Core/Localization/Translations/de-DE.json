@@ -806,5 +806,16 @@
     "GlobalSettings.Promo.Placeholder": "Code hier einfügen...",
     "GlobalSettings.Promo.Status.Free": "Kostenlose Version aktiv",
     "GlobalSettings.Promo.Status.Premium": "Premium aktiv",
-    "GlobalSettings.Promo.Status.PremiumFormat": "Premium aktiv bis {0}"
+    "GlobalSettings.Promo.Status.PremiumFormat": "Premium aktiv bis {0}",
+    "GlobalSettings.Promo.SuccessFormat": "Aktionscode angewendet. Premium ist bis {0} aktiv.",
+    "GlobalSettings.Promo.Error.PremiumEdition": "Dieses Paket ist bereits die permanente Premium-Version.",
+    "GlobalSettings.Promo.Error.EmptyCode": "Bitte geben Sie einen Aktionscode ein.",
+    "GlobalSettings.Promo.Error.InvalidCode": "Aktionscode wurde nicht gefunden oder ist ungültig.",
+    "GlobalSettings.Promo.Error.Inactive": "Dieser Aktionscode ist nicht aktiv.",
+    "GlobalSettings.Promo.Error.InvalidDuration": "Für diesen Aktionscode ist keine gültige Dauer definiert.",
+    "GlobalSettings.Promo.Error.Expired": "Dieser Aktionscode ist abgelaufen.",
+    "GlobalSettings.Promo.Error.AlreadyRedeemed": "Dieser Aktionscode wurde auf diesem Gerät bereits verwendet.",
+    "GlobalSettings.Promo.Error.ConfigMissing": "Aktionscode-Konfiguration wurde nicht gefunden. Stellen Sie sicher, dass die Aktionscode-URL vom App-Administrator konfiguriert wurde.",
+    "GlobalSettings.Promo.Error.ConfigLoadFailed": "Aktionscode-Konfiguration konnte nicht geladen werden. Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
+    "GlobalSettings.Promo.Error.ApplyFailedFormat": "Aktionscode konnte nicht angewendet werden: {0}"
 }

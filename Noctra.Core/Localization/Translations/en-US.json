@@ -807,5 +807,16 @@
     "GlobalSettings.Promo.Status.Free": "Free version active",
     "GlobalSettings.Promo.Status.Premium": "Premium active",
     "GlobalSettings.Promo.Status.PremiumFormat": "Premium active until {0}",
+    "GlobalSettings.Promo.SuccessFormat": "Promo code applied. Premium is active until {0}.",
+    "GlobalSettings.Promo.Error.PremiumEdition": "This package is already the permanent Premium edition.",
+    "GlobalSettings.Promo.Error.EmptyCode": "Please enter a promo code.",
+    "GlobalSettings.Promo.Error.InvalidCode": "Promo code was not found or is invalid.",
+    "GlobalSettings.Promo.Error.Inactive": "This promo code is not active.",
+    "GlobalSettings.Promo.Error.InvalidDuration": "No valid duration is defined for this promo code.",
+    "GlobalSettings.Promo.Error.Expired": "This promo code has expired.",
+    "GlobalSettings.Promo.Error.AlreadyRedeemed": "This promo code has already been used on this device.",
+    "GlobalSettings.Promo.Error.ConfigMissing": "Promo code configuration was not found. Make sure the promo code URL is configured by the app administrator.",
+    "GlobalSettings.Promo.Error.ConfigLoadFailed": "Promo code configuration could not be loaded. Check your internet connection and try again.",
+    "GlobalSettings.Promo.Error.ApplyFailedFormat": "Could not apply promo code: {0}",
     "Localization.Tests.FallbackEnglishOnly": "__EN_FALLBACK_ONLY__"
 }

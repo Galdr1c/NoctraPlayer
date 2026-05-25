@@ -153,7 +153,7 @@ public class AppSettings
 
     /// <summary>
     /// Developer tarafından sağlanabilecek uzak promosyon kodu JSON adresi.
-    /// Boşsa LicenseService içindeki yerel/fallback kodlar kullanılır.
+    /// Boşsa ortam değişkeni veya LicenseService içindeki varsayılan uzak URL kullanılır.
     /// </summary>
     public string? PromoCodeConfigUrl { get; set; }
 
@@ -229,5 +229,4 @@ public class AppSettings
     public List<string> HiddenMovieGroups { get; set; } = new();
     public List<string> HiddenSeriesGroups { get; set; } = new();
 }
-
 

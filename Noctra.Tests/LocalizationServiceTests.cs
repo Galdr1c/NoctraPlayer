@@ -58,4 +58,36 @@ public class LocalizationServiceTests
 
         Assert.Equal("Missing.Key", service.GetString("Missing.Key"));
     }
+
+    [Theory]
+    [InlineData("tr")]
+    [InlineData("en")]
+    [InlineData("de")]
+    [InlineData("fr")]
+    [InlineData("es")]
+    public void PromoResultKeys_ExistInEverySupportedLanguage(string language)
+    {
+        var service = new LocalizationService();
+        service.SetLanguage(language);
+
+        var keys = new[]
+        {
+            "GlobalSettings.Promo.SuccessFormat",
+            "GlobalSettings.Promo.Error.PremiumEdition",
+            "GlobalSettings.Promo.Error.EmptyCode",
+            "GlobalSettings.Promo.Error.InvalidCode",
+            "GlobalSettings.Promo.Error.Inactive",
+            "GlobalSettings.Promo.Error.InvalidDuration",
+            "GlobalSettings.Promo.Error.Expired",
+            "GlobalSettings.Promo.Error.AlreadyRedeemed",
+            "GlobalSettings.Promo.Error.ConfigMissing",
+            "GlobalSettings.Promo.Error.ConfigLoadFailed",
+            "GlobalSettings.Promo.Error.ApplyFailedFormat"
+        };
+
+        foreach (var key in keys)
+        {
+            Assert.NotEqual(key, service.GetString(key));
+        }
+    }
 }

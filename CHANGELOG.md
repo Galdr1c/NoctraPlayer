@@ -12,8 +12,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - [Guvenlik] **Developer Premium Toggle Release'de Gizlendi**: Global Ayarlar ekranindaki developer premium toggle gorunurlugu `DEBUG` kosuluna baglandi; `IsDeveloperModeActive` runtime'da manipule edilse bile release build'de toggle yuzeyi acilmaz.
 - [Guvenlik] **Public Promo Kod Ornekleri Kaldirildi**: `README.md` ve `PROMO_CODES_README.md` icindeki gercek kod gibi gorunen promosyon kodu ornekleri placeholder formatlara cevrildi; dokumanlar artik yerel/fallback promo kod olmadigini ve uzak JSON yoksa kod dogrulamanin basarisiz olacagini acikca belirtiyor.
 - [Guvenlik] **PIN Hash'leri PBKDF2'ye Tasindi**: Yeni profil PIN hash'leri artik random salt, `PBKDF2-SHA256` ve surumlu hash formatinda saklanir. Eski `SHA256(NOCTRA_PIN_{pin})` kayitlari geriye donuk dogrulanmaya devam eder.
+- [Duzeltildi] **Promo Config Hatalari Acik Mesaja Ayrildi**: Promo kod URL'si yoksa veya uzak JSON yuklenemezse artik bos kod listesiyle "kod gecersiz" sonucuna dusulmez; kullaniciya yapilandirma/yukleme hatasi doner. `settings.json` icindeki `promoCodeConfigUrl` tekrar desteklenir.
+- [Gelistirildi] **Promo Hata Mesajlari Lokalize Edildi**: Promo kod basari/hata mesajlari ve beklenmeyen uygulama hatasi metni localization key'lerine tasindi; `tr-TR`, `en-US`, `de-DE`, `es-ES`, `fr-FR` cevirileri eklendi.
 - [Not] Promosyon kodu akisi Store Premium edition modelinden ayridir ve client-side dogasi nedeniyle kotuye kullanim korumasi icin server-side redemption gerektirir.
-- [Dogrulama] `dotnet test Noctra.Tests\Noctra.Tests.csproj --filter LicenseService` sonucu `22/22` test gecti. `dotnet build NoctraPlayer.sln -c Release` basarili.
+- [Dogrulama] `dotnet test Noctra.Tests\Noctra.Tests.csproj --filter "LicenseServiceTests|LocalizationServiceTests|SecurityServiceTests|PinSystemScenariosTests"` sonucu `43/43` test gecti. `dotnet build NoctraPlayer.sln -c Release` basarili.
 
 ### Live/Movies/Series Bos Ekran ve Filtre UI Duzenlemesi (2026-05-24)
 - [Duzeltildi] **Bos Movies/Series Ekraninda Sonsuz Loading**: Film veya dizi icerigi olmayan profillerde `Loading movies...` / `Loading series...` spinner'inin takili kalmasi engellendi. Icerik yukleme gostergesi artik genel kanal arka plan yuklemesi yerine aktif view'in gercek icerik yukleme durumuna gore calisir.

@@ -325,7 +325,7 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            PromoCodeStatus = $"Promosyon kodu uygulanamadı: {ex.Message}";
+            PromoCodeStatus = string.Format(_localizationService.GetString("GlobalSettings.Promo.Error.ApplyFailedFormat"), ex.Message);
             IsPromoCodeStatusSuccess = false;
         }
         finally

@@ -113,10 +113,11 @@ Noctra, iki farklı Premium akışını destekler:
 
 Uygulamada hazır veya fallback promosyon kodu yoktur. Promosyon kodları uzak JSON yapılandırmasından gelmelidir; README'de gösterilen değerler yalnızca format örneğidir ve gerçek kampanya kodu değildir.
 
-Kod yönetimi iki kaynaktan yapılabilir:
+Kod yönetimi üç kaynaktan yapılabilir:
 
 1. `NOCTRA_PROMO_CODES_URL` environment değişkeni.
-2. `LicenseService.cs` içindeki `DefaultRemotePromoCodesUrl` sabiti.
+2. `%LOCALAPPDATA%/Noctra/settings.json` içindeki `promoCodeConfigUrl` alanı.
+3. `LicenseService.cs` içindeki `DefaultRemotePromoCodesUrl` sabiti.
 
 Uzak JSON örneği:
 
@@ -135,7 +136,7 @@ Uzak JSON örneği:
 }
 ```
 
-Uzak JSON okunamazsa veya kod listesi boşsa promosyon kodu bulunamadı/geçersiz sonucu döner; yerel/fallback kod kullanılmaz. Aynı kodun aynı cihazda tekrar kullanılmasını önlemek için kullanılan kodlar `settings.json` içinde `redeemedPromoCodes` alanına kaydedilir.
+Promo kod URL'si yapılandırılmadıysa kullanıcıya yapılandırma hatası gösterilir. Uzak JSON okunamazsa veya indirilemezse yükleme hatası gösterilir; bu durumlar yanlış kod/geçersiz kod mesajıyla karıştırılmaz. Kod listesi yüklendiği halde eşleşme yoksa promosyon kodu bulunamadı/geçersiz sonucu döner. Yerel/fallback kod kullanılmaz. Aynı kodun aynı cihazda tekrar kullanılmasını önlemek için kullanılan kodlar `settings.json` içinde `redeemedPromoCodes` alanına kaydedilir.
 
 > Daha detaylı kullanım ve JSON şeması için `PROMO_CODES_README.md` dosyasına bakın.
 

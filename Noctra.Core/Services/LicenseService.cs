@@ -55,6 +55,7 @@ public class LicenseService : ObservableObject, ILicenseService
     private readonly IAppEditionService _appEditionService;
     private readonly ISettingsService _settingsService;
     private readonly HttpClient _httpClient;
+    private readonly ILocalizationService? _localizationService;
     private bool _manualPremiumOverride;
 
 #if DEBUG
@@ -64,8 +65,8 @@ public class LicenseService : ObservableObject, ILicenseService
 #endif
 
     /// <summary>
-    /// Developer: Uzak JSON adresini burada sabitleyebilir veya
-    /// NOCTRA_PROMO_CODES_URL environment değişkeni ile verebilirsin.
+    /// Developer: Uzak JSON adresini burada sabitleyebilir, settings.json içindeki
+    /// promoCodeConfigUrl alanı veya NOCTRA_PROMO_CODES_URL environment değişkeni ile verebilirsin.
     /// Beklenen JSON:
     /// { "codes": [ { "code": "PROMO-EXAMPLE-7D", "durationDays": 7, "isActive": true } ] }
     /// </summary>
@@ -104,11 +105,16 @@ public class LicenseService : ObservableObject, ILicenseService
     {
     }
 
-    public LicenseService(IAppEditionService appEditionService, ISettingsService settingsService, HttpClient httpClient)
+    public LicenseService(
+        IAppEditionService appEditionService,
+        ISettingsService settingsService,
+        HttpClient httpClient,
+        ILocalizationService? localizationService = null)
     {
         _appEditionService = appEditionService;
         _settingsService = settingsService;
         _httpClient = httpClient;
+        _localizationService = localizationService;
         _settingsService.SettingsChanged += OnSettingsChanged;
         SyncSubscriptionFromSettings(notify: false);
     }
@@ -174,37 +180,42 @@ public class LicenseService : ObservableObject, ILicenseService
     {
         if (_appEditionService.IsPremiumEdition)
         {
-            return PromoCodeRedemptionResult.Fail("Bu paket zaten kalıcı Premium sürüm.");
+            return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.PremiumEdition", "Bu paket zaten kalıcı Premium sürüm."));
         }
 
         var normalizedCode = NormalizePromoCode(promoCode);
         if (string.IsNullOrWhiteSpace(normalizedCode))
         {
-            return PromoCodeRedemptionResult.Fail("Lütfen promosyon kodunu girin.");
+            return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.EmptyCode", "Lütfen promosyon kodunu girin."));
         }
 
-        var codes = await LoadPromoCodesAsync();
-        var matchedCode = codes.FirstOrDefault(code =>
+        var promoCodesResult = await LoadPromoCodesAsync();
+        if (!promoCodesResult.Success)
+        {
+            return PromoCodeRedemptionResult.Fail(promoCodesResult.ErrorMessage);
+        }
+
+        var matchedCode = promoCodesResult.Codes.FirstOrDefault(code =>
             NormalizePromoCode(code.Code).Equals(normalizedCode, StringComparison.OrdinalIgnoreCase));
 
         if (matchedCode == null)
         {
-            return PromoCodeRedemptionResult.Fail("Promosyon kodu bulunamadı veya geçersiz.");
+            return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.InvalidCode", "Promosyon kodu bulunamadı veya geçersiz."));
         }
 
         if (!matchedCode.IsActive)
         {
-            return PromoCodeRedemptionResult.Fail("Bu promosyon kodu aktif değil.");
+            return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.Inactive", "Bu promosyon kodu aktif değil."));
         }
 
         if (matchedCode.DurationDays <= 0)
         {
-            return PromoCodeRedemptionResult.Fail("Bu promosyon kodu için geçerli süre tanımlanmamış.");
+            return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.InvalidDuration", "Bu promosyon kodu için geçerli süre tanımlanmamış."));
         }
 
         if (matchedCode.ValidUntilUtc.HasValue && matchedCode.ValidUntilUtc.Value <= DateTime.UtcNow)
         {
-            return PromoCodeRedemptionResult.Fail("Bu promosyon kodunun kullanım süresi dolmuş.");
+            return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.Expired", "Bu promosyon kodunun kullanım süresi dolmuş."));
         }
 
         var settings = _settingsService.Settings;
@@ -212,7 +223,7 @@ public class LicenseService : ObservableObject, ILicenseService
         if (!matchedCode.AllowReuse && settings.RedeemedPromoCodes.Any(code =>
                 NormalizePromoCode(code).Equals(normalizedCode, StringComparison.OrdinalIgnoreCase)))
         {
-            return PromoCodeRedemptionResult.Fail("Bu promosyon kodu daha önce bu cihazda kullanılmış.");
+            return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.AlreadyRedeemed", "Bu promosyon kodu daha önce bu cihazda kullanılmış."));
         }
 
         _manualPremiumOverride = false;
@@ -233,35 +244,31 @@ public class LicenseService : ObservableObject, ILicenseService
         SyncSubscriptionFromSettings(notify: true);
 
         return PromoCodeRedemptionResult.Ok(
-            $"Promosyon kodu uygulandı. Premium {FormatLocalDate(expiresAt)} tarihine kadar aktif.",
+            Localize("GlobalSettings.Promo.SuccessFormat", "Promosyon kodu uygulandı. Premium {0} tarihine kadar aktif.", FormatLocalDate(expiresAt)),
             expiresAt,
             matchedCode.DurationDays);
     }
 
-    private async Task<IReadOnlyList<PromoCodeDefinition>> LoadPromoCodesAsync()
+    private async Task<PromoCodeLoadResult> LoadPromoCodesAsync()
     {
         var remoteUrl = GetRemotePromoCodesUrl();
-        if (!string.IsNullOrWhiteSpace(remoteUrl))
+        if (string.IsNullOrWhiteSpace(remoteUrl))
         {
-            try
-            {
-                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
-                using var response = await _httpClient.GetAsync(remoteUrl, cts.Token);
-                response.EnsureSuccessStatusCode();
-                var json = await response.Content.ReadAsStringAsync(cts.Token);
-                var remoteCodes = ParsePromoCodeJson(json);
-                if (remoteCodes.Count > 0)
-                {
-                    return remoteCodes;
-                }
-            }
-            catch
-            {
-                // Uzak yapılandırma okunamazsa boş liste döner.
-            }
+            return PromoCodeLoadResult.Fail(Localize("GlobalSettings.Promo.Error.ConfigMissing", "Promosyon kodu yapılandırması bulunamadı. Lütfen uygulama yöneticisinin promosyon kodu URL'sini yapılandırdığından emin olun."));
         }
 
-        return new List<PromoCodeDefinition>();
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+            using var response = await _httpClient.GetAsync(remoteUrl, cts.Token);
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync(cts.Token);
+            return PromoCodeLoadResult.Ok(ParsePromoCodeJson(json));
+        }
+        catch
+        {
+            return PromoCodeLoadResult.Fail(Localize("GlobalSettings.Promo.Error.ConfigLoadFailed", "Promosyon kodu yapılandırması yüklenemedi. Lütfen internet bağlantınızı kontrol edip tekrar deneyin."));
+        }
     }
 
     private static List<PromoCodeDefinition> ParsePromoCodeJson(string json)
@@ -289,7 +296,25 @@ public class LicenseService : ObservableObject, ILicenseService
             return envUrl.Trim();
         }
 
+        var settingsUrl = _settingsService.Settings.PromoCodeConfigUrl;
+        if (!string.IsNullOrWhiteSpace(settingsUrl))
+        {
+            return settingsUrl.Trim();
+        }
+
         return DefaultRemotePromoCodesUrl;
+    }
+
+    private sealed record PromoCodeLoadResult(
+        bool Success,
+        IReadOnlyList<PromoCodeDefinition> Codes,
+        string ErrorMessage)
+    {
+        public static PromoCodeLoadResult Ok(IReadOnlyList<PromoCodeDefinition> codes) =>
+            new(true, codes, string.Empty);
+
+        public static PromoCodeLoadResult Fail(string errorMessage) =>
+            new(false, Array.Empty<PromoCodeDefinition>(), errorMessage);
     }
 
     private void OnSettingsChanged()
@@ -358,6 +383,17 @@ public class LicenseService : ObservableObject, ILicenseService
     private static string FormatLocalDate(DateTime utcDate)
     {
         return utcDate.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
+    }
+
+    private string Localize(string key, string fallback, params object[] args)
+    {
+        var template = _localizationService?.GetString(key);
+        if (string.IsNullOrWhiteSpace(template) || string.Equals(template, key, StringComparison.Ordinal))
+        {
+            template = fallback;
+        }
+
+        return args.Length == 0 ? template : string.Format(template, args);
     }
 
     // ==========================================

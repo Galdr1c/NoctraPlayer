@@ -806,5 +806,16 @@
     "GlobalSettings.Promo.Placeholder": "Pega el código aquí...",
     "GlobalSettings.Promo.Status.Free": "Versión gratuita activa",
     "GlobalSettings.Promo.Status.Premium": "Premium activo",
-    "GlobalSettings.Promo.Status.PremiumFormat": "Premium activo hasta {0}"
+    "GlobalSettings.Promo.Status.PremiumFormat": "Premium activo hasta {0}",
+    "GlobalSettings.Promo.SuccessFormat": "Código promocional aplicado. Premium está activo hasta {0}.",
+    "GlobalSettings.Promo.Error.PremiumEdition": "Este paquete ya es la edición Premium permanente.",
+    "GlobalSettings.Promo.Error.EmptyCode": "Introduce un código promocional.",
+    "GlobalSettings.Promo.Error.InvalidCode": "El código promocional no se encontró o no es válido.",
+    "GlobalSettings.Promo.Error.Inactive": "Este código promocional no está activo.",
+    "GlobalSettings.Promo.Error.InvalidDuration": "No se ha definido una duración válida para este código promocional.",
+    "GlobalSettings.Promo.Error.Expired": "Este código promocional ha caducado.",
+    "GlobalSettings.Promo.Error.AlreadyRedeemed": "Este código promocional ya se ha usado en este dispositivo.",
+    "GlobalSettings.Promo.Error.ConfigMissing": "No se encontró la configuración de códigos promocionales. Asegúrate de que el administrador de la app haya configurado la URL de códigos promocionales.",
+    "GlobalSettings.Promo.Error.ConfigLoadFailed": "No se pudo cargar la configuración de códigos promocionales. Comprueba tu conexión a internet e inténtalo de nuevo.",
+    "GlobalSettings.Promo.Error.ApplyFailedFormat": "No se pudo aplicar el código promocional: {0}"
 }

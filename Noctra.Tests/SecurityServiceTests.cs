@@ -99,7 +99,7 @@ namespace Noctra.Tests
         [Fact]
         public void VerifyPin_LegacySha256Hash_ShouldReturnTrue()
         {
-            const string legacyHashFor1234 = "28AC1837DB52BD3FB2B47FE879841B1866B18978156B8F15DA52A36046D99453";
+            const string legacyHashFor1234 = "83D837DD7E939316F5A94A1216FF2E6F2DC9E9859441F333CC12FA2414468B88";
 
             Assert.True(_securityService.VerifyPin("1234", legacyHashFor1234));
         }

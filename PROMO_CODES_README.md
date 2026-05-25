@@ -18,10 +18,11 @@ Gerçek kampanya kodlarını public repository, README veya istemci kodu içine 
 
 ## Uzak Kontrol
 
-Uygulama promosyon kodlarını uzak bir JSON adresinden okuyabilir. URL iki şekilde verilebilir:
+Uygulama promosyon kodlarını uzak bir JSON adresinden okuyabilir. URL üç şekilde verilebilir:
 
 1. `NOCTRA_PROMO_CODES_URL` environment değişkeni.
-2. `LicenseService.cs` içindeki `DefaultRemotePromoCodesUrl` sabiti.
+2. Kullanıcının `%LOCALAPPDATA%/Noctra/settings.json` dosyasındaki `promoCodeConfigUrl` alanı.
+3. `LicenseService.cs` içindeki `DefaultRemotePromoCodesUrl` sabiti.
 
 Örnek JSON:
 
@@ -76,6 +77,7 @@ Promosyon bilgileri global ayarlarda saklanır:
 
 ```json
 {
+  "promoCodeConfigUrl": "https://example.com/noctra-promo-codes.json",
   "activePromoCode": "PROMO-EXAMPLE-7D",
   "promoPremiumExpiresAtUtc": "2026-06-01T12:00:00Z",
   "redeemedPromoCodes": [
@@ -101,7 +103,10 @@ Profil ayarı yüklendiğinde global promosyon alanları ana `settings.json` dos
 - Süresi dolmuş `validUntilUtc` değerleri reddedilir.
 - `allowReuse=false` ise aynı kod aynı cihazda tekrar kullanılamaz.
 - Kullanıcının mevcut süreli Premium hakkı bitmeden yeni geçerli kod girilirse yeni süre mevcut bitiş tarihinin üzerine eklenir.
-- Uzak JSON okunamazsa veya kod listesi boşsa promosyon kodu bulunamadı/geçersiz sonucu döner; yerel/fallback kod kullanılmaz.
+- Promo kod URL'si yapılandırılmadıysa yapılandırma hatası gösterilir.
+- Uzak JSON okunamazsa veya indirilemezse yükleme hatası gösterilir; bu durum yanlış/geçersiz kod mesajıyla karıştırılmaz.
+- Kod listesi yüklendiği halde eşleşme yoksa promosyon kodu bulunamadı/geçersiz sonucu döner.
+- Yerel/fallback kod kullanılmaz.
 
 ## Güvenlik Notu
 

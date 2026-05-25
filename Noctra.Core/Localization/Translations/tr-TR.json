@@ -806,5 +806,16 @@
     "GlobalSettings.Promo.Placeholder": "Kodu buraya yapıştır...",
     "GlobalSettings.Promo.Status.Free": "Free sürüm aktif",
     "GlobalSettings.Promo.Status.Premium": "Premium aktif",
-    "GlobalSettings.Promo.Status.PremiumFormat": "Premium {0} tarihine kadar aktif"
+    "GlobalSettings.Promo.Status.PremiumFormat": "Premium {0} tarihine kadar aktif",
+    "GlobalSettings.Promo.SuccessFormat": "Promosyon kodu uygulandı. Premium {0} tarihine kadar aktif.",
+    "GlobalSettings.Promo.Error.PremiumEdition": "Bu paket zaten kalıcı Premium sürüm.",
+    "GlobalSettings.Promo.Error.EmptyCode": "Lütfen promosyon kodunu girin.",
+    "GlobalSettings.Promo.Error.InvalidCode": "Promosyon kodu bulunamadı veya geçersiz.",
+    "GlobalSettings.Promo.Error.Inactive": "Bu promosyon kodu aktif değil.",
+    "GlobalSettings.Promo.Error.InvalidDuration": "Bu promosyon kodu için geçerli süre tanımlanmamış.",
+    "GlobalSettings.Promo.Error.Expired": "Bu promosyon kodunun kullanım süresi dolmuş.",
+    "GlobalSettings.Promo.Error.AlreadyRedeemed": "Bu promosyon kodu daha önce bu cihazda kullanılmış.",
+    "GlobalSettings.Promo.Error.ConfigMissing": "Promosyon kodu yapılandırması bulunamadı. Lütfen uygulama yöneticisinin promosyon kodu URL'sini yapılandırdığından emin olun.",
+    "GlobalSettings.Promo.Error.ConfigLoadFailed": "Promosyon kodu yapılandırması yüklenemedi. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.",
+    "GlobalSettings.Promo.Error.ApplyFailedFormat": "Promosyon kodu uygulanamadı: {0}"
 }
