@@ -50,16 +50,17 @@ public class EpgService : IEpgService
             return -1; // -1 indicates it was skipped due to concurrency
         }
 
-        // Check if EPG is enabled globally
-        if (!_settingsService.Settings.EpgEnabled)
-        {
-            _logger?.LogInformation("EPG is disabled in settings, skipping load.");
-            return 0;
-        }
-
         int totalLoaded = 0;
         try
         {
+            // Check if EPG is enabled globally after the semaphore is acquired so
+            // all exits are covered by the release in finally.
+            if (!_settingsService.Settings.EpgEnabled)
+            {
+                _logger?.LogInformation("EPG is disabled in settings, skipping load.");
+                return 0;
+            }
+
             LastError = null; // Clear previous error
             if (string.IsNullOrEmpty(epgUrl)) return 0;
 

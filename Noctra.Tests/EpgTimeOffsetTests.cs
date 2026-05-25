@@ -114,5 +114,50 @@ namespace Noctra.Tests
             // Expected: 14:00 UTC - 5 hours offset = 09:00
             Assert.Equal(new DateTime(2023, 1, 1, 9, 0, 0, DateTimeKind.Utc), program.EndTime);
         }
+
+        [Fact]
+        public async Task LoadEpgAsync_WhenEpgDisabled_ShouldReleaseSemaphore()
+        {
+            var service = CreateEpgServiceForLoad(new AppSettings { EpgEnabled = false });
+
+            var first = await service.LoadEpgAsync("https://example.com/epg.xml", isPrimary: false);
+            var second = await service.LoadEpgAsync("https://example.com/epg.xml", isPrimary: false);
+
+            Assert.Equal(0, first);
+            Assert.Equal(0, second);
+        }
+
+        [Fact]
+        public async Task LoadEpgAsync_WhenUrlEmpty_ShouldReleaseSemaphore()
+        {
+            var service = CreateEpgServiceForLoad(new AppSettings { EpgEnabled = true });
+
+            var first = await service.LoadEpgAsync(string.Empty, isPrimary: false);
+            var second = await service.LoadEpgAsync(string.Empty, isPrimary: false);
+
+            Assert.Equal(0, first);
+            Assert.Equal(0, second);
+        }
+
+        private EpgService CreateEpgServiceForLoad(AppSettings settings)
+        {
+            var dbName = Guid.NewGuid().ToString();
+            var mockContextFactory = new Mock<IDbContextFactory<AppDbContext>>();
+            mockContextFactory.Setup(f => f.CreateDbContextAsync(It.IsAny<System.Threading.CancellationToken>()))
+                .ReturnsAsync(() => CreateContext(dbName));
+
+            var mockSettingsService = new Mock<ISettingsService>();
+            mockSettingsService.Setup(s => s.Settings).Returns(settings);
+
+            var mockLocalizationService = new Mock<ILocalizationService>();
+            mockLocalizationService.Setup(l => l.GetString(It.IsAny<string>())).Returns<string>(k => k);
+
+            return new EpgService(
+                mockContextFactory.Object,
+                new HttpClient(),
+                mockSettingsService.Object,
+                mockLocalizationService.Object,
+                new LanguageDetectionService());
+        }
     }
 }
