@@ -16,6 +16,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - [Gelistirildi] **Promo Hata Mesajlari Lokalize Edildi**: Promo kod basari/hata mesajlari ve beklenmeyen uygulama hatasi metni localization key'lerine tasindi; `tr-TR`, `en-US`, `de-DE`, `es-ES`, `fr-FR` cevirileri eklendi.
 - [Duzeltildi] **Ortak HttpClient Sonsuz Timeout Kapatildi**: M3U/EPG/provider isteklerinde kullanilan singleton `HttpClient` artik `Timeout.InfiniteTimeSpan` yerine 3 dakikalik timeout kullanir; streaming/indirme akislari kendi `CancellationToken` kontrolleriyle calismaya devam eder.
 - [Temizlik] **StalkerPortalService Dead Code Kaldirildi**: Kullanilmayan `_dummy` static `ConcurrentDictionary` alani silindi.
+- [Kritik] **Cache Temizleme Profil Ayarlarini Korumaya Alindi**: `CacheService` temizleme kapsamindan `Settings` klasoru cikarildi; "Onbellegi Temizle" artik `Settings/profile_*.json` profil ayar dosyalarini silemez.
 - [Not] Promosyon kodu akisi Store Premium edition modelinden ayridir ve client-side dogasi nedeniyle kotuye kullanim korumasi icin server-side redemption gerektirir.
 - [Dogrulama] `dotnet test Noctra.Tests\Noctra.Tests.csproj --filter "LicenseServiceTests|LocalizationServiceTests|SecurityServiceTests|PinSystemScenariosTests"` sonucu `43/43` test gecti. `dotnet build NoctraPlayer.sln -c Release` basarili.
 

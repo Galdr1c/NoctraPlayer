@@ -16,8 +16,7 @@ public class CacheService : ICacheService
         "image-cache",
         "image-cache-avalonia",
         "TempPlayback",
-        "Logs",
-        "Settings"
+        "Logs"
     };
 
     public Task<long> GetCacheSizeAsync()
