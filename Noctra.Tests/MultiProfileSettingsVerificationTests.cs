@@ -165,5 +165,27 @@ namespace Noctra.Tests
                 Assert.Equal(1, h2); // P2 korunmalı
             }
         }
+
+        [Fact]
+        public async Task AtomicWrite_ShouldReplaceExistingSettingsFile_WithoutLeavingTempFile()
+        {
+            var directory = Path.Combine(Path.GetTempPath(), "NoctraTests", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            var path = Path.Combine(directory, "settings.json");
+
+            try
+            {
+                await File.WriteAllTextAsync(path, "{\"old\":true}");
+
+                await SettingsService.WriteAllTextAtomicallyAsync(path, "{\"new\":true}");
+
+                Assert.Equal("{\"new\":true}", await File.ReadAllTextAsync(path));
+                Assert.Empty(Directory.GetFiles(directory, "*.tmp"));
+            }
+            finally
+            {
+                try { Directory.Delete(directory, recursive: true); } catch { }
+            }
+        }
     }
 }

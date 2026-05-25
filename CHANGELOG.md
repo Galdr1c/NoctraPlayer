@@ -18,6 +18,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - [Temizlik] **StalkerPortalService Dead Code Kaldirildi**: Kullanilmayan `_dummy` static `ConcurrentDictionary` alani silindi.
 - [Kritik] **Cache Temizleme Profil Ayarlarini Korumaya Alindi**: `CacheService` temizleme kapsamindan `Settings` klasoru cikarildi; "Onbellegi Temizle" artik `Settings/profile_*.json` profil ayar dosyalarini silemez.
 - [Kritik] **EPG Semafor Sizintisi Duzeltildi**: `EpgService.LoadEpgAsync` icinde EPG kapali erken cikisi artik `try/finally` kapsaminda; semafor serbest birakilmadan donulup sonraki EPG yuklemelerinin `-1` ile atlanmasi engellendi.
+- [Kritik] **Settings Yazimi Atomik Hale Getirildi**: `SettingsService.SaveAsync` artik ayar JSON'unu once ayni dizindeki `.tmp` dosyasina yazar, sonra hedef dosyayi atomik olarak degistirir; yarim yazim nedeniyle profil/global ayarlarin bozulup varsayilana dusmesi riski azaltildi.
 - [Not] Promosyon kodu akisi Store Premium edition modelinden ayridir ve client-side dogasi nedeniyle kotuye kullanim korumasi icin server-side redemption gerektirir.
 - [Dogrulama] `dotnet test Noctra.Tests\Noctra.Tests.csproj --filter "LicenseServiceTests|LocalizationServiceTests|SecurityServiceTests|PinSystemScenariosTests"` sonucu `43/43` test gecti. `dotnet build NoctraPlayer.sln -c Release` basarili.
 

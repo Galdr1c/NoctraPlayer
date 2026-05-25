@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text;
 using Noctra.Models;
 using Microsoft.Extensions.Logging;
 
@@ -200,7 +201,7 @@ public class SettingsService : ISettingsService
             // 1. Save current profile settings
             var path = GetSettingsPath(profileId);
             var json = JsonSerializer.Serialize(Settings, JsonOptions);
-            await File.WriteAllTextAsync(path, json);
+            await WriteAllTextAtomicallyAsync(path, json);
             _logger?.LogInformation("Settings saved for profile {Id}", profileId);
 
             // 2. If it's a sub-profile, update the master global settings too
@@ -213,7 +214,7 @@ public class SettingsService : ISettingsService
                 SyncGlobalSettings(globalSettings, Settings);
                 
                 var globalJson = JsonSerializer.Serialize(globalSettings, JsonOptions);
-                await File.WriteAllTextAsync(globalPath, globalJson);
+                await WriteAllTextAtomicallyAsync(globalPath, globalJson);
                 _logger?.LogInformation("Global settings updated from profile {Id}", profileId);
             }
             
@@ -222,6 +223,59 @@ public class SettingsService : ISettingsService
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to save settings");
+        }
+    }
+
+    internal static async Task WriteAllTextAtomicallyAsync(string path, string contents, CancellationToken cancellationToken = default)
+    {
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        var tempPath = Path.Combine(
+            string.IsNullOrWhiteSpace(directory) ? Directory.GetCurrentDirectory() : directory,
+            $"{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
+
+        try
+        {
+            await using (var stream = new FileStream(
+                tempPath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 4096,
+                FileOptions.Asynchronous | FileOptions.WriteThrough))
+            await using (var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)))
+            {
+                await writer.WriteAsync(contents.AsMemory(), cancellationToken);
+                await writer.FlushAsync(cancellationToken);
+                await stream.FlushAsync(cancellationToken);
+            }
+
+            if (File.Exists(path))
+            {
+                File.Replace(tempPath, path, destinationBackupFileName: null, ignoreMetadataErrors: true);
+            }
+            else
+            {
+                File.Move(tempPath, path);
+            }
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(tempPath))
+                {
+                    File.Delete(tempPath);
+                }
+            }
+            catch
+            {
+                // Best-effort cleanup; the target file has already been protected.
+            }
         }
     }
     
