@@ -7,6 +7,13 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Premium Lisans Test Bypass Guvenlik Duzeltmesi (2026-05-25)
+- [Guvenlik] **Release Build'de Manuel Premium Override Kapatildi**: `LicenseService.ActivatePremium()`, `DeactivatePremium()` ve `SetTierForTesting()` cagrilari artik sadece `DEBUG` build'lerde premium durumunu manuel degistirebilir. Release/Store build'lerde bu test bypass yolu no-op kalir.
+- [Guvenlik] **Developer Premium Toggle Release'de Gizlendi**: Global Ayarlar ekranindaki developer premium toggle gorunurlugu `DEBUG` kosuluna baglandi; `IsDeveloperModeActive` runtime'da manipule edilse bile release build'de toggle yuzeyi acilmaz.
+- [Guvenlik] **Public Promo Kod Ornekleri Kaldirildi**: `README.md` ve `PROMO_CODES_README.md` icindeki gercek kod gibi gorunen promosyon kodu ornekleri placeholder formatlara cevrildi; dokumanlar artik yerel/fallback promo kod olmadigini ve uzak JSON yoksa kod dogrulamanin basarisiz olacagini acikca belirtiyor.
+- [Not] Promosyon kodu akisi Store Premium edition modelinden ayridir ve client-side dogasi nedeniyle kotuye kullanim korumasi icin server-side redemption gerektirir.
+- [Dogrulama] `dotnet test Noctra.Tests\Noctra.Tests.csproj --filter LicenseService` sonucu `22/22` test gecti. `dotnet build NoctraPlayer.sln -c Release` basarili.
+
 ### Live/Movies/Series Bos Ekran ve Filtre UI Duzenlemesi (2026-05-24)
 - [Duzeltildi] **Bos Movies/Series Ekraninda Sonsuz Loading**: Film veya dizi icerigi olmayan profillerde `Loading movies...` / `Loading series...` spinner'inin takili kalmasi engellendi. Icerik yukleme gostergesi artik genel kanal arka plan yuklemesi yerine aktif view'in gercek icerik yukleme durumuna gore calisir.
 - [Duzeltildi] **Bos Ekranda Filtre Cubugu**: Live, Movies ve Series ekranlarinda icerik yokken ustteki grup combobox'i, `All` butonu ve siralama filtresi gizlenir; icerik geldiginde tekrar gorunur.

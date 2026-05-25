@@ -111,18 +111,12 @@ Noctra, iki farklı Premium akışını destekler:
 1. **Edition tabanlı Premium:** Microsoft Store için ayrı `Free` ve `Premium` paketleri üretilebilir. Premium paket çalıştığında premium özellikler otomatik aktiftir.
 2. **Promosyon kodu ile süreli Premium:** Free sürümde, Global Ayarlar ekranındaki promosyon alanından kod girilerek belirli gün kadar Premium açılabilir.
 
-Varsayılan/fallback promosyon kodları `Noctra.Core/Services/LicenseService.cs` içinde tanımlıdır:
+Uygulamada hazır veya fallback promosyon kodu yoktur. Promosyon kodları uzak JSON yapılandırmasından gelmelidir; README'de gösterilen değerler yalnızca format örneğidir ve gerçek kampanya kodu değildir.
 
-```text
-NOC-8KQ2-MP7A  -> 7 gün Premium
-NOC-T4Z9-P6XD  -> 30 gün Premium
-```
-
-Kod yönetimi üç kaynaktan yapılabilir:
+Kod yönetimi iki kaynaktan yapılabilir:
 
 1. `NOCTRA_PROMO_CODES_URL` environment değişkeni.
-2. `%LOCALAPPDATA%/Noctra/settings.json` içindeki `promoCodeConfigUrl` alanı.
-3. `LicenseService.cs` içindeki `DefaultRemotePromoCodesUrl` sabiti.
+2. `LicenseService.cs` içindeki `DefaultRemotePromoCodesUrl` sabiti.
 
 Uzak JSON örneği:
 
@@ -130,18 +124,18 @@ Uzak JSON örneği:
 {
   "codes": [
     {
-      "code": "NOC-8KQ2-MP7A",
+      "code": "PROMO-EXAMPLE-7D",
       "durationDays": 7,
       "isActive": true,
       "allowReuse": false,
       "validUntilUtc": "2026-12-31T23:59:59Z",
-      "description": "7 günlük Premium"
+      "description": "7 gunluk Premium format ornegi"
     }
   ]
 }
 ```
 
-Uzak JSON okunamazsa uygulama yerel/fallback kodlarla devam eder. Aynı kodun aynı cihazda tekrar kullanılmasını önlemek için kullanılan kodlar `settings.json` içinde `redeemedPromoCodes` alanına kaydedilir.
+Uzak JSON okunamazsa veya kod listesi boşsa promosyon kodu bulunamadı/geçersiz sonucu döner; yerel/fallback kod kullanılmaz. Aynı kodun aynı cihazda tekrar kullanılmasını önlemek için kullanılan kodlar `settings.json` içinde `redeemedPromoCodes` alanına kaydedilir.
 
 > Daha detaylı kullanım ve JSON şeması için `PROMO_CODES_README.md` dosyasına bakın.
 
@@ -316,7 +310,7 @@ Tam akış için `docs/microsoft-store-submission.md` dosyasını inceleyin.
 
 - MSIX paketleme için yalnızca `dotnet` CLI yeterli değildir; `.wapproj` için Visual Studio/MSBuild paketleme araçları gerekir.
 - Store sertifikasyonunda en kritik alan LibVLC native bağımlılıklarının paket içinde doğru çalışmasıdır.
-- Promosyon kodu sistemi client-side doğrulama yapar. Üretim seviyesinde tek kullanımlık kod, cihaz/kullanıcı bazlı redemption ve kötüye kullanım koruması için sunucu tarafı doğrulama önerilir.
+- Promosyon kodu sistemi client-side doğrulama yapar ve repository içinde gerçek kod tutulmamalıdır. Üretim seviyesinde tek kullanımlık kod, cihaz/kullanıcı bazlı redemption ve kötüye kullanım koruması için sunucu tarafı doğrulama önerilir.
 
 ## Kısa Yol Haritası
 

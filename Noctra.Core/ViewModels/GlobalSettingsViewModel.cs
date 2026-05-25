@@ -161,7 +161,17 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
 
     public bool IsPremium => _licenseService.IsPremium;
     public bool IsFreeEdition => !_licenseService.IsEditionLockedPremium;
-    public bool CanTogglePremiumForTesting => IsDeveloperModeActive && !_licenseService.IsEditionLockedPremium;
+    public bool CanTogglePremiumForTesting
+    {
+        get
+        {
+#if DEBUG
+            return IsDeveloperModeActive && !_licenseService.IsEditionLockedPremium;
+#else
+            return false;
+#endif
+        }
+    }
 
     public string PremiumStatusText
     {

@@ -57,11 +57,17 @@ public class LicenseService : ObservableObject, ILicenseService
     private readonly HttpClient _httpClient;
     private bool _manualPremiumOverride;
 
+#if DEBUG
+    private const bool AllowsManualPremiumOverride = true;
+#else
+    private const bool AllowsManualPremiumOverride = false;
+#endif
+
     /// <summary>
-    /// Developer: Uzak JSON adresini burada sabitleyebilir veya settings.json içindeki
-    /// promoCodeConfigUrl alanı / NOCTRA_PROMO_CODES_URL environment değişkeni ile verebilirsin.
+    /// Developer: Uzak JSON adresini burada sabitleyebilir veya
+    /// NOCTRA_PROMO_CODES_URL environment değişkeni ile verebilirsin.
     /// Beklenen JSON:
-    /// { "codes": [ { "code": "NOC-8KQ2-MP7A", "durationDays": 7, "isActive": true } ] }
+    /// { "codes": [ { "code": "PROMO-EXAMPLE-7D", "durationDays": 7, "isActive": true } ] }
     /// </summary>
     private const string DefaultRemotePromoCodesUrl = "";
 
@@ -126,7 +132,7 @@ public class LicenseService : ObservableObject, ILicenseService
 
     public void ActivatePremium()
     {
-        if (_appEditionService.IsPremiumEdition)
+        if (_appEditionService.IsPremiumEdition || !AllowsManualPremiumOverride)
         {
             return;
         }
@@ -142,7 +148,7 @@ public class LicenseService : ObservableObject, ILicenseService
 
     public void DeactivatePremium()
     {
-        if (_appEditionService.IsPremiumEdition || _currentSubscription.Tier == SubscriptionTier.Free)
+        if (_appEditionService.IsPremiumEdition || !AllowsManualPremiumOverride || _currentSubscription.Tier == SubscriptionTier.Free)
         {
             return;
         }
@@ -467,7 +473,7 @@ public class LicenseService : ObservableObject, ILicenseService
     /// </summary>
     public void SetTierForTesting(SubscriptionTier tier)
     {
-        if (_appEditionService.IsPremiumEdition && tier != SubscriptionTier.Premium)
+        if (!AllowsManualPremiumOverride || (_appEditionService.IsPremiumEdition && tier != SubscriptionTier.Premium))
         {
             return;
         }

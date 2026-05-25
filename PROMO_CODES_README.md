@@ -10,24 +10,18 @@ Bu sürümde promosyon kodu girişi profil ayarlarından çıkarılıp `GlobalSe
 4. Kod geçerliyse Premium bitiş tarihi hesaplanır ve global `settings.json` içine kaydedilir.
 5. Premium durum değişikliği `LicenseService.SubscriptionChanged` ile UI tarafına bildirilir.
 
-## Hazır Yerel Kodlar
+## Kod Kaynağı
 
-Varsayılan/fallback kodlar `Noctra.Core/Services/LicenseService.cs` içindeki `DeveloperPromoCodes` listesindedir:
+Uygulamada hazır veya fallback promosyon kodu yoktur. Kodlar uzak JSON yapılandırmasından gelmelidir; dokümanda kullanılan kod değerleri yalnızca format örneğidir ve gerçek kampanya kodu değildir.
 
-```text
-NOC-8KQ2-MP7A  -> 7 gün Premium
-NOC-T4Z9-P6XD  -> 30 gün Premium
-```
-
-Süreleri değiştirmek veya yeni kod eklemek için bu listeyi düzenleyebilirsiniz.
+Gerçek kampanya kodlarını public repository, README veya istemci kodu içine yazmayın. Üretim kampanyaları için sunucu tarafı redemption servisi kullanın.
 
 ## Uzak Kontrol
 
-Uygulama promosyon kodlarını uzak bir JSON adresinden okuyabilir. URL üç şekilde verilebilir:
+Uygulama promosyon kodlarını uzak bir JSON adresinden okuyabilir. URL iki şekilde verilebilir:
 
 1. `NOCTRA_PROMO_CODES_URL` environment değişkeni.
-2. Kullanıcının `%LOCALAPPDATA%/Noctra/settings.json` dosyasındaki `promoCodeConfigUrl` alanı.
-3. `LicenseService.cs` içindeki `DefaultRemotePromoCodesUrl` sabiti.
+2. `LicenseService.cs` içindeki `DefaultRemotePromoCodesUrl` sabiti.
 
 Örnek JSON:
 
@@ -35,19 +29,19 @@ Uygulama promosyon kodlarını uzak bir JSON adresinden okuyabilir. URL üç şe
 {
   "codes": [
     {
-      "code": "NOC-8KQ2-MP7A",
+      "code": "PROMO-EXAMPLE-7D",
       "durationDays": 7,
       "isActive": true,
       "allowReuse": false,
       "validUntilUtc": "2026-12-31T23:59:59Z",
-      "description": "7 günlük Premium"
+      "description": "7 gunluk Premium format ornegi"
     },
     {
-      "code": "NOC-T4Z9-P6XD",
+      "code": "PROMO-EXAMPLE-30D",
       "durationDays": 30,
       "isActive": true,
       "allowReuse": false,
-      "description": "30 günlük Premium"
+      "description": "30 gunluk Premium format ornegi"
     }
   ]
 }
@@ -82,11 +76,10 @@ Promosyon bilgileri global ayarlarda saklanır:
 
 ```json
 {
-  "promoCodeConfigUrl": "https://example.com/noctra-promo-codes.json",
-  "activePromoCode": "NOC-8KQ2-MP7A",
+  "activePromoCode": "PROMO-EXAMPLE-7D",
   "promoPremiumExpiresAtUtc": "2026-06-01T12:00:00Z",
   "redeemedPromoCodes": [
-    "NOC-8KQ2-MP7A"
+    "PROMO-EXAMPLE-7D"
   ]
 }
 ```
@@ -108,7 +101,7 @@ Profil ayarı yüklendiğinde global promosyon alanları ana `settings.json` dos
 - Süresi dolmuş `validUntilUtc` değerleri reddedilir.
 - `allowReuse=false` ise aynı kod aynı cihazda tekrar kullanılamaz.
 - Kullanıcının mevcut süreli Premium hakkı bitmeden yeni geçerli kod girilirse yeni süre mevcut bitiş tarihinin üzerine eklenir.
-- Uzak JSON okunamazsa yerel/fallback kodlar kullanılır.
+- Uzak JSON okunamazsa veya kod listesi boşsa promosyon kodu bulunamadı/geçersiz sonucu döner; yerel/fallback kod kullanılmaz.
 
 ## Güvenlik Notu
 
