@@ -14,6 +14,8 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - [Guvenlik] **PIN Hash'leri PBKDF2'ye Tasindi**: Yeni profil PIN hash'leri artik random salt, `PBKDF2-SHA256` ve surumlu hash formatinda saklanir. Eski `SHA256(NOCTRA_PIN_{pin})` kayitlari geriye donuk dogrulanmaya devam eder.
 - [Duzeltildi] **Promo Config Hatalari Acik Mesaja Ayrildi**: Promo kod URL'si yoksa veya uzak JSON yuklenemezse artik bos kod listesiyle "kod gecersiz" sonucuna dusulmez; kullaniciya yapilandirma/yukleme hatasi doner. `settings.json` icindeki `promoCodeConfigUrl` tekrar desteklenir.
 - [Gelistirildi] **Promo Hata Mesajlari Lokalize Edildi**: Promo kod basari/hata mesajlari ve beklenmeyen uygulama hatasi metni localization key'lerine tasindi; `tr-TR`, `en-US`, `de-DE`, `es-ES`, `fr-FR` cevirileri eklendi.
+- [Duzeltildi] **Ortak HttpClient Sonsuz Timeout Kapatildi**: M3U/EPG/provider isteklerinde kullanilan singleton `HttpClient` artik `Timeout.InfiniteTimeSpan` yerine 3 dakikalik timeout kullanir; streaming/indirme akislari kendi `CancellationToken` kontrolleriyle calismaya devam eder.
+- [Temizlik] **StalkerPortalService Dead Code Kaldirildi**: Kullanilmayan `_dummy` static `ConcurrentDictionary` alani silindi.
 - [Not] Promosyon kodu akisi Store Premium edition modelinden ayridir ve client-side dogasi nedeniyle kotuye kullanim korumasi icin server-side redemption gerektirir.
 - [Dogrulama] `dotnet test Noctra.Tests\Noctra.Tests.csproj --filter "LicenseServiceTests|LocalizationServiceTests|SecurityServiceTests|PinSystemScenariosTests"` sonucu `43/43` test gecti. `dotnet build NoctraPlayer.sln -c Release` basarili.
 

@@ -25,7 +25,6 @@ public class StalkerPortalService : IStalkerPortalService
     private static readonly ConcurrentDictionary<string, CachedTokenState>    TokenCache  = new(StringComparer.Ordinal);
     private static readonly ConcurrentDictionary<string, SemaphoreSlim>       TokenLocks  = new(StringComparer.Ordinal);
     private static readonly ConcurrentDictionary<string, CachedEndpointState> EndpointCache = new(StringComparer.Ordinal);
-    private static readonly ConcurrentDictionary<string, ConcurrentDictionary<string, string>> _dummy = new(); // Not used but keeps structure
     private static int _cleanupCounter;
     private static readonly TimeSpan TokenTtl    = TimeSpan.FromMinutes(15);
     private static readonly TimeSpan EndpointTtl = TimeSpan.FromHours(24);

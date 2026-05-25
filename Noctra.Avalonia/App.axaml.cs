@@ -23,6 +23,8 @@ namespace Noctra.Avalonia;
 
 public partial class App : Application
 {
+    private static readonly TimeSpan SharedHttpClientTimeout = TimeSpan.FromMinutes(3);
+
     public IServiceProvider Services { get; private set; } = null!;
 
     public override void Initialize()
@@ -267,6 +269,8 @@ public partial class App : Application
         // HttpClient as Singleton: SocketsHttpHandler already manages connection pooling.
         // Transient would create new handler per resolution, defeating pooling and causing socket exhaustion.
         // PooledConnectionLifetime (5min) handles DNS rotation for long-lived instances.
+        // The shared timeout prevents playlist/EPG/API requests from hanging forever;
+        // streaming-style operations still pass their own CancellationToken where needed.
         services.AddSingleton(_ => CreateOptimizedHttpClient());
 
         services.AddTransient<IM3UParser, M3UParser>();
@@ -427,7 +431,7 @@ public partial class App : Application
             PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
             AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
         };
-        var client = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+        var client = new HttpClient(handler) { Timeout = SharedHttpClientTimeout };
         client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
         return client;
     }
