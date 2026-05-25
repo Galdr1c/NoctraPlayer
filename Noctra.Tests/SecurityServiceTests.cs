@@ -65,18 +65,20 @@ namespace Noctra.Tests
         }
 
         [Fact]
-        public void HashPin_ShouldReturnConsistentHash()
+        public void HashPin_ShouldReturnVersionedPbkdf2Hash()
         {
-            var hash1 = _securityService.HashPin("1234");
-            var hash2 = _securityService.HashPin("1234");
-            Assert.Equal(hash1, hash2);
+            var hash = _securityService.HashPin("1234");
+
+            Assert.StartsWith("PBKDF2$SHA256$", hash);
+            Assert.Equal(5, hash.Split('$').Length);
         }
 
         [Fact]
-        public void HashPin_DifferentPins_ShouldReturnDifferentHashes()
+        public void HashPin_SamePin_ShouldReturnDifferentHashes()
         {
             var hash1 = _securityService.HashPin("1234");
-            var hash2 = _securityService.HashPin("5678");
+            var hash2 = _securityService.HashPin("1234");
+
             Assert.NotEqual(hash1, hash2);
         }
 
@@ -92,6 +94,20 @@ namespace Noctra.Tests
         {
             var hash = _securityService.HashPin("1111");
             Assert.False(_securityService.VerifyPin("2222", hash));
+        }
+
+        [Fact]
+        public void VerifyPin_LegacySha256Hash_ShouldReturnTrue()
+        {
+            const string legacyHashFor1234 = "28AC1837DB52BD3FB2B47FE879841B1866B18978156B8F15DA52A36046D99453";
+
+            Assert.True(_securityService.VerifyPin("1234", legacyHashFor1234));
+        }
+
+        [Fact]
+        public void VerifyPin_InvalidHashFormat_ShouldReturnFalse()
+        {
+            Assert.False(_securityService.VerifyPin("1234", "not-a-valid-hash"));
         }
     }
 }

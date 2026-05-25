@@ -34,7 +34,7 @@ public class Profile
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
-    /// 4 haneli PIN'in SHA256 hash'i. Null = PIN yok.
+    /// 4 haneli PIN'in hash'i. Null = PIN yok.
     /// </summary>
     public string? PinHash { get; set; }
 

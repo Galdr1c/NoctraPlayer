@@ -17,12 +17,12 @@ public interface ISecurityService
     string? Decrypt(string? cipherText);
 
     /// <summary>
-    /// 4 haneli PIN'in SHA256 hash'ini üretir.
+    /// 4 haneli PIN icin salt'li ve surumlu hash uretir.
     /// </summary>
     string HashPin(string pin);
 
     /// <summary>
-    /// PIN'in verilen hash ile eşleşip eşleşmediğini doğrular.
+    /// PIN'in verilen hash ile eslesip eslesmedigini dogrular.
     /// </summary>
     bool VerifyPin(string pin, string hash);
 }

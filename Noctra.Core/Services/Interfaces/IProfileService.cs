@@ -64,7 +64,7 @@ public record ProfileSaveRequest
     public bool CredentialsChanged { get; init; }
 
     /// <summary>
-    /// PIN hash (SHA256). Null = PIN kaldır, değer = PIN ayarla/güncelle.
+    /// PIN hash. Null = PIN kaldir, deger = PIN ayarla/guncelle.
     /// </summary>
     public string? PinHash { get; init; }
 
