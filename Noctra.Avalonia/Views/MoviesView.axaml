@@ -12,7 +12,9 @@
              x:Class="Noctra.Avalonia.Views.MoviesView"
              x:DataType="vm:MainViewModel">
     <ScrollViewer x:Name="MoviesScrollViewer" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Movies}}"
-                      ScrollChanged="MoviesView_ScrollChanged">
+                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                      ScrollChanged="MoviesView_ScrollChanged"
+                      PointerWheelChanged="MoviesView_PointerWheelChanged">
           <StackPanel Margin="24">
             <Grid Margin="0,0,0,24" ColumnDefinitions="*,Auto">
               <TextBlock Text="{loc:Translate Movies.Title}" FontSize="24" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>

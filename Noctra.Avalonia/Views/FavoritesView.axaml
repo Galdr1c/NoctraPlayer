@@ -11,7 +11,10 @@
              mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="600"
              x:Class="Noctra.Avalonia.Views.FavoritesView"
              x:DataType="vm:MainViewModel">
-    <ScrollViewer x:Name="FavoritesScrollViewer" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Favorites}}">
+    <ScrollViewer x:Name="FavoritesScrollViewer" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Favorites}}"
+                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                  ScrollChanged="FavoritesView_ScrollChanged"
+                  PointerWheelChanged="FavoritesView_PointerWheelChanged">
           <StackPanel Margin="24">
             <TextBlock Text="{loc:Translate Favorites.Title}" FontSize="24" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
             <ItemsControl ItemsSource="{Binding FavoriteChannels}">

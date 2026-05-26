@@ -7,6 +7,17 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### IPTV Profil Gorsel Fallback ve Scroll Duzeltmeleri (2026-05-26)
+- [Duzeltildi] **Provider-First Gorsel Akisi**: Profil yuklenirken kartlar once placeholder ile acilir, provider'dan gelen logo/poster kullanilir. Provider gorseli bos kalirsa veya 2 denemede ulasilamazsa M3U profillerde son care TMDB poster fallback devreye girer; TMDB de sonuc vermezse placeholder korunur.
+- [Duzeltildi] **Xtream/Stalker TMDB Kullanimi Sinirlandi**: Xtream Codes ve Stalker Portal profillerinde liste gorselleri icin TMDB fallback kullanilmaz; provider metadata oncelikli kalir.
+- [Duzeltildi] **Dizi Episode Gorsel Fallback'i**: Series detail ekraninda episode kucuk resmi yoksa sezon/ana dizi posteri kullanilir. Bu davranis Xtream, Stalker ve M3U'dan uretilen series episode kayitlarina uygulanir.
+- [Duzeltildi] **Series Detail Siralama**: Sezonlar soldan saga artan sezon numarasiyla, episodeler yukaridan asagi artan bolum numarasiyla siralanir. Bos/0 sezon container'lari gorunumde sona itilip bos olanlar filtrelenir.
+- [Duzeltildi] **Stalker 0 Bolum Gorunen Diziler**: Stalker episode-level `cmd` alani parse edilir; sezon `cmd` bos olsa bile episode `cmd` varsa bolumler uretilir. Boylece bazi dizilerin 0 bolum gorunmesi engellendi.
+- [Duzeltildi] **Xtream/Stalker Liste Yuklenirken Bos Ekran**: Kanal listesi arka planda yuklenirken `ShowEmptyChannels` erken acilip menu icerigini bos gibi gostermiyor; loading state `IsChannelLoading` ile birlikte degerlendiriliyor.
+- [Duzeltildi] **Tum Sayfalarda Scroll Devami**: Live, Movies, Series, Home, Search, My List ve Favorites scroll alanlari ortak paging helper'a baglandi. `ScrollChanged` disinda `PointerWheelChanged` sonrasi da paging kontrolu yapilarak scroll'un kaldigi yerden devam etmemesi giderildi.
+- [Duzeltildi] **30 Poster/Logo Siniri**: Yeni sayfa yuklendiginde image warmup tekrar tetiklenir ve warmup ilk 30 kart yerine ilk 120 karti kapsar. Scroll ile gelen 2. ve 3. sayfa posterleri de preload/cache kuyruguna girer.
+- [Dogrulama] `dotnet build NoctraPlayer.sln` basarili. `dotnet test NoctraPlayer.sln --no-build` sonucu `850/851` test gecti; kalan `LicenseServiceTests.ApplyPromoCodeAsync_WhenLocalizationIsEnglish_ShouldReturnEnglishMessage` metin farki lisans/promo akisiyle ilgili ve bu degisiklik kapsamindan bagimsiz gorunuyor.
+
 ### Performans Trace ve Gorsel Yukleme Duzeltmeleri (2026-05-26)
 - [Yeni] **Kapsamli Perf Trace**: `artifacts/perf-trace` altina startup, profil yukleme, navigasyon, filtreleme, search, liste yukleme, image warmup, RemoteImage, video playback, overlay, EPG yenileme, kanal yenileme, profil degistirme, subtitle degistirme ve konum/ayar degisimleri icin zamanlama/counter/event loglari eklendi.
 - [Performans] **Menu Gecisleri Hizlandirildi**: Tekrarlayan filtre istekleri coalesce edildi, ayni imzali filtreler baskilandi ve navigasyon loglarina caller/reason/signature bilgisi eklendi. Son loglarda `GetChannelsFilteredPageAsync` dusuk milisaniye seviyesine, menu gecisleri cogunlukla milisaniye seviyesine indi.

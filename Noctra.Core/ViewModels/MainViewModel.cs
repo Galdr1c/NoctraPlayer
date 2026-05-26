@@ -76,6 +76,8 @@ public partial class MainViewModel : ObservableObject
     private long _downloadLandingStoredBytes;
     private readonly SemaphoreSlim _channelVisualEnrichmentSemaphore = new(3, 3);
     private readonly SemaphoreSlim _seriesVisualEnrichmentSemaphore = new(3, 3);
+    private const int ProviderImageFallbackAttempts = 2;
+    private const int ProviderImageFallbackDelayMs = 250;
     private CancellationTokenSource? _slowLoadingWarnCts;
     private readonly ILocalizationService _localizationService;
     private bool _suppressNavigationFilterRefresh;
@@ -226,8 +228,10 @@ public partial class MainViewModel : ObservableObject
 
     private int CurrentViewItemCount => ActiveView == AppView.Series ? SeriesViewItems.Count : FilteredChannels.CountedItemCount;
 
-    public bool IsContentLoading => IsLoading && CurrentViewItemCount == 0;
-    public bool ShowEmptyChannels => !IsLoading && CurrentViewItemCount == 0;
+    private bool IsContentStillLoading => IsLoading || IsChannelLoading;
+
+    public bool IsContentLoading => IsContentStillLoading && CurrentViewItemCount == 0;
+    public bool ShowEmptyChannels => !IsContentStillLoading && CurrentViewItemCount == 0;
     public bool ShowContentFilters => !IsContentLoading && !ShowEmptyChannels;
     public bool ShowGroupFilter => ShowContentFilters && Groups.Count > 0;
 
@@ -2218,6 +2222,7 @@ public partial class MainViewModel : ObservableObject
                 // Fire and forget EPG enrichment for the new page
                 _ = EnrichChannelsWithEpgAsync(page);
 
+                OnPropertyChanged(nameof(FilteredChannels));
                 NotifyContentStateChanged();
             });
 
@@ -2320,6 +2325,7 @@ public partial class MainViewModel : ObservableObject
 
             SeriesViewItems.AddRange(page);
             _perfTrace?.Counter("LOAD", "LoadMoreSeriesAsync added", page.Count, $"visible={SeriesViewItems.Count}");
+            OnPropertyChanged(nameof(SeriesViewItems));
             NotifyContentStateChanged();
 
             // On-demand TMDB enrichment for newly visible series
@@ -2360,7 +2366,8 @@ public partial class MainViewModel : ObservableObject
         }
 
         var candidates = page
-            .Where(c => c.Type == ChannelType.VOD && c.Id > 0 && (!HasDisplayImage(c) || ShouldRefreshProviderImageUrl(c.CoverUrl ?? c.LogoUrl)))
+            .Where(c => c.Type == ChannelType.VOD && c.Id > 0 &&
+                        (!HasDisplayImage(c) || ShouldRefreshProviderImageUrl(c.CoverUrl ?? c.LogoUrl)))
             .ToList();
 
         if (candidates.Count == 0)
@@ -2368,11 +2375,10 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        var providerRefreshCount = candidates.Count(c => HasDisplayImage(c) && ShouldRefreshProviderImageUrl(c.CoverUrl ?? c.LogoUrl));
         _perfTrace?.Event(
             "IMAGE",
             "QueueVisibleChannelVisualEnrichment",
-            $"candidates={candidates.Count} providerRefresh={providerRefreshCount} page={page.Count}");
+            $"candidates={candidates.Count} page={page.Count}");
 
         _ = Task.Run(async () =>
         {
@@ -2403,7 +2409,8 @@ public partial class MainViewModel : ObservableObject
         }
 
         var candidates = page
-            .Where(s => s.Id > 0 && (!HasDisplayImage(s) || ShouldRefreshProviderImageUrl(s.CoverUrl)))
+            .Where(s => s.Id > 0 &&
+                        (!HasDisplayImage(s) || ShouldRefreshProviderImageUrl(s.CoverUrl)))
             .ToList();
 
         if (candidates.Count == 0)
@@ -2411,11 +2418,10 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        var providerRefreshCount = candidates.Count(s => HasDisplayImage(s) && ShouldRefreshProviderImageUrl(s.CoverUrl));
         _perfTrace?.Event(
             "IMAGE",
             "QueueVisibleSeriesVisualEnrichment",
-            $"candidates={candidates.Count} providerRefresh={providerRefreshCount} page={page.Count}");
+            $"candidates={candidates.Count} page={page.Count}");
 
         _ = Task.Run(async () =>
         {
@@ -2448,6 +2454,13 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
+            var currentImageUrl = channel.CoverUrl ?? channel.LogoUrl;
+            if (HasDisplayImage(channel) &&
+                !await ShouldUseTmdbImageFallbackAsync(currentImageUrl).ConfigureAwait(false))
+            {
+                return;
+            }
+
             var languageCode = SeriesInfoParser.ExtractLanguageCode(channel.GroupTitle ?? channel.Name);
             var metadata = await _metadataService.FetchMetadataAsync(channel.Name, ChannelType.VOD, languageCode);
             if (metadata == null || string.IsNullOrWhiteSpace(metadata.PosterUrl))
@@ -2468,7 +2481,6 @@ public partial class MainViewModel : ObservableObject
 
             var changed = false;
 
-            var currentImageUrl = dbChannel.CoverUrl ?? dbChannel.LogoUrl;
             if (!HasDisplayImage(dbChannel) || ShouldRefreshProviderImageUrl(currentImageUrl))
             {
                 dbChannel.LogoUrl = metadata.PosterUrl;
@@ -2522,6 +2534,12 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
+            if (HasDisplayImage(series) &&
+                !await ShouldUseTmdbImageFallbackAsync(series.CoverUrl).ConfigureAwait(false))
+            {
+                return;
+            }
+
             var languageCode = SeriesInfoParser.ExtractLanguageCode(series.GroupTitle ?? series.Genre ?? series.Name);
             var metadata = await _metadataService.SearchSeriesAsync(series.Name, languageCode);
             if (metadata == null || string.IsNullOrWhiteSpace(metadata.PosterUrl))
@@ -2586,6 +2604,88 @@ public partial class MainViewModel : ObservableObject
         {
             _pendingVisualEnrichmentKeys.TryRemove(key, out _);
         }
+    }
+
+    private async Task<bool> ShouldUseTmdbImageFallbackAsync(string? providerImageUrl)
+    {
+        if (!IsDisplayImageUrl(providerImageUrl))
+        {
+            return true;
+        }
+
+        if (!ShouldRefreshProviderImageUrl(providerImageUrl))
+        {
+            return false;
+        }
+
+        return !await IsProviderImageReachableAsync(providerImageUrl).ConfigureAwait(false);
+    }
+
+    private async Task<bool> IsProviderImageReachableAsync(string? providerImageUrl)
+    {
+        if (string.IsNullOrWhiteSpace(providerImageUrl))
+        {
+            return false;
+        }
+
+        var normalized = providerImageUrl.Trim().Trim('"', '\'');
+        if (normalized.StartsWith("//", StringComparison.Ordinal))
+        {
+            normalized = "https:" + normalized;
+        }
+
+        if (!Uri.TryCreate(normalized, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        if (uri.Scheme.Equals("avares", StringComparison.OrdinalIgnoreCase) ||
+            uri.Scheme.Equals("file", StringComparison.OrdinalIgnoreCase) ||
+            uri.Scheme.Equals("data", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (!uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
+            !uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        for (var attempt = 1; attempt <= ProviderImageFallbackAttempts; attempt++)
+        {
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+                using var response = await _httpClient
+                    .SendAsync(request, HttpCompletionOption.ResponseHeadersRead)
+                    .ConfigureAwait(false);
+
+                if (response.IsSuccessStatusCode && !IsHtmlImageResponse(response))
+                {
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogDebug(ex, "Provider image probe failed for {Host} attempt {Attempt}", uri.Host, attempt);
+            }
+
+            if (attempt < ProviderImageFallbackAttempts)
+            {
+                await Task.Delay(ProviderImageFallbackDelayMs).ConfigureAwait(false);
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsHtmlImageResponse(HttpResponseMessage response)
+    {
+        var mediaType = response.Content.Headers.ContentType?.MediaType;
+        return mediaType != null &&
+               (mediaType.Contains("text/html", StringComparison.OrdinalIgnoreCase) ||
+                mediaType.Contains("application/xhtml", StringComparison.OrdinalIgnoreCase));
     }
 
     partial void OnSearchTextChanged(string value)
@@ -7236,6 +7336,7 @@ public partial class MainViewModel : ObservableObject
         try
         {
             IsSelectedSeriesMetadataLoading = true;
+            NormalizeSeriesDetailForDisplay(series);
 
             SelectedSeriesPosterUrl = series.CoverUrl;
             SelectedSeriesBackdropUrl = series.BackdropUrl;
@@ -7310,9 +7411,12 @@ public partial class MainViewModel : ObservableObject
             }
 
             // Set first season by default
-            if (series.Seasons.Count > 0 && SelectedSeason == null)
+            if (series.Seasons.Count > 0)
             {
-                SelectedSeason = series.Seasons.OrderBy(s => s.SeasonNumber).FirstOrDefault();
+                SelectedSeason = SelectedSeason == null
+                    ? series.Seasons.FirstOrDefault()
+                    : series.Seasons.FirstOrDefault(s => s.SeasonNumber == SelectedSeason.SeasonNumber)
+                      ?? series.Seasons.FirstOrDefault();
             }
         }
         catch (Exception ex)
@@ -7376,7 +7480,7 @@ public partial class MainViewModel : ObservableObject
                 EpisodeNumber = episodeNumber,
                 Name = channel.Name,
                 StreamUrl = channel.StreamUrl,
-                CoverUrl = channel.LogoUrl
+                CoverUrl = FirstNonEmpty(channel.LogoUrl, series.CoverUrl)
             });
         }
 
@@ -7388,6 +7492,8 @@ public partial class MainViewModel : ObservableObject
                 return kvp.Value;
             })
             .ToList();
+
+        NormalizeSeriesDetailForDisplay(series);
     }
 
 
@@ -7415,6 +7521,7 @@ public partial class MainViewModel : ObservableObject
         if (ShouldLazyLoadProviderSeriesEpisodes(source))
         {
             await LazyLoadProviderSeriesEpisodesAsync(source, db);
+            NormalizeSeriesDetailForDisplay(source);
 
             // --- UI SENKRONİZASYONU ---
             // Eğer veritabanından farklı bir instance (source != series) yüklendiyse, 
@@ -7559,6 +7666,7 @@ public partial class MainViewModel : ObservableObject
         }
 
         await ApplyProfileProgressAsync(source, db);
+        NormalizeSeriesDetailForDisplay(source);
         return source;
     }
 
@@ -7614,7 +7722,47 @@ public partial class MainViewModel : ObservableObject
         target.Seasons = source.Seasons;
         target.MetadataFetchedAt = source.MetadataFetchedAt;
         target.LastTmdbSync = source.LastTmdbSync;
+        NormalizeSeriesDetailForDisplay(target);
     }
+
+    private static void NormalizeSeriesDetailForDisplay(Series? series)
+    {
+        if (series?.Seasons == null)
+        {
+            return;
+        }
+
+        foreach (var season in series.Seasons)
+        {
+            if (string.IsNullOrWhiteSpace(season.CoverUrl))
+            {
+                season.CoverUrl = series.CoverUrl;
+            }
+
+            season.Episodes = season.Episodes
+                .OrderBy(e => e.EpisodeNumber <= 0 ? int.MaxValue : e.EpisodeNumber)
+                .ThenBy(e => e.Name)
+                .Select(e =>
+                {
+                    if (string.IsNullOrWhiteSpace(e.CoverUrl))
+                    {
+                        e.CoverUrl = FirstNonEmpty(season.CoverUrl, series.CoverUrl);
+                    }
+
+                    return e;
+                })
+                .ToList();
+        }
+
+        series.Seasons = series.Seasons
+            .Where(s => s.Episodes.Count > 0 || s.SeasonNumber > 0)
+            .OrderBy(s => s.SeasonNumber <= 0 ? int.MaxValue : s.SeasonNumber)
+            .ThenBy(s => s.Name)
+            .ToList();
+    }
+
+    private static string? FirstNonEmpty(params string?[] values)
+        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
 
     private static void ApplyStalkerSeriesMetadata(Series series, StalkerSeriesInfo detail)
     {
@@ -7752,12 +7900,6 @@ public partial class MainViewModel : ObservableObject
         int defaultSeasonNum = 1;
         foreach (var stalkerSeason in detail.Seasons)
         {
-            if (string.IsNullOrWhiteSpace(stalkerSeason.Cmd))
-            {
-                _logger?.LogWarning("[Stalker] Season {Name} has no cmd, skipping episode generation", stalkerSeason.Name);
-                continue;
-            }
-
             int seasonNum = defaultSeasonNum;
             // "Season 1" vs içinden rakamı ayıkla
             var match = System.Text.RegularExpressions.Regex.Match(stalkerSeason.Name, @"\d+");
@@ -7778,9 +7920,16 @@ public partial class MainViewModel : ObservableObject
             foreach (var stalkerEp in stalkerSeason.Episodes)
             {
                 var epNum = stalkerEp.EpisodeNumber;
+                var episodeCmd = FirstNonEmpty(stalkerEp.Cmd, stalkerSeason.Cmd);
+                if (string.IsNullOrWhiteSpace(episodeCmd))
+                {
+                    _logger?.LogWarning("[Stalker] Episode {Episode} in season {Name} has no cmd, skipping", epNum, stalkerSeason.Name);
+                    continue;
+                }
+
                 // PlayChannelAsync intercept etmesi için stalker-series-ep://episode?cmd={cmd}&ep={epNum} formatında özel link
                 // Cmd içinde '/' gibi karakterler olabildiği için query param olarak taşımak daha güvenli (Uri host kısmında hata veriyor)
-                var encodedCmd = System.Net.WebUtility.UrlEncode(stalkerSeason.Cmd);
+                var encodedCmd = System.Net.WebUtility.UrlEncode(episodeCmd);
                 var interceptUrl = $"stalker-series-ep://episode?cmd={encodedCmd}&ep={epNum}";
 
                 if (season.Episodes.Any(e => string.Equals(e.StreamUrl, interceptUrl, StringComparison.OrdinalIgnoreCase)))
@@ -7801,7 +7950,7 @@ public partial class MainViewModel : ObservableObject
                     StreamUrl = interceptUrl,
                     Plot = epDescription,
                     Duration = duration,
-                    CoverUrl = epCover,
+                    CoverUrl = FirstNonEmpty(epCover, season.CoverUrl, series.CoverUrl),
                     AirDate = airDate,
                     Season = season
                 });
@@ -7809,6 +7958,8 @@ public partial class MainViewModel : ObservableObject
 
             defaultSeasonNum++;
         }
+
+        NormalizeSeriesDetailForDisplay(series);
 
         // DB'ye kaydet
         if (series.Id > 0)
@@ -7946,7 +8097,7 @@ public partial class MainViewModel : ObservableObject
                     EpisodeNumber = ep.EpisodeNum,
                     Name = ep.Title ?? $"Bölüm {ep.EpisodeNum}",
                     StreamUrl = streamUrl,
-                    CoverUrl = ep.CoverUrl,
+                    CoverUrl = FirstNonEmpty(ep.CoverUrl, season.CoverUrl, series.CoverUrl),
                     Plot = ep.Plot,
                     Duration = duration,
                     AirDate = airDate,
@@ -7955,10 +8106,7 @@ public partial class MainViewModel : ObservableObject
             }
         }
 
-        // Sezonları sırala
-        series.Seasons = series.Seasons.OrderBy(s => s.SeasonNumber).ToList();
-        foreach (var s in series.Seasons)
-            s.Episodes = s.Episodes.OrderBy(e => e.EpisodeNumber).ToList();
+        NormalizeSeriesDetailForDisplay(series);
 
         // DB'ye kaydet (series.Id > 0 ise tracking ile güncellenir)
         if (series.Id > 0)

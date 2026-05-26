@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Noctra.ViewModels;
 using Noctra.Models;
@@ -13,6 +14,23 @@ public partial class SearchView : UserControl
     }
 
     private MainViewModel? ViewModel => DataContext as MainViewModel;
+
+    private async void SearchView_ScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        try
+        {
+            await ScrollPaging.LoadMoreIfNeededAsync(ViewModel, sender);
+        }
+        catch (Exception ex)
+        {
+            if (ViewModel != null) ViewModel.StatusMessage = $"Kaydırma hatası: {ex.Message}";
+        }
+    }
+
+    private void SearchView_PointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        ScrollPaging.QueueLoadMoreAfterWheel(ViewModel, sender, e);
+    }
 
     
     private async void Context_AddToMyList_Click(object? sender, RoutedEventArgs e)

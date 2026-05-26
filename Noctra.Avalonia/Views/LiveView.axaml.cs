@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Noctra.ViewModels;
 using Noctra.Models;
@@ -23,14 +24,17 @@ public partial class LiveView : UserControl
     {
         try
         {
-            if (sender is not ScrollViewer scrollViewer) return;
-            var scrollableHeight = System.Math.Max(0, scrollViewer.Extent.Height - scrollViewer.Viewport.Height);
-            if (ViewModel != null) await ViewModel.LoadMoreChannelsIfNeededAsync(scrollViewer.Offset.Y, scrollableHeight);
+            await ScrollPaging.LoadMoreIfNeededAsync(ViewModel, sender);
         }
         catch (Exception ex)
         {
             if (ViewModel != null) ViewModel.StatusMessage = $"Kaydırma hatası: {ex.Message}";
         }
+    }
+
+    private void LiveView_PointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        ScrollPaging.QueueLoadMoreAfterWheel(ViewModel, sender, e);
     }
 
     

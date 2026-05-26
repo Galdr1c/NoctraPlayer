@@ -11,7 +11,10 @@
              mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="600"
              x:Class="Noctra.Avalonia.Views.HomeView"
              x:DataType="vm:MainViewModel">
-    <ScrollViewer x:Name="HomeScrollViewer" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Home}}">
+    <ScrollViewer x:Name="HomeScrollViewer" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Home}}"
+                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                  ScrollChanged="HomeView_ScrollChanged"
+                  PointerWheelChanged="HomeView_PointerWheelChanged">
           <StackPanel Margin="24">
 
             <!-- Grid/Wrap: İzlemeye Devam Et -->

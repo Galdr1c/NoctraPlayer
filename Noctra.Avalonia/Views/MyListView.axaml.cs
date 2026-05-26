@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Noctra.ViewModels;
 using Noctra.Models;
@@ -19,9 +20,21 @@ public partial class MyListView : UserControl
         if (ViewModel != null) ViewModel.SelectedGroup = null;
     }
 
-    private void MyListView_ScrollChanged(object? sender, ScrollChangedEventArgs e)
+    private async void MyListView_ScrollChanged(object? sender, ScrollChangedEventArgs e)
     {
-        // Logic will be moved here
+        try
+        {
+            await ScrollPaging.LoadMoreIfNeededAsync(ViewModel, sender);
+        }
+        catch (Exception ex)
+        {
+            if (ViewModel != null) ViewModel.StatusMessage = $"Kaydırma hatası: {ex.Message}";
+        }
+    }
+
+    private void MyListView_PointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        ScrollPaging.QueueLoadMoreAfterWheel(ViewModel, sender, e);
     }
 
     

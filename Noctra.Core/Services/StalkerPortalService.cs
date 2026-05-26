@@ -869,6 +869,7 @@ public class StalkerPortalService : IStalkerPortalService
                         {
                             EpisodeNumber = numId,
                             Name = rawEpisodeTitle,
+                            Cmd = GetString(epObj, "cmd"),
                             Description = GetString(epObj, "description") ?? GetString(epObj, "plot"),
                             Pic = NormalizeLogoUrl(
                                 GetString(epObj, "pic")

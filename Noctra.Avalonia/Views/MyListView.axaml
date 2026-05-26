@@ -11,7 +11,10 @@
              mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="600"
              x:Class="Noctra.Avalonia.Views.MyListView"
              x:DataType="vm:MainViewModel">
-    <ScrollViewer x:Name="MyListScrollViewer" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.MyList}}">
+    <ScrollViewer x:Name="MyListScrollViewer" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.MyList}}"
+                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                  ScrollChanged="MyListView_ScrollChanged"
+                  PointerWheelChanged="MyListView_PointerWheelChanged">
           <StackPanel Margin="24">
             <TextBlock Text="{loc:Translate MyList.Title}" FontSize="24" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
             <ItemsControl ItemsSource="{Binding MyList}">

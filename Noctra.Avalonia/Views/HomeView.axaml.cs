@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Noctra.ViewModels;
 using Noctra.Models;
@@ -19,7 +20,22 @@ public partial class HomeView : UserControl
         if (ViewModel != null) ViewModel.SelectedGroup = null;
     }
 
+    private async void HomeView_ScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        try
+        {
+            await ScrollPaging.LoadMoreIfNeededAsync(ViewModel, sender);
+        }
+        catch (Exception ex)
+        {
+            if (ViewModel != null) ViewModel.StatusMessage = $"Kaydırma hatası: {ex.Message}";
+        }
+    }
 
+    private void HomeView_PointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        ScrollPaging.QueueLoadMoreAfterWheel(ViewModel, sender, e);
+    }
 
     
     private async void Context_AddToMyList_Click(object? sender, RoutedEventArgs e)

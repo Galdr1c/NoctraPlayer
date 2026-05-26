@@ -12,7 +12,9 @@
              x:Class="Noctra.Avalonia.Views.LiveView"
              x:DataType="vm:MainViewModel">
     <ScrollViewer x:Name="LiveScrollViewer" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Live}}"
-                      ScrollChanged="LiveView_ScrollChanged">
+                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                      ScrollChanged="LiveView_ScrollChanged"
+                      PointerWheelChanged="LiveView_PointerWheelChanged">
           <StackPanel Margin="24">
             <Grid Margin="0,0,0,24" ColumnDefinitions="*,Auto">
               <TextBlock Text="{loc:Translate Live.Title}" FontSize="24" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>

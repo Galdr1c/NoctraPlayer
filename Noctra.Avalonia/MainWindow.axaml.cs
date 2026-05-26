@@ -23,6 +23,7 @@ namespace Noctra.Avalonia;
 public partial class MainWindow : Window
 {
     private static readonly TimeSpan ImageWarmupDelay = TimeSpan.FromMilliseconds(100);
+    private const int ImageWarmupMaxCount = 120;
     private static readonly TimeSpan PointerInteractionThrottle = TimeSpan.FromMilliseconds(100);
 
     private readonly IVideoPlayerService _videoPlayerService;
@@ -496,19 +497,19 @@ public partial class MainWindow : Window
     private async Task WarmupVisibleImagesAsync(CancellationToken cancellationToken)
     {
         using var trace = _perfTrace.BeginOperation("IMAGE", "WarmupVisibleImagesAsync", $"view={_mainViewModel.ActiveView}");
-        var urls = new List<string?>(60);
+        var urls = new List<string?>(ImageWarmupMaxCount);
 
         if (_mainViewModel.ActiveView == AppView.Series)
         {
-            urls.AddRange(_mainViewModel.SeriesViewItems.Take(30).Select(s => s.CoverUrl));
+            urls.AddRange(_mainViewModel.SeriesViewItems.Take(ImageWarmupMaxCount).Select(s => s.CoverUrl));
         }
         else if (_mainViewModel.ActiveView == AppView.Home)
         {
-            urls.AddRange(_mainViewModel.ContinueWatching.Take(30).Select(c => c.CoverUrl ?? c.LogoUrl));
+            urls.AddRange(_mainViewModel.ContinueWatching.Take(ImageWarmupMaxCount).Select(c => c.CoverUrl ?? c.LogoUrl));
         }
         else if (_mainViewModel.ActiveView is AppView.Live or AppView.Movies)
         {
-            urls.AddRange(_mainViewModel.FilteredChannels.Take(30).Select(c => c.CoverUrl ?? c.LogoUrl));
+            urls.AddRange(_mainViewModel.FilteredChannels.Take(ImageWarmupMaxCount).Select(c => c.CoverUrl ?? c.LogoUrl));
         }
         else if (_mainViewModel.ActiveView == AppView.History)
         {
@@ -518,16 +519,16 @@ public partial class MainWindow : Window
         }
         else if (_mainViewModel.ActiveView == AppView.MyList)
         {
-            urls.AddRange(_mainViewModel.MyList.Take(30).Select(GetMediaImageUrl));
+            urls.AddRange(_mainViewModel.MyList.Take(ImageWarmupMaxCount).Select(GetMediaImageUrl));
         }
         else if (_mainViewModel.ActiveView == AppView.Favorites)
         {
-            urls.AddRange(_mainViewModel.FavoriteChannels.Take(30).Select(GetMediaImageUrl));
+            urls.AddRange(_mainViewModel.FavoriteChannels.Take(ImageWarmupMaxCount).Select(GetMediaImageUrl));
         }
 
         var emptyCount = urls.Count(string.IsNullOrWhiteSpace);
         _perfTrace.Counter("IMAGE", "Warmup urls", urls.Count, $"view={_mainViewModel.ActiveView} empty={emptyCount}");
-        await RemoteImage.PreloadAsync(urls, maxCount: 30, cancellationToken).ConfigureAwait(false);
+        await RemoteImage.PreloadAsync(urls, maxCount: ImageWarmupMaxCount, cancellationToken).ConfigureAwait(false);
     }
 
     private static string? GetMediaImageUrl(object? item)
