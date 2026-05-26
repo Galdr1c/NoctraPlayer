@@ -34,7 +34,6 @@ public partial class WatermarkViewModel : ObservableObject, IDisposable
 
         _shiftTimer = new System.Timers.Timer(TimeSpan.FromSeconds(60).TotalMilliseconds);
         _shiftTimer.Elapsed += ShiftTimer_Elapsed;
-        _shiftTimer.Start();
         
         // Initial random position
         ShiftPosition();
@@ -53,10 +52,23 @@ public partial class WatermarkViewModel : ObservableObject, IDisposable
 
     private void UpdateVisibility()
     {
-        _dispatcherService.Invoke(() => 
+        _dispatcherService.BeginInvoke(() => 
         {
             IsVisible = !_licenseService.IsFeatureAvailable(LicenseService.Features.AdFree);
         });
+    }
+
+    partial void OnIsVisibleChanged(bool value)
+    {
+        if (value)
+        {
+            ShiftPosition();
+            _shiftTimer.Start();
+        }
+        else
+        {
+            _shiftTimer.Stop();
+        }
     }
 
     private void ShiftTimer_Elapsed(object? sender, ElapsedEventArgs e)
@@ -67,7 +79,12 @@ public partial class WatermarkViewModel : ObservableObject, IDisposable
     private void ShiftPosition()
     {
         // Shift within a small range (-20 to +20 px)
-        _dispatcherService.Invoke(() =>
+        if (!IsVisible)
+        {
+            return;
+        }
+
+        _dispatcherService.BeginInvoke(() =>
         {
             TranslateX = _random.Next(-20, 21);
             TranslateY = _random.Next(-20, 21);

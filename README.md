@@ -205,12 +205,14 @@ noctra_v1.db                  SQLite uygulama veritabanı
 Kök dizine veya çıktı klasörüne `.env` dosyası koyabilirsiniz:
 
 ```env
-TMDB_API_KEY=your_tmdb_api_key
+TMDB_API_KEY=your_tmdb_v3_api_key
+TMDB_BEARER_TOKEN=your_tmdb_v4_access_token
 NOCTRA_PROMO_CODES_URL=https://example.com/noctra-promo-codes.json
 DEV_PASSWORD=your_developer_password
 ```
 
-- `TMDB_API_KEY`: Metadata zenginleştirme için kullanılır.
+- `TMDB_API_KEY`: TMDB v3 API key. M3U metadata zenginlestirme icin kullanilir.
+- `TMDB_BEARER_TOKEN`: TMDB v4 access token. Bu deger varsa `TMDB_API_KEY` yerine Bearer auth ile kullanilir.
 - `NOCTRA_PROMO_CODES_URL`: Uzak promosyon kodu listesi.
 - `DEV_PASSWORD`: Global ayarlardaki geliştirici modunu açmak için kullanılır.
 

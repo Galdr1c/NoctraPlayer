@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Noctra.Services.Interfaces;
 using Noctra.Core.Services;
 using Noctra.ViewModels;
+using Noctra.Models;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
@@ -30,15 +32,31 @@ public class RemoteImage : Image
     private static readonly HttpClient HttpClient = CreateHttpClient();
     private static readonly ConcurrentDictionary<string, Bitmap> Cache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, Task<Bitmap?>> InFlightLoads = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly ConcurrentDictionary<string, byte> FailedUrlLog = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, DateTime> FailedUntilUtc = new(StringComparer.OrdinalIgnoreCase);
     private static readonly LinkedList<string> CacheLruList = new();
     private static readonly Dictionary<string, LinkedListNode<string>> NodeMap = new(StringComparer.OrdinalIgnoreCase);
     private static readonly object CacheLock = new();
-    private static readonly SemaphoreSlim HttpDownloadGate = new(8, 8);
-    private const int MaxCacheEntries = 1500;
-    private const int PreloadConcurrency = 10;
-    private const int HttpImageMaxAttempts = 4;
+    private static readonly object ActiveControlsLock = new();
+    private static readonly List<WeakReference<RemoteImage>> ActiveControls = new();
+    private static readonly SemaphoreSlim ImageLoadGate = new(6, 6);
+    private static readonly SemaphoreSlim HttpDownloadGate = new(4, 4);
+    private const int MaxCacheEntries = 500;
+    private const int PreloadConcurrency = 3;
+    private const int HttpImageMaxAttempts = 2;
     private const int HttpRetryBaseDelayMs = 250;
+    private const int DeferredLoadDelayMs = 20;
+    private const int MaxTransientEmptyUrlLogs = 40;
+    private static readonly string DiskCacheDirectory = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "Noctra",
+        "ImageCache");
+    private static readonly TimeSpan FailureCooldown = TimeSpan.FromMinutes(10);
+    private static readonly HashSet<string> KnownBadImageHosts = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "nox101.com",
+        "logo.uixtreamreseller.com"
+    };
+    private static int TransientEmptyUrlLogCount;
 
     private CancellationTokenSource? _loadCts;
 
@@ -66,6 +84,8 @@ public class RemoteImage : Image
                 Duration = TimeSpan.FromSeconds(0.25)
             }
         };
+
+        DataContextChanged += (_, _) => RetryCurrentUrlIfNeeded("data-context");
     }
 
     public string? Url
@@ -80,8 +100,9 @@ public class RemoteImage : Image
         set => SetValue(IsImageLoadedProperty, value);
     }
 
-    public static async Task PreloadAsync(IEnumerable<string?> urls, int maxCount = 120, CancellationToken cancellationToken = default)
+    public static async Task PreloadAsync(IEnumerable<string?> urls, int maxCount = 40, CancellationToken cancellationToken = default)
     {
+        using var trace = PerformanceTraceService.Shared?.BeginOperation("IMAGE", "RemoteImage.PreloadAsync", $"max={maxCount}");
         if (urls == null)
         {
             return;
@@ -102,6 +123,19 @@ public class RemoteImage : Image
                 continue;
             }
 
+            if (IsRecentlyFailed(normalized))
+            {
+                PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage.PreloadAsync skip-failed", $"host={ExtractHost(normalized)}");
+                continue;
+            }
+
+            if (IsKnownBadImageHost(normalized))
+            {
+                PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage.PreloadAsync skip-known-bad-host", $"host={ExtractHost(normalized)}");
+                MarkFailureCooldown(normalized);
+                continue;
+            }
+
             normalizedUrls.Add(normalized);
             if (normalizedUrls.Count >= maxCount)
             {
@@ -111,9 +145,11 @@ public class RemoteImage : Image
 
         if (normalizedUrls.Count == 0)
         {
+            PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage.PreloadAsync skipped", "no uncached urls");
             return;
         }
 
+        PerformanceTraceService.Shared?.Counter("IMAGE", "RemoteImage.PreloadAsync urls", normalizedUrls.Count);
         using var throttle = new SemaphoreSlim(PreloadConcurrency, PreloadConcurrency);
         var tasks = new List<Task>(normalizedUrls.Count);
         foreach (var normalized in normalizedUrls)
@@ -123,8 +159,7 @@ public class RemoteImage : Image
                 await throttle.WaitAsync(cancellationToken).ConfigureAwait(false);
                 try
                 {
-                    var task = InFlightLoads.GetOrAdd(normalized, static url => DownloadBitmapAsync(url));
-                    await task.ConfigureAwait(false);
+                    await GetOrQueueBitmapLoadAsync(normalized, cancellationToken).ConfigureAwait(false);
                 }
                 finally
                 {
@@ -140,15 +175,14 @@ public class RemoteImage : Image
     {
         base.OnAttachedToVisualTree(e);
 
-        if (Source == null && !string.IsNullOrWhiteSpace(Url))
-        {
-            StartImageLoad();
-        }
+        TrackActiveControl(this);
+        RetryCurrentUrlIfNeeded("attached");
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         CancelPendingLoad();
+        UntrackActiveControl(this);
         base.OnDetachedFromVisualTree(e);
     }
 
@@ -159,24 +193,48 @@ public class RemoteImage : Image
         var normalizedUrl = NormalizeUrl(Url);
         if (string.IsNullOrWhiteSpace(normalizedUrl))
         {
+            if (DataContext == null)
+            {
+                var count = Interlocked.Increment(ref TransientEmptyUrlLogCount);
+                if (count <= MaxTransientEmptyUrlLogs)
+                {
+                    PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage empty-url transient", BuildEmptyUrlDetails());
+                }
+                else if (count == MaxTransientEmptyUrlLogs + 1)
+                {
+                    PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage empty-url transient suppressed", $"limit={MaxTransientEmptyUrlLogs}");
+                }
+            }
+            else
+            {
+                PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage empty-url", BuildEmptyUrlDetails());
+            }
+
             SetSourceOnUiThread(null);
             return;
         }
 
-        lock (CacheLock)
+        if (IsKnownBadImageHost(normalizedUrl))
         {
-            if (Cache.TryGetValue(normalizedUrl, out var cached))
-            {
-                // LRU usage update
-                if (NodeMap.TryGetValue(normalizedUrl, out var lruNode))
-                {
-                    CacheLruList.Remove(lruNode);
-                    NodeMap[normalizedUrl] = CacheLruList.AddLast(normalizedUrl);
-                }
+            PerformanceTraceService.Shared?.Event(
+                "IMAGE",
+                "RemoteImage known-bad-host skipped",
+                $"host={ExtractHost(normalizedUrl)} data={DescribeDataContext(DataContext)}");
+            MarkFailureCooldown(normalizedUrl);
+            SetSourceOnUiThread(null);
+            return;
+        }
 
-                SetSourceOnUiThread(cached);
-                return;
-            }
+        if (TryApplyCachedSource(normalizedUrl, "memory-cache"))
+        {
+            return;
+        }
+
+        if (IsRecentlyFailed(normalizedUrl))
+        {
+            PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage skip-failed", $"host={ExtractHost(normalizedUrl)} data={DescribeDataContext(DataContext)}");
+            SetSourceOnUiThread(null);
+            return;
         }
 
         // DO NOT clear the existing source immediately here if we already have an image.
@@ -184,23 +242,125 @@ public class RemoteImage : Image
         // If we don't have an image, it will remain as placeholder until loaded.
 
         _loadCts = new CancellationTokenSource();
-        var loadTask = InFlightLoads.GetOrAdd(normalizedUrl, static url => DownloadBitmapAsync(url));
-        _ = AwaitImageAsync(normalizedUrl, loadTask, _loadCts.Token);
+        PerformanceTraceService.Shared?.Event(
+            "IMAGE",
+            "RemoteImage load-scheduled",
+            $"host={ExtractHost(normalizedUrl)} data={DescribeDataContext(DataContext)}");
+        _ = AwaitImageAsync(normalizedUrl, _loadCts.Token);
     }
-    private async Task AwaitImageAsync(string url, Task<Bitmap?> loadTask, CancellationToken cancellationToken)
+
+    private void RetryCurrentUrlIfNeeded(string reason)
+    {
+        if (reason == "data-context" && DataContext == null)
+        {
+            return;
+        }
+
+        var normalizedUrl = NormalizeUrl(Url);
+        if (string.IsNullOrWhiteSpace(normalizedUrl))
+        {
+            return;
+        }
+
+        if (Source == null || !IsImageLoaded)
+        {
+            if (TryApplyCachedSource(normalizedUrl, $"retry-{reason}"))
+            {
+                return;
+            }
+
+            if (IsRecentlyFailed(normalizedUrl))
+            {
+                StartImageLoad();
+                return;
+            }
+
+            PerformanceTraceService.Shared?.Event(
+                "IMAGE",
+                "RemoteImage retry-current-url",
+                $"reason={reason} host={ExtractHost(normalizedUrl)} data={DescribeDataContext(DataContext)}");
+            StartImageLoad();
+        }
+    }
+
+    private async Task AwaitImageAsync(string url, CancellationToken cancellationToken)
     {
         try
         {
-            var bitmap = await loadTask.WaitAsync(cancellationToken).ConfigureAwait(false);
+            await Task.Delay(DeferredLoadDelayMs, cancellationToken).ConfigureAwait(false);
+            var currentUrl = NormalizeUrl(Url);
+            if (!string.Equals(currentUrl, url, StringComparison.OrdinalIgnoreCase))
+            {
+                PerformanceTraceService.Shared?.Event(
+                    "IMAGE",
+                    "RemoteImage load-url-changed",
+                    $"from={ExtractHost(url)} to={ExtractHost(currentUrl ?? string.Empty)} data={DescribeDataContext(DataContext)}");
+                return;
+            }
+
+            if (TryApplyCachedSource(url, "await-cache"))
+            {
+                return;
+            }
+
+            PerformanceTraceService.Shared?.Event(
+                "IMAGE",
+                "RemoteImage load-dispatch",
+                $"host={ExtractHost(url)} data={DescribeDataContext(DataContext)}");
+            var bitmap = await GetOrQueueBitmapLoadAsync(url, cancellationToken).ConfigureAwait(false);
+            if (bitmap == null)
+            {
+                PerformanceTraceService.Shared?.Event(
+                    "IMAGE",
+                    "RemoteImage load-null",
+                    $"host={ExtractHost(url)} data={DescribeDataContext(DataContext)}");
+            }
+
             TrySetSource(url, bitmap, cancellationToken);
         }
         catch (OperationCanceledException)
         {
-            // Ignore stale requests when the control is recycled.
+            PerformanceTraceService.Shared?.Event(
+                "IMAGE",
+                "RemoteImage load-cancelled",
+                $"host={ExtractHost(url)} data={DescribeDataContext(DataContext)}");
         }
         catch
         {
             TrySetSource(url, null, cancellationToken);
+        }
+    }
+
+    private static async Task<Bitmap?> GetOrQueueBitmapLoadAsync(string url, CancellationToken cancellationToken)
+    {
+        if (IsRecentlyFailed(url))
+        {
+            PerformanceTraceService.Shared?.Event("IMAGE", "Skip recent failed image load", ExtractHost(url));
+            return null;
+        }
+
+        if (InFlightLoads.TryGetValue(url, out var existing))
+        {
+            PerformanceTraceService.Shared?.Event("IMAGE", "Await existing image load", ExtractHost(url));
+            return await existing.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        using var gateTrace = PerformanceTraceService.Shared?.BeginOperation("IMAGE", "WaitImageLoadGate", ExtractHost(url));
+        await ImageLoadGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (InFlightLoads.TryGetValue(url, out existing))
+            {
+                return await existing.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            PerformanceTraceService.Shared?.Event("IMAGE", "Queue image load", ExtractHost(url));
+            var task = InFlightLoads.GetOrAdd(url, static loadUrl => DownloadBitmapAsync(loadUrl));
+            return await task.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            ImageLoadGate.Release();
         }
     }
 
@@ -215,6 +375,13 @@ public class RemoteImage : Image
 
             if (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
             {
+                var cached = TryLoadDiskCache(url);
+                if (cached != null)
+                {
+                    AddToCache(url, cached);
+                    return cached;
+                }
+
                 return await DownloadHttpBitmapAsync(url, uri).ConfigureAwait(false);
             }
 
@@ -271,9 +438,13 @@ public class RemoteImage : Image
     {
         for (var attempt = 0; attempt < HttpImageMaxAttempts; attempt++)
         {
+            var httpGateAcquired = false;
             try
             {
+                using var gateTrace = PerformanceTraceService.Shared?.BeginOperation("IMAGE", "WaitHttpDownloadGate", $"host={uri.Host} attempt={attempt + 1}");
                 await HttpDownloadGate.WaitAsync().ConfigureAwait(false);
+                httpGateAcquired = true;
+                using var trace = PerformanceTraceService.Shared?.BeginOperation("IMAGE", "DownloadHttpBitmap", $"host={uri.Host} attempt={attempt + 1}");
                 using var request = new HttpRequestMessage(HttpMethod.Get, uri);
                 using var response = await HttpClient
                     .SendAsync(request, HttpCompletionOption.ResponseHeadersRead)
@@ -340,6 +511,7 @@ public class RemoteImage : Image
                 try
                 {
                     var bitmap = new Bitmap(memory);
+                    SaveDiskCache(normalizedUrl, memory.ToArray());
                     AddToCache(normalizedUrl, bitmap);
                     return bitmap;
                 }
@@ -372,7 +544,10 @@ public class RemoteImage : Image
             }
             finally
             {
-                HttpDownloadGate.Release();
+                if (httpGateAcquired)
+                {
+                    HttpDownloadGate.Release();
+                }
             }
         }
 
@@ -452,6 +627,7 @@ public class RemoteImage : Image
 
     private static void AddToCache(string url, Bitmap bitmap)
     {
+        var added = false;
         lock (CacheLock)
         {
             if (Cache.ContainsKey(url))
@@ -473,36 +649,84 @@ public class RemoteImage : Image
                 NodeMap.Remove(oldest);
                 if (Cache.TryRemove(oldest, out var evicted))
                 {
-                    evicted?.Dispose();
+                    // Do not dispose here. Active Image controls may still reference this Bitmap as Source.
+                    // Removing it from the cache is enough; GC can collect it once no control references it.
+                    PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage cache-evict", $"host={ExtractHost(oldest)}");
                 }
             }
 
             if (Cache.TryAdd(url, bitmap))
             {
                 NodeMap[url] = CacheLruList.AddLast(url);
+                added = true;
             }
+        }
+
+        if (added)
+        {
+            NotifyActiveControlsSourceAvailable(url, bitmap);
         }
     }
 
-    private void SetSourceOnUiThread(Bitmap? bitmap)
+    private bool TryApplyCachedSource(string normalizedUrl, string reason)
     {
+        Bitmap? cached;
+        lock (CacheLock)
+        {
+            if (!Cache.TryGetValue(normalizedUrl, out cached))
+            {
+                return false;
+            }
+
+            if (NodeMap.TryGetValue(normalizedUrl, out var lruNode))
+            {
+                CacheLruList.Remove(lruNode);
+                NodeMap[normalizedUrl] = CacheLruList.AddLast(normalizedUrl);
+            }
+        }
+
+        PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage cache-hit", $"host={ExtractHost(normalizedUrl)} reason={reason} data={DescribeDataContext(DataContext)}");
+        SetSourceOnUiThread(cached, normalizedUrl, reason);
+        return true;
+    }
+
+    private void SetSourceOnUiThread(Bitmap? bitmap, string? sourceUrl = null, string? reason = null)
+    {
+        void TraceApplied()
+        {
+            if (bitmap != null && !string.IsNullOrWhiteSpace(sourceUrl))
+            {
+                var details = $"host={ExtractHost(sourceUrl)} cached=true data={DescribeDataContext(DataContext)}";
+                if (!string.IsNullOrWhiteSpace(reason))
+                {
+                    details += $" reason={reason}";
+                }
+
+                PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage source-applied", details);
+            }
+
+        }
+
         if (Dispatcher.UIThread.CheckAccess())
         {
             Source = bitmap;
             IsImageLoaded = bitmap != null;
+            TraceApplied();
             return;
         }
 
         Dispatcher.UIThread.Post(() => {
             Source = bitmap;
             IsImageLoaded = bitmap != null;
-        }, DispatcherPriority.Background);
+            TraceApplied();
+        }, DispatcherPriority.Render);
     }
 
     private void TrySetSource(string sourceUrl, Bitmap? bitmap, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
         {
+            PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage source-skip-cancelled", $"host={ExtractHost(sourceUrl)} data={DescribeDataContext(DataContext)}");
             return;
         }
 
@@ -510,17 +734,27 @@ public class RemoteImage : Image
         {
             if (cancellationToken.IsCancellationRequested)
             {
+                PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage source-skip-cancelled", $"host={ExtractHost(sourceUrl)} data={DescribeDataContext(DataContext)}");
                 return;
             }
 
             var currentUrl = NormalizeUrl(Url);
             if (!string.Equals(currentUrl, sourceUrl, StringComparison.OrdinalIgnoreCase))
             {
+                PerformanceTraceService.Shared?.Event(
+                    "IMAGE",
+                    "RemoteImage source-skip-url-mismatch",
+                    $"from={ExtractHost(sourceUrl)} to={ExtractHost(currentUrl ?? string.Empty)} data={DescribeDataContext(DataContext)}");
                 return;
             }
 
             Source = bitmap;
             IsImageLoaded = bitmap != null;
+            if (bitmap != null)
+            {
+                PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage source-applied", $"host={ExtractHost(sourceUrl)} cached=false data={DescribeDataContext(DataContext)}");
+            }
+
         }
 
         if (Dispatcher.UIThread.CheckAccess())
@@ -529,7 +763,7 @@ public class RemoteImage : Image
         }
         else
         {
-            Dispatcher.UIThread.Post(Apply, DispatcherPriority.Background);
+            Dispatcher.UIThread.Post(Apply, DispatcherPriority.Render);
         }
     }
 
@@ -552,12 +786,12 @@ public class RemoteImage : Image
             AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
             PooledConnectionLifetime = TimeSpan.FromMinutes(5),
             PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
-            MaxConnectionsPerServer = 32
+            MaxConnectionsPerServer = 8
         };
 
         var client = new HttpClient(handler)
         {
-            Timeout = TimeSpan.FromSeconds(14)
+            Timeout = TimeSpan.FromSeconds(5)
         };
 
         client.DefaultRequestHeaders.UserAgent.ParseAdd("Noctra.Avalonia/1.0");
@@ -617,10 +851,222 @@ public class RemoteImage : Image
 
     private static void LogFailure(string url, string reason)
     {
-        if (FailedUrlLog.Count > 300 || !FailedUrlLog.TryAdd(url, 0))
+        // Only log the first failure per URL to avoid log spam.
+        // FailedUntilUtc naturally deduplicates because MarkFailureCooldown adds the URL.
+        var isNewFailure = !FailedUntilUtc.ContainsKey(url);
+        MarkFailureCooldown(url);
+
+        if (isNewFailure)
+        {
+            PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage failure", $"host={ExtractHost(url)} reason={reason}");
+        }
+    }
+
+    private static void MarkFailureCooldown(string url)
+    {
+        FailedUntilUtc[url] = DateTime.UtcNow.Add(FailureCooldown);
+    }
+
+    private static Bitmap? TryLoadDiskCache(string url)
+    {
+        try
+        {
+            var path = GetDiskCachePath(url);
+            if (!File.Exists(path))
+            {
+                return null;
+            }
+
+            var fileInfo = new FileInfo(path);
+            if (fileInfo.Length <= 0)
+            {
+                File.Delete(path);
+                return null;
+            }
+
+            using var stream = File.OpenRead(path);
+            var bitmap = new Bitmap(stream);
+            PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage disk-cache-hit", $"host={ExtractHost(url)} bytes={fileInfo.Length}");
+            return bitmap;
+        }
+        catch
+        {
+            TryDeleteDiskCache(url);
+            return null;
+        }
+    }
+
+    private static void SaveDiskCache(string url, byte[] bytes)
+    {
+        if (bytes.Length == 0)
         {
             return;
         }
 
+        try
+        {
+            Directory.CreateDirectory(DiskCacheDirectory);
+            var path = GetDiskCachePath(url);
+            if (File.Exists(path))
+            {
+                return;
+            }
+
+            File.WriteAllBytes(path, bytes);
+            PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage disk-cache-save", $"host={ExtractHost(url)} bytes={bytes.Length}");
+        }
+        catch
+        {
+            // Disk cache is opportunistic; UI image loading must not fail because persistence failed.
+        }
+    }
+
+    private static void TryDeleteDiskCache(string url)
+    {
+        try
+        {
+            var path = GetDiskCachePath(url);
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+        catch
+        {
+            // Ignore cleanup failures.
+        }
+    }
+
+    private static string GetDiskCachePath(string url)
+    {
+        var hash = Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(url)));
+        return Path.Combine(DiskCacheDirectory, hash + ".img");
+    }
+
+    private static bool IsRecentlyFailed(string url)
+    {
+        if (!FailedUntilUtc.TryGetValue(url, out var untilUtc))
+        {
+            return false;
+        }
+
+        if (untilUtc > DateTime.UtcNow)
+        {
+            return true;
+        }
+
+        FailedUntilUtc.TryRemove(url, out _);
+        return false;
+    }
+
+    private static bool IsKnownBadImageHost(string url)
+    {
+        return Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+               KnownBadImageHosts.Contains(uri.Host);
+    }
+
+    private static void TrackActiveControl(RemoteImage control)
+    {
+        lock (ActiveControlsLock)
+        {
+            for (var i = ActiveControls.Count - 1; i >= 0; i--)
+            {
+                if (!ActiveControls[i].TryGetTarget(out var existing))
+                {
+                    ActiveControls.RemoveAt(i);
+                    continue;
+                }
+
+                if (ReferenceEquals(existing, control))
+                {
+                    return;
+                }
+            }
+
+            ActiveControls.Add(new WeakReference<RemoteImage>(control));
+        }
+    }
+
+    private static void UntrackActiveControl(RemoteImage control)
+    {
+        lock (ActiveControlsLock)
+        {
+            for (var i = ActiveControls.Count - 1; i >= 0; i--)
+            {
+                if (!ActiveControls[i].TryGetTarget(out var existing) || ReferenceEquals(existing, control))
+                {
+                    ActiveControls.RemoveAt(i);
+                }
+            }
+        }
+    }
+
+    private static void NotifyActiveControlsSourceAvailable(string sourceUrl, Bitmap bitmap)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            lock (ActiveControlsLock)
+            {
+                for (var i = ActiveControls.Count - 1; i >= 0; i--)
+                {
+                    if (!ActiveControls[i].TryGetTarget(out var control))
+                    {
+                        ActiveControls.RemoveAt(i);
+                        continue;
+                    }
+
+                    var currentUrl = NormalizeUrl(control.Url);
+                    if (!string.Equals(currentUrl, sourceUrl, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    if (ReferenceEquals(control.Source, bitmap) && control.IsImageLoaded)
+                    {
+                        continue;
+                    }
+
+                    control.Source = bitmap;
+                    control.IsImageLoaded = true;
+                    PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage source-applied", $"host={ExtractHost(sourceUrl)} cached=true reason=cache-notify data={DescribeDataContext(control.DataContext)}");
+                }
+            }
+        }, DispatcherPriority.Render);
+    }
+
+    private string BuildEmptyUrlDetails()
+    {
+        return $"control={GetType().Name} data={DescribeDataContext(DataContext)}";
+    }
+
+    private static string DescribeDataContext(object? dataContext)
+    {
+        return dataContext switch
+        {
+            Channel channel => $"Channel id={channel.Id} type={channel.Type} playlist={channel.PlaylistId} name={TrimForLog(channel.Name)} group={TrimForLog(channel.GroupTitle)} logo={HasValue(channel.LogoUrl)} backdrop={HasValue(channel.BackdropUrl)}",
+            Series series => $"Series id={series.Id} playlist={series.PlaylistId} name={TrimForLog(series.Name)} group={TrimForLog(series.GroupTitle)} cover={HasValue(series.CoverUrl)} backdrop={HasValue(series.BackdropUrl)}",
+            Episode episode => $"Episode id={episode.Id} season={episode.SeasonId} name={TrimForLog(episode.Name)} cover={HasValue(episode.CoverUrl)}",
+            null => "<null>",
+            _ => dataContext.GetType().Name
+        };
+    }
+
+    private static string HasValue(string? value)
+        => string.IsNullOrWhiteSpace(value) ? "empty" : "set";
+
+    private static string TrimForLog(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "<empty>";
+        }
+
+        var normalized = value.Replace("|", "/", StringComparison.Ordinal).Trim();
+        return normalized.Length <= 48 ? normalized : normalized[..48] + "...";
+    }
+
+    private static string ExtractHost(string url)
+    {
+        return Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Host : "<invalid>";
     }
 }

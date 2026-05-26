@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Noctra.Data;
+using Noctra.Core.Services;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
 
@@ -23,8 +24,10 @@ public partial class MetadataService : IMetadataService
     private const string TMDB_BASE_URL = "https://api.themoviedb.org/3";
     private const string TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
     
-    // API key - should be configured via appsettings or environment variable
+    // TMDB credential. v4 access tokens use Bearer auth; v3 API keys must stay in the query string.
     private string _apiKey = string.Empty;
+    private bool _useQueryApiKey;
+    private bool _credentialTraceEmitted;
     
     // Genre cache: LanguageCode -> (GenreID -> GenreName)
     private readonly ConcurrentDictionary<string, Dictionary<int, string>> _genreCache = new();
@@ -41,14 +44,7 @@ public partial class MetadataService : IMetadataService
         _settingsService = settingsService;
         _logger = logger;
         
-        // Try to get API key from environment
-        _apiKey = Environment.GetEnvironmentVariable("TMDB_API_KEY") ?? string.Empty;
-        
-        // Use Authorization header instead of query param for security
-        if (!string.IsNullOrEmpty(_apiKey))
-        {
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
-        }
+        LoadApiKeyFromEnvironment();
     }
     
     /// <summary>
@@ -56,15 +52,78 @@ public partial class MetadataService : IMetadataService
     /// </summary>
     public void SetApiKey(string apiKey)
     {
-        _apiKey = apiKey;
-        if (!string.IsNullOrEmpty(_apiKey))
-        {
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
-        }
-        else
+        ApplyApiCredential(apiKey, forceBearer: true, traceSource: "SetApiKey");
+    }
+
+    private void ApplyApiCredential(string? credential, bool forceBearer, string traceSource)
+    {
+        _apiKey = credential?.Trim() ?? string.Empty;
+        _useQueryApiKey = !forceBearer && IsLikelyV3ApiKey(_apiKey);
+
+        if (string.IsNullOrEmpty(_apiKey))
         {
             _httpClient.DefaultRequestHeaders.Authorization = null;
+            return;
         }
+
+        _httpClient.DefaultRequestHeaders.Authorization = _useQueryApiKey
+            ? null
+            : new AuthenticationHeaderValue("Bearer", _apiKey);
+
+        if (!_credentialTraceEmitted)
+        {
+            _credentialTraceEmitted = true;
+            PerformanceTraceService.Shared?.Event("TMDB", "Credential loaded", $"source={traceSource} authMode={GetAuthModeForTrace()} keyType={GetCredentialTypeForTrace(_apiKey)}");
+        }
+    }
+
+    private void LoadApiKeyFromEnvironment()
+    {
+        var bearerToken = Environment.GetEnvironmentVariable("TMDB_BEARER_TOKEN");
+        if (!string.IsNullOrWhiteSpace(bearerToken))
+        {
+            ApplyApiCredential(bearerToken, forceBearer: true, traceSource: "env:TMDB_BEARER_TOKEN");
+            return;
+        }
+
+        var apiKey = Environment.GetEnvironmentVariable("TMDB_API_KEY");
+        if (!string.IsNullOrWhiteSpace(apiKey))
+        {
+            ApplyApiCredential(apiKey, forceBearer: false, traceSource: "env:TMDB_API_KEY");
+        }
+    }
+
+    private string AddApiKeyIfNeeded(string url)
+    {
+        if (!_useQueryApiKey || string.IsNullOrWhiteSpace(_apiKey))
+        {
+            return url;
+        }
+
+        var separator = url.Contains('?', StringComparison.Ordinal) ? "&" : "?";
+        return $"{url}{separator}api_key={Uri.EscapeDataString(_apiKey)}";
+    }
+
+    private static bool IsLikelyV3ApiKey(string credential)
+    {
+        return credential.Length == 32 && Regex.IsMatch(credential, "^[a-fA-F0-9]{32}$", RegexOptions.CultureInvariant);
+    }
+
+    private string GetAuthModeForTrace()
+    {
+        return _useQueryApiKey ? "v3-query" : "bearer";
+    }
+
+    private static string GetCredentialTypeForTrace(string credential)
+    {
+        if (IsLikelyV3ApiKey(credential))
+        {
+            return "v3-api-key";
+        }
+
+        return credential.Count(c => c == '.') >= 2 || credential.StartsWith("eyJ", StringComparison.Ordinal)
+            ? "v4-token"
+            : "unknown";
     }
     
     public async Task<ChannelMetadata?> FetchMetadataAsync(string searchQuery, ChannelType? type = null, string languageCode = "tr-TR", CancellationToken cancellationToken = default)
@@ -106,7 +165,7 @@ public partial class MetadataService : IMetadataService
                 url = $"{TMDB_BASE_URL}/search/multi?query={Uri.EscapeDataString(queryWithoutYear)}&include_adult=false&language={languageCode}";
             }
             
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            var response = await _httpClient.GetAsync(AddApiKeyIfNeeded(url), cancellationToken);
             
             if (!response.IsSuccessStatusCode)
             {
@@ -225,7 +284,7 @@ public partial class MetadataService : IMetadataService
         {
             var lang = languageCode.Contains('-') ? languageCode.Split('-')[0] : languageCode;
             var url = $"{TMDB_BASE_URL}/tv/{tmdbId}?append_to_response=credits,content_ratings,videos,watch/providers&include_video_language={lang},en,null&language={languageCode}";
-            return await _httpClient.GetFromJsonAsync<TmdbDetail>(url, cancellationToken);
+            return await _httpClient.GetFromJsonAsync<TmdbDetail>(AddApiKeyIfNeeded(url), cancellationToken);
         }
         catch (Exception ex)
         {
@@ -242,7 +301,7 @@ public partial class MetadataService : IMetadataService
         try
         {
             var url = $"{TMDB_BASE_URL}/tv/{tmdbId}/season/{seasonNumber}?language={languageCode}";
-            return await _httpClient.GetFromJsonAsync<TmdbSeasonDetail>(url, cancellationToken);
+            return await _httpClient.GetFromJsonAsync<TmdbSeasonDetail>(AddApiKeyIfNeeded(url), cancellationToken);
         }
         catch (Exception ex)
         {
@@ -259,7 +318,7 @@ public partial class MetadataService : IMetadataService
             var append = mediaType == "movie" ? "credits,release_dates,videos,watch/providers" : "credits,content_ratings,videos,watch/providers";
             var url = $"{TMDB_BASE_URL}/{endpoint}/{id}?append_to_response={append}&language={languageCode}";
             
-            return await _httpClient.GetFromJsonAsync<TmdbDetail>(url, cancellationToken);
+            return await _httpClient.GetFromJsonAsync<TmdbDetail>(AddApiKeyIfNeeded(url), cancellationToken);
         }
         catch (Exception ex)
         {
@@ -402,8 +461,16 @@ public partial class MetadataService : IMetadataService
     {
         EnsureApiKeyLoaded();
 
-        if (string.IsNullOrWhiteSpace(searchQuery) || string.IsNullOrEmpty(_apiKey))
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
             return null;
+        }
+
+        if (string.IsNullOrEmpty(_apiKey))
+        {
+            PerformanceTraceService.Shared?.Event("TMDB", "SearchSeriesAsync skipped", $"reason=missing-api-key query={TrimForTrace(searchQuery)} language={languageCode}");
+            return null;
+        }
 
         try
         {
@@ -411,64 +478,129 @@ public partial class MetadataService : IMetadataService
             if (string.IsNullOrWhiteSpace(cleanQuery))
                 cleanQuery = searchQuery;
 
-            var (queryWithoutYear, year) = ExtractYearFromQuery(cleanQuery);
-
-            var url = $"{TMDB_BASE_URL}/search/tv?query={Uri.EscapeDataString(queryWithoutYear)}&include_adult=false&language={languageCode}";
-
-            if (year.HasValue)
-                url += $"&first_air_date_year={year.Value}";
-
-            var response = await _httpClient.GetAsync(url, cancellationToken);
-            if (!response.IsSuccessStatusCode)
-                return null;
-
-            var data = await response.Content.ReadFromJsonAsync<TmdbSearchResponse>(cancellationToken: cancellationToken);
-            if (data?.Results == null || data.Results.Count == 0)
-                return null;
-
-            // Same scoring logic as FetchMetadataAsync
-            int ScoreResult(TmdbResult r)
+            foreach (var queryCandidate in BuildSeriesSearchQueries(cleanQuery))
             {
-                var resultName = r.DisplayTitle ?? "";
-                if (resultName.Equals(queryWithoutYear, StringComparison.OrdinalIgnoreCase)) return 100;
-                if ((r.OriginalTitle ?? r.OriginalName ?? "").Equals(queryWithoutYear, StringComparison.OrdinalIgnoreCase)) return 95;
-                if (resultName.StartsWith(queryWithoutYear, StringComparison.OrdinalIgnoreCase)) return 80;
-                if (queryWithoutYear.StartsWith(resultName, StringComparison.OrdinalIgnoreCase)) return 75;
-                if (resultName.Contains(" " + queryWithoutYear, StringComparison.OrdinalIgnoreCase) ||
-                    resultName.Contains(queryWithoutYear + " ", StringComparison.OrdinalIgnoreCase)) return 40;
-                if (resultName.Contains(queryWithoutYear, StringComparison.OrdinalIgnoreCase)) return 20;
-                return 1;
+                foreach (var lang in BuildSeriesSearchLanguages(languageCode))
+                {
+                    var metadata = await SearchSeriesOnceAsync(queryCandidate, lang, cancellationToken);
+                    if (metadata?.PosterUrl != null)
+                    {
+                        if (!string.Equals(queryCandidate, cleanQuery, StringComparison.OrdinalIgnoreCase) ||
+                            !string.Equals(lang, languageCode, StringComparison.OrdinalIgnoreCase))
+                        {
+                            PerformanceTraceService.Shared?.Event(
+                                "TMDB",
+                                "SearchSeriesAsync fallback-hit",
+                                $"query={TrimForTrace(searchQuery)} candidate={TrimForTrace(queryCandidate)} language={lang} title={TrimForTrace(metadata.Title)}");
+                        }
+
+                        return metadata;
+                    }
+                }
             }
 
-            var best = data.Results
-                .OrderByDescending(r => ScoreResult(r))
-                .ThenByDescending(r => r.Popularity)
-                .FirstOrDefault();
-
-            if (best == null)
-                return null;
-
-            // Genre ID → name conversion (uses cache, no extra API call after first)
-            var genres = await GetGenresAsync(best.GenreIds, languageCode, cancellationToken);
-
-            return new ChannelMetadata
-            {
-                TmdbId = best.Id,
-                Title = best.DisplayTitle,
-                Description = best.Overview,
-                PosterUrl = GetImageUrl(best.PosterPath, "w500"),
-                BackdropUrl = GetImageUrl(best.BackdropPath, "w780"),
-                Rating = best.VoteAverage,
-                ReleaseYear = best.ReleaseYear,
-                Genres = genres,
-                MediaType = "tv"
-            };
+            PerformanceTraceService.Shared?.Event("TMDB", "SearchSeriesAsync no-poster", $"query={TrimForTrace(searchQuery)} clean={TrimForTrace(cleanQuery)} language={languageCode}");
+            return null;
         }
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "TMDB series search failed for: {Query}", searchQuery);
+            PerformanceTraceService.Shared?.Event("TMDB", "SearchSeriesAsync exception", $"query={TrimForTrace(searchQuery)} error={ex.GetType().Name}");
             return null;
         }
+    }
+
+    private async Task<ChannelMetadata?> SearchSeriesOnceAsync(string query, string languageCode, CancellationToken cancellationToken)
+    {
+        var (queryWithoutYear, year) = ExtractYearFromQuery(query);
+        if (string.IsNullOrWhiteSpace(queryWithoutYear))
+        {
+            return null;
+        }
+
+        var url = $"{TMDB_BASE_URL}/search/tv?query={Uri.EscapeDataString(queryWithoutYear)}&include_adult=false&language={languageCode}";
+        if (year.HasValue)
+        {
+            url += $"&first_air_date_year={year.Value}";
+        }
+
+        var response = await _httpClient.GetAsync(AddApiKeyIfNeeded(url), cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            PerformanceTraceService.Shared?.Event("TMDB", "SearchSeriesAsync http-failed", $"status={(int)response.StatusCode} authMode={GetAuthModeForTrace()} query={TrimForTrace(queryWithoutYear)} language={languageCode}");
+            return null;
+        }
+
+        var data = await response.Content.ReadFromJsonAsync<TmdbSearchResponse>(cancellationToken: cancellationToken);
+        if (data?.Results == null || data.Results.Count == 0)
+        {
+            PerformanceTraceService.Shared?.Event("TMDB", "SearchSeriesAsync no-results", $"query={TrimForTrace(queryWithoutYear)} language={languageCode}");
+            return null;
+        }
+
+        int ScoreResult(TmdbResult r)
+        {
+            var resultName = r.DisplayTitle ?? "";
+            if (resultName.Equals(queryWithoutYear, StringComparison.OrdinalIgnoreCase)) return 100;
+            if ((r.OriginalTitle ?? r.OriginalName ?? "").Equals(queryWithoutYear, StringComparison.OrdinalIgnoreCase)) return 95;
+            if (resultName.StartsWith(queryWithoutYear, StringComparison.OrdinalIgnoreCase)) return 80;
+            if (queryWithoutYear.StartsWith(resultName, StringComparison.OrdinalIgnoreCase)) return 75;
+            if (resultName.Contains(" " + queryWithoutYear, StringComparison.OrdinalIgnoreCase) ||
+                resultName.Contains(queryWithoutYear + " ", StringComparison.OrdinalIgnoreCase)) return 40;
+            if (resultName.Contains(queryWithoutYear, StringComparison.OrdinalIgnoreCase)) return 20;
+            return 1;
+        }
+
+        var best = data.Results
+            .Where(r => !string.IsNullOrWhiteSpace(r.PosterPath))
+            .OrderByDescending(r => ScoreResult(r))
+            .ThenByDescending(r => r.Popularity)
+            .FirstOrDefault();
+
+        if (best == null)
+        {
+            PerformanceTraceService.Shared?.Event("TMDB", "SearchSeriesAsync results-without-poster", $"query={TrimForTrace(queryWithoutYear)} language={languageCode} results={data.Results.Count}");
+            return null;
+        }
+
+        var genres = await GetGenresAsync(best.GenreIds, languageCode, cancellationToken);
+        return new ChannelMetadata
+        {
+            TmdbId = best.Id,
+            Title = best.DisplayTitle,
+            Description = best.Overview,
+            PosterUrl = GetImageUrl(best.PosterPath, "w500"),
+            BackdropUrl = GetImageUrl(best.BackdropPath, "w780"),
+            Rating = best.VoteAverage,
+            ReleaseYear = best.ReleaseYear,
+            Genres = genres,
+            MediaType = "tv"
+        };
+    }
+
+    private static IEnumerable<string> BuildSeriesSearchQueries(string cleanQuery)
+    {
+        yield return cleanQuery;
+    }
+
+    private static IEnumerable<string> BuildSeriesSearchLanguages(string languageCode)
+    {
+        yield return languageCode;
+        if (!languageCode.Equals("en-US", StringComparison.OrdinalIgnoreCase))
+        {
+            yield return "en-US";
+        }
+    }
+
+    private static string TrimForTrace(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "<empty>";
+        }
+
+        var normalized = value.Replace("|", "/", StringComparison.Ordinal).Trim();
+        return normalized.Length <= 80 ? normalized : normalized[..80] + "...";
     }
     
     public async Task<List<string>> GetGenresAsync(List<int> genreIds, string languageCode = "tr-TR", CancellationToken cancellationToken = default)
@@ -509,7 +641,7 @@ public partial class MetadataService : IMetadataService
 
             // Fetch movie genres
             var movieGenreUrl = $"{TMDB_BASE_URL}/genre/movie/list?language={languageCode}";
-            var movieResponse = await _httpClient.GetFromJsonAsync<TmdbGenreResponse>(movieGenreUrl, cancellationToken);
+            var movieResponse = await _httpClient.GetFromJsonAsync<TmdbGenreResponse>(AddApiKeyIfNeeded(movieGenreUrl), cancellationToken);
             if (movieResponse?.Genres != null)
             {
                 foreach (var g in movieResponse.Genres)
@@ -518,7 +650,7 @@ public partial class MetadataService : IMetadataService
             
             // Fetch TV genres
             var tvGenreUrl = $"{TMDB_BASE_URL}/genre/tv/list?language={languageCode}";
-            var tvResponse = await _httpClient.GetFromJsonAsync<TmdbGenreResponse>(tvGenreUrl, cancellationToken);
+            var tvResponse = await _httpClient.GetFromJsonAsync<TmdbGenreResponse>(AddApiKeyIfNeeded(tvGenreUrl), cancellationToken);
             if (tvResponse?.Genres != null)
             {
                 foreach (var g in tvResponse.Genres)
@@ -558,14 +690,7 @@ public partial class MetadataService : IMetadataService
 
     private void EnsureApiKeyLoaded()
     {
-        // Rely purely on environment variable or hardcoded internal key
         if (!string.IsNullOrWhiteSpace(_apiKey)) return;
-
-        var fromEnv = Environment.GetEnvironmentVariable("TMDB_API_KEY");
-        if (!string.IsNullOrWhiteSpace(fromEnv))
-        {
-            _apiKey = fromEnv.Trim();
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
-        }
+        LoadApiKeyFromEnvironment();
     }
 }

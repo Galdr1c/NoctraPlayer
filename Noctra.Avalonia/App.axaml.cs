@@ -41,10 +41,15 @@ public partial class App : Application
             var services = new ServiceCollection();
             ConfigureServices(services);
             Services = services.BuildServiceProvider();
+            var perfTrace = Services.GetRequiredService<IPerformanceTraceService>();
+            perfTrace.Event("STARTUP", "Services built");
 
             using var scope = Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Database.EnsureCreated();
+            using (perfTrace.BeginOperation("STARTUP", "Database.EnsureCreated"))
+            {
+                db.Database.EnsureCreated();
+            }
             
             // Phase 29: Move blocking schema fixups to an async flow to avoid deadlock
             // ApplySchemaFixupsAsync(db).GetAwaiter().GetResult(); 
@@ -53,12 +58,14 @@ public partial class App : Application
 
             var settings = scope.ServiceProvider.GetRequiredService<ISettingsService>();
             var themeService = Services.GetRequiredService<IThemeService>();
-            ApplyApplicationLanguage(settings.Settings.Language);
-            themeService.SetTheme(settings.Settings.IsDarkTheme);
-            
             var localizationService = Services.GetRequiredService<ILocalizationService>();
-            localizationService.SetLanguage(settings.Settings.Language ?? "tr");
-            LocalizationSource.Instance.Initialize(localizationService);
+            using (perfTrace.BeginOperation("STARTUP", "Apply language/theme"))
+            {
+                ApplyApplicationLanguage(settings.Settings.Language);
+                themeService.SetTheme(settings.Settings.IsDarkTheme);
+                localizationService.SetLanguage(settings.Settings.Language ?? "tr");
+                LocalizationSource.Instance.Initialize(localizationService);
+            }
 
             settings.SettingsChanged += () =>
             {
@@ -96,13 +103,16 @@ public partial class App : Application
                 // Fire and forget warmup
                 _ = Task.Run(async () =>
                 {
+                    using var startupTrace = PerformanceTraceService.Shared?.BeginOperation("STARTUP", "Framework warmup task");
                     var startupStopwatch = System.Diagnostics.Stopwatch.StartNew();
                     try
                     {
                         
                         // 1. Warmup Settings (Lazy load trigger)
                         var settingsService = Services.GetRequiredService<ISettingsService>();
+                        PerformanceTraceService.Shared?.Event("STARTUP", "Settings warmup begin");
                         _ = settingsService.Settings; 
+                        PerformanceTraceService.Shared?.Event("STARTUP", "Settings warmup end");
 
                         // 2. Warmup EF Core (Triggers first-time model compilation)
                         using (var scope = Services.CreateScope())
@@ -110,15 +120,22 @@ public partial class App : Application
                             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                             
                             // Phase 29: Apply schema fixups here (async) to avoid UI hang
+                            using (PerformanceTraceService.Shared?.BeginOperation("STARTUP", "ApplySchemaFixupsAsync"))
+                            {
                             await ApplySchemaFixupsAsync(db);
+                            }
                             
+                            using (PerformanceTraceService.Shared?.BeginOperation("STARTUP", "Profiles.AnyAsync"))
+                            {
                             await db.Profiles.AnyAsync();
+                            }
                         }
 
                         // 2.1 Purge profiles with expired deletion countdown
                         try
                         {
                             var profileService = Services.GetRequiredService<IProfileService>();
+                            using var purgeTrace = PerformanceTraceService.Shared?.BeginOperation("STARTUP", "PurgeExpiredProfilesAsync");
                             await profileService.PurgeExpiredProfilesAsync();
                         }
                         catch (Exception ex)
@@ -130,8 +147,10 @@ public partial class App : Application
                         // 3. Resolve MainWindow/ProfilesWindow early
                         var profilesWindow = await Dispatcher.UIThread.InvokeAsync(() => 
                         {
+                            PerformanceTraceService.Shared?.Event("STARTUP", "Resolve ProfilesWindow begin");
                             var win = Services.GetRequiredService<ProfilesWindow>();
                             win.DisableAutoSelect = true;
+                            PerformanceTraceService.Shared?.Event("STARTUP", "Resolve ProfilesWindow end");
                             return win;
                         });
                         
@@ -176,6 +195,7 @@ public partial class App : Application
                         // Transition to Main Window
                         await Dispatcher.UIThread.InvokeAsync(() =>
                         {
+                            PerformanceTraceService.Shared?.Event("STARTUP", "Show ProfilesWindow");
                             desktop.MainWindow = profilesWindow;
                             profilesWindow.Show();
                             splashWindow.Close();
@@ -187,6 +207,7 @@ public partial class App : Application
                         // Fallback: Just try to open the app anyway if warmup fails
                         await Dispatcher.UIThread.InvokeAsync(() =>
                         {
+                            PerformanceTraceService.Shared?.Event("STARTUP", "Fallback open ProfilesWindow", ex.GetType().Name);
                             var win = Services.GetRequiredService<ProfilesWindow>();
                             win.DisableAutoSelect = true;
                             desktop.MainWindow = win;
@@ -336,6 +357,7 @@ public partial class App : Application
 
         services.AddSingleton<ITmdbSyncService, TmdbSyncService>();
         services.AddSingleton<IDiagnosticReportService, DiagnosticReportService>();
+        services.AddSingleton<IPerformanceTraceService, PerformanceTraceService>();
 
         services.AddSingleton<IDispatcherService, AvaloniaDispatcherService>();
         services.AddSingleton<IDialogService, AvaloniaDialogService>();
@@ -453,6 +475,13 @@ public partial class App : Application
         
         // Phase 29: Defensive fix for phantom CurrentProgramId column seen in logs
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN CurrentProgramId INTEGER;"); } catch { }
+
+        // Composite indexes for hot menu/filter paths. Single-column indexes are not enough for
+        // PlaylistId + Type + GroupTitle + newest-first paging used by the card grids.
+        try { await context.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_Channels_Playlist_Type_Group_Id ON Channels(PlaylistId, Type, GroupTitle, Id DESC);"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_Channels_Playlist_Type_Id ON Channels(PlaylistId, Type, Id DESC);"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_Channels_Playlist_Group_Id ON Channels(PlaylistId, GroupTitle, Id DESC);"); } catch { }
+        try { await context.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_Channels_Playlist_Favorite_Id ON Channels(PlaylistId, IsFavorite, Id DESC);"); } catch { }
         
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN IsCompleted INTEGER NOT NULL DEFAULT 0;"); } catch { }
         try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN IntroStartSec REAL;"); } catch { }

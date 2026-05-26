@@ -22,14 +22,21 @@ namespace Noctra.Avalonia;
 
 public partial class MainWindow : Window
 {
+    private static readonly TimeSpan ImageWarmupDelay = TimeSpan.FromMilliseconds(100);
+    private static readonly TimeSpan PointerInteractionThrottle = TimeSpan.FromMilliseconds(100);
+
     private readonly IVideoPlayerService _videoPlayerService;
     private readonly IWatchHistoryService _watchHistoryService;
     private readonly ISettingsService _settingsService;
+    private readonly IPerformanceTraceService _perfTrace;
     private readonly MainViewModel _mainViewModel;
     private readonly PlayerViewModel _playerViewModel;
     private readonly WindowResizeService _windowResizeService;
+    private readonly DispatcherTimer _uiStallTimer;
     private CancellationTokenSource? _imageWarmupCts;
     private CancellationTokenSource _mediaSelectionCts = new();
+    private DateTime _lastPointerInteractionUtc = DateTime.MinValue;
+    private DateTime _lastUiHeartbeatUtc = DateTime.UtcNow;
 
     public MainWindow()
         : this(
@@ -37,7 +44,8 @@ public partial class MainWindow : Window
             ((App)Application.Current!).Services.GetRequiredService<PlayerViewModel>(),
             ((App)Application.Current!).Services.GetRequiredService<IVideoPlayerService>(),
             ((App)Application.Current!).Services.GetRequiredService<IWatchHistoryService>(),
-            ((App)Application.Current!).Services.GetRequiredService<ISettingsService>())
+            ((App)Application.Current!).Services.GetRequiredService<ISettingsService>(),
+            ((App)Application.Current!).Services.GetRequiredService<IPerformanceTraceService>())
     {
     }
 
@@ -46,7 +54,8 @@ public partial class MainWindow : Window
         PlayerViewModel playerViewModel, 
         IVideoPlayerService videoPlayerService,
         IWatchHistoryService watchHistoryService,
-        ISettingsService settingsService)
+        ISettingsService settingsService,
+        IPerformanceTraceService? perfTraceService = null)
     {
         InitializeComponent();
 
@@ -55,7 +64,15 @@ public partial class MainWindow : Window
         _videoPlayerService = videoPlayerService;
         _watchHistoryService = watchHistoryService;
         _settingsService = settingsService;
+        _perfTrace = perfTraceService ?? new PerformanceTraceService();
         _windowResizeService = new WindowResizeService(this);
+        _uiStallTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(250)
+        };
+        _uiStallTimer.Tick += UiStallTimer_Tick;
+        _uiStallTimer.Start();
+        _perfTrace.Event("UI", "MainWindow constructed", $"traceFile={_perfTrace.LogFilePath}");
         DataContext = _mainViewModel;
 
         PlayerOverlayLayer.DataContext = _playerViewModel;
@@ -125,6 +142,18 @@ public partial class MainWindow : Window
         }
     }
 
+    private void UiStallTimer_Tick(object? sender, EventArgs e)
+    {
+        var now = DateTime.UtcNow;
+        var gapMs = (now - _lastUiHeartbeatUtc).TotalMilliseconds;
+        _lastUiHeartbeatUtc = now;
+
+        if (gapMs >= 500)
+        {
+            _perfTrace.Event("UI_STALL", "Dispatcher heartbeat delayed", $"gapMs={gapMs:F0}");
+        }
+    }
+
     private void OnClosed(object? sender, EventArgs e)
     {
         // Flush watch position before closing
@@ -150,6 +179,8 @@ public partial class MainWindow : Window
         _playerViewModel.PreviousLiveChannelRequested -= PlayerViewModel_PreviousLiveChannelRequested;
         _playerViewModel.PiPRequested -= PlayerViewModel_PiPRequested;
         _videoPlayerService.MediaPlayerReady -= VideoPlayerService_MediaPlayerReady;
+        _uiStallTimer.Stop();
+        _uiStallTimer.Tick -= UiStallTimer_Tick;
 
         // VideoSurface.MediaPlayer = null; // Handled in ClosePiP or let it be cleared
         ClosePiP(false); 
@@ -365,9 +396,15 @@ public partial class MainWindow : Window
     private void MainViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(MainViewModel.FilteredChannels) or
-            nameof(MainViewModel.SeriesViewItems))
+            nameof(MainViewModel.SeriesViewItems) or
+            nameof(MainViewModel.ContinueWatching) or
+            nameof(MainViewModel.MyList) or
+            nameof(MainViewModel.FavoriteChannels) or
+            nameof(MainViewModel.HistoryLiveChannels) or
+            nameof(MainViewModel.HistoryVodChannels) or
+            nameof(MainViewModel.HistorySeriesItems))
         {
-            ScheduleImageWarmup();
+            ScheduleImageWarmup(e.PropertyName);
         }
         else if (e.PropertyName == nameof(MainViewModel.ActiveDownloadCount))
         {
@@ -435,8 +472,9 @@ public partial class MainWindow : Window
         }
     }
 
-    private void ScheduleImageWarmup()
+    private void ScheduleImageWarmup(string? reason = null)
     {
+        _perfTrace.Event("IMAGE", "ScheduleImageWarmup", $"view={_mainViewModel.ActiveView} reason={reason ?? "unknown"}");
         _imageWarmupCts?.Cancel();
         _imageWarmupCts?.Dispose();
         _imageWarmupCts = new CancellationTokenSource();
@@ -446,7 +484,7 @@ public partial class MainWindow : Window
         {
             try
             {
-                await Task.Delay(50, token).ConfigureAwait(false);
+                await Task.Delay(ImageWarmupDelay, token).ConfigureAwait(false);
                 await WarmupVisibleImagesAsync(token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
@@ -457,13 +495,49 @@ public partial class MainWindow : Window
 
     private async Task WarmupVisibleImagesAsync(CancellationToken cancellationToken)
     {
-        var urls = new List<string?>(220);
+        using var trace = _perfTrace.BeginOperation("IMAGE", "WarmupVisibleImagesAsync", $"view={_mainViewModel.ActiveView}");
+        var urls = new List<string?>(60);
 
+        if (_mainViewModel.ActiveView == AppView.Series)
+        {
+            urls.AddRange(_mainViewModel.SeriesViewItems.Take(30).Select(s => s.CoverUrl));
+        }
+        else if (_mainViewModel.ActiveView == AppView.Home)
+        {
+            urls.AddRange(_mainViewModel.ContinueWatching.Take(30).Select(c => c.CoverUrl ?? c.LogoUrl));
+        }
+        else if (_mainViewModel.ActiveView is AppView.Live or AppView.Movies)
+        {
+            urls.AddRange(_mainViewModel.FilteredChannels.Take(30).Select(c => c.CoverUrl ?? c.LogoUrl));
+        }
+        else if (_mainViewModel.ActiveView == AppView.History)
+        {
+            urls.AddRange(_mainViewModel.HistoryLiveChannels.Take(12).Select(c => c.CoverUrl ?? c.LogoUrl));
+            urls.AddRange(_mainViewModel.HistoryVodChannels.Take(12).Select(c => c.CoverUrl ?? c.LogoUrl));
+            urls.AddRange(_mainViewModel.HistorySeriesItems.Take(12).Select(s => s.CoverUrl));
+        }
+        else if (_mainViewModel.ActiveView == AppView.MyList)
+        {
+            urls.AddRange(_mainViewModel.MyList.Take(30).Select(GetMediaImageUrl));
+        }
+        else if (_mainViewModel.ActiveView == AppView.Favorites)
+        {
+            urls.AddRange(_mainViewModel.FavoriteChannels.Take(30).Select(GetMediaImageUrl));
+        }
 
-        urls.AddRange(_mainViewModel.FilteredChannels.Take(120).Select(c => c.CoverUrl ?? c.LogoUrl));
-        urls.AddRange(_mainViewModel.SeriesViewItems.Take(60).Select(s => s.CoverUrl));
+        var emptyCount = urls.Count(string.IsNullOrWhiteSpace);
+        _perfTrace.Counter("IMAGE", "Warmup urls", urls.Count, $"view={_mainViewModel.ActiveView} empty={emptyCount}");
+        await RemoteImage.PreloadAsync(urls, maxCount: 30, cancellationToken).ConfigureAwait(false);
+    }
 
-        await RemoteImage.PreloadAsync(urls, maxCount: 220, cancellationToken).ConfigureAwait(false);
+    private static string? GetMediaImageUrl(object? item)
+    {
+        return item switch
+        {
+            Channel channel => channel.CoverUrl ?? channel.LogoUrl,
+            Series series => series.CoverUrl,
+            _ => null
+        };
     }
 
     private void MainWindow_KeyDown(object? sender, KeyEventArgs e)
@@ -858,6 +932,13 @@ public partial class MainWindow : Window
             return;
         }
 
+        var now = DateTime.UtcNow;
+        if (now - _lastPointerInteractionUtc < PointerInteractionThrottle)
+        {
+            return;
+        }
+
+        _lastPointerInteractionUtc = now;
         _playerViewModel.UserInteractionCommand.Execute(null);
     }
 

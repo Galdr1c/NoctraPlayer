@@ -38,6 +38,10 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.GroupTitle);
             entity.HasIndex(e => e.IsFavorite);
             entity.HasIndex(e => e.TmdbId);
+            entity.HasIndex(e => new { e.PlaylistId, e.Type, e.GroupTitle, e.Id });
+            entity.HasIndex(e => new { e.PlaylistId, e.Type, e.Id });
+            entity.HasIndex(e => new { e.PlaylistId, e.GroupTitle, e.Id });
+            entity.HasIndex(e => new { e.PlaylistId, e.IsFavorite, e.Id });
         });
 
         // Playlist yapılandırması

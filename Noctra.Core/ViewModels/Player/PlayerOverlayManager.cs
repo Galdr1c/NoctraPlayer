@@ -113,6 +113,7 @@ public class PlayerOverlayManager
 
     public void ClosePanels()
     {
+        _vm.LogDebug("UI Action: ClosePanels clicked");
         _vm.IsAudioSettingsOpen    = false;
         _vm.IsQualitySettingsOpen  = false;
         _vm.IsEpisodesPanelOpen    = false;
@@ -125,6 +126,7 @@ public class PlayerOverlayManager
 
     public void ShowSleepTimerMenu()
     {
+        _vm.LogDebug("UI Action: ShowSleepTimerMenu clicked");
         _vm.IsSleepTimerPanelOpen = !_vm.IsSleepTimerPanelOpen;
         if (_vm.IsSleepTimerPanelOpen)
         {

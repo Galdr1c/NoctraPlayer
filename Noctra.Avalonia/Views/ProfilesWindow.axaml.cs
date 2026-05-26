@@ -4,6 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Interactivity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Noctra.Core.Services;
 using Noctra.Data;
 using Noctra.Models;
 using Noctra.Services;
@@ -179,25 +180,37 @@ public partial class ProfilesWindow : Window
 
     private async void SelectProfile_Click(object? sender, RoutedEventArgs e)
     {
+        using var trace = PerformanceTraceService.Shared?.BeginOperation("PROFILE", "ProfilesWindow.SelectProfile_Click");
         if (DataContext is not ProfilesViewModel vm || sender is not Control control || control.DataContext is not Profile profile)
         {
+            PerformanceTraceService.Shared?.Event("PROFILE", "SelectProfile_Click skipped", "missing vm/control/profile");
             return;
         }
+        PerformanceTraceService.Shared?.Event("PROFILE", "SelectProfile_Click profile", $"profile={profile.Id} manage={vm.IsManageMode} hasPin={!string.IsNullOrEmpty(profile.PinHash)}");
 
         // Manage modundaysa düzenleme/silme — PIN kontrolü orada yapılır
         if (vm.IsManageMode)
         {
             // PIN kontrolü — düzenleme için
+            using var editPinTrace = PerformanceTraceService.Shared?.BeginOperation("PROFILE", "VerifyPin edit", $"profile={profile.Id}");
             if (!await VerifyPinIfRequired(profile, "Profiles.Pin.Purpose.Edit"))
+            {
+                PerformanceTraceService.Shared?.Event("PROFILE", "VerifyPin edit failed", $"profile={profile.Id}");
                 return;
+            }
 
             vm.EditProfileCommand.Execute(profile);
+            PerformanceTraceService.Shared?.Event("PROFILE", "EditProfileCommand executed", $"profile={profile.Id}");
             return;
         }
 
         // Normal mod — giriş: PIN kontrolü
+        using var enterPinTrace = PerformanceTraceService.Shared?.BeginOperation("PROFILE", "VerifyPin enter", $"profile={profile.Id}");
         if (!await VerifyPinIfRequired(profile, "Profiles.Pin.Purpose.Enter"))
+        {
+            PerformanceTraceService.Shared?.Event("PROFILE", "VerifyPin enter failed", $"profile={profile.Id}");
             return;
+        }
 
         // PIN doğru girildi — eğer geri sayım aktifse iptal et
         if (profile.IsPendingDeletion)
@@ -211,6 +224,7 @@ public partial class ProfilesWindow : Window
         }
 
         vm.SelectProfileCommand.Execute(profile);
+        PerformanceTraceService.Shared?.Event("PROFILE", "SelectProfileCommand executed", $"profile={profile.Id}");
     }
 
     private async void DeleteProfile_Click(object? sender, RoutedEventArgs e)
@@ -229,29 +243,38 @@ public partial class ProfilesWindow : Window
 
     private async void ProfilesWindow_Opened(object? sender, EventArgs e)
     {
+        using var trace = PerformanceTraceService.Shared?.BeginOperation("PROFILE", "ProfilesWindow.Opened");
         try
         {
-            await _viewModel.RefreshProfilesAsync();
+            using (PerformanceTraceService.Shared?.BeginOperation("PROFILE", "RefreshProfilesAsync"))
+            {
+                await _viewModel.RefreshProfilesAsync();
+            }
+            PerformanceTraceService.Shared?.Counter("PROFILE", "Profiles loaded", _viewModel.Profiles.Count);
 
             if (DisableAutoSelect || !_settingsService.Settings.AutoSelectLastProfile || _autoSelectTriggered)
             {
+                PerformanceTraceService.Shared?.Event("PROFILE", "AutoSelect skipped", $"disabled={DisableAutoSelect} setting={_settingsService.Settings.AutoSelectLastProfile} triggered={_autoSelectTriggered}");
                 return;
             }
 
             var lastProfile = _viewModel.Profiles.OrderByDescending(p => p.LastUsed).FirstOrDefault();
             if (lastProfile == null)
             {
+                PerformanceTraceService.Shared?.Event("PROFILE", "AutoSelect skipped", "no profiles");
                 return;
             }
 
             // Auto-select: PIN korumalı profilleri otomatik seçme
             if (!string.IsNullOrEmpty(lastProfile.PinHash))
             {
+                PerformanceTraceService.Shared?.Event("PROFILE", "AutoSelect skipped", $"profile={lastProfile.Id} reason=pin");
                 return;
             }
 
             _autoSelectTriggered = true;
             await Task.Delay(50);
+            PerformanceTraceService.Shared?.Event("PROFILE", "AutoSelect profile", $"profile={lastProfile.Id}");
             _viewModel.SelectProfileCommand.Execute(lastProfile);
         }
         catch (Exception ex)
@@ -262,13 +285,19 @@ public partial class ProfilesWindow : Window
 
     private async void ViewModel_OnProfileSelected(Profile profile)
     {
+        using var trace = PerformanceTraceService.Shared?.BeginOperation("PROFILE", "ViewModel_OnProfileSelected", $"profile={profile.Id}");
         ProfileLoadingWindow? loadingWindow = null;
         try
         {
-            using var db = await _contextFactory.CreateDbContextAsync();
-            var reloadedProfile = await db.Profiles
-                .Include(p => p.ProviderAccount)
-                .FirstOrDefaultAsync(p => p.Id == profile.Id);
+            Profile? reloadedProfile;
+            using (PerformanceTraceService.Shared?.BeginOperation("PROFILE", "Reload selected profile", $"profile={profile.Id}"))
+            {
+                using var db = await _contextFactory.CreateDbContextAsync();
+                reloadedProfile = await db.Profiles
+                    .Include(p => p.ProviderAccount)
+                    .FirstOrDefaultAsync(p => p.Id == profile.Id);
+            }
+            PerformanceTraceService.Shared?.Event("PROFILE", "Reload selected profile done", $"found={reloadedProfile != null}");
 
             if (reloadedProfile == null)
             {
@@ -307,7 +336,10 @@ public partial class ProfilesWindow : Window
             var minDelayTask = Task.Delay(1500); // 1.5 seconds minimum for premium feel
             var loadTask = _mainViewModel.LoadProfileAsync(reloadedProfile);
             
-            await Task.WhenAll(minDelayTask, loadTask);
+            using (PerformanceTraceService.Shared?.BeginOperation("PROFILE", "LoadProfile with loading window", $"profile={reloadedProfile.Id}"))
+            {
+                await Task.WhenAll(minDelayTask, loadTask);
+            }
             
             // Clean up status listener
             _mainViewModel.PropertyChanged -= OnStatusChanged;
@@ -320,6 +352,7 @@ public partial class ProfilesWindow : Window
             }
 
             _mainWindow.Show();
+            PerformanceTraceService.Shared?.Event("PROFILE", "MainWindow shown", $"profile={reloadedProfile.Id}");
             loadingWindow.Close();
             Close(true);
         }

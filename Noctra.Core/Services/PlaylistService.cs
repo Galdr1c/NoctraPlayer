@@ -7,6 +7,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
+using Noctra.Core.Services;
 
 namespace Noctra.Services;
 
@@ -17,6 +18,7 @@ public partial class PlaylistService : IPlaylistService
 {
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> AddPlaylistLocks = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<int, Dictionary<string, ChannelBackupData>> _refreshBackups = new();
+    private readonly ConcurrentDictionary<int, byte> _linearStreamRepairCompleted = new();
     private record ChannelBackupData(bool Fav, bool List, TimeSpan? Pos, TimeSpan? Dur, bool Comp, DateTime? LastW);
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly IM3UParser _parser;
@@ -73,7 +75,7 @@ public partial class PlaylistService : IPlaylistService
                 if (existing.ChannelCount > 0)
                 {
                     System.Diagnostics.Debug.WriteLine($"[PlaylistService] Found existing playlist: {existing.Id} with {existing.ChannelCount} channels");
-                    await RepairLinearStreamChannelTypesAsync(context, existing.Id);
+                    await EnsureLinearStreamChannelTypesRepairedOnceAsync(context, existing.Id);
                     
                     // YENİ: Child profile ise mevcut kanalları kontrol et ve temizle
                     var profile = await context.Profiles.AsNoTracking().FirstOrDefaultAsync(p => p.Id == profileId);
@@ -176,7 +178,7 @@ public partial class PlaylistService : IPlaylistService
 
         if (existing != null)
         {
-            await RepairLinearStreamChannelTypesAsync(context, existing.Id);
+            await EnsureLinearStreamChannelTypesRepairedOnceAsync(context, existing.Id);
             return existing;
         }
 
@@ -210,6 +212,7 @@ public partial class PlaylistService : IPlaylistService
                 channel.PlaylistId = playlist.Id;
             }
             await FastSqliteBulkInsertAsync(context, organizedChannels);
+            InvalidateLinearStreamRepair(playlist.Id);
 
             // Fire-and-forget: aggregation runs in background, UI unblocked
             var aggregationPlaylistId = playlist.Id;
@@ -406,6 +409,7 @@ public partial class PlaylistService : IPlaylistService
 
         // Mevcut FastSqliteBulkInsertAsync metodunu kullan
         await FastSqliteBulkInsertAsync(context, organized);
+        InvalidateLinearStreamRepair(playlistId);
 
         // Kanal sayısını güncelle
         await context.Playlists
@@ -457,6 +461,7 @@ public partial class PlaylistService : IPlaylistService
             ApplyBackupData(playlistId, organized);
 
             await FastSqliteBulkInsertAsync(context, organized);
+            InvalidateLinearStreamRepair(playlistId);
         }
 
         // Kanal sayısını güncelle
@@ -488,6 +493,7 @@ public partial class PlaylistService : IPlaylistService
         await context.Channels
             .Where(c => c.PlaylistId == playlistId && (c.StreamUrl.StartsWith("stalker-dummy://") || c.StreamUrl.StartsWith("xtream-dummy://")))
             .ExecuteDeleteAsync();
+        InvalidateLinearStreamRepair(playlistId);
             
         // Kanal sayısını güncelle
         await context.Playlists
@@ -541,6 +547,7 @@ public partial class PlaylistService : IPlaylistService
         await context.Channels
             .Where(c => c.PlaylistId == playlistId)
             .ExecuteDeleteAsync();
+        InvalidateLinearStreamRepair(playlistId);
 
         // Kanal sayısını sıfırla
         await context.Playlists
@@ -570,27 +577,61 @@ public partial class PlaylistService : IPlaylistService
         }
     }
 
+    private async Task EnsureLinearStreamChannelTypesRepairedOnceAsync(AppDbContext context, int playlistId)
+    {
+        if (!_linearStreamRepairCompleted.TryAdd(playlistId, 0))
+        {
+            return;
+        }
+
+        try
+        {
+            await RepairLinearStreamChannelTypesAsync(context, playlistId);
+        }
+        catch
+        {
+            _linearStreamRepairCompleted.TryRemove(playlistId, out _);
+            throw;
+        }
+    }
+
+    private void InvalidateLinearStreamRepair(int playlistId)
+    {
+        _linearStreamRepairCompleted.TryRemove(playlistId, out _);
+    }
+
     private static async Task RepairLinearStreamChannelTypesAsync(AppDbContext context, int playlistId)
     {
-        var candidates = await context.Channels
-            .Where(c => c.PlaylistId == playlistId && c.Type != ChannelType.Live && c.StreamUrl != null)
-            .ToListAsync();
-
-        var repaired = 0;
-        foreach (var channel in candidates)
-        {
-            if (!ShouldForceLiveFromStreamUrl(channel.StreamUrl))
-            {
-                continue;
-            }
-
-            channel.Type = ChannelType.Live;
-            repaired++;
-        }
+        using var trace = PerformanceTraceService.Shared?.BeginOperation("DB", "RepairLinearStreamChannelTypesAsync", $"playlist={playlistId}");
+        var liveType = (int)ChannelType.Live;
+        var repaired = await context.Database.ExecuteSqlInterpolatedAsync($@"
+UPDATE Channels
+SET Type = {liveType}
+WHERE PlaylistId = {playlistId}
+  AND Type <> {liveType}
+  AND StreamUrl IS NOT NULL
+  AND lower(StreamUrl) NOT LIKE '%/movie/%'
+  AND lower(StreamUrl) NOT LIKE '%/vod/%'
+  AND lower(StreamUrl) NOT LIKE '%/series/%'
+  AND lower(StreamUrl) NOT LIKE '%/tv_show/%'
+  AND lower(StreamUrl) NOT LIKE '%type=vod%'
+  AND lower(StreamUrl) NOT LIKE '%type=movie%'
+  AND lower(StreamUrl) NOT LIKE '%type=series%'
+  AND (
+      lower(StreamUrl) LIKE '%.m3u8'
+      OR lower(StreamUrl) LIKE '%.m3u8?%'
+      OR lower(StreamUrl) LIKE '%.ts'
+      OR lower(StreamUrl) LIKE '%.ts?%'
+      OR lower(StreamUrl) LIKE '%.m3u'
+      OR lower(StreamUrl) LIKE '%.m3u?%'
+      OR lower(StreamUrl) LIKE '%format=m3u8%'
+      OR lower(StreamUrl) LIKE '%extension=m3u8%'
+      OR lower(StreamUrl) LIKE '%extension=ts%'
+  );");
 
         if (repaired > 0)
         {
-            await context.SaveChangesAsync();
+            PerformanceTraceService.Shared?.Counter("DB", "LinearStreamChannelTypesRepaired", repaired, $"playlist={playlistId}");
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] Repaired {repaired} linear stream channel type(s) to Live for playlist {playlistId}.");
         }
     }
@@ -715,6 +756,7 @@ public partial class PlaylistService : IPlaylistService
                 channel.PlaylistId = playlist.Id;
             }
             await FastSqliteBulkInsertAsync(context, organized);
+            InvalidateLinearStreamRepair(playlist.Id);
 
             // Fire-and-forget: aggregation runs in background, UI unblocked
             var fileAggregationPlaylistId = playlist.Id;
@@ -865,6 +907,7 @@ public partial class PlaylistService : IPlaylistService
         await context.Channels
             .Where(c => c.PlaylistId == playlistId)
             .ExecuteDeleteAsync();
+        InvalidateLinearStreamRepair(playlistId);
 
         // 3. YENİ KANALLARA YEDEK VERİLERİ UYGULA
         foreach (var nc in organizedChannels)
@@ -886,6 +929,7 @@ public partial class PlaylistService : IPlaylistService
         if (organizedChannels.Count > 0)
         {
             await FastSqliteBulkInsertAsync(context, organizedChannels);
+            InvalidateLinearStreamRepair(playlist.Id);
         }
 
         var finalCount = await context.Channels.CountAsync(c => c.PlaylistId == playlist.Id);
@@ -931,6 +975,7 @@ public partial class PlaylistService : IPlaylistService
         if (playlist != null)
         {
             playlist.IsActive = false;
+            InvalidateLinearStreamRepair(playlistId);
             await context.SaveChangesAsync();
         }
     }
@@ -938,7 +983,7 @@ public partial class PlaylistService : IPlaylistService
     public async Task<List<Channel>> GetChannelsAsync(int playlistId)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
-        await RepairLinearStreamChannelTypesAsync(context, playlistId);
+        await EnsureLinearStreamChannelTypesRepairedOnceAsync(context, playlistId);
         return await context.Channels
             .AsNoTracking()
             .Where(c => c.PlaylistId == playlistId)
@@ -953,7 +998,7 @@ public partial class PlaylistService : IPlaylistService
     public async Task<List<Channel>> GetChannelsFilteredAsync(int playlistId, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, int limit = 1000, ChannelSortOrder sortOrder = ChannelSortOrder.NewestFirst, List<string>? hiddenGroups = null)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
-        await RepairLinearStreamChannelTypesAsync(context, playlistId);
+        await EnsureLinearStreamChannelTypesRepairedOnceAsync(context, playlistId);
         var query = BuildFilteredChannelQuery(context, playlistId, searchText, group, type, onlyFavorites, hiddenGroups);
 
         return await ApplySort(query, sortOrder)
@@ -963,7 +1008,7 @@ public partial class PlaylistService : IPlaylistService
     public async Task<List<Channel>> GetChannelsFilteredPageAsync(int playlistId, int skip, int take, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, ChannelSortOrder sortOrder = ChannelSortOrder.NewestFirst, List<string>? hiddenGroups = null)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
-        await RepairLinearStreamChannelTypesAsync(context, playlistId);
+        await EnsureLinearStreamChannelTypesRepairedOnceAsync(context, playlistId);
         var query = BuildFilteredChannelQuery(context, playlistId, searchText, group, type, onlyFavorites, hiddenGroups);
 
         return await ApplySort(query, sortOrder)
@@ -987,8 +1032,9 @@ public partial class PlaylistService : IPlaylistService
     public async Task<List<string>> GetGroupsByTypeAsync(int playlistId, ChannelType type)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
-        await RepairLinearStreamChannelTypesAsync(context, playlistId);
+        await EnsureLinearStreamChannelTypesRepairedOnceAsync(context, playlistId);
         return await context.Channels
+            .AsNoTracking()
             .Where(c => c.PlaylistId == playlistId && c.Type == type && !string.IsNullOrEmpty(c.GroupTitle))
             .Select(c => c.GroupTitle!)
             .Distinct()
@@ -999,7 +1045,7 @@ public partial class PlaylistService : IPlaylistService
     public async Task<(int TotalCount, List<string> AllGroups, List<string> LiveGroups, List<string> VodGroups, List<string> SeriesGroups)> GetChannelGroupMetadataAsync(int playlistId)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
-        await RepairLinearStreamChannelTypesAsync(context, playlistId);
+        await EnsureLinearStreamChannelTypesRepairedOnceAsync(context, playlistId);
         
         // Toplam kanal sayısı (GroupTitle null/boş olanlar dahil) — hafif COUNT sorgusu
         var totalCount = await context.Channels
@@ -1075,7 +1121,9 @@ public partial class PlaylistService : IPlaylistService
 
     private IQueryable<Channel> BuildFilteredChannelQuery(AppDbContext context, int playlistId, string? searchText, string? group, ChannelType? type, bool onlyFavorites, List<string>? hiddenGroups = null)
     {
-        var query = context.Channels.Where(c => c.PlaylistId == playlistId);
+        var query = context.Channels
+            .AsNoTracking()
+            .Where(c => c.PlaylistId == playlistId);
 
         if (!string.IsNullOrWhiteSpace(searchText))
         {

@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Noctra.Models;
+using Noctra.Core.Services;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
 using System;
@@ -496,6 +497,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     internal void LogDebug(string msg) {
         System.Diagnostics.Debug.WriteLine($"[PVM] {msg}");
+        PerformanceTraceService.Shared?.Event("PLAYER", msg);
     }
 
     public int? CurrentProfileId { get; set; }
@@ -859,7 +861,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private void StartSeeking() => PlaybackController.StartSeeking();
 
     [RelayCommand]
-    private void Seek(double position) => PlaybackController.Seek(position);
+    private void Seek(double position)
+    {
+        LogDebug($"UI Action: Seek requested (Position={position:F1})");
+        PlaybackController.Seek(position);
+    }
 
     [RelayCommand]
     private void SkipForward(object? parameter) => PlaybackController.SkipForward(parameter);
@@ -1250,6 +1256,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     partial void OnIsEpgPanelOpenChanged(bool value)
     {
+        LogDebug($"UI State: IsEpgPanelOpen={value}");
         if (value)
         {
             _autoHideTimer.Change(System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
@@ -1465,6 +1472,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     partial void OnIsAudioSettingsOpenChanged(bool value)
     {
+        LogDebug($"UI State: IsAudioSettingsOpen={value}");
         if (value)
         {
             _autoHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
@@ -1476,6 +1484,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     partial void OnIsQualitySettingsOpenChanged(bool value)
     {
+        LogDebug($"UI State: IsQualitySettingsOpen={value}");
         if (value)
         {
             _autoHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
@@ -1487,6 +1496,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     partial void OnIsInfoPanelOpenChanged(bool value)
     {
+        LogDebug($"UI State: IsInfoPanelOpen={value}");
         if (value)
         {
             _autoHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
@@ -1498,6 +1508,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     partial void OnIsBufferingChanged(bool value)
     {
+        LogDebug($"UI State: IsBuffering={value}");
         OnPropertyChanged(nameof(IsBufferShieldVisible));
 
         if (value)
@@ -1522,6 +1533,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     partial void OnIsEpisodesPanelOpenChanged(bool value)
     {
+        LogDebug($"UI State: IsEpisodesPanelOpen={value}");
         if (value)
         {
             _autoHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
