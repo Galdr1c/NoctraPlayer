@@ -647,7 +647,9 @@ WHERE PlaylistId = {playlistId}
   AND (
       StreamUrl IS NULL
       OR (
-          lower(StreamUrl) NOT LIKE '%/series/%'
+          lower(StreamUrl) NOT LIKE 'xtream-series://%'
+          AND lower(StreamUrl) NOT LIKE 'stalker-series://%'
+          AND lower(StreamUrl) NOT LIKE '%/series/%'
           AND lower(StreamUrl) NOT LIKE '%/tv_show/%'
           AND lower(StreamUrl) NOT LIKE '%type=series%'
       )

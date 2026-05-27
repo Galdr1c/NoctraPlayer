@@ -373,6 +373,60 @@ namespace Noctra.Tests
             Assert.Equal("Breaking Bad S01E01", episode.Name);
             _mediaServiceMock.Verify(m => m.AggregateContentAsync(playlistId, It.IsAny<CancellationToken>()), Times.Once);
         }
+
+        [Fact]
+        public async Task GetChannelsFilteredAsync_DoesNotRepairProviderSeriesVirtualLinksToLive()
+        {
+            // Arrange
+            var service = CreateService();
+            int playlistId;
+
+            using (var context = new AppDbContext(_options))
+            {
+                var playlist = new Playlist
+                {
+                    Name = "Xtream",
+                    Url = "http://provider.test/xtream",
+                    IsActive = true,
+                    ChannelCount = 2,
+                    CreatedAt = DateTime.UtcNow,
+                    LastUpdated = DateTime.UtcNow
+                };
+
+                context.Playlists.Add(playlist);
+                await context.SaveChangesAsync();
+                playlistId = playlist.Id;
+
+                context.Channels.AddRange(
+                    new Channel
+                    {
+                        PlaylistId = playlistId,
+                        Name = "The Last of Us",
+                        GroupTitle = "Series",
+                        StreamUrl = "xtream-series://123",
+                        Type = ChannelType.Series
+                    },
+                    new Channel
+                    {
+                        PlaylistId = playlistId,
+                        Name = "Dark",
+                        GroupTitle = "Series",
+                        StreamUrl = "stalker-series://456",
+                        Type = ChannelType.Series
+                    });
+                await context.SaveChangesAsync();
+            }
+
+            // Act
+            var series = await service.GetChannelsFilteredAsync(playlistId, type: ChannelType.Series);
+            var live = await service.GetChannelsFilteredAsync(playlistId, type: ChannelType.Live);
+
+            // Assert
+            Assert.Equal(2, series.Count);
+            Assert.Empty(live);
+            Assert.Contains(series, c => c.StreamUrl == "xtream-series://123");
+            Assert.Contains(series, c => c.StreamUrl == "stalker-series://456");
+        }
         private PlaylistService CreateService()
         {
             return new PlaylistService(
