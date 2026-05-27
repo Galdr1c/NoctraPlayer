@@ -7,6 +7,17 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Series Siniflandirma ve TMDB Detay Duzeltmeleri (2026-05-27)
+- [Duzeltildi] **Dizi Grup Basligi Canli TV'yi Series'e Tasimiyor**: `TR • DIZI`, `TR • 7/24 DIZI`, `BEIN DIZILER` gibi group-title degerleri artik tek basina tum grubu Series yapmaz. Ayni grupta yalnizca `S01E01`, `1x01`, `Sezon/Bolum` veya series URL sinyali tasiyan satirlar Series kabul edilir; lineer kanallar Live kalir.
+- [Duzeltildi] **Mevcut Hatali Series Kayitlari Onarimi**: Daha once dizi group-title'i nedeniyle Series'e kaydedilmis canli kanallar playlist okunurken otomatik Live'a geri alinir. Onarim yapildiginda series aggregation tekrar tetiklenerek eski hatali Series metadata kayitlarinin temizlenmesi saglanir.
+- [Duzeltildi] **M3U Tip Tespiti Sadelestirildi**: Parser artik URL sinyallerini onceliklendirir; lineer stream uzantilari Live, `.mp4`/`.mkv` dosyalari ise bolum paterni varsa Series, aksi halde VOD olarak siniflandirilir.
+- [Gelistirildi] **Series Detaylari Anlik Guncellenir**: Series, season ve episode metadata alanlari observable hale getirildi; TMDB'den gelen poster, plot, cast, trailer, network ve episode bilgileri detay ekranina daha hizli yansir.
+- [Gelistirildi] **M3U Series Detay Lazy Load Akisi**: M3U profillerde TmdbId eksikse detay ekraninda once arama yapilir, sonra tam dizi ve sezon/episode metadata yuklenir. Xtream/Stalker provider metadata onceligi korunur.
+- [Gelistirildi] **TMDB Detay Istekleri Retry Korumasi**: Dizi ve sezon detay istekleri gecici ag hatalarinda kisa retry akisi kullanir.
+- [Duzeltildi] **RemoteImage Failure Cooldown Kisaltildi**: Basarisiz gorsel denemelerinin tekrar denenme bekleme suresi 10 dakikadan 2 dakikaya indirildi.
+- [Test] **Series Grup Regression Testleri**: `TR • DIZI` icinde lineer kanallarin Live kaldigi, ayni gruptaki `S01E01` bolumlerinin Series kaldigi ve mevcut DB repair akisinin aggregation tetikledigi test edildi.
+- [Dogrulama] `dotnet build` basarili. `dotnet test` sonucu `853/853` test gecti.
+
 ### IPTV Profil Gorsel Fallback ve Scroll Duzeltmeleri (2026-05-26)
 - [Duzeltildi] **Provider-First Gorsel Akisi**: Profil yuklenirken kartlar once placeholder ile acilir, provider'dan gelen logo/poster kullanilir. Provider gorseli bos kalirsa veya 2 denemede ulasilamazsa M3U profillerde son care TMDB poster fallback devreye girer; TMDB de sonuc vermezse placeholder korunur.
 - [Duzeltildi] **Xtream/Stalker TMDB Kullanimi Sinirlandi**: Xtream Codes ve Stalker Portal profillerinde liste gorselleri icin TMDB fallback kullanilmaz; provider metadata oncelikli kalir.

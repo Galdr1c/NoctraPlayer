@@ -361,17 +361,18 @@ public class PlaylistOrganizerServiceTests
     [InlineData("TR ⭐ BEIN ⭐ TOD ⭐ MAX DİZİLER")]
     [InlineData("BEIN DİZİLER")]
     [InlineData("DİZİ KOLEKSİYONU")]
-    public void FixChannelTypes_StrongSeriesKeywords_ForcesSeriesType(string groupName)
+    public void FixChannelTypes_StrongSeriesKeywords_OnlyEpisodePatternItemsBecomeSeries(string groupName)
     {
         var channels = new List<Channel>
         {
-            Live("Yellowstone", groupName),
-            Live("Watchmen", groupName)
+            Live("BEIN SERIES 1", groupName),
+            Live("Watchmen S01E01", groupName)
         };
 
         _sut.FixChannelTypes(channels);
 
-        Assert.All(channels, c => Assert.Equal(ChannelType.Series, c.Type));
+        Assert.Equal(ChannelType.Live, channels[0].Type);
+        Assert.Equal(ChannelType.Series, channels[1].Type);
     }
 
     [Theory]
@@ -405,6 +406,23 @@ public class PlaylistOrganizerServiceTests
         _sut.FixChannelTypes(channels);
 
         Assert.All(channels, c => Assert.Equal(ChannelType.Live, c.Type));
+    }
+
+    [Fact]
+    public void FixChannelTypes_DiziGroup_OnlyEpisodePatternItemsBecomeSeries()
+    {
+        var channels = new List<Channel>
+        {
+            Live("TR • BEIN SERIES 1", "TR • DIZI", "http://provider/live/bein-series-1"),
+            Live("TR • FX", "TR • DIZI", "http://provider/live/fx"),
+            Live("Breaking Bad S01E01", "TR • DIZI", "http://provider/content/breaking-bad-s01e01.mp4")
+        };
+
+        _sut.FixChannelTypes(channels);
+
+        Assert.Equal(ChannelType.Live, channels[0].Type);
+        Assert.Equal(ChannelType.Live, channels[1].Type);
+        Assert.Equal(ChannelType.Series, channels[2].Type);
     }
 
     [Fact]

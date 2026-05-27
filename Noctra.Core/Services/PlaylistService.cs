@@ -586,7 +586,11 @@ public partial class PlaylistService : IPlaylistService
 
         try
         {
-            await RepairLinearStreamChannelTypesAsync(context, playlistId);
+            var repaired = await RepairLinearStreamChannelTypesAsync(context, playlistId);
+            if (repaired > 0)
+            {
+                await _mediaService.AggregateContentAsync(playlistId);
+            }
         }
         catch
         {
@@ -600,11 +604,11 @@ public partial class PlaylistService : IPlaylistService
         _linearStreamRepairCompleted.TryRemove(playlistId, out _);
     }
 
-    private static async Task RepairLinearStreamChannelTypesAsync(AppDbContext context, int playlistId)
+    private static async Task<int> RepairLinearStreamChannelTypesAsync(AppDbContext context, int playlistId)
     {
         using var trace = PerformanceTraceService.Shared?.BeginOperation("DB", "RepairLinearStreamChannelTypesAsync", $"playlist={playlistId}");
         var liveType = (int)ChannelType.Live;
-        var repaired = await context.Database.ExecuteSqlInterpolatedAsync($@"
+        var linearRepaired = await context.Database.ExecuteSqlInterpolatedAsync($@"
 UPDATE Channels
 SET Type = {liveType}
 WHERE PlaylistId = {playlistId}
@@ -629,11 +633,42 @@ WHERE PlaylistId = {playlistId}
       OR lower(StreamUrl) LIKE '%extension=ts%'
   );");
 
+        var seriesKeywordRepaired = await context.Database.ExecuteSqlInterpolatedAsync($@"
+UPDATE Channels
+SET Type = {liveType}
+WHERE PlaylistId = {playlistId}
+  AND Type <> {liveType}
+  AND GroupTitle IS NOT NULL
+  AND (
+      lower(GroupTitle) LIKE '%dizi%'
+      OR lower(GroupTitle) LIKE '%series%'
+      OR lower(GroupTitle) LIKE '%koleksiyon%'
+  )
+  AND (
+      StreamUrl IS NULL
+      OR (
+          lower(StreamUrl) NOT LIKE '%/series/%'
+          AND lower(StreamUrl) NOT LIKE '%/tv_show/%'
+          AND lower(StreamUrl) NOT LIKE '%type=series%'
+      )
+  )
+  AND lower(Name) NOT GLOB '*s[0-9][0-9]e[0-9][0-9]*'
+  AND lower(Name) NOT GLOB '*[0-9]x[0-9][0-9]*'
+  AND lower(Name) NOT LIKE '%sezon%'
+  AND lower(Name) NOT LIKE '%season%'
+  AND lower(Name) NOT LIKE '%bölüm%'
+  AND lower(Name) NOT LIKE '%bolum%'
+  AND lower(Name) NOT LIKE '%episode%';");
+
+        var repaired = linearRepaired + seriesKeywordRepaired;
+
         if (repaired > 0)
         {
             PerformanceTraceService.Shared?.Counter("DB", "LinearStreamChannelTypesRepaired", repaired, $"playlist={playlistId}");
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] Repaired {repaired} linear stream channel type(s) to Live for playlist {playlistId}.");
         }
+
+        return repaired;
     }
 
     private static bool ShouldForceLiveFromStreamUrl(string? streamUrl)

@@ -7530,126 +7530,159 @@ public partial class MainViewModel : ObservableObject
         }
 
         // --- LAZY LOAD TMDB METADATA (Seasons & Episodes) ---
-        // Kullanıcı İsteği: Sadece M3U profillerinde TMDB API kullan, çünkü Xtream/Stalker zaten verilerle geliyor.
-        if (source.TmdbId.HasValue && source.MetadataFetchedAt == null && IsM3UProfile())
+        // Sadece M3U profillerinde TMDB API kullan; Xtream/Stalker zaten verilerle geliyor.
+        // Koşul: (TmdbId biliniyorsa VE MetadataFetchedAt boşsa) VEYA (hiç TMDB araması yapılmadıysa)
+        bool needsTmdbFetch = IsM3UProfile() &&
+                              source.MetadataFetchedAt == null &&
+                              (source.TmdbId.HasValue || source.LastTmdbSync == null);
+
+        if (needsTmdbFetch)
         {
             try
             {
                 var languageCode = SeriesInfoParser.ExtractLanguageCode(source.GroupTitle ?? source.Genre ?? source.Name);
 
-                // 1. Fetch deep Series info
-                var tmdbSeries = await _metadataService.FetchSeriesDetailsAsync(source.TmdbId.Value, languageCode);
-                if (tmdbSeries != null)
+                // --- Adım 0: TmdbId bilinmiyorsa önce arama yap ---
+                if (!source.TmdbId.HasValue)
                 {
-                    // Update series fields from the detail response (same API call, no extra request)
-                    if (string.IsNullOrEmpty(source.Cast) && tmdbSeries.Credits?.Cast != null)
-                    {
-                        source.Cast = string.Join(", ", tmdbSeries.Credits.Cast.OrderBy(c => c.Order).Take(5).Select(c => c.Name));
-                    }
-                    if (string.IsNullOrEmpty(source.Director) && tmdbSeries.Credits?.Crew != null)
-                    {
-                        source.Director = tmdbSeries.DirectorName;
-                    }
-                    if (string.IsNullOrEmpty(source.Plot) && !string.IsNullOrEmpty(tmdbSeries.Overview))
-                    {
-                        source.Plot = tmdbSeries.Overview;
-                    }
-                    if (!string.IsNullOrEmpty(tmdbSeries.PosterPath))
-                    {
-                        source.CoverUrl = $"https://image.tmdb.org/t/p/w500{tmdbSeries.PosterPath}";
-                    }
-                    if (string.IsNullOrEmpty(source.BackdropUrl) && !string.IsNullOrEmpty(tmdbSeries.BackdropPath))
-                    {
-                        source.BackdropUrl = $"https://image.tmdb.org/t/p/original{tmdbSeries.BackdropPath}";
-                    }
+                    var cleanName = SeriesInfoParser.CleanSeriesName(source.Name);
+                    var searchMeta = await _metadataService.SearchSeriesAsync(cleanName, languageCode);
 
-                    // Centralized Heuristics (Network, Rating etc.)
-                    var tempMeta = new ChannelMetadata();
-                    _metadataService.ApplyHeuristics(tmdbSeries, tempMeta, languageCode, source.GroupTitle ?? source.Name);
-                    
-                    source.ContentRating = tempMeta.ContentRating;
-                    source.NetworkName = tempMeta.NetworkName;
-                    source.NetworkLogoUrl = tempMeta.NetworkLogoUrl;
+                    // Ağ hatası durumunda ikinci deneme farklı dille
+                    if (searchMeta?.TmdbId == null && !languageCode.Equals("en-US", StringComparison.OrdinalIgnoreCase))
+                        searchMeta = await _metadataService.SearchSeriesAsync(cleanName, "en-US");
 
-                    // Trailer (from same API call — videos included via append_to_response)
-                    if (string.IsNullOrEmpty(source.TrailerUrl))
+                    if (searchMeta?.TmdbId != null)
                     {
-                        var trailer = tmdbSeries.Videos?.Results?
-                            .Where(v => v.Site == "YouTube" && (v.Type == "Trailer" || v.Type == "Teaser"))
-                            .OrderByDescending(v => v.Official)
-                            .ThenByDescending(v => v.Type == "Trailer")
-                            .FirstOrDefault();
-                        if (trailer != null && !string.IsNullOrEmpty(trailer.Key))
-                            source.TrailerUrl = $"https://www.youtube.com/watch?v={trailer.Key}";
-                    }
+                        source.TmdbId = searchMeta.TmdbId;
+                        if (!string.IsNullOrEmpty(searchMeta.PosterUrl)) source.CoverUrl = searchMeta.PosterUrl;
+                        if (!string.IsNullOrEmpty(searchMeta.Description)) source.Plot = searchMeta.Description;
+                        if (searchMeta.Rating.HasValue) source.Rating = searchMeta.Rating;
+                        if (searchMeta.ReleaseYear.HasValue) source.ReleaseYear = searchMeta.ReleaseYear;
 
-                    // Genres
-                    if (string.IsNullOrEmpty(source.Genre) && tmdbSeries.Genres != null && tmdbSeries.Genres.Count > 0)
-                    {
-                        source.Genre = string.Join(", ", tmdbSeries.Genres.Select(g => g.Name));
+                        // DB'ye kaydet, UI zaten ObservableProperty ile güncellendi
+                        if (dbSeries != null)
+                        {
+                            dbSeries.TmdbId = source.TmdbId;
+                            dbSeries.CoverUrl = source.CoverUrl;
+                            dbSeries.Plot = source.Plot;
+                            dbSeries.Rating = source.Rating;
+                            dbSeries.ReleaseYear = source.ReleaseYear;
+                        }
                     }
+                    source.LastTmdbSync = DateTime.UtcNow;
+                    if (dbSeries != null) dbSeries.LastTmdbSync = source.LastTmdbSync;
                 }
 
-                // 2. Fetch Season and Episode details
-                bool changesMade = false;
-                foreach (var season in source.Seasons)
+                // --- Adım 1: TmdbId varsa tam dizi detayını çek ---
+                TmdbDetail? tmdbSeries = null;
+                if (source.TmdbId.HasValue)
                 {
-                    if (season.SeasonNumber <= 0) continue;
-
-                    var tmdbSeason = await _metadataService.FetchSeasonDetailsAsync(source.TmdbId.Value, season.SeasonNumber, languageCode);
-                    if (tmdbSeason != null)
+                    tmdbSeries = await _metadataService.FetchSeriesDetailsAsync(source.TmdbId.Value, languageCode);
+                    if (tmdbSeries != null)
                     {
-                        season.TmdbSeasonId = tmdbSeason.Id;
-                        if (!string.IsNullOrEmpty(tmdbSeason.PosterPath))
+                        if (string.IsNullOrEmpty(source.Cast) && tmdbSeries.Credits?.Cast != null)
+                            source.Cast = string.Join(", ", tmdbSeries.Credits.Cast.OrderBy(c => c.Order).Take(5).Select(c => c.Name));
+                        if (string.IsNullOrEmpty(source.Director))
+                            source.Director = tmdbSeries.DirectorName;
+                        if (string.IsNullOrEmpty(source.Plot) && !string.IsNullOrEmpty(tmdbSeries.Overview))
+                            source.Plot = tmdbSeries.Overview;
+                        if (!string.IsNullOrEmpty(tmdbSeries.PosterPath))
+                            source.CoverUrl = $"https://image.tmdb.org/t/p/w500{tmdbSeries.PosterPath}";
+                        if (string.IsNullOrEmpty(source.BackdropUrl) && !string.IsNullOrEmpty(tmdbSeries.BackdropPath))
+                            source.BackdropUrl = $"https://image.tmdb.org/t/p/original{tmdbSeries.BackdropPath}";
+                        if (tmdbSeries.VoteAverage > 0 && (source.Rating == null || source.Rating == 0))
+                            source.Rating = tmdbSeries.VoteAverage;
+                        if (string.IsNullOrEmpty(source.Genre) && tmdbSeries.Genres?.Count > 0)
+                            source.Genre = string.Join(", ", tmdbSeries.Genres.Select(g => g.Name));
+
+                        var tempMeta = new ChannelMetadata();
+                        _metadataService.ApplyHeuristics(tmdbSeries, tempMeta, languageCode, source.GroupTitle ?? source.Name);
+                        source.ContentRating = tempMeta.ContentRating;
+                        source.NetworkName = tempMeta.NetworkName;
+                        source.NetworkLogoUrl = tempMeta.NetworkLogoUrl;
+
+                        if (string.IsNullOrEmpty(source.TrailerUrl))
                         {
-                            season.CoverUrl = $"https://image.tmdb.org/t/p/w500{tmdbSeason.PosterPath}";
-                        }
-                        if (string.IsNullOrEmpty(season.Plot))
-                        {
-                            season.Plot = tmdbSeason.Overview;
+                            var trailer = tmdbSeries.Videos?.Results?
+                                .Where(v => v.Site == "YouTube" && (v.Type == "Trailer" || v.Type == "Teaser"))
+                                .OrderByDescending(v => v.Official)
+                                .ThenByDescending(v => v.Type == "Trailer")
+                                .FirstOrDefault();
+                            if (trailer != null && !string.IsNullOrEmpty(trailer.Key))
+                                source.TrailerUrl = $"https://www.youtube.com/watch?v={trailer.Key}";
                         }
 
-                        // Update Episodes
-                        foreach (var episode in season.Episodes)
+                        // Anında UI güncellemesi — source != series ise kopyala
+                        if (!ReferenceEquals(source, series))
+                            SyncSeriesDetailState(series, source);
+                    }
+
+                    // --- Adım 2: Sezonları paralel olarak çek (N+1 yerine paralel) ---
+                    var seasonsToFetch = source.Seasons.Where(s => s.SeasonNumber > 0).ToList();
+                    if (seasonsToFetch.Count > 0)
+                    {
+                        var seasonTasks = seasonsToFetch.Select(season =>
+                            _metadataService.FetchSeasonDetailsAsync(source.TmdbId.Value, season.SeasonNumber, languageCode)
+                                .ContinueWith(t => (season, tmdbSeason: t.Result), TaskContinuationOptions.ExecuteSynchronously)
+                        );
+
+                        var seasonResults = await Task.WhenAll(seasonTasks);
+
+                        foreach (var (season, tmdbSeason) in seasonResults)
                         {
-                            var tmdbEp = tmdbSeason.Episodes.FirstOrDefault(e => e.EpisodeNumber == episode.EpisodeNumber);
-                            if (tmdbEp != null)
+                            if (tmdbSeason == null) continue;
+
+                            season.TmdbSeasonId = tmdbSeason.Id;
+                            if (!string.IsNullOrEmpty(tmdbSeason.PosterPath))
+                                season.CoverUrl = $"https://image.tmdb.org/t/p/w500{tmdbSeason.PosterPath}";
+                            if (string.IsNullOrEmpty(season.Plot))
+                                season.Plot = tmdbSeason.Overview;
+
+                            foreach (var episode in season.Episodes)
                             {
+                                var tmdbEp = tmdbSeason.Episodes.FirstOrDefault(e => e.EpisodeNumber == episode.EpisodeNumber);
+                                if (tmdbEp == null) continue;
+
                                 if (!string.IsNullOrEmpty(tmdbEp.StillPath))
-                                {
                                     episode.CoverUrl = $"https://image.tmdb.org/t/p/w500{tmdbEp.StillPath}";
-                                }
                                 if (string.IsNullOrEmpty(episode.Plot))
-                                {
                                     episode.Plot = tmdbEp.Overview;
-                                }
                                 if (string.IsNullOrEmpty(episode.TmdbEpisodeName) && !string.IsNullOrEmpty(tmdbEp.Name))
-                                {
                                     episode.TmdbEpisodeName = tmdbEp.Name;
-                                }
-                                // Runtime (from same API call — no extra request)
                                 if (tmdbEp.Runtime.HasValue && tmdbEp.Runtime.Value > 0 && !episode.Duration.HasValue)
-                                {
                                     episode.Duration = TimeSpan.FromMinutes(tmdbEp.Runtime.Value);
-                                }
-                                // Air Date (from same API call — no extra request)
                                 if (!string.IsNullOrEmpty(tmdbEp.AirDate) && !episode.AirDate.HasValue)
-                                {
                                     if (DateTime.TryParse(tmdbEp.AirDate, out var airDate))
                                         episode.AirDate = airDate;
-                                }
                             }
                         }
 
-                        changesMade = true;
+                        // Sezon verileri yüklendi — UI'yi anında güncelle (Seasons setter PropertyChanged fırlatır)
+                        NormalizeSeriesDetailForDisplay(source);
+                        if (!ReferenceEquals(source, series))
+                            SyncSeriesDetailState(series, source);
                     }
                 }
 
-                // 3. Mark as fetched and Save
-                bool seriesDataFetched = tmdbSeries != null;
-                if ((seriesDataFetched || changesMade) && dbSeries != null)
+                // --- Adım 3: Tamamlandı olarak işaretle ve kaydet ---
+                if (source.TmdbId.HasValue && dbSeries != null)
                 {
                     source.MetadataFetchedAt = DateTime.UtcNow;
+                    dbSeries.Cast = source.Cast;
+                    dbSeries.Director = source.Director;
+                    dbSeries.Plot = source.Plot;
+                    dbSeries.CoverUrl = source.CoverUrl;
+                    dbSeries.BackdropUrl = source.BackdropUrl;
+                    dbSeries.Genre = source.Genre;
+                    dbSeries.ContentRating = source.ContentRating;
+                    dbSeries.NetworkName = source.NetworkName;
+                    dbSeries.NetworkLogoUrl = source.NetworkLogoUrl;
+                    dbSeries.TrailerUrl = source.TrailerUrl;
+                    dbSeries.Rating = source.Rating;
+                    dbSeries.TmdbId = source.TmdbId;
+                    dbSeries.LastTmdbSync = DateTime.UtcNow;
+                    dbSeries.MetadataFetchedAt = source.MetadataFetchedAt;
                     await db.SaveChangesAsync();
                 }
             }
@@ -7667,6 +7700,11 @@ public partial class MainViewModel : ObservableObject
 
         await ApplyProfileProgressAsync(source, db);
         NormalizeSeriesDetailForDisplay(source);
+
+        // Son kez UI senkronizasyonu — tüm değişiklikler yansısın
+        if (!ReferenceEquals(source, series))
+            SyncSeriesDetailState(series, source);
+
         return source;
     }
 
@@ -7719,6 +7757,10 @@ public partial class MainViewModel : ObservableObject
         target.ContentRating = source.ContentRating;
         target.TmdbId = source.TmdbId;
         target.TmdbTitle = source.TmdbTitle;
+        target.BackdropUrl = source.BackdropUrl;
+        target.TrailerUrl = source.TrailerUrl;
+        target.NetworkName = source.NetworkName;
+        target.NetworkLogoUrl = source.NetworkLogoUrl;
         target.Seasons = source.Seasons;
         target.MetadataFetchedAt = source.MetadataFetchedAt;
         target.LastTmdbSync = source.LastTmdbSync;

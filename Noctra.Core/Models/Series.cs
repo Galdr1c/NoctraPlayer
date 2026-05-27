@@ -16,28 +16,50 @@ public partial class Series : ObservableObject
     
     [ObservableProperty]
     private string? _coverUrl;
-    
-    public string? Plot { get; set; }
-    public string? Genre { get; set; }
-    public int? ReleaseYear { get; set; }
-    public double? Rating { get; set; }
-    public string? ContentRating { get; set; }
+
+    [ObservableProperty]
+    private string? _plot;
+
+    [ObservableProperty]
+    private string? _genre;
+
+    [ObservableProperty]
+    private int? _releaseYear;
+
+    [ObservableProperty]
+    private double? _rating;
+
+    [ObservableProperty]
+    private string? _contentRating;
+
     public int PlaylistId { get; set; }
-    
+
     // TMDB Integration
     public int? TmdbId { get; set; }
     public string? TmdbTitle { get; set; }
-    
+
     [ObservableProperty]
     private DateTime? _lastTmdbSync;
-    
-    public string? Cast { get; set; }
-    public string? Director { get; set; }
-    public string? BackdropUrl { get; set; }
-    public string? TrailerUrl { get; set; }
+
+    [ObservableProperty]
+    private string? _cast;
+
+    [ObservableProperty]
+    private string? _director;
+
+    [ObservableProperty]
+    private string? _backdropUrl;
+
+    [ObservableProperty]
+    private string? _trailerUrl;
+
     public DateTime? MetadataFetchedAt { get; set; }
-    public string? NetworkName { get; set; }
-    public string? NetworkLogoUrl { get; set; }
+
+    [ObservableProperty]
+    private string? _networkName;
+
+    [ObservableProperty]
+    private string? _networkLogoUrl;
 
     [ObservableProperty]
     private bool _isInMyList;
@@ -91,17 +113,22 @@ public partial class Series : ObservableObject
 /// <summary>
 /// Sezon bilgilerini tutar
 /// </summary>
-public class Season
+public partial class Season : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
 {
     public int Id { get; set; }
     public int SeasonNumber { get; set; }
     public string? Name { get; set; }
-    public string? CoverUrl { get; set; }
-    public string? Plot { get; set; }
+
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
+    private string? _coverUrl;
+
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
+    private string? _plot;
+
     public int SeriesId { get; set; }
     public int? TmdbSeasonId { get; set; }
 
-    [NotMapped]
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public bool IsExpanded { get; set; }
 
     // Navigation properties
@@ -118,9 +145,15 @@ public partial class Episode : ObservableObject
     public int EpisodeNumber { get; set; }
     public string Name { get; set; } = string.Empty;
     public string StreamUrl { get; set; } = string.Empty;
-    public string? Plot { get; set; }
-    public string? TmdbEpisodeName { get; set; }
-    public string? CoverUrl { get; set; }
+
+    [ObservableProperty]
+    private string? _plot;
+
+    [ObservableProperty]
+    private string? _tmdbEpisodeName;
+
+    [ObservableProperty]
+    private string? _coverUrl;
     
     [ObservableProperty]
     private TimeSpan? _duration;

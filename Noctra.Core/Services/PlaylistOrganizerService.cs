@@ -159,7 +159,10 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
             {
                 foreach (var channel in group)
                 {
-                    channel.Type = ChannelType.Series;
+                    if (hasSeriesMarker || ShouldForceSeriesFromChannel(channel))
+                    {
+                        channel.Type = ChannelType.Series;
+                    }
                 }
                 continue;
             }
@@ -323,6 +326,19 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
                lowerUrl.Contains("format=m3u8") ||
                lowerUrl.Contains("extension=m3u8") ||
                lowerUrl.Contains("extension=ts");
+    }
+
+    private static bool ShouldForceSeriesFromChannel(Channel channel)
+    {
+        if (SeriesInfoParser.IsSeries(channel.Name))
+        {
+            return true;
+        }
+
+        var lowerUrl = channel.StreamUrl?.ToLowerInvariant() ?? string.Empty;
+        return lowerUrl.Contains("/series/") ||
+               lowerUrl.Contains("/tv_show/") ||
+               lowerUrl.Contains("type=series");
     }
 
     private static int GetQualityIndex(string name)

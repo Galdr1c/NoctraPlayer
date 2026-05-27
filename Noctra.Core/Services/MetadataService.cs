@@ -284,7 +284,12 @@ public partial class MetadataService : IMetadataService
         {
             var lang = languageCode.Contains('-') ? languageCode.Split('-')[0] : languageCode;
             var url = $"{TMDB_BASE_URL}/tv/{tmdbId}?append_to_response=credits,content_ratings,videos,watch/providers&include_video_language={lang},en,null&language={languageCode}";
-            return await _httpClient.GetFromJsonAsync<TmdbDetail>(AddApiKeyIfNeeded(url), cancellationToken);
+            
+            // Retry up to 2 times on transient network errors
+            return await NetworkRetry.ExecuteAsync(
+                () => _httpClient.GetFromJsonAsync<TmdbDetail>(AddApiKeyIfNeeded(url), cancellationToken),
+                maxAttempts: 2,
+                cancellationToken: cancellationToken);
         }
         catch (Exception ex)
         {
@@ -301,7 +306,11 @@ public partial class MetadataService : IMetadataService
         try
         {
             var url = $"{TMDB_BASE_URL}/tv/{tmdbId}/season/{seasonNumber}?language={languageCode}";
-            return await _httpClient.GetFromJsonAsync<TmdbSeasonDetail>(AddApiKeyIfNeeded(url), cancellationToken);
+            // Retry up to 2 times on transient network errors
+            return await NetworkRetry.ExecuteAsync(
+                () => _httpClient.GetFromJsonAsync<TmdbSeasonDetail>(AddApiKeyIfNeeded(url), cancellationToken),
+                maxAttempts: 2,
+                cancellationToken: cancellationToken);
         }
         catch (Exception ex)
         {

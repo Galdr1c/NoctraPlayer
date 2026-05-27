@@ -240,103 +240,42 @@ public partial class M3UParser : IM3UParser
     }
 
     /// <summary>
-    /// Kanal türünü URL ve grup bilgisinden tespit eder
+    /// Kanal türünü URL'den tespit eder.
+    /// Kural: .mp4 / .mkv uzantılı içerikler → dizi paterni varsa Series, yoksa VOD.
+    ///        Diğer tüm içerikler → Live.
     /// </summary>
     private static ChannelType DetectChannelType(string url, string name, string? groupTitle)
     {
         var lowerUrl = url.ToLowerInvariant();
-        var lowerGroup = groupTitle?.ToLowerInvariant() ?? "";
-        var lowerName = name.ToLowerInvariant();
 
-        // 1. URL Pattern Analizi (EN GÜÇLÜ SİNYAL)
-        // Eğer URL açıkça /live/ veya pluto.tv içeriyorsa, bu bir canlı kanaldır (7/24 döngü olsa bile)
-        if (lowerUrl.Contains("/live/") || lowerUrl.Contains("type=live") || lowerUrl.Contains("/radio/") || lowerUrl.Contains("pluto.tv"))
+        // 1. Kesin URL yolu belirteçleri — en yüksek öncelik
+        if (lowerUrl.Contains("/live/") || lowerUrl.Contains("type=live") ||
+            lowerUrl.Contains("/radio/") || lowerUrl.Contains("pluto.tv"))
             return ChannelType.Live;
 
         if (lowerUrl.Contains("/series/") || lowerUrl.Contains("/tv_show/") || lowerUrl.Contains("type=series"))
             return ChannelType.Series;
 
-        if (lowerUrl.Contains("/movie/") || lowerUrl.Contains("/vod/") || lowerUrl.Contains("type=vod") || lowerUrl.Contains("type=movie"))
+        if (lowerUrl.Contains("/movie/") || lowerUrl.Contains("/vod/") ||
+            lowerUrl.Contains("type=vod") || lowerUrl.Contains("type=movie"))
             return ChannelType.VOD;
 
+        // 2. Lineer stream uzantıları → her zaman Live
         if (IsLinearStreamUrl(lowerUrl))
             return ChannelType.Live;
 
-        // 2. KESİN CANLI / DÖNGÜ KONTROLÜ (Grup ve İsim bazlı)
-        // Eğer grupta veya isimde 7/24, Canlı, Spor belirtileri varsa VOD/Series kontrollerinden ÖNCE ele alalım.
-        if (SeriesInfoParser.IsLiveSeries(name) || SeriesInfoParser.IsLiveSeries(groupTitle) ||
-            lowerGroup.Contains("spor") || lowerGroup.Contains("sport") || 
-            lowerGroup.Contains("7/24") || lowerGroup.Contains("24/7") ||
-            lowerName.Contains("7/24") || lowerName.Contains("24/7"))
+        // 3. .mp4 veya .mkv dosyaları: önce dizi pattern'ini ara, yoksa VOD
+        var urlPath = lowerUrl.Contains('?') ? lowerUrl[..lowerUrl.IndexOf('?')] : lowerUrl;
+        if (urlPath.EndsWith(".mp4") || urlPath.EndsWith(".mkv"))
         {
-            return ChannelType.Live;
-        }
-
-        // 3. Grup Başlığı Analizi
-        // Önce Radio (Canlı) kontrolü
-        if (lowerGroup.Contains("radio") || lowerName.Contains(" radio"))
-        {
-            return ChannelType.Live;
-        }
-
-        // 4. Başlık ve İsim Analizi
-        // group-title, especially in iptv-org, is a channel genre/category, not the
-        // app content type. Do not classify as Series just because the group says
-        // "Series"; require explicit episode/title evidence or a series URL pattern.
-        // Dizi: S01E01, 1x01, Sezon 1, Bölüm 1
-        if (SeriesInfoParser.IsSeries(name) ||
-            lowerName.Contains("bolum") ||
-            lowerName.Contains("episode"))
-        {
-            return ChannelType.Series;
-        }
-
-        // Film: Yıl (1990-2030)
-        if (VodPatternYear().IsMatch(name))
-        {
+            // Dizi episod pattern'i varsa (S01E01, 1x01, "Sezon 1 Bölüm 1" vb.) → Series
+            if (SeriesInfoParser.IsSeries(name))
+                return ChannelType.Series;
+            // Dizi değilse bu bir film/VOD dosyası
             return ChannelType.VOD;
         }
 
-        // 5. Uzantı ve Diğer Karakteristikler
-        if (lowerUrl.EndsWith(".mp4") || lowerUrl.EndsWith(".mkv") || lowerUrl.EndsWith(".avi") || lowerUrl.EndsWith(".mov"))
-        {
-            return ChannelType.VOD;
-        }
-
-        if (IsLinearStreamUrl(lowerUrl))
-        {
-            return ChannelType.Live;
-        }
-
-        // 6. Grup Başlığı Analizi - VOD (düşük öncelikli)
-        // NOT: Bu kontrol extension/URL pattern kontrollerinden SONRA gelir.
-        // "Movies" gibi grup isimleri iptv-org gibi kaynaklarda canlı kanal kategorisidir
-        // (örn. MovieSmart Turk, 24/7 film yayını yapan lineer kanal).
-        // Bu noktaya ulaşan URL'ler tanınmayan formattadır (proxy/stream sunucusu, extension'sız).
-        // Bilinen VOD URL pattern'i (/.mp4, /movie/, type=vod vb.) içermeyen URL'ler
-        // canlı yayın olarak sınıflandırılır.
-        if (lowerGroup.Contains("movie") || 
-            lowerGroup.Contains("film") || 
-            lowerGroup.Contains("vod") || 
-            lowerGroup.Contains("cinema") || 
-            lowerGroup.Contains("sinema") ||
-            lowerGroup.Contains("yerli film") ||
-            lowerGroup.Contains("yabanci film") ||
-            lowerGroup.Contains("netflix") ||
-            lowerGroup.Contains("disney") ||
-            lowerGroup.Contains("amazon") ||
-            lowerGroup.Contains("hulu") ||
-            lowerGroup.Contains("apple tv") ||
-            lowerGroup.Contains("blutv") ||
-            lowerGroup.Contains("gain") ||
-            lowerGroup.Contains("exxen") ||
-            lowerGroup.Contains("sinevizyon") ||
-            lowerGroup.Contains("kino"))
-        {
-            return ChannelType.Live;
-        }
-
-        // Varsayılan
+        // 4. Diğer her şey → Live (uzantısız proxy URL'leri, HLS olmayan akışlar vb.)
         return ChannelType.Live;
     }
 
@@ -354,9 +293,6 @@ public partial class M3UParser : IM3UParser
                lowerUrl.Contains("extension=m3u8") ||
                lowerUrl.Contains("extension=ts");
     }
-
-    [GeneratedRegex(@"(?:\b|\()((?:19|20)\d{2})(?:\b|\))", RegexOptions.IgnoreCase)]
-    private static partial Regex VodPatternYear(); // (1990) veya 1990 gibi yılları yakalar
 
     // Regex pattern'ları (Lenient versions)
     [GeneratedRegex(@"tvg-id\s*=\s*(?:""([^""]*)""|([^""\s,]+))", RegexOptions.IgnoreCase)]

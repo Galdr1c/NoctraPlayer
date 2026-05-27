@@ -50,7 +50,7 @@ public class RemoteImage : Image
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "Noctra",
         "ImageCache");
-    private static readonly TimeSpan FailureCooldown = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan FailureCooldown = TimeSpan.FromMinutes(2);
     private static readonly HashSet<string> KnownBadImageHosts = new(StringComparer.OrdinalIgnoreCase)
     {
         "nox101.com",

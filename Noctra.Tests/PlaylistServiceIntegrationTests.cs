@@ -71,6 +71,10 @@ namespace Noctra.Tests
             // Default organizer behavior: just return what's given
             _organizerMock.Setup(o => o.Organize(It.IsAny<List<Channel>>(), It.IsAny<bool>()))
                 .Returns<List<Channel>, bool>((c, _) => c);
+
+            _mediaServiceMock
+                .Setup(m => m.AggregateContentAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
         }
 
         public void Dispose()
@@ -303,6 +307,71 @@ namespace Noctra.Tests
             var channel = Assert.Single(live);
             Assert.Equal("MovieSmart Turk (576p)", channel.Name);
             Assert.Equal(ChannelType.Live, channel.Type);
+        }
+
+        [Fact]
+        public async Task GetChannelsFilteredAsync_RepairsExistingDiziGroupLinearChannelsButKeepsEpisodes()
+        {
+            // Arrange
+            var service = CreateService();
+            int playlistId;
+
+            using (var context = new AppDbContext(_options))
+            {
+                var playlist = new Playlist
+                {
+                    Name = "Provider",
+                    Url = "http://provider.test/list.m3u",
+                    IsActive = true,
+                    ChannelCount = 3,
+                    CreatedAt = DateTime.UtcNow,
+                    LastUpdated = DateTime.UtcNow
+                };
+
+                context.Playlists.Add(playlist);
+                await context.SaveChangesAsync();
+                playlistId = playlist.Id;
+
+                context.Channels.AddRange(
+                    new Channel
+                    {
+                        PlaylistId = playlistId,
+                        Name = "TR • BEIN SERIES 1",
+                        GroupTitle = "TR • DIZI",
+                        StreamUrl = "http://provider/live/bein-series-1",
+                        Type = ChannelType.Series
+                    },
+                    new Channel
+                    {
+                        PlaylistId = playlistId,
+                        Name = "TR • FX",
+                        GroupTitle = "TR • DIZI",
+                        StreamUrl = "http://provider/live/fx",
+                        Type = ChannelType.Series
+                    },
+                    new Channel
+                    {
+                        PlaylistId = playlistId,
+                        Name = "Breaking Bad S01E01",
+                        GroupTitle = "TR • DIZI",
+                        StreamUrl = "http://provider/content/breaking-bad-s01e01.mp4",
+                        Type = ChannelType.Series
+                    });
+                await context.SaveChangesAsync();
+            }
+
+            // Act
+            var live = await service.GetChannelsFilteredAsync(playlistId, type: ChannelType.Live);
+            var series = await service.GetChannelsFilteredAsync(playlistId, type: ChannelType.Series);
+
+            // Assert
+            Assert.Equal(2, live.Count);
+            Assert.Contains(live, c => c.Name == "TR • BEIN SERIES 1");
+            Assert.Contains(live, c => c.Name == "TR • FX");
+
+            var episode = Assert.Single(series);
+            Assert.Equal("Breaking Bad S01E01", episode.Name);
+            _mediaServiceMock.Verify(m => m.AggregateContentAsync(playlistId, It.IsAny<CancellationToken>()), Times.Once);
         }
         private PlaylistService CreateService()
         {
