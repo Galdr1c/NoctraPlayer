@@ -278,7 +278,7 @@ public partial class M3UParser : IM3UParser
 
         // 4. Bazı M3U provider'ları film URL'lerini uzantısız proxy path ile verir.
         // Başlıkta yıl varsa ve grup canlı kanal kategorisi gibi durmuyorsa VOD kabul et.
-        if (LooksLikeVodMovieTitle(name) && !LooksLikeLiveGroup(groupTitle))
+        if (LooksLikeVodMovieTitle(name))
             return ChannelType.VOD;
 
         // 5. Diğer her şey → Live (uzantısız proxy URL'leri, HLS olmayan akışlar vb.)
@@ -311,29 +311,6 @@ public partial class M3UParser : IM3UParser
     private static bool LooksLikeVodMovieTitle(string name)
         => MovieYearRegex().IsMatch(name);
 
-    private static bool LooksLikeLiveGroup(string? groupTitle)
-    {
-        if (string.IsNullOrWhiteSpace(groupTitle))
-            return false;
-
-        var group = groupTitle.ToLowerInvariant();
-        return group.Contains("abertos") ||
-               group.Contains("rede ") ||
-               group.Contains("globo") ||
-               group.Contains("sbt") ||
-               group.Contains("record") ||
-               group.Contains("band") ||
-               group.Contains("espn") ||
-               group.Contains("esporte") ||
-               group.Contains("sport") ||
-               group.Contains("24h") ||
-               group.Contains("24/7") ||
-               group.Contains("live") ||
-               group.Contains("canli") ||
-               group.Contains("canlı") ||
-               group.Contains("radio") ||
-               group.Contains("religios");
-    }
 
     [GeneratedRegex(@"(?:\(|\b)(?:19|20)\d{2}(?:\)|\b)", RegexOptions.IgnoreCase)]
     private static partial Regex MovieYearRegex();

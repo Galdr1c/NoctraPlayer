@@ -695,27 +695,6 @@ WHERE PlaylistId = {playlistId}
       OR lower(StreamUrl) LIKE '%.webm%'
       OR Name GLOB '*(19[0-9][0-9])*'
       OR Name GLOB '*(20[0-9][0-9])*'
-  )
-  AND (
-      GroupTitle IS NULL
-      OR (
-          lower(GroupTitle) NOT LIKE '%abertos%'
-          AND lower(GroupTitle) NOT LIKE '%rede %'
-          AND lower(GroupTitle) NOT LIKE '%globo%'
-          AND lower(GroupTitle) NOT LIKE '%sbt%'
-          AND lower(GroupTitle) NOT LIKE '%record%'
-          AND lower(GroupTitle) NOT LIKE '%band%'
-          AND lower(GroupTitle) NOT LIKE '%espn%'
-          AND lower(GroupTitle) NOT LIKE '%esporte%'
-          AND lower(GroupTitle) NOT LIKE '%sport%'
-          AND lower(GroupTitle) NOT LIKE '%24h%'
-          AND lower(GroupTitle) NOT LIKE '%24/7%'
-          AND lower(GroupTitle) NOT LIKE '%live%'
-          AND lower(GroupTitle) NOT LIKE '%canli%'
-          AND lower(GroupTitle) NOT LIKE '%canlı%'
-          AND lower(GroupTitle) NOT LIKE '%radio%'
-          AND lower(GroupTitle) NOT LIKE '%religios%'
-      )
   );");
 
         var repaired = linearRepaired + seriesKeywordRepaired + vodProxyRepaired;
