@@ -7,6 +7,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### WatchHistory ChannelId Onarımı — Playlist Refresh Sonrası VOD/Live Geçmişi Kurtarma (2026-05-27)
+- [Düzeltildi] **Playlist Refresh Sonrası VOD/Live Geçmişi Kaybolması**: M3U, Xtream Codes veya Stalker Portal üzerinden playlist yenilendiğinde, kanallar silinip baştan oluşturulduğu için `WatchHistory.ChannelId` referansı `NULL`'a düşüyor ve izleme geçmişindeki VOD/Live kayıtları UI'da görünmez oluyordu.
+- [Düzeltildi] **WatchHistory.ChannelId Onarım Mekanizması**: Refresh öncesinde eski kanalların fingerprint (name+groupUrl) eşleştirmesi yapılıp WatchHistory kayıtlarının ChannelId referansları yeni kanallara yönlendirilir. Dizi geçmişi (`EpisodeId` bazlı) zaten çalıştığı için onarım yalnızca VOD ve Live TV kayıtlarını hedefler.
+- [Değişti] **RepairWatchHistoryChannelIdsAsync Metodu**: `IPlaylistService` interface'ine eklendi. Refresh öncesi yakalanan fingerprint verisini kullanarak WatchHistory.ChannelId sütununu onarır.
+- [Değişti] **M3U RefreshAsync Yolu**: WatchHistory backup verisi `_watchHistoryRepairData` sözlüğüne kaydedilir ve bulk insert sonrası `RepairWatchHistoryChannelIdsAsync` çağrılır.
+- [Değişti] **Xtream/Stalker Yolu**: Kanal silme öncesinde WatchHistory backup alınır, `ResumeXtreamProgressiveLoadingAsync` ve `ResumeStalkerProgressiveLoadingAsync` sonunda onarım tetiklenir.
+- [Doğrulama] `dotnet build` basarili. `dotnet test` sonucu `855/856` test gecti; kalan 1 hata (`M3UParserTests.ParseAsync_ShouldDetectCorrectType`) önceden var olan, bu değişiklikle ilgisiz.
+
 ### Gecmisten Sil Context Menu Duzenlemesi (2026-05-27)
 - [Duzeltildi] **Canli TV Gecmisinden Silme Calismiyordu**: Gecmis sayfasindaki Canli TV bolumunde sag tik -> "Gecmisten Sil" menusu calismiyordu. Sebep: MenuItem `Command` binding`i `#HistoryScrollViewer` isimli element referansi kullaniyordu ancak bu referans bir `DataTemplate` (ItemsControl.ItemTemplate) icinde oldugu icin XAML namescope sinirini asamiyor ve komut hicbir zaman calismiyordu. `Click="Context_RemoveFromHistory_Click"` event handler`ina gecirilerek sorun cozuldu.
 - [Test] dotnet build basarili.

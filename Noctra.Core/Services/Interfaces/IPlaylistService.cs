@@ -107,6 +107,12 @@ public interface IPlaylistService
     Task RefreshEpgAsync(int playlistId);
 
     /// <summary>
+    /// WatchHistory kayıtlarındaki ChannelId referanslarını fingerprint eşleştirmesiyle onarır.
+    /// Refresh sonrası VOD/Live geçmişinin kaybolmasını engeller.
+    /// </summary>
+    Task RepairWatchHistoryChannelIdsAsync(int playlistId);
+
+    /// <summary>
     /// Tam yenileme için playlist'e ait TÜM kanalları siler.
     /// Sunucudan başarılı yanıt geldikten sonra, yeni dummy kanallar eklenmeden önce çağrılır.
     /// </summary>

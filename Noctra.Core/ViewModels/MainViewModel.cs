@@ -1136,6 +1136,9 @@ public partial class MainViewModel : ObservableObject
                 },
                 cancellationToken: CancellationToken.None);
 
+            // WatchHistory onarımı: Eski kanal fingerprint'lerini yeni kanal ID'leriyle eşleştir
+            await _playlistService.RepairWatchHistoryChannelIdsAsync(playlist.Id);
+
             _dispatcherService.BeginInvoke(() => StatusMessage = _localizationService.GetString("Main.Status.OrganizingMedia"));
             try
             {
@@ -1275,6 +1278,9 @@ public partial class MainViewModel : ObservableObject
                 },
                 progress: progress,
                 cancellationToken: CancellationToken.None);
+
+            // WatchHistory onarımı: Eski kanal fingerprint'lerini yeni kanal ID'leriyle eşleştir
+            await _playlistService.RepairWatchHistoryChannelIdsAsync(playlist.Id);
 
             _dispatcherService.BeginInvoke(() => StatusMessage = _localizationService.GetString("Main.Status.OrganizingMedia"));
             try

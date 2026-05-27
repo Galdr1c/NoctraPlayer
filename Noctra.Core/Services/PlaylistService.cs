@@ -20,6 +20,9 @@ public partial class PlaylistService : IPlaylistService
     private readonly ConcurrentDictionary<int, Dictionary<string, ChannelBackupData>> _refreshBackups = new();
     private readonly ConcurrentDictionary<int, byte> _linearStreamRepairCompleted = new();
     private record ChannelBackupData(bool Fav, bool List, TimeSpan? Pos, TimeSpan? Dur, bool Comp, DateTime? LastW);
+
+    /// <summary>WatchHistory onarımı için: playlistId → { fingerprint → (oldChannelId, watchHistoryIds) }</summary>
+    private readonly ConcurrentDictionary<int, Dictionary<string, (int OldChannelId, List<int> WatchHistoryIds)>> _watchHistoryRepairData = new();
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly IM3UParser _parser;
     private readonly IMediaService _mediaService;
@@ -543,7 +546,69 @@ public partial class PlaylistService : IPlaylistService
         
         _refreshBackups[playlistId] = userDataMap;
 
-        // 2. TÜM KANALLARI SİL
+        // 2. WATCHHISTORY ONARIMI İÇİN ESKİ KANAL FINGERPRINT'LERİNİ YAKALA
+        try
+        {
+            var oldChannelsForFingerprint = await context.Channels
+                .Where(c => c.PlaylistId == playlistId)
+                .Select(c => new { c.Id, c.Name, c.StreamUrl, c.GroupTitle, c.TvgId, c.TvgName })
+                .ToListAsync();
+
+            var repairMap = new Dictionary<string, (int OldChannelId, List<int> WatchHistoryIds)>(StringComparer.OrdinalIgnoreCase);
+            var oldChannelFingerprints = new Dictionary<int, string>();
+
+            foreach (var c in oldChannelsForFingerprint)
+            {
+                var stub = new Channel { Name = c.Name, StreamUrl = c.StreamUrl, GroupTitle = c.GroupTitle, TvgId = c.TvgId, TvgName = c.TvgName };
+                var fp = BuildChannelFingerprint(stub);
+                if (!oldChannelFingerprints.ContainsValue(fp))
+                {
+                    oldChannelFingerprints[c.Id] = fp;
+                }
+            }
+
+            var oldIds = oldChannelsForFingerprint.Select(c => c.Id).ToList();
+            if (oldIds.Count > 0)
+            {
+                var watchHistoryRecords = await context.WatchHistories
+                    .Where(h => h.ChannelId.HasValue && oldIds.Contains(h.ChannelId.Value))
+                    .Select(h => new { h.Id, h.ChannelId })
+                    .ToListAsync();
+
+                foreach (var wh in watchHistoryRecords)
+                {
+                    if (wh.ChannelId.HasValue && oldChannelFingerprints.TryGetValue(wh.ChannelId.Value, out var whFingerprint))
+                    {
+                        if (!repairMap.ContainsKey(whFingerprint))
+                        {
+                            repairMap[whFingerprint] = (wh.ChannelId.Value, new List<int>());
+                        }
+                        repairMap[whFingerprint].WatchHistoryIds.Add(wh.Id);
+                    }
+                }
+            }
+
+            // repairMap'i fingerprint -> (oldChannelId, watchHistoryIds) formatında sakla
+            var finalRepairMap = new Dictionary<string, (int OldChannelId, List<int> WatchHistoryIds)>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kvp in repairMap)
+            {
+                if (kvp.Value.WatchHistoryIds.Count > 0)
+                {
+                    finalRepairMap[kvp.Key] = kvp.Value;
+                }
+            }
+
+            if (finalRepairMap.Count > 0)
+            {
+                _watchHistoryRepairData[playlistId] = finalRepairMap;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PlaylistService] WatchHistory backup in DeleteAllChannelsForRefreshAsync failed (non-fatal): {ex.Message}");
+        }
+
+        // 3. TÜM KANALLARI SİL
         await context.Channels
             .Where(c => c.PlaylistId == playlistId)
             .ExecuteDeleteAsync();
@@ -974,8 +1039,73 @@ WHERE PlaylistId = {playlistId}
             }
         }
 
+        // ── WATCHHISTORY ONARIMI: Eski kanal fingerprint'lerini ve WatchHistory referanslarını yakala ──
+        var oldChannelFingerprints = new Dictionary<int, string>();
+        var oldChannelWatchHistoryIds = new Dictionary<int, List<int>>();
+        try
+        {
+            var oldChannelsForFingerprint = await context.Channels
+                .Where(c => c.PlaylistId == playlistId)
+                .Select(c => new { c.Id, c.Name, c.StreamUrl, c.GroupTitle, c.TvgId, c.TvgName })
+                .ToListAsync();
+
+            foreach (var c in oldChannelsForFingerprint)
+            {
+                var stub = new Channel { Name = c.Name, StreamUrl = c.StreamUrl, GroupTitle = c.GroupTitle, TvgId = c.TvgId, TvgName = c.TvgName };
+                var fp = BuildChannelFingerprint(stub);
+                if (!oldChannelFingerprints.ContainsValue(fp))
+                {
+                    oldChannelFingerprints[c.Id] = fp;
+                }
+            }
+
+            var oldIds = oldChannelsForFingerprint.Select(c => c.Id).ToList();
+            if (oldIds.Count > 0)
+            {
+                var watchHistoryRecords = await context.WatchHistories
+                    .Where(h => h.ChannelId.HasValue && oldIds.Contains(h.ChannelId.Value))
+                    .Select(h => new { h.Id, h.ChannelId })
+                    .ToListAsync();
+
+                foreach (var wh in watchHistoryRecords)
+                {
+                    if (wh.ChannelId.HasValue)
+                    {
+                        if (!oldChannelWatchHistoryIds.TryGetValue(wh.ChannelId.Value, out var list))
+                        {
+                            list = new List<int>();
+                            oldChannelWatchHistoryIds[wh.ChannelId.Value] = list;
+                        }
+                        list.Add(wh.Id);
+                    }
+                }
+            }
+
+            // Toplanan verileri _watchHistoryRepairData'ya yaz (RepairWatchHistoryChannelIdsAsync buradan okur)
+            if (oldChannelFingerprints.Count > 0 && oldChannelWatchHistoryIds.Count > 0)
+            {
+                var repairMap = new Dictionary<string, (int OldChannelId, List<int> WatchHistoryIds)>(StringComparer.OrdinalIgnoreCase);
+                foreach (var kvp in oldChannelWatchHistoryIds)
+                {
+                    if (oldChannelFingerprints.TryGetValue(kvp.Key, out var fp) && kvp.Value.Count > 0)
+                    {
+                        repairMap[fp] = (kvp.Key, kvp.Value);
+                    }
+                }
+                if (repairMap.Count > 0)
+                {
+                    _watchHistoryRepairData[playlistId] = repairMap;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PlaylistService] WatchHistory backup failed (non-fatal): {ex.Message}");
+        }
+
         // 2. TÜM KANALLARI SİL (Temiz bir başlangıç için)
-        // Cascade silme kuralları gereği WatchHistory.ChannelId null'a çekilecek (SetNull), veri kaybı yaşanmayacak.
+        // Not: ExecuteDeleteAsync FK cascade tetiklemez. WatchHistory.ChannelId değerleri olduğu gibi kalır
+        // (silmeyen kanallara referans verir). Onarımı aşağıda yapıyoruz.
         await context.Channels
             .Where(c => c.PlaylistId == playlistId)
             .ExecuteDeleteAsync();
@@ -1003,6 +1133,9 @@ WHERE PlaylistId = {playlistId}
             await FastSqliteBulkInsertAsync(context, organizedChannels);
             InvalidateLinearStreamRepair(playlist.Id);
         }
+
+        // 4b. WATCHHISTORY ONARIMI: Eski kanal fingerprint'lerini yeni kanallarla eşleştir
+        await RepairWatchHistoryChannelIdsAsync(playlist.Id);
 
         var finalCount = await context.Channels.CountAsync(c => c.PlaylistId == playlist.Id);
         playlist.ChannelCount = finalCount;
@@ -1722,6 +1855,113 @@ WHERE PlaylistId = {playlistId}
 
         return null;
     }
+    /// <summary>
+    /// WatchHistory kayıtlarındaki ChannelId referanslarını fingerprint eşleştirmesiyle onarır.
+    /// Refresh/DeleteAllChannelsForRefreshAsync öncesinde yakalanan eski kanal fingerprint'lerini
+    /// yeni kanalların ID'leriyle eşleştirerek WatchHistory tablosunu günceller.
+    /// </summary>
+    public async Task RepairWatchHistoryChannelIdsAsync(int playlistId)
+    {
+        if (!_watchHistoryRepairData.TryRemove(playlistId, out var repairMap) || repairMap.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            using var context = await _contextFactory.CreateDbContextAsync();
+
+            // Yeni kanalları fingerprint'leriyle birlikte yükle
+            var newChannels = await context.Channels
+                .Where(c => c.PlaylistId == playlistId)
+                .Select(c => new { c.Id, c.Name, c.StreamUrl, c.GroupTitle, c.TvgId, c.TvgName })
+                .ToListAsync();
+
+            if (newChannels.Count == 0)
+            {
+                return;
+            }
+
+            // Yeni kanalların fingerprint'lerini oluştur: fingerprint -> newChannelId
+            var newFingerprintToId = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            foreach (var nc in newChannels)
+            {
+                var stub = new Channel { Name = nc.Name, StreamUrl = nc.StreamUrl, GroupTitle = nc.GroupTitle, TvgId = nc.TvgId, TvgName = nc.TvgName };
+                var fp = BuildChannelFingerprint(stub);
+                // Aynı fingerprint'e sahip birden çok yeni kanal olabilir — ilkini kullan
+                if (!newFingerprintToId.ContainsKey(fp))
+                {
+                    newFingerprintToId[fp] = nc.Id;
+                }
+            }
+
+            // WatchHistory güncellemelerini topla: (watchHistoryId, newChannelId)
+            var updates = new List<(int WatchHistoryId, int NewChannelId)>();
+            foreach (var kvp in repairMap)
+            {
+                var oldFingerprint = kvp.Key;
+                var oldChannelId = kvp.Value.OldChannelId;
+                var watchHistoryIds = kvp.Value.WatchHistoryIds;
+
+                if (watchHistoryIds.Count == 0)
+                {
+                    continue;
+                }
+
+                // Yeni kanalda aynı fingerprint'i bul
+                if (newFingerprintToId.TryGetValue(oldFingerprint, out var newChannelId))
+                {
+                    foreach (var whId in watchHistoryIds)
+                    {
+                        updates.Add((whId, newChannelId));
+                    }
+                }
+                else
+                {
+                    // Fingerprint eşleşmesi yok: Eski kanal ID'sini yeni kanallar arasında bulmaya çalış
+                    // (Bazı sağlayıcılar kanal ID'sini stabil tutar)
+                    var matchingNewChannel = newChannels.FirstOrDefault(nc => nc.Id == oldChannelId);
+                    if (matchingNewChannel != null)
+                    {
+                        foreach (var whId in watchHistoryIds)
+                        {
+                            updates.Add((whId, matchingNewChannel.Id));
+                        }
+                    }
+                }
+            }
+
+            // Toplu güncelleme yap
+            if (updates.Count > 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PlaylistService] Repairing {updates.Count} WatchHistory ChannelId references for playlist {playlistId}");
+
+                // Batch güncelleme: WatchHistoryId başına sadece bir güncelleme olacak şekilde grupla
+                var distinctUpdates = updates
+                    .GroupBy(u => u.WatchHistoryId)
+                    .Select(g => g.First())
+                    .ToList();
+
+                const int batchSize = 100;
+                for (int i = 0; i < distinctUpdates.Count; i += batchSize)
+                {
+                    var batch = distinctUpdates.Skip(i).Take(batchSize).ToList();
+                    foreach (var (whId, newId) in batch)
+                    {
+                        await context.WatchHistories
+                            .Where(w => w.Id == whId)
+                            .ExecuteUpdateAsync(s => s
+                                .SetProperty(w => w.ChannelId, newId));
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PlaylistService] WatchHistory repair failed (non-fatal): {ex.Message}");
+        }
+    }
+
     private async Task FastSqliteBulkInsertAsync(AppDbContext context, IReadOnlyCollection<Channel> channels)
     {
         if (channels.Count == 0) return;
