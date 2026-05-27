@@ -7,7 +7,17 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
-### WatchHistory ChannelId Onarımı — Playlist Refresh Sonrası VOD/Live Geçmişi Kurtarma (2026-05-27)
+### RemoteImage Performans Fix ve NoctraPlayer-fixes Uygulaması (2026-05-27)
+- [Uygulandı] **NoctraPlayer-fixes.zip**: `Channel.cs`, `IXtreamCodesService.cs`, `XtreamCodesService.cs`, `StalkerPortalService.cs` ve `MainViewModel.cs` dosyaları zip'teki güncel sürümleriyle değiştirildi. Channel metadata field'ları ObservableProperty yapılarak UI reaktifliği sağlandı; Xtream/Stalker servislerinde BackdropUrl, ContentRating, TmdbId parse desteği eklendi; Stalker pagination refactor edildi; MainViewModel büyük revizyona uğradı. Mevcut dosyalar `artifacts/backup/` altına yedeklendi.
+- [Düzeltildi] **44 Saniyelik Image Download Takılması (KRİTİK)**: `RemoteImage` bileşeninde `CopyToAsync` çağrısına `CancellationToken` eklenmediği için, yavaş sunucularda body download süresiz takılabiliyordu (log'da 44649ms tespit edildi). 8 saniyelik body timeout eklendi.
+- [Düzeltildi] **HttpClient Timeout Düşürüldü**: Image HTTP isteği timeout süresi 5 saniyeden 3 saniyeye indirildi. Header bağlantısı daha hızlı başarısız olup slot boşaltacak.
+- [Düzeltildi] **FailureCooldown Artırıldı**: Başarısız image denemelerinin tekrar denenme bekleme süresi 2 dakikadan 5 dakikaya çıkarıldı. Boşuna retry azaltıldı.
+- [Yeni] **Dinamik Host Failure Escalation**: Aynı host 3+ kez başarısız olursa otomatik olarak 15 dakikalık cooldown uygulanır. `HostFailureCounts` sözlüğü ile takip edilir. Statik `KnownBadImageHosts` listesi kaldırıldı — tüm kötü host tespiti artık dinamik.
+- [Düzeltildi] **OperationCanceledException Catch Eklendi**: Body download timeout'unu yakalayan catch bloğu eklendi. Artık timeout durumunda "BodyTimeout" log'u yazılır ve retry akışına girilir.
+- [Geliştirildi] **IsKnownBadImageHost Dinamikleştirildi**: Artık sadece statik listeye değil, `HostFailureCounts` sözlüğüne de bakar. 3+ kez başarısız olan host otomatik olarak kötü host sayılır.
+- [Doğrulama] `dotnet build` basarili, 0 hata.
+
+### WatchHistory ChannelId Onarımı
 - [Düzeltildi] **Playlist Refresh Sonrası VOD/Live Geçmişi Kaybolması**: M3U, Xtream Codes veya Stalker Portal üzerinden playlist yenilendiğinde, kanallar silinip baştan oluşturulduğu için `WatchHistory.ChannelId` referansı `NULL`'a düşüyor ve izleme geçmişindeki VOD/Live kayıtları UI'da görünmez oluyordu.
 - [Düzeltildi] **WatchHistory.ChannelId Onarım Mekanizması**: Refresh öncesinde eski kanalların fingerprint (name+groupUrl) eşleştirmesi yapılıp WatchHistory kayıtlarının ChannelId referansları yeni kanallara yönlendirilir. Dizi geçmişi (`EpisodeId` bazlı) zaten çalıştığı için onarım yalnızca VOD ve Live TV kayıtlarını hedefler.
 - [Değişti] **RepairWatchHistoryChannelIdsAsync Metodu**: `IPlaylistService` interface'ine eklendi. Refresh öncesi yakalanan fingerprint verisini kullanarak WatchHistory.ChannelId sütununu onarır.

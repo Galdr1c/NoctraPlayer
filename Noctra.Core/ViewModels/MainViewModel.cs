@@ -1278,7 +1278,7 @@ public partial class MainViewModel : ObservableObject
                 },
                 progress: progress,
                 cancellationToken: CancellationToken.None);
-
+                
             // WatchHistory onarımı: Eski kanal fingerprint'lerini yeni kanal ID'leriyle eşleştir
             await _playlistService.RepairWatchHistoryChannelIdsAsync(playlist.Id);
 
@@ -2487,6 +2487,7 @@ public partial class MainViewModel : ObservableObject
 
             var changed = false;
 
+            // --- Poster ---
             if (!HasDisplayImage(dbChannel) || ShouldRefreshProviderImageUrl(currentImageUrl))
             {
                 dbChannel.LogoUrl = metadata.PosterUrl;
@@ -2497,6 +2498,41 @@ public partial class MainViewModel : ObservableObject
                     $"id={channel.Id} oldHost={DescribeImageHost(currentImageUrl)} newHost={DescribeImageHost(metadata.PosterUrl)}");
             }
 
+            // --- Backdrop ---
+            if (string.IsNullOrWhiteSpace(dbChannel.BackdropUrl) && !string.IsNullOrWhiteSpace(metadata.BackdropUrl))
+            {
+                dbChannel.BackdropUrl = metadata.BackdropUrl;
+                changed = true;
+            }
+
+            // --- Text metadata (only fill blanks — provider data has priority) ---
+            if (string.IsNullOrWhiteSpace(dbChannel.Plot) && !string.IsNullOrWhiteSpace(metadata.Description))
+            {
+                dbChannel.Plot = metadata.Description;
+                changed = true;
+            }
+            if (string.IsNullOrWhiteSpace(dbChannel.Director) && !string.IsNullOrWhiteSpace(metadata.Director))
+            {
+                dbChannel.Director = metadata.Director;
+                changed = true;
+            }
+            if (string.IsNullOrWhiteSpace(dbChannel.Cast) && !string.IsNullOrWhiteSpace(metadata.Cast))
+            {
+                dbChannel.Cast = metadata.Cast;
+                changed = true;
+            }
+            if (dbChannel.Rating == null && metadata.Rating.HasValue)
+            {
+                dbChannel.Rating = metadata.Rating;
+                changed = true;
+            }
+            if (string.IsNullOrWhiteSpace(dbChannel.ContentRating) && !string.IsNullOrWhiteSpace(metadata.ContentRating))
+            {
+                dbChannel.ContentRating = metadata.ContentRating;
+                changed = true;
+            }
+
+            // --- TmdbId ---
             if (dbChannel.TmdbId == null && metadata.TmdbId.HasValue)
             {
                 dbChannel.TmdbId = metadata.TmdbId.Value;
@@ -2512,14 +2548,16 @@ public partial class MainViewModel : ObservableObject
 
                 await _dispatcherService.InvokeAsync(() =>
                 {
-                    channel.LogoUrl = dbChannel.LogoUrl;
-                    if (string.IsNullOrWhiteSpace(channel.BackdropUrl))
-                    {
-                        channel.BackdropUrl = dbChannel.BackdropUrl;
-                    }
-                    channel.TmdbId = dbChannel.TmdbId;
+                    channel.LogoUrl    = dbChannel.LogoUrl;
+                    channel.BackdropUrl = dbChannel.BackdropUrl;
+                    channel.Plot        = dbChannel.Plot;
+                    channel.Director    = dbChannel.Director;
+                    channel.Cast        = dbChannel.Cast;
+                    channel.Rating      = dbChannel.Rating;
+                    channel.ContentRating = dbChannel.ContentRating;
+                    channel.TmdbId      = dbChannel.TmdbId;
                     channel.LastTmdbSync = dbChannel.LastTmdbSync;
-                    channel.NotifyVisualsChanged();
+                    channel.NotifyMetadataChanged();
                     return Task.CompletedTask;
                 });
             }
@@ -7837,17 +7875,28 @@ public partial class MainViewModel : ObservableObject
     private static void ApplyXtreamSeriesMetadata(Series series, XtreamSeriesDetail detail)
     {
         if (!string.IsNullOrWhiteSpace(detail.Name))
-        {
             series.Name = System.Net.WebUtility.UrlDecode(detail.Name).Trim();
-        }
         if (!string.IsNullOrWhiteSpace(detail.Cover))
             series.CoverUrl = detail.Cover;
+        // Prefer cover_big / backdrop over the smaller cover for backdrop slot
+        if (!string.IsNullOrWhiteSpace(detail.BackdropUrl) && string.IsNullOrWhiteSpace(series.BackdropUrl))
+            series.BackdropUrl = detail.BackdropUrl;
         if (!string.IsNullOrWhiteSpace(detail.Plot) && string.IsNullOrWhiteSpace(series.Plot))
             series.Plot = detail.Plot;
         if (!string.IsNullOrWhiteSpace(detail.Genre) && string.IsNullOrWhiteSpace(series.Genre))
             series.Genre = detail.Genre;
         if (!string.IsNullOrWhiteSpace(detail.Cast) && string.IsNullOrWhiteSpace(series.Cast))
             series.Cast = detail.Cast;
+        if (!string.IsNullOrWhiteSpace(detail.Director) && string.IsNullOrWhiteSpace(series.Director))
+            series.Director = detail.Director;
+        if (detail.Rating.HasValue && detail.Rating.Value > 0 && (series.Rating == null || series.Rating == 0))
+            series.Rating = detail.Rating;
+        if (detail.ReleaseYear.HasValue && series.ReleaseYear == null)
+            series.ReleaseYear = detail.ReleaseYear;
+        if (!string.IsNullOrWhiteSpace(detail.ContentRating) && string.IsNullOrWhiteSpace(series.ContentRating))
+            series.ContentRating = detail.ContentRating;
+        if (detail.TmdbId.HasValue && series.TmdbId == null)
+            series.TmdbId = detail.TmdbId;
     }
 
     private static bool ClearTmdbSeasonAndEpisodeMetadata(Series series)

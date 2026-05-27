@@ -1022,7 +1022,16 @@ public class StalkerPortalService : IStalkerPortalService
                                 GetString(item, "category_id") ??
                                 GetString(item, "genre_id"),
                     CategoryName = GetString(item, "category_name") ??
-                                   GetString(item, "genre_name")
+                                   GetString(item, "genre_name"),
+                    // Metadata — present in many Stalker portal VOD/Series list responses
+                    Description = GetString(item, "description") ?? GetString(item, "plot"),
+                    Director    = GetString(item, "director"),
+                    Actors      = GetString(item, "actors") ?? GetString(item, "actor"),
+                    Year        = GetString(item, "year"),
+                    Rating      = GetString(item, "rating_imdb") ?? GetString(item, "rating"),
+                    Age         = GetString(item, "age"),
+                    TmdbId      = GetString(item, "tmdb_id") ?? GetString(item, "tmdb"),
+                    Genres      = GetString(item, "genres_str") ?? GetString(item, "genre"),
                 });
             }
         }
@@ -1114,14 +1123,55 @@ public class StalkerPortalService : IStalkerPortalService
 
             var name = string.IsNullOrWhiteSpace(item.Name) ? localizationService.GetString("Common.Unknown") : item.Name.Trim();
 
-            channels.Add(new Channel
+            Channel ch;
+            if (channelType == ChannelType.Live)
             {
-                Name       = name,
-                StreamUrl  = streamUrl,
-                LogoUrl    = NormalizeLogoUrl(item.Logo, baseUrl),
-                GroupTitle = group,
-                Type       = channelType
-            });
+                ch = new Channel
+                {
+                    Name       = name,
+                    StreamUrl  = streamUrl,
+                    LogoUrl    = NormalizeLogoUrl(item.Logo, baseUrl),
+                    GroupTitle = group,
+                    Type       = channelType
+                };
+            }
+            else
+            {
+                // VOD and Series: map all available metadata so detail screens populate immediately
+                double? rating = null;
+                if (!string.IsNullOrWhiteSpace(item.Rating) &&
+                    double.TryParse(item.Rating, System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture, out var r))
+                    rating = r;
+
+                int? releaseYear = null;
+                if (!string.IsNullOrWhiteSpace(item.Year) &&
+                    int.TryParse(item.Year.Split('-').FirstOrDefault(), out var y) && y > 1900)
+                    releaseYear = y;
+
+                int? tmdbId = null;
+                if (!string.IsNullOrWhiteSpace(item.TmdbId) &&
+                    int.TryParse(item.TmdbId, out var t) && t > 0)
+                    tmdbId = t;
+
+                ch = new Channel
+                {
+                    Name          = name,
+                    StreamUrl     = streamUrl,
+                    LogoUrl       = NormalizeLogoUrl(item.Logo, baseUrl),
+                    GroupTitle    = group,
+                    Type          = channelType,
+                    Plot          = string.IsNullOrWhiteSpace(item.Description) ? null : item.Description,
+                    Director      = string.IsNullOrWhiteSpace(item.Director) ? null : item.Director,
+                    Cast          = string.IsNullOrWhiteSpace(item.Actors) ? null : item.Actors,
+                    Rating        = rating,
+                    ReleaseYear   = releaseYear,
+                    ContentRating = string.IsNullOrWhiteSpace(item.Age) ? null : item.Age,
+                    TmdbId        = tmdbId,
+                };
+            }
+
+            channels.Add(ch);
         }
 
         return channels;
@@ -1362,6 +1412,15 @@ public class StalkerPortalService : IStalkerPortalService
         public string? Logo         { get; set; }
         public string? TvGenreId    { get; set; }
         public string? CategoryName { get; set; }
+        // Metadata fields (available in VOD/Series list responses on many portals)
+        public string? Description  { get; set; }
+        public string? Director     { get; set; }
+        public string? Actors       { get; set; }
+        public string? Year         { get; set; }
+        public string? Rating       { get; set; }
+        public string? Age          { get; set; }
+        public string? TmdbId       { get; set; }
+        public string? Genres       { get; set; }
     }
 
     private readonly record struct CachedTokenState(string Token, DateTimeOffset ExpiresAt);

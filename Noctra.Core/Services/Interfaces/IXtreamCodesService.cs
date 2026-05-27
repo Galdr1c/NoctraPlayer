@@ -65,12 +65,15 @@ public class XtreamSeriesDetail
 {
     public string? Name { get; set; }
     public string? Cover { get; set; }
+    public string? BackdropUrl { get; set; }   // cover_big / backdrop_path
     public string? Plot { get; set; }
     public double? Rating { get; set; }
     public int? ReleaseYear { get; set; }
     public string? Genre { get; set; }
     public string? Cast { get; set; }
     public string? Director { get; set; }
+    public string? ContentRating { get; set; } // age field
+    public int? TmdbId { get; set; }           // tmdb_id field
     public List<XtreamSeasonDetail> Seasons { get; set; } = new();
     // episodes: { "1": [...], "2": [...] }
     public Dictionary<string, List<XtreamEpisodeDetail>> Episodes { get; set; } = new();

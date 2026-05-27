@@ -50,12 +50,11 @@ public class RemoteImage : Image
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "Noctra",
         "ImageCache");
-    private static readonly TimeSpan FailureCooldown = TimeSpan.FromMinutes(2);
-    private static readonly HashSet<string> KnownBadImageHosts = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "nox101.com",
-        "logo.uixtreamreseller.com"
-    };
+    private static readonly TimeSpan FailureCooldown = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan HostFailureCooldown = TimeSpan.FromMinutes(15);
+    private static readonly ConcurrentDictionary<string, int> HostFailureCounts = new(StringComparer.OrdinalIgnoreCase);
+    private const int HostFailureThreshold = 3;
+    private static readonly HashSet<string> KnownBadImageHosts = new(StringComparer.OrdinalIgnoreCase);
     private static int TransientEmptyUrlLogCount;
 
     private CancellationTokenSource? _loadCts;
@@ -484,7 +483,9 @@ public class RemoteImage : Image
 
                 await using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
                 using var memory = new MemoryStream();
-                await stream.CopyToAsync(memory).ConfigureAwait(false);
+                // Body download için 8 saniyelik toplam timeout - 44 saniyelik takılmaları önler
+                using var bodyCts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+                await stream.CopyToAsync(memory, bodyCts.Token).ConfigureAwait(false);
                 var length = memory.Length;
                 
                 if (length == 0)
@@ -528,6 +529,13 @@ public class RemoteImage : Image
             }
             catch (TaskCanceledException) when (attempt < HttpImageMaxAttempts - 1)
             {
+                LogFailure(normalizedUrl, "Timeout");
+                var backoffMs = HttpRetryBaseDelayMs * (attempt + 1) * (attempt + 1);
+                await Task.Delay(backoffMs).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (attempt < HttpImageMaxAttempts - 1)
+            {
+                LogFailure(normalizedUrl, "BodyTimeout");
                 var backoffMs = HttpRetryBaseDelayMs * (attempt + 1) * (attempt + 1);
                 await Task.Delay(backoffMs).ConfigureAwait(false);
             }
@@ -791,7 +799,7 @@ public class RemoteImage : Image
 
         var client = new HttpClient(handler)
         {
-            Timeout = TimeSpan.FromSeconds(5)
+            Timeout = TimeSpan.FromSeconds(3)
         };
 
         client.DefaultRequestHeaders.UserAgent.ParseAdd("Noctra.Avalonia/1.0");
@@ -856,9 +864,22 @@ public class RemoteImage : Image
         var isNewFailure = !FailedUntilUtc.ContainsKey(url);
         MarkFailureCooldown(url);
 
+        // Track host-level failures for escalation
+        var host = ExtractHost(url);
+        if (!string.IsNullOrEmpty(host))
+        {
+            var hostCount = HostFailureCounts.AddOrUpdate(host, 1, (_, c) => c + 1);
+            if (hostCount >= HostFailureThreshold)
+            {
+                // This host keeps failing - apply long cooldown to all its URLs
+                FailedUntilUtc[url] = DateTime.UtcNow.Add(HostFailureCooldown);
+                PerformanceTraceService.Shared?.Event("IMAGE", "HostEscalated", $"host={host} count={hostCount} cooldown={HostFailureCooldown.TotalMinutes}m");
+            }
+        }
+
         if (isNewFailure)
         {
-            PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage failure", $"host={ExtractHost(url)} reason={reason}");
+            PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage failure", $"host={host} reason={reason}");
         }
     }
 
@@ -961,8 +982,20 @@ public class RemoteImage : Image
 
     private static bool IsKnownBadImageHost(string url)
     {
-        return Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
-               KnownBadImageHosts.Contains(uri.Host);
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return false;
+
+        var host = uri.Host;
+
+        // Statik liste (elle eklenenler)
+        if (KnownBadImageHosts.Contains(host))
+            return true;
+
+        // Dinamik: 3+ kez başarısız olan host otomatik kötü host sayılır
+        if (HostFailureCounts.TryGetValue(host, out var count) && count >= HostFailureThreshold)
+            return true;
+
+        return false;
     }
 
     private static void TrackActiveControl(RemoteImage control)

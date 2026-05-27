@@ -201,6 +201,10 @@ public class XtreamCodesService : IXtreamCodesService
             {
                 detail.Name = GetStringOrNull(info, "name");
                 detail.Cover = GetStringOrNull(info, "cover");
+                // High-res backdrop: try backdrop_path, cover_big, movie_image
+                detail.BackdropUrl = GetStringOrNull(info, "backdrop_path")
+                                  ?? GetStringOrNull(info, "cover_big")
+                                  ?? GetStringOrNull(info, "movie_image");
                 detail.Plot = GetStringOrNull(info, "plot");
                 detail.Genre = GetStringOrNull(info, "genre");
                 detail.Cast = GetStringOrNull(info, "cast");
@@ -208,6 +212,10 @@ public class XtreamCodesService : IXtreamCodesService
                 detail.Rating = ParseDouble(GetStringOrNull(info, "rating"));
                 detail.ReleaseYear = ParseInt(GetStringOrNull(info, "releaseDate")
                                         ?.Split('-').FirstOrDefault());
+                detail.ContentRating = GetStringOrNull(info, "age");
+                var tmdbRaw = GetStringOrNull(info, "tmdb_id") ?? GetStringOrNull(info, "tmdb");
+                if (int.TryParse(tmdbRaw, out var parsedTmdb) && parsedTmdb > 0)
+                    detail.TmdbId = parsedTmdb;
             }
 
             // seasons block
@@ -443,16 +451,30 @@ public class XtreamCodesService : IXtreamCodesService
             .Select(s =>
             {
                 var extension = string.IsNullOrWhiteSpace(s.ContainerExtension) ? "mp4" : s.ContainerExtension;
+
+                int? tmdbId = null;
+                if (!string.IsNullOrWhiteSpace(s.TmdbId) &&
+                    int.TryParse(s.TmdbId, out var t) && t > 0)
+                    tmdbId = t;
+
+                // Prefer backdrop if available, else fall back to stream_icon for detail view
+                var backdropUrl = string.IsNullOrWhiteSpace(s.BackdropPath) ? null : s.BackdropPath;
+
                 return new Channel
                 {
-                    Name = SafeName(s.Name, "VOD"),
-                    StreamUrl = $"{baseUrl}/movie/{Uri.EscapeDataString(username)}/{Uri.EscapeDataString(password)}/{s.StreamId}.{extension}",
-                    LogoUrl = s.StreamIcon,
-                    GroupTitle = ResolveCategory(s.CategoryId, s.CategoryName, categories, "VOD"),
-                    Type = ChannelType.VOD,
-                    Plot = s.Plot,
-                    ReleaseYear = ParseInt(s.Year),
-                    Rating = ParseDouble(s.Rating)
+                    Name          = SafeName(s.Name, "VOD"),
+                    StreamUrl     = $"{baseUrl}/movie/{Uri.EscapeDataString(username)}/{Uri.EscapeDataString(password)}/{s.StreamId}.{extension}",
+                    LogoUrl       = s.StreamIcon,
+                    BackdropUrl   = backdropUrl,
+                    GroupTitle    = ResolveCategory(s.CategoryId, s.CategoryName, categories, "VOD"),
+                    Type          = ChannelType.VOD,
+                    Plot          = s.Plot,
+                    Director      = string.IsNullOrWhiteSpace(s.Director) ? null : s.Director,
+                    Cast          = string.IsNullOrWhiteSpace(s.Cast) ? null : s.Cast,
+                    ContentRating = string.IsNullOrWhiteSpace(s.Age) ? null : s.Age,
+                    ReleaseYear   = ParseInt(s.Year),
+                    Rating        = ParseDouble(s.Rating),
+                    TmdbId        = tmdbId,
                 };
             })
             .ToList();
@@ -855,6 +877,21 @@ public class XtreamCodesService : IXtreamCodesService
 
         [JsonPropertyName("plot")]
         public string? Plot { get; set; }
+
+        [JsonPropertyName("tmdb_id")]
+        public string? TmdbId { get; set; }
+
+        [JsonPropertyName("backdrop_path")]
+        public string? BackdropPath { get; set; }
+
+        [JsonPropertyName("cast")]
+        public string? Cast { get; set; }
+
+        [JsonPropertyName("director")]
+        public string? Director { get; set; }
+
+        [JsonPropertyName("age")]
+        public string? Age { get; set; }
     }
 
     private sealed class XtreamSeriesDto

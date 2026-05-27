@@ -53,13 +53,13 @@ public partial class Channel : ObservableObject
     public int PlaylistId { get; set; }
     
     // Metadata for VOD/Movies
-    public string? Plot { get; set; }
-    public int? ReleaseYear { get; set; }
-    public double? Rating { get; set; }
-    public string? BackdropUrl { get; set; }
-    public string? Director { get; set; }
-    public string? Cast { get; set; }
-    public string? ContentRating { get; set; }
+    [ObservableProperty] private string? _plot;
+    [ObservableProperty] private int? _releaseYear;
+    [ObservableProperty] private double? _rating;
+    [ObservableProperty] private string? _backdropUrl;
+    [ObservableProperty] private string? _director;
+    [ObservableProperty] private string? _cast;
+    [ObservableProperty] private string? _contentRating;
     
     public TimeSpan? Duration { get; set; }
     public TimeSpan? WatchedPosition { get; set; }
@@ -102,6 +102,21 @@ public partial class Channel : ObservableObject
         OnPropertyChanged(nameof(LogoUrl));
         OnPropertyChanged(nameof(BackdropUrl));
         OnPropertyChanged(nameof(CoverUrl));
+    }
+
+    /// <summary>
+    /// Fires PropertyChanged for all metadata fields so the player overlay and detail view
+    /// refresh immediately when TMDB data is applied after the initial render.
+    /// </summary>
+    public void NotifyMetadataChanged()
+    {
+        NotifyVisualsChanged();
+        OnPropertyChanged(nameof(Plot));
+        OnPropertyChanged(nameof(Director));
+        OnPropertyChanged(nameof(Cast));
+        OnPropertyChanged(nameof(Rating));
+        OnPropertyChanged(nameof(ContentRating));
+        OnPropertyChanged(nameof(Description));
     }
 }
 
