@@ -241,7 +241,8 @@ public partial class M3UParser : IM3UParser
 
     /// <summary>
     /// Kanal türünü URL'den tespit eder.
-    /// Kural: .mp4 / .mkv uzantılı içerikler → dizi paterni varsa Series, yoksa VOD.
+    /// Kural: video dosyaları → dizi paterni varsa Series, yoksa VOD.
+    ///        Uzantısız proxy URL'lerinde yıl paterni varsa VOD.
     ///        Diğer tüm içerikler → Live.
     /// </summary>
     private static ChannelType DetectChannelType(string url, string name, string? groupTitle)
@@ -264,9 +265,9 @@ public partial class M3UParser : IM3UParser
         if (IsLinearStreamUrl(lowerUrl))
             return ChannelType.Live;
 
-        // 3. .mp4 veya .mkv dosyaları: önce dizi pattern'ini ara, yoksa VOD
+        // 3. Video dosyaları: önce dizi pattern'ini ara, yoksa VOD
         var urlPath = lowerUrl.Contains('?') ? lowerUrl[..lowerUrl.IndexOf('?')] : lowerUrl;
-        if (urlPath.EndsWith(".mp4") || urlPath.EndsWith(".mkv"))
+        if (IsVideoFileUrl(urlPath))
         {
             // Dizi episod pattern'i varsa (S01E01, 1x01, "Sezon 1 Bölüm 1" vb.) → Series
             if (SeriesInfoParser.IsSeries(name))
@@ -275,7 +276,12 @@ public partial class M3UParser : IM3UParser
             return ChannelType.VOD;
         }
 
-        // 4. Diğer her şey → Live (uzantısız proxy URL'leri, HLS olmayan akışlar vb.)
+        // 4. Bazı M3U provider'ları film URL'lerini uzantısız proxy path ile verir.
+        // Başlıkta yıl varsa ve grup canlı kanal kategorisi gibi durmuyorsa VOD kabul et.
+        if (LooksLikeVodMovieTitle(name) && !LooksLikeLiveGroup(groupTitle))
+            return ChannelType.VOD;
+
+        // 5. Diğer her şey → Live (uzantısız proxy URL'leri, HLS olmayan akışlar vb.)
         return ChannelType.Live;
     }
 
@@ -293,6 +299,44 @@ public partial class M3UParser : IM3UParser
                lowerUrl.Contains("extension=m3u8") ||
                lowerUrl.Contains("extension=ts");
     }
+
+    private static bool IsVideoFileUrl(string urlPath)
+        => urlPath.EndsWith(".mp4") ||
+           urlPath.EndsWith(".mkv") ||
+           urlPath.EndsWith(".avi") ||
+           urlPath.EndsWith(".mov") ||
+           urlPath.EndsWith(".m4v") ||
+           urlPath.EndsWith(".webm");
+
+    private static bool LooksLikeVodMovieTitle(string name)
+        => MovieYearRegex().IsMatch(name);
+
+    private static bool LooksLikeLiveGroup(string? groupTitle)
+    {
+        if (string.IsNullOrWhiteSpace(groupTitle))
+            return false;
+
+        var group = groupTitle.ToLowerInvariant();
+        return group.Contains("abertos") ||
+               group.Contains("rede ") ||
+               group.Contains("globo") ||
+               group.Contains("sbt") ||
+               group.Contains("record") ||
+               group.Contains("band") ||
+               group.Contains("espn") ||
+               group.Contains("esporte") ||
+               group.Contains("sport") ||
+               group.Contains("24h") ||
+               group.Contains("24/7") ||
+               group.Contains("live") ||
+               group.Contains("canli") ||
+               group.Contains("canlı") ||
+               group.Contains("radio") ||
+               group.Contains("religios");
+    }
+
+    [GeneratedRegex(@"(?:\(|\b)(?:19|20)\d{2}(?:\)|\b)", RegexOptions.IgnoreCase)]
+    private static partial Regex MovieYearRegex();
 
     // Regex pattern'ları (Lenient versions)
     [GeneratedRegex(@"tvg-id\s*=\s*(?:""([^""]*)""|([^""\s,]+))", RegexOptions.IgnoreCase)]

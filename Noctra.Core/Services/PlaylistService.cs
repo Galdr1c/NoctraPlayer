@@ -608,6 +608,7 @@ public partial class PlaylistService : IPlaylistService
     {
         using var trace = PerformanceTraceService.Shared?.BeginOperation("DB", "RepairLinearStreamChannelTypesAsync", $"playlist={playlistId}");
         var liveType = (int)ChannelType.Live;
+        var vodType = (int)ChannelType.VOD;
         var linearRepaired = await context.Database.ExecuteSqlInterpolatedAsync($@"
 UPDATE Channels
 SET Type = {liveType}
@@ -662,7 +663,62 @@ WHERE PlaylistId = {playlistId}
   AND lower(Name) NOT LIKE '%bolum%'
   AND lower(Name) NOT LIKE '%episode%';");
 
-        var repaired = linearRepaired + seriesKeywordRepaired;
+        var vodProxyRepaired = await context.Database.ExecuteSqlInterpolatedAsync($@"
+UPDATE Channels
+SET Type = {vodType}
+WHERE PlaylistId = {playlistId}
+  AND Type = {liveType}
+  AND StreamUrl IS NOT NULL
+  AND lower(StreamUrl) NOT LIKE '%/live/%'
+  AND lower(StreamUrl) NOT LIKE '%type=live%'
+  AND lower(StreamUrl) NOT LIKE '%/radio/%'
+  AND lower(StreamUrl) NOT LIKE '%/series/%'
+  AND lower(StreamUrl) NOT LIKE '%/tv_show/%'
+  AND lower(StreamUrl) NOT LIKE '%type=series%'
+  AND lower(StreamUrl) NOT LIKE '%.m3u8%'
+  AND lower(StreamUrl) NOT LIKE '%.m3u%'
+  AND lower(StreamUrl) NOT LIKE '%.ts'
+  AND lower(StreamUrl) NOT LIKE '%.ts?%'
+  AND lower(StreamUrl) NOT LIKE '%format=m3u8%'
+  AND lower(StreamUrl) NOT LIKE '%extension=m3u8%'
+  AND lower(StreamUrl) NOT LIKE '%extension=ts%'
+  AND (
+      lower(StreamUrl) LIKE '%/movie/%'
+      OR lower(StreamUrl) LIKE '%/vod/%'
+      OR lower(StreamUrl) LIKE '%type=vod%'
+      OR lower(StreamUrl) LIKE '%type=movie%'
+      OR lower(StreamUrl) LIKE '%.mp4%'
+      OR lower(StreamUrl) LIKE '%.mkv%'
+      OR lower(StreamUrl) LIKE '%.avi%'
+      OR lower(StreamUrl) LIKE '%.mov%'
+      OR lower(StreamUrl) LIKE '%.m4v%'
+      OR lower(StreamUrl) LIKE '%.webm%'
+      OR Name GLOB '*(19[0-9][0-9])*'
+      OR Name GLOB '*(20[0-9][0-9])*'
+  )
+  AND (
+      GroupTitle IS NULL
+      OR (
+          lower(GroupTitle) NOT LIKE '%abertos%'
+          AND lower(GroupTitle) NOT LIKE '%rede %'
+          AND lower(GroupTitle) NOT LIKE '%globo%'
+          AND lower(GroupTitle) NOT LIKE '%sbt%'
+          AND lower(GroupTitle) NOT LIKE '%record%'
+          AND lower(GroupTitle) NOT LIKE '%band%'
+          AND lower(GroupTitle) NOT LIKE '%espn%'
+          AND lower(GroupTitle) NOT LIKE '%esporte%'
+          AND lower(GroupTitle) NOT LIKE '%sport%'
+          AND lower(GroupTitle) NOT LIKE '%24h%'
+          AND lower(GroupTitle) NOT LIKE '%24/7%'
+          AND lower(GroupTitle) NOT LIKE '%live%'
+          AND lower(GroupTitle) NOT LIKE '%canli%'
+          AND lower(GroupTitle) NOT LIKE '%canlı%'
+          AND lower(GroupTitle) NOT LIKE '%radio%'
+          AND lower(GroupTitle) NOT LIKE '%religios%'
+      )
+  );");
+
+        var repaired = linearRepaired + seriesKeywordRepaired + vodProxyRepaired;
 
         if (repaired > 0)
         {

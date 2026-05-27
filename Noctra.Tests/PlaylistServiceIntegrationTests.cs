@@ -427,6 +427,61 @@ namespace Noctra.Tests
             Assert.Contains(series, c => c.StreamUrl == "xtream-series://123");
             Assert.Contains(series, c => c.StreamUrl == "stalker-series://456");
         }
+
+        [Fact]
+        public async Task GetChannelsFilteredAsync_RepairsYearTitledProxyMoviesFromLiveToVod()
+        {
+            // Arrange
+            var service = CreateService();
+            int playlistId;
+
+            using (var context = new AppDbContext(_options))
+            {
+                var playlist = new Playlist
+                {
+                    Name = "M3U Movies",
+                    Url = "http://provider.test/get.php",
+                    IsActive = true,
+                    ChannelCount = 2,
+                    CreatedAt = DateTime.UtcNow,
+                    LastUpdated = DateTime.UtcNow
+                };
+
+                context.Playlists.Add(playlist);
+                await context.SaveChangesAsync();
+                playlistId = playlist.Id;
+
+                context.Channels.AddRange(
+                    new Channel
+                    {
+                        PlaylistId = playlistId,
+                        Name = "É Quase Verdade (2026)",
+                        GroupTitle = "Filmes | Ficcao",
+                        StreamUrl = "http://provider.test/stream/12345",
+                        Type = ChannelType.Live
+                    },
+                    new Channel
+                    {
+                        PlaylistId = playlistId,
+                        Name = "Canal 2026",
+                        GroupTitle = "ABERTOS",
+                        StreamUrl = "http://provider.test/channel/2026",
+                        Type = ChannelType.Live
+                    });
+                await context.SaveChangesAsync();
+            }
+
+            // Act
+            var movies = await service.GetChannelsFilteredAsync(playlistId, type: ChannelType.VOD);
+            var live = await service.GetChannelsFilteredAsync(playlistId, type: ChannelType.Live);
+
+            // Assert
+            var movie = Assert.Single(movies);
+            Assert.Equal("É Quase Verdade (2026)", movie.Name);
+
+            var channel = Assert.Single(live);
+            Assert.Equal("Canal 2026", channel.Name);
+        }
         private PlaylistService CreateService()
         {
             return new PlaylistService(
