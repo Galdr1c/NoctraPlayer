@@ -7,6 +7,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Gecmisten Sil Context Menu Duzenlemesi (2026-05-27)
+- [Duzeltildi] **Canli TV Gecmisinden Silme Calismiyordu**: Gecmis sayfasindaki Canli TV bolumunde sag tik -> "Gecmisten Sil" menusu calismiyordu. Sebep: MenuItem `Command` binding`i `#HistoryScrollViewer` isimli element referansi kullaniyordu ancak bu referans bir `DataTemplate` (ItemsControl.ItemTemplate) icinde oldugu icin XAML namescope sinirini asamiyor ve komut hicbir zaman calismiyordu. `Click="Context_RemoveFromHistory_Click"` event handler`ina gecirilerek sorun cozuldu.
+- [Test] dotnet build basarili.
+
 ### Series Siniflandirma ve TMDB Detay Duzeltmeleri (2026-05-27)
 - [Duzeltildi] **Dizi Grup Basligi Canli TV'yi Series'e Tasimiyor**: `TR • DIZI`, `TR • 7/24 DIZI`, `BEIN DIZILER` gibi group-title degerleri artik tek basina tum grubu Series yapmaz. Ayni grupta yalnizca `S01E01`, `1x01`, `Sezon/Bolum` veya series URL sinyali tasiyan satirlar Series kabul edilir; lineer kanallar Live kalir.
 - [Duzeltildi] **Mevcut Hatali Series Kayitlari Onarimi**: Daha once dizi group-title'i nedeniyle Series'e kaydedilmis canli kanallar playlist okunurken otomatik Live'a geri alinir. Onarim yapildiginda series aggregation tekrar tetiklenerek eski hatali Series metadata kayitlarinin temizlenmesi saglanir.

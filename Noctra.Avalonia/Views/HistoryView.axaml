@@ -27,9 +27,7 @@
                   <controls:LiveTvCard Margin="0,0,16,16">
                     <controls:LiveTvCard.ContextMenu>
                       <ContextMenu>
-                        <MenuItem Header="{loc:Translate History.Remove}" 
-                                  Command="{Binding #HistoryScrollViewer.((vm:MainViewModel)DataContext).RemoveFromHistoryCommand}"
-                                  CommandParameter="{Binding}">
+                        <MenuItem Header="{loc:Translate History.Remove}" Click="Context_RemoveFromHistory_Click">
                           <MenuItem.Icon>
                             <materialIcons:MaterialIcon Kind="DeleteOutline" />
                           </MenuItem.Icon>

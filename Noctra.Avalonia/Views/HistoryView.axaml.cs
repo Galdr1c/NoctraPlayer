@@ -84,6 +84,20 @@ public partial class HistoryView : UserControl
         }
     }
 
+    private async void Context_RemoveFromHistory_Click(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (sender is not MenuItem menuItem) return;
+            var media = ResolveContextMedia(menuItem);
+            if (media != null && ViewModel != null) await ViewModel.RemoveFromHistoryCommand.ExecuteAsync(media);
+        }
+        catch (Exception ex)
+        {
+            if (ViewModel != null) ViewModel.StatusMessage = $"Hata: {ex.Message}";
+        }
+    }
+
     private static object? ResolveContextMedia(MenuItem menuItem)
     {
         if (menuItem.CommandParameter is Channel || menuItem.CommandParameter is Series) return menuItem.CommandParameter;
