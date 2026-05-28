@@ -7,7 +7,13 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
-### M3U İçerik Türü Tespiti Yeniden Yazıldı (2026-05-28)
+### M3U İlk Yüklemede Series Ekranı Boş Görünüyordu (2026-05-28)
+
+- [Düzeltildi] **Race Condition: Series/VOD Ekranı İlk Girişte Boş Kalıyordu**: M3U profili ilk kez yüklenirken `AddFromUrlAsync` içindeki aggregation fire-and-forget olarak başlatılıp hemen return ediliyor. Aggregation hızlı biterse `RaiseAggregationCompleted` tetiklendiğinde `SelectedPlaylist` henüz null olduğundan `OnAggregationCompleted` handler'ındaki `SelectedPlaylist?.Id == playlistId` koşulu false dönüyor ve `LoadHomeContentAsync` hiç çağrılmıyordu. Profil değiştirince veya uygulamayı yeniden açınca veri DB'de hazır olduğu için görünüyordu.
+- [Düzeltildi] **M3U Yükleme Tamamlandığında `LoadHomeContentAsync` Direkt Çağrılıyor**: `LoadPlaylistsAsync` sonrasına `await LoadHomeContentAsync()` eklendi. Artık aggregation ne zaman biterse bitsin, `LoadPlaylistsAsync` → `LoadHomeContentAsync` zinciri garantili çalışıyor ve Series/VOD ekranları ilk girişte dolu geliyor.
+- [Doğrulama] `dotnet build` başarılı, 0 hata.
+
+
 
 - [Değişti] **`DetectChannelType` Sadeleştirildi**: Grup başlığı analizi, yıl pattern'i ve video uzantısı kontrolleri kaldırıldı. Kural artık üç adım: URL'de `.ts`/`/ts`/`.m3u`/`/m3u`/`.m3u8`/`/m3u8` varsa → Live; başlıkta sezon+bölüm pattern'i varsa → Series; diğer her şey → VOD.
 - [Düzeltildi] **Uzantısız Proxy URL'leri Artık VOD**: `/ts` içermeyen proxy URL'leri (örn. `http://provider/play/TOKEN`) daha önce Live'a düşüyordu. Artık doğru şekilde VOD olarak sınıflandırılıyor.

@@ -677,6 +677,9 @@ public partial class MainViewModel : ObservableObject
                                                             _dispatcherService.BeginInvoke(async () =>
                                                             {
                                                                 await LoadPlaylistsAsync();
+                                                                // Aggregation may have completed before SelectedPlaylist was set (race condition).
+                                                                // Explicitly reload home content so Series/VOD tabs are populated.
+                                                                await LoadHomeContentAsync();
                                                                 StatusMessage = _localizationService.GetString("Main.Status.ChannelsReadyOrganizingSeries");
                                                                 IsChannelLoading = false;
                                                                 ChannelLoadingProgress = 100;
