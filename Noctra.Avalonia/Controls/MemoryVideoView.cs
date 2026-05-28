@@ -240,6 +240,12 @@ public class MemoryVideoView : NativeControlHost
 
     private bool IsOurProcessActive()
     {
+        // Win32 foreground window detection (GetForegroundWindow) is Windows-only.
+        // On Linux/macOS there is no native HWND airspace issue, so we always
+        // report active to keep the overlay fully functional on those platforms.
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            return true;
+
         try
         {
             var fg = GetForegroundWindow();
@@ -291,6 +297,17 @@ public class MemoryVideoView : NativeControlHost
     {
         _focusController?.OnLayoutChanged(this.IsEffectivelyVisible);
         QueueOverlayPositionUpdate();
+
+        // CPU/battery optimization: only poll focus while the video view is visible.
+        // When the user navigates to another tab, stop the timer to avoid unnecessary 200ms polling.
+        if (_focusCheckTimer != null)
+        {
+            bool shouldRun = this.IsEffectivelyVisible;
+            if (shouldRun && !_focusCheckTimer.IsEnabled)
+                _focusCheckTimer.Start();
+            else if (!shouldRun && _focusCheckTimer.IsEnabled)
+                _focusCheckTimer.Stop();
+        }
     }
 
     private void FocusCheckTimer_Tick(object? sender, EventArgs e)
@@ -376,15 +393,24 @@ public class MemoryVideoView : NativeControlHost
 
         try 
         {
-            var topLeft = this.PointToScreen(new Point(0, 0));
+            // PointToScreen returns physical pixels, but Window.Position expects
+            // device-independent pixels (dips). Divide by RenderScaling to fix
+            // HiDPI (125%/150%) and multi-monitor positioning issues.
+            var physicalPos = this.PointToScreen(new Point(0, 0));
+            var scaling = this.GetVisualRoot()?.RenderScaling ?? 1.0;
+            var dipPos = new PixelPoint(
+                (int)Math.Round(physicalPos.X / scaling),
+                (int)Math.Round(physicalPos.Y / scaling)
+            );
+
             var width = Math.Max(0, Bounds.Width);
             var height = Math.Max(0, Bounds.Height);
 
             if (width <= 0 || height <= 0)
                 return;
             
-            if (_overlayWindow.Position != topLeft)
-                _overlayWindow.Position = topLeft;
+            if (_overlayWindow.Position != dipPos)
+                _overlayWindow.Position = dipPos;
                 
             if (Math.Abs(_overlayWindow.Width - width) > 0.5)
                 _overlayWindow.Width = width;

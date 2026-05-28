@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Gereksiz LibVLCSharp.Avalonia Paket Bağımlılığı Kaldırıldı (2026-05-28)
+- [Temizlik] **Kullanılmayan Paket Referansı Silindi**: `LibVLCSharp.Avalonia` (v3.9.5) paketi projede hiçbir `.cs` dosyasında kullanılmıyor. Kendi `MemoryVideoView` sınıfımız yazıldığı için `LibVLCSharp.Avalonia.VideoView` hiçbir yerde referans alınmıyordu. Paket sadece derleme boyutunu şişiriyordu.
+
+### macOS/Linux Platform Desteği: Overlay Focus Artık Win32 Dışında da Çalışıyor (2026-05-28)
+
+- [Düzeltildi] **Windows-only P/Invoke Linux/macOS'ta Sessizce Çöküyordu**:  metodu  Win32 API'sini çağırıyordu. Linux/macOS'ta  bulunamadığı için  catch'e düşüp  dönüyordu. Sonuç: Overlay her 200ms'de bir gizleniyor, player kontrolleri görünmez oluyordu.
+- [Düzeltildi] **Platform Kontrolü Eklendi**:  ile koruma eklendi. Windows dışı platformlarda  dönülüyor — çünkü HWND airspace sorunu Windows'a özgüdür, macOS/Linux'ta overlay floating window zaten sorunsuz çalışır.
+- [Doğrulama] 50/50 OverlayFocusController testi geçiyor.
+
+### CPU/Pil Optimizasyonu: 200ms Focus Polling Sadece Video Görünürken Çalışıyor (2026-05-28)
+
+- [Optimize Edildi] **Focus Check Timer Sürekli Çalışıyordu**: 'daki 200ms , video oynarken, duraklıyken ve hatta kullanıcı başka sekmeye geçmiş olsa bile sürekli ateşleniyordu. Gereksiz CPU ve pil tüketimine yol açıyordu.
+- [Düzeltildi] **Timer Sadece  İken Çalışıyor**:  handler'ına timer start/stop mantığı eklendi. Kullanıcı başka sekmeye geçince timer duruyor, geri dönünce yeniden başlıyor. Alt-Tab sırasında (layout hâlâ görünür) timer çalışmaya devam ediyor — focus takibi için gerekli.
+- [Doğrulama] 50/50 OverlayFocusController testi geçiyor, hiçbir regresyon yok.
+
+### HiDPI/Çoklu Monitör Desteği: Overlay Penceresi Artık Kaymıyor (2026-05-28)
+
+- [Düzeltildi] **Overlay Penceresi Yüksek DPI''da Kayıyordu**:  metodu  ile fiziksel piksel koordinatı alıp doğrudan ''a atıyordu. Oysa  device-independent pixel (dip) bekler. 125%/150% DPI''da overlay,  farkı kadar kayıyordu.
+- [Düzeltildi] **Çoklu Monitörde Overlay Kayması Giderildi**: Farklı DPI ölçeklerine sahip monitörler arasında geçişte overlay''in yanlış pozisyonda görünmesi sorunu çözüldü. Artık  sonucu  ile bölünerek dip''e dönüştürülüyor.
+- [İyileştirme] **Kesme Değil Yuvarlama Kullanılıyor**: Floating-point imprecision''dan kaynaklanabilecek 1px''lik truncation hatalarını önlemek için  kullanıldı.
+- [Doğrulama] 50/50 OverlayFocusController testi geçiyor, hiçbir regresyon yok.
 
 ### M3U İlk Yüklemede Series Ekranı Boş Görünüyordu (2026-05-28)
 
