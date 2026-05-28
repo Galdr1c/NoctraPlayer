@@ -576,7 +576,7 @@ public static partial class SeriesInfoParser
     private static partial Regex SymbolsRegex();
 
     // Phase 1: Country prefixes like "TR | ", "EN.", "DE:" and bracketed tags like "(FR-)", "(S|UK)", "[VIP]", "|TR|", "{HD}"
-    [GeneratedRegex(@"^\s*(?:(?:[\[\(\{\|]\s*(?:TR|EN|UK|US|EU|CA|AU|DE|FR|ES|IT|PT|NL|AL|CL|AR|RU|PL|GR|SE|DK|VIP|HD|FHD|UHD|4K|S\|[A-Z]{2})\s*[\-\|:>\.]?\s*[\]\)\}\|]\s*)+|(?:(?:TR|EN|UK|US|EU|CA|AU|DE|FR|ES|IT|PT|NL|AL|CL|AR|RU|PL|GR|SE|DK)\s*[\-\|:>\.]\s*)+)+", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^\s*(?:(?:[\[\(\{|]\s*(?:TR|EN|UK|US|EU|CA|AU|DE|FR|ES|IT|PT|NL|AL|CL|AR|RU|PL|GR|SE|DK|IN|NO|FI|BE|CH|AT|IE|RO|BG|HU|CZ|SK|HR|SI|RS|BA|MK|ME|UA|BY|MD|BR|MX|CO|PE|VE|EC|GT|CU|BO|DO|HN|PY|SV|CR|UY|PA|NI|PR|ZA|NG|KE|GH|EG|MA|DZ|TN|LY|SY|IQ|JO|LB|YE|OM|QA|KW|AE|SA|PK|BD|AF|IR|IL|CN|JP|KR|VN|TH|ID|MY|PH|SG|TUR|ENG|USA|GBR|CAN|AUS|GER|FRA|ESP|ITA|POR|NLD|ALB|POL|GRE|SWE|DNK|NOR|FIN|BEL|CHE|AUT|ROU|BGR|HUN|CZE|SVK|HRV|SRB|UKR|RUS|ARA|IND|PAK|BRA|MEX|ARG|COL|PER|CHL|VEN|NGA|ZAF|VIP|HD|FHD|UHD|4K|S\|[A-Z]{2})\s*[\-\|:>\.]?\s*[\]\)\}\|]\s*)+|(?:(?:TR|EN|UK|US|EU|CA|AU|DE|FR|ES|IT|PT|NL|AL|CL|AR|RU|PL|GR|SE|DK|IN|NO|FI|BE|CH|AT|IE|RO|BG|HU|CZ|SK|HR|SI|RS|BA|MK|ME|UA|BY|MD|BR|MX|CO|PE|VE|EC|GT|CU|BO|DO|HN|PY|SV|CR|UY|PA|NI|PR|ZA|NG|KE|GH|EG|MA|DZ|TN|LY|SY|IQ|JO|LB|YE|OM|QA|KW|AE|SA|PK|BD|AF|IR|IL|CN|JP|KR|VN|TH|ID|MY|PH|SG|TUR|ENG|USA|GBR|CAN|AUS|GER|FRA|ESP|ITA|POR|NLD|ALB|POL|GRE|SWE|DNK|NOR|FIN|BEL|CHE|AUT|ROU|BGR|HUN|CZE|SVK|HRV|SRB|UKR|RUS|ARA|IND|PAK|BRA|MEX|ARG|COL|PER|CHL|VEN|NGA|ZAF)\s*[\-\|:>\.]\s*)+)+", RegexOptions.IgnoreCase)]
     private static partial Regex CountryPrefixRegex();
 
     [GeneratedRegex(@"^\s*(?:[^|]+?\s*\|\s*)", RegexOptions.IgnoreCase)]

@@ -176,6 +176,7 @@ public partial class M3UParser : IM3UParser
                 {
                     currentChannel.StreamUrl = line;
                     currentChannel.Type = DetectChannelType(line, currentChannel.Name, currentChannel.GroupTitle);
+                    ProcessGroupTitleAndNameFallback(currentChannel);
                     channels.Add(currentChannel);
                     currentChannel = null;
                 }
@@ -249,6 +250,12 @@ public partial class M3UParser : IM3UParser
     {
         var lowerUrl = url.ToLowerInvariant();
 
+        if (lowerUrl.Contains("/serie/") || lowerUrl.Contains("/series/") || lowerUrl.Contains("/dizi/") || lowerUrl.Contains("/diziler/") || lowerUrl.Contains("/tv_show/") || lowerUrl.Contains("/tv_shows/") || lowerUrl.Contains("type=series"))
+            return ChannelType.Series;
+
+        if (lowerUrl.Contains("/movie/") || lowerUrl.Contains("/movies/") || lowerUrl.Contains("/film/") || lowerUrl.Contains("/filmler/") || lowerUrl.Contains("/vod/") || lowerUrl.Contains("type=movie") || lowerUrl.Contains("type=vod"))
+            return ChannelType.VOD;
+
         if (IsLinearStreamUrl(lowerUrl))
             return ChannelType.Live;
 
@@ -265,10 +272,38 @@ public partial class M3UParser : IM3UParser
     /// </summary>
     private static bool IsLinearStreamUrl(string lowerUrl)
     {
+        if (lowerUrl.Contains("/movie/") ||
+            lowerUrl.Contains("/movies/") ||
+            lowerUrl.Contains("/vod/") ||
+            lowerUrl.Contains("/film/") ||
+            lowerUrl.Contains("/filmler/") ||
+            lowerUrl.Contains("/serie/") ||
+            lowerUrl.Contains("/series/") ||
+            lowerUrl.Contains("/dizi/") ||
+            lowerUrl.Contains("/diziler/") ||
+            lowerUrl.Contains("/tv_show/") ||
+            lowerUrl.Contains("/tv_shows/") ||
+            lowerUrl.Contains("type=vod") ||
+            lowerUrl.Contains("type=movie") ||
+            lowerUrl.Contains("type=series"))
+        {
+            return false;
+        }
+
         var path = lowerUrl;
         var q = path.IndexOf('?');
         if (q >= 0)
             path = path[..q];
+
+        var lastSlash = path.LastIndexOf('/');
+        if (lastSlash >= 0)
+        {
+            var lastSegment = path[(lastSlash + 1)..];
+            if (lastSegment.Length > 0 && lastSegment.All(char.IsDigit))
+            {
+                return true;
+            }
+        }
 
         return path.EndsWith(".m3u8") ||
                path.EndsWith("/m3u8") ||   // proxy path segment
@@ -338,6 +373,189 @@ public partial class M3UParser : IM3UParser
                msg.Contains("prematurely") || 
                msg.Contains("ended") || 
                msg.Contains("closed");
+    }
+
+    private static readonly HashSet<string> KnownCountryCodes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // 2-Letter Codes
+        "TR", "EN", "UK", "US", "EU", "CA", "AU", "DE", "FR", "ES", "IT", "PT", "NL", "AL", "CL", "AR", "RU", "PL", "GR", "SE", "DK", "IN",
+        "NO", "FI", "BE", "CH", "AT", "IE", "RO", "BG", "HU", "CZ", "SK", "HR", "SI", "RS", "BA", "MK", "ME", "UA", "BY", "MD", "BR", "MX",
+        "CO", "PE", "VE", "EC", "GT", "CU", "BO", "DO", "HN", "PY", "SV", "CR", "UY", "PA", "NI", "PR", "ZA", "NG", "KE", "GH", "EG", "MA",
+        "DZ", "TN", "LY", "SY", "IQ", "JO", "LB", "YE", "OM", "QA", "KW", "AE", "SA", "PK", "BD", "AF", "IR", "IL", "CN", "JP", "KR", "VN",
+        "TH", "ID", "MY", "PH", "SG", "WO",
+
+        // 3-Letter Codes
+        "TUR", "ENG", "USA", "GBR", "CAN", "AUS", "GER", "FRA", "ESP", "ITA", "POR", "NLD", "ALB", "POL", "GRE", "SWE", "DNK", "NOR", "FIN",
+        "BEL", "CHE", "AUT", "ROU", "BGR", "HUN", "CZE", "SVK", "HRV", "SRB", "UKR", "RUS", "ARA", "IND", "PAK", "BRA", "MEX", "ARG", "COL",
+        "PER", "CHL", "VEN", "NGA", "ZAF"
+    };
+
+    private static readonly Dictionary<string, string> CountryNameMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "TURKEY", "TR" }, { "TÜRKİYE", "TR" }, { "TURKIYE", "TR" },
+        { "GERMANY", "DE" }, { "DEUTSCH", "DE" }, { "DEUTSCHLAND", "DE" },
+        { "FRANCE", "FR" }, { "FRENCH", "FR" },
+        { "SPAIN", "ES" }, { "SPANISH", "ES" }, { "ESPANOL", "ES" }, { "ESPAÑA", "ES" },
+        { "ITALY", "IT" }, { "ITALIAN", "IT" }, { "ITALIA", "IT" },
+        { "PORTUGAL", "PT" }, { "PORTUGUESE", "PT" },
+        { "NETHERLANDS", "NL" }, { "DUTCH", "NL" },
+        { "ALBANIA", "AL" }, { "ALBANIAN", "AL" },
+        { "RUSSIA", "RU" }, { "RUSSIAN", "RU" },
+        { "POLAND", "PL" }, { "POLISH", "PL" },
+        { "GREECE", "GR" }, { "GREEK", "GR" },
+        { "SWEDEN", "SE" }, { "SWEDISH", "SE" },
+        { "DENMARK", "DK" }, { "DANISH", "DK" },
+        { "NORWAY", "NO" }, { "NORWEGIAN", "NO" },
+        { "FINLAND", "FI" }, { "FINNISH", "FI" },
+        { "ARABIC", "AR" }, { "ARAB", "AR" },
+        { "ENGLISH", "EN" }, { "UNITED KINGDOM", "UK" }, { "UNITED STATES", "US" }
+    };
+
+    private static string? ExtractCountryCodeFromPrefix(string prefix)
+    {
+        var delimiters = new[] { ' ', '-', '_', '/', '|', '+', '&', '[', ']', '(', ')' };
+        var parts = prefix.Split(delimiters, StringSplitOptions.RemoveEmptyEntries);
+        foreach (var part in parts)
+        {
+            var trimmedPart = part.Trim();
+            if (KnownCountryCodes.Contains(trimmedPart))
+            {
+                return trimmedPart.ToUpperInvariant();
+            }
+            if (CountryNameMap.TryGetValue(trimmedPart, out var code))
+            {
+                return code;
+            }
+        }
+        return null;
+    }
+
+    private static void ProcessGroupTitleAndNameFallback(Channel channel)
+    {
+        if (!string.IsNullOrEmpty(channel.GroupTitle) && channel.GroupTitle != "undefined")
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(channel.Name))
+        {
+            return;
+        }
+
+        var name = channel.Name.Trim();
+
+        // 1. Arabic character check
+        if (ContainsArabic(name))
+        {
+            channel.GroupTitle = "AR";
+            return;
+        }
+
+        // 2. Bracket-based prefix: [TR] Kanal D
+        var bracketMatch = Regex.Match(name, @"^\[(?<group>[A-Za-z0-9_\-\s]+)\]\s*(?<rest>.+)$");
+        if (bracketMatch.Success)
+        {
+            var rawGroup = bracketMatch.Groups["group"].Value.Trim();
+            var rest = bracketMatch.Groups["rest"].Value.Trim();
+
+            var countryCode = ExtractCountryCodeFromPrefix(rawGroup);
+            channel.GroupTitle = countryCode ?? rawGroup;
+            channel.Name = rest;
+            return;
+        }
+
+        // 3. Delimiter-based prefix: TR: 50M2, DU-TR: 50M2, IN | Sport: Star Sports, TR; Hayat, NW: Aljazeera, R24: Vikings, AN-DU: Movie
+        int delimIndex = -1;
+        for (int i = 0; i < name.Length - 1; i++)
+        {
+            char c = name[i];
+            if ((c == ':' || c == ';' || c == '|') && char.IsWhiteSpace(name[i + 1]))
+            {
+                delimIndex = i;
+                break;
+            }
+        }
+
+        if (delimIndex > 0)
+        {
+            var prefix = name[..delimIndex].Trim();
+            var rest = name[(delimIndex + 1)..].Trim();
+
+            var countryCode = ExtractCountryCodeFromPrefix(prefix);
+            if (countryCode != null)
+            {
+                channel.GroupTitle = countryCode;
+                channel.Name = rest;
+                return;
+            }
+            
+            // Otherwise, it must be fully uppercase alphanumeric, hyphens, spaces, pipes
+            if (Regex.IsMatch(prefix, @"^[A-Z0-9_\-\s\|]+$"))
+            {
+                channel.GroupTitle = prefix;
+                channel.Name = rest;
+                return;
+            }
+        }
+
+        // 4. Space-separated prefix: EN The Amateur, ENl Titan
+        var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length > 1)
+        {
+            var firstWord = words[0];
+            string? matchedCode = null;
+            if (KnownCountryCodes.Contains(firstWord))
+            {
+                matchedCode = firstWord.ToUpperInvariant();
+            }
+            else if (CountryNameMap.TryGetValue(firstWord, out var mapped))
+            {
+                matchedCode = mapped;
+            }
+            else if (firstWord.Length > 2 && firstWord.EndsWith('l'))
+            {
+                var codePart = firstWord[..^1];
+                if (KnownCountryCodes.Contains(codePart))
+                {
+                    matchedCode = codePart.ToUpperInvariant();
+                }
+                else if (CountryNameMap.TryGetValue(codePart, out var mapped2))
+                {
+                    matchedCode = mapped2;
+                }
+            }
+
+            if (matchedCode != null)
+            {
+                channel.GroupTitle = matchedCode;
+                channel.Name = string.Join(" ", words.Skip(1));
+                return;
+            }
+        }
+
+        // 5. Default fallbacks if no prefix matched
+        if (channel.Type == ChannelType.VOD)
+        {
+            channel.GroupTitle = "Others";
+        }
+        else if (channel.Type == ChannelType.Series)
+        {
+            channel.GroupTitle = "Others";
+        }
+        else
+        {
+            channel.GroupTitle = "Others";
+        }
+    }
+
+    private static bool ContainsArabic(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return false;
+        return text.Any(c => (c >= 0x0600 && c <= 0x06FF) || 
+                             (c >= 0x0750 && c <= 0x077F) || 
+                             (c >= 0x08A0 && c <= 0x08FF) || 
+                             (c >= 0xFB50 && c <= 0xFDFF) || 
+                             (c >= 0xFE70 && c <= 0xFEFF));
     }
 
     private List<Channel>? _lastPartialChannels;

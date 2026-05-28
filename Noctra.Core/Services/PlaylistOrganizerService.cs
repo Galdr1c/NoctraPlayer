@@ -206,6 +206,16 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
             path = path[..q];
         }
 
+        var lastSlash = path.LastIndexOf('/');
+        if (lastSlash >= 0)
+        {
+            var lastSegment = path[(lastSlash + 1)..];
+            if (lastSegment.Length > 0 && lastSegment.All(char.IsDigit))
+            {
+                return true;
+            }
+        }
+
         return path.EndsWith(".m3u8") ||
                path.EndsWith("/m3u8") ||   // proxy path segment
                path.EndsWith(".ts") ||
