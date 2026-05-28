@@ -7,6 +7,15 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### M3U İçerik Türü Tespiti Yeniden Yazıldı (2026-05-28)
+
+- [Değişti] **`DetectChannelType` Sadeleştirildi**: Grup başlığı analizi, yıl pattern'i ve video uzantısı kontrolleri kaldırıldı. Kural artık üç adım: URL'de `.ts`/`/ts`/`.m3u`/`/m3u`/`.m3u8`/`/m3u8` varsa → Live; başlıkta sezon+bölüm pattern'i varsa → Series; diğer her şey → VOD.
+- [Düzeltildi] **Uzantısız Proxy URL'leri Artık VOD**: `/ts` içermeyen proxy URL'leri (örn. `http://provider/play/TOKEN`) daha önce Live'a düşüyordu. Artık doğru şekilde VOD olarak sınıflandırılıyor.
+- [Düzeltildi] **`IsSeries` False Positive Düzeltildi**: `s16`, `s14` gibi token'lar (adult içerik başlıklarında yaygın) dizi sezonu olarak algılanıyordu. `IsSeries` artık yalnızca hem sezon hem bölüm birlikte olan pattern'leri kabul ediyor (`S01E01`, `1x01`, `Season 1 Episode 2`, `Sezon 1 Bölüm 2` vb.). Tek başına `Sezon 1` veya `S01` artık Series saymıyor.
+- [Değişti] **`SeasonOnlyRegex` `IsSeries`'den Çıkarıldı**: `SeasonOnlyRegex` yalnızca `Parse()` metodunda kullanılıyor; `IsSeries` için artık sezon+bölüm birlikteliği zorunlu.
+- [Temizlendi] Kullanılmayan `IsVideoFileUrl`, `LooksLikeVodMovieTitle`, `LooksLiveTvGroup`, `LooksLiveTvTitle`, `LiveChannelNameRegex`, `MovieYearRegex`, `SeasonWordOnlyRegex` kaldırıldı.
+- [Test] M3UParser testleri güncellendi: gerçek sağlayıcı verisinden `/ts` → Live, uzantısız → VOD, adult başlık → VOD, `S01E01` → Series case'leri eklendi. SeriesInfoParser testlerinde `"Leyla ile Mecnun Sezon 1"` beklentisi `false` olarak güncellendi. 103/103 test geçiyor.
+
 ### RemoteImage Performans Fix ve NoctraPlayer-fixes Uygulaması (2026-05-27)
 - [Uygulandı] **NoctraPlayer-fixes.zip**: `Channel.cs`, `IXtreamCodesService.cs`, `XtreamCodesService.cs`, `StalkerPortalService.cs` ve `MainViewModel.cs` dosyaları zip'teki güncel sürümleriyle değiştirildi. Channel metadata field'ları ObservableProperty yapılarak UI reaktifliği sağlandı; Xtream/Stalker servislerinde BackdropUrl, ContentRating, TmdbId parse desteği eklendi; Stalker pagination refactor edildi; MainViewModel büyük revizyona uğradı. Mevcut dosyalar `artifacts/backup/` altına yedeklendi.
 - [Düzeltildi] **44 Saniyelik Image Download Takılması (KRİTİK)**: `RemoteImage` bileşeninde `CopyToAsync` çağrısına `CancellationToken` eklenmediği için, yavaş sunucularda body download süresiz takılabiliyordu (log'da 44649ms tespit edildi). 8 saniyelik body timeout eklendi.

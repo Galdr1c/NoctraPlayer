@@ -74,7 +74,7 @@ public class SeriesInfoParserTests
     [InlineData("beIN SPORTS - 1", false)]
     [InlineData("The Boys S03E01", true)]
     [InlineData("Vikings 5x10", true)]
-    [InlineData("Leyla ile Mecnun Sezon 1", true)]
+    [InlineData("Leyla ile Mecnun Sezon 1", false)]
     public void IsSeries_IdentifiesCorrectType(string title, bool expectedIsSeries)
     {
         var result = SeriesInfoParser.IsSeries(title);

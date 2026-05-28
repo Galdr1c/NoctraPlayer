@@ -63,18 +63,16 @@ public static partial class SeriesInfoParser
     public static bool IsSeries(string? title)
     {
         if (string.IsNullOrWhiteSpace(title)) return false;
-
-        // If it looks like a 24/7 or Live channel, it's not a standard episodic series
         if (IsLiveSeries(title)) return false;
 
-        return SxeRegex().IsMatch(title) || 
-               XRegex().IsMatch(title) || 
-               TurkishRegex().IsMatch(title) || 
-               TurkishAltRegex().IsMatch(title) ||
-               TurkishEpisodeOnlyRegex().IsMatch(title) ||
-               EnglishRegex().IsMatch(title) ||
-               SeriesPatternHyphen().IsMatch(title) ||
-               SeasonOnlyRegex().IsMatch(title) ||
+        // Hem sezon hem bölüm birlikte olmalı
+        return SxeRegex().IsMatch(title) ||       // S01E01
+               XRegex().IsMatch(title) ||          // 1x01
+               SeriesPatternHyphen().IsMatch(title) || // S01-E01
+               TurkishRegex().IsMatch(title) ||    // Sezon 1 Bölüm 2
+               TurkishAltRegex().IsMatch(title) || // 1. Sezon 2. Bölüm
+               TurkishEpisodeOnlyRegex().IsMatch(title) || // 5. Bölüm
+               EnglishRegex().IsMatch(title) ||    // Season 1 Episode 2
                SpanishRegex().IsMatch(title) ||
                PortugueseRegex().IsMatch(title) ||
                FrenchRegex().IsMatch(title) ||

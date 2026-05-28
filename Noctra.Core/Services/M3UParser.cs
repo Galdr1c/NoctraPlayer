@@ -275,6 +275,7 @@ public partial class M3UParser : IM3UParser
                path.EndsWith(".ts") ||
                path.EndsWith("/ts") ||     // proxy path segment — en yaygın canlı TV göstergesi
                path.EndsWith(".m3u") ||
+               path.EndsWith("/m3u") ||
                lowerUrl.Contains("format=m3u8") ||
                lowerUrl.Contains("extension=m3u8") ||
                lowerUrl.Contains("extension=ts");

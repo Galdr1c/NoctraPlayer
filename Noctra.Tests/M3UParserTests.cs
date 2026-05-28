@@ -50,6 +50,10 @@ namespace Noctra.Tests
         [InlineData("#EXTINF:-1 group-title=\"Animação\",Your Name (2016)\nhttp://provider.test/stream/67890", ChannelType.VOD)]
         // ── Uzantısız proxy URL, dizi pattern'i var → Series
         [InlineData("#EXTINF:-1 group-title=\"Series\",Breaking Bad S02E05\nhttp://provider.test/stream/99999", ChannelType.Series)]
+        // ── Adult başlıklar: s16/s14 gibi token'lar dizi pattern'i değil → VOD
+        [InlineData("#EXTINF:-1 group-title=\"♦️[HOT] Adultos\",TitTorture06 s16 ChanelPreston JadaStevens [Adulto]\nhttp://bmnew26.site:80/play/tE-icPf9jCprKLppYTgq9kuyM_PcMiPyABC", ChannelType.VOD)]
+        [InlineData("#EXTINF:-1 group-title=\"♦️[HOT] Adultos\",Spanking03 s14 JohnStagliano KellyDivine [Adulto]\nhttp://bmnew26.site:80/play/tE-icPf9jCprKLppYTgq9kuyM_PcMiPyDEF", ChannelType.VOD)]
+        [InlineData("#EXTINF:-1 group-title=\"♦️[HOT] Adultos\",StretchClass14Scene02 s02 JohnStagliano AnikkaAlbrite [Adulto]\nhttp://bmnew26.site:80/play/tE-icPf9jCprKLppYTgq9kuyM_PcMiPyGHI", ChannelType.VOD)]
         public async Task ParseAsync_ShouldDetectCorrectType(string m3uEntry, ChannelType expectedType)
         {
             // Arrange
