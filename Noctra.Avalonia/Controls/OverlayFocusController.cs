@@ -90,10 +90,11 @@ public sealed class OverlayFocusController
     {
         IsLayoutVisible = isEffectivelyVisible;
 
-        // Optimization: Immediate hide if we lose focus AND layout visibility
-        // but avoid immediate hide if we HAVE focus to prevent flicker during layout transitions.
-        // The timer tick will eventually hide it if it stays hidden.
-        if (!IsLayoutVisible && !IsRootActive)
+    // Hide the overlay whenever layout visibility is lost, regardless of focus state.
+    // Previously we relied on the timer tick to handle the `IsRootActive=true` case,
+    // but the 200ms timer is now stopped when the layout is not visible (CPU optimization),
+    // so we must hide immediately to prevent the overlay from lingering on screen.
+    if (!IsLayoutVisible)
         {
             if (_isOverlayCurrentlyVisible())
             {
@@ -101,7 +102,7 @@ public sealed class OverlayFocusController
                 HideCallCount++;
             }
         }
-        else if (IsLayoutVisible && IsRootActive)
+        else if (IsRootActive)
         {
             // Immediate show if we have focus and become visible
             if (!_isOverlayCurrentlyVisible())

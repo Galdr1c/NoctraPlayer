@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Layout Gizliyken Overlay'in Ekranda Kalması Düzeltildi (2026-05-28)
+
+- [Düzeltildi] **Timer Durdurulunca Overlay Ekranda Kalıyordu**:  yalnızca  durumunda overlay'i gizliyordu. CPU optimizasyonu kapsamında 200ms'lik focus timer layout görünmezken durdurulunca, timer tick'i hiç ateşlenmediği için  iken overlay sonsuza kadar görünür kalıyordu. Kullanıcı buffer shield ekranındayken veya video overlay açıkken geri/ESC tuşuna basınca player kapanıyor ama overlay kontrolleri ekranda donup kalıyordu.
+- [Düzeltildi] **Koşul  Olarak Değiştirildi**: Artık layout görünmez olduğu anda root aktiflik durumuna bakılmaksızın overlay hemen gizleniyor, timer tick'ine gerek kalmıyor.
+- [Test] **56/56 OverlayFocusController testi geçiyor.** J grubu (6 yeni test) bu senaryoyu kapsar: layout gizliyken root aktif olsa bile anlık gizleme, idempotency, geri dönüşte restore, hiç timer tick'i gerekmeden gizli kalma, full ClosePlayer akışı ve focus loss+return sonrası layout kapalıyken gizli kalma.
+
 ### Gereksiz LibVLCSharp.Avalonia Paket Bağımlılığı Kaldırıldı (2026-05-28)
 - [Temizlik] **Kullanılmayan Paket Referansı Silindi**: `LibVLCSharp.Avalonia` (v3.9.5) paketi projede hiçbir `.cs` dosyasında kullanılmıyor. Kendi `MemoryVideoView` sınıfımız yazıldığı için `LibVLCSharp.Avalonia.VideoView` hiçbir yerde referans alınmıyordu. Paket sadece derleme boyutunu şişiriyordu.
 

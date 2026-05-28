@@ -15,8 +15,9 @@
 //   G. Çift çağrı koruması (idempotency)             (5 test)
 //   H. Hızlı ardışık geçişler (rapid-fire)           (5 test)
 //   I. Kombine senaryo (alt-tab + layout + rapid)    (5 test)
+//   J. LAYOUT FIX: Timer durunca anlık gizleme       (6 test)
 //
-// TOPLAM: 50 test
+// TOPLAM: 56 test
 // ============================================================
 
 using Xunit;
@@ -454,20 +455,21 @@ public class OverlayFocusControllerTests_D_PersistentHideBugRegression
 public class OverlayFocusControllerTests_E_LayoutTransitions
 {
     [Fact]
-    public void E1_LayoutFalse_WhileRootActive_ShouldHideEventually_ByTimer()
+    public void E1_LayoutFalse_WhileRootActive_ShouldHideImmediately()
     {
-        // IsRootActive=true iken layout=false → Hemen Hide çağrılmamalı (titreşim önleme), 
-        // ancak timer bir sonraki tick'te gizlemeli.
+        // YENİ DAVRANIŞ (CPU optimizasyonu fix'i):
+        // IsRootActive=true iken layout=false → Hemen Hide çağrılır.
+        // Eskiden timer tick'ine güveniyorduk, ancak timer artık layout
+        // görünmezken durdurulduğu için overlay sonsuza kadar görünür kalıyordu.
         var h = new OverlayHarness();
         h.Tick();
         h.ClearLog();
 
         h.Layout(false); // IsRootActive hâlâ true
-        Assert.DoesNotContain("HIDE", h.Log); // Hemen gizlenmez
 
-        h.Tick(); // Timer gizlemeli
-        Assert.False(h.OverlayVisible);
+        // Yeni davranış: timer durduğu için hemen gizlenmeli
         Assert.Contains("HIDE", h.Log);
+        Assert.False(h.OverlayVisible);
     }
 
     [Fact]
@@ -747,23 +749,25 @@ public class OverlayFocusControllerTests_H_RapidFire
     }
 
     [Fact]
-    public void H4_RapidLayoutToggle_ProcessAlwaysActive_NoSpuriousHides()
+    public void H4_RapidLayoutToggle_ProcessAlwaysActive_EndsCorrectly()
     {
+        // YENİ DAVRANIŞ: Layout(false) artık hemen Hide çağırır.
+        // Test, hızlı toggle sonrası final state'in tutarlı olduğunu doğrular.
         var h = new OverlayHarness();
         h.Tick();
-
-        int hidesBefore = h.LoggedHideCount;
 
         // Hızlı layout toggle, process hep aktif
         for (int i = 0; i < 20; i++)
             h.Layout(i % 2 == 0);
 
-        // Layout=true ile bitir, timer çalıştır
+        // Layout=true ile bitir
         h.Layout(true);
         h.Tick();
 
-        // Root aktifken layout değişimleri Hide tetiklememiş olmalı
-        Assert.Equal(hidesBefore, h.LoggedHideCount);
+        // Son durum: overlay görünür ve root/layout aktif
+        Assert.True(h.OverlayVisible);
+        Assert.True(h.Controller.IsRootActive);
+        Assert.True(h.Controller.IsLayoutVisible);
     }
 
     [Fact]
@@ -877,3 +881,128 @@ public class OverlayFocusControllerTests_I_CombinedScenarios
         Assert.Equal(1, h.Controller.TopmostFalseCount);
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BÖLÜM J: Layout Gizliyken Timer Durdurulduğunda Anlık Gizleme
+//
+// SORUN:
+//   CPU optimizasyonu kapsamında 200ms focus timer, layout görünmezken
+//   durduruluyordu. OnLayoutChanged ise eski kodda yalnızca 
+//   `!IsLayoutVisible && !IsRootActive` durumunda Hide çağırıyordu.
+//   `IsRootActive=true` iken layout=false olduğunda Hide çağrılmıyor,
+//   timer da durduğu için overlay sonsuza kadar görünür kalıyordu.
+//
+// ÇÖZÜM:
+//   OnLayoutChanged artık `!IsLayoutVisible` olduğunda, root aktifliğine
+//   bakmaksızın overlay'i hemen gizler.
+// ─────────────────────────────────────────────────────────────────────────────
+
+public class OverlayFocusControllerTests_J_LayoutHiddenTimerStopped
+{
+    [Fact]
+    public void J1_LayoutFalse_RootActive_OverlayVisible_HidesImmediately()
+    {
+        // Çekirdek fix: Root aktif ve overlay görünürken layout kapanırsa
+        // timer tick'i beklenmeden hemen gizlenmeli.
+        var h = new OverlayHarness();
+        h.Tick(); // overlay göster
+
+        h.Layout(false); // layout gizleniyor (örn. kullanıcı geri tuşuna bastı)
+
+        Assert.False(h.OverlayVisible);
+        Assert.Contains("HIDE", h.Log);
+    }
+
+    [Fact]
+    public void J2_LayoutFalse_RootActive_OverlayAlreadyHidden_NoExtraHide()
+    {
+        // Overlay zaten gizliyken layout kapanırsa ek Hide çağrılmamalı (idempotency)
+        var h = new OverlayHarness();
+        h.Tick(); // show
+        h.Layout(false); // hide
+        h.ClearLog();
+
+        // Aynı layout(false) tekrar çağrılsa (Avalonia layout event'i tekrarlayabilir)
+        h.Layout(false);
+
+        Assert.DoesNotContain("HIDE", h.Log);
+        Assert.False(h.OverlayVisible);
+    }
+
+    [Fact]
+    public void J3_LayoutFalse_ThenTrue_OverlayRestoresImmediately()
+    {
+        // Layout kapanıp hemen açılırsa overlay geri gelmeli (OnLayoutChanged ile)
+        var h = new OverlayHarness();
+        h.Tick(); // show
+        h.ClearLog();
+
+        h.Layout(false); // hide (OnLayoutChanged ile)
+        Assert.False(h.OverlayVisible);
+
+        h.Layout(true); // layout geri geldi, root aktif → show (OnLayoutChanged ile)
+        Assert.True(h.OverlayVisible);
+        Assert.Contains("SHOW", h.Log);
+    }
+
+    [Fact]
+    public void J4_NoTimerTickNeeded_AfterLayoutFalse()
+    {
+        // Timer durduğu için tick atılmasa bile overlay gizlenmeli
+        var h = new OverlayHarness();
+        h.Tick(); // show
+        h.ClearLog();
+
+        h.Layout(false); // OnLayoutChanged ile gizlenir
+
+        // Hiç tick atılmadan overlay gizli kalmalı
+        Assert.False(h.OverlayVisible);
+
+        // Tick atılsa bile durum değişmez (gizli kalır)
+        h.Tick(5);
+        Assert.False(h.OverlayVisible);
+    }
+
+    [Fact]
+    public void J5_ClosePlayer_Simulation_FullFlow()
+    {
+        // Orijinal bug senaryosu: Kullanıcı ESC/Back ile player'dan çıkıyor
+        var h = new OverlayHarness();
+        h.Tick(); // Player açıldı, overlay gösteriliyor
+
+        // Kullanıcı geri tuşuna basıyor → PlayerArea.IsVisible = false
+        // MemoryVideoView.OnLayoutUpdated → OnLayoutChanged(false)
+        h.Layout(false);
+
+        // Timer durduruldu (MemoryVideoView timer'ı stop eder)
+        // Ama OnLayoutChanged hemen hide yaptığı için overlay gizlendi
+        Assert.False(h.OverlayVisible);
+        Assert.True(h.Controller.IsRootActive);   // Uygulama hala aktif
+        Assert.False(h.Controller.IsLayoutVisible); // Ama layout gizli
+
+        // Timer tick'leri atılsa bile overlay gizli kalır
+        h.Tick(3);
+        Assert.False(h.OverlayVisible);
+    }
+
+    [Fact]
+    public void J6_LayoutFalse_RootActive_ThenFocusLoss_OverlayStaysHidden()
+    {
+        // Layout false + root active → overlay gizli
+        // Sonra odak kaybı ve geri dönüş: layout hala false olduğu için overlay gizli kalmalı
+        var h = new OverlayHarness();
+        h.Tick();
+        h.Layout(false);
+
+        h.LoseFocus(); // Alt-Tab (overlay zaten gizli)
+        h.GainFocus(); // Geri dön (root aktif, ama layout hala false)
+
+        // Layout hala false olduğu için overlay gizli kalmalı
+        Assert.False(h.OverlayVisible);
+
+        // Layout true olunca overlay geri gelmeli
+        h.Layout(true);
+        Assert.True(h.OverlayVisible);
+    }
+}
+
