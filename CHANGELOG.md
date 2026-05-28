@@ -13,14 +13,17 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - [Düzeltildi] **M3U Yükleme Tamamlandığında `LoadHomeContentAsync` Direkt Çağrılıyor**: `LoadPlaylistsAsync` sonrasına `await LoadHomeContentAsync()` eklendi. Artık aggregation ne zaman biterse bitsin, `LoadPlaylistsAsync` → `LoadHomeContentAsync` zinciri garantili çalışıyor ve Series/VOD ekranları ilk girişte dolu geliyor.
 - [Doğrulama] `dotnet build` başarılı, 0 hata.
 
-
+### M3U İçerik Türü Tespiti Yeniden Yazıldı ve PlaylistOrganizer Temizliği (2026-05-28)
 
 - [Değişti] **`DetectChannelType` Sadeleştirildi**: Grup başlığı analizi, yıl pattern'i ve video uzantısı kontrolleri kaldırıldı. Kural artık üç adım: URL'de `.ts`/`/ts`/`.m3u`/`/m3u`/`.m3u8`/`/m3u8` varsa → Live; başlıkta sezon+bölüm pattern'i varsa → Series; diğer her şey → VOD.
 - [Düzeltildi] **Uzantısız Proxy URL'leri Artık VOD**: `/ts` içermeyen proxy URL'leri (örn. `http://provider/play/TOKEN`) daha önce Live'a düşüyordu. Artık doğru şekilde VOD olarak sınıflandırılıyor.
-- [Düzeltildi] **`IsSeries` False Positive Düzeltildi**: `s16`, `s14` gibi token'lar (adult içerik başlıklarında yaygın) dizi sezonu olarak algılanıyordu. `IsSeries` artık yalnızca hem sezon hem bölüm birlikte olan pattern'leri kabul ediyor (`S01E01`, `1x01`, `Season 1 Episode 2`, `Sezon 1 Bölüm 2` vb.). Tek başına `Sezon 1` veya `S01` artık Series saymıyor.
-- [Değişti] **`SeasonOnlyRegex` `IsSeries`'den Çıkarıldı**: `SeasonOnlyRegex` yalnızca `Parse()` metodunda kullanılıyor; `IsSeries` için artık sezon+bölüm birlikteliği zorunlu.
-- [Temizlendi] Kullanılmayan `IsVideoFileUrl`, `LooksLikeVodMovieTitle`, `LooksLiveTvGroup`, `LooksLiveTvTitle`, `LiveChannelNameRegex`, `MovieYearRegex`, `SeasonWordOnlyRegex` kaldırıldı.
-- [Test] M3UParser testleri güncellendi: gerçek sağlayıcı verisinden `/ts` → Live, uzantısız → VOD, adult başlık → VOD, `S01E01` → Series case'leri eklendi. SeriesInfoParser testlerinde `"Leyla ile Mecnun Sezon 1"` beklentisi `false` olarak güncellendi. 103/103 test geçiyor.
+- [Düzeltildi] **`IsSeries` False Positive Düzeltildi**: `s16`, `s14` gibi token'lar (adult içerik başlıklarında yaygın) dizi sezonu olarak algılanıyordu. `IsSeries` artık yalnızca hem sezon hem bölüm birlikte olan pattern'leri kabul ediyor (`S01E01`, `1x01`, `Season 1 Episode 2`, `Sezon 1 Bölüm 2` vb.). Tek başına `Sezon 1` veya `S01` artık Series saymıyor; `SeasonOnlyRegex` sadece `Parse()` metodunda kullanılıyor.
+- [Temizlendi] **`PlaylistOrganizerService.FixChannelTypes` Kaldırıldı**: M3UParser artık doğru türü set ettiği için bu metot etkisizdi. `ShouldForceSeriesFromChannel`, `NormalizeGroupNames`, `IsVideoFileUrl`, `LooksLikeVodMovieTitle`, `MovieYearRegex`, `SeasonWordOnlyRegex` da kaldırıldı.
+- [Temizlendi] **`Organize` Sadeleştirildi**: `trustProviderTypes` parametresi artık işlevsiz, `FixChannelTypes` çağrısı kaldırıldı.
+- [Düzeltildi] **Episode Thumbnail Preload Eklendi**: `SelectedSeason` değiştiğinde (dizi detayı açılınca veya sezon değiştirilince) o sezonun tüm episode `CoverUrl`'leri arka planda preload ediliyor. Episode `RemoteImage`'ları attach olduğunda zaten memory cache'de bulup anında gösteriyor.
+- [Düzeltildi] **Scroll Sonrası Resim Kaybı**: `StartImageLoad`'da memory cache miss olunca disk cache'e bakılıyor. Disk cache'de varsa anında memory cache'e alınıp uygulanıyor — HTTP isteği gönderilmiyor.
+- [Test] M3UParser ve SeriesInfoParser testleri güncellendi: gerçek sağlayıcı verisinden `/ts` → Live, uzantısız → VOD, adult başlık (`s16`) → VOD, `S01E01` → Series case'leri eklendi. `FixChannelTypes` testleri kaldırıldı. 857/857 test geçiyor.
+
 
 ### RemoteImage Performans Fix ve NoctraPlayer-fixes Uygulaması (2026-05-27)
 - [Uygulandı] **NoctraPlayer-fixes.zip**: `Channel.cs`, `IXtreamCodesService.cs`, `XtreamCodesService.cs`, `StalkerPortalService.cs` ve `MainViewModel.cs` dosyaları zip'teki güncel sürümleriyle değiştirildi. Channel metadata field'ları ObservableProperty yapılarak UI reaktifliği sağlandı; Xtream/Stalker servislerinde BackdropUrl, ContentRating, TmdbId parse desteği eklendi; Stalker pagination refactor edildi; MainViewModel büyük revizyona uğradı. Mevcut dosyalar `artifacts/backup/` altına yedeklendi.

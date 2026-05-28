@@ -407,6 +407,12 @@ public partial class MainWindow : Window
         {
             ScheduleImageWarmup(e.PropertyName);
         }
+        else if (e.PropertyName == nameof(MainViewModel.SelectedSeason))
+        {
+            var episodes = _mainViewModel.SelectedSeason?.Episodes;
+            if (episodes != null)
+                _ = RemoteImage.PreloadAsync(episodes.Select(ep => ep.CoverUrl), maxCount: 50);
+        }
         else if (e.PropertyName == nameof(MainViewModel.ActiveDownloadCount))
         {
             UpdateDownloadBadgeVisibility();

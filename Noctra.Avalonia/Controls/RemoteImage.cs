@@ -229,6 +229,15 @@ public class RemoteImage : Image
             return;
         }
 
+        // Disk cache'de varsa memory cache'e al ve uygula (scroll sonrası hızlı geri yükleme)
+        var diskBitmap = TryLoadDiskCache(normalizedUrl);
+        if (diskBitmap != null)
+        {
+            AddToCache(normalizedUrl, diskBitmap);
+            SetSourceOnUiThread(diskBitmap, normalizedUrl, "disk-cache");
+            return;
+        }
+
         if (IsRecentlyFailed(normalizedUrl))
         {
             PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage skip-failed", $"host={ExtractHost(normalizedUrl)} data={DescribeDataContext(DataContext)}");
