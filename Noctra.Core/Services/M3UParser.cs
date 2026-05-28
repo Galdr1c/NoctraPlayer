@@ -241,50 +241,28 @@ public partial class M3UParser : IM3UParser
 
     /// <summary>
     /// Kanal türünü URL'den tespit eder.
-    /// Kural: video dosyaları → dizi paterni varsa Series, yoksa VOD.
-    ///        Uzantısız proxy URL'lerinde yıl paterni varsa VOD.
-    ///        Diğer tüm içerikler → Live.
+    /// .ts/.m3u/.m3u8 veya /ts//m3u//m3u8 içeriyorsa → Live
+    /// Series pattern varsa → Series
+    /// Diğer her şey → VOD
     /// </summary>
     private static ChannelType DetectChannelType(string url, string name, string? groupTitle)
     {
         var lowerUrl = url.ToLowerInvariant();
 
-        // 1. Kesin URL yolu belirteçleri — en yüksek öncelik
-        if (lowerUrl.Contains("/live/") || lowerUrl.Contains("type=live") ||
-            lowerUrl.Contains("/radio/") || lowerUrl.Contains("pluto.tv"))
-            return ChannelType.Live;
-
-        if (lowerUrl.Contains("/series/") || lowerUrl.Contains("/tv_show/") || lowerUrl.Contains("type=series"))
-            return ChannelType.Series;
-
-        if (lowerUrl.Contains("/movie/") || lowerUrl.Contains("/vod/") ||
-            lowerUrl.Contains("type=vod") || lowerUrl.Contains("type=movie"))
-            return ChannelType.VOD;
-
-        // 2. Lineer stream uzantıları → her zaman Live
         if (IsLinearStreamUrl(lowerUrl))
             return ChannelType.Live;
 
-        // 3. Video dosyaları: önce dizi pattern'ini ara, yoksa VOD
-        var urlPath = lowerUrl.Contains('?') ? lowerUrl[..lowerUrl.IndexOf('?')] : lowerUrl;
-        if (IsVideoFileUrl(urlPath))
-        {
-            // Dizi episod pattern'i varsa (S01E01, 1x01, "Sezon 1 Bölüm 1" vb.) → Series
-            if (SeriesInfoParser.IsSeries(name))
-                return ChannelType.Series;
-            // Dizi değilse bu bir film/VOD dosyası
-            return ChannelType.VOD;
-        }
+        if (SeriesInfoParser.IsSeries(name))
+            return ChannelType.Series;
 
-        // 4. Bazı M3U provider'ları film URL'lerini uzantısız proxy path ile verir.
-        // Başlıkta yıl varsa ve grup canlı kanal kategorisi gibi durmuyorsa VOD kabul et.
-        if (LooksLikeVodMovieTitle(name))
-            return ChannelType.VOD;
-
-        // 5. Diğer her şey → Live (uzantısız proxy URL'leri, HLS olmayan akışlar vb.)
-        return ChannelType.Live;
+        return ChannelType.VOD;
     }
 
+    /// <summary>
+    /// URL'nin lineer (canlı) yayın akışı olduğunu gösterir.
+    /// Hem uzantı hem yol segmenti kontrol edilir: /ts, /m3u8 gibi
+    /// path segment'leri proxy tabanlı IPTV sağlayıcılarında yaygındır.
+    /// </summary>
     private static bool IsLinearStreamUrl(string lowerUrl)
     {
         var path = lowerUrl;
@@ -293,27 +271,15 @@ public partial class M3UParser : IM3UParser
             path = path[..q];
 
         return path.EndsWith(".m3u8") ||
+               path.EndsWith("/m3u8") ||   // proxy path segment
                path.EndsWith(".ts") ||
+               path.EndsWith("/ts") ||     // proxy path segment — en yaygın canlı TV göstergesi
                path.EndsWith(".m3u") ||
                lowerUrl.Contains("format=m3u8") ||
                lowerUrl.Contains("extension=m3u8") ||
                lowerUrl.Contains("extension=ts");
     }
 
-    private static bool IsVideoFileUrl(string urlPath)
-        => urlPath.EndsWith(".mp4") ||
-           urlPath.EndsWith(".mkv") ||
-           urlPath.EndsWith(".avi") ||
-           urlPath.EndsWith(".mov") ||
-           urlPath.EndsWith(".m4v") ||
-           urlPath.EndsWith(".webm");
-
-    private static bool LooksLikeVodMovieTitle(string name)
-        => MovieYearRegex().IsMatch(name);
-
-
-    [GeneratedRegex(@"(?:\(|\b)(?:19|20)\d{2}(?:\)|\b)", RegexOptions.IgnoreCase)]
-    private static partial Regex MovieYearRegex();
 
     // Regex pattern'ları (Lenient versions)
     [GeneratedRegex(@"tvg-id\s*=\s*(?:""([^""]*)""|([^""\s,]+))", RegexOptions.IgnoreCase)]

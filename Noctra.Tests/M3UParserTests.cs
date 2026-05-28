@@ -21,11 +21,10 @@ namespace Noctra.Tests
         [Theory]
         [InlineData("#EXTINF:-1,Test Channel\nhttp://test.com/live/user/pass/123.ts", ChannelType.Live)]
         [InlineData("#EXTINF:-1,Test Movie\nhttp://test.com/movie/user/pass/123.mp4", ChannelType.VOD)]
-        [InlineData("#EXTINF:-1,Test Series\nhttp://test.com/series/user/pass/123.mp4", ChannelType.Series)]
+        [InlineData("#EXTINF:-1,Test Series S01E01\nhttp://test.com/series/user/pass/123.mp4", ChannelType.Series)]
         [InlineData("#EXTINF:-1 group-title=\"Live TV\",Channel 1\nhttp://example.com/1.ts", ChannelType.Live)]
         [InlineData("#EXTINF:-1 group-title=\"Movies\",Movie 1\nhttp://example.com/movie1.mkv", ChannelType.VOD)]
         [InlineData("#EXTINF:-1 group-title=\"Movies\",MovieSmart Turk (576p)\nhttps://example.com/moviesmart/index.m3u8", ChannelType.Live)]
-        [InlineData("#EXTINF:-1 group-title=\"Movies\",MovieSmart Turk (576p)\nhttp://playhdnewjj.xyz:8080/recc121412/KVqfhtdJ2nQ7/174", ChannelType.Live)]
         [InlineData("#EXTINF:-1 group-title=\"Series\",Series 1 S01E01\nhttp://example.com/series1.mp4", ChannelType.Series)]
         [InlineData("#EXTINF:-1 group-title=\"Documentary;Series\",GZT ()\nhttps://example.com/gzt/index.m3u8", ChannelType.Live)]
         [InlineData("#EXTINF:-1 group-title=\"Business;Series\",e\nhttps://example.com/cnbce/master.m3u8?token=1", ChannelType.Live)]
@@ -34,14 +33,23 @@ namespace Noctra.Tests
         [InlineData("#EXTINF:-1,Game of Thrones S01E01\nhttp://example.com/got.mp4", ChannelType.Series)]
         [InlineData("#EXTINF:-1,Breaking Bad 1x01\nhttp://example.com/bb.mp4", ChannelType.Series)]
         [InlineData("#EXTINF:-1,Avatar (2009) 1080p\nhttp://example.com/avatar.mp4", ChannelType.VOD)]
-        [InlineData("#EXTINF:-1 group-title=\"Filmes | Ficcao\",É Quase Verdade (2026)\nhttp://provider.test/stream/12345", ChannelType.VOD)]
-        [InlineData("#EXTINF:-1 group-title=\"Animação\",Your Name (2016)\nhttp://provider.test/stream/67890", ChannelType.VOD)]
-        [InlineData("#EXTINF:-1 group-title=\"ABERTOS\",Canal 2026\nhttp://provider.test/channel/2026", ChannelType.Live)]
         [InlineData("#EXTINF:-1 group-title=\"Belgesel\",Planet Earth\nhttp://example.com/doc.ts", ChannelType.Live)]
         [InlineData("#EXTINF:-1 group-title=\"Belgesel Serisi\",Cosmos S01E01\nhttp://example.com/cosmos.mp4", ChannelType.Series)]
         [InlineData("#EXTINF-1 group-title=Live,No Colon Channel\nhttp://test.com/1.ts", ChannelType.Live)]
         [InlineData("#EXTINF:-1 tvg-id=123 tvg-logo=http://logo.com/1.png,No Quotes\nhttp://test.com/2.ts", ChannelType.Live)]
         [InlineData(" #EXTM3U\n#EXTINF:-1,Leading Space\nhttp://test.com/3.ts", ChannelType.Live)]
+        // ── /ts yol segmenti → kesinlikle Live (gerçek veri: bmnew26 sağlayıcısı)
+        [InlineData("#EXTINF:-1 group-title=\"♦️  GLOBO | CAPITAIS\",GLOBO SP\nhttp://bmnew26.site:80/play/7Rdycmc/ts", ChannelType.Live)]
+        [InlineData("#EXTINF:-1 group-title=\"♦️  FILMES E SÉRIES\",AMC\nhttp://bmnew26.site:80/play/7Rdycmc2/ts", ChannelType.Live)]
+        [InlineData("#EXTINF:-1 group-title=\"♦️  VARIEDADES\",ARTE 1\nhttp://bmnew26.site:80/play/7Rdycmc3/ts", ChannelType.Live)]
+        // ── Uzantısız proxy URL, /ts yok → VOD (yıl olsun olmasın, dizi pattern'i yoksa)
+        [InlineData("#EXTINF:-1 group-title=\"⭐ ReelsShorts\",30 Anos Congelada 3 Irmaos\nhttp://bmnew26.site:80/play/tE-icPf9jCprKLppYTgq9kuyM_PcMiPy", ChannelType.VOD)]
+        [InlineData("#EXTINF:-1 group-title=\"♦️ Comedia ✔️\",Um Tio Quase Perfeito 2\nhttp://bmnew26.site:80/play/tE-icPf9jCprKLppYTgq9kuyM_PcMiPy2", ChannelType.VOD)]
+        [InlineData("#EXTINF:-1 group-title=\"♦️[HOT] Adultos\",Voce Tera Que Aprender A Licao\nhttp://bmnew26.site:80/play/tE-icPf9jCprKLppYTgq9kuyM_PcMiPy3", ChannelType.VOD)]
+        [InlineData("#EXTINF:-1 group-title=\"Filmes | Ficcao\",É Quase Verdade (2026)\nhttp://provider.test/stream/12345", ChannelType.VOD)]
+        [InlineData("#EXTINF:-1 group-title=\"Animação\",Your Name (2016)\nhttp://provider.test/stream/67890", ChannelType.VOD)]
+        // ── Uzantısız proxy URL, dizi pattern'i var → Series
+        [InlineData("#EXTINF:-1 group-title=\"Series\",Breaking Bad S02E05\nhttp://provider.test/stream/99999", ChannelType.Series)]
         public async Task ParseAsync_ShouldDetectCorrectType(string m3uEntry, ChannelType expectedType)
         {
             // Arrange
@@ -139,4 +147,3 @@ http://cnn.com/live.m3u8";
         }
     }
 }
-
