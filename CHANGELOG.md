@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### TMDB API Proxy: Self-Hosted Vercel + Redis Cache (2026-05-29)
+
+- [Yeni] **Self-Hosted TMDB Proxy (Vercel Serverless)**: milindkusahu/tmdb-proxy reposu fork'lanarak Vercel'e deploy edildi. Tüm TMDB API istekleri artık dogrudan api.themoviedb.org yerine https://tmdb-proxy-galdric.vercel.app/api/tmdb uzerinden gider. API key sunucu tarafında (Vercel Environment Variables) saklanır, son kullanıcıya asla açılmaz.
+- [Yeni] **Upstash Redis Cache Katmanı**: Proxy'ye @upstash/redis ile Redis cache entegrasyonu eklendi. Başarılı TMDB yanıtları 1 saat TTL ile Redis'te saklanır. Aynı film/dizi sorgusu 100 kullanıcıdan gelse bile sadece **1 kere** TMDB'ye gider, sonraki tüm istekler cache'ten döner.
+- [Yeni] **Stale Cache Fallback (429 Koruması)**: TMDB rate limit (HTTP 429) durumunda proxy, Redis'teki eski cache yanıtını döndürür. Kullanıcılar rate limit'e takıldığında boş yanıt veya hata görmez â€” eski veriye devam eder.
+- [Yeni] **Dual Auth Desteği**: Proxy hem v3 API Key (query string) hem de v4 Bearer Token (Authorization header) ile calisir. Vercel environment variable'lari uzerinden yonetilir.
+- [Yeni] **CORS Headers**: Tüm proxy yanıtlarında Access-Control-Allow-Origin: * başlığı eklenir.
+
+### MetadataService.cs Proxy Entegrasyonu
+
+- [Degisti] **TMDB_BASE_URL Proxy URL'sine Yönlendirildi**: https://api.themoviedb.org/3 -> https://tmdb-proxy-galdric.vercel.app/api/tmdb
+- [Yeni] **IsUsingProxy Otomatik Algılama**: private static readonly bool IsUsingProxy = !TMDB_BASE_URL.Contains("api.themoviedb.org"); â€” proxy modunu otomatik algılar. İleride direkt API'ye dönülürse tüm proxy mantığı otomatik devre dışı kalır.
+- [Degisti] **AddApiKeyIfNeeded Proxy Modunda Bypass**: Proxy kendi auth'unu yönettiği için Noctra tarafından Api_key query parametresi gönderilmez. URL olduğu gibi döner.
+- [Degisti] **Tüm API Key Kontrolleri Proxy Modunda Bypass Edildi**: EnsureApiKeyLoaded() ve string.IsNullOrEmpty(_apiKey) kontrolleri FetchMetadataAsync, SearchSeriesAsync, FetchSeriesDetailsAsync, FetchSeasonDetailsAsync metotlarında !IsUsingProxy koşuluna alındı. Proxy modunda API key olmasa bile istek proxy'ye gider.
+
+### Test Güncellemeleri
+
+- [Degisti] **FetchMetadataAsync_ReturnsNull_WhenKeyCleared -> Proxy Mode Testi**: Test, API key olmadan proxy modunda isteğin proxy URL'sine gittiğini ve Api_key parametresi içermediğini doğrular.
+- [Dogrulama] **11/11 test geçiyor**: ApiKeyAuth (10 test) + MetadataService (1 test) başarılı.
+- [Dogrulama] **dotnet build başarılı**, 0 hata.
+- [Dogrulama] Proxy HTTP 200 dönüyor, curl ile arama ve detay sorguları çalışıyor.
+
 ### Layout Gizliyken Overlay'in Ekranda Kalması Düzeltildi (2026-05-28)
 
 - [Düzeltildi] **Timer Durdurulunca Overlay Ekranda Kalıyordu**:  yalnızca  durumunda overlay'i gizliyordu. CPU optimizasyonu kapsamında 200ms'lik focus timer layout görünmezken durdurulunca, timer tick'i hiç ateşlenmediği için  iken overlay sonsuza kadar görünür kalıyordu. Kullanıcı buffer shield ekranındayken veya video overlay açıkken geri/ESC tuşuna basınca player kapanıyor ama overlay kontrolleri ekranda donup kalıyordu.

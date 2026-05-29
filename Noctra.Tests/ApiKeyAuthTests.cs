@@ -218,14 +218,16 @@ public class ApiKeyAuthTests
     }
 
     /// <summary>
-    /// Verifies that when API key is truly empty (no env var, manually cleared),
-    /// FetchMetadataAsync returns null without making any HTTP request.
-    /// Temporarily clears the TMDB_API_KEY env var for this test.
+    /// Verifies that when proxy mode is active (TMDB_BASE_URL points to proxy),
+    /// FetchMetadataAsync makes requests even without an API key, because
+    /// the proxy handles authentication server-side.
+    /// The request should go to the proxy URL and return null since the
+    /// mock handler returns empty JSON (no results).
     /// </summary>
     [Fact]
-    public async Task FetchMetadataAsync_ReturnsNull_WhenKeyCleared()
+    public async Task FetchMetadataAsync_ReturnsNull_WhenKeyCleared_ProxyMode()
     {
-        // Arrange — temporarily clear env var so constructor/EnsureApiKeyLoaded won't reload it
+        // Arrange — temporarily clear env var
         var originalKey = Environment.GetEnvironmentVariable("TMDB_API_KEY");
         try
         {
@@ -233,16 +235,20 @@ public class ApiKeyAuthTests
 
             var (client, handlerMock) = CreateMockHttpClient();
             var service = new MetadataService(client);
-            // _apiKey should be empty after constructor (env var was cleared)
 
             // Act
             var result = await service.FetchMetadataAsync("Test", ChannelType.VOD);
 
             // Assert
             Assert.Null(result);
-            // No request should have been made
-            Assert.DoesNotContain(handlerMock.Invocations,
-                i => i.Method.Name == "SendAsync");
+            // In proxy mode, a request IS made (proxy handles auth)
+            // Verify the request went to the proxy URL
+            var request = GetCapturedRequest(handlerMock);
+            var url = request.RequestUri!.ToString();
+            Assert.Contains("tmdb-proxy-galdric.vercel.app", url, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("search/movie", url, StringComparison.OrdinalIgnoreCase);
+            // No api_key should be in the URL (proxy handles auth)
+            Assert.DoesNotContain("api_key=", url, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {

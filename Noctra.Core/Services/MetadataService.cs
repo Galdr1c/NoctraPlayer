@@ -21,7 +21,8 @@ public partial class MetadataService : IMetadataService
     private readonly ISettingsService? _settingsService;
     private readonly ILogger<MetadataService>? _logger;
     
-    private const string TMDB_BASE_URL = "https://api.themoviedb.org/3";
+    private const string TMDB_BASE_URL = "https://tmdb-proxy-galdric.vercel.app/api/tmdb";
+    private static readonly bool IsUsingProxy = !TMDB_BASE_URL.Contains("api.themoviedb.org");
     private const string TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
     
     // TMDB credential. v4 access tokens use Bearer auth; v3 API keys must stay in the query string.
@@ -95,6 +96,10 @@ public partial class MetadataService : IMetadataService
 
     private string AddApiKeyIfNeeded(string url)
     {
+        // Proxy mode: proxy handles auth on its own, no need to send API key
+        if (IsUsingProxy)
+            return url;
+
         if (!_useQueryApiKey || string.IsNullOrWhiteSpace(_apiKey))
         {
             return url;
@@ -128,9 +133,10 @@ public partial class MetadataService : IMetadataService
     
     public async Task<ChannelMetadata?> FetchMetadataAsync(string searchQuery, ChannelType? type = null, string languageCode = "tr-TR", CancellationToken cancellationToken = default)
     {
-        EnsureApiKeyLoaded();
+        if (!IsUsingProxy)
+            EnsureApiKeyLoaded();
 
-        if (string.IsNullOrWhiteSpace(searchQuery) || string.IsNullOrEmpty(_apiKey))
+        if (string.IsNullOrWhiteSpace(searchQuery) || (!IsUsingProxy && string.IsNullOrEmpty(_apiKey)))
             return null;
         
         try
@@ -277,8 +283,11 @@ public partial class MetadataService : IMetadataService
     
     public async Task<TmdbDetail?> FetchSeriesDetailsAsync(int tmdbId, string languageCode = "tr-TR", CancellationToken cancellationToken = default)
     {
-        EnsureApiKeyLoaded();
-        if (string.IsNullOrEmpty(_apiKey)) return null;
+        if (!IsUsingProxy)
+        {
+            EnsureApiKeyLoaded();
+            if (string.IsNullOrEmpty(_apiKey)) return null;
+        }
 
         try
         {
@@ -300,8 +309,11 @@ public partial class MetadataService : IMetadataService
 
     public async Task<TmdbSeasonDetail?> FetchSeasonDetailsAsync(int tmdbId, int seasonNumber, string languageCode = "tr-TR", CancellationToken cancellationToken = default)
     {
-        EnsureApiKeyLoaded();
-        if (string.IsNullOrEmpty(_apiKey)) return null;
+        if (!IsUsingProxy)
+        {
+            EnsureApiKeyLoaded();
+            if (string.IsNullOrEmpty(_apiKey)) return null;
+        }
 
         try
         {
@@ -468,17 +480,20 @@ public partial class MetadataService : IMetadataService
     /// </summary>
     public async Task<ChannelMetadata?> SearchSeriesAsync(string searchQuery, string languageCode = "tr-TR", CancellationToken cancellationToken = default)
     {
-        EnsureApiKeyLoaded();
-
         if (string.IsNullOrWhiteSpace(searchQuery))
         {
             return null;
         }
 
-        if (string.IsNullOrEmpty(_apiKey))
+        if (!IsUsingProxy)
         {
-            PerformanceTraceService.Shared?.Event("TMDB", "SearchSeriesAsync skipped", $"reason=missing-api-key query={TrimForTrace(searchQuery)} language={languageCode}");
-            return null;
+            EnsureApiKeyLoaded();
+
+            if (string.IsNullOrEmpty(_apiKey))
+            {
+                PerformanceTraceService.Shared?.Event("TMDB", "SearchSeriesAsync skipped", $"reason=missing-api-key query={TrimForTrace(searchQuery)} language={languageCode}");
+                return null;
+            }
         }
 
         try

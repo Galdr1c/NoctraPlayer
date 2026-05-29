@@ -3,6 +3,8 @@
 # api key
 .env
 *.MetadataService.cs
+*.m3u
+*.m3u8
 
 # User-specific files
 *.rsuser
