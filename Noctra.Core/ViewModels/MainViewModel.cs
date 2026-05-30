@@ -1674,6 +1674,7 @@ public partial class MainViewModel : ObservableObject
         if (playlistId <= 0 || !profileId.HasValue)
         {
             _dispatcherService.Invoke(() => SetItems(ContinueWatching, Enumerable.Empty<Channel>()));
+            _dispatcherService.Invoke(() => OnPropertyChanged(nameof(ContinueWatching)));
             return;
         }
 
@@ -1771,11 +1772,13 @@ public partial class MainViewModel : ObservableObject
                 .ToList();
 
             _dispatcherService.Invoke(() => SetItems(ContinueWatching, combinedContinue));
+            _dispatcherService.Invoke(() => OnPropertyChanged(nameof(ContinueWatching)));
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Error updating Continue Watching rail");
             _dispatcherService.Invoke(() => SetItems(ContinueWatching, Enumerable.Empty<Channel>()));
+            _dispatcherService.Invoke(() => OnPropertyChanged(nameof(ContinueWatching)));
         }
     }
 
@@ -4610,6 +4613,7 @@ public partial class MainViewModel : ObservableObject
             SetItems(MyList, list
                 .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty),
                 () => ShowMyListEmptyState = MyList.Count == 0);
+            _dispatcherService.Invoke(() => OnPropertyChanged(nameof(MyList)));
         }
         catch (Exception ex)
         {
@@ -4674,6 +4678,7 @@ public partial class MainViewModel : ObservableObject
                     ShowFavoritesEmptyState = FavoriteChannels.Count == 0;
                     _ = EnrichChannelsWithEpgAsync(FavoriteChannels.OfType<Channel>());
                 });
+            _dispatcherService.Invoke(() => OnPropertyChanged(nameof(FavoriteChannels)));
         }
         catch (Exception ex)
         {
@@ -4712,7 +4717,9 @@ public partial class MainViewModel : ObservableObject
     {
         var historySnapshot = (sourceChannels ?? HistoryChannels).ToList();
         SetItems(HistoryLiveChannels, historySnapshot.Where(c => c.Type == ChannelType.Live));
+        _dispatcherService.Invoke(() => OnPropertyChanged(nameof(HistoryLiveChannels)));
         SetItems(HistoryVodChannels, historySnapshot.Where(c => c.Type == ChannelType.VOD));
+        _dispatcherService.Invoke(() => OnPropertyChanged(nameof(HistoryVodChannels)));
 
         // Use cached LastWatchedEpisodeAt when available (populated on episode watch save)
         var cachedSeries = _allSeriesCache
@@ -4727,6 +4734,7 @@ public partial class MainViewModel : ObservableObject
                                      && HistoryVodChannels.Count == 0
                                      && HistorySeriesItems.Count == 0;
             });
+            _dispatcherService.Invoke(() => OnPropertyChanged(nameof(HistorySeriesItems)));
             return;
         }
 
@@ -4771,6 +4779,7 @@ public partial class MainViewModel : ObservableObject
                                  && HistoryVodChannels.Count == 0
                                  && HistorySeriesItems.Count == 0;
         });
+        _dispatcherService.Invoke(() => OnPropertyChanged(nameof(HistorySeriesItems)));
     }
 
     private void UpdateDownloadedItems()
@@ -5830,6 +5839,7 @@ public partial class MainViewModel : ObservableObject
                     ShowMyListEmptyState = MyList.Count == 0;
                     _ = EnrichChannelsWithEpgAsync(MyList.OfType<Channel>());
                 });
+            _dispatcherService.Invoke(() => OnPropertyChanged(nameof(MyList)));
 
             var favoriteChannels = await db.Channels
                 .AsNoTracking()
@@ -5851,11 +5861,13 @@ public partial class MainViewModel : ObservableObject
                     ShowFavoritesEmptyState = FavoriteChannels.Count == 0;
                     _ = EnrichChannelsWithEpgAsync(FavoriteChannels.OfType<Channel>());
                 });
+            _dispatcherService.Invoke(() => OnPropertyChanged(nameof(FavoriteChannels)));
 
             SetItems(HistoryChannels, await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds), () => {
                 _ = UpdateHistoryBucketsAsync();
                 _ = EnrichChannelsWithEpgAsync(HistoryChannels);
             });
+            _dispatcherService.Invoke(() => OnPropertyChanged(nameof(HistoryChannels)));
 
             if (ActiveView == AppView.Downloads)
             {
@@ -5909,6 +5921,7 @@ public partial class MainViewModel : ObservableObject
             _hasMoreHistory = initialChannels.Count == IncrementalPageSize;
 
             SetItems(HistoryChannels, initialChannels, () => _ = EnrichChannelsWithEpgAsync(HistoryChannels));
+            _dispatcherService.Invoke(() => OnPropertyChanged(nameof(HistoryChannels)));
             _ = UpdateHistoryBucketsAsync(initialChannels);
         }
         catch (Exception ex)

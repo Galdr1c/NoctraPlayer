@@ -7,6 +7,12 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### SetItems Sonrası OnPropertyChanged Bildirimleri ve Warmup Testleri (2026-05-30)
+
+- [Düzeltildi] **SetItems Sonrası OnPropertyChanged Eklendi**: `MainViewModel`'de `ContinueWatching`, `MyList`, `FavoriteChannels`, `HistoryLiveChannels`, `HistoryVodChannels`, `HistorySeriesItems` ve `HistoryChannels` koleksiyonları için `SetItems` çağrısından hemen sonra `OnPropertyChanged` bildirimi gönderilecek şekilde güncellendi. Warmup mekanizmasının (`MainWindow.axaml.cs` PropertyChanged handler) bu koleksiyonları doğru şekilde yakalaması sağlandı.
+- [Yeni] **ViewModelWarmupNotificationsTests (8 test)**: `Noctra.Tests/ViewModelWarmupNotificationsTests.cs` dosyası eklendi. Tüm `SetItems` → `OnPropertyChanged` akışlarını doğrulayan 8 birim testi: ContinueWatching (no-profile + with-profile), MyList (dolu + boş), FavoriteChannels, HistoryBuckets (Live+VOD+Series, dolu + boş) ve RefreshPersonalListsFromDatabaseAsync (MyList+FavoriteChannels+HistoryChannels).
+- [Doğrulama] **8/8 test geçiyor**, build başarılı.
+- [Doğrulama] **Warmup Handler × OnPropertyChanged Çapraz Referansı**: MainWindow.axaml.cs'deki 9 warmup özelliğinin tamamı MainViewModel.cs'de karşılık gelen `OnPropertyChanged` bildirimine sahip. Başka PropertyChanged handler'ı bu koleksiyonlara bağımlı değil.
 
 ### Varsayılan Dil: tr-TR -> en-US (2026-05-30)
 

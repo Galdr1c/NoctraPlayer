@@ -396,7 +396,8 @@ public partial class MainWindow : Window
 
     private void MainViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(MainViewModel.FilteredChannels) or
+        if (e.PropertyName is nameof(MainViewModel.ActiveView) or
+            nameof(MainViewModel.FilteredChannels) or
             nameof(MainViewModel.SeriesViewItems) or
             nameof(MainViewModel.ContinueWatching) or
             nameof(MainViewModel.MyList) or
