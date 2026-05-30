@@ -13,8 +13,6 @@ public class CacheService : ICacheService
 
     private static readonly string[] CacheDirectories =
     {
-        "image-cache",
-        "image-cache-avalonia",
         "TempPlayback",
         "Logs"
     };

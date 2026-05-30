@@ -362,7 +362,6 @@ public partial class App : Application
         services.AddSingleton<IDispatcherService, AvaloniaDispatcherService>();
         services.AddSingleton<IDialogService, AvaloniaDialogService>();
         services.AddSingleton<IThemeService, AvaloniaThemeService>();
-        services.AddSingleton<AvaloniaImageCacheService>();
         services.AddSingleton<IVideoPlayerService, VideoPlayerService>(sp => 
             new VideoPlayerService(
                 sp.GetRequiredService<IDispatcherService>(),

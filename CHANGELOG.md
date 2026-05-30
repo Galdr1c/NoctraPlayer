@@ -7,6 +7,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Image Disk Cache Sistemi Kaldırıldı (2026-05-30)
+
+- [Kaldırıldı] **RemoteImage Disk Cache Tamamen Kaldırıldı**: RemoteImage kontrolü artık görselleri %LOCALAPPDATA%/Noctra/ImageCache klasörüne yazmıyor. Görseller sadece **memory cache** (LRU 500 entry, 30 dk TTL) üzerinden yönetiliyor. İnternet bağlantısı varsa görsel her seferinde HTTP’den indirilir — zaten uygulama açıkken internet vardır.
+- [Kaldırıldı] **AvaloniaImageCacheService Dosyası Silindi**: Hiçbir yerde kullanılmayan (ölü kod) AvaloniaImageCacheService.cs dosyası ve DI registration’ı (services.AddSingleton<AvaloniaImageCacheService>()) kaldırıldı.
+- [Temizlik] **CacheService.CacheDirectories Güncellendi**: image-cache ve image-cache-avalonia referansları CacheDirectories dizisinden çıkarıldı — artık bu klasörler oluşturulmayacağı için temizlenecek bir şey kalmadı.
+- [Temizlik] **Kullanılmayan using System.Security.Cryptography Kaldırıldı**: RemoteImage.cs’den SHA256 hash için kullanılan kriptografi kütüphanesi referansı temizlendi.
+- [Doğrulama] **dotnet build başarılı**, 0 hata. Disk cache ile ilgili tüm referanslar projeden temizlendi.
+
 ### SetItems Sonrası OnPropertyChanged Bildirimleri ve Warmup Testleri (2026-05-30)
 
 - [Düzeltildi] **SetItems Sonrası OnPropertyChanged Eklendi**: `MainViewModel`'de `ContinueWatching`, `MyList`, `FavoriteChannels`, `HistoryLiveChannels`, `HistoryVodChannels`, `HistorySeriesItems` ve `HistoryChannels` koleksiyonları için `SetItems` çağrısından hemen sonra `OnPropertyChanged` bildirimi gönderilecek şekilde güncellendi. Warmup mekanizmasının (`MainWindow.axaml.cs` PropertyChanged handler) bu koleksiyonları doğru şekilde yakalaması sağlandı.

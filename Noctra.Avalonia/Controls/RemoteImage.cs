@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Noctra.Services.Interfaces;
@@ -46,10 +45,7 @@ public class RemoteImage : Image
     private const int HttpRetryBaseDelayMs = 250;
     private const int DeferredLoadDelayMs = 20;
     private const int MaxTransientEmptyUrlLogs = 40;
-    private static readonly string DiskCacheDirectory = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Noctra",
-        "ImageCache");
+
     private static readonly TimeSpan FailureCooldown = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan HostFailureCooldown = TimeSpan.FromMinutes(15);
     private static readonly ConcurrentDictionary<string, int> HostFailureCounts = new(StringComparer.OrdinalIgnoreCase);
@@ -229,15 +225,6 @@ public class RemoteImage : Image
             return;
         }
 
-        // Disk cache'de varsa memory cache'e al ve uygula (scroll sonrası hızlı geri yükleme)
-        var diskBitmap = TryLoadDiskCache(normalizedUrl);
-        if (diskBitmap != null)
-        {
-            AddToCache(normalizedUrl, diskBitmap);
-            SetSourceOnUiThread(diskBitmap, normalizedUrl, "disk-cache");
-            return;
-        }
-
         if (IsRecentlyFailed(normalizedUrl))
         {
             PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage skip-failed", $"host={ExtractHost(normalizedUrl)} data={DescribeDataContext(DataContext)}");
@@ -383,13 +370,6 @@ public class RemoteImage : Image
 
             if (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
             {
-                var cached = TryLoadDiskCache(url);
-                if (cached != null)
-                {
-                    AddToCache(url, cached);
-                    return cached;
-                }
-
                 return await DownloadHttpBitmapAsync(url, uri).ConfigureAwait(false);
             }
 
@@ -521,7 +501,6 @@ public class RemoteImage : Image
                 try
                 {
                     var bitmap = new Bitmap(memory);
-                    SaveDiskCache(normalizedUrl, memory.ToArray());
                     AddToCache(normalizedUrl, bitmap);
                     return bitmap;
                 }
@@ -895,82 +874,6 @@ public class RemoteImage : Image
     private static void MarkFailureCooldown(string url)
     {
         FailedUntilUtc[url] = DateTime.UtcNow.Add(FailureCooldown);
-    }
-
-    private static Bitmap? TryLoadDiskCache(string url)
-    {
-        try
-        {
-            var path = GetDiskCachePath(url);
-            if (!File.Exists(path))
-            {
-                return null;
-            }
-
-            var fileInfo = new FileInfo(path);
-            if (fileInfo.Length <= 0)
-            {
-                File.Delete(path);
-                return null;
-            }
-
-            using var stream = File.OpenRead(path);
-            var bitmap = new Bitmap(stream);
-            PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage disk-cache-hit", $"host={ExtractHost(url)} bytes={fileInfo.Length}");
-            return bitmap;
-        }
-        catch
-        {
-            TryDeleteDiskCache(url);
-            return null;
-        }
-    }
-
-    private static void SaveDiskCache(string url, byte[] bytes)
-    {
-        if (bytes.Length == 0)
-        {
-            return;
-        }
-
-        try
-        {
-            Directory.CreateDirectory(DiskCacheDirectory);
-            var path = GetDiskCachePath(url);
-            if (File.Exists(path))
-            {
-                return;
-            }
-
-            File.WriteAllBytes(path, bytes);
-            PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage disk-cache-save", $"host={ExtractHost(url)} bytes={bytes.Length}");
-        }
-        catch
-        {
-            // Disk cache is opportunistic; UI image loading must not fail because persistence failed.
-        }
-    }
-
-    private static void TryDeleteDiskCache(string url)
-    {
-        try
-        {
-            var path = GetDiskCachePath(url);
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch
-        {
-            // Ignore cleanup failures.
-        }
-    }
-
-    private static string GetDiskCachePath(string url)
-    {
-        var hash = Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(url)));
-        return Path.Combine(DiskCacheDirectory, hash + ".img");
     }
 
     private static bool IsRecentlyFailed(string url)
