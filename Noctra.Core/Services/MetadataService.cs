@@ -19,9 +19,11 @@ public partial class MetadataService : IMetadataService
     private readonly HttpClient _httpClient;
     private readonly IDbContextFactory<AppDbContext>? _dbContextFactory;
     private readonly ISettingsService? _settingsService;
+    private readonly ILocalizationService? _localizationService;
     private readonly ILogger<MetadataService>? _logger;
     
     private const string TMDB_BASE_URL = "https://tmdb-proxy-galdric.vercel.app/api/tmdb";
+    private const string DIRECT_TMDB_BASE_URL = "https://api.themoviedb.org/3";
     private static readonly bool IsUsingProxy = !TMDB_BASE_URL.Contains("api.themoviedb.org");
     private const string TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
     
@@ -38,14 +40,28 @@ public partial class MetadataService : IMetadataService
         HttpClient httpClient,
         IDbContextFactory<AppDbContext>? dbContextFactory = null,
         ISettingsService? settingsService = null,
+        ILocalizationService? localizationService = null,
         ILogger<MetadataService>? logger = null)
     {
         _httpClient = httpClient;
         _dbContextFactory = dbContextFactory;
         _settingsService = settingsService;
+        _localizationService = localizationService;
         _logger = logger;
         
         LoadApiKeyFromEnvironment();
+    }
+
+    /// <summary>
+    /// Resolves the effective language code to use for TMDB API calls.
+    /// If a language code is explicitly provided, uses it.
+    /// Otherwise, reads from the localization service, falling back to "en-US".
+    /// </summary>
+    private string ResolveLanguage(string? languageCode)
+    {
+        if (!string.IsNullOrWhiteSpace(languageCode))
+            return languageCode!;
+        return _localizationService?.CurrentLanguage ?? "en-US";
     }
     
     /// <summary>
@@ -100,13 +116,106 @@ public partial class MetadataService : IMetadataService
         if (IsUsingProxy)
             return url;
 
+        return AddApiKeyToUrl(url);
+    }
+
+    /// <summary>
+    /// Adds the TMDB API key to the URL for direct API access (used during proxy fallback).
+    /// </summary>
+    private string AddApiKeyToUrl(string url)
+    {
         if (!_useQueryApiKey || string.IsNullOrWhiteSpace(_apiKey))
-        {
             return url;
-        }
 
         var separator = url.Contains('?', StringComparison.Ordinal) ? "&" : "?";
         return $"{url}{separator}api_key={Uri.EscapeDataString(_apiKey)}";
+    }
+
+    /// <summary>
+    /// Builds a fallback URL by replacing the proxy base with the direct TMDB API base.
+    /// Returns null if the URL doesn't contain the proxy base.
+    /// </summary>
+    private string? BuildFallbackUrl(string proxyUrl)
+    {
+        var fallback = proxyUrl.Replace(TMDB_BASE_URL, DIRECT_TMDB_BASE_URL);
+        return fallback != proxyUrl ? fallback : null;
+    }
+
+    /// <summary>
+    /// Executes an HTTP GET with automatic proxy fallback.
+    /// Tries the proxy URL first. On failure (5xx, network error, timeout),
+    /// falls back to the direct TMDB API with the API key.
+    /// </summary>
+    private async Task<HttpResponseMessage?> GetWithFallbackAsync(string url, CancellationToken cancellationToken)
+    {
+        // Attempt 1: Proxy
+        HttpResponseMessage? response = null;
+        string? fallbackUrl = null;
+
+        try
+        {
+            response = await _httpClient.GetAsync(AddApiKeyIfNeeded(url), cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+                return response;
+
+            if ((int)response.StatusCode >= 500)
+            {
+                _logger?.LogWarning("TMDB proxy returned {StatusCode}, falling back to direct API", (int)response.StatusCode);
+                fallbackUrl = BuildFallbackUrl(url);
+            }
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == null)
+        {
+            // Network-level error (DNS, connection refused, SSL, etc.) — not an HTTP response error
+            _logger?.LogWarning(ex, "TMDB proxy network error, falling back to direct API");
+            fallbackUrl = BuildFallbackUrl(url);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // Timeout (not user cancellation)
+            _logger?.LogWarning("TMDB proxy request timed out, falling back to direct API");
+            fallbackUrl = BuildFallbackUrl(url);
+        }
+
+        if (fallbackUrl == null)
+            return response;
+
+        // Attempt 2: Direct API
+        response?.Dispose();
+
+        try
+        {
+            // Ensure API key is loaded for the direct API fallback
+            EnsureApiKeyLoaded();
+            var directUrl = AddApiKeyToUrl(fallbackUrl);
+            response = await _httpClient.GetAsync(directUrl, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger?.LogWarning("Direct TMDB API fallback also failed: {StatusCode}", (int)response.StatusCode);
+                return null;
+            }
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Direct TMDB API fallback failed for: {Url}", TrimForTrace(fallbackUrl));
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Fetches and deserializes JSON with automatic proxy fallback.
+    /// </summary>
+    private async Task<T?> FetchJsonWithFallbackAsync<T>(string url, CancellationToken cancellationToken) where T : class
+    {
+        var response = await GetWithFallbackAsync(url, cancellationToken);
+        if (response?.IsSuccessStatusCode != true)
+            return null;
+
+        return await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken);
     }
 
     private static bool IsLikelyV3ApiKey(string credential)
@@ -131,7 +240,7 @@ public partial class MetadataService : IMetadataService
             : "unknown";
     }
     
-    public async Task<ChannelMetadata?> FetchMetadataAsync(string searchQuery, ChannelType? type = null, string languageCode = "tr-TR", CancellationToken cancellationToken = default)
+    public async Task<ChannelMetadata?> FetchMetadataAsync(string searchQuery, ChannelType? type = null, string? languageCode = null, CancellationToken cancellationToken = default)
     {
         if (!IsUsingProxy)
             EnsureApiKeyLoaded();
@@ -141,6 +250,8 @@ public partial class MetadataService : IMetadataService
         
         try
         {
+            languageCode = ResolveLanguage(languageCode);
+
             // Clean up search query (remove year, quality tags, SxxExx, etc.)
             var cleanQuery = CleanSearchQuery(searchQuery);
             
@@ -171,11 +282,11 @@ public partial class MetadataService : IMetadataService
                 url = $"{TMDB_BASE_URL}/search/multi?query={Uri.EscapeDataString(queryWithoutYear)}&include_adult=false&language={languageCode}";
             }
             
-            var response = await _httpClient.GetAsync(AddApiKeyIfNeeded(url), cancellationToken);
+            var response = await GetWithFallbackAsync(url, cancellationToken);
             
-            if (!response.IsSuccessStatusCode)
+            if (response == null)
             {
-                _logger?.LogWarning("TMDB API request failed: {StatusCode}", response.StatusCode);
+                _logger?.LogWarning("TMDB API request failed (proxy + fallback)", null);
                 return null;
             }
             
@@ -281,7 +392,7 @@ public partial class MetadataService : IMetadataService
         }
     }
     
-    public async Task<TmdbDetail?> FetchSeriesDetailsAsync(int tmdbId, string languageCode = "tr-TR", CancellationToken cancellationToken = default)
+    public async Task<TmdbDetail?> FetchSeriesDetailsAsync(int tmdbId, string? languageCode = null, CancellationToken cancellationToken = default)
     {
         if (!IsUsingProxy)
         {
@@ -291,14 +402,12 @@ public partial class MetadataService : IMetadataService
 
         try
         {
+            languageCode = ResolveLanguage(languageCode);
             var lang = languageCode.Contains('-') ? languageCode.Split('-')[0] : languageCode;
             var url = $"{TMDB_BASE_URL}/tv/{tmdbId}?append_to_response=credits,content_ratings,videos,watch/providers&include_video_language={lang},en,null&language={languageCode}";
             
             // Retry up to 2 times on transient network errors
-            return await NetworkRetry.ExecuteAsync(
-                () => _httpClient.GetFromJsonAsync<TmdbDetail>(AddApiKeyIfNeeded(url), cancellationToken),
-                maxAttempts: 2,
-                cancellationToken: cancellationToken);
+            return await FetchJsonWithFallbackAsync<TmdbDetail>(url, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -307,7 +416,7 @@ public partial class MetadataService : IMetadataService
         }
     }
 
-    public async Task<TmdbSeasonDetail?> FetchSeasonDetailsAsync(int tmdbId, int seasonNumber, string languageCode = "tr-TR", CancellationToken cancellationToken = default)
+    public async Task<TmdbSeasonDetail?> FetchSeasonDetailsAsync(int tmdbId, int seasonNumber, string? languageCode = null, CancellationToken cancellationToken = default)
     {
         if (!IsUsingProxy)
         {
@@ -317,12 +426,10 @@ public partial class MetadataService : IMetadataService
 
         try
         {
+            languageCode = ResolveLanguage(languageCode);
             var url = $"{TMDB_BASE_URL}/tv/{tmdbId}/season/{seasonNumber}?language={languageCode}";
             // Retry up to 2 times on transient network errors
-            return await NetworkRetry.ExecuteAsync(
-                () => _httpClient.GetFromJsonAsync<TmdbSeasonDetail>(AddApiKeyIfNeeded(url), cancellationToken),
-                maxAttempts: 2,
-                cancellationToken: cancellationToken);
+            return await FetchJsonWithFallbackAsync<TmdbSeasonDetail>(url, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -339,7 +446,7 @@ public partial class MetadataService : IMetadataService
             var append = mediaType == "movie" ? "credits,release_dates,videos,watch/providers" : "credits,content_ratings,videos,watch/providers";
             var url = $"{TMDB_BASE_URL}/{endpoint}/{id}?append_to_response={append}&language={languageCode}";
             
-            return await _httpClient.GetFromJsonAsync<TmdbDetail>(AddApiKeyIfNeeded(url), cancellationToken);
+            return await FetchJsonWithFallbackAsync<TmdbDetail>(url, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -478,7 +585,7 @@ public partial class MetadataService : IMetadataService
     /// Returns basic metadata from the search response WITHOUT fetching details (credits, content_ratings, trailer).
     /// 1 API call instead of 2.
     /// </summary>
-    public async Task<ChannelMetadata?> SearchSeriesAsync(string searchQuery, string languageCode = "tr-TR", CancellationToken cancellationToken = default)
+    public async Task<ChannelMetadata?> SearchSeriesAsync(string searchQuery, string? languageCode = null, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(searchQuery))
         {
@@ -498,6 +605,7 @@ public partial class MetadataService : IMetadataService
 
         try
         {
+            languageCode = ResolveLanguage(languageCode);
             var cleanQuery = CleanSearchQuery(searchQuery);
             if (string.IsNullOrWhiteSpace(cleanQuery))
                 cleanQuery = searchQuery;
@@ -548,10 +656,10 @@ public partial class MetadataService : IMetadataService
             url += $"&first_air_date_year={year.Value}";
         }
 
-        var response = await _httpClient.GetAsync(AddApiKeyIfNeeded(url), cancellationToken);
-        if (!response.IsSuccessStatusCode)
+        var response = await GetWithFallbackAsync(url, cancellationToken);
+        if (response == null)
         {
-            PerformanceTraceService.Shared?.Event("TMDB", "SearchSeriesAsync http-failed", $"status={(int)response.StatusCode} authMode={GetAuthModeForTrace()} query={TrimForTrace(queryWithoutYear)} language={languageCode}");
+            PerformanceTraceService.Shared?.Event("TMDB", "SearchSeriesAsync http-failed", $"query={TrimForTrace(queryWithoutYear)} language={languageCode}");
             return null;
         }
 
@@ -627,10 +735,12 @@ public partial class MetadataService : IMetadataService
         return normalized.Length <= 80 ? normalized : normalized[..80] + "...";
     }
     
-    public async Task<List<string>> GetGenresAsync(List<int> genreIds, string languageCode = "tr-TR", CancellationToken cancellationToken = default)
+    public async Task<List<string>> GetGenresAsync(List<int> genreIds, string? languageCode = null, CancellationToken cancellationToken = default)
     {
         if (genreIds.Count == 0)
             return new List<string>();
+
+        languageCode = ResolveLanguage(languageCode);
         
         await EnsureGenresCachedAsync(languageCode, cancellationToken);
         
@@ -665,7 +775,7 @@ public partial class MetadataService : IMetadataService
 
             // Fetch movie genres
             var movieGenreUrl = $"{TMDB_BASE_URL}/genre/movie/list?language={languageCode}";
-            var movieResponse = await _httpClient.GetFromJsonAsync<TmdbGenreResponse>(AddApiKeyIfNeeded(movieGenreUrl), cancellationToken);
+            var movieResponse = await FetchJsonWithFallbackAsync<TmdbGenreResponse>(movieGenreUrl, cancellationToken);
             if (movieResponse?.Genres != null)
             {
                 foreach (var g in movieResponse.Genres)
@@ -674,7 +784,7 @@ public partial class MetadataService : IMetadataService
             
             // Fetch TV genres
             var tvGenreUrl = $"{TMDB_BASE_URL}/genre/tv/list?language={languageCode}";
-            var tvResponse = await _httpClient.GetFromJsonAsync<TmdbGenreResponse>(AddApiKeyIfNeeded(tvGenreUrl), cancellationToken);
+            var tvResponse = await FetchJsonWithFallbackAsync<TmdbGenreResponse>(tvGenreUrl, cancellationToken);
             if (tvResponse?.Genres != null)
             {
                 foreach (var g in tvResponse.Genres)

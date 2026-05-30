@@ -53,13 +53,13 @@ public partial class SettingsViewModel : ObservableObject
     private bool _subtitleEnabled;
 
     [ObservableProperty]
-    private string _subtitleLanguage = "tr";
+    private string _subtitleLanguage = "en";
 
     [ObservableProperty]
     private int _subtitleFontSize = 40;
 
     [ObservableProperty]
-    private string _preferredAudioLanguage = "tr";
+    private string _preferredAudioLanguage = "en";
     
     // ============ İndirme Ayarları ============
     
@@ -81,7 +81,7 @@ public partial class SettingsViewModel : ObservableObject
     private bool _isDarkTheme;
 
     [ObservableProperty]
-    private string _appLanguage = "tr";
+    private string _appLanguage = "en";
 
     [ObservableProperty]
     private int _channelListRefreshFrequencyHours;
@@ -479,9 +479,9 @@ public partial class SettingsViewModel : ObservableObject
 
         SelectedDataUsage = (int)s.DataUsage;
         SubtitleEnabled = s.SubtitleEnabled;
-        SubtitleLanguage = string.IsNullOrWhiteSpace(s.SubtitleLanguage) ? "tr" : s.SubtitleLanguage;
+        SubtitleLanguage = string.IsNullOrWhiteSpace(s.SubtitleLanguage) ? "en" : s.SubtitleLanguage;
         SubtitleFontSize = s.SubtitleFontSize;
-        PreferredAudioLanguage = string.IsNullOrWhiteSpace(s.PreferredAudioLanguage) ? "tr" : s.PreferredAudioLanguage;
+        PreferredAudioLanguage = string.IsNullOrWhiteSpace(s.PreferredAudioLanguage) ? "en" : s.PreferredAudioLanguage;
         
         // Downloads
         SelectedDownloadQuality = (int)s.DownloadQuality;
@@ -503,7 +503,7 @@ public partial class SettingsViewModel : ObservableObject
         
         // Appearance
         IsDarkTheme = s.IsDarkTheme;
-        AppLanguage = string.IsNullOrWhiteSpace(s.Language) ? "tr" : s.Language;
+        AppLanguage = string.IsNullOrWhiteSpace(s.Language) ? "en" : s.Language;
         ChannelListRefreshFrequencyHours = s.ChannelListRefreshFrequencyHours;
         EpgRefreshFrequencyHours = s.EpgRefreshFrequencyHours;
         EpgEnabled = s.EpgEnabled;
@@ -579,7 +579,7 @@ public partial class SettingsViewModel : ObservableObject
         
         // Appearance
         s.IsDarkTheme = IsDarkTheme;
-        s.Language = string.IsNullOrWhiteSpace(AppLanguage) ? "tr" : AppLanguage;
+        s.Language = string.IsNullOrWhiteSpace(AppLanguage) ? "en" : AppLanguage;
         s.ChannelListRefreshFrequencyHours = Math.Max(0, ChannelListRefreshFrequencyHours);
         s.EpgRefreshFrequencyHours = Math.Max(0, EpgRefreshFrequencyHours);
         s.CustomEpgUrl = string.IsNullOrWhiteSpace(CustomEpgUrl) ? null : CustomEpgUrl.Trim();

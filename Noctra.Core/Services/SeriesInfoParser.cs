@@ -153,11 +153,11 @@ public static partial class SeriesInfoParser
     /// <summary>
     /// Analyzes the string (category or channel name) to detect language prefixes/tags 
     /// and returns a TMDB-compatible ISO language code (e.g. "tr-TR", "en-US").
-    /// Falls back to "tr-TR" if no language is detected.
+    /// Falls back to "en-US" if no language is detected.
     /// </summary>
     public static string ExtractLanguageCode(string? titleOrCategory)
     {
-        if (string.IsNullOrWhiteSpace(titleOrCategory)) return "tr-TR";
+        if (string.IsNullOrWhiteSpace(titleOrCategory)) return "en-US";
 
         var trimmed = titleOrCategory.Trim().ToUpperInvariant();
         
@@ -269,7 +269,7 @@ public static partial class SeriesInfoParser
         }
 
         // Default
-        return "tr-TR";
+        return "en-US";
     }
 
     /// <summary>

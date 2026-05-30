@@ -80,7 +80,7 @@ public class AppSettings
     /// <summary>
     /// Tercih edilen altyazı dili (örn: "tr", "en")
     /// </summary>
-    public string SubtitleLanguage { get; set; } = "tr";
+    public string SubtitleLanguage { get; set; } = "en";
 
     /// <summary>
     /// Altyazı yazı tipi boyutu (varsayılan: 40)
@@ -100,7 +100,7 @@ public class AppSettings
     /// <summary>
     /// Tercih edilen ses dili (örn: "tr", "en")
     /// </summary>
-    public string PreferredAudioLanguage { get; set; } = "tr";
+    public string PreferredAudioLanguage { get; set; } = "en";
 
     /// <summary>
     /// Son kullanilan profili acilista otomatik sec
@@ -143,7 +143,7 @@ public class AppSettings
 
     // ============ Global Ayarlar ============
     
-    public string Language { get; set; } = "tr";
+    public string Language { get; set; } = "en";
     public bool AutoUpdate { get; set; } = true;
     public bool HardwareAcceleration { get; set; } = true;
     public bool Analytics { get; set; } = false;

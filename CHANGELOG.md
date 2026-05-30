@@ -7,6 +7,19 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+
+### Varsayılan Dil: tr-TR -> en-US (2026-05-30)
+
+- [Değişti] **Uygulama Varsayılan Dili en-US**: LocalizationService null/switch fallbackleri "tr-TR" -> "en-US".
+- [Değişti] **AppSettings**: Language/SubtitleLanguage/PreferredAudioLanguage "tr" -> "en".
+- [Değişti] **MetadataService (TMDB)**: IMetadataService default "tr-TR" -> null, LocalizationService.CurrentLanguage kullanılır.
+- [Değişti] **LanguageDetectionService**: Fallback ülke "TR" -> "US".
+- [Değişti] **SeriesInfoParser**: ExtractLanguageCode fallback "tr-TR" -> "en-US".
+- [Değişti] **ViewModel/Axaml Fallbackları**: GlobalSettingsVM, SettingsVM, App.axaml.cs, MainViewModel.cs tüm "tr" -> "en".
+- [Test] **7 test dosyası güncellendi** yeni varsayılanlara uyum için.
+- [Doğrulama] **860 test geliyor** (3 önceden varolan M3UParser hatası hariç).
+
+
 ### TMDB API Proxy: Self-Hosted Vercel + Redis Cache (2026-05-29)
 
 - [Yeni] **Self-Hosted TMDB Proxy (Vercel Serverless)**: milindkusahu/tmdb-proxy reposu fork'lanarak Vercel'e deploy edildi. Tüm TMDB API istekleri artık dogrudan api.themoviedb.org yerine https://tmdb-proxy-galdric.vercel.app/api/tmdb uzerinden gider. API key sunucu tarafında (Vercel Environment Variables) saklanır, son kullanıcıya asla açılmaz.
@@ -28,6 +41,24 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - [Dogrulama] **11/11 test geçiyor**: ApiKeyAuth (10 test) + MetadataService (1 test) başarılı.
 - [Dogrulama] **dotnet build başarılı**, 0 hata.
 - [Dogrulama] Proxy HTTP 200 dönüyor, curl ile arama ve detay sorguları çalışıyor.
+
+### 🔁 Proxy Down Fallback: Otomatik Direkt TMDB API'ye Düşüş (2026-05-29)
+
+- [Yeni] **Proxy 5xx/Network/Timeout Koruması (GetWithFallbackAsync)**: Tüm TMDB HTTP istekleri artık önce proxy'ye gider. Proxy 5xx dönerse, network hatası (DNS/bağlantı reddi) alınırsa veya timeout oluşursa, istek otomatik olarak direkt `api.themoviedb.org/3`'e yönlendirilir. Kullanıcı kesintisiz devam eder.
+- [Yeni] **DIRECT_TMDB_BASE_URL Sabiti**: Orijinal `https://api.themoviedb.org/3` URL'si sabit olarak tutulur. Fallback anında proxy URL'sindeki base adres bu sabitle değiştirilir.
+- [Yeni] **AddApiKeyToUrl Helper'ı**: Fallback durumunda API key'in URL'ye eklenmesi için ayrı bir yardımcı metot eklendi. Proxy modundaki `AddApiKeyIfNeeded` bypass'ından etkilenmez.
+- [Yeni] **FetchJsonWithFallbackAsync<T>**: JSON deserialization gerektiren istekler (GetFromJsonAsync) için generic fallback wrapper'ı eklendi. 4 metotta kullanılır: FetchSeriesDetailsAsync, FetchSeasonDetailsAsync, FetchDetailsAsync, EnsureGenresCachedAsync.
+- [Değişti] **6 HTTP Çağrısı Güncellendi**: FetchMetadataAsync, FetchSeriesDetailsAsync, FetchSeasonDetailsAsync, FetchDetailsAsync, SearchSeriesOnceAsync, EnsureGenresCachedAsync metotlarındaki tüm doğrudan HTTP çağrıları fallback mekanizmasına taşındı.
+- [Değişti] **NetworkRetry.ExecuteAsync Kullanımı Kaldırıldı**: FetchSeriesDetailsAsync ve FetchSeasonDetailsAsync'deki retry mekanizması (2 deneme + exponential backoff) yerine tek seferlik proxy→direct fallback kullanılır. Bu, kod karmaşıklığını azaltır ve proxy down durumunda daha hızlı yanıt verir.
+- [Güvence] **OperationCanceledException Doğru Yakalanır**: Kullanıcı iptali (CancellationToken) ile timeout (TaskCanceledException) ayrılır. Timeout'ta fallback'e gidilir, kullanıcı iptalinde sessizce çıkılır.
+- [Güvence] **EnsureApiKeyLoaded Fallback Yolunda Çağrılır**: Proxy modunda API key kontrolleri bypass edilse bile, fallback yolunda direkt API'ye istek atmadan önce `EnsureApiKeyLoaded()` çağrılır ve `_apiKey` boşsa key eklenmeden istek gider (401 döner).
+- [Doğrulama] **Build başarılı**, 0 hata. **11/11 test geçiyor**. Proxy HTTP 200 dönüyor.
+
+### 🔄 Redis Cache TTL: 1 Saat -> 5 Gün (2026-05-30)
+
+- [Değişti] **Cache TTL 432.000 saniyeye (5 gün) yükseltildi**: Proxy'deki Redis cache süresi 1 saatten 5 güne çıkarıldı. Aynı film/dizi için TMDB'ye 5 günde sadece 1 istek gider.
+- [Teknik] **API Key Auth Değişti**: Proxy artık Bearer token yerine v3 API key'i  query string parametresi olarak gönderiyor.  environment variable'ı kullanılıyor.
+- [Teknik] **Yeniden deploy**: Upstash Redis + 5 gün TTL ile proxy Vercel'e yeniden deploy edildi.
 
 ### Layout Gizliyken Overlay'in Ekranda Kalması Düzeltildi (2026-05-28)
 
@@ -73,7 +104,6 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - [Düzeltildi] **Episode Thumbnail Preload Eklendi**: `SelectedSeason` değiştiğinde (dizi detayı açılınca veya sezon değiştirilince) o sezonun tüm episode `CoverUrl`'leri arka planda preload ediliyor. Episode `RemoteImage`'ları attach olduğunda zaten memory cache'de bulup anında gösteriyor.
 - [Düzeltildi] **Scroll Sonrası Resim Kaybı**: `StartImageLoad`'da memory cache miss olunca disk cache'e bakılıyor. Disk cache'de varsa anında memory cache'e alınıp uygulanıyor — HTTP isteği gönderilmiyor.
 - [Test] M3UParser ve SeriesInfoParser testleri güncellendi: gerçek sağlayıcı verisinden `/ts` → Live, uzantısız → VOD, adult başlık (`s16`) → VOD, `S01E01` → Series case'leri eklendi. `FixChannelTypes` testleri kaldırıldı. 857/857 test geçiyor.
-
 
 ### RemoteImage Performans Fix ve NoctraPlayer-fixes Uygulaması (2026-05-27)
 - [Uygulandı] **NoctraPlayer-fixes.zip**: `Channel.cs`, `IXtreamCodesService.cs`, `XtreamCodesService.cs`, `StalkerPortalService.cs` ve `MainViewModel.cs` dosyaları zip'teki güncel sürümleriyle değiştirildi. Channel metadata field'ları ObservableProperty yapılarak UI reaktifliği sağlandı; Xtream/Stalker servislerinde BackdropUrl, ContentRating, TmdbId parse desteği eklendi; Stalker pagination refactor edildi; MainViewModel büyük revizyona uğradı. Mevcut dosyalar `artifacts/backup/` altına yedeklendi.

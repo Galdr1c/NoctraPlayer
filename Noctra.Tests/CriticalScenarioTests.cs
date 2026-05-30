@@ -380,7 +380,7 @@ namespace Noctra.Tests
 
             ctx.VideoService.FirePlaybackEnded();
 
-            Assert.Contains("kararsız", ctx.VM.ConnectionStatus,
+            Assert.Contains("unstable", ctx.VM.ConnectionStatus,
                 StringComparison.OrdinalIgnoreCase);
         }
 

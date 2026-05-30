@@ -444,7 +444,7 @@ public partial class GlobalSettings : ObservableObject
     private bool _isDarkTheme = true;
 
     [ObservableProperty]
-    private string _language = "tr";
+    private string _language = "en";
 
     [ObservableProperty]
     private bool _autoUpdate = true;

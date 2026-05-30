@@ -23,7 +23,7 @@ namespace Noctra.Tests
 
             var httpClient = new HttpClient();
             var loggerMock = new Mock<ILogger<MetadataService>>();
-            var service = new MetadataService(httpClient, null, null, loggerMock.Object);
+            var service = new MetadataService(httpClient, null, null, null, loggerMock.Object);
 
             var result = await service.FetchMetadataAsync("Matrix", ChannelType.VOD);
             

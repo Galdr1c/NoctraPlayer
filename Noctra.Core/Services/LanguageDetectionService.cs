@@ -147,10 +147,10 @@ public class LanguageDetectionService
     /// Tek bir kanal adından ülke kodunu tespit eder
     /// </summary>
     /// <param name="channelName">Kanal adı</param>
-    /// <returns>ISO 3166-1 alpha-2 ülke kodu (varsayılan: "TR")</returns>
+    /// <returns>ISO 3166-1 alpha-2 ülke kodu (varsayılan: "US")</returns>
     public string DetectCountryFromName(string? channelName)
     {
-        if (string.IsNullOrWhiteSpace(channelName)) return "TR";
+        if (string.IsNullOrWhiteSpace(channelName)) return "US";
 
         // 1) Priority: Try tokens first (prefix markers like TR |, [DE], etc.)
         var tokens = Tokenize(channelName);
@@ -174,21 +174,21 @@ public class LanguageDetectionService
             }
         }
 
-        return "TR"; // Default fallback
+        return "US"; // Default fallback
     }
 
     /// <summary>
     /// Kanal listesinden en baskın ülkeyi tespit eder
     /// </summary>
     /// <param name="channelNames">Kanal adları listesi</param>
-    /// <returns>ISO 3166-1 alpha-2 ülke kodu (varsayılan: "TR")</returns>
+    /// <returns>ISO 3166-1 alpha-2 ülke kodu (varsayılan: "US")</returns>
     public string DetectCountry(IEnumerable<Noctra.Models.Channel> channels)
     {
         if (channels == null || !channels.Any())
-            return "TR";
+            return "US";
 
         var countries = DetectCountries(channels);
-        return countries.Count > 0 ? countries[0].CountryCode : "TR";
+        return countries.Count > 0 ? countries[0].CountryCode : "US";
     }
 
     /// <summary>
@@ -198,7 +198,7 @@ public class LanguageDetectionService
     {
         var channelList = channels.ToList();
         if (channelList.Count == 0)
-            return new List<(string, int, double)> { ("TR", 0, 100) };
+            return new List<(string, int, double)> { ("US", 0, 100) };
 
         var scores = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 

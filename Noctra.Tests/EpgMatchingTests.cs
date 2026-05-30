@@ -474,11 +474,11 @@ public class EpgGetNameVariantsRealWorldTests
     [InlineData("Kanal D",           "TR:kanald")]
     [InlineData("Show TV",           "TR:showtv")]
     [InlineData("Star TV",           "TR:startv")]
-    [InlineData("FOX",               "TR:fox")]
+    [InlineData("FOX",               "US:fox")]
     [InlineData("NTV",               "TR:ntv")]
     [InlineData("ATV",               "TR:atv")]
     [InlineData("CNN Türk",          "TR:cnnturk")]
-    [InlineData("beIN Sports 1",     "TR:beinsports1")]
+    [InlineData("beIN Sports 1",     "US:beinsports1")]
     public void GetNameVariants_ChannelName_ContainsNormalizedForm(string channelName, string expectedNormalized)
     {
         var variants = GetNameVariants(channelName);

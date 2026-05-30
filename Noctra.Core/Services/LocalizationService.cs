@@ -14,7 +14,7 @@ public class LocalizationService : ILocalizationService
     {
         _logger = logger;
         _translations = LoadTranslations();
-        CurrentLanguage = NormalizeLanguageCode("tr");
+        CurrentLanguage = NormalizeLanguageCode("en");
     }
 
     public string CurrentLanguage { get; private set; }
@@ -57,7 +57,7 @@ public class LocalizationService : ILocalizationService
 
     internal static string NormalizeLanguageCode(string? languageCode)
     {
-        var normalized = (languageCode ?? "tr").Trim().ToLowerInvariant();
+        var normalized = (languageCode ?? "en").Trim().ToLowerInvariant();
         return normalized switch
         {
             "tr" or "tr-tr" => "tr-TR",
@@ -65,7 +65,7 @@ public class LocalizationService : ILocalizationService
             "de" or "de-de" => "de-DE",
             "fr" or "fr-fr" => "fr-FR",
             "es" or "es-es" => "es-ES",
-            _ => "tr-TR"
+            _ => "en-US"
         };
     }
 

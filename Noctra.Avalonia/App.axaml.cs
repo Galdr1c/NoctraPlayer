@@ -63,7 +63,7 @@ public partial class App : Application
             {
                 ApplyApplicationLanguage(settings.Settings.Language);
                 themeService.SetTheme(settings.Settings.IsDarkTheme);
-                localizationService.SetLanguage(settings.Settings.Language ?? "tr");
+                localizationService.SetLanguage(settings.Settings.Language ?? "en");
                 LocalizationSource.Instance.Initialize(localizationService);
             }
 
@@ -75,7 +75,7 @@ public partial class App : Application
                     {
                         ApplyApplicationLanguage(settings.Settings.Language);
                         themeService.SetTheme(settings.Settings.IsDarkTheme);
-                        localizationService.SetLanguage(settings.Settings.Language ?? "tr");
+                        localizationService.SetLanguage(settings.Settings.Language ?? "en");
                     }
                     catch
                     {
@@ -632,14 +632,14 @@ CREATE TABLE IF NOT EXISTS SeriesEpisodeProgresses (
 
     private static void ApplyApplicationLanguage(string? languageCode)
     {
-        var normalized = (languageCode ?? "tr").Trim().ToLowerInvariant();
+        var normalized = (languageCode ?? "en").Trim().ToLowerInvariant();
         var cultureName = normalized switch
         {
             "en" => "en-US",
             "de" => "de-DE",
             "fr" => "fr-FR",
             "es" => "es-ES",
-            _ => "tr-TR"
+            _ => "en-US"
         };
 
         var culture = new CultureInfo(cultureName);

@@ -114,7 +114,7 @@ namespace Noctra.Tests
         [InlineData("TR: Kanal D [HD]", "TR")]
         [InlineData("【TR】Kanal D", "TR")]
         [InlineData("〔DE〕RTL", "DE")]
-        [InlineData("Random Channel", "TR")] // Fallback
+        [InlineData("Random Channel", "US")] // Fallback
         public void DetectCountry_WithVariousPrefixFormats_ExtractsCorrectly(string channelName, string expectedCountry)
         {
             var service = new LanguageDetectionService();

@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Noctra.Models;
 using System.Net.Http;
@@ -3983,7 +3983,7 @@ public partial class MainViewModel : ObservableObject
             }
 
             // 2. EPG kaynaklarını topla
-            var appLanguage = (_settingsService.Settings.Language ?? "tr").ToUpperInvariant();
+            var appLanguage = (_settingsService.Settings.Language ?? "en").ToUpperInvariant();
             var playlistEpgUrl = (SelectedPlaylist?.EpgUrl ?? string.Empty).Trim();
             var customEpgUrls = _settingsService.Settings.CustomEpgUrls?.Where(u => !string.IsNullOrWhiteSpace(u)).ToList() ?? new List<string>();
             var hasUsableTvgIds = channelsForMapping.Any(c => !string.IsNullOrWhiteSpace(c.TvgId));
@@ -5060,7 +5060,7 @@ public partial class MainViewModel : ObservableObject
             season = new Season
             {
                 SeasonNumber = parsed.SeasonNumber,
-                Name = $"Sezon {parsed.SeasonNumber}",
+                Name = $"Season {parsed.SeasonNumber}",
                 CoverUrl = item.PosterUrl
             };
             series.Seasons.Add(season);
@@ -7515,7 +7515,7 @@ public partial class MainViewModel : ObservableObject
                 season = new Season
                 {
                     SeasonNumber = seasonNumber,
-                    Name = $"Sezon {seasonNumber}",
+                    Name = $"Season {seasonNumber}",
                     CoverUrl = series.CoverUrl,
                     SeriesId = series.Id
                 };
@@ -7949,7 +7949,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (!IsCurrentProviderType(ProfileType.StalkerPortal)) return;
 
-        // Bu diziye ait Channel kaydını bul — StreamUrl'de series_id var
+        // Bu diziye ait Channel kaydÄ±nÄ± bul â€” StreamUrl'de series_id var
         var seriesChannel = await db.Channels
             .AsNoTracking()
             .FirstOrDefaultAsync(c =>
@@ -7960,7 +7960,7 @@ public partial class MainViewModel : ObservableObject
 
         if (seriesChannel == null)
         {
-            // İsim eşleşmesi yoksa normalized key ile dene
+            // Ä°sim eÅŸleÅŸmesi yoksa normalized key ile dene
             var allSeriesChannels = await db.Channels
                 .AsNoTracking()
                 .Where(c => c.PlaylistId == series.PlaylistId &&
@@ -8011,7 +8011,7 @@ public partial class MainViewModel : ObservableObject
             var season = new Season
             {
                 SeasonNumber = seasonNum,
-                Name = string.IsNullOrWhiteSpace(stalkerSeason.Name) ? $"Sezon {seasonNum}" : stalkerSeason.Name,
+                Name = string.IsNullOrWhiteSpace(stalkerSeason.Name) ? $"Season {seasonNum}" : stalkerSeason.Name,
                 CoverUrl = series.CoverUrl,
                 Series = series
             };
@@ -8046,7 +8046,7 @@ public partial class MainViewModel : ObservableObject
                 season.Episodes.Add(new Episode
                 {
                     EpisodeNumber = epNum,
-                    Name = string.IsNullOrWhiteSpace(stalkerEp.Name) ? $"Bölüm {epNum}" : stalkerEp.Name,
+                    Name = string.IsNullOrWhiteSpace(stalkerEp.Name) ? $"Episode {epNum}" : stalkerEp.Name,
                     StreamUrl = interceptUrl,
                     Plot = epDescription,
                     Duration = duration,
@@ -8161,7 +8161,7 @@ public partial class MainViewModel : ObservableObject
                 season = new Season
                 {
                     SeasonNumber = seasonNum,
-                    Name = seasonMap.TryGetValue(seasonNum, out var sd) ? sd.Name : $"Sezon {seasonNum}",
+                    Name = seasonMap.TryGetValue(seasonNum, out var sd) ? sd.Name : $"Season {seasonNum}",
                     CoverUrl = seasonMap.TryGetValue(seasonNum, out var sd2) ? sd2.Cover : null,
                     Series = series
                 };
@@ -8195,7 +8195,7 @@ public partial class MainViewModel : ObservableObject
                 season.Episodes.Add(new Episode
                 {
                     EpisodeNumber = ep.EpisodeNum,
-                    Name = ep.Title ?? $"Bölüm {ep.EpisodeNum}",
+                    Name = ep.Title ?? $"Episode {ep.EpisodeNum}",
                     StreamUrl = streamUrl,
                     CoverUrl = FirstNonEmpty(ep.CoverUrl, season.CoverUrl, series.CoverUrl),
                     Plot = ep.Plot,

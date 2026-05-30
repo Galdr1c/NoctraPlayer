@@ -31,7 +31,7 @@ public class LocalizationServiceTests
     [InlineData("de-DE", "de-DE")]
     [InlineData("fr", "fr-FR")]
     [InlineData("es", "es-ES")]
-    [InlineData("unknown", "tr-TR")]
+    [InlineData("unknown", "en-US")]
     public void NormalizeLanguageCode_ReturnsExpectedValue(string input, string expected)
     {
         Assert.Equal(expected, LocalizationService.NormalizeLanguageCode(input));
