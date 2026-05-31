@@ -1621,6 +1621,18 @@ public partial class MainViewModel : ObservableObject
         {
             var playlistId = SelectedPlaylist?.Id ?? 0;
             _allSeriesCache = await _mediaService.GetSeriesListAsync(playlistId);
+            if (_allSeriesCache.Count == 0 && playlistId > 0)
+            {
+                var hasSeriesChannels = await PlaylistHasSeriesChannelsAsync(playlistId);
+                if (hasSeriesChannels)
+                {
+                    _perfTrace?.Event("HOME", "Series cache empty; rebuilding aggregation", $"playlist={playlistId}");
+                    await _mediaService.AggregateContentAsync(playlistId);
+                    _mediaService.RaiseAggregationCompleted(playlistId);
+                    _allSeriesCache = await _mediaService.GetSeriesListAsync(playlistId);
+                }
+            }
+
             _perfTrace?.Counter("HOME", "AllSeriesCache", _allSeriesCache.Count, $"playlist={playlistId}");
 
             _isEpisodeContinueDirty = true;
@@ -1780,6 +1792,17 @@ public partial class MainViewModel : ObservableObject
             _dispatcherService.Invoke(() => SetItems(ContinueWatching, Enumerable.Empty<Channel>()));
             _dispatcherService.Invoke(() => OnPropertyChanged(nameof(ContinueWatching)));
         }
+    }
+
+    private async Task<bool> PlaylistHasSeriesChannelsAsync(int playlistId)
+    {
+        var sample = await _playlistService.GetChannelsFilteredPageAsync(
+            playlistId,
+            skip: 0,
+            take: 1,
+            type: ChannelType.Series);
+
+        return sample.Count > 0;
     }
 
     private static bool IsContinueWatchingCandidate(TimeSpan? watchedPosition, TimeSpan? duration, bool completed)
@@ -8892,5 +8915,4 @@ public partial class MainViewModel : ObservableObject
     [GeneratedRegex(@"(?:\b|_)(adult|xxx|porn|sexy|18\+| \+18|pink|redlight|erotik|erotic|lust|hentai|brazzers|bangbros|babes|realitykings|digitalplayground|naughtyamerica|passion|penthouse|hustler|playboy|blue movie|hardcore|softcore|x-rated|sex|cam|strip|fetish|bondage|bdsm|amateur|milf|gay|lesbian|pornstar|yetişkin|mature)(?:\b|_)", RegexOptions.IgnoreCase)]
     private static partial Regex AdultContentRegex();
 }
-
 
