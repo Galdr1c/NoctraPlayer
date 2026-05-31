@@ -1767,6 +1767,19 @@ public partial class MainViewModel : ObservableObject
                     })
                     .ToList();
 
+                var progressContinue = await BuildSeriesContinueFromProgressAsync(db, profileId.Value, playlistId);
+                if (progressContinue.Count > 0)
+                {
+                    episodeContinue = episodeContinue
+                        .Concat(progressContinue)
+                        .GroupBy(c => string.IsNullOrWhiteSpace(c.StreamUrl)
+                            ? $"{c.Type}:{c.Id}:{c.Name}"
+                            : c.StreamUrl,
+                            StringComparer.OrdinalIgnoreCase)
+                        .Select(g => g.OrderByDescending(c => c.LastWatched).First())
+                        .ToList();
+                }
+
                 _cachedEpisodeContinue = episodeContinue;
                 _isEpisodeContinueDirty = false;
             }
@@ -1792,6 +1805,85 @@ public partial class MainViewModel : ObservableObject
             _dispatcherService.Invoke(() => SetItems(ContinueWatching, Enumerable.Empty<Channel>()));
             _dispatcherService.Invoke(() => OnPropertyChanged(nameof(ContinueWatching)));
         }
+    }
+
+    private async Task<List<Channel>> BuildSeriesContinueFromProgressAsync(AppDbContext db, int profileId, int playlistId)
+    {
+        var progressRows = await db.SeriesEpisodeProgresses
+            .AsNoTracking()
+            .Where(p => p.ProfileId == profileId && !p.Completed)
+            .OrderByDescending(p => p.LastWatchedAt)
+            .Take(200)
+            .ToListAsync();
+
+        if (progressRows.Count == 0 || _allSeriesCache.Count == 0)
+        {
+            return new List<Channel>();
+        }
+
+        var progressKeys = progressRows
+            .Select(p => p.SeriesKey)
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var matchingSeriesIds = _allSeriesCache
+            .Where(s => progressKeys.Contains(SeriesProgressIdentity.NormalizeSeriesKey(s.Name)))
+            .Select(s => s.Id)
+            .Where(id => id > 0)
+            .Distinct()
+            .ToList();
+
+        if (matchingSeriesIds.Count == 0)
+        {
+            return new List<Channel>();
+        }
+
+        var seriesWithEpisodes = await db.Series
+            .AsNoTracking()
+            .Include(s => s.Seasons)
+            .ThenInclude(s => s.Episodes)
+            .AsSplitQuery()
+            .Where(s => s.PlaylistId == playlistId && matchingSeriesIds.Contains(s.Id))
+            .ToListAsync();
+
+        var seriesByKey = seriesWithEpisodes
+            .GroupBy(s => SeriesProgressIdentity.NormalizeSeriesKey(s.Name), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.OrderBy(s => s.Id).First(), StringComparer.OrdinalIgnoreCase);
+
+        var result = new List<Channel>();
+        foreach (var progress in progressRows
+                     .GroupBy(p => p.SeriesKey, StringComparer.OrdinalIgnoreCase)
+                     .Select(g => g.OrderByDescending(p => p.LastWatchedAt).First()))
+        {
+            if (!seriesByKey.TryGetValue(progress.SeriesKey, out var series))
+            {
+                continue;
+            }
+
+            var episode = series.Seasons
+                .FirstOrDefault(s => Math.Max(1, s.SeasonNumber) == Math.Max(1, progress.SeasonNumber))
+                ?.Episodes
+                .FirstOrDefault(e => Math.Max(1, e.EpisodeNumber) == Math.Max(1, progress.EpisodeNumber));
+
+            if (episode == null)
+            {
+                continue;
+            }
+
+            episode.LastWatched = progress.LastWatchedAt;
+            episode.WatchedPosition = progress.StoppedAt;
+            episode.Duration = progress.Duration ?? episode.Duration;
+            episode.IsCompleted = progress.Completed;
+
+            if (!IsContinueWatchingCandidate(episode.WatchedPosition, episode.Duration, episode.IsCompleted))
+            {
+                continue;
+            }
+
+            result.Add(BuildSeriesEpisodeChannel(episode, series));
+        }
+
+        return result;
     }
 
     private async Task<bool> PlaylistHasSeriesChannelsAsync(int playlistId)
@@ -4744,6 +4836,20 @@ public partial class MainViewModel : ObservableObject
         SetItems(HistoryVodChannels, historySnapshot.Where(c => c.Type == ChannelType.VOD));
         _dispatcherService.Invoke(() => OnPropertyChanged(nameof(HistoryVodChannels)));
 
+        var playlistId = SelectedPlaylist?.Id ?? 0;
+        if (CurrentProfileId.HasValue && playlistId > 0 && _allSeriesCache.Count > 0)
+        {
+            try
+            {
+                using var db = await _contextFactory.CreateDbContextAsync();
+                await ApplySeriesProgressToHistoryCacheAsync(db, CurrentProfileId.Value);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error applying persisted series progress to history cache");
+            }
+        }
+
         // Use cached LastWatchedEpisodeAt when available (populated on episode watch save)
         var cachedSeries = _allSeriesCache
             .Where(s => s.LastWatchedEpisodeAt.HasValue)
@@ -4762,7 +4868,6 @@ public partial class MainViewModel : ObservableObject
         }
 
         // Fallback: query DB for series with watched episodes
-        var playlistId = SelectedPlaylist?.Id ?? 0;
         var watchedSeries = new List<Series>();
         if (playlistId > 0)
         {
@@ -4803,6 +4908,34 @@ public partial class MainViewModel : ObservableObject
                                  && HistorySeriesItems.Count == 0;
         });
         _dispatcherService.Invoke(() => OnPropertyChanged(nameof(HistorySeriesItems)));
+    }
+
+    private async Task ApplySeriesProgressToHistoryCacheAsync(AppDbContext db, int profileId)
+    {
+        var progressRows = await db.SeriesEpisodeProgresses
+            .AsNoTracking()
+            .Where(p => p.ProfileId == profileId)
+            .GroupBy(p => p.SeriesKey)
+            .Select(g => new { SeriesKey = g.Key, LastWatchedAt = g.Max(p => p.LastWatchedAt) })
+            .ToListAsync();
+
+        if (progressRows.Count == 0)
+        {
+            return;
+        }
+
+        var lastWatchedByKey = progressRows
+            .Where(p => !string.IsNullOrWhiteSpace(p.SeriesKey))
+            .ToDictionary(p => p.SeriesKey, p => (DateTime?)p.LastWatchedAt, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var series in _allSeriesCache)
+        {
+            var key = SeriesProgressIdentity.NormalizeSeriesKey(series.Name);
+            if (lastWatchedByKey.TryGetValue(key, out var lastWatchedAt))
+            {
+                series.LastWatchedEpisodeAt = lastWatchedAt;
+            }
+        }
     }
 
     private void UpdateDownloadedItems()
@@ -8915,4 +9048,3 @@ public partial class MainViewModel : ObservableObject
     [GeneratedRegex(@"(?:\b|_)(adult|xxx|porn|sexy|18\+| \+18|pink|redlight|erotik|erotic|lust|hentai|brazzers|bangbros|babes|realitykings|digitalplayground|naughtyamerica|passion|penthouse|hustler|playboy|blue movie|hardcore|softcore|x-rated|sex|cam|strip|fetish|bondage|bdsm|amateur|milf|gay|lesbian|pornstar|yetişkin|mature)(?:\b|_)", RegexOptions.IgnoreCase)]
     private static partial Regex AdultContentRegex();
 }
-

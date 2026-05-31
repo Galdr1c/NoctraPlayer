@@ -120,6 +120,8 @@ public class ProfileService : IProfileService
         {
             // If credentials changed, delete associated playlists to force a complete re-sync
             // but keep SeriesEpisodeProgresses (they are profile-wide)
+            await DeleteProfilePlaylistContentAsync(db, profile.Id);
+
             await db.Playlists
                 .Where(pl => pl.ProfileId == profile.Id)
                 .ExecuteDeleteAsync();
@@ -132,6 +134,47 @@ public class ProfileService : IProfileService
         }
         await transaction.CommitAsync();
         return profile;
+    }
+
+    private static async Task DeleteProfilePlaylistContentAsync(AppDbContext db, int profileId)
+    {
+        var playlistIds = await db.Playlists
+            .Where(pl => pl.ProfileId == profileId)
+            .Select(pl => pl.Id)
+            .ToListAsync();
+
+        if (playlistIds.Count == 0)
+        {
+            return;
+        }
+
+        var epgChannels = await db.Channels
+            .Where(c => playlistIds.Contains(c.PlaylistId))
+            .Select(c => new { c.TvgId, c.TvgName, c.Name })
+            .ToListAsync();
+
+        var epgChannelIds = epgChannels
+            .SelectMany(c => new[] { c.TvgId, c.TvgName, c.Name })
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (epgChannelIds.Count > 0)
+        {
+            const int batchSize = 500;
+            for (var i = 0; i < epgChannelIds.Count; i += batchSize)
+            {
+                var batch = epgChannelIds.Skip(i).Take(batchSize).ToList();
+                await db.EpgPrograms
+                    .Where(e => batch.Contains(e.ChannelId))
+                    .ExecuteDeleteAsync();
+            }
+        }
+
+        await db.Series
+            .Where(s => playlistIds.Contains(s.PlaylistId))
+            .ExecuteDeleteAsync();
     }
 
     public async Task DeleteProfileAsync(int profileId, int providerAccountId)

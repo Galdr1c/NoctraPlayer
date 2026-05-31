@@ -175,6 +175,67 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task RefreshAsync_AfterSuccessfulParse_ReplacesDerivedPlaylistData()
+        {
+            var service = CreateService();
+            int playlistId;
+
+            using (var context = new AppDbContext(_options))
+            {
+                var playlist = new Playlist
+                {
+                    Name = "Refresh Source",
+                    Url = "http://source.com/list.m3u",
+                    IsActive = true,
+                    ChannelCount = 1,
+                    CreatedAt = DateTime.UtcNow,
+                    LastUpdated = DateTime.UtcNow
+                };
+                context.Playlists.Add(playlist);
+                await context.SaveChangesAsync();
+                playlistId = playlist.Id;
+
+                context.Channels.Add(new Channel
+                {
+                    PlaylistId = playlistId,
+                    Name = "Old Channel",
+                    StreamUrl = "old-url",
+                    TvgId = "old.epg",
+                    Type = ChannelType.Live
+                });
+                context.Series.Add(new Series
+                {
+                    PlaylistId = playlistId,
+                    Name = "Old Series"
+                });
+                context.EpgPrograms.Add(new EpgProgram
+                {
+                    ChannelId = "old.epg",
+                    Title = "Old Program",
+                    StartTime = DateTime.UtcNow,
+                    EndTime = DateTime.UtcNow.AddHours(1)
+                });
+                await context.SaveChangesAsync();
+            }
+
+            var refreshedChannels = new List<Channel>
+            {
+                new Channel { Name = "New Channel", StreamUrl = "new-url", Type = ChannelType.Live }
+            };
+            _parserMock.Setup(p => p.ParseFromUrlAsync("http://source.com/list.m3u")).ReturnsAsync(refreshedChannels);
+
+            await service.RefreshAsync(playlistId);
+
+            using (var context = new AppDbContext(_options))
+            {
+                var channel = Assert.Single(await context.Channels.Where(c => c.PlaylistId == playlistId).ToListAsync());
+                Assert.Equal("New Channel", channel.Name);
+                Assert.False(await context.Series.AnyAsync(s => s.PlaylistId == playlistId));
+                Assert.False(await context.EpgPrograms.AnyAsync(e => e.ChannelId == "old.epg"));
+            }
+        }
+
+        [Fact]
         public async Task RefreshAsync_WithChildProfile_ShouldApplyFilter()
         {
             // Arrange

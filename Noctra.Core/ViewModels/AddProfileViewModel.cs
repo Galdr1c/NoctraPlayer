@@ -1081,6 +1081,22 @@ public partial class AddProfileViewModel : ObservableObject
                 return;
             }
 
+            if (EditingProfile != null && credentialsChanged)
+            {
+                StatusMessage = _localizationService.GetString("AddProfile.Status.Analyzing");
+
+                var preview = await BuildImportPreviewAsync();
+                if (!preview.IsValid || preview.TotalChannels <= 0)
+                {
+                    HasError = true;
+                    StatusMessage = string.IsNullOrWhiteSpace(preview.ErrorMessage)
+                        ? "Yeni provider dogrulanamadi; mevcut profil verisi korundu."
+                        : preview.ErrorMessage;
+                    UrlError = StatusMessage;
+                    return;
+                }
+            }
+
             var request = new ProfileSaveRequest
             {
                 ProfileName = ProfileName,

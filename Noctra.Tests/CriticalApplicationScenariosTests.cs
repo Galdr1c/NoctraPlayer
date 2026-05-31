@@ -1055,6 +1055,67 @@ namespace Noctra.Tests
             Assert.False(isNotDuplicate, "Different Username should not be a duplicate.");
         }
 
+        [Fact]
+        public async Task SaveProfileAsync_WhenCredentialsChanged_RemovesOldPlaylistContentButKeepsProgress()
+        {
+            var account = await SeedAccountAsync("Original", "http://old.example.com");
+            account.Type = ProfileType.M3U;
+            account.Username = "old-user";
+            account.Password = "old-pass";
+            var profile = await SeedProfileAsync(account);
+            var playlist = await SeedPlaylistAsync(profile.Id);
+            var channel = await SeedChannelAsync(playlist.Id, "Old Channel", ChannelType.Live);
+            channel.TvgId = "old.epg";
+
+            _context.Series.Add(new Series
+            {
+                PlaylistId = playlist.Id,
+                Name = "Old Series"
+            });
+            _context.EpgPrograms.Add(new EpgProgram
+            {
+                ChannelId = "old.epg",
+                Title = "Old Program",
+                StartTime = DateTime.UtcNow,
+                EndTime = DateTime.UtcNow.AddHours(1)
+            });
+            await WriteSeriesProgressAsync(profile.Id, "oldseries");
+            await _context.SaveChangesAsync();
+
+            var editionMock = new Mock<IAppEditionService>();
+            var downloadMock = new Mock<IContentDownloadService>();
+            downloadMock
+                .Setup(d => d.FailActiveDownloadsForProfileAsync(
+                    It.IsAny<int>(),
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+            var svc = new ProfileService(_contextFactory, downloadMock.Object, new LicenseService(editionMock.Object));
+
+            await svc.SaveProfileAsync(new ProfileSaveRequest
+            {
+                ExistingIds = new ExistingProfileIds(profile.Id, account.Id),
+                ProfileName = profile.Name,
+                Avatar = profile.Avatar,
+                IsChild = profile.IsChild,
+                Url = "http://new.example.com",
+                Username = "new-user",
+                EncryptedPassword = "new-pass",
+                AccountType = ProfileType.M3U,
+                CredentialsChanged = true
+            });
+
+            Assert.False(await _context.Playlists.AnyAsync(p => p.ProfileId == profile.Id));
+            Assert.False(await _context.Channels.AnyAsync(c => c.PlaylistId == playlist.Id));
+            Assert.False(await _context.Series.AnyAsync(s => s.PlaylistId == playlist.Id));
+            Assert.False(await _context.EpgPrograms.AnyAsync(e => e.ChannelId == "old.epg"));
+            Assert.True(await _context.SeriesEpisodeProgresses.AnyAsync(p => p.ProfileId == profile.Id));
+            downloadMock.Verify(d => d.FailActiveDownloadsForProfileAsync(
+                profile.Id,
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()), Times.Once);
+        }
+
         // ─── Infrastructure ───────────────────────────────────────────────────────────
 
         private sealed class SharedConnectionDbContextFactory : IDbContextFactory<AppDbContext>

@@ -519,7 +519,7 @@ public partial class PlaylistService : IPlaylistService
         var existingChannelData = await context.Channels
             .AsNoTracking()
             .Where(c => c.PlaylistId == playlistId)
-            .Select(c => new { c.Name, c.StreamUrl, c.GroupTitle, c.TvgId, c.TvgName, c.Type, c.IsFavorite, c.IsInMyList, c.WatchedPosition, c.Duration, c.IsCompleted, c.LastWatched })
+            .Select(c => new { c.Id, c.Name, c.StreamUrl, c.GroupTitle, c.TvgId, c.TvgName, c.Type, c.IsFavorite, c.IsInMyList, c.WatchedPosition, c.Duration, c.IsCompleted, c.LastWatched })
             .ToListAsync();
 
         var userDataMap = new Dictionary<string, ChannelBackupData>(StringComparer.OrdinalIgnoreCase);
@@ -608,10 +608,16 @@ public partial class PlaylistService : IPlaylistService
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] WatchHistory backup in DeleteAllChannelsForRefreshAsync failed (non-fatal): {ex.Message}");
         }
 
-        // 3. TÜM KANALLARI SİL
-        await context.Channels
-            .Where(c => c.PlaylistId == playlistId)
-            .ExecuteDeleteAsync();
+        // 3. TÜM PLAYLIST İÇERİĞİNİ SİL
+        await DeletePlaylistContentForReplacementAsync(
+            context,
+            playlistId,
+            existingChannelData
+                .SelectMany(c => new[] { c.TvgId, c.TvgName, c.Name })
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Select(id => id!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList());
         InvalidateLinearStreamRepair(playlistId);
 
         // Kanal sayısını sıfırla
@@ -1011,7 +1017,7 @@ WHERE PlaylistId = {playlistId}
         // Fingerprint -> (IsFavorite, IsInMyList, WatchedPosition, Duration, IsCompleted, LastWatched)
         var existingChannelData = await context.Channels
             .Where(c => c.PlaylistId == playlistId)
-            .Select(c => new { c.Name, c.StreamUrl, c.GroupTitle, c.TvgId, c.TvgName, c.Type, c.IsFavorite, c.IsInMyList, c.WatchedPosition, c.Duration, c.IsCompleted, c.LastWatched })
+            .Select(c => new { c.Id, c.Name, c.StreamUrl, c.GroupTitle, c.TvgId, c.TvgName, c.Type, c.IsFavorite, c.IsInMyList, c.WatchedPosition, c.Duration, c.IsCompleted, c.LastWatched })
             .ToListAsync();
 
         var userDataMap = new Dictionary<string, (bool Fav, bool List, TimeSpan? Pos, TimeSpan? Dur, bool Comp, DateTime? LastW)>(StringComparer.OrdinalIgnoreCase);
@@ -1103,12 +1109,15 @@ WHERE PlaylistId = {playlistId}
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] WatchHistory backup failed (non-fatal): {ex.Message}");
         }
 
-        // 2. TÜM KANALLARI SİL (Temiz bir başlangıç için)
-        // Not: ExecuteDeleteAsync FK cascade tetiklemez. WatchHistory.ChannelId değerleri olduğu gibi kalır
-        // (silmeyen kanallara referans verir). Onarımı aşağıda yapıyoruz.
-        await context.Channels
-            .Where(c => c.PlaylistId == playlistId)
-            .ExecuteDeleteAsync();
+        await DeletePlaylistContentForReplacementAsync(
+            context,
+            playlistId,
+            existingChannelData
+                .SelectMany(c => new[] { c.TvgId, c.TvgName, c.Name })
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Select(id => id!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList());
         InvalidateLinearStreamRepair(playlistId);
 
         // 3. YENİ KANALLARA YEDEK VERİLERİ UYGULA
@@ -1171,6 +1180,34 @@ WHERE PlaylistId = {playlistId}
         System.Diagnostics.Debug.WriteLine($"[RefreshError] {context}: {ex}");
         return Task.CompletedTask;
     }
+
+    private static async Task DeletePlaylistContentForReplacementAsync(
+        AppDbContext context,
+        int playlistId,
+        IReadOnlyCollection<string> epgChannelIds)
+    {
+        if (epgChannelIds.Count > 0)
+        {
+            const int batchSize = 500;
+            var ids = epgChannelIds.ToList();
+            for (var i = 0; i < ids.Count; i += batchSize)
+            {
+                var batch = ids.Skip(i).Take(batchSize).ToList();
+                await context.EpgPrograms
+                    .Where(e => batch.Contains(e.ChannelId))
+                    .ExecuteDeleteAsync();
+            }
+        }
+
+        await context.Series
+            .Where(s => s.PlaylistId == playlistId)
+            .ExecuteDeleteAsync();
+
+        await context.Channels
+            .Where(c => c.PlaylistId == playlistId)
+            .ExecuteDeleteAsync();
+    }
+
     public async Task DeleteAsync(int playlistId)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
