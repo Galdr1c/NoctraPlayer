@@ -249,6 +249,8 @@ public partial class M3UParser : IM3UParser
     private static ChannelType DetectChannelType(string url, string name, string? groupTitle)
     {
         var lowerUrl = url.ToLowerInvariant();
+        var isAdult = GroupTitleSuggestsAdult(groupTitle);
+        var looksLikeSeries = SeriesInfoParser.IsSeries(name) && !LooksLikeBareNumericChannelName(name);
 
         if (lowerUrl.Contains("/serie/") || lowerUrl.Contains("/series/") || lowerUrl.Contains("/dizi/") || lowerUrl.Contains("/diziler/") || lowerUrl.Contains("/tv_show/") || lowerUrl.Contains("/tv_shows/") || lowerUrl.Contains("type=series"))
             return ChannelType.Series;
@@ -256,11 +258,20 @@ public partial class M3UParser : IM3UParser
         if (lowerUrl.Contains("/movie/") || lowerUrl.Contains("/movies/") || lowerUrl.Contains("/film/") || lowerUrl.Contains("/filmler/") || lowerUrl.Contains("/vod/") || lowerUrl.Contains("type=movie") || lowerUrl.Contains("type=vod"))
             return ChannelType.VOD;
 
-        if (IsLinearStreamUrl(lowerUrl))
+        if (lowerUrl.Contains("/live/") || lowerUrl.Contains("/livetv/") || lowerUrl.Contains("/tv/") || lowerUrl.Contains("type=live"))
             return ChannelType.Live;
 
-        if (SeriesInfoParser.IsSeries(name))
+        if (HasStrongLinearStreamSignal(lowerUrl))
+            return ChannelType.Live;
+
+        if (GroupTitleSuggestsVod(groupTitle) && !HasStrongLinearStreamSignal(lowerUrl))
+            return ChannelType.VOD;
+
+        if (!isAdult && (looksLikeSeries || (GroupTitleSuggestsSeries(groupTitle) && LooksLikeEpisodicName(name))))
             return ChannelType.Series;
+
+        if (IsLinearStreamUrl(lowerUrl))
+            return ChannelType.Live;
 
         return ChannelType.VOD;
     }
@@ -314,6 +325,83 @@ public partial class M3UParser : IM3UParser
                lowerUrl.Contains("format=m3u8") ||
                lowerUrl.Contains("extension=m3u8") ||
                lowerUrl.Contains("extension=ts");
+    }
+
+    private static bool HasStrongLinearStreamSignal(string lowerUrl)
+    {
+        var path = lowerUrl;
+        var q = path.IndexOf('?');
+        if (q >= 0)
+            path = path[..q];
+
+        return path.EndsWith(".m3u8") ||
+               path.EndsWith("/m3u8") ||
+               path.EndsWith(".ts") ||
+               path.EndsWith("/ts") ||
+               path.EndsWith(".m3u") ||
+               path.EndsWith("/m3u") ||
+               lowerUrl.Contains("format=m3u8") ||
+               lowerUrl.Contains("extension=m3u8") ||
+               lowerUrl.Contains("extension=ts");
+    }
+
+    private static bool GroupTitleSuggestsVod(string? groupTitle)
+    {
+        if (string.IsNullOrWhiteSpace(groupTitle))
+        {
+            return false;
+        }
+
+        var normalized = groupTitle.Trim().ToLowerInvariant();
+        return normalized.Contains("movie") ||
+               normalized.Contains("movies") ||
+               normalized.Contains("film") ||
+               normalized.Contains("filmes") ||
+               normalized.Contains("cinema") ||
+               normalized.Contains("animação") ||
+               normalized.Contains("animacao");
+    }
+
+    private static bool GroupTitleSuggestsSeries(string? groupTitle)
+    {
+        if (string.IsNullOrWhiteSpace(groupTitle))
+        {
+            return false;
+        }
+
+        var normalized = groupTitle.Trim().ToLowerInvariant();
+        return normalized.Contains("series") ||
+               normalized.Contains("serie") ||
+               normalized.Contains("dizi") ||
+               normalized.Contains("drama") ||
+               normalized.Contains("dramas");
+    }
+
+    private static bool GroupTitleSuggestsAdult(string? groupTitle)
+    {
+        if (string.IsNullOrWhiteSpace(groupTitle))
+        {
+            return false;
+        }
+
+        var normalized = groupTitle.Trim().ToLowerInvariant();
+        return normalized.Contains("adult") ||
+               normalized.Contains("adulti") ||
+               normalized.Contains("xxx") ||
+               normalized.Contains("porn");
+    }
+
+    private static bool LooksLikeEpisodicName(string name)
+    {
+        return Regex.IsMatch(name, @"\b(?:episode|ep|part)\s*\d{1,3}\b", RegexOptions.IgnoreCase) ||
+               Regex.IsMatch(name, @"\bseason\s*\d{1,2}.*?\b(?:episode|ep|part)\s*\d{1,3}\b", RegexOptions.IgnoreCase) ||
+               Regex.IsMatch(name, @"\blast\s+episode\b", RegexOptions.IgnoreCase);
+    }
+
+    private static bool LooksLikeBareNumericChannelName(string name)
+    {
+        var candidate = ExtractNameAfterKnownPrefix(name) ?? name;
+        return Regex.IsMatch(candidate.Trim(), @"^\d{1,3}\s*x\s*\d{1,3}$", RegexOptions.IgnoreCase);
     }
 
 
@@ -378,14 +466,14 @@ public partial class M3UParser : IM3UParser
     private static readonly HashSet<string> KnownCountryCodes = new(StringComparer.OrdinalIgnoreCase)
     {
         // 2-Letter Codes
-        "TR", "EN", "UK", "US", "EU", "CA", "AU", "DE", "FR", "ES", "IT", "PT", "NL", "AL", "CL", "AR", "RU", "PL", "GR", "SE", "DK", "IN",
+        "TR", "EN", "UK", "GB", "US", "EU", "CA", "AU", "DE", "FR", "ES", "IT", "PT", "NL", "AL", "CL", "AR", "RU", "PL", "GR", "SE", "DK", "IN",
         "NO", "FI", "BE", "CH", "AT", "IE", "RO", "BG", "HU", "CZ", "SK", "HR", "SI", "RS", "BA", "MK", "ME", "UA", "BY", "MD", "BR", "MX",
         "CO", "PE", "VE", "EC", "GT", "CU", "BO", "DO", "HN", "PY", "SV", "CR", "UY", "PA", "NI", "PR", "ZA", "NG", "KE", "GH", "EG", "MA",
         "DZ", "TN", "LY", "SY", "IQ", "JO", "LB", "YE", "OM", "QA", "KW", "AE", "SA", "PK", "BD", "AF", "IR", "IL", "CN", "JP", "KR", "VN",
         "TH", "ID", "MY", "PH", "SG", "WO",
 
         // 3-Letter Codes
-        "TUR", "ENG", "USA", "GBR", "CAN", "AUS", "GER", "FRA", "ESP", "ITA", "POR", "NLD", "ALB", "POL", "GRE", "SWE", "DNK", "NOR", "FIN",
+        "TUR", "ENG", "USA", "GBR", "RSA", "CAN", "AUS", "GER", "FRA", "ESP", "ITA", "POR", "NLD", "ALB", "POL", "GRE", "SWE", "DNK", "NOR", "FIN",
         "BEL", "CHE", "AUT", "ROU", "BGR", "HUN", "CZE", "SVK", "HRV", "SRB", "UKR", "RUS", "ARA", "IND", "PAK", "BRA", "MEX", "ARG", "COL",
         "PER", "CHL", "VEN", "NGA", "ZAF"
     };
@@ -395,7 +483,7 @@ public partial class M3UParser : IM3UParser
         { "TURKEY", "TR" }, { "TÜRKİYE", "TR" }, { "TURKIYE", "TR" },
         { "GERMANY", "DE" }, { "DEUTSCH", "DE" }, { "DEUTSCHLAND", "DE" },
         { "FRANCE", "FR" }, { "FRENCH", "FR" },
-        { "SPAIN", "ES" }, { "SPANISH", "ES" }, { "ESPANOL", "ES" }, { "ESPAÑA", "ES" },
+        { "SPAIN", "ES" }, { "SPANISH", "ES" }, { "ESPANOL", "ES" }, { "ESPAÑA", "ES" }, { "SP", "ES" },
         { "ITALY", "IT" }, { "ITALIAN", "IT" }, { "ITALIA", "IT" },
         { "PORTUGAL", "PT" }, { "PORTUGUESE", "PT" },
         { "NETHERLANDS", "NL" }, { "DUTCH", "NL" },
@@ -408,7 +496,7 @@ public partial class M3UParser : IM3UParser
         { "NORWAY", "NO" }, { "NORWEGIAN", "NO" },
         { "FINLAND", "FI" }, { "FINNISH", "FI" },
         { "ARABIC", "AR" }, { "ARAB", "AR" },
-        { "ENGLISH", "EN" }, { "UNITED KINGDOM", "UK" }, { "UNITED STATES", "US" }
+        { "ENGLISH", "EN" }, { "UNITED KINGDOM", "GB" }, { "UNITED STATES", "US" }
     };
 
     private static string? ExtractCountryCodeFromPrefix(string prefix)
@@ -430,6 +518,28 @@ public partial class M3UParser : IM3UParser
         return null;
     }
 
+    private static string? ExtractNameAfterKnownPrefix(string name)
+    {
+        var delimiterIndex = name.IndexOf(':');
+        if (delimiterIndex <= 0 || delimiterIndex >= name.Length - 1)
+        {
+            return null;
+        }
+
+        var prefix = name[..delimiterIndex].Trim();
+        if (ExtractCountryCodeFromPrefix(prefix) != null || Regex.IsMatch(prefix, @"^[A-Z0-9_\-\s\|]+$"))
+        {
+            return name[(delimiterIndex + 1)..].Trim();
+        }
+
+        return null;
+    }
+
+    private static bool IsQualityOnlyPrefix(string prefix)
+    {
+        return Regex.IsMatch(prefix.Trim(), @"^(?:4k|uhd|2160p|1080p|720p|576p|480p|fhd|hd|sd|hevc|raw|h265|h\.?265|x265)$", RegexOptions.IgnoreCase);
+    }
+
     private static void ProcessGroupTitleAndNameFallback(Channel channel)
     {
         if (!string.IsNullOrEmpty(channel.GroupTitle) && channel.GroupTitle != "undefined")
@@ -444,11 +554,19 @@ public partial class M3UParser : IM3UParser
 
         var name = channel.Name.Trim();
 
-        // 1. Arabic character check
-        if (ContainsArabic(name))
+        // 1. Pipe country prefix: |GB| Sky Sports, |GB Free Sports
+        var pipeCountryMatch = Regex.Match(name, @"^\|(?<country>[A-Za-z]{2,3})(?:\||\s+)(?<rest>.+)$");
+        if (pipeCountryMatch.Success)
         {
-            channel.GroupTitle = "AR";
-            return;
+            var rawCountry = pipeCountryMatch.Groups["country"].Value.Trim();
+            var rest = pipeCountryMatch.Groups["rest"].Value.Trim();
+            var countryCode = ExtractCountryCodeFromPrefix(rawCountry);
+            if (countryCode != null && !string.IsNullOrWhiteSpace(rest))
+            {
+                channel.Country = countryCode;
+                channel.GroupTitle = BuildSmartGroupTitle(channel.Type, rest, countryCode);
+                return;
+            }
         }
 
         // 2. Bracket-based prefix: [TR] Kanal D
@@ -459,9 +577,12 @@ public partial class M3UParser : IM3UParser
             var rest = bracketMatch.Groups["rest"].Value.Trim();
 
             var countryCode = ExtractCountryCodeFromPrefix(rawGroup);
-            channel.GroupTitle = countryCode ?? rawGroup;
-            channel.Name = rest;
-            return;
+            if (countryCode != null)
+            {
+                channel.Country = countryCode;
+                channel.GroupTitle = BuildSmartGroupTitle(channel.Type, rest, countryCode);
+                return;
+            }
         }
 
         // 3. Delimiter-based prefix: TR: 50M2, DU-TR: 50M2, IN | Sport: Star Sports, TR; Hayat, NW: Aljazeera, R24: Vikings, AN-DU: Movie
@@ -481,21 +602,22 @@ public partial class M3UParser : IM3UParser
             var prefix = name[..delimIndex].Trim();
             var rest = name[(delimIndex + 1)..].Trim();
 
+            if (IsQualityOnlyPrefix(prefix))
+            {
+                channel.GroupTitle = BuildSmartGroupTitle(channel.Type, rest, null);
+                return;
+            }
+
             var countryCode = ExtractCountryCodeFromPrefix(prefix);
             if (countryCode != null)
             {
-                channel.GroupTitle = countryCode;
-                channel.Name = rest;
+                channel.GroupTitle = BuildSmartGroupTitle(channel.Type, rest, countryCode);
+                channel.Country = countryCode;
                 return;
             }
             
-            // Otherwise, it must be fully uppercase alphanumeric, hyphens, spaces, pipes
-            if (Regex.IsMatch(prefix, @"^[A-Z0-9_\-\s\|]+$"))
-            {
-                channel.GroupTitle = prefix;
-                channel.Name = rest;
-                return;
-            }
+            // Unknown prefixes are often show names, brand names, or provider markers
+            // (AN:, KD:, R24:, Sky Sports:). They are not stable playlist groups.
         }
 
         // 4. Space-separated prefix: EN The Amateur, ENl Titan
@@ -527,25 +649,43 @@ public partial class M3UParser : IM3UParser
 
             if (matchedCode != null)
             {
-                channel.GroupTitle = matchedCode;
-                channel.Name = string.Join(" ", words.Skip(1));
+                var rest = string.Join(" ", words.Skip(1));
+                channel.GroupTitle = BuildSmartGroupTitle(channel.Type, rest, matchedCode);
+                channel.Country = matchedCode;
                 return;
             }
         }
 
-        // 5. Default fallbacks if no prefix matched
-        if (channel.Type == ChannelType.VOD)
+        if (ContainsArabic(name) && channel.Type != ChannelType.Series)
         {
-            channel.GroupTitle = "Others";
+            channel.GroupTitle = "AR";
+            return;
         }
-        else if (channel.Type == ChannelType.Series)
+
+        channel.GroupTitle = BuildSmartGroupTitle(channel.Type, name, null);
+    }
+
+    private static string BuildSmartGroupTitle(ChannelType type, string name, string? countryCode)
+    {
+        var typePrefix = type switch
         {
-            channel.GroupTitle = "Others";
-        }
-        else
+            ChannelType.Series => "Series",
+            ChannelType.VOD => "Movies",
+            _ => "Live"
+        };
+
+        if (type == ChannelType.Series)
+            return "Series / Others";
+
+        if (type == ChannelType.Live)
         {
-            channel.GroupTitle = "Others";
+            if (!string.IsNullOrWhiteSpace(countryCode))
+            {
+                return $"Live / {countryCode}";
+            }
         }
+
+        return $"{typePrefix} / Others";
     }
 
     private static bool ContainsArabic(string text)
@@ -553,8 +693,8 @@ public partial class M3UParser : IM3UParser
         if (string.IsNullOrEmpty(text)) return false;
         return text.Any(c => (c >= 0x0600 && c <= 0x06FF) || 
                              (c >= 0x0750 && c <= 0x077F) || 
-                             (c >= 0x08A0 && c <= 0x08FF) || 
-                             (c >= 0xFB50 && c <= 0xFDFF) || 
+                             (c >= 0x08A0 && c <= 0x08FF) ||
+                             (c >= 0xFB50 && c <= 0xFDFF) ||
                              (c >= 0xFE70 && c <= 0xFEFF));
     }
 

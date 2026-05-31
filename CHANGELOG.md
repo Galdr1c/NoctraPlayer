@@ -7,6 +7,22 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Belirsiz M3U GroupTitle İçin Akıllı Gruplama (2026-05-31)
+
+- [Yeni] **Tester Playlist Audit Modu**: `Tester` projesine `--audit-playlist <m3u-path-or-url> [--out rapor.html]` modu eklendi. M3U playlist parse sonucu tip dağılımı, en büyük gruplar, `Others` bucket nedenleri, boş/undefined group-title örnekleri ve şüpheli tip/grup eşleşmeleri konsol + HTML rapor olarak üretilir.
+- [Yeni] **GroupTitle Olmayan Playlistlerde Sade Fallback Gruplama**: `M3UParser`, sağlayıcının `group-title` vermediği Solanaflix benzeri playlistlerde artık sadece güvenli üst seviye grup üretir. Ülke prefix'i varsa `Country` alanına yazılır ve live kanallar `Live / <Country>` altında toplanır; kanal markası veya dizi adı kategoriye çevrilmez.
+- [Değişti] **Görünen Ad Korundu**: `|GB| Sky Sports...`, `AR: ...`, `4K: ...` gibi display name değerleri artık parser tarafından temizlenmez. Grup çıkarımı bu metinden yapılabilir, ancak `Channel.Name` kullanıcıya playlistte geldiği haliyle bırakılır.
+- [Değişti] **Live Marka Bazlı Grup Açma Kaldırıldı**: `Live / SRB / Pink Style`, `Live / SRB / Pink Music` gibi her kanal/marka için ayrı grup üreten davranış kaldırıldı. Ülke biliniyorsa hepsi `Live / SRB` gibi ortak grupta; ülke bilinmiyorsa `Live / Others` altında kalır.
+- [Değişti] **GroupTitle'sız Series Tek Genel Grupta**: `Virgin River S1 E1`, `The Penthouse S01E01` gibi sezon/bölüm paterni taşıyan kayıtlar `Series` olarak algılanmaya devam eder, ancak dropdown'da her dizi için ayrı kategori açmamak için `Series / Others` altında gruplanır.
+- [Değişti] **Arbitrary Prefix Grup Kabul Edilmiyor**: `AN:`, `KD:`, `R24:`, `NFL:`, `NCIS:`, `spectrum:`, `[DirectTV]`, `[spectrum]` gibi `group-title` yerine display name içinde gelen prefix'ler artık kategori yapılmaz. Yalnızca güvenilir ülke/dil kodları (`GB`, `TR`, `USA`, `SRB` vb.) fallback grup üretir.
+- [Düzeltildi] **VOD Grup Sinyali Korundu**: `Filmes`, `Movies`, `Animação` gibi gerçek provider group-title'ları numeric proxy URL'lerde VOD sinyali olarak korunur; ancak `.m3u8`, `.ts`, `.m3u` gibi güçlü live stream uzantıları varsa eski live davranışı devam eder.
+- [Düzeltildi] **Arapça İçeriklerde Series Gruplama Önceliği**: Arapça karakter içeren dizi bölümleri artık düz `AR` grubuna düşmez; `AR: الناجية الوحيدة S01 E01` gibi kayıtlar `Series / Others` altında gruplanır.
+- [Düzeltildi] **Kalite Prefix'i Grup Sayılmıyor**: `4K: No Time To Die` gibi VOD kayıtlarında `4K` grup adı yapılmaz; görünen ad korunur ve kayıt `Movies / Others` altında kalır.
+- [Düzeltildi] **Bare `2x2` Live Kanalı Series Sanılmıyor**: `RUS: 2x2` gibi kanal adları `1x01` dizi paterniyle karıştırılmaz.
+- [Düzeltildi] **Provider GroupTitle Varken Tam Koruma**: `group-title` dolu gelen playlistlerde provider'ın verdiği grup, görünen ad ve ülke alanı artık parser tarafından değiştirilmez; akıllı grup/ülke çıkarımı yalnızca `group-title` boş veya `undefined` olduğunda çalışır.
+- [Düzeltildi] **Provider URL Tipi Önceliği**: URL'de `/live`, `/movie`, `/series` veya `type=live/movie/series` gibi provider belirteçleri varsa tip sınıflandırması bu sinyale göre yapılır. `.m3u8`, `/m3u8`, `.ts`, `/ts`, `.m3u`, `/m3u`, `format=m3u8`, `extension=m3u8`, `extension=ts` canlı yayın sinyalleri de heuristiklerden önce `Live` kabul edilir.
+- [Test] **Solanaflix, Global Kanal ve Raeed Tarzı Regression Testleri Eklendi**: Country prefix, group-title'sız generic live/series fallback, farklı ülkelerden (`TR`, `IT`, `FR`, `DE`) kanal adı örnekleri, Arapça series, kalite prefix VOD ve `2x2` live kanal senaryoları `M3UParserTests` kapsamına alındı.
+
 ### Image Disk Cache Sistemi Kaldırıldı (2026-05-30)
 
 - [Kaldırıldı] **RemoteImage Disk Cache Tamamen Kaldırıldı**: RemoteImage kontrolü artık görselleri `%LOCALAPPDATA%/Noctra/ImageCache` klasörüne yazmıyor. Görseller uygulama oturumu boyunca sadece **memory cache** üzerinden tutuluyor; cache 500 girişlik LRU sınırıyla yönetiliyor. Cache miss olduğunda görsel yeniden HTTP'den indirilir.

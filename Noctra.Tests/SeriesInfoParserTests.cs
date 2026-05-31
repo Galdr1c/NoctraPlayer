@@ -15,6 +15,8 @@ public class SeriesInfoParserTests
     [InlineData("TR | La Casa de Papel S02E05", "La Casa de Papel", 2, 5)]
     [InlineData("Lupin Saison 1 Episode 3", "Lupin", 1, 3)]
     [InlineData("Tatort Staffel 3 Folge 115", "Tatort", 3, 115)]
+    [InlineData("Dao Episode 15", "Dao", 1, 15)]
+    [InlineData("Makafat Season 6 Khwahish Part 2", "Makafat", 6, 2)]
     public void Parse_StandardPatterns_ReturnsCorrectInfo(string title, string expectedName, int expectedSeason, int expectedEpisode)
     {
         var result = SeriesInfoParser.Parse(title);
@@ -74,6 +76,8 @@ public class SeriesInfoParserTests
     [InlineData("beIN SPORTS - 1", false)]
     [InlineData("The Boys S03E01", true)]
     [InlineData("Vikings 5x10", true)]
+    [InlineData("Dao Episode 15", true)]
+    [InlineData("Makafat Season 6 Khwahish Part 2", true)]
     [InlineData("Leyla ile Mecnun Sezon 1", false)]
     public void IsSeries_IdentifiesCorrectType(string title, bool expectedIsSeries)
     {

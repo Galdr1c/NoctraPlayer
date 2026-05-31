@@ -51,6 +51,12 @@ partial class NoctraProviderTester
             return;
         }
 
+        if (args[0] == "--audit-playlist")
+        {
+            await RunPlaylistAuditAsync(args);
+            return;
+        }
+
         // Config dosyasından toplu test
         if (args[0] == "--batch" || args[0] == "-b")
         {
@@ -1030,6 +1036,7 @@ partial class NoctraProviderTester
         Console.WriteLine("  Xtream   : dotnet run -- --type xtream --host <url> --user <u> --pass <p>");
         Console.WriteLine("  Stalker  : dotnet run -- --type stalker --host <url> --mac <mac>");
         Console.WriteLine("  Toplu    : dotnet run -- --batch [providers.json]");
+        Console.WriteLine("  Audit    : dotnet run -- --audit-playlist <m3u-path-or-url> [--out rapor.html]");
         Console.WriteLine();
         Console.WriteLine("ÖRNEKLER:");
         Console.WriteLine("  dotnet run -- --type m3u --url http://example.com/playlist.m3u");

@@ -38,6 +38,23 @@ public static partial class SeriesInfoParser
             }
         }
 
+        var englishSeasonPart = EnglishSeasonPartRegex().Match(trimmedTitle);
+        if (englishSeasonPart.Success)
+        {
+            var seriesName = CleanSeriesName(englishSeasonPart.Groups["name"].Value);
+            var season = ParseSafeInt(englishSeasonPart.Groups["season"].Value, 1);
+            var episode = ParseSafeInt(englishSeasonPart.Groups["episode"].Value, 1);
+            return new SeriesInfo(seriesName, season, episode);
+        }
+
+        var englishEpisodeOnly = EnglishEpisodeOnlyRegex().Match(trimmedTitle);
+        if (englishEpisodeOnly.Success)
+        {
+            var seriesName = CleanSeriesName(englishEpisodeOnly.Groups["name"].Value);
+            var episode = ParseSafeInt(englishEpisodeOnly.Groups["episode"].Value, 1);
+            return new SeriesInfo(seriesName, 1, episode);
+        }
+
         var seasonOnly = SeasonOnlyRegex().Match(trimmedTitle);
         if (seasonOnly.Success)
         {
@@ -76,7 +93,9 @@ public static partial class SeriesInfoParser
                SpanishRegex().IsMatch(title) ||
                PortugueseRegex().IsMatch(title) ||
                FrenchRegex().IsMatch(title) ||
-               GermanRegex().IsMatch(title);
+               GermanRegex().IsMatch(title) ||
+               EnglishSeasonPartRegex().IsMatch(title) ||
+               EnglishEpisodeOnlyRegex().IsMatch(title);
     }
 
     public static bool IsLiveSeries(string? title)
@@ -524,6 +543,8 @@ public static partial class SeriesInfoParser
         yield return PortugueseRegex();
         yield return FrenchRegex();
         yield return GermanRegex();
+        yield return EnglishSeasonPartRegex();
+        yield return EnglishEpisodeOnlyRegex();
     }
 
     // Trailing \s*.*?bölüm vs.. is to consume garbage like " - 1. Bölüm" correctly.
@@ -559,6 +580,12 @@ public static partial class SeriesInfoParser
 
     [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)\b[Ss]taffel\s*(?<season>\d{1,2}).*?[Ff]olge\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
     private static partial Regex GermanRegex();
+
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)\b[Ss]eason\s*(?<season>\d{1,2}).*?\b[Pp]art\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
+    private static partial Regex EnglishSeasonPartRegex();
+
+    [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)\b[Ee]pisode\s*(?<episode>\d{1,3})\b", RegexOptions.IgnoreCase)]
+    private static partial Regex EnglishEpisodeOnlyRegex();
 
     [GeneratedRegex(@"^(?<name>.+?)\s*(?:[-._ ]*)\b(?:[Ss]eason|[Ss]ezon|[Tt]emporada|[Ss]aison|[Ss]taffel|[Ss])\s*(?<season>\d{1,2})\b", RegexOptions.IgnoreCase)]
     private static partial Regex SeasonOnlyRegex();
