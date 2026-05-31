@@ -88,7 +88,7 @@ public class ApiKeyAuthTests
     // ──────────────────────────────────────────────
 
     [Fact]
-    public void SetApiKey_UpdatesHeader_ToNewKey()
+    public void SetApiKey_DoesNotAttachHeader_InProxyMode()
     {
         // Arrange
         var (client, _) = CreateMockHttpClient();
@@ -98,9 +98,7 @@ public class ApiKeyAuthTests
         service.SetApiKey("new_key_67890");
 
         // Assert
-        Assert.NotNull(client.DefaultRequestHeaders.Authorization);
-        Assert.Equal("Bearer", client.DefaultRequestHeaders.Authorization!.Scheme);
-        Assert.Equal("new_key_67890", client.DefaultRequestHeaders.Authorization.Parameter);
+        Assert.Null(client.DefaultRequestHeaders.Authorization);
     }
 
     [Fact]
@@ -118,7 +116,7 @@ public class ApiKeyAuthTests
     }
 
     [Fact]
-    public void SetApiKey_CanSwitch_FromEmptyToKey()
+    public void SetApiKey_CanSwitch_FromEmptyToKey_WithoutProxyHeader()
     {
         // Arrange
         var (client, _) = CreateMockHttpClient();
@@ -128,8 +126,7 @@ public class ApiKeyAuthTests
         service.SetApiKey("fresh_key");
 
         // Assert
-        Assert.NotNull(client.DefaultRequestHeaders.Authorization);
-        Assert.Equal("fresh_key", client.DefaultRequestHeaders.Authorization!.Parameter);
+        Assert.Null(client.DefaultRequestHeaders.Authorization);
     }
 
     // ──────────────────────────────────────────────
@@ -137,7 +134,7 @@ public class ApiKeyAuthTests
     // ──────────────────────────────────────────────
 
     [Fact]
-    public async Task FetchMetadataAsync_Sends_BearerHeader_NoApiKeyInUrl()
+    public async Task FetchMetadataAsync_ProxyMode_SendsNoClientCredential()
     {
         // Arrange
         var (client, handlerMock) = CreateMockHttpClient();
@@ -152,13 +149,13 @@ public class ApiKeyAuthTests
         var request = GetCapturedRequest(handlerMock);
         var url = request.RequestUri!.ToString();
 
-        Assert.Equal("Bearer", request.Headers.Authorization!.Scheme);
-        Assert.Equal("test_key_for_fetch", request.Headers.Authorization!.Parameter);
+        Assert.Null(request.Headers.Authorization);
+        Assert.Contains("tmdb-proxy-galdric.vercel.app", url, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("api_key=", url, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task SearchSeriesAsync_Sends_BearerHeader_NoApiKeyInUrl()
+    public async Task SearchSeriesAsync_ProxyMode_SendsNoClientCredential()
     {
         // Arrange
         var (client, handlerMock) = CreateMockHttpClient();
@@ -172,13 +169,13 @@ public class ApiKeyAuthTests
         var request = GetCapturedRequest(handlerMock);
         var url = request.RequestUri!.ToString();
 
-        Assert.Equal("Bearer", request.Headers.Authorization!.Scheme);
-        Assert.Equal("search_test_key", request.Headers.Authorization!.Parameter);
+        Assert.Null(request.Headers.Authorization);
+        Assert.Contains("tmdb-proxy-galdric.vercel.app", url, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("api_key=", url, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task FetchSeriesDetailsAsync_Sends_BearerHeader_NoApiKeyInUrl()
+    public async Task FetchSeriesDetailsAsync_ProxyMode_SendsNoClientCredential()
     {
         // Arrange
         var (client, handlerMock) = CreateMockHttpClient();
@@ -192,13 +189,13 @@ public class ApiKeyAuthTests
         var request = GetCapturedRequest(handlerMock);
         var url = request.RequestUri!.ToString();
 
-        Assert.Equal("Bearer", request.Headers.Authorization!.Scheme);
-        Assert.Equal("details_test_key", request.Headers.Authorization!.Parameter);
+        Assert.Null(request.Headers.Authorization);
+        Assert.Contains("tmdb-proxy-galdric.vercel.app", url, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("api_key=", url, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task FetchSeasonDetailsAsync_Sends_BearerHeader_NoApiKeyInUrl()
+    public async Task FetchSeasonDetailsAsync_ProxyMode_SendsNoClientCredential()
     {
         // Arrange
         var (client, handlerMock) = CreateMockHttpClient();
@@ -212,8 +209,8 @@ public class ApiKeyAuthTests
         var request = GetCapturedRequest(handlerMock);
         var url = request.RequestUri!.ToString();
 
-        Assert.Equal("Bearer", request.Headers.Authorization!.Scheme);
-        Assert.Equal("season_test_key", request.Headers.Authorization!.Parameter);
+        Assert.Null(request.Headers.Authorization);
+        Assert.Contains("tmdb-proxy-galdric.vercel.app", url, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("api_key=", url, StringComparison.OrdinalIgnoreCase);
     }
 

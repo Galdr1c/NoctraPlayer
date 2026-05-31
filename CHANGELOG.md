@@ -9,10 +9,10 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ### Image Disk Cache Sistemi Kaldırıldı (2026-05-30)
 
-- [Kaldırıldı] **RemoteImage Disk Cache Tamamen Kaldırıldı**: RemoteImage kontrolü artık görselleri %LOCALAPPDATA%/Noctra/ImageCache klasörüne yazmıyor. Görseller sadece **memory cache** (LRU 500 entry, 30 dk TTL) üzerinden yönetiliyor. İnternet bağlantısı varsa görsel her seferinde HTTP’den indirilir — zaten uygulama açıkken internet vardır.
-- [Kaldırıldı] **AvaloniaImageCacheService Dosyası Silindi**: Hiçbir yerde kullanılmayan (ölü kod) AvaloniaImageCacheService.cs dosyası ve DI registration’ı (services.AddSingleton<AvaloniaImageCacheService>()) kaldırıldı.
-- [Temizlik] **CacheService.CacheDirectories Güncellendi**: image-cache ve image-cache-avalonia referansları CacheDirectories dizisinden çıkarıldı — artık bu klasörler oluşturulmayacağı için temizlenecek bir şey kalmadı.
-- [Temizlik] **Kullanılmayan using System.Security.Cryptography Kaldırıldı**: RemoteImage.cs’den SHA256 hash için kullanılan kriptografi kütüphanesi referansı temizlendi.
+- [Kaldırıldı] **RemoteImage Disk Cache Tamamen Kaldırıldı**: RemoteImage kontrolü artık görselleri `%LOCALAPPDATA%/Noctra/ImageCache` klasörüne yazmıyor. Görseller uygulama oturumu boyunca sadece **memory cache** üzerinden tutuluyor; cache 500 girişlik LRU sınırıyla yönetiliyor. Cache miss olduğunda görsel yeniden HTTP'den indirilir.
+- [Kaldırıldı] **AvaloniaImageCacheService Dosyası Silindi**: Hiçbir yerde kullanılmayan (ölü kod) `AvaloniaImageCacheService.cs` dosyası ve DI registration'ı (`services.AddSingleton<AvaloniaImageCacheService>()`) kaldırıldı.
+- [Temizlik] **CacheService.CacheDirectories Güncellendi**: `image-cache` ve `image-cache-avalonia` referansları `CacheDirectories` dizisinden çıkarıldı; artık bu klasörler oluşturulmadığı için cache temizleme kapsamına alınmıyor.
+- [Temizlik] **Kullanılmayan `System.Security.Cryptography` Referansı Kaldırıldı**: `RemoteImage.cs` içinde disk cache hash'i için kullanılan kriptografi `using` referansı temizlendi.
 - [Doğrulama] **dotnet build başarılı**, 0 hata. Disk cache ile ilgili tüm referanslar projeden temizlendi.
 
 ### SetItems Sonrası OnPropertyChanged Bildirimleri ve Warmup Testleri (2026-05-30)
@@ -20,7 +20,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - [Düzeltildi] **SetItems Sonrası OnPropertyChanged Eklendi**: `MainViewModel`'de `ContinueWatching`, `MyList`, `FavoriteChannels`, `HistoryLiveChannels`, `HistoryVodChannels`, `HistorySeriesItems` ve `HistoryChannels` koleksiyonları için `SetItems` çağrısından hemen sonra `OnPropertyChanged` bildirimi gönderilecek şekilde güncellendi. Warmup mekanizmasının (`MainWindow.axaml.cs` PropertyChanged handler) bu koleksiyonları doğru şekilde yakalaması sağlandı.
 - [Yeni] **ViewModelWarmupNotificationsTests (8 test)**: `Noctra.Tests/ViewModelWarmupNotificationsTests.cs` dosyası eklendi. Tüm `SetItems` → `OnPropertyChanged` akışlarını doğrulayan 8 birim testi: ContinueWatching (no-profile + with-profile), MyList (dolu + boş), FavoriteChannels, HistoryBuckets (Live+VOD+Series, dolu + boş) ve RefreshPersonalListsFromDatabaseAsync (MyList+FavoriteChannels+HistoryChannels).
 - [Doğrulama] **8/8 test geçiyor**, build başarılı.
-- [Doğrulama] **Warmup Handler × OnPropertyChanged Çapraz Referansı**: MainWindow.axaml.cs'deki 9 warmup özelliğinin tamamı MainViewModel.cs'de karşılık gelen `OnPropertyChanged` bildirimine sahip. Başka PropertyChanged handler'ı bu koleksiyonlara bağımlı değil.
+- [Doğrulama] **Warmup Handler x OnPropertyChanged Çapraz Referansı**: `MainWindow.axaml.cs` warmup handler'ının izlediği property'ler `MainViewModel.cs` içinde karşılık gelen `OnPropertyChanged` bildirimlerine sahip. Koleksiyon değişimleri handler tarafından tekrar yakalanıyor.
 
 ### Varsayılan Dil: tr-TR -> en-US (2026-05-30)
 
@@ -31,30 +31,37 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - [Değişti] **SeriesInfoParser**: ExtractLanguageCode fallback "tr-TR" -> "en-US".
 - [Değişti] **ViewModel/Axaml Fallbackları**: GlobalSettingsVM, SettingsVM, App.axaml.cs, MainViewModel.cs tüm "tr" -> "en".
 - [Test] **7 test dosyası güncellendi** yeni varsayılanlara uyum için.
-- [Doğrulama] **860 test geliyor** (3 önceden varolan M3UParser hatası hariç).
+- [Doğrulama] **857/860 test geçiyor**; kalan 3 hata önceden var olan M3UParser testlerinden geliyor.
 
 
 ### TMDB API Proxy: Self-Hosted Vercel + Redis Cache (2026-05-29)
 
-- [Yeni] **Self-Hosted TMDB Proxy (Vercel Serverless)**: milindkusahu/tmdb-proxy reposu fork'lanarak Vercel'e deploy edildi. Tüm TMDB API istekleri artık dogrudan api.themoviedb.org yerine https://tmdb-proxy-galdric.vercel.app/api/tmdb uzerinden gider. API key sunucu tarafında (Vercel Environment Variables) saklanır, son kullanıcıya asla açılmaz.
+- [Yeni] **Self-Hosted TMDB Proxy (Vercel Serverless)**: `milindkusahu/tmdb-proxy` reposu fork'lanarak Vercel'e deploy edildi. TMDB API istekleri artık doğrudan `api.themoviedb.org` yerine `https://tmdb-proxy-galdric.vercel.app/api/tmdb` üzerinden gider. API key sunucu tarafında (Vercel Environment Variables) saklanır, son kullanıcıya açılmaz.
 - [Yeni] **Upstash Redis Cache Katmanı**: Proxy'ye @upstash/redis ile Redis cache entegrasyonu eklendi. Başarılı TMDB yanıtları 1 saat TTL ile Redis'te saklanır. Aynı film/dizi sorgusu 100 kullanıcıdan gelse bile sadece **1 kere** TMDB'ye gider, sonraki tüm istekler cache'ten döner.
-- [Yeni] **Stale Cache Fallback (429 Koruması)**: TMDB rate limit (HTTP 429) durumunda proxy, Redis'teki eski cache yanıtını döndürür. Kullanıcılar rate limit'e takıldığında boş yanıt veya hata görmez â€” eski veriye devam eder.
-- [Yeni] **Dual Auth Desteği**: Proxy hem v3 API Key (query string) hem de v4 Bearer Token (Authorization header) ile calisir. Vercel environment variable'lari uzerinden yonetilir.
+- [Yeni] **Stale Cache Fallback (429 Koruması)**: TMDB rate limit (HTTP 429) durumunda proxy, Redis'teki eski cache yanıtını döndürür. Kullanıcılar rate limit'e takıldığında boş yanıt veya hata yerine eski veriye devam eder.
+- [Yeni] **Dual Auth Desteği**: Proxy hem v3 API Key (query string) hem de v4 Bearer Token (Authorization header) ile çalışır. Vercel environment variable'ları üzerinden yönetilir.
 - [Yeni] **CORS Headers**: Tüm proxy yanıtlarında Access-Control-Allow-Origin: * başlığı eklenir.
 
 ### MetadataService.cs Proxy Entegrasyonu
 
-- [Degisti] **TMDB_BASE_URL Proxy URL'sine Yönlendirildi**: https://api.themoviedb.org/3 -> https://tmdb-proxy-galdric.vercel.app/api/tmdb
-- [Yeni] **IsUsingProxy Otomatik Algılama**: private static readonly bool IsUsingProxy = !TMDB_BASE_URL.Contains("api.themoviedb.org"); â€” proxy modunu otomatik algılar. İleride direkt API'ye dönülürse tüm proxy mantığı otomatik devre dışı kalır.
-- [Degisti] **AddApiKeyIfNeeded Proxy Modunda Bypass**: Proxy kendi auth'unu yönettiği için Noctra tarafından Api_key query parametresi gönderilmez. URL olduğu gibi döner.
-- [Degisti] **Tüm API Key Kontrolleri Proxy Modunda Bypass Edildi**: EnsureApiKeyLoaded() ve string.IsNullOrEmpty(_apiKey) kontrolleri FetchMetadataAsync, SearchSeriesAsync, FetchSeriesDetailsAsync, FetchSeasonDetailsAsync metotlarında !IsUsingProxy koşuluna alındı. Proxy modunda API key olmasa bile istek proxy'ye gider.
+- [Değişti] **TMDB_BASE_URL Proxy URL'sine Yönlendirildi**: `https://api.themoviedb.org/3` -> `https://tmdb-proxy-galdric.vercel.app/api/tmdb`
+- [Yeni] **IsUsingProxy Otomatik Algılama**: `private static readonly bool IsUsingProxy = !TMDB_BASE_URL.Contains("api.themoviedb.org");` proxy modunu otomatik algılar. İleride direkt API'ye dönülürse proxy mantığı otomatik devre dışı kalır.
+- [Değişti] **AddApiKeyIfNeeded Proxy Modunda Bypass**: Proxy kendi auth'unu yönettiği için Noctra tarafından `api_key` query parametresi gönderilmez. URL olduğu gibi döner.
+- [Değişti] **Tüm API Key Kontrolleri Proxy Modunda Bypass Edildi**: `EnsureApiKeyLoaded()` ve `string.IsNullOrEmpty(_apiKey)` kontrolleri `FetchMetadataAsync`, `SearchSeriesAsync`, `FetchSeriesDetailsAsync` ve `FetchSeasonDetailsAsync` metotlarında `!IsUsingProxy` koşuluna alındı. Proxy modunda API key olmasa bile istek proxy'ye gider.
+
+### TMDB Proxy Credential Sızıntısı Önleme (2026-05-31)
+
+- [Düzeltildi] **Proxy İsteklerinde Client Credential Gönderimi Engellendi**: Proxy modunda `MetadataService.SetApiKey()` veya `TMDB_BEARER_TOKEN` kullanılsa bile Noctra artık Vercel proxy isteklerine `Authorization` header'ı eklemez. Proxy kendi TMDB auth'unu sunucu tarafında yönettiği için client credential'ının proxy'ye taşınmasına gerek yoktur.
+- [Düzeltildi] **Fallback Credential Akışı Ayrıldı**: `SendGetAsync` helper'ı eklendi. Proxy isteği credential'sız gider; proxy 5xx/network/timeout nedeniyle direkt `api.themoviedb.org/3` fallback'e düşerse Bearer token veya v3 `api_key` sadece o direkt TMDB isteğine eklenir.
+- [Test] **ApiKeyAuthTests Proxy Mode Beklentileri Güncellendi**: `FetchMetadataAsync`, `SearchSeriesAsync`, `FetchSeriesDetailsAsync` ve `FetchSeasonDetailsAsync` proxy mode testleri artık proxy URL'sine gidildiğini, `api_key` taşınmadığını ve `Authorization` header'ı gönderilmediğini doğrular.
+- [Doğrulama] **11/11 TMDB testi geçiyor** (`ApiKeyAuthTests|MetadataServiceTests`). Canlı Vercel proxy'de arama endpoint'i `X-Cache: HIT`, detay endpoint'i ilk istekte `MISS`, ikinci aynı istekte `HIT` döndü; Redis cache yaz/oku akışı doğrulandı.
 
 ### Test Güncellemeleri
 
-- [Degisti] **FetchMetadataAsync_ReturnsNull_WhenKeyCleared -> Proxy Mode Testi**: Test, API key olmadan proxy modunda isteğin proxy URL'sine gittiğini ve Api_key parametresi içermediğini doğrular.
-- [Dogrulama] **11/11 test geçiyor**: ApiKeyAuth (10 test) + MetadataService (1 test) başarılı.
-- [Dogrulama] **dotnet build başarılı**, 0 hata.
-- [Dogrulama] Proxy HTTP 200 dönüyor, curl ile arama ve detay sorguları çalışıyor.
+- [Değişti] **FetchMetadataAsync_ReturnsNull_WhenKeyCleared -> Proxy Mode Testi**: Test, API key olmadan proxy modunda isteğin proxy URL'sine gittiğini ve `api_key` parametresi içermediğini doğrular.
+- [Doğrulama] **11/11 test geçiyor**: ApiKeyAuth (10 test) + MetadataService (1 test) başarılı.
+- [Doğrulama] **dotnet build başarılı**, 0 hata.
+- [Doğrulama] Proxy HTTP 200 dönüyor; arama ve detay sorguları curl ile çalışıyor.
 
 ### 🔁 Proxy Down Fallback: Otomatik Direkt TMDB API'ye Düşüş (2026-05-29)
 
@@ -71,7 +78,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 ### 🔄 Redis Cache TTL: 1 Saat -> 5 Gün (2026-05-30)
 
 - [Değişti] **Cache TTL 432.000 saniyeye (5 gün) yükseltildi**: Proxy'deki Redis cache süresi 1 saatten 5 güne çıkarıldı. Aynı film/dizi için TMDB'ye 5 günde sadece 1 istek gider.
-- [Teknik] **API Key Auth Değişti**: Proxy artık Bearer token yerine v3 API key'i  query string parametresi olarak gönderiyor.  environment variable'ı kullanılıyor.
+- [Teknik] **API Key Auth Değişti**: Proxy artık Bearer token yerine v3 API key'i query string parametresi olarak gönderiyor. Vercel tarafında `TMDB_API_KEY` environment variable'ı kullanılıyor.
 - [Teknik] **Yeniden deploy**: Upstash Redis + 5 gün TTL ile proxy Vercel'e yeniden deploy edildi.
 
 ### Layout Gizliyken Overlay'in Ekranda Kalması Düzeltildi (2026-05-28)

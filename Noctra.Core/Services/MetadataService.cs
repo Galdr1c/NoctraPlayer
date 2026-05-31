@@ -83,7 +83,7 @@ public partial class MetadataService : IMetadataService
             return;
         }
 
-        _httpClient.DefaultRequestHeaders.Authorization = _useQueryApiKey
+        _httpClient.DefaultRequestHeaders.Authorization = IsUsingProxy || _useQueryApiKey
             ? null
             : new AuthenticationHeaderValue("Bearer", _apiKey);
 
@@ -154,7 +154,7 @@ public partial class MetadataService : IMetadataService
 
         try
         {
-            response = await _httpClient.GetAsync(AddApiKeyIfNeeded(url), cancellationToken);
+            response = await SendGetAsync(AddApiKeyIfNeeded(url), includeCredential: !IsUsingProxy, cancellationToken);
 
             if (response.IsSuccessStatusCode)
                 return response;
@@ -189,7 +189,7 @@ public partial class MetadataService : IMetadataService
             // Ensure API key is loaded for the direct API fallback
             EnsureApiKeyLoaded();
             var directUrl = AddApiKeyToUrl(fallbackUrl);
-            response = await _httpClient.GetAsync(directUrl, cancellationToken);
+            response = await SendGetAsync(directUrl, includeCredential: true, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -216,6 +216,18 @@ public partial class MetadataService : IMetadataService
             return null;
 
         return await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken);
+    }
+
+    private async Task<HttpResponseMessage> SendGetAsync(string url, bool includeCredential, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+        if (includeCredential && !_useQueryApiKey && !string.IsNullOrWhiteSpace(_apiKey))
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+        }
+
+        return await _httpClient.SendAsync(request, cancellationToken);
     }
 
     private static bool IsLikelyV3ApiKey(string credential)
