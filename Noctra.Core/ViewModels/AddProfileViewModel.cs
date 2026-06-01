@@ -1090,7 +1090,7 @@ public partial class AddProfileViewModel : ObservableObject
                 {
                     HasError = true;
                     StatusMessage = string.IsNullOrWhiteSpace(preview.ErrorMessage)
-                        ? "Yeni provider dogrulanamadi; mevcut profil verisi korundu."
+                        ? _localizationService.GetString("AddProfile.Error.NewProviderValidationFailed")
                         : preview.ErrorMessage;
                     UrlError = StatusMessage;
                     return;

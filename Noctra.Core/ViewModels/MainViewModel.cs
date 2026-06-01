@@ -574,6 +574,43 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    private void StartChannelRefreshProgress(string message)
+    {
+        IsChannelLoading = true;
+        ChannelLoadingProgress = 0;
+        ChannelLoadingStats = message;
+        StatusMessage = message;
+    }
+
+    private void ReportChannelRefreshProgress(double percent, string message, bool updateStatusMessage = true)
+    {
+        ChannelLoadingProgress = Math.Clamp(percent, 0, 100);
+        ChannelLoadingStats = message;
+        if (updateStatusMessage)
+        {
+            StatusMessage = message;
+        }
+    }
+
+    private void CompleteChannelRefreshProgress(string message)
+    {
+        ChannelLoadingProgress = 100;
+        ChannelLoadingStats = string.Empty;
+        IsChannelLoading = false;
+        StatusMessage = message;
+    }
+
+    private static double MapChannelCategoryProgress(int loadedCategories, int totalCategories)
+    {
+        if (totalCategories <= 0)
+        {
+            return 10;
+        }
+
+        var ratio = Math.Clamp((double)loadedCategories / totalCategories, 0, 1);
+        return 10 + (ratio * 75);
+    }
+
     [ObservableProperty]
     private int? _currentProfileId;
 
@@ -1085,6 +1122,8 @@ public partial class MainViewModel : ObservableObject
         {
             var uiResetDone = false;
             List<string> pendingGroups = new();
+            var totalCategories = 0;
+            var loadedCategories = 0;
             if (!isFullRefresh)
             {
                 pendingGroups = await _playlistService.GetPendingDummyGroupsAsync(playlist.Id);
@@ -1103,6 +1142,8 @@ public partial class MainViewModel : ObservableObject
                 {
                     if (isFullRefresh) 
                     {
+                        totalCategories = categories.Count;
+                        loadedCategories = 0;
                         if (!uiResetDone)
                         {
                             uiResetDone = true;
@@ -1123,6 +1164,9 @@ public partial class MainViewModel : ObservableObject
                         await _playlistService.AppendChannelsAsync(playlist.Id, dummyChannels);
                         _dispatcherService.BeginInvoke(() => 
                         {
+                            var stats = string.Format(CultureInfo.CurrentCulture,
+                                _localizationService.GetString("Main.Status.CategoryProgressFormat"), 0, totalCategories);
+                            ReportChannelRefreshProgress(MapChannelCategoryProgress(0, totalCategories), stats);
                             if (SelectedPlaylist?.Id == playlist.Id) _ = LoadChannelsAsync(playlist.Id);
                         });
 
@@ -1139,6 +1183,18 @@ public partial class MainViewModel : ObservableObject
                 {
                     await _playlistService.ReplaceDummyWithRealChannelsAsync(playlist.Id, groupName, channels);
 
+                    if (isFullRefresh)
+                    {
+                        loadedCategories++;
+                        var loaded = loadedCategories;
+                        _dispatcherService.BeginInvoke(() =>
+                        {
+                            var stats = string.Format(CultureInfo.CurrentCulture,
+                                _localizationService.GetString("Main.Status.CategoryLoadedFormat"), loaded, totalCategories, groupName);
+                            ReportChannelRefreshProgress(MapChannelCategoryProgress(loaded, totalCategories), stats, updateStatusMessage: false);
+                        });
+                    }
+
                     if (SelectedPlaylist?.Id == playlist.Id && SelectedGroup == groupName)
                     {
                         _ = ThrottledLoadChannelsAsync(playlist.Id);
@@ -1149,7 +1205,8 @@ public partial class MainViewModel : ObservableObject
             // WatchHistory onarımı: Eski kanal fingerprint'lerini yeni kanal ID'leriyle eşleştir
             await _playlistService.RepairWatchHistoryChannelIdsAsync(playlist.Id);
 
-            _dispatcherService.BeginInvoke(() => StatusMessage = _localizationService.GetString("Main.Status.OrganizingMedia"));
+            _dispatcherService.BeginInvoke(() =>
+                ReportChannelRefreshProgress(92, _localizationService.GetString("Main.Status.OrganizingMedia")));
             try
             {
                 await _mediaService.AggregateContentAsync(playlist.Id);
@@ -1162,9 +1219,11 @@ public partial class MainViewModel : ObservableObject
 
             _dispatcherService.BeginInvoke(() =>
             {
-                StatusMessage = _localizationService.GetString("Main.Status.XtreamUpdated");
-                IsChannelLoading = false;
-                ChannelLoadingProgress = 100;
+                var message = _localizationService.GetString("Main.Status.XtreamUpdated");
+                if (!isFullRefresh)
+                {
+                    CompleteChannelRefreshProgress(message);
+                }
             });
         }
         catch (Exception ex)
@@ -1223,7 +1282,18 @@ public partial class MainViewModel : ObservableObject
                     lastProgressUpdate = now;
                     _dispatcherService.BeginInvoke(() =>
                     {
-                        StatusMessage = p.Message;
+                        if (p.TotalCategories > 0)
+                        {
+                            var percent = isFullRefresh
+                                ? MapChannelCategoryProgress(p.LoadedCategories, p.TotalCategories)
+                                : (double)p.LoadedCategories / p.TotalCategories * 100;
+                            ReportChannelRefreshProgress(percent, p.Message);
+                        }
+                        else
+                        {
+                            StatusMessage = p.Message;
+                            ChannelLoadingStats = p.Message;
+                        }
                     });
                 }
             });
@@ -1292,7 +1362,8 @@ public partial class MainViewModel : ObservableObject
             // WatchHistory onarımı: Eski kanal fingerprint'lerini yeni kanal ID'leriyle eşleştir
             await _playlistService.RepairWatchHistoryChannelIdsAsync(playlist.Id);
 
-            _dispatcherService.BeginInvoke(() => StatusMessage = _localizationService.GetString("Main.Status.OrganizingMedia"));
+            _dispatcherService.BeginInvoke(() =>
+                ReportChannelRefreshProgress(92, _localizationService.GetString("Main.Status.OrganizingMedia")));
             try
             {
                 await _mediaService.AggregateContentAsync(playlist.Id);
@@ -1305,12 +1376,13 @@ public partial class MainViewModel : ObservableObject
 
             _dispatcherService.BeginInvoke(() =>
             {
-                StatusMessage = isFullRefresh
+                var finalMessage = isFullRefresh
                     ? _localizationService.GetString("Main.Status.RefreshComplete")
                     : _localizationService.GetString("Main.Status.AllContentReady");
-                IsChannelLoading = false;
-                ChannelLoadingStats = string.Empty;
-                ChannelLoadingProgress = 100;
+                if (!isFullRefresh)
+                {
+                    CompleteChannelRefreshProgress(finalMessage);
+                }
             });
         }
         catch (Exception ex)
@@ -3650,7 +3722,7 @@ public partial class MainViewModel : ObservableObject
             if (!isBackground)
             {
                 BeginLoading();
-                StatusMessage = _localizationService.GetString("Main.Status.RefreshingChannels");
+                StartChannelRefreshProgress(_localizationService.GetString("Main.Status.RefreshingChannels"));
             }
 
             var profile = CurrentProfile;
@@ -3661,9 +3733,15 @@ public partial class MainViewModel : ObservableObject
                 {
                     _perfTrace?.Event("REFRESH", "RefreshSelectedPlaylist provider", $"type=Stalker playlist={playlistId}");
                     await ResumeStalkerProgressiveLoadingAsync(profile, SelectedPlaylist, isFullRefresh: true);
+                    if (!isBackground)
+                    {
+                        ReportChannelRefreshProgress(92, _localizationService.GetString("Main.Status.OptimizingLayout"));
+                    }
                     await ReloadCurrentPlaylistUiAfterRefreshAsync(playlistId, resetUi: !isBackground);
                     if (!isBackground)
                     {
+                        CompleteChannelRefreshProgress(_localizationService.GetString("Main.Status.RefreshComplete"));
+                        ChannelListLastError = null;
                         _playlistNoChangeUntilUtc[playlistId] = DateTime.UtcNow.AddMinutes(5);
                     }
                     return;
@@ -3672,9 +3750,15 @@ public partial class MainViewModel : ObservableObject
                 {
                     _perfTrace?.Event("REFRESH", "RefreshSelectedPlaylist provider", $"type=Xtream playlist={playlistId}");
                     await ResumeXtreamProgressiveLoadingAsync(profile, SelectedPlaylist, isFullRefresh: true);
+                    if (!isBackground)
+                    {
+                        ReportChannelRefreshProgress(92, _localizationService.GetString("Main.Status.OptimizingLayout"));
+                    }
                     await ReloadCurrentPlaylistUiAfterRefreshAsync(playlistId, resetUi: !isBackground);
                     if (!isBackground)
                     {
+                        CompleteChannelRefreshProgress(_localizationService.GetString("Main.Status.XtreamUpdated"));
+                        ChannelListLastError = null;
                         _playlistNoChangeUntilUtc[playlistId] = DateTime.UtcNow.AddMinutes(5);
                     }
                     return;
@@ -3686,32 +3770,49 @@ public partial class MainViewModel : ObservableObject
             int afterCount;
             using (_perfTrace?.BeginOperation("REFRESH", "GetChannelCount before", $"playlist={playlistId}"))
             {
+                if (!isBackground)
+                {
+                    ReportChannelRefreshProgress(10, _localizationService.GetString("Main.Status.RefreshingChannels"));
+                }
                 beforeCount = await _playlistService.GetChannelCountAsync(playlistId);
             }
 
             using (_perfTrace?.BeginOperation("REFRESH", "PlaylistService.RefreshAsync", $"playlist={playlistId}"))
             {
+                if (!isBackground)
+                {
+                    ReportChannelRefreshProgress(25, _localizationService.GetString("Settings.Refresh.Channel.UpdatingData"));
+                }
                 await _playlistService.RefreshAsync(playlistId);
             }
 
             using (_perfTrace?.BeginOperation("REFRESH", "GetChannelCount after", $"playlist={playlistId}"))
             {
+                if (!isBackground)
+                {
+                    ReportChannelRefreshProgress(65, _localizationService.GetString("Main.Status.OptimizingLayout"));
+                }
                 afterCount = await _playlistService.GetChannelCountAsync(playlistId);
             }
             _perfTrace?.Counter("REFRESH", "ChannelCountDelta", afterCount - beforeCount, $"before={beforeCount} after={afterCount}");
             
             // Refresh replaces playlist content, so rebuild the active UI from DB even
             // when channel count is unchanged but group names or series changed.
+            if (!isBackground)
+            {
+                ReportChannelRefreshProgress(78, _localizationService.GetString("Main.Status.OptimizingLayout"));
+            }
             await ReloadCurrentPlaylistUiAfterRefreshAsync(playlistId, resetUi: !isBackground);
 
             if (!isBackground)
             {
                 var delta = afterCount - beforeCount;
-                StatusMessage = delta == 0
+                var finalMessage = delta == 0
                     ? _localizationService.GetString("Main.Status.PlaylistUpdated")
                     : string.Format(CultureInfo.CurrentCulture,
                         _localizationService.GetString("Main.Status.PlaylistRefreshedWithDelta"),
                         Math.Abs(delta));
+                CompleteChannelRefreshProgress(finalMessage);
                     
                 ChannelListLastError = null;
                 _playlistNoChangeUntilUtc[playlistId] = DateTime.UtcNow.AddMinutes(5);
@@ -3724,6 +3825,7 @@ public partial class MainViewModel : ObservableObject
                 var errorMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Settings.Refresh.Channel.Error"), ex);
                 StatusMessage = errorMessage;
                 ChannelListLastError = UserFriendlyErrorMessage.FromException(ex);
+                IsChannelLoading = false;
 
                 // Refresh başarısızsa: UI'yi boş bırakma, mevcut DB içeriğini geri yükle.
                 // LoadChannelsAsync kendi status mesajlarını yazacağı için, hata mesajını en sonda tekrar basıyoruz.

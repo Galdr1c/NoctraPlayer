@@ -6,6 +6,7 @@ using Noctra.Services;
 using Noctra.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 using System.Collections.ObjectModel;
 
 namespace Noctra.ViewModels;
@@ -29,6 +30,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly ILocalizationService _localizationService;
     private CancellationTokenSource? _epgRefreshWatchCts;
     private int _isRefreshOperationRunning;
+    private string? _activeRefreshScope;
 
     // ============ Oynatma Ayarları ============
     [ObservableProperty]
@@ -357,6 +359,11 @@ public partial class SettingsViewModel : ObservableObject
         else if (e.PropertyName == nameof(MainViewModel.GlobalLoadingMessage))
         {
             OnPropertyChanged(nameof(GlobalLoadingMessage));
+        }
+        else if (e.PropertyName == nameof(MainViewModel.ChannelLoadingProgress) ||
+                 e.PropertyName == nameof(MainViewModel.ChannelLoadingStats))
+        {
+            SyncChannelProgressFromMain();
         }
     }
 
@@ -815,7 +822,7 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task RefreshChannelListNowAsync()
     {
-        if (!TryBeginRefreshOperation(_localizationService.GetString("Settings.Refresh.Channel.Started")))
+        if (!TryBeginRefreshOperation(_localizationService.GetString("Settings.Refresh.Channel.Started"), "Channel"))
         {
             return;
         }
@@ -825,22 +832,23 @@ public partial class SettingsViewModel : ObservableObject
             _mainViewModel.IsGlobalLoading = true;
             _mainViewModel.GlobalLoadingMessage = _localizationService.GetString("Settings.Refresh.Channel.Started");
 
-            SetProgressStatus("Kanal", 12, _localizationService.GetString("Settings.Refresh.Channel.Started"));
+            SetProgressStatus("Channel", 0, _localizationService.GetString("Settings.Refresh.Channel.Started"));
             await _mainViewModel.RefreshSelectedPlaylistAsync();
+            SyncChannelProgressFromMain(minimumPercent: 88, fallbackMessage: _localizationService.GetString("Settings.Refresh.Channel.UpdatingData"));
 
-            SetProgressStatus("Kanal", 60, _localizationService.GetString("Settings.Refresh.Channel.UpdatingData"));
+            SetProgressStatus("Channel", Math.Max(RefreshProgressPercent, 90), _localizationService.GetString("Settings.Refresh.Channel.UpdatingData"));
             _mainViewModel.GlobalLoadingMessage = _localizationService.GetString("Settings.Refresh.Channel.UpdatingData");
             await ScanChannelListStatsCoreAsync(updateStatusMessage: false);
 
             // Kanal listesi yenilenirken bitiş süresini de güncelle
-            SetProgressStatus("Kanal", 80, _localizationService.GetString("Settings.Refresh.Channel.CheckingAccount"));
+            SetProgressStatus("Channel", Math.Max(RefreshProgressPercent, 95), _localizationService.GetString("Settings.Refresh.Channel.CheckingAccount"));
             _mainViewModel.GlobalLoadingMessage = _localizationService.GetString("Settings.Refresh.Channel.CheckingAccount");
             await _mainViewModel.RefreshCurrentProfileExpirationAsync();
             LoadProfileInfo();
 
             if (!string.IsNullOrWhiteSpace(ChannelListLastError))
             {
-                SetProgressStatus("Kanal", 100, ChannelListLastError);
+                SetProgressStatus("Channel", 100, ChannelListLastError);
             }
             else
             {
@@ -848,18 +856,18 @@ public partial class SettingsViewModel : ObservableObject
                 var afterCount = await _playlistService.GetChannelCountAsync(_mainViewModel.SelectedPlaylist?.Id ?? 0);
                 if (afterCount == 0)
                 {
-                    SetProgressStatus("Kanal", 100, _localizationService.GetString("Settings.Refresh.Channel.Warning.NoContent"));
+                    SetProgressStatus("Channel", 100, _localizationService.GetString("Settings.Refresh.Channel.Warning.NoContent"));
                 }
                 else
                 {
-                    SetProgressStatus("Kanal", 100, _localizationService.GetString("Settings.Refresh.Channel.Completed"));
+                    SetProgressStatus("Channel", 100, _localizationService.GetString("Settings.Refresh.Channel.Completed"));
                 }
             }
         }
         catch (Exception ex)
         {
             ChannelListLastError = UserFriendlyErrorMessage.FromException(ex);
-            SetProgressStatus("Kanal", RefreshProgressPercent, UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Settings.Refresh.Channel.Error"), ex));
+            SetProgressStatus("Channel", RefreshProgressPercent, UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Settings.Refresh.Channel.Error"), ex));
         }
         finally
         {
@@ -875,7 +883,7 @@ public partial class SettingsViewModel : ObservableObject
         // Önce ayarları kaydet ki arka plan görevi yeni URL'yi görebilsin
         await SaveSettingsAsync();
 
-        if (!TryBeginRefreshOperation(_localizationService.GetString("Settings.Refresh.Epg.Started")))
+        if (!TryBeginRefreshOperation(_localizationService.GetString("Settings.Refresh.Epg.Started"), "EPG"))
         {
             return;
         }
@@ -982,7 +990,7 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
-    private bool TryBeginRefreshOperation(string operationLabel)
+    private bool TryBeginRefreshOperation(string operationLabel, string scope)
     {
         if (Interlocked.Exchange(ref _isRefreshOperationRunning, 1) == 1)
         {
@@ -990,6 +998,7 @@ public partial class SettingsViewModel : ObservableObject
             return false;
         }
 
+        _activeRefreshScope = scope;
         RefreshProgressPercent = 0;
         ChannelListLastError = null;
         StatusMessage = string.Format(_localizationService.GetString("Settings.Status.Refresh.Label"), operationLabel);
@@ -998,17 +1007,49 @@ public partial class SettingsViewModel : ObservableObject
 
     private void EndRefreshOperation()
     {
+        _activeRefreshScope = null;
         Interlocked.Exchange(ref _isRefreshOperationRunning, 0);
     }
 
-    private void SetProgressStatus(string scope, int percent, string message)
+    private void SyncChannelProgressFromMain(int minimumPercent = 0, string? fallbackMessage = null)
+    {
+        if (Volatile.Read(ref _isRefreshOperationRunning) != 1 ||
+            !string.Equals(_activeRefreshScope, "Channel", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var percent = Math.Max(minimumPercent, (int)Math.Round(_mainViewModel.ChannelLoadingProgress));
+        var message = !string.IsNullOrWhiteSpace(_mainViewModel.ChannelLoadingStats)
+            ? _mainViewModel.ChannelLoadingStats
+            : !string.IsNullOrWhiteSpace(_mainViewModel.StatusMessage)
+                ? _mainViewModel.StatusMessage
+                : fallbackMessage ?? _localizationService.GetString("Settings.Refresh.Channel.Started");
+
+        SetProgressStatus("Channel", percent, message, updateMainStatus: false);
+    }
+
+    private void SetProgressStatus(string scope, int percent, string message, bool updateMainStatus = true)
     {
         var normalized = Math.Clamp(percent, 0, 100);
+        var localizedScope = scope.Equals("Channel", StringComparison.OrdinalIgnoreCase)
+            ? _localizationService.GetString("Settings.Refresh.Scope.Channel")
+            : scope.Equals("EPG", StringComparison.OrdinalIgnoreCase)
+                ? _localizationService.GetString("Settings.Refresh.Scope.Epg")
+                : scope;
+
         RefreshProgressPercent = normalized;
-        StatusMessage = $"[{scope}] {message} (%{normalized})";
+        StatusMessage = string.Format(
+            CultureInfo.CurrentCulture,
+            _localizationService.GetString("Settings.Status.ProgressFormat"),
+            localizedScope,
+            message,
+            normalized);
         
         // Settings penceresi kapatılsa bile ana pencerenin sol altındaki bar güncellenmeye devam etsin
-        if (scope == "EPG" || scope == "Kanal")
+        if (updateMainStatus &&
+            (scope.Equals("EPG", StringComparison.OrdinalIgnoreCase) ||
+             scope.Equals("Channel", StringComparison.OrdinalIgnoreCase)))
         {
             _mainViewModel.StatusMessage = StatusMessage;
         }

@@ -346,7 +346,7 @@ public class EpgService : IEpgService
                                 { 
                                     Status = EpgLoadStatus.Saving, 
                                     Message = string.Format(_localizationService.GetString("Epg.Progress.SavingFormat"), totalLoaded), 
-                                    ProgressPercent = Math.Min(98, 30 + (totalLoaded / 5000.0 * 5.0)),
+                                    ProgressPercent = Math.Min(98, 30 + (65 * (1 - Math.Exp(-totalLoaded / 20000.0)))),
                                     LoadedCount = totalLoaded
                                 });
 

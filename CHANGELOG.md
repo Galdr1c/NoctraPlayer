@@ -24,6 +24,9 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 - **Series enrichment deduplication**: Visible Series cards now avoid duplicate in-flight TMDB metadata and no-poster lookup work during repeated scroll/filter refreshes.
 - **Git ignore hygiene**: Local Vercel, Upstash, TMDB proxy, environment, database, trace, dump, playlist, and packaging outputs are ignored by default.
 - **Refresh UI state rebuild**: Channel-list refresh now reloads playlist, group, channel, and Series UI caches from the database for M3U, Xtream, and Stalker profiles.
+- **Localized refresh and provider validation status**: Add-profile provider validation errors and settings refresh progress labels now use translation keys across supported languages.
+- **Refresh progress flow**: Channel refresh progress now comes from the active provider load instead of a separate settings-only percentage; M3U uses clear stages, while Xtream and Stalker use category progress.
+- **EPG save progress curve**: EPG saving progress now advances with a smoother bounded curve during large XMLTV imports.
 - **README rewritten**: The project README was rebuilt into a shorter product, architecture, setup, and packaging guide.
 - **CHANGELOG rewritten**: The old long-form maintenance log was replaced with a compact Keep a Changelog structure.
 
