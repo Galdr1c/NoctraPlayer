@@ -5,6 +5,8 @@ All notable changes to Noctra Media Player are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+Detailed historical engineering notes are archived in [`docs/history/legacy-changelog.md`](./docs/history/legacy-changelog.md).
+
 ## [Unreleased]
 
 ### Added
