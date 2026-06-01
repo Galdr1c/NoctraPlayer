@@ -131,7 +131,7 @@ namespace Noctra.Tests
         // ─── CoverUrl ────────────────────────────────────────────────────────────────
 
         [Fact]
-        public void CoverUrl_WhenBackdropExists_ReturnsBackdropUrl()
+        public void CoverUrl_WhenLogoExists_ReturnsLogoUrl()
         {
             var channel = new Channel
             {
@@ -139,19 +139,19 @@ namespace Noctra.Tests
                 LogoUrl     = "https://cdn.provider.com/logo.png"
             };
 
-            Assert.Equal("https://image.tmdb.org/backdrop.jpg", channel.CoverUrl);
+            Assert.Equal("https://cdn.provider.com/logo.png", channel.CoverUrl);
         }
 
         [Fact]
-        public void CoverUrl_WhenNoBackdrop_FallsBackToLogoUrl()
+        public void CoverUrl_WhenNoLogo_FallsBackToBackdropUrl()
         {
             var channel = new Channel
             {
-                BackdropUrl = null,
-                LogoUrl     = "https://cdn.provider.com/logo.png"
+                BackdropUrl = "https://image.tmdb.org/backdrop.jpg",
+                LogoUrl     = null
             };
 
-            Assert.Equal("https://cdn.provider.com/logo.png", channel.CoverUrl);
+            Assert.Equal("https://image.tmdb.org/backdrop.jpg", channel.CoverUrl);
         }
 
         [Fact]

@@ -7,7 +7,6 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
-using Noctra.Avalonia.Controls;
 using Noctra.Models;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
@@ -22,8 +21,6 @@ namespace Noctra.Avalonia;
 
 public partial class MainWindow : Window
 {
-    private static readonly TimeSpan ImageWarmupDelay = TimeSpan.FromMilliseconds(100);
-    private const int ImageWarmupMaxCount = 120;
     private static readonly TimeSpan PointerInteractionThrottle = TimeSpan.FromMilliseconds(100);
 
     private readonly IVideoPlayerService _videoPlayerService;
@@ -34,7 +31,6 @@ public partial class MainWindow : Window
     private readonly PlayerViewModel _playerViewModel;
     private readonly WindowResizeService _windowResizeService;
     private readonly DispatcherTimer _uiStallTimer;
-    private CancellationTokenSource? _imageWarmupCts;
     private CancellationTokenSource _mediaSelectionCts = new();
     private DateTime _lastPointerInteractionUtc = DateTime.MinValue;
     private DateTime _lastUiHeartbeatUtc = DateTime.UtcNow;
@@ -188,9 +184,6 @@ public partial class MainWindow : Window
         VideoSurface.MediaPlayer = null;
         // _pipWindow?.ClosePiP(); // Removed old method call
 
-        _imageWarmupCts?.Cancel();
-        _imageWarmupCts?.Dispose();
-        _imageWarmupCts = null;
     }
 
     private void VideoPlayerService_MediaPlayerReady(object? sender, LibVLCSharp.Shared.MediaPlayer? mp)
@@ -396,25 +389,7 @@ public partial class MainWindow : Window
 
     private void MainViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(MainViewModel.ActiveView) or
-            nameof(MainViewModel.FilteredChannels) or
-            nameof(MainViewModel.SeriesViewItems) or
-            nameof(MainViewModel.ContinueWatching) or
-            nameof(MainViewModel.MyList) or
-            nameof(MainViewModel.FavoriteChannels) or
-            nameof(MainViewModel.HistoryLiveChannels) or
-            nameof(MainViewModel.HistoryVodChannels) or
-            nameof(MainViewModel.HistorySeriesItems))
-        {
-            ScheduleImageWarmup(e.PropertyName);
-        }
-        else if (e.PropertyName == nameof(MainViewModel.SelectedSeason))
-        {
-            var episodes = _mainViewModel.SelectedSeason?.Episodes;
-            if (episodes != null)
-                _ = RemoteImage.PreloadAsync(episodes.Select(ep => ep.CoverUrl), maxCount: 50);
-        }
-        else if (e.PropertyName == nameof(MainViewModel.ActiveDownloadCount))
+        if (e.PropertyName == nameof(MainViewModel.ActiveDownloadCount))
         {
             UpdateDownloadBadgeVisibility();
         }
@@ -478,74 +453,6 @@ public partial class MainWindow : Window
         {
             StartupDiagnostics.LogException("Failed to open EditChannelWindow.", ex);
         }
-    }
-
-    private void ScheduleImageWarmup(string? reason = null)
-    {
-        _perfTrace.Event("IMAGE", "ScheduleImageWarmup", $"view={_mainViewModel.ActiveView} reason={reason ?? "unknown"}");
-        _imageWarmupCts?.Cancel();
-        _imageWarmupCts?.Dispose();
-        _imageWarmupCts = new CancellationTokenSource();
-        var token = _imageWarmupCts.Token;
-
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await Task.Delay(ImageWarmupDelay, token).ConfigureAwait(false);
-                await WarmupVisibleImagesAsync(token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-        }, token);
-    }
-
-    private async Task WarmupVisibleImagesAsync(CancellationToken cancellationToken)
-    {
-        using var trace = _perfTrace.BeginOperation("IMAGE", "WarmupVisibleImagesAsync", $"view={_mainViewModel.ActiveView}");
-        var urls = new List<string?>(ImageWarmupMaxCount);
-
-        if (_mainViewModel.ActiveView == AppView.Series)
-        {
-            urls.AddRange(_mainViewModel.SeriesViewItems.Take(ImageWarmupMaxCount).Select(s => s.CoverUrl));
-        }
-        else if (_mainViewModel.ActiveView == AppView.Home)
-        {
-            urls.AddRange(_mainViewModel.ContinueWatching.Take(ImageWarmupMaxCount).Select(c => c.CoverUrl ?? c.LogoUrl));
-        }
-        else if (_mainViewModel.ActiveView is AppView.Live or AppView.Movies)
-        {
-            urls.AddRange(_mainViewModel.FilteredChannels.Take(ImageWarmupMaxCount).Select(c => c.CoverUrl ?? c.LogoUrl));
-        }
-        else if (_mainViewModel.ActiveView == AppView.History)
-        {
-            urls.AddRange(_mainViewModel.HistoryLiveChannels.Take(12).Select(c => c.CoverUrl ?? c.LogoUrl));
-            urls.AddRange(_mainViewModel.HistoryVodChannels.Take(12).Select(c => c.CoverUrl ?? c.LogoUrl));
-            urls.AddRange(_mainViewModel.HistorySeriesItems.Take(12).Select(s => s.CoverUrl));
-        }
-        else if (_mainViewModel.ActiveView == AppView.MyList)
-        {
-            urls.AddRange(_mainViewModel.MyList.Take(ImageWarmupMaxCount).Select(GetMediaImageUrl));
-        }
-        else if (_mainViewModel.ActiveView == AppView.Favorites)
-        {
-            urls.AddRange(_mainViewModel.FavoriteChannels.Take(ImageWarmupMaxCount).Select(GetMediaImageUrl));
-        }
-
-        var emptyCount = urls.Count(string.IsNullOrWhiteSpace);
-        _perfTrace.Counter("IMAGE", "Warmup urls", urls.Count, $"view={_mainViewModel.ActiveView} empty={emptyCount}");
-        await RemoteImage.PreloadAsync(urls, maxCount: ImageWarmupMaxCount, cancellationToken).ConfigureAwait(false);
-    }
-
-    private static string? GetMediaImageUrl(object? item)
-    {
-        return item switch
-        {
-            Channel channel => channel.CoverUrl ?? channel.LogoUrl,
-            Series series => series.CoverUrl,
-            _ => null
-        };
     }
 
     private void MainWindow_KeyDown(object? sender, KeyEventArgs e)

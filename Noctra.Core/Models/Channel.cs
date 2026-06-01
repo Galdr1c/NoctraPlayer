@@ -92,7 +92,7 @@ public partial class Channel : ObservableObject
     public string? LocalSizeText { get; set; }
 
     [NotMapped]
-    public string? CoverUrl => !string.IsNullOrEmpty(BackdropUrl) ? BackdropUrl : LogoUrl;
+    public string? CoverUrl => !string.IsNullOrEmpty(LogoUrl) ? LogoUrl : BackdropUrl;
     
     [NotMapped]
     public string? Description => Plot;

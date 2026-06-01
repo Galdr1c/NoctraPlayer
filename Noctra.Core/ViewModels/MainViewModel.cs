@@ -1548,7 +1548,6 @@ public partial class MainViewModel : ObservableObject
 
             StatusMessage = string.Format(CultureInfo.CurrentCulture,
                 _localizationService.GetString("Main.Status.ContentsReadyFormat"), meta.TotalCount);
-            // Fire-and-forget tasks are wrapped to avoid unobserved failures and task races.
             StartPostChannelLoadBackgroundTasks();
             EnsureChannelBackgroundRefresh();
         }
@@ -1563,20 +1562,6 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private async Task WarmupAfterInitialChannelLoadAsync()
-    {
-        try
-        {
-            await Task.WhenAll(
-                LoadHomeContentAsync(),
-                LoadFavoritesAsync());
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogDebug($"WarmupAfterInitialChannelLoadAsync error: {ex}");
-        }
-    }
-
     private void StartPostChannelLoadBackgroundTasks()
     {
         _ = RunPostChannelLoadBackgroundTasksAsync();
@@ -1585,15 +1570,6 @@ public partial class MainViewModel : ObservableObject
     private async Task RunPostChannelLoadBackgroundTasksAsync()
     {
         using var trace = _perfTrace?.BeginOperation("BG", "RunPostChannelLoadBackgroundTasksAsync");
-        try
-        {
-            await WarmupAfterInitialChannelLoadAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogDebug($"Post-load warmup failed: {ex}");
-        }
-
         if (Interlocked.Exchange(ref _isBackgroundEpgSyncRunning, 1) == 1)
         {
             _perfTrace?.Event("BG", "Post-load EPG skipped", "already running");
@@ -6366,6 +6342,9 @@ public partial class MainViewModel : ObservableObject
         _perfTrace?.Counter("SEARCH", "SearchVodChannels", SearchVodChannels.Count);
 
         ShowSearchEmptyState = !hasAnyExact && !ShowSearchSimilarSection;
+
+        QueueVisibleChannelVisualEnrichment(SearchVodChannels.ToList());
+        QueueVisibleSeriesVisualEnrichment(SearchSeriesChannels.ToList());
     }
 
     private void UpdateSearchSuggestionAndSimilar(string rawQuery, List<Series> seriesSnapshot)
@@ -6432,6 +6411,9 @@ public partial class MainViewModel : ObservableObject
         SetItems(SearchSimilarSeriesChannels, similarSeries);
         SetItems(SearchSimilarVodChannels, similarVod);
         ShowSearchSimilarSection = similarLive.Count > 0 || similarSeries.Count > 0 || similarVod.Count > 0;
+
+        QueueVisibleChannelVisualEnrichment(similarVod);
+        QueueVisibleSeriesVisualEnrichment(similarSeries);
     }
 
     private string ComputeBestSuggestion(string query, IEnumerable<string> candidates)

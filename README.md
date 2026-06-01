@@ -1,208 +1,167 @@
-# Noctra Media Player
+<div align="center">
+  <br />
+  <img src="Noctra.Avalonia/Assets/Square150x150Logo.png" alt="Noctra" />
+  <h1>Noctra</h1>
+  <p><strong>Modern Windows IPTV player for M3U, Xtream Codes, and Stalker Portal providers.</strong></p>
+  <p>
+    <code>.NET 8</code> | <code>Avalonia UI</code> | <code>LibVLC</code> | <code>SQLite</code> | <code>MSIX</code>
+  </p>
+  <p>
+    <img src="https://img.shields.io/badge/version-1.0.0-7b5fff?style=flat-square" alt="Version 1.0.0" />
+    <img src="https://img.shields.io/badge/platform-Windows-0078d4?style=flat-square" alt="Windows" />
+    <img src="https://img.shields.io/badge/runtime-.NET%208-512bd4?style=flat-square" alt=".NET 8" />
+    <img src="https://img.shields.io/badge/UI-Avalonia-ff3d8b?style=flat-square" alt="Avalonia" />
+  </p>
+  <br />
+</div>
 
-Noctra, Windows için geliştirilen modern bir IPTV medya oynatıcısıdır. Uygulama; M3U, Xtream Codes ve Stalker Portal kaynaklarını tek bir arayüzde yönetir, canlı yayın / film / dizi ayrımı yapar, izleme geçmişini takip eder ve Free/Premium sürüm mantığıyla çalışır.
+---
 
-> Noctra içerik sağlamaz. Uygulama yalnızca kullanıcının erişim yetkisine sahip olduğu IPTV sağlayıcılarını ve oynatma listelerini görüntülemek için tasarlanmıştır.
+## Overview
 
-## Öne Çıkanlar
+Noctra is a desktop IPTV media player built for real provider workflows: large playlists, mixed content types, series grouping, watch progress, EPG, downloads, and profile isolation.
 
-- **Çoklu profil sistemi:** Profil bazlı sağlayıcı, favori, izleme geçmişi ve ayar izolasyonu.
-- **Sağlayıcı desteği:** M3U, Xtream Codes ve Stalker Portal entegrasyonu.
-- **İçerik türleri:** Live TV, VOD/Filmler ve Series/Diziler için ayrı deneyim.
-- **Modern Avalonia UI:** Dark/Light tema, lokalizasyon, kart tabanlı içerik listeleri ve premium odaklı ayarlar ekranı.
-- **LibVLC oynatıcı:** Canlı yayın, VOD ve dizi bölümleri için VLC tabanlı medya oynatma.
-- **EPG sistemi:** Özel EPG kaynakları, saat ofseti, arka plan yenileme ve EPG eşleştirme.
-- **İndirme sistemi:** VOD ve dizi bölümleri için yerel indirme, kuyruk, duraklat/devam et ve kaldığı yerden sürdürme.
-- **Premium modeli:** Free/Premium edition altyapısı, Microsoft Store yönlendirmesi ve süreli promosyon kodu desteği.
-- **Güvenlik ve bakım:** PIN/çocuk profili desteği, adult içerik filtreleme, cache/veritabanı temizleme ve tanı raporu üretimi.
+Noctra does **not** provide content. It only displays IPTV playlists and provider accounts that the user is authorized to access.
 
-## Teknoloji Yığını
+### Highlights
 
-| Katman | Teknoloji |
-| --- | --- |
-| Uygulama UI | Avalonia UI 11 |
-| Dil / Runtime | C# / .NET 8 |
-| Oynatma | LibVLCSharp + VideoLAN.LibVLC.Windows |
+- **Provider support**: M3U, Xtream Codes, and Stalker Portal.
+- **Content views**: Live TV, Movies/VOD, Series, Search, My List, Favorites, History, and Downloads.
+- **Series-first handling**: season/episode grouping, provider-independent progress, continue watching, and local download playback.
+- **Metadata enrichment**: provider poster first, TMDB fallback where appropriate, localized title/overview/cast/rating data.
+- **EPG**: playlist EPG, custom XMLTV sources, time offset, matching, refresh, and cleanup.
+- **Offline media**: encrypted local downloads for VOD and series episodes.
+- **Profiles**: avatar, provider credentials, PIN, child profile rules, favorites, watch history, and settings per profile.
+- **Store-ready editions**: Free/Premium build metadata and MSIX packaging flow.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| UI | Avalonia UI 11 |
+| Runtime | C# / .NET 8 |
+| Playback | LibVLCSharp + VideoLAN.LibVLC.Windows |
 | MVVM | CommunityToolkit.Mvvm |
-| Veri | SQLite + Entity Framework Core |
-| Paketleme | MSIX / Windows Application Packaging Project |
-| Test | xUnit |
+| Data | SQLite + Entity Framework Core |
+| Packaging | MSIX / Windows Application Packaging Project |
+| Tests | xUnit |
 
-## Proje Yapısı
+---
 
-```text
-Noctra.Avalonia/      Ana masaüstü uygulaması, pencere/view katmanı, Avalonia servisleri
-Noctra.Core/          ViewModel, model, veri erişimi, lisans, playlist, EPG ve medya servisleri
-Noctra.Tests/         Birim ve senaryo testleri
-Noctra.Packaging/     Microsoft Store Free/Premium MSIX paketleme projesi
-Tester/               Sağlayıcı/stream test aracı ve deep stream test altyapısı
-build/                Paketleme ve Store sertifikasyon yardımcı scriptleri
-docs/                 Store submission ve geliştirme planları
-```
-
-## Temel Özellikler
-
-### Profil ve Sağlayıcı Yönetimi
-
-- Çoklu profil oluşturma, düzenleme ve silme.
-- Profil avatarı seçimi.
-- Profil bazlı M3U, Xtream Codes ve Stalker Portal hesabı.
-- Sağlayıcı verisini güvenli yenileme: başarısız bağlantılarda mevcut listeyi koruma.
-- Favoriler, “Listem” ve izleme geçmişi verilerini yenileme sırasında koruma.
-
-### İçerik ve Oynatma
-
-- Canlı TV, film ve dizi sekmeleri.
-- Kategori/grup filtreleme, arama ve sıralama.
-- Dizi detayında sezon/bölüm yapısı.
-- Bölüm paneli, sonraki bölüm önerisi ve “baştan başla” akışı.
-- İzleme ilerlemesi, devam etme ve tamamlanma takibi.
-- Ses, altyazı, seek, tam ekran ve overlay kontrolleri.
-- Sleep timer desteği.
-
-### Metadata ve Akıllı Ayrıştırma
-
-- M3U için kategori ve içerik tipi tahmini.
-- Xtream/Stalker sağlayıcılarında sağlayıcı tiplerine öncelik verme.
-- TMDB zenginleştirmesi: poster, arka plan, oyuncular, puan, açıklama ve bölüm adı.
-- TMDB kullanımı sağlayıcı tipine göre optimize edilir; Xtream/Stalker tarafında gereksiz API çağrıları azaltılır.
-- Çok dilli adult içerik tespiti ve kategori sıralama koruması.
-
-### EPG
-
-- Playlist kaynaklı ve özel EPG URL desteği.
-- Birden fazla özel EPG kaynağı.
-- Free/Premium limitlerine göre özel EPG kaynağı sınırı.
-- EPG saat ofseti.
-- Manuel ve otomatik yenileme.
-- EPG verisi ve database temizliği.
-
-### İndirme Merkezi
-
-- VOD ve dizi bölümü indirme.
-- Uygulama içi çözümleme cache’i ile oynatma.
-- Aktif indirmeler, kuyruk, hız ve disk alanı takibi.
-- Duraklat/devam et, iptal ve uygulama yeniden açıldığında durum geri yükleme.
-- Varsayılan indirme yapısı:
+## Architecture
 
 ```text
-%LOCALAPPDATA%/Noctra/Downloads/profile_{id}/Filmler/{Film Adı}/...
-%LOCALAPPDATA%/Noctra/Downloads/profile_{id}/Diziler/{Dizi Adı}/Sezon 01/...
+NoctraPlayer.sln
+|-- Noctra.Avalonia/      Desktop app, XAML views, controls, UI services
+|-- Noctra.Core/          Models, ViewModels, provider services, DB, EPG, downloads
+|-- Noctra.Tests/         Unit and scenario tests
+|-- Noctra.Packaging/     Microsoft Store / MSIX packaging project
+|-- Tester/               Provider and stream validation CLI
+|-- build/                Store packaging helper scripts
+`-- docs/                 Planning and release notes
 ```
 
-### Global Ayarlar
-
-Global ayarlar `GlobalSettingsWindow` üzerinden yönetilir:
-
-- Dark/Light tema.
-- Uygulama dili.
-- Otomatik güncelleme kontrolü.
-- Donanım hızlandırma.
-- Kullanım istatistikleri tercihi.
-- Cache/veritabanı temizleme.
-- Hata raporu oluşturma.
-- Premium satın alma/yükseltme yönlendirmesi.
-- Promosyon kodu ile süreli Premium aktivasyonu.
-
-## Premium ve Promosyon Kodları
-
-Noctra, iki farklı Premium akışını destekler:
-
-1. **Edition tabanlı Premium:** Microsoft Store için ayrı `Free` ve `Premium` paketleri üretilebilir. Premium paket çalıştığında premium özellikler otomatik aktiftir.
-2. **Promosyon kodu ile süreli Premium:** Free sürümde, Global Ayarlar ekranındaki promosyon alanından kod girilerek belirli gün kadar Premium açılabilir.
-
-Uygulamada hazır veya fallback promosyon kodu yoktur. Promosyon kodları uzak JSON yapılandırmasından gelmelidir; README'de gösterilen değerler yalnızca format örneğidir ve gerçek kampanya kodu değildir.
-
-Kod yönetimi üç kaynaktan yapılabilir:
-
-1. `NOCTRA_PROMO_CODES_URL` environment değişkeni.
-2. `%LOCALAPPDATA%/Noctra/settings.json` içindeki `promoCodeConfigUrl` alanı.
-3. `LicenseService.cs` içindeki `DefaultRemotePromoCodesUrl` sabiti.
-
-Uzak JSON örneği:
-
-```json
-{
-  "codes": [
-    {
-      "code": "PROMO-EXAMPLE-7D",
-      "durationDays": 7,
-      "isActive": true,
-      "allowReuse": false,
-      "validUntilUtc": "2026-12-31T23:59:59Z",
-      "description": "7 gunluk Premium format ornegi"
-    }
-  ]
-}
-```
-
-Promo kod URL'si yapılandırılmadıysa kullanıcıya yapılandırma hatası gösterilir. Uzak JSON okunamazsa veya indirilemezse yükleme hatası gösterilir; bu durumlar yanlış kod/geçersiz kod mesajıyla karıştırılmaz. Kod listesi yüklendiği halde eşleşme yoksa promosyon kodu bulunamadı/geçersiz sonucu döner. Yerel/fallback kod kullanılmaz. Aynı kodun aynı cihazda tekrar kullanılmasını önlemek için kullanılan kodlar `settings.json` içinde `redeemedPromoCodes` alanına kaydedilir.
-
-> Daha detaylı kullanım ve JSON şeması için `PROMO_CODES_README.md` dosyasına bakın.
-
-## Free / Premium Limitleri
-
-Premium kontrolü `LicenseService` üzerinden yapılır. Ana özellik kontrolleri:
-
-- `ad_free`
-- `epg_auto_refresh`
-- `resume_playback`
-- `sleep_timer`
-
-Ana limit kontrolleri:
-
-- Profil sayısı.
-- Özel EPG URL sayısı.
-
-Limit değerleri `Noctra.Core/Models/SubscriptionTier.cs` içinde `TierLimits` üzerinden yönetilir.
-
-## Lokalizasyon
-
-Çeviri dosyaları aşağıdaki klasördedir:
+### Runtime Data
 
 ```text
-Noctra.Core/Localization/Translations/
+%LOCALAPPDATA%\Noctra\
+|-- noctra_v1.db
+|-- settings.json
+|-- Settings\profile_{id}.json
+`-- Downloads\
 ```
 
-Mevcut dil dosyaları:
+---
 
-- `tr-TR.json`
-- `en-US.json`
-- `de-DE.json`
-- `es-ES.json`
-- `fr-FR.json`
+## Core Features
 
-Yeni UI metni eklerken sabit metin yerine çeviri key’i kullanılması önerilir.
+### Provider and Playlist Handling
 
-## Ayar ve Veri Konumları
+| Provider | Supported |
+|----------|-----------|
+| M3U URL/file | Yes |
+| Xtream Codes | Yes |
+| Stalker Portal | Yes |
+| Provider preview before save | Yes |
+| Safe refresh without deleting old data on failure | Yes |
 
-Uygulama çalışma verilerini kullanıcı dizininde saklar:
+### Media Experience
+
+- Live TV playback with EPG overlay.
+- VOD and series playback with watch progress.
+- Search across visible channels, movies, and series.
+- Category filtering, sorting, favorites, and My List.
+- Continue Watching and History rails.
+- Picture-in-picture, fullscreen, audio/subtitle selection, sleep timer, and overlay controls.
+
+### Posters and Metadata
+
+Noctra keeps the image flow intentionally simple:
+
+1. Use provider poster/logo URL when available.
+2. Use TMDB poster when provider data is missing or unusable and the provider type allows fallback.
+3. Show the card placeholder when no valid image exists.
+
+Images are loaded on demand by visible cards. There is no app-wide poster preload or disk image cache.
+
+### Downloads
+
+| Capability | Notes |
+|------------|-------|
+| VOD downloads | Supported |
+| Series episode downloads | Supported |
+| Queue / pause / resume / cancel | Supported |
+| Encrypted local files | `.nctra` format |
+| Offline playback | Downloads view and offline fallback |
+| Integrity repair | Handles partial/finalization failures where possible |
+
+Default layout:
 
 ```text
-%LOCALAPPDATA%/Noctra/
+%LOCALAPPDATA%\Noctra\Downloads\profile_{id}\Filmler\...
+%LOCALAPPDATA%\Noctra\Downloads\profile_{id}\Diziler\...\Sezon 01\...
 ```
 
-Önemli dosya/klasörler:
+---
 
-```text
-settings.json                 Global ayarlar ve promosyon/premium bilgileri
-Settings/profile_{id}.json    Profil bazlı ayarlar
-Downloads/                    İndirilen içerikler
-noctra_v1.db                  SQLite uygulama veritabanı
+## Quick Start
+
+### Prerequisites
+
+- Windows 10 1809 or newer
+- .NET 8 SDK
+- Visual Studio 2022, Rider, or VS Code
+- Visual Studio MSIX tooling for Store packaging
+
+### Run the App
+
+```powershell
+dotnet restore .\NoctraPlayer.sln
+dotnet build .\NoctraPlayer.sln
+dotnet run --project .\Noctra.Avalonia\Noctra.Avalonia.csproj
 ```
 
-## Geliştirme Ortamı
+### Run Tests
 
-### Gereksinimler
+```powershell
+dotnet test .\Noctra.Tests\Noctra.Tests.csproj
+```
 
-- Windows 10 1809 veya üzeri.
-- .NET 8 SDK.
-- Visual Studio 2022 veya Rider/VS Code.
-- Microsoft Store/MSIX paketleme için Visual Studio 2022 MSIX Packaging Tools.
+Useful filters:
 
-### Opsiyonel `.env` Değerleri
+```powershell
+dotnet test .\Noctra.Tests\Noctra.Tests.csproj --filter "FullyQualifiedName~M3UParser"
+dotnet test .\Noctra.Tests\Noctra.Tests.csproj --filter "FullyQualifiedName~MetadataService"
+dotnet test .\Noctra.Tests\Noctra.Tests.csproj --filter "FullyQualifiedName~Download"
+```
 
-Kök dizine veya çıktı klasörüne `.env` dosyası koyabilirsiniz:
+---
+
+## Configuration
+
+Optional `.env` values can be placed in the repository root or output directory.
 
 ```env
 TMDB_API_KEY=your_tmdb_v3_api_key
@@ -211,114 +170,120 @@ NOCTRA_PROMO_CODES_URL=https://example.com/noctra-promo-codes.json
 DEV_PASSWORD=your_developer_password
 ```
 
-- `TMDB_API_KEY`: TMDB v3 API key. M3U metadata zenginlestirme icin kullanilir.
-- `TMDB_BEARER_TOKEN`: TMDB v4 access token. Bu deger varsa `TMDB_API_KEY` yerine Bearer auth ile kullanilir.
-- `NOCTRA_PROMO_CODES_URL`: Uzak promosyon kodu listesi.
-- `DEV_PASSWORD`: Global ayarlardaki geliştirici modunu açmak için kullanılır.
+| Variable | Purpose |
+|----------|---------|
+| `TMDB_API_KEY` | TMDB v3 metadata lookup key |
+| `TMDB_BEARER_TOKEN` | TMDB v4 bearer token |
+| `NOCTRA_PROMO_CODES_URL` | Remote promo-code JSON source |
+| `DEV_PASSWORD` | Developer mode unlock value |
 
-## Çalıştırma
+Promo-code details live in [`PROMO_CODES_README.md`](./PROMO_CODES_README.md).
 
-```powershell
-dotnet restore .\Noctra.Avalonia\Noctra.Avalonia.csproj
-dotnet build .\Noctra.Avalonia\Noctra.Avalonia.csproj -c Debug
-dotnet run --project .\Noctra.Avalonia\Noctra.Avalonia.csproj
-```
+---
 
-Release build:
+## Store Packaging
 
-```powershell
-dotnet build .\Noctra.Avalonia\Noctra.Avalonia.csproj -c Release
-```
-
-> Not: Repository içinde `.sln` dosyası yoksa komutları doğrudan `.csproj` dosyaları üzerinden çalıştırın.
-
-## Test
-
-```powershell
-dotnet test .\Noctra.Tests\Noctra.Tests.csproj
-```
-
-Belirli testleri çalıştırmak için:
-
-```powershell
-dotnet test .\Noctra.Tests\Noctra.Tests.csproj --filter "FullyQualifiedName~LicenseService"
-dotnet test .\Noctra.Tests\Noctra.Tests.csproj --filter "FullyQualifiedName~M3UParser"
-```
-
-## Provider / Stream Test Aracı
-
-`Tester/` projesi, sağlayıcı entegrasyonlarını ve stream kalitesini test etmek için yardımcı araç içerir.
-
-Örnekler:
-
-```powershell
-dotnet run --project .\Tester\NoctraProviderTester.csproj -- --type m3u --url "http://example.com/list.m3u" --deep-test
-
-dotnet run --project .\Tester\NoctraProviderTester.csproj -- --type xtream --host "http://host" --user "username" --pass "password" --deep-test --live 3 --vod 3 --duration 20
-```
-
-Ayrıntılı metrikler için `Tester/DEEP_TEST_GUIDE.md` dosyasına bakın.
-
-## Microsoft Store Paketleme
-
-Noctra aynı kod tabanından iki ayrı Store paketi üretebilir:
-
-- `Noctra` → Free edition.
-- `Noctra Premium` → Premium edition.
-
-Store paketleme için:
+Noctra can build Free and Premium editions from the same codebase.
 
 ```powershell
 .\build\package-store.ps1
 ```
 
-Sadece tek edition üretmek için:
+Build one edition:
 
 ```powershell
 .\build\package-store.ps1 -Editions Free
 .\build\package-store.ps1 -Editions Premium
 ```
 
-Versiyon vererek paketlemek için:
+Set a version:
 
 ```powershell
 .\build\package-store.ps1 -VersionPrefix 1.2.0
 ```
 
-Yerel sertifikasyon kontrolü:
+Run local certification checks:
 
 ```powershell
 .\build\test-store-package.ps1
 ```
 
-Gerçek Store gönderimi öncesinde şu dosyalardaki placeholder değerleri Partner Center bilgileriyle değiştirilmelidir:
+Before a real Store submission, update:
 
 ```text
-Noctra.Packaging/StoreAssociation.props
-Noctra.Packaging/store-profiles.json
+Noctra.Packaging\StoreAssociation.props
+Noctra.Packaging\store-profiles.json
 ```
 
-Tam akış için `docs/microsoft-store-submission.md` dosyasını inceleyin.
+---
 
-## Geliştirme Notları
+## Provider Test CLI
 
-- Yeni özellik eklerken ilgili ViewModel, servis ve test katmanını birlikte güncelleyin.
-- UI metinlerini mümkün olduğunca lokalizasyon dosyalarına taşıyın.
-- Premium özellik eklerken `LicenseService.Features` veya `LicenseService.Limits` üzerinden kontrol sağlayın.
-- Global ayar niteliğindeki değerleri profil ayarlarından ayırıp `settings.json` üzerinde merkezi tutun.
-- IPTV sağlayıcı yenilemelerinde kullanıcı verisini silmeden önce bağlantı/yanıt doğrulamasını tamamlayın.
-- M3U, Xtream ve Stalker sağlayıcılarının veri modelleri farklı olduğu için agresif normalizasyon yerine sağlayıcı güveni mantığını koruyun.
+The `Tester` project validates provider connectivity and stream behavior.
 
-## Bilinen Notlar
+```powershell
+dotnet run --project .\Tester\NoctraProviderTester.csproj -- --type m3u --url "http://example.com/list.m3u" --deep-test
+```
 
-- MSIX paketleme için yalnızca `dotnet` CLI yeterli değildir; `.wapproj` için Visual Studio/MSBuild paketleme araçları gerekir.
-- Store sertifikasyonunda en kritik alan LibVLC native bağımlılıklarının paket içinde doğru çalışmasıdır.
-- Promosyon kodu sistemi client-side doğrulama yapar ve repository içinde gerçek kod tutulmamalıdır. Üretim seviyesinde tek kullanımlık kod, cihaz/kullanıcı bazlı redemption ve kötüye kullanım koruması için sunucu tarafı doğrulama önerilir.
+```powershell
+dotnet run --project .\Tester\NoctraProviderTester.csproj -- --type xtream --host "http://host" --user "username" --pass "password" --deep-test --live 3 --vod 3 --duration 20
+```
 
-## Kısa Yol Haritası
+For playlist classification audits:
 
-- Promosyon kodu metinlerinin tamamen localization key’lerine taşınması.
-- Başarı/hata durumuna göre promosyon mesajı renginin ayrıştırılması.
-- Uzak promosyon kodu paneli veya geliştirici arayüzü.
-- Store submission sonrası gerçek product id ve publisher değerlerinin güncellenmesi.
-- Paketlenmiş uygulamada LibVLC runtime doğrulamasının tamamlanması.
+```powershell
+dotnet run --project .\Tester\NoctraProviderTester.csproj -- --audit-playlist ".\playlist.m3u" --out audit.html
+```
+
+See [`Tester/DEEP_TEST_GUIDE.md`](./Tester/DEEP_TEST_GUIDE.md) for detailed stream metrics.
+
+---
+
+## Localization
+
+Translations are embedded from:
+
+```text
+Noctra.Core\Localization\Translations\
+```
+
+Current languages:
+
+| Locale | Language |
+|--------|----------|
+| `en-US` | English |
+| `tr-TR` | Turkish |
+| `de-DE` | German |
+| `es-ES` | Spanish |
+| `fr-FR` | French |
+
+New UI text should use localization keys instead of hardcoded strings.
+
+---
+
+## Development Notes
+
+- Keep provider data authoritative when it is valid.
+- Use TMDB as enrichment, not as a replacement for every provider field.
+- Avoid app-wide preloading; load data and images for the view the user is actually using.
+- Protect user data during provider refresh. Do not delete old content until the new source is verified.
+- Add focused tests when changing parser, progress, download, metadata, or provider refresh behavior.
+
+---
+
+## Changelog
+
+See [`CHANGELOG.md`](./CHANGELOG.md) for the release history.
+
+Current focus:
+
+- On-demand poster loading.
+- Cleaner search and scroll paging.
+- Provider-safe metadata handling.
+- Stable downloads and provider-independent series progress.
+
+---
+
+## License
+
+See [`LICENSE`](./LICENSE).

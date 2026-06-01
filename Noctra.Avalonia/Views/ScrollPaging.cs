@@ -7,6 +7,9 @@ namespace Noctra.Avalonia.Views;
 
 internal static class ScrollPaging
 {
+    private const double LoadMoreThreshold = 0.70;
+    private const int MaxLoadPasses = 4;
+
     public static async Task LoadMoreIfNeededAsync(MainViewModel? viewModel, object? sender)
     {
         if (viewModel == null || sender is not ScrollViewer scrollViewer)
@@ -14,28 +17,46 @@ internal static class ScrollPaging
             return;
         }
 
-        var scrollableHeight = Math.Max(0, scrollViewer.Extent.Height - scrollViewer.Viewport.Height);
-        if (scrollableHeight <= 0)
+        for (var pass = 0; pass < MaxLoadPasses; pass++)
         {
-            return;
-        }
+            var scrollableHeight = Math.Max(0, scrollViewer.Extent.Height - scrollViewer.Viewport.Height);
+            var shouldLoad = scrollableHeight <= 0 ||
+                             scrollViewer.Offset.Y / scrollableHeight >= LoadMoreThreshold;
 
-        switch (viewModel.ActiveView)
-        {
-            case AppView.Live:
-            case AppView.Movies:
-                await viewModel.LoadMoreChannelsIfNeededAsync(scrollViewer.Offset.Y, scrollableHeight);
-                break;
+            if (!shouldLoad)
+            {
+                return;
+            }
 
-            case AppView.Series:
-                await viewModel.LoadMoreSeriesIfNeededAsync(scrollViewer.Offset.Y, scrollableHeight);
-                break;
+            var before = GetVisibleItemCount(viewModel);
 
-            case AppView.Home:
-            case AppView.Search:
-                await viewModel.LoadMoreChannelsIfNeededAsync(scrollViewer.Offset.Y, scrollableHeight);
-                await viewModel.LoadMoreSeriesIfNeededAsync(scrollViewer.Offset.Y, scrollableHeight);
-                break;
+            switch (viewModel.ActiveView)
+            {
+                case AppView.Live:
+                case AppView.Movies:
+                    await viewModel.LoadMoreChannelsAsync();
+                    break;
+
+                case AppView.Series:
+                    await viewModel.LoadMoreSeriesAsync();
+                    break;
+
+                case AppView.Home:
+                case AppView.Search:
+                    await viewModel.LoadMoreChannelsAsync();
+                    await viewModel.LoadMoreSeriesAsync();
+                    break;
+
+                default:
+                    return;
+            }
+
+            if (GetVisibleItemCount(viewModel) == before)
+            {
+                return;
+            }
+
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
         }
     }
 
@@ -51,4 +72,9 @@ internal static class ScrollPaging
             await LoadMoreIfNeededAsync(viewModel, scrollViewer);
         }, DispatcherPriority.Background);
     }
+
+    private static int GetVisibleItemCount(MainViewModel viewModel)
+        => viewModel.ActiveView == AppView.Series
+            ? viewModel.SeriesViewItems.Count
+            : viewModel.FilteredChannels.CountedItemCount + viewModel.SeriesViewItems.Count;
 }
