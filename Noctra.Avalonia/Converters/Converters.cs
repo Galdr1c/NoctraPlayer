@@ -153,11 +153,11 @@ public class WidthToColumnsConverter : IValueConverter
             return 4;
         }
 
-        if (width < 600) return 1;
-        if (width < 900) return 2;
-        if (width < 1200) return 3;
-        if (width < 1500) return 4;
-        if (width < 1800) return 5;
+        if (width < 520) return 1;
+        if (width < 780) return 2;
+        if (width < 1080) return 3;
+        if (width < 1380) return 4;
+        if (width < 1680) return 5;
         return 6;
     }
 

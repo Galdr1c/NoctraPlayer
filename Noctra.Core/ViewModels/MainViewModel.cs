@@ -1033,6 +1033,7 @@ public partial class MainViewModel : ObservableObject
         // My List, Favorites, History
         SetItems(MyList, Enumerable.Empty<object>());
         SetItems(FavoriteChannels, Enumerable.Empty<object>());
+        ClearPersonalListBuckets();
         SetItems(HistoryChannels, Enumerable.Empty<Channel>());
         SetItems(HistoryLiveChannels, Enumerable.Empty<Channel>());
         SetItems(HistorySeriesItems, Enumerable.Empty<Series>());
@@ -4486,6 +4487,24 @@ public partial class MainViewModel : ObservableObject
     private BatchObservableCollection<object> _favoriteChannels = new();
 
     [ObservableProperty]
+    private BatchObservableCollection<Channel> _myListLiveChannels = new();
+
+    [ObservableProperty]
+    private BatchObservableCollection<Channel> _myListVodChannels = new();
+
+    [ObservableProperty]
+    private BatchObservableCollection<Series> _myListSeriesItems = new();
+
+    [ObservableProperty]
+    private BatchObservableCollection<Channel> _favoriteLiveChannels = new();
+
+    [ObservableProperty]
+    private BatchObservableCollection<Channel> _favoriteVodChannels = new();
+
+    [ObservableProperty]
+    private BatchObservableCollection<Series> _favoriteSeriesItems = new();
+
+    [ObservableProperty]
     private BatchObservableCollection<Channel> _historyChannels = new();
 
     [ObservableProperty]
@@ -4645,6 +4664,7 @@ public partial class MainViewModel : ObservableObject
                 {
                     _logger?.LogDebug($"Navigate->UpdateMyList failed: {ex}");
                     MyList.Clear();
+                    ClearMyListBuckets();
                     ShowMyListEmptyState = true;
                 }
                 _ = RefreshPersonalListsFromDatabaseAsync();
@@ -4662,6 +4682,7 @@ public partial class MainViewModel : ObservableObject
                 {
                     _logger?.LogDebug($"Navigate->UpdateFavoriteChannels failed: {ex}");
                     FavoriteChannels.Clear();
+                    ClearFavoriteBuckets();
                     ShowFavoritesEmptyState = true;
                 }
                 _ = RefreshPersonalListsFromDatabaseAsync();
@@ -4752,13 +4773,17 @@ public partial class MainViewModel : ObservableObject
             list.AddRange(seriesMap.Values.Where(s => s.IsInMyList).Cast<object>());
             SetItems(MyList, list
                 .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty),
-                () => ShowMyListEmptyState = MyList.Count == 0);
+                () => {
+                    SyncMyListBuckets(MyList);
+                    ShowMyListEmptyState = MyList.Count == 0;
+                });
             _dispatcherService.Invoke(() => OnPropertyChanged(nameof(MyList)));
         }
         catch (Exception ex)
         {
             _logger?.LogDebug($"UpdateMyList failed: {ex}");
             MyList.Clear();
+            ClearMyListBuckets();
             ShowMyListEmptyState = true;
         }
     }
@@ -4815,6 +4840,7 @@ public partial class MainViewModel : ObservableObject
             SetItems(FavoriteChannels, list
                 .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty),
                 () => {
+                    SyncFavoriteBuckets(FavoriteChannels);
                     ShowFavoritesEmptyState = FavoriteChannels.Count == 0;
                     _ = EnrichChannelsWithEpgAsync(FavoriteChannels.OfType<Channel>());
                 });
@@ -4824,8 +4850,51 @@ public partial class MainViewModel : ObservableObject
         {
             _logger?.LogDebug($"UpdateFavoriteChannels failed: {ex}");
             FavoriteChannels.Clear();
+            ClearFavoriteBuckets();
             ShowFavoritesEmptyState = true;
         }
+    }
+
+    private void SyncMyListBuckets(IEnumerable<object> items)
+    {
+        var snapshot = items.ToList();
+        SetItems(MyListLiveChannels, snapshot.OfType<Channel>().Where(c => c.Type == ChannelType.Live));
+        SetItems(MyListVodChannels, snapshot.OfType<Channel>().Where(c => c.Type == ChannelType.VOD));
+        SetItems(MyListSeriesItems, snapshot.OfType<Series>());
+        OnPropertyChanged(nameof(MyListLiveChannels));
+        OnPropertyChanged(nameof(MyListVodChannels));
+        OnPropertyChanged(nameof(MyListSeriesItems));
+    }
+
+    private void SyncFavoriteBuckets(IEnumerable<object> items)
+    {
+        var snapshot = items.ToList();
+        SetItems(FavoriteLiveChannels, snapshot.OfType<Channel>().Where(c => c.Type == ChannelType.Live));
+        SetItems(FavoriteVodChannels, snapshot.OfType<Channel>().Where(c => c.Type == ChannelType.VOD));
+        SetItems(FavoriteSeriesItems, snapshot.OfType<Series>());
+        OnPropertyChanged(nameof(FavoriteLiveChannels));
+        OnPropertyChanged(nameof(FavoriteVodChannels));
+        OnPropertyChanged(nameof(FavoriteSeriesItems));
+    }
+
+    private void ClearMyListBuckets()
+    {
+        SetItems(MyListLiveChannels, Enumerable.Empty<Channel>());
+        SetItems(MyListVodChannels, Enumerable.Empty<Channel>());
+        SetItems(MyListSeriesItems, Enumerable.Empty<Series>());
+    }
+
+    private void ClearFavoriteBuckets()
+    {
+        SetItems(FavoriteLiveChannels, Enumerable.Empty<Channel>());
+        SetItems(FavoriteVodChannels, Enumerable.Empty<Channel>());
+        SetItems(FavoriteSeriesItems, Enumerable.Empty<Series>());
+    }
+
+    private void ClearPersonalListBuckets()
+    {
+        ClearMyListBuckets();
+        ClearFavoriteBuckets();
     }
 
     public void ResetWatchHistoryUI()
@@ -5956,6 +6025,7 @@ public partial class MainViewModel : ObservableObject
             {
                 MyList.Clear();
                 FavoriteChannels.Clear();
+                ClearPersonalListBuckets();
                 HistoryChannels.Clear();
                 HistoryLiveChannels.Clear();
                 HistoryVodChannels.Clear();
@@ -5986,6 +6056,7 @@ public partial class MainViewModel : ObservableObject
             {
                 MyList.Clear();
                 FavoriteChannels.Clear();
+                ClearPersonalListBuckets();
                 HistoryChannels.Clear();
                 HistoryLiveChannels.Clear();
                 HistoryVodChannels.Clear();
@@ -6017,6 +6088,7 @@ public partial class MainViewModel : ObservableObject
                 .Concat(myListSeries.Cast<object>())
                 .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty),
                 () => {
+                    SyncMyListBuckets(MyList);
                     ShowMyListEmptyState = MyList.Count == 0;
                     _ = EnrichChannelsWithEpgAsync(MyList.OfType<Channel>());
                 });
@@ -6039,6 +6111,7 @@ public partial class MainViewModel : ObservableObject
                 .Concat(favoriteSeries.Cast<object>())
                 .OrderBy(item => item is Channel c ? c.Name : item is Series s ? s.Name : string.Empty),
                 () => {
+                    SyncFavoriteBuckets(FavoriteChannels);
                     ShowFavoritesEmptyState = FavoriteChannels.Count == 0;
                     _ = EnrichChannelsWithEpgAsync(FavoriteChannels.OfType<Channel>());
                 });

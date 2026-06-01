@@ -39,7 +39,11 @@
             </Grid>
             <ItemsControl ItemsSource="{Binding FilteredChannels}" Margin="0,0,-16,-16"
                           IsVisible="{Binding !IsContentLoading}">
-              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <UniformGrid Columns="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource WidthToColumnsConverter}}"/>
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="models:Channel">
                   <controls:LiveTvCard Margin="0,0,16,16" />

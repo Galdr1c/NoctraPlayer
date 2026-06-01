@@ -42,8 +42,12 @@
             <!-- Live results -->
             <StackPanel Margin="0,0,0,24" IsVisible="{Binding SearchLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
               <TextBlock Text="{loc:Translate History.LiveTv}" FontSize="20" LetterSpacing="1" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
-              <ItemsControl ItemsSource="{Binding SearchLiveChannels}" ItemTemplate="{StaticResource SearchLiveCardTemplate}">
-                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl ItemsSource="{Binding SearchLiveChannels}" ItemTemplate="{StaticResource SearchLiveCardTemplate}" Margin="0,0,-16,-16">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <UniformGrid Columns="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource WidthToColumnsConverter}}"/>
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
               </ItemsControl>
             </StackPanel>
 
@@ -70,8 +74,12 @@
               <!-- Similar Live -->
               <StackPanel Margin="0,0,0,20" IsVisible="{Binding SearchSimilarLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
                 <TextBlock Text="{loc:Translate History.LiveTv}" FontSize="16" LetterSpacing="1"  FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
-                <ItemsControl ItemsSource="{Binding SearchSimilarLiveChannels}" ItemTemplate="{StaticResource SearchLiveCardTemplate}">
-                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl ItemsSource="{Binding SearchSimilarLiveChannels}" ItemTemplate="{StaticResource SearchLiveCardTemplate}" Margin="0,0,-16,-16">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <UniformGrid Columns="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource WidthToColumnsConverter}}"/>
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
                 </ItemsControl>
               </StackPanel>
 

@@ -27,6 +27,8 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 - **Localized refresh and provider validation status**: Add-profile provider validation errors and settings refresh progress labels now use translation keys across supported languages.
 - **Refresh progress flow**: Channel refresh progress now comes from the active provider load instead of a separate settings-only percentage; M3U uses clear stages, while Xtream and Stalker use category progress.
 - **EPG save progress curve**: EPG saving progress now advances with a smoother bounded curve during large XMLTV imports.
+- **Live TV responsive grid**: Live channel cards now stretch into adaptive columns so half-width windows can fit three columns and wide screens use the available space more evenly.
+- **Personal-list media sections**: Favorites, My List, History, and Search now keep Live TV cards in responsive live grids instead of mixing them into poster-card rows.
 - **README rewritten**: The project README was rebuilt into a shorter product, architecture, setup, and packaging guide.
 - **CHANGELOG rewritten**: The old long-form maintenance log was replaced with a compact Keep a Changelog structure.
 
