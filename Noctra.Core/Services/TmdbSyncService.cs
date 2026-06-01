@@ -130,7 +130,7 @@ public class TmdbSyncService : ITmdbSyncService
             dbSeries.BackdropUrl = meta.BackdropUrl;
             // MetadataFetchedAt intentionally NULL → detail view will fetch full data
 
-            if (!string.IsNullOrEmpty(meta.PosterUrl))
+            if (ShouldFillCoverUrl(dbSeries.CoverUrl) && !string.IsNullOrEmpty(meta.PosterUrl))
                 dbSeries.CoverUrl = meta.PosterUrl;
 
             if (meta.Genres != null && meta.Genres.Count > 0)
@@ -151,7 +151,7 @@ public class TmdbSyncService : ITmdbSyncService
                 series.ReleaseYear = meta.ReleaseYear;
                 series.BackdropUrl = meta.BackdropUrl;
                 series.LastTmdbSync = DateTime.UtcNow;
-                if (!string.IsNullOrEmpty(meta.PosterUrl))
+                if (ShouldFillCoverUrl(series.CoverUrl) && !string.IsNullOrEmpty(meta.PosterUrl))
                     series.CoverUrl = meta.PosterUrl;
                 if (meta.Genres != null && meta.Genres.Count > 0)
                     series.Genre = string.Join(", ", meta.Genres);
@@ -192,7 +192,7 @@ public class TmdbSyncService : ITmdbSyncService
             dbSeries.ReleaseYear = details.ReleaseYear;
             dbSeries.MetadataFetchedAt = DateTime.UtcNow;
 
-            if (!string.IsNullOrEmpty(details.PosterPath))
+            if (ShouldFillCoverUrl(dbSeries.CoverUrl) && !string.IsNullOrEmpty(details.PosterPath))
                 dbSeries.CoverUrl = $"https://image.tmdb.org/t/p/w500{details.PosterPath}";
             if (!string.IsNullOrEmpty(details.BackdropPath))
                 dbSeries.BackdropUrl = $"https://image.tmdb.org/t/p/original{details.BackdropPath}";
@@ -279,6 +279,18 @@ public class TmdbSyncService : ITmdbSyncService
 
         // Puan bilgisi de varsa yeterli kabul et.
         return series.Rating > 0;
+    }
+
+    private static bool ShouldFillCoverUrl(string? coverUrl)
+    {
+        if (string.IsNullOrWhiteSpace(coverUrl))
+        {
+            return true;
+        }
+
+        return coverUrl.Contains("noposter", StringComparison.OrdinalIgnoreCase) ||
+               coverUrl.Contains("placeholder", StringComparison.OrdinalIgnoreCase) ||
+               coverUrl.Contains("default", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task<bool> CheckAndPurgeUnsafeSeriesAsync(AppDbContext context, Series dbSeries, CancellationToken cancellationToken)

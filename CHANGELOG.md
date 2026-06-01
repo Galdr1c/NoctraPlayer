@@ -20,6 +20,9 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 - **Poster-first VOD cards**: Movie cards prefer `LogoUrl`/provider poster before falling back to backdrop images.
 - **On-demand image loading**: MainWindow image warmup and episode/card preload hooks were removed. Cards load their own images when they appear.
 - **Post-load background work reduced**: The old startup warmup path no longer reloads home/favorites just to prepare images.
+- **Provider poster ownership**: TMDB no longer replaces an existing provider poster just because it may be higher quality.
+- **Series enrichment deduplication**: Visible Series cards now avoid duplicate in-flight TMDB metadata and no-poster lookup work during repeated scroll/filter refreshes.
+- **Git ignore hygiene**: Local Vercel, Upstash, TMDB proxy, environment, database, trace, dump, playlist, and packaging outputs are ignored by default.
 - **README rewritten**: The project README was rebuilt into a shorter product, architecture, setup, and packaging guide.
 - **CHANGELOG rewritten**: The old long-form maintenance log was replaced with a compact Keep a Changelog structure.
 
@@ -27,6 +30,7 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 - **Poster preload pipeline**: `RemoteImage.PreloadAsync`, image warmup scheduling, and active-control cache notify code were removed.
 - **RemoteImage host escalation complexity**: Per-host failure escalation and known-bad-host state were removed from the control.
+- **Provider image probing for TMDB replacement**: Existing provider poster URLs are no longer probed and swapped with TMDB posters.
 
 ### Fixed
 

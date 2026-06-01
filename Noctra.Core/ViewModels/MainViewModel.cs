@@ -73,11 +73,11 @@ public partial class MainViewModel : ObservableObject
     private readonly IPerformanceTraceService? _perfTrace;
     private readonly DateTime _downloadCenterSessionStartUtc = DateTime.UtcNow;
     private readonly ConcurrentDictionary<string, byte> _pendingVisualEnrichmentKeys = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<int, byte> _pendingSeriesMetadataEnrichmentIds = new();
+    private readonly ConcurrentDictionary<string, byte> _seriesVisualNoPosterKeys = new(StringComparer.OrdinalIgnoreCase);
     private long _downloadLandingStoredBytes;
     private readonly SemaphoreSlim _channelVisualEnrichmentSemaphore = new(3, 3);
     private readonly SemaphoreSlim _seriesVisualEnrichmentSemaphore = new(3, 3);
-    private const int ProviderImageFallbackAttempts = 2;
-    private const int ProviderImageFallbackDelayMs = 250;
     private CancellationTokenSource? _slowLoadingWarnCts;
     private readonly ILocalizationService _localizationService;
     private bool _suppressNavigationFilterRefresh;
@@ -1901,46 +1901,6 @@ public partial class MainViewModel : ObservableObject
     private static bool HasDisplayImage(Series series)
         => IsDisplayImageUrl(series.CoverUrl);
 
-    private static bool ShouldRefreshProviderImageUrl(string? url)
-    {
-        if (!IsDisplayImageUrl(url))
-        {
-            return true;
-        }
-
-        var normalized = url!.Trim().Trim('"', '\'');
-        if (!Uri.TryCreate(normalized, UriKind.Absolute, out var uri))
-        {
-            return true;
-        }
-
-        if (uri.Scheme.Equals("avares", StringComparison.OrdinalIgnoreCase) ||
-            uri.Scheme.Equals("file", StringComparison.OrdinalIgnoreCase) ||
-            uri.Scheme.Equals("data", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        var host = uri.Host.ToLowerInvariant();
-        return !(host == "image.tmdb.org" ||
-                 host.EndsWith(".tmdb.org", StringComparison.OrdinalIgnoreCase) ||
-                 host.Contains("themoviedb", StringComparison.OrdinalIgnoreCase) ||
-                 host.Contains("tmdb", StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static string DescribeImageHost(string? url)
-    {
-        if (string.IsNullOrWhiteSpace(url))
-        {
-            return "empty";
-        }
-
-        var normalized = url.Trim().Trim('"', '\'');
-        return Uri.TryCreate(normalized, UriKind.Absolute, out var uri)
-            ? uri.Host
-            : "invalid";
-    }
-
     private static bool IsDisplayImageUrl(string? url)
     {
         if (string.IsNullOrWhiteSpace(url))
@@ -2432,7 +2392,11 @@ public partial class MainViewModel : ObservableObject
             NotifyContentStateChanged();
 
             // On-demand TMDB enrichment for newly visible series
-            var enrichPage = page.Where(s => (s.TmdbId == null && s.LastTmdbSync == null) || s.MetadataFetchedAt == null).ToList();
+            var enrichPage = page
+                .Where(s => s.Id > 0 &&
+                            ((s.TmdbId == null && s.LastTmdbSync == null) || s.MetadataFetchedAt == null) &&
+                            _pendingSeriesMetadataEnrichmentIds.TryAdd(s.Id, 1))
+                .ToList();
             if (enrichPage.Count > 0)
             {
                 _ = Task.Run(async () =>
@@ -2444,6 +2408,13 @@ public partial class MainViewModel : ObservableObject
                     catch (Exception ex)
                     {
                         _logger?.LogDebug($"TMDB enrichment for page failed: {ex.Message}");
+                    }
+                    finally
+                    {
+                        foreach (var series in enrichPage)
+                        {
+                            _pendingSeriesMetadataEnrichmentIds.TryRemove(series.Id, out _);
+                        }
                     }
                 });
             }
@@ -2461,6 +2432,9 @@ public partial class MainViewModel : ObservableObject
     private bool ShouldUseLazyVisualEnrichment()
         => IsM3UProfile();
 
+    private static string GetSeriesVisualEnrichmentKey(int seriesId)
+        => $"series:{seriesId}";
+
     private void QueueVisibleChannelVisualEnrichment(IReadOnlyCollection<Channel> page)
     {
         if (!ShouldUseLazyVisualEnrichment())
@@ -2470,7 +2444,7 @@ public partial class MainViewModel : ObservableObject
 
         var candidates = page
             .Where(c => c.Type == ChannelType.VOD && c.Id > 0 &&
-                        (!HasDisplayImage(c) || ShouldRefreshProviderImageUrl(c.CoverUrl ?? c.LogoUrl)))
+                        !HasDisplayImage(c))
             .ToList();
 
         if (candidates.Count == 0)
@@ -2513,7 +2487,8 @@ public partial class MainViewModel : ObservableObject
 
         var candidates = page
             .Where(s => s.Id > 0 &&
-                        (!HasDisplayImage(s) || ShouldRefreshProviderImageUrl(s.CoverUrl)))
+                        !HasDisplayImage(s) &&
+                        !_seriesVisualNoPosterKeys.ContainsKey(GetSeriesVisualEnrichmentKey(s.Id)))
             .ToList();
 
         if (candidates.Count == 0)
@@ -2557,9 +2532,7 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            var currentImageUrl = channel.CoverUrl ?? channel.LogoUrl;
-            if (HasDisplayImage(channel) &&
-                !await ShouldUseTmdbImageFallbackAsync(currentImageUrl).ConfigureAwait(false))
+            if (HasDisplayImage(channel))
             {
                 return;
             }
@@ -2585,14 +2558,14 @@ public partial class MainViewModel : ObservableObject
             var changed = false;
 
             // --- Poster ---
-            if (!HasDisplayImage(dbChannel) || ShouldRefreshProviderImageUrl(currentImageUrl))
+            if (!HasDisplayImage(dbChannel))
             {
                 dbChannel.LogoUrl = metadata.PosterUrl;
                 changed = true;
                 _perfTrace?.Event(
                     "IMAGE",
                     "EnrichChannelVisualAsync poster",
-                    $"id={channel.Id} oldHost={DescribeImageHost(currentImageUrl)} newHost={DescribeImageHost(metadata.PosterUrl)}");
+                    $"id={channel.Id}");
             }
 
             // --- Backdrop ---
@@ -2667,7 +2640,7 @@ public partial class MainViewModel : ObservableObject
 
     private async Task EnrichSeriesVisualAsync(Series series)
     {
-        var key = $"series:{series.Id}";
+        var key = GetSeriesVisualEnrichmentKey(series.Id);
         if (!_pendingVisualEnrichmentKeys.TryAdd(key, 1))
         {
             return;
@@ -2675,8 +2648,7 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            if (HasDisplayImage(series) &&
-                !await ShouldUseTmdbImageFallbackAsync(series.CoverUrl).ConfigureAwait(false))
+            if (HasDisplayImage(series))
             {
                 return;
             }
@@ -2685,6 +2657,7 @@ public partial class MainViewModel : ObservableObject
             var metadata = await _metadataService.SearchSeriesAsync(series.Name, languageCode);
             if (metadata == null || string.IsNullOrWhiteSpace(metadata.PosterUrl))
             {
+                _seriesVisualNoPosterKeys.TryAdd(key, 1);
                 _perfTrace?.Event(
                     "IMAGE",
                     "EnrichSeriesVisualAsync no-poster",
@@ -2701,15 +2674,14 @@ public partial class MainViewModel : ObservableObject
 
             var changed = false;
 
-            if (!HasDisplayImage(dbSeries) || ShouldRefreshProviderImageUrl(dbSeries.CoverUrl))
+            if (!HasDisplayImage(dbSeries))
             {
-                var oldHost = DescribeImageHost(dbSeries.CoverUrl);
                 dbSeries.CoverUrl = metadata.PosterUrl;
                 changed = true;
                 _perfTrace?.Event(
                     "IMAGE",
                     "EnrichSeriesVisualAsync poster",
-                    $"id={series.Id} oldHost={oldHost} newHost={DescribeImageHost(metadata.PosterUrl)}");
+                    $"id={series.Id}");
             }
 
             if (string.IsNullOrWhiteSpace(dbSeries.BackdropUrl) && !string.IsNullOrWhiteSpace(metadata.BackdropUrl))
@@ -2745,88 +2717,6 @@ public partial class MainViewModel : ObservableObject
         {
             _pendingVisualEnrichmentKeys.TryRemove(key, out _);
         }
-    }
-
-    private async Task<bool> ShouldUseTmdbImageFallbackAsync(string? providerImageUrl)
-    {
-        if (!IsDisplayImageUrl(providerImageUrl))
-        {
-            return true;
-        }
-
-        if (!ShouldRefreshProviderImageUrl(providerImageUrl))
-        {
-            return false;
-        }
-
-        return !await IsProviderImageReachableAsync(providerImageUrl).ConfigureAwait(false);
-    }
-
-    private async Task<bool> IsProviderImageReachableAsync(string? providerImageUrl)
-    {
-        if (string.IsNullOrWhiteSpace(providerImageUrl))
-        {
-            return false;
-        }
-
-        var normalized = providerImageUrl.Trim().Trim('"', '\'');
-        if (normalized.StartsWith("//", StringComparison.Ordinal))
-        {
-            normalized = "https:" + normalized;
-        }
-
-        if (!Uri.TryCreate(normalized, UriKind.Absolute, out var uri))
-        {
-            return false;
-        }
-
-        if (uri.Scheme.Equals("avares", StringComparison.OrdinalIgnoreCase) ||
-            uri.Scheme.Equals("file", StringComparison.OrdinalIgnoreCase) ||
-            uri.Scheme.Equals("data", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        if (!uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
-            !uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        for (var attempt = 1; attempt <= ProviderImageFallbackAttempts; attempt++)
-        {
-            try
-            {
-                using var request = new HttpRequestMessage(HttpMethod.Get, uri);
-                using var response = await _httpClient
-                    .SendAsync(request, HttpCompletionOption.ResponseHeadersRead)
-                    .ConfigureAwait(false);
-
-                if (response.IsSuccessStatusCode && !IsHtmlImageResponse(response))
-                {
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogDebug(ex, "Provider image probe failed for {Host} attempt {Attempt}", uri.Host, attempt);
-            }
-
-            if (attempt < ProviderImageFallbackAttempts)
-            {
-                await Task.Delay(ProviderImageFallbackDelayMs).ConfigureAwait(false);
-            }
-        }
-
-        return false;
-    }
-
-    private static bool IsHtmlImageResponse(HttpResponseMessage response)
-    {
-        var mediaType = response.Content.Headers.ContentType?.MediaType;
-        return mediaType != null &&
-               (mediaType.Contains("text/html", StringComparison.OrdinalIgnoreCase) ||
-                mediaType.Contains("application/xhtml", StringComparison.OrdinalIgnoreCase));
     }
 
     partial void OnSearchTextChanged(string value)
@@ -7753,7 +7643,8 @@ public partial class MainViewModel : ObservableObject
                     if (searchMeta?.TmdbId != null)
                     {
                         source.TmdbId = searchMeta.TmdbId;
-                        if (!string.IsNullOrEmpty(searchMeta.PosterUrl)) source.CoverUrl = searchMeta.PosterUrl;
+                        if (!HasDisplayImage(source) && !string.IsNullOrEmpty(searchMeta.PosterUrl))
+                            source.CoverUrl = searchMeta.PosterUrl;
                         if (!string.IsNullOrEmpty(searchMeta.Description)) source.Plot = searchMeta.Description;
                         if (searchMeta.Rating.HasValue) source.Rating = searchMeta.Rating;
                         if (searchMeta.ReleaseYear.HasValue) source.ReleaseYear = searchMeta.ReleaseYear;
@@ -7785,7 +7676,7 @@ public partial class MainViewModel : ObservableObject
                             source.Director = tmdbSeries.DirectorName;
                         if (string.IsNullOrEmpty(source.Plot) && !string.IsNullOrEmpty(tmdbSeries.Overview))
                             source.Plot = tmdbSeries.Overview;
-                        if (!string.IsNullOrEmpty(tmdbSeries.PosterPath))
+                        if (!HasDisplayImage(source) && !string.IsNullOrEmpty(tmdbSeries.PosterPath))
                             source.CoverUrl = $"https://image.tmdb.org/t/p/w500{tmdbSeries.PosterPath}";
                         if (string.IsNullOrEmpty(source.BackdropUrl) && !string.IsNullOrEmpty(tmdbSeries.BackdropPath))
                             source.BackdropUrl = $"https://image.tmdb.org/t/p/original{tmdbSeries.BackdropPath}";
@@ -7832,7 +7723,7 @@ public partial class MainViewModel : ObservableObject
                             if (tmdbSeason == null) continue;
 
                             season.TmdbSeasonId = tmdbSeason.Id;
-                            if (!string.IsNullOrEmpty(tmdbSeason.PosterPath))
+                            if (string.IsNullOrWhiteSpace(season.CoverUrl) && !string.IsNullOrEmpty(tmdbSeason.PosterPath))
                                 season.CoverUrl = $"https://image.tmdb.org/t/p/w500{tmdbSeason.PosterPath}";
                             if (string.IsNullOrEmpty(season.Plot))
                                 season.Plot = tmdbSeason.Overview;
@@ -7842,7 +7733,7 @@ public partial class MainViewModel : ObservableObject
                                 var tmdbEp = tmdbSeason.Episodes.FirstOrDefault(e => e.EpisodeNumber == episode.EpisodeNumber);
                                 if (tmdbEp == null) continue;
 
-                                if (!string.IsNullOrEmpty(tmdbEp.StillPath))
+                                if (string.IsNullOrWhiteSpace(episode.CoverUrl) && !string.IsNullOrEmpty(tmdbEp.StillPath))
                                     episode.CoverUrl = $"https://image.tmdb.org/t/p/w500{tmdbEp.StillPath}";
                                 if (string.IsNullOrEmpty(episode.Plot))
                                     episode.Plot = tmdbEp.Overview;
