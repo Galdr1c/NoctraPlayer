@@ -82,6 +82,7 @@ public partial class MainViewModel : ObservableObject
     private readonly ILocalizationService _localizationService;
     private bool _suppressNavigationFilterRefresh;
     private int _navigationTraceId;
+    private bool _suppressSelectedPlaylistChanged;
 
     // Guards media-selection flows before they reach MainWindow playback.
     // This prevents rapid Live/VOD/Series clicks from completing out of order
@@ -973,6 +974,9 @@ public partial class MainViewModel : ObservableObject
         _hasMoreSeriesItems = false;
         _isLoadingMoreSeriesItems = false;
         _seriesFilteredSource.Clear();
+        _allSeriesCache.Clear();
+        _pendingSeriesMetadataEnrichmentIds.Clear();
+        _seriesVisualNoPosterKeys.Clear();
         _allGroupsCache.Clear();
         _liveGroupsCache.Clear();
         _vodGroupsCache.Clear();
@@ -1036,6 +1040,9 @@ public partial class MainViewModel : ObservableObject
         _hasMoreSeriesItems = false;
         _isLoadingMoreSeriesItems = false;
         _seriesFilteredSource.Clear();
+        _allSeriesCache.Clear();
+        _pendingSeriesMetadataEnrichmentIds.Clear();
+        _seriesVisualNoPosterKeys.Clear();
         _allGroupsCache.Clear();
         _liveGroupsCache.Clear();
         _vodGroupsCache.Clear();
@@ -1518,6 +1525,11 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSelectedPlaylistChanged(Playlist? value)
     {
+        if (_suppressSelectedPlaylistChanged)
+        {
+            return;
+        }
+
         if (value != null)
         {
             _ = LoadChannelsAsync(value.Id);
@@ -1559,6 +1571,54 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             EndLoading();
+        }
+    }
+
+    private async Task ReloadCurrentPlaylistUiAfterRefreshAsync(int playlistId, bool resetUi)
+    {
+        using var trace = _perfTrace?.BeginOperation(
+            "REFRESH",
+            "ReloadCurrentPlaylistUiAfterRefreshAsync",
+            $"playlist={playlistId} resetUi={resetUi} activeView={ActiveView}");
+
+        if (resetUi)
+        {
+            ResetUIForRefresh();
+        }
+
+        var playlists = await _playlistService.GetAllAsync(CurrentProfileId);
+        SetItems(Playlists, playlists);
+
+        var reloadedPlaylist = playlists.FirstOrDefault(p => p.Id == playlistId) ?? playlists.FirstOrDefault();
+        if (reloadedPlaylist == null)
+        {
+            SelectedPlaylist = null;
+            Channels.Clear();
+            FilteredChannels.Clear();
+            _allSeriesCache.Clear();
+            _seriesFilteredSource.Clear();
+            SeriesViewItems.Clear();
+            SetItems(Groups, Enumerable.Empty<string>());
+            NotifyContentStateChanged();
+            return;
+        }
+
+        _suppressSelectedPlaylistChanged = true;
+        try
+        {
+            SelectedPlaylist = reloadedPlaylist;
+        }
+        finally
+        {
+            _suppressSelectedPlaylistChanged = false;
+        }
+
+        await LoadChannelsAsync(reloadedPlaylist.Id);
+        UpdateGroupsForSelectedType();
+
+        if (ActiveView is AppView.Live or AppView.Movies or AppView.Series or AppView.Home or AppView.Search)
+        {
+            ScheduleImmediateFilter("post-refresh-reload", nameof(ReloadCurrentPlaylistUiAfterRefreshAsync));
         }
     }
 
@@ -3601,6 +3661,7 @@ public partial class MainViewModel : ObservableObject
                 {
                     _perfTrace?.Event("REFRESH", "RefreshSelectedPlaylist provider", $"type=Stalker playlist={playlistId}");
                     await ResumeStalkerProgressiveLoadingAsync(profile, SelectedPlaylist, isFullRefresh: true);
+                    await ReloadCurrentPlaylistUiAfterRefreshAsync(playlistId, resetUi: !isBackground);
                     if (!isBackground)
                     {
                         _playlistNoChangeUntilUtc[playlistId] = DateTime.UtcNow.AddMinutes(5);
@@ -3611,6 +3672,7 @@ public partial class MainViewModel : ObservableObject
                 {
                     _perfTrace?.Event("REFRESH", "RefreshSelectedPlaylist provider", $"type=Xtream playlist={playlistId}");
                     await ResumeXtreamProgressiveLoadingAsync(profile, SelectedPlaylist, isFullRefresh: true);
+                    await ReloadCurrentPlaylistUiAfterRefreshAsync(playlistId, resetUi: !isBackground);
                     if (!isBackground)
                     {
                         _playlistNoChangeUntilUtc[playlistId] = DateTime.UtcNow.AddMinutes(5);
@@ -3638,14 +3700,9 @@ public partial class MainViewModel : ObservableObject
             }
             _perfTrace?.Counter("REFRESH", "ChannelCountDelta", afterCount - beforeCount, $"before={beforeCount} after={afterCount}");
             
-            // "Güvenli Sıfırlama" sonrası tüm kanallar silinip baştan eklendiği için
-            // eklenen/silinen farkı 0 olsa dahi kategoriler değişmiş olabilir. 
-            // Bu yüzden LoadChannelsAsync her zaman çağrılmalı.
-            if (!isBackground)
-            {
-                ResetUIForRefresh();
-            }
-            await LoadChannelsAsync(playlistId);
+            // Refresh replaces playlist content, so rebuild the active UI from DB even
+            // when channel count is unchanged but group names or series changed.
+            await ReloadCurrentPlaylistUiAfterRefreshAsync(playlistId, resetUi: !isBackground);
 
             if (!isBackground)
             {
