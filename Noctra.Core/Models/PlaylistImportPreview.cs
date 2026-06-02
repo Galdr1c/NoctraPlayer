@@ -13,7 +13,6 @@ public class PlaylistImportPreview
     public int CategoryCount { get; init; }
     public int DuplicateNameCount { get; init; }
     public int DuplicateStreamUrlCount { get; init; }
-    public bool HasExistingAccountDuplicate { get; init; }
     public string? ErrorMessage { get; init; }
 
     public ConnectionHealth Health { get; init; } = ConnectionHealth.Unknown;
@@ -32,8 +31,7 @@ public class PlaylistImportPreview
             "PlaylistPreview.Health.Unknown" => "Unknown",
             "PlaylistPreview.LatencyFormat" => " | Latency: {0}ms ({1})",
             "PlaylistPreview.DuplicateChannelFormat" => " | Duplicate channels: names {0}, URLs {1}",
-            "PlaylistPreview.ExistingAccountWarning" => " | Warning: another account already uses this connection",
-            "PlaylistPreview.SummaryFormat" => "{0} preview | Total {1} channels | Live {2} | VOD {3} | Series {4} | Categories {5}{6}{7}{8}",
+            "PlaylistPreview.SummaryFormat" => "{0} preview | Total {1} channels | Live {2} | VOD {3} | Series {4} | Categories {5}{6}{7}",
             _ => key
         };
 
@@ -63,10 +61,6 @@ public class PlaylistImportPreview
             ? string.Format(t("PlaylistPreview.DuplicateChannelFormat"), DuplicateNameCount, DuplicateStreamUrlCount)
             : string.Empty;
 
-        var existingSuffix = HasExistingAccountDuplicate
-            ? t("PlaylistPreview.ExistingAccountWarning")
-            : string.Empty;
-
         return string.Format(
             t("PlaylistPreview.SummaryFormat"),
             SourceType,
@@ -76,14 +70,12 @@ public class PlaylistImportPreview
             SeriesCount,
             CategoryCount,
             latencyPart,
-            duplicateSuffix,
-            existingSuffix);
+            duplicateSuffix);
     }
 
     public static PlaylistImportPreview FromChannels(
         IReadOnlyCollection<Channel> channels,
         string sourceType,
-        bool hasExistingAccountDuplicate,
         ConnectionHealth health = ConnectionHealth.Unknown,
         long? latencyMs = null,
         int? statusCode = null)
@@ -119,7 +111,6 @@ public class PlaylistImportPreview
             DuplicateStreamUrlCount = nonEmptyUrls
                 .GroupBy(u => u, StringComparer.OrdinalIgnoreCase)
                 .Count(g => g.Count() > 1),
-            HasExistingAccountDuplicate = hasExistingAccountDuplicate,
             Health = health,
             LatencyMs = latencyMs,
             StatusCode = statusCode

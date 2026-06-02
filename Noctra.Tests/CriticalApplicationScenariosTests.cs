@@ -1023,39 +1023,6 @@ namespace Noctra.Tests
         }
 
         [Fact]
-        public async Task CheckDuplicateAccount_DetectsDuplicates_RegardlessOfEncryptionOutput()
-        {
-            var editionMock = new Mock<IAppEditionService>();
-            var svc = new ProfileService(_contextFactory, null!, new LicenseService(editionMock.Object));
-            
-            // 1. Seed existing M3U
-            var m3uAccount = await SeedAccountAsync("Original M3U", "http://test.m3u");
-            m3uAccount.Type = ProfileType.M3U;
-            m3uAccount.Username = null;
-            m3uAccount.Password = "encrypted_output_1";
-            await _context.SaveChangesAsync();
-            
-            // Verify: Same URL detects duplicate even if we pretend encryption output is different
-            var isDuplicateM3U = await svc.CheckDuplicateAccountAsync(0, ProfileType.M3U, "http://test.m3u", null!, "encrypted_output_2");
-            Assert.True(isDuplicateM3U, "Duplicate M3U should be detected by URL.");
-
-            // 2. Seed existing Xtream
-            var xtreamAccount = await SeedAccountAsync("Original Xtream", "http://xtream.com");
-            xtreamAccount.Type = ProfileType.XtreamCodes;
-            xtreamAccount.Username = "user1";
-            xtreamAccount.Password = "encrypted_output_A";
-            await _context.SaveChangesAsync();
-            
-            // Verify: Same URL + Username detects duplicate
-            var isDuplicateXtream = await svc.CheckDuplicateAccountAsync(0, ProfileType.XtreamCodes, "http://xtream.com", "user1", "encrypted_output_B");
-            Assert.True(isDuplicateXtream, "Duplicate Xtream should be detected by URL and Username.");
-            
-            // Verify: Different Username is NOT a duplicate
-            var isNotDuplicate = await svc.CheckDuplicateAccountAsync(0, ProfileType.XtreamCodes, "http://xtream.com", "user2", "encrypted_output_A");
-            Assert.False(isNotDuplicate, "Different Username should not be a duplicate.");
-        }
-
-        [Fact]
         public async Task SaveProfileAsync_WhenCredentialsChanged_RemovesOldPlaylistContentButKeepsProgress()
         {
             var account = await SeedAccountAsync("Original", "http://old.example.com");

@@ -42,6 +42,9 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 ### Removed
 
 - **Header search popup**: The old header result popup and its async overlay search state were removed; header search now commits directly to the Search page.
+- **Duplicate provider restriction**: The check that prevented adding the same M3U/Xtream/Stalker provider in multiple profiles was removed. Users can now use the same provider account across different profiles.
+
+### Fixed
 - **Poster preload pipeline**: `RemoteImage.PreloadAsync`, image warmup scheduling, and active-control cache notify code were removed.
 - **RemoteImage host escalation complexity**: Per-host failure escalation and known-bad-host state were removed from the control.
 - **Provider image probing for TMDB replacement**: Existing provider poster URLs are no longer probed and swapped with TMDB posters.

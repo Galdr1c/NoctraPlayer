@@ -17,12 +17,6 @@ public interface IProfileService
     Task DeleteProfileAsync(int profileId, int providerAccountId);
 
     /// <summary>
-    /// Checks if a duplicate provider account already exists (excluding the given account ID).
-    /// </summary>
-    Task<bool> CheckDuplicateAccountAsync(
-        int excludeAccountId, ProfileType type, string url, string username, string password);
-
-    /// <summary>
     /// Gets all profiles ordered by last used (descending), including their provider accounts.
     /// </summary>
     Task<List<Profile>> GetProfilesAsync();

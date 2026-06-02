@@ -1037,9 +1037,6 @@ public partial class AddProfileViewModel : ObservableObject
                     ? ProfileType.XtreamCodes
                     : ProfileType.M3U;
 
-            var existingAccountDuplicate = await _profileService.CheckDuplicateAccountAsync(
-                excludedProviderAccountId, selectedType, Url, Username, Password);
-
             IReadOnlyCollection<Channel> channels;
             if (IsStalker)
             {
@@ -1048,7 +1045,7 @@ public partial class AddProfileViewModel : ObservableObject
                     Username,
                     includeVod: true);
 
-                return PlaylistImportPreview.FromChannels(channels, "Stalker Portal", existingAccountDuplicate, health, latency, statusCode);
+                return PlaylistImportPreview.FromChannels(channels, "Stalker Portal", health, latency, statusCode);
             }
 
             if (IsXtream)
@@ -1059,11 +1056,11 @@ public partial class AddProfileViewModel : ObservableObject
                     Password,
                     includeSeriesEpisodes: false);
 
-                return PlaylistImportPreview.FromChannels(channels, "Xtream", existingAccountDuplicate, health, latency, statusCode);
+                return PlaylistImportPreview.FromChannels(channels, "Xtream", health, latency, statusCode);
             }
 
             channels = await _m3uParser.ParseFromUrlAsync(Url);
-            return PlaylistImportPreview.FromChannels(channels, "M3U", existingAccountDuplicate, health, latency, statusCode);
+            return PlaylistImportPreview.FromChannels(channels, "M3U", health, latency, statusCode);
         }
         catch (Exception ex)
         {
@@ -1162,20 +1159,7 @@ public partial class AddProfileViewModel : ObservableObject
                                      originalType != newAccountType;
             }
 
-            // Check for duplicate account before saving
-            var excludeAccountId = EditingProfile?.ProviderAccountId ?? 0;
-            var isDuplicate = await _profileService.CheckDuplicateAccountAsync(
-                excludeAccountId, newAccountType, Url, Username, encryptedPassword);
-
-            if (isDuplicate)
-            {
-                HasError = true;
-                StatusMessage = newAccountType == ProfileType.M3U
-                    ? _localizationService.GetString("AddProfile.Error.DuplicateM3u")
-                    : _localizationService.GetString("AddProfile.Error.DuplicateServer");
-                UrlError = StatusMessage;
-                return;
-            }
+            
 
             if (EditingProfile != null && credentialsChanged)
             {

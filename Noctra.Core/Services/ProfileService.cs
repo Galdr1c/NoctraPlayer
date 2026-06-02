@@ -216,23 +216,6 @@ public class ProfileService : IProfileService
         await CleanDeletedProfileSettingsAsync();
     }
 
-    public async Task<bool> CheckDuplicateAccountAsync(
-        int excludeAccountId, ProfileType type, string url, string username, string password)
-    {
-        await using var db = await _contextFactory.CreateDbContextAsync();
-        
-        // Normalize: Treat null as empty string for comparison
-        var normalizedUrl = url ?? string.Empty;
-        var normalizedUsername = username ?? string.Empty;
-
-        return await db.ProviderAccounts
-            .AnyAsync(a =>
-                a.Id != excludeAccountId &&
-                a.Type == type &&
-                a.Url == normalizedUrl &&
-                (a.Username ?? string.Empty) == normalizedUsername);
-    }
-
     public async Task<List<Profile>> GetProfilesAsync()
     {
         await using var db = await _contextFactory.CreateDbContextAsync();
