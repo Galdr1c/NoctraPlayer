@@ -85,6 +85,7 @@ public partial class MainViewModel : ObservableObject
     private bool _suppressNavigationFilterRefresh;
     private int _navigationTraceId;
     private bool _suppressSelectedPlaylistChanged;
+    private bool _isNavigationContentResetPending;
 
     // Guards media-selection flows before they reach MainWindow playback.
     // This prevents rapid Live/VOD/Series clicks from completing out of order
@@ -228,7 +229,7 @@ public partial class MainViewModel : ObservableObject
 
     private int CurrentViewItemCount => ActiveView == AppView.Series ? SeriesViewItems.Count : FilteredChannels.CountedItemCount;
 
-    private bool IsContentStillLoading => IsLoading || IsChannelLoading;
+    private bool IsContentStillLoading => IsLoading || IsChannelLoading || _isNavigationContentResetPending;
 
     public bool IsContentLoading => IsContentStillLoading && CurrentViewItemCount == 0;
     public bool ShowEmptyChannels => !IsContentStillLoading && CurrentViewItemCount == 0;
@@ -3120,6 +3121,43 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowGroupFilter));
     }
 
+    private void PrepareContentSurfaceForNavigation(AppView view)
+    {
+        if (view is AppView.Live or AppView.Movies)
+        {
+            _isNavigationContentResetPending = true;
+            _lastCompletedFilterSignature = null;
+            ResetIncrementalState();
+            FilteredChannels = new BatchObservableCollection<Channel>(c => !IsDummyChannel(c));
+            NotifyContentStateChanged();
+            return;
+        }
+
+        if (view == AppView.Series)
+        {
+            _isNavigationContentResetPending = true;
+            _lastCompletedFilterSignature = null;
+            ResetSeriesIncrementalState();
+            _seriesFilteredSource.Clear();
+            SeriesViewItems = new BatchObservableCollection<Series>();
+            NotifyContentStateChanged();
+            return;
+        }
+
+        CompleteNavigationContentReset();
+    }
+
+    private void CompleteNavigationContentReset()
+    {
+        if (!_isNavigationContentResetPending)
+        {
+            return;
+        }
+
+        _isNavigationContentResetPending = false;
+        NotifyContentStateChanged();
+    }
+
     partial void OnShowOnlyFavoritesChanged(bool value)
     {
         if (_suppressNavigationFilterRefresh)
@@ -3465,7 +3503,11 @@ public partial class MainViewModel : ObservableObject
             "FILTER",
             "ApplyFiltersAsync",
             $"nav={Volatile.Read(ref _navigationTraceId)} view={ActiveView} type={SelectedChannelType} group={SelectedGroup ?? "<all>"} search={(string.IsNullOrWhiteSpace(SearchText) ? "<empty>" : SearchText)}");
-        if (SelectedPlaylist == null || token.IsCancellationRequested) return false;
+        if (SelectedPlaylist == null || token.IsCancellationRequested)
+        {
+            CompleteNavigationContentReset();
+            return false;
+        }
 
         BeginLoading();
 
@@ -3538,6 +3580,7 @@ public partial class MainViewModel : ObservableObject
         }
         finally
         {
+            CompleteNavigationContentReset();
             EndLoading();
         }
     }
@@ -4829,6 +4872,35 @@ public partial class MainViewModel : ObservableObject
             {
                 SearchText = string.Empty;
                 SearchQuery = string.Empty;
+            }
+
+            if (view == AppView.Live)
+            {
+                SelectedChannelType = ChannelType.Live;
+                if (previousView != view)
+                {
+                    PrepareContentSurfaceForNavigation(view);
+                }
+            }
+            else if (view == AppView.Movies)
+            {
+                SelectedChannelType = ChannelType.VOD;
+                if (previousView != view)
+                {
+                    PrepareContentSurfaceForNavigation(view);
+                }
+            }
+            else if (view == AppView.Series)
+            {
+                SelectedChannelType = ChannelType.Series;
+                if (previousView != view)
+                {
+                    PrepareContentSurfaceForNavigation(view);
+                }
+            }
+            else
+            {
+                CompleteNavigationContentReset();
             }
 
             ActiveView = view;

@@ -44,6 +44,7 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Fixed
 
+- **View-switch content bleed**: Live, Movies, and Series navigation now clears the target content surface before the new view renders, preventing old cards from flashing under the new page title.
 - **Profile switch background loading leak**: Large Xtream/Stalker progressive loads are now cancelled and prevented from updating progress/status after profile switch or app close.
 - **Connection health accuracy**: Connection badges no longer default to “good”; Add Profile and save validation now use the same provider auth/content rules, and M3U health checks are profile-scoped with GET fallback.
 - **Category image stall**: Categories that reached the end of visible scroll without creating enough scrollable height can now request additional pages.
