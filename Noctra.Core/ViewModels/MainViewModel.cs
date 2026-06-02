@@ -8681,7 +8681,7 @@ public partial class MainViewModel : ObservableObject
 
         if (detail == null) return;
 
-        // Poster/metadata/name güncelle (Kullanıcı İsteği: Stalker API'den gelen zengin TMDB metadatasını kaydet)
+        // Poster/metadata/name güncelle (provider detail metadata)
         ApplyStalkerSeriesMetadata(series, detail);
 
         // Seasons ve Episodes'ları oluştur

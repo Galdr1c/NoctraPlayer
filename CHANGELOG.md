@@ -21,7 +21,7 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 - **On-demand image loading**: MainWindow image warmup and episode/card preload hooks were removed. Cards load their own images when they appear.
 - **Post-load background work reduced**: The old startup warmup path no longer reloads home/favorites just to prepare images.
 - **Provider poster ownership**: TMDB no longer replaces an existing provider poster just because it may be higher quality.
-- **Provider-scoped Series artwork**: Stalker Series list parsing now reads the broader poster field set returned by portal category responses, while visible Series TMDB enrichment remains limited to M3U profiles.
+- **Provider-scoped Series artwork**: Stalker Series list parsing now reads the broader poster field set returned by portal category responses, while Xtream/Stalker list cards avoid slow per-card detail artwork requests.
 - **Series enrichment deduplication**: Visible Series cards now avoid duplicate in-flight TMDB metadata and no-poster lookup work during repeated scroll/filter refreshes.
 - **Git ignore hygiene**: Local Vercel, Upstash, TMDB proxy, environment, database, trace, dump, playlist, and packaging outputs are ignored by default.
 - **Refresh UI state rebuild**: Channel-list refresh now reloads playlist, group, channel, and Series UI caches from the database for M3U, Xtream, and Stalker profiles.
@@ -59,7 +59,7 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 - **Connection health accuracy**: Connection badges no longer default to “good”; Add Profile and save validation now use the same provider auth/content rules, and M3U health checks are profile-scoped with GET fallback.
 - **Category image stall**: Categories that reached the end of visible scroll without creating enough scrollable height can now request additional pages.
 - **Search cards without posters**: Search and similar-result sections now queue visible VOD/series image fallback when provider posters are missing.
-- **Stalker Series posters only appearing after detail open**: Stalker category-list parsing now captures additional provider poster fields, so cards can populate from the original list response instead of waiting for detail-page metadata.
+- **Provider Series poster latency**: Xtream/Stalker Series list cards no longer perform per-card provider detail artwork requests; only posters present in the provider list response are rendered immediately, keeping large lists responsive.
 - **120-image ceiling behavior**: Image loading is no longer tied to a fixed warmup count; visible cards decide their own image load.
 
 ### Verification

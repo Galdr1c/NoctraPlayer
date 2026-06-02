@@ -457,14 +457,24 @@ public class XtreamCodesService : IXtreamCodesService
                     int.TryParse(s.TmdbId, out var t) && t > 0)
                     tmdbId = t;
 
-                // Prefer backdrop if available, else fall back to stream_icon for detail view
-                var backdropUrl = string.IsNullOrWhiteSpace(s.BackdropPath) ? null : s.BackdropPath;
+                var posterUrl = FirstNonEmpty(
+                    s.StreamIcon,
+                    s.Cover,
+                    s.MovieImage,
+                    s.CoverBig,
+                    s.Poster,
+                    s.PosterUrl,
+                    s.Image,
+                    s.ScreenshotUri,
+                    s.ScreenshotUrl);
+
+                var backdropUrl = FirstNonEmpty(s.BackdropPath, s.CoverBig, s.MovieImage);
 
                 return new Channel
                 {
                     Name          = SafeName(s.Name, "VOD"),
                     StreamUrl     = $"{baseUrl}/movie/{Uri.EscapeDataString(username)}/{Uri.EscapeDataString(password)}/{s.StreamId}.{extension}",
-                    LogoUrl       = s.StreamIcon,
+                    LogoUrl       = posterUrl,
                     BackdropUrl   = backdropUrl,
                     GroupTitle    = ResolveCategory(s.CategoryId, s.CategoryName, categories, "VOD"),
                     Type          = ChannelType.VOD,
@@ -768,6 +778,9 @@ public class XtreamCodesService : IXtreamCodesService
         return System.Net.WebUtility.UrlDecode(value).Trim();
     }
 
+    private static string? FirstNonEmpty(params string?[] values)
+        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+
     private static int? ParseInt(string? input)
     {
         if (int.TryParse(input, out var v)) return v;
@@ -859,6 +872,30 @@ public class XtreamCodesService : IXtreamCodesService
 
         [JsonPropertyName("stream_icon")]
         public string? StreamIcon { get; set; }
+
+        [JsonPropertyName("cover")]
+        public string? Cover { get; set; }
+
+        [JsonPropertyName("movie_image")]
+        public string? MovieImage { get; set; }
+
+        [JsonPropertyName("cover_big")]
+        public string? CoverBig { get; set; }
+
+        [JsonPropertyName("poster")]
+        public string? Poster { get; set; }
+
+        [JsonPropertyName("poster_url")]
+        public string? PosterUrl { get; set; }
+
+        [JsonPropertyName("image")]
+        public string? Image { get; set; }
+
+        [JsonPropertyName("screenshot_uri")]
+        public string? ScreenshotUri { get; set; }
+
+        [JsonPropertyName("screenshot_url")]
+        public string? ScreenshotUrl { get; set; }
 
         [JsonPropertyName("category_id")]
         public string? CategoryId { get; set; }

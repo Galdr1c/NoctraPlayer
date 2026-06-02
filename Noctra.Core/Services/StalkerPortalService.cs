@@ -33,9 +33,10 @@ public class StalkerPortalService : IStalkerPortalService
 
     private static readonly string[] KnownPortalPaths =
     [
+        "/c/server/load.php",
         "/stalker_portal/server/load.php",
-        "/stalker_portal/c/",
         "/server/load.php",
+        "/stalker_portal/c/",
         "/c/",
         "/portal.php",
     ];
@@ -1027,7 +1028,10 @@ public class StalkerPortalService : IStalkerPortalService
                 items.Add(new StalkerListItem
                 {
                     Id        = GetString(item, "id"),
-                    Name      = GetString(item, "name"),
+                    Name      = GetString(item, "name") ??
+                                GetString(item, "title") ??
+                                GetString(item, "o_name") ??
+                                GetString(item, "old_name"),
                     Cmd       = GetString(item, "cmd"),
                     Logo      = GetString(item, "logo") ?? 
                                 GetString(item, "pic") ?? 
@@ -1039,12 +1043,15 @@ public class StalkerPortalService : IStalkerPortalService
                                 GetString(item, "cover_big") ??
                                 GetString(item, "poster") ??
                                 GetString(item, "poster_url") ??
+                                GetString(item, "image_url") ??
+                                GetString(item, "thumbnail") ??
                                 GetString(item, "image"),
                     TvGenreId = GetString(item, "tv_genre_id") ??
                                 GetString(item, "category_id") ??
                                 GetString(item, "genre_id"),
                     CategoryName = GetString(item, "category_name") ??
-                                   GetString(item, "genre_name"),
+                                   GetString(item, "genre_name") ??
+                                   GetString(item, "category"),
                     // Metadata — present in many Stalker portal VOD/Series list responses
                     Description = GetString(item, "description") ?? GetString(item, "plot"),
                     Director    = GetString(item, "director"),
