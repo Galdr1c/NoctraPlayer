@@ -204,9 +204,6 @@ public partial class MainViewModel : ObservableObject
     private string _searchQuery = string.Empty;
 
     [ObservableProperty]
-    private BatchObservableCollection<object> _searchResults = new();
-
-    [ObservableProperty]
     private bool _isLoading;
 
     [ObservableProperty]
@@ -1027,7 +1024,6 @@ public partial class MainViewModel : ObservableObject
         SetItems(FilteredChannels, Enumerable.Empty<Channel>());
         SetItems(ContinueWatching, Enumerable.Empty<Channel>());
         SetItems(SeriesViewItems, Enumerable.Empty<Series>());
-        SetItems(SearchResults, Enumerable.Empty<object>());
         SetItems(Groups, Enumerable.Empty<string>());
         
         // My List, Favorites, History
@@ -2184,7 +2180,6 @@ public partial class MainViewModel : ObservableObject
     private const int ImmediateFilterCoalesceDelayMs = 75;
     private const int DuplicateFilterSuppressWindowMs = 350;
     private readonly int _filterDelayMs = 300;
-    private readonly int _searchDelayMs = 200;
     private int _filterRequestVersion;
     private int _isFilterApplyRunning;
     private int _pendingFilterRequest;
@@ -6379,89 +6374,60 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        var rawQuery = SearchText.Trim();
-        var normalizedSeriesQuery = NormalizeSeriesQuery(rawQuery);
-
-        // Scoring and Sorting Logic
-        int CalculateScore(string? name, string? group, ChannelType type)
+        var query = BuildSearchQuery(SearchText);
+        if (string.IsNullOrWhiteSpace(query.Normalized))
         {
-            if (string.IsNullOrWhiteSpace(name)) return 0;
-            
-            // Exact match is king
-            if (name.Equals(rawQuery, StringComparison.OrdinalIgnoreCase)) return 100;
-            if (!string.IsNullOrEmpty(normalizedSeriesQuery) && name.Equals(normalizedSeriesQuery, StringComparison.OrdinalIgnoreCase)) return 95;
-
-            // Starts with is very strong
-            if (name.StartsWith(rawQuery, StringComparison.OrdinalIgnoreCase)) return 80;
-            if (!string.IsNullOrEmpty(normalizedSeriesQuery) && name.StartsWith(normalizedSeriesQuery, StringComparison.OrdinalIgnoreCase)) return 75;
-
-            // Contains as a word boundary
-            if (name.Contains(" " + rawQuery, StringComparison.OrdinalIgnoreCase) || name.Contains("-" + rawQuery, StringComparison.OrdinalIgnoreCase)) return 60;
-
-            // Contains anywhere
-            if (name.Contains(rawQuery, StringComparison.OrdinalIgnoreCase)) return 40;
-            if (!string.IsNullOrEmpty(normalizedSeriesQuery) && name.Contains(normalizedSeriesQuery, StringComparison.OrdinalIgnoreCase)) return 35;
-
-            // Group match
-            if (!string.IsNullOrWhiteSpace(group) && group.Contains(rawQuery, StringComparison.OrdinalIgnoreCase)) return 20;
-
-            return 0;
+            return;
         }
 
-        var channelsSnapshot = FilteredChannels.ToList();
-
-        SetItems(SearchLiveChannels, channelsSnapshot
-            .Where(c => c.Type == ChannelType.Live)
-            .Select(c => new { Item = c, Score = CalculateScore(c.Name, c.GroupTitle, c.Type) })
-            .Where(x => x.Score > 0)
-            .OrderByDescending(x => x.Score)
-            .ThenByDescending(x => HasDisplayImage(x.Item))
-            .ThenBy(x => x.Item.Name)
-            .Select(x => x.Item));
+        var channelsSnapshot = Channels.ToList();
 
         var hiddenSeriesGroups = _settingsService.Settings.HiddenSeriesGroups;
-        var seriesSnapshot = _allSeriesCache.Where(s => s.GroupTitle == null || !hiddenSeriesGroups.Contains(s.GroupTitle)).ToList();
-        
-        int CalculateSeriesScore(Series s)
-        {
-            var nameScore = CalculateScore(s.Name, s.Genre, ChannelType.Series);
-            if (nameScore >= 40) return nameScore; // Name match is enough
+        var seriesSnapshot = _allSeriesCache
+            .Where(s => s.GroupTitle == null || !hiddenSeriesGroups.Contains(s.GroupTitle))
+            .ToList();
 
-            // Only check episodes if query is long enough to avoid noise like "%3" matching "Episode 3"
-            if (rawQuery.Length >= 3)
-            {
-                if (s.Seasons.SelectMany(sea => sea.Episodes).Any(ep => ep.Name?.Contains(rawQuery, StringComparison.OrdinalIgnoreCase) ?? false))
-                    return 10;
-            }
-            
-            return 0;
-        }
-
-        SetItems(SearchSeriesChannels, seriesSnapshot
-            .Select(s => new { Item = s, Score = CalculateSeriesScore(s) })
-            .Where(x => x.Score > 0)
+        var rankedLive = channelsSnapshot
+            .Where(c => c.Type == ChannelType.Live)
+            .Select(c => new RankedChannel(c, ScoreChannelSearch(c, query)))
+            .Where(x => x.Score >= SearchPrimaryScoreThreshold)
             .OrderByDescending(x => x.Score)
             .ThenByDescending(x => HasDisplayImage(x.Item))
             .ThenBy(x => x.Item.Name)
-            .Select(x => x.Item));
+            .Take(SearchPrimaryResultLimit)
+            .ToList();
 
-        SetItems(SearchVodChannels, channelsSnapshot
+        var rankedSeries = seriesSnapshot
+            .Select(s => new RankedSeries(s, ScoreSeriesSearch(s, query, includeEpisodes: true)))
+            .Where(x => x.Score >= SearchPrimaryScoreThreshold)
+            .OrderByDescending(x => x.Score)
+            .ThenByDescending(x => HasDisplayImage(x.Item))
+            .ThenBy(x => x.Item.Name)
+            .Take(SearchPrimaryResultLimit)
+            .ToList();
+
+        var rankedVod = channelsSnapshot
             .Where(c => c.Type == ChannelType.VOD)
-            .Select(c => new { Item = c, Score = CalculateScore(c.Name, c.GroupTitle, c.Type) })
-            .Where(x => x.Score > 0)
+            .Select(c => new RankedChannel(c, ScoreChannelSearch(c, query)))
+            .Where(x => x.Score >= SearchPrimaryScoreThreshold)
             .OrderByDescending(x => x.Score)
             .ThenByDescending(x => HasDisplayImage(x.Item))
             .ThenBy(x => x.Item.Name)
-            .Select(x => x.Item));
+            .Take(SearchPrimaryResultLimit)
+            .ToList();
+
+        SetItems(SearchLiveChannels, rankedLive.Select(x => x.Item));
+        SetItems(SearchSeriesChannels, rankedSeries.Select(x => x.Item));
+        SetItems(SearchVodChannels, rankedVod.Select(x => x.Item));
+
+        UpdateSearchSuggestionAndSimilar(query, channelsSnapshot, seriesSnapshot);
+        _perfTrace?.Counter("SEARCH", "SearchLiveChannels", SearchLiveChannels.Count);
+        _perfTrace?.Counter("SEARCH", "SearchSeriesChannels", SearchSeriesChannels.Count);
+        _perfTrace?.Counter("SEARCH", "SearchVodChannels", SearchVodChannels.Count);
 
         var hasAnyExact = SearchLiveChannels.Count > 0
             || SearchSeriesChannels.Count > 0
             || SearchVodChannels.Count > 0;
-
-        UpdateSearchSuggestionAndSimilar(rawQuery, seriesSnapshot);
-        _perfTrace?.Counter("SEARCH", "SearchLiveChannels", SearchLiveChannels.Count);
-        _perfTrace?.Counter("SEARCH", "SearchSeriesChannels", SearchSeriesChannels.Count);
-        _perfTrace?.Counter("SEARCH", "SearchVodChannels", SearchVodChannels.Count);
 
         ShowSearchEmptyState = !hasAnyExact && !ShowSearchSimilarSection;
 
@@ -6469,10 +6435,9 @@ public partial class MainViewModel : ObservableObject
         QueueVisibleSeriesVisualEnrichment(SearchSeriesChannels.ToList());
     }
 
-    private void UpdateSearchSuggestionAndSimilar(string rawQuery, List<Series> seriesSnapshot)
+    private void UpdateSearchSuggestionAndSimilar(SearchQueryParts query, List<Channel> channelsSnapshot, List<Series> seriesSnapshot)
     {
-        var normalizedQuery = NormalizeFuzzyText(rawQuery);
-        if (string.IsNullOrWhiteSpace(normalizedQuery))
+        if (string.IsNullOrWhiteSpace(query.Normalized))
         {
             SearchSuggestion = string.Empty;
             SearchSimilarLiveChannels.Clear();
@@ -6482,51 +6447,45 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        var candidateNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var channel in Channels)
-        {
-            if (!string.IsNullOrWhiteSpace(channel.Name))
-            {
-                candidateNames.Add(channel.Name);
-            }
-        }
+        SearchSuggestion = ComputeBestSuggestion(query, channelsSnapshot, seriesSnapshot);
 
-        foreach (var series in seriesSnapshot)
-        {
-            if (!string.IsNullOrWhiteSpace(series.Name))
-            {
-                candidateNames.Add(series.Name);
-            }
-        }
-
-        SearchSuggestion = ComputeBestSuggestion(rawQuery, candidateNames);
-
-        // Precompute ID sets for O(1) deduplication instead of O(n*m) Any()
         var liveIds = new HashSet<int>(SearchLiveChannels.Select(x => x.Id));
         var seriesIds = new HashSet<int>(SearchSeriesChannels.Select(x => x.Id));
         var vodIds = new HashSet<int>(SearchVodChannels.Select(x => x.Id));
 
-        var similarLive = Channels
+        var similarLive = channelsSnapshot
             .Where(c => c.Type == ChannelType.Live)
-            .Where(c => IsLikelySimilar(rawQuery, c.Name))
             .Where(c => !liveIds.Contains(c.Id))
-            .OrderByDescending(HasDisplayImage)
-            .Take(12)
+            .Select(c => new RankedChannel(c, ScoreChannelSearch(c, query)))
+            .Where(IsSimilarSearchScore)
+            .OrderByDescending(x => x.Score)
+            .ThenByDescending(x => HasDisplayImage(x.Item))
+            .ThenBy(x => x.Item.Name)
+            .Take(SearchSimilarResultLimit)
+            .Select(x => x.Item)
             .ToList();
 
         var similarSeries = seriesSnapshot
-            .Where(s => IsLikelySimilar(rawQuery, s.Name))
             .Where(s => !seriesIds.Contains(s.Id))
-            .OrderByDescending(HasDisplayImage)
-            .Take(12)
+            .Select(s => new RankedSeries(s, ScoreSeriesSearch(s, query, includeEpisodes: false)))
+            .Where(IsSimilarSearchScore)
+            .OrderByDescending(x => x.Score)
+            .ThenByDescending(x => HasDisplayImage(x.Item))
+            .ThenBy(x => x.Item.Name)
+            .Take(SearchSimilarResultLimit)
+            .Select(x => x.Item)
             .ToList();
 
-        var similarVod = Channels
+        var similarVod = channelsSnapshot
             .Where(c => c.Type == ChannelType.VOD)
-            .Where(c => IsLikelySimilar(rawQuery, c.Name))
             .Where(c => !vodIds.Contains(c.Id))
-            .OrderByDescending(HasDisplayImage)
-            .Take(12)
+            .Select(c => new RankedChannel(c, ScoreChannelSearch(c, query)))
+            .Where(IsSimilarSearchScore)
+            .OrderByDescending(x => x.Score)
+            .ThenByDescending(x => HasDisplayImage(x.Item))
+            .ThenBy(x => x.Item.Name)
+            .Take(SearchSimilarResultLimit)
+            .Select(x => x.Item)
             .ToList();
 
         SetItems(SearchSimilarLiveChannels, similarLive);
@@ -6538,94 +6497,292 @@ public partial class MainViewModel : ObservableObject
         QueueVisibleSeriesVisualEnrichment(similarSeries);
     }
 
-    private string ComputeBestSuggestion(string query, IEnumerable<string> candidates)
+    private string ComputeBestSuggestion(SearchQueryParts query, IEnumerable<Channel> channels, IEnumerable<Series> series)
     {
-        var normalizedQuery = NormalizeFuzzyText(query);
-        if (string.IsNullOrWhiteSpace(normalizedQuery) || normalizedQuery.Length < 2)
+        if (query.Normalized.Length < 3)
         {
             return string.Empty;
         }
 
-        string best = string.Empty;
-        double bestScore = 0; // Higher is better
+        var best = channels
+            .Where(c => c.Type is ChannelType.Live or ChannelType.VOD)
+            .Select(c => new SearchSuggestionCandidate(c.Name, ScoreTitleForSuggestion(c.Name, query), HasDisplayImage(c)))
+            .Concat(series.Select(s => new SearchSuggestionCandidate(s.Name, ScoreTitleForSuggestion(s.Name, query), HasDisplayImage(s))))
+            .Where(x => x.Score >= SearchSuggestionScoreThreshold)
+            .OrderByDescending(x => x.Score)
+            .ThenByDescending(x => x.HasImage)
+            .ThenBy(x => x.Title)
+            .FirstOrDefault();
 
-        foreach (var candidate in candidates)
+        if (best is null || string.IsNullOrWhiteSpace(best.Title))
         {
-            if (string.IsNullOrWhiteSpace(candidate)) continue;
-
-            var normalizedCandidate = NormalizeFuzzyText(candidate);
-            if (string.IsNullOrWhiteSpace(normalizedCandidate) || normalizedCandidate == normalizedQuery)
-                continue;
-
-            double similarity = GetFuzzySimilarity(normalizedQuery, normalizedCandidate);
-
-            // Favor names that start with the query
-            if (normalizedCandidate.StartsWith(normalizedQuery, StringComparison.OrdinalIgnoreCase))
-            {
-                similarity += 0.15;
-            }
-            else if (normalizedCandidate.StartsWith(normalizedQuery[..Math.Min(2, normalizedQuery.Length)], StringComparison.OrdinalIgnoreCase))
-            {
-                similarity += 0.05;
-            }
-
-            // Penalty for extra length (prefer shorter matches when query is short)
-            double lengthDiffPenalty = Math.Abs(normalizedCandidate.Length - normalizedQuery.Length) * 0.01;
-            similarity -= lengthDiffPenalty;
-
-            // CRITICAL: Avoid suggesting a specific episode (Sxx Exx) if the query is just the series name
-            // and we likely already found the series.
-            if (normalizedCandidate.Contains(" s0") || normalizedCandidate.Contains(" s1") || 
-                normalizedCandidate.Contains(" buelum") || normalizedCandidate.Contains(" episode"))
-            {
-                // If the query doesn't contain season/episode info, penalize candidates that do.
-                if (!normalizedQuery.Contains(" s0") && !normalizedQuery.Contains(" s1") && 
-                    !normalizedQuery.Contains(" buelum") && !normalizedQuery.Contains(" episode"))
-                {
-                    similarity -= 0.3;
-                }
-            }
-
-            if (similarity > bestScore && similarity > 0.80)
-            {
-                bestScore = similarity;
-                best = candidate;
-            }
+            return string.Empty;
         }
 
-        // If the best suggestion is basically the same as what we already found in exact results, skip it.
-        if (!string.IsNullOrEmpty(best))
+        var normalizedBest = NormalizeFuzzyText(best.Title);
+        if (normalizedBest == query.Normalized
+            || SearchSeriesChannels.Any(s => NormalizeFuzzyText(s.Name) == normalizedBest)
+            || SearchLiveChannels.Any(c => NormalizeFuzzyText(c.Name) == normalizedBest)
+            || SearchVodChannels.Any(c => NormalizeFuzzyText(c.Name) == normalizedBest))
         {
-            var bestLower = best.ToLowerInvariant();
-            if (SearchSeriesChannels.Any(s => s.Name?.ToLowerInvariant() == bestLower) ||
-                SearchLiveChannels.Any(c => c.Name?.ToLowerInvariant() == bestLower) ||
-                SearchVodChannels.Any(c => c.Name?.ToLowerInvariant() == bestLower))
+            return string.Empty;
+        }
+
+        return best.Title;
+    }
+
+    private const int SearchPrimaryScoreThreshold = 55;
+    private const int SearchSimilarScoreThreshold = 35;
+    private const int SearchPrimaryResultLimit = 96;
+    private const int SearchSimilarResultLimit = 18;
+    private const int SearchSuggestionScoreThreshold = 74;
+
+    private static bool IsSimilarSearchScore<T>(RankedSearchItem<T> item)
+    {
+        return item.Score >= SearchSimilarScoreThreshold && item.Score < SearchPrimaryScoreThreshold;
+    }
+
+    private static bool IsLikelySimilar(string query, string? candidate)
+    {
+        var searchQuery = BuildSearchQuery(query);
+        if (string.IsNullOrWhiteSpace(searchQuery.Normalized) || string.IsNullOrWhiteSpace(candidate))
+        {
+            return false;
+        }
+
+        return ScoreSearchField(candidate, searchQuery, 100) >= SearchSimilarScoreThreshold;
+    }
+
+    private static SearchQueryParts BuildSearchQuery(string? rawQuery)
+    {
+        var raw = rawQuery?.Trim() ?? string.Empty;
+        var normalized = NormalizeFuzzyText(raw);
+        var normalizedSeries = NormalizeSeriesQuery(raw);
+        var tokens = normalized
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(t => t.Length > 1)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        return new SearchQueryParts(raw, normalized, normalizedSeries, tokens, HasEpisodeIntent(normalized));
+    }
+
+    private static int ScoreChannelSearch(Channel channel, SearchQueryParts query)
+    {
+        var titleScore = ScoreSearchField(channel.Name, query, 100);
+        var tvgNameScore = ScoreSearchField(channel.TvgName, query, 86);
+        var groupScore = ScoreSearchField(channel.GroupTitle, query, 58);
+        var languageScore = ScoreSearchField(channel.Language, query, 42);
+        var countryScore = ScoreSearchField(channel.Country, query, 42);
+        var yearScore = channel.ReleaseYear?.ToString(CultureInfo.InvariantCulture) == query.Normalized ? 56 : 0;
+
+        return Max(titleScore, tvgNameScore, groupScore, languageScore, countryScore, yearScore);
+    }
+
+    private static int ScoreSeriesSearch(Series series, SearchQueryParts query, bool includeEpisodes)
+    {
+        var titleScore = ScoreSearchField(series.Name, query, 100);
+        var tmdbTitleScore = ScoreSearchField(series.TmdbTitle, query, 92);
+        var categoryScore = ScoreSearchField(series.GroupTitle, query, 58);
+        var genreScore = ScoreSearchField(series.Genre, query, 54);
+        var networkScore = ScoreSearchField(series.NetworkName, query, 45);
+        var yearScore = series.ReleaseYear?.ToString(CultureInfo.InvariantCulture) == query.Normalized ? 56 : 0;
+        var episodeScore = includeEpisodes ? ScoreSeriesEpisodeNames(series, query) : 0;
+
+        return Max(titleScore, tmdbTitleScore, categoryScore, genreScore, networkScore, yearScore, episodeScore);
+    }
+
+    private static int ScoreSeriesEpisodeNames(Series series, SearchQueryParts query)
+    {
+        if (query.Normalized.Length < 4 || query.Tokens.Length == 0)
+        {
+            return 0;
+        }
+
+        var best = 0;
+        foreach (var episode in series.Seasons.SelectMany(s => s.Episodes))
+        {
+            best = Math.Max(best, ScoreSearchField(episode.Name, query, 42));
+            if (best >= 42)
             {
-                return string.Empty;
+                break;
             }
         }
 
         return best;
     }
 
-    private static bool IsLikelySimilar(string query, string? candidate)
+    private static int ScoreTitleForSuggestion(string? title, SearchQueryParts query)
     {
-        var normalizedQuery = NormalizeFuzzyText(query);
-        var normalizedCandidate = NormalizeFuzzyText(candidate);
-        
-        if (string.IsNullOrWhiteSpace(normalizedQuery) || string.IsNullOrWhiteSpace(normalizedCandidate))
+        if (string.IsNullOrWhiteSpace(title))
         {
-            return false;
+            return 0;
         }
 
-        if (normalizedCandidate.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase) ||
-            normalizedQuery.Contains(normalizedCandidate, StringComparison.OrdinalIgnoreCase))
+        var normalizedTitle = NormalizeFuzzyText(title);
+        if (normalizedTitle == query.Normalized || string.IsNullOrWhiteSpace(normalizedTitle))
         {
-            return true;
+            return 0;
         }
 
-        return GetFuzzySimilarity(normalizedQuery, normalizedCandidate) >= 0.70;
+        var score = ScoreSearchField(title, query, 100);
+        if (normalizedTitle.StartsWith(query.Normalized, StringComparison.Ordinal))
+        {
+            score += 8;
+        }
+
+        score -= Math.Min(18, Math.Abs(normalizedTitle.Length - query.Normalized.Length));
+        return Math.Clamp(score, 0, 100);
     }
+
+    private static int ScoreSearchField(string? value, SearchQueryParts query, int weight)
+    {
+        if (string.IsNullOrWhiteSpace(value) || string.IsNullOrWhiteSpace(query.Normalized))
+        {
+            return 0;
+        }
+
+        var normalizedValue = NormalizeFuzzyText(value);
+        if (string.IsNullOrWhiteSpace(normalizedValue))
+        {
+            return 0;
+        }
+
+        var baseScore = ScoreNormalizedSearchField(normalizedValue, query);
+        if (baseScore <= 0)
+        {
+            return 0;
+        }
+
+        if (!query.HasEpisodeIntent && ContainsEpisodeMarker(normalizedValue))
+        {
+            baseScore = Math.Max(0, baseScore - 12);
+        }
+
+        return Math.Clamp((int)Math.Round(baseScore * (weight / 100.0)), 0, 100);
+    }
+
+    private static int ScoreNormalizedSearchField(string normalizedValue, SearchQueryParts query)
+    {
+        if (normalizedValue == query.Normalized || (!string.IsNullOrWhiteSpace(query.NormalizedSeries) && normalizedValue == query.NormalizedSeries))
+        {
+            return 100;
+        }
+
+        if (normalizedValue.StartsWith(query.Normalized, StringComparison.Ordinal))
+        {
+            return 92;
+        }
+
+        if (ContainsPhraseOnBoundary(normalizedValue, query.Normalized))
+        {
+            return 84;
+        }
+
+        if (normalizedValue.Contains(query.Normalized, StringComparison.Ordinal))
+        {
+            return 74;
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.NormalizedSeries) && normalizedValue.Contains(query.NormalizedSeries, StringComparison.Ordinal))
+        {
+            return 70;
+        }
+
+        var tokenScore = ScoreTokenCoverage(normalizedValue, query.Tokens);
+        if (tokenScore > 0)
+        {
+            return tokenScore;
+        }
+
+        if (query.Normalized.Length < 3)
+        {
+            return 0;
+        }
+
+        var fuzzy = GetFuzzySimilarity(query.Normalized, normalizedValue);
+        return fuzzy switch
+        {
+            >= 0.92 => 72,
+            >= 0.84 => 62,
+            >= 0.74 => 44,
+            _ => 0
+        };
+    }
+
+    private static int ScoreTokenCoverage(string normalizedValue, string[] tokens)
+    {
+        if (tokens.Length == 0)
+        {
+            return 0;
+        }
+
+        var valueWords = normalizedValue.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (valueWords.Length == 0)
+        {
+            return 0;
+        }
+
+        var exactMatches = 0;
+        var prefixMatches = 0;
+        foreach (var token in tokens)
+        {
+            if (valueWords.Any(w => w == token))
+            {
+                exactMatches++;
+                prefixMatches++;
+            }
+            else if (valueWords.Any(w => w.StartsWith(token, StringComparison.Ordinal)))
+            {
+                prefixMatches++;
+            }
+        }
+
+        if (exactMatches == tokens.Length)
+        {
+            return 68;
+        }
+
+        if (prefixMatches == tokens.Length)
+        {
+            return 62;
+        }
+
+        if (tokens.Length > 1 && prefixMatches >= Math.Max(1, tokens.Length - 1))
+        {
+            return 48;
+        }
+
+        return 0;
+    }
+
+    private static bool ContainsPhraseOnBoundary(string normalizedValue, string normalizedQuery)
+    {
+        return normalizedValue.Contains($" {normalizedQuery} ", StringComparison.Ordinal)
+            || normalizedValue.EndsWith($" {normalizedQuery}", StringComparison.Ordinal);
+    }
+
+    private static bool HasEpisodeIntent(string normalizedQuery)
+    {
+        return Regex.IsMatch(normalizedQuery, @"\b(s\d{1,2}|e\d{1,2}|season|sezon|episode|bolum|buelum)\b", RegexOptions.IgnoreCase);
+    }
+
+    private static bool ContainsEpisodeMarker(string normalizedValue)
+    {
+        return Regex.IsMatch(normalizedValue, @"\b(s\d{1,2}\s*e\d{1,2}|season|sezon|episode|bolum|buelum)\b", RegexOptions.IgnoreCase);
+    }
+
+    private static int Max(params int[] values) => values.Length == 0 ? 0 : values.Max();
+
+    private sealed record SearchQueryParts(string Raw, string Normalized, string NormalizedSeries, string[] Tokens, bool HasEpisodeIntent);
+
+    private abstract record RankedSearchItem<T>(T Item, int Score);
+
+    private sealed record RankedChannel(Channel Item, int Score) : RankedSearchItem<Channel>(Item, Score);
+
+    private sealed record RankedSeries(Series Item, int Score) : RankedSearchItem<Series>(Item, Score);
+
+    private sealed record SearchSuggestionCandidate(string Title, int Score, bool HasImage);
 
     private static double GetFuzzySimilarity(string normalizedQuery, string normalizedCandidate)
     {
@@ -6867,76 +7024,6 @@ public partial class MainViewModel : ObservableObject
         SearchQuery = SearchSuggestion;
         SearchText = SearchSuggestion;
         Navigate(AppView.Search);
-    }
-
-
-    partial void OnSearchQueryChanged(string value)
-    {
-        _perfTrace?.Event("SEARCH", "OnSearchQueryChanged", $"len={value?.Length ?? 0}");
-        // Only clear results when query is emptied.
-        // Actual search triggers on Enter/button via CommitSearch.
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            SearchResults.Clear();
-        }
-    }
-
-    private async Task SearchOverlayAsync(string query, CancellationToken token)
-    {
-        using var trace = _perfTrace?.BeginOperation("SEARCH", "SearchOverlayAsync", $"len={query?.Length ?? 0}");
-        try
-        {
-            await Task.Delay(_searchDelayMs, token);
-
-            var channelsSnapshot = Channels;
-            var seriesSnapshot = _allSeriesCache;
-            var searchLower = query.ToLowerInvariant();
-
-            var results = await Task.Run(() =>
-            {
-                var localResults = new List<object>();
-                var normalizedSeriesQuery = NormalizeSeriesQuery(query);
-
-                localResults.AddRange(channelsSnapshot.Where(c =>
-                    c.Type != ChannelType.Series &&
-                    (c.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                     (c.GroupTitle?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)))
-                    .OrderByDescending(HasDisplayImage)
-                    .ThenBy(c => c.Name)
-                    .Take(10));
-
-                localResults.AddRange(seriesSnapshot.Where(s =>
-                    SeriesMatchesSearch(s, query, normalizedSeriesQuery))
-                    .OrderByDescending(HasDisplayImage)
-                    .ThenBy(s => s.Name)
-                    .Take(10));
-
-                return localResults;
-            }, token);
-
-            if (token.IsCancellationRequested) return;
-            _perfTrace?.Counter("SEARCH", "SearchOverlay results", results.Count, $"channels={channelsSnapshot.Count} series={seriesSnapshot.Count}");
-
-            _dispatcherService.BeginInvoke(() =>
-            {
-                if (!token.IsCancellationRequested)
-                {
-                    SetItems(SearchResults, results);
-                }
-            });
-        }
-        catch (OperationCanceledException)
-        {
-            // 3sn'de timeout → sunucu yanıt vermiyor
-            _dispatcherService.BeginInvoke(() =>
-            {
-                StatusMessage = _localizationService.GetString("Main.Status.ServerNoResponse");
-            });
-        }
-        catch (ObjectDisposedException)
-        {
-            // Ignore races from rapid search token replacement.
-        }
     }
 
     [RelayCommand]

@@ -1,7 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Noctra.ViewModels"
-        xmlns:models="using:Noctra.Models"
         xmlns:views="using:Noctra.Avalonia.Views"
         xmlns:controls="using:Noctra.Avalonia.Controls"
         xmlns:loc="using:Noctra.Avalonia.Localization"
@@ -195,52 +194,6 @@
             </Border>
           </TextBox.InnerLeftContent>
         </TextBox>
-
-        <!-- Search Results Popup -->
-        <Popup IsOpen="{Binding !!SearchResults.Count}" 
-               PlacementTarget="{Binding #HeaderSearchBox}"
-               Placement="Bottom"
-               IsLightDismissEnabled="True" >
-          <Border Width="340" MaxHeight="400" Background="{DynamicResource SurfaceBrush}" 
-                  CornerRadius="12" Padding="8" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-            <ScrollViewer>
-              <ItemsControl ItemsSource="{Binding SearchResults}">
-                <ItemsControl.DataTemplates>
-                  <DataTemplate x:DataType="models:Channel">
-                    <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" 
-                            CommandParameter="{Binding}"
-                            Background="Transparent" BorderThickness="0" Padding="8" Cursor="Hand" HorizontalAlignment="Stretch">
-                      <Grid ColumnDefinitions="40,*">
-                        <Border Width="32" Height="32" CornerRadius="4" ClipToBounds="True">
-                          <controls:RemoteImage Stretch="UniformToFill" Url="{Binding LogoUrl}"/>
-                        </Border>
-                        <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                          <TextBlock Text="{Binding Name}" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
-                          <TextBlock Text="{Binding GroupTitle}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" TextTrimming="CharacterEllipsis"/>
-                        </StackPanel>
-                      </Grid>
-                    </Button>
-                  </DataTemplate>
-                  <DataTemplate x:DataType="models:Series">
-                    <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" 
-                            CommandParameter="{Binding}"
-                            Background="Transparent" BorderThickness="0" Padding="8" Cursor="Hand" HorizontalAlignment="Stretch">
-                      <Grid ColumnDefinitions="40,*">
-                        <Border Width="32" Height="32" CornerRadius="4" ClipToBounds="True">
-                          <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
-                        </Border>
-                        <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
-                          <TextBlock Text="{Binding Name}" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
-                          <TextBlock Text="{loc:Translate Shell.Series.Type}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
-                        </StackPanel>
-                      </Grid>
-                    </Button>
-                  </DataTemplate>
-                </ItemsControl.DataTemplates>
-              </ItemsControl>
-            </ScrollViewer>
-          </Border>
-        </Popup>
 
         <!-- Header Actions -->
         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">

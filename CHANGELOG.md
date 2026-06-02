@@ -29,11 +29,14 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 - **EPG save progress curve**: EPG saving progress now advances with a smoother bounded curve during large XMLTV imports.
 - **Live TV responsive grid**: Live channel cards now stretch into adaptive columns so half-width windows can fit three columns and wide screens use the available space more evenly.
 - **Personal-list media sections**: Favorites, My List, History, and Search now keep Live TV cards in responsive live grids instead of mixing them into poster-card rows.
+- **Search ranking strategy**: Search now uses one local scoring model for Live TV, Movies, and Series, weighting title matches first and local metadata fields second.
+- **Similar search results**: Similar results now come from the same scoring model with controlled thresholds, deduplication from primary results, and no TMDB/API calls.
 - **README rewritten**: The project README was rebuilt into a shorter product, architecture, setup, and packaging guide.
 - **CHANGELOG rewritten**: The old long-form maintenance log was replaced with a compact Keep a Changelog structure.
 
 ### Removed
 
+- **Header search popup**: The old header result popup and its async overlay search state were removed; header search now commits directly to the Search page.
 - **Poster preload pipeline**: `RemoteImage.PreloadAsync`, image warmup scheduling, and active-control cache notify code were removed.
 - **RemoteImage host escalation complexity**: Per-host failure escalation and known-bad-host state were removed from the control.
 - **Provider image probing for TMDB replacement**: Existing provider poster URLs are no longer probed and swapped with TMDB posters.
