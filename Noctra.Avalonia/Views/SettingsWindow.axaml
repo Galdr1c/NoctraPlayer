@@ -1363,6 +1363,19 @@
                                    FontSize="18" 
                                    FontWeight="SemiBold"
                                    HorizontalAlignment="Center"/>
+                        <Button Command="{Binding CancelRefreshOperationCommand}"
+                                HorizontalAlignment="Center"
+                                Padding="18,9"
+                                Background="{DynamicResource Surface1Brush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Cursor="Hand">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <materialIcons:MaterialIcon Kind="CloseCircleOutline" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}"/>
+                                <TextBlock Text="{loc:Translate Dialog.Cancel}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Button>
                     </StackPanel>
                 </Border>
             </Grid>

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -819,7 +820,25 @@ public partial class AddProfileViewModel : ObservableObject
                 StatusMessage = _localizationService.GetString("AddProfile.Analysis.Failed");
                 return;
             }
-            
+
+            var providerVerification = await VerifyProviderAsync(CancellationToken.None);
+            if (providerVerification.Health == ConnectionHealth.Critical)
+            {
+                ConnectionHealth = ConnectionHealth.Critical;
+                DetailedStatus = string.IsNullOrWhiteSpace(providerVerification.Error)
+                    ? _localizationService.GetString("AddProfile.Analysis.Failed")
+                    : providerVerification.Error;
+                HasError = true;
+                StatusMessage = _localizationService.GetString("AddProfile.Analysis.Failed");
+                return;
+            }
+
+            if (providerVerification.Health != ConnectionHealth.Unknown)
+            {
+                ConnectionHealth = providerVerification.Health;
+                DetailedStatus = FormatDetailedStatus(statusCode, providerVerification.Latency, null);
+            }
+
             HasError = false;
             StatusMessage = _localizationService.GetString("AddProfile.Analysis.Completed");
         }
@@ -866,6 +885,81 @@ public partial class AddProfileViewModel : ObservableObject
         };
     }
 
+    private async Task<(ConnectionHealth Health, long Latency, string? Error)> VerifyProviderAsync(CancellationToken cancellationToken)
+    {
+        var stopwatch = Stopwatch.StartNew();
+
+        try
+        {
+            if (IsXtream)
+            {
+                var authenticated = await _xtreamCodesService.AuthenticateAsync(
+                    NormalizeProviderBaseUrl(Url), Username, Password, cancellationToken);
+                stopwatch.Stop();
+                return authenticated
+                    ? (ClassifyLatency(stopwatch.ElapsedMilliseconds), stopwatch.ElapsedMilliseconds, null)
+                    : (ConnectionHealth.Critical, stopwatch.ElapsedMilliseconds, _localizationService.GetString("Xtream.Error.AuthFailed"));
+            }
+
+            if (IsStalker)
+            {
+                var authenticated = await _stalkerPortalService.AuthenticateAsync(
+                    Url, Username, cancellationToken);
+                if (!authenticated)
+                {
+                    stopwatch.Stop();
+                    return (ConnectionHealth.Critical, stopwatch.ElapsedMilliseconds, _localizationService.GetString("Stalker.Error.HandshakeFailed"));
+                }
+
+                var categories = await _stalkerPortalService.GetCategoriesAsync(
+                    Url, Username, cancellationToken);
+                stopwatch.Stop();
+                return categories.Count > 0
+                    ? (ClassifyLatency(stopwatch.ElapsedMilliseconds), stopwatch.ElapsedMilliseconds, null)
+                    : (ConnectionHealth.Critical, stopwatch.ElapsedMilliseconds, _localizationService.GetString("AddProfile.Error.NewProviderValidationFailed"));
+            }
+
+            if (IsM3U && !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Password))
+            {
+                var authenticated = await _xtreamCodesService.AuthenticateAsync(
+                    NormalizeProviderBaseUrl(Url), Username, Password, cancellationToken);
+                stopwatch.Stop();
+                return authenticated
+                    ? (ClassifyLatency(stopwatch.ElapsedMilliseconds), stopwatch.ElapsedMilliseconds, null)
+                    : (ConnectionHealth.Critical, stopwatch.ElapsedMilliseconds, _localizationService.GetString("Xtream.Error.AuthFailed"));
+            }
+
+            stopwatch.Stop();
+            return (ConnectionHealth.Unknown, stopwatch.ElapsedMilliseconds, null);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            stopwatch.Stop();
+            return (ConnectionHealth.Critical, stopwatch.ElapsedMilliseconds, UserFriendlyErrorMessage.FromException(ex));
+        }
+    }
+
+    private static ConnectionHealth ClassifyLatency(long latencyMs)
+    {
+        return latencyMs < 500 ? ConnectionHealth.Good :
+               latencyMs < 1500 ? ConnectionHealth.Weak :
+               ConnectionHealth.Bad;
+    }
+
+    private static string NormalizeProviderBaseUrl(string url)
+    {
+        var trimmed = url?.Trim() ?? string.Empty;
+        if (!trimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+            !trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            trimmed = "http://" + trimmed;
+        }
+
+        return Uri.TryCreate(trimmed, UriKind.Absolute, out var uri)
+            ? $"{uri.Scheme}://{uri.Host}{(uri.IsDefaultPort ? string.Empty : $":{uri.Port}")}"
+            : trimmed.TrimEnd('/');
+    }
+
     private async Task<(ConnectionHealth Health, int? StatusCode, long? Latency, string? Error)> PerformHealthCheckAsync(string url)
     {
         try
@@ -886,6 +980,12 @@ public partial class AddProfileViewModel : ObservableObject
             {
                 var request = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Head, url);
                 response = await client.SendAsync(request, System.Net.Http.HttpCompletionOption.ResponseHeadersRead);
+                if (response.StatusCode == System.Net.HttpStatusCode.MethodNotAllowed)
+                {
+                    response.Dispose();
+                    stopwatch.Restart();
+                    response = await client.GetAsync(url, System.Net.Http.HttpCompletionOption.ResponseHeadersRead);
+                }
             }
             catch (System.Net.Http.HttpRequestException)
             {
@@ -900,11 +1000,7 @@ public partial class AddProfileViewModel : ObservableObject
 
             if (response.IsSuccessStatusCode)
             {
-                var health = latency < 300 ? ConnectionHealth.Good : 
-                             latency < 1000 ? ConnectionHealth.Weak : 
-                             ConnectionHealth.Bad;
-                
-                return (health, code, latency, null);
+                return (ClassifyLatency(latency), code, latency, null);
             }
             else
             {
@@ -1085,15 +1181,33 @@ public partial class AddProfileViewModel : ObservableObject
             {
                 StatusMessage = _localizationService.GetString("AddProfile.Status.Analyzing");
 
-                var preview = await BuildImportPreviewAsync();
-                if (!preview.IsValid || preview.TotalChannels <= 0)
+                var providerValidation = await VerifyProviderAsync(CancellationToken.None);
+                if (providerValidation.Health == ConnectionHealth.Critical)
                 {
                     HasError = true;
-                    StatusMessage = string.IsNullOrWhiteSpace(preview.ErrorMessage)
+                    StatusMessage = string.IsNullOrWhiteSpace(providerValidation.Error)
                         ? _localizationService.GetString("AddProfile.Error.NewProviderValidationFailed")
-                        : preview.ErrorMessage;
+                        : providerValidation.Error;
                     UrlError = StatusMessage;
+                    ConnectionHealth = ConnectionHealth.Critical;
+                    DetailedStatus = StatusMessage;
                     return;
+                }
+
+                if (providerValidation.Health == ConnectionHealth.Unknown)
+                {
+                    var preview = await BuildImportPreviewAsync();
+                    if (!preview.IsValid || preview.TotalChannels <= 0)
+                    {
+                        HasError = true;
+                        StatusMessage = string.IsNullOrWhiteSpace(preview.ErrorMessage)
+                            ? _localizationService.GetString("AddProfile.Error.NewProviderValidationFailed")
+                            : preview.ErrorMessage;
+                        UrlError = StatusMessage;
+                        ConnectionHealth = ConnectionHealth.Critical;
+                        DetailedStatus = StatusMessage;
+                        return;
+                    }
                 }
             }
 

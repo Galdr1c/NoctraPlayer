@@ -153,6 +153,8 @@ public partial class MainWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        _mainViewModel.CancelProfileBackgroundLoading();
+
         // Flush watch position before closing
         try
         {

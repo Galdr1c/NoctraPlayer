@@ -878,6 +878,30 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void CancelRefreshOperation()
+    {
+        if (Volatile.Read(ref _isRefreshOperationRunning) != 1)
+        {
+            return;
+        }
+
+        _epgRefreshWatchCts?.Cancel();
+        if (string.Equals(_activeRefreshScope, "Channel", StringComparison.OrdinalIgnoreCase))
+        {
+            _mainViewModel.CancelProfileBackgroundLoading();
+            _mainViewModel.IsChannelLoading = false;
+            _mainViewModel.ChannelLoadingStats = string.Empty;
+        }
+
+        var message = _localizationService.GetString("Dialog.Cancel");
+        StatusMessage = message;
+        _mainViewModel.StatusMessage = message;
+        _mainViewModel.IsGlobalLoading = false;
+        _mainViewModel.GlobalLoadingMessage = string.Empty;
+        EndRefreshOperation();
+    }
+
+    [RelayCommand]
     private async Task RefreshEpgNowAsync()
     {
         // Önce ayarları kaydet ki arka plan görevi yeni URL'yi görebilsin

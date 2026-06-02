@@ -31,6 +31,7 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 - **Personal-list media sections**: Favorites, My List, History, and Search now keep Live TV cards in responsive live grids instead of mixing them into poster-card rows.
 - **Search ranking strategy**: Search now uses one local scoring model for Live TV, Movies, and Series, weighting title matches first and local metadata fields second.
 - **Similar search results**: Similar results now come from the same scoring model with controlled thresholds, deduplication from primary results, and no TMDB/API calls.
+- **Refresh cancellation**: Settings refresh overlay now includes a Cancel action for long-running channel-list refreshes.
 - **README rewritten**: The project README was rebuilt into a shorter product, architecture, setup, and packaging guide.
 - **CHANGELOG rewritten**: The old long-form maintenance log was replaced with a compact Keep a Changelog structure.
 
@@ -43,6 +44,8 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Fixed
 
+- **Profile switch background loading leak**: Large Xtream/Stalker progressive loads are now cancelled and prevented from updating progress/status after profile switch or app close.
+- **Connection health accuracy**: Connection badges no longer default to “good”; Add Profile and save validation now use the same provider auth/content rules, and M3U health checks are profile-scoped with GET fallback.
 - **Category image stall**: Categories that reached the end of visible scroll without creating enough scrollable height can now request additional pages.
 - **Search cards without posters**: Search and similar-result sections now queue visible VOD/series image fallback when provider posters are missing.
 - **120-image ceiling behavior**: Image loading is no longer tied to a fixed warmup count; visible cards decide their own image load.
