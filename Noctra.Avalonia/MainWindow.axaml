@@ -9,7 +9,7 @@
         x:Class="Noctra.Avalonia.MainWindow"
         x:Name="RootWindow"
         x:DataType="vm:MainViewModel"
-        Icon="avares://Noctra.Avalonia/Assets/Square44x44Logo.targetsize-256.png"
+        Icon="avares://Noctra/Assets/Square44x44Logo.targetsize-256.png"
         Title="Noctra"
         TransparencyLevelHint="None"
         Width="1400" Height="800"
@@ -1275,7 +1275,7 @@
             <StackPanel Spacing="24">
                 <controls:PremiumSpinner Width="80" Height="80">
                     <!-- Pulsing App Logo in Center -->
-                    <Image Source="avares://Noctra.Avalonia/Assets/Square150x150Logo.png" 
+                    <Image Source="avares://Noctra/Assets/Square150x150Logo.png"
                            Width="32" Height="32"
                            VerticalAlignment="Center" HorizontalAlignment="Center"
                            RenderTransformOrigin="50%,50%">

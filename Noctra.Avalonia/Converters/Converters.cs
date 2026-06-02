@@ -673,7 +673,7 @@ public class StringToVisibilityConverter : IValueConverter
 public class AvatarPathConverter : IValueConverter
 {
     private const string DefaultAvatarFileName = "avatar_1.png";
-    private const string AvatarAssetPrefix = "avares://Noctra.Avalonia/Assets/Avatars/";
+    private const string AvatarAssetPrefix = "avares://Noctra/Assets/Avatars/";
     private static readonly object CacheLock = new();
     private static readonly Dictionary<string, Bitmap> BitmapCache = new(StringComparer.OrdinalIgnoreCase);
 

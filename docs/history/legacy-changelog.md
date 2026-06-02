@@ -7,6 +7,28 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Haziran 2026 UI, Provider ve Paketleme Düzeltmeleri (2026-06-02)
+
+- [Düzeltildi] **Live/Movies/Series Geçişinde Hayalet Kart Sorunu**: Live kanallar açıkken Movies veya Series sayfasına geçildiğinde yeni sayfa başlığı altında eski canlı kanal kartlarının bir frame görünmesi engellendi. `MainViewModel` artık hedef view render edilmeden önce ilgili içerik yüzeyini temizliyor ve filtreleme tamamlanana kadar boş durum göstermiyor.
+- [Düzeltildi] **Profil Değiştirince Arka Plan Playlist Yüklemesi Sızmıyor**: Büyük Xtream/Stalker yüklemelerinde kullanıcı profil değiştirirse veya uygulamayı kapatırsa eski profil scope'u iptal ediliyor. Progress/status mesajları artık başka profile taşınmıyor.
+- [Düzeltildi] **Kanal Listesi Yenileme Sonrası Boş Series ve Eski GroupTitle Kalıntıları**: Refresh sonrası playlist, grup, kanal ve Series UI cache'leri DB'den yeniden kuruluyor. Eski provider group adları ve boş kategori kalıntıları profil değiştirene kadar ekranda kalmıyor.
+- [Düzeltildi] **Connection Health ve Add Profile Save Doğrulaması Birleştirildi**: Bağlantı analizi ile Kaydet doğrulaması aynı provider auth/content kurallarını kullanıyor. Stalker için handshake + kategori kontrolü, Xtream için gerçek auth, M3U için uygun preview/health akışı kullanılıyor.
+- [Yeni] **Refresh Overlay İptal Düğmesi**: Uzun süren kanal listesi yenilemelerinde kullanıcı artık beklemek zorunda değil; settings refresh overlay üzerinden işlem iptal edilebiliyor.
+- [Değişti] **Progress Hesapları Provider Akışına Bağlandı**: M3U, Xtream, Stalker ve EPG yenileme progress yüzdeleri ayrı settings yüzdesi yerine gerçek provider yükleme aşamalarından besleniyor.
+- [Düzeltildi] **Canlı Kanal Grid Responsive Davranışı**: Yarım pencere genişliğinde Live kartlarının üç kolon ve tam ekranda daha dengeli yerleşmesi için grid/card ölçüleri ortak responsive yapıya taşındı. Favorites, My List, History ve Search ekranlarında Live kartlar poster kartlarla karışık satır düzenine düşmüyor.
+- [Değişti] **Global Arama Stratejisi Yenilendi**: Header popup araması kaldırıldı. Search sayfası ve benzer sonuçlar artık yerel scoring modelini kullanıyor; TMDB/API çağrısı yapmadan başlık ve metadata alanlarına göre sıralama, eşik ve deduplication uyguluyor.
+- [Kaldırıldı] **Görsel Preload Pipeline**: `RemoteImage.PreloadAsync`, image warmup scheduling ve active-control cache notify akışları kaldırıldı. Kart görselleri ekranda görünür olduğunda kendi RemoteImage kontrolü üzerinden yükleniyor.
+- [Değişti] **RemoteImage Sadeleştirildi**: Kontrol artık URL normalize eder, memory cache'e bakar, gerekirse HTTP'den indirir ve URL yoksa placeholder gösterir. Host escalation, known-bad-host ve disk cache karmaşıklığı kaldırıldı.
+- [Değişti] **TMDB Provider Poster Üstüne Yazmıyor**: Provider poster/logoları geçerliyse "daha kaliteli görsel olabilir" diye TMDB ile değiştirme davranışı kaldırıldı. M3U tarafında TMDB yalnızca eksik görsel/metaveri doldurma akışında kullanılır; Xtream/Stalker provider metadata'sı önceliklidir.
+- [Düzeltildi] **Kategori Sonunda Görsel/Yükleme Tıkanması**: Scroll edilecek yükseklik oluşmadığında veya sayfa sonunda kalındığında ek sayfa istenebiliyor; 120 görselden sonra yükleme duruyor hissi veren warmup sınırı kaldırıldı.
+- [Değişti] **Uygulama Çıktı Adı Noctra.exe**: Avalonia projesi artık build/paket çıktısında `Noctra.exe` üretir. Teknik `Noctra.Avalonia` klasör/namespace yapısı korunurken app manifest, MSIX full-trust executable yolu ve Avalonia resource URI'leri `Noctra` assembly adına göre güncellendi.
+- [Değişti] **PlaylistImportPreview Localize Edildi**: Silinmedi; Add Profile doğrulamasında içerik var mı, kanal/kategori/duplicate durumu ne gibi bilgileri taşıdığı için kullanılmaya devam ediyor. Özet metinleri `PlaylistPreview.*` localization key'lerine taşındı.
+- [Değişti] **Stalker Progress Localize Edildi**: `StalkerLoadProgress.Message` içindeki Türkçe sabit mesaj kaldırıldı. Progress metni `MainViewModel` içinde `Stalker.Progress.*` localization key'leriyle üretiliyor.
+- [Temizlik] **IStalkerPortalService Dokümantasyonu Temizlendi**: Bozuk encoding'li Türkçe XML yorumlar temiz İngilizce teknik açıklamalara çevrildi; runtime kullanıcı metni interface DTO'larından ayrıldı.
+- [Temizlik] **.gitignore Güvenlik ve Paketleme Hijyeni**: Vercel, Upstash, TMDB proxy, environment, database, trace, dump, playlist ve packaging çıktıları ignore kapsamına alındı.
+- [Dokümantasyon] **README ve CHANGELOG Yapısı Yenilendi**: Ana changelog Keep a Changelog formatına taşındı; eski uzun teknik kayıtlar `docs/history/legacy-changelog.md` altında arşivlenmeye devam ediyor.
+- [Doğrulama] `dotnet build NoctraPlayer.sln` başarılı. `dotnet test Noctra.Tests\Noctra.Tests.csproj --no-build` sonucu `904/904` test geçiyor. `git diff --check` yalnızca CRLF uyarıları veriyor.
+
 ### Belirsiz M3U GroupTitle İçin Akıllı Gruplama (2026-05-31)
 
 - [Yeni] **Tester Playlist Audit Modu**: `Tester` projesine `--audit-playlist <m3u-path-or-url> [--out rapor.html]` modu eklendi. M3U playlist parse sonucu tip dağılımı, en büyük gruplar, `Others` bucket nedenleri, boş/undefined group-title örnekleri ve şüpheli tip/grup eşleşmeleri konsol + HTML rapor olarak üretilir.

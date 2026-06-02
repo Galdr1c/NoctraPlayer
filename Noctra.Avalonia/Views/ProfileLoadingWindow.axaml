@@ -8,7 +8,7 @@
         xmlns:loc="using:Noctra.Avalonia.Localization"
         x:Class="Noctra.Avalonia.Views.ProfileLoadingWindow"
         x:DataType="vm:ProfileLoadingViewModel"
-        Icon="avares://Noctra.Avalonia/Assets/Square44x44Logo.targetsize-256.png"
+        Icon="avares://Noctra/Assets/Square44x44Logo.targetsize-256.png"
         Title="{loc:Translate Profile.Loading.Title}"
         Width="450" Height="350"
         WindowStartupLocation="CenterScreen"
@@ -32,7 +32,7 @@
                 <Panel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
                     <controls:PremiumSpinner>
                         <!-- Pulsing App Logo in Center -->
-                        <Image Source="avares://Noctra.Avalonia/Assets/Square71x71Logo.png" 
+                        <Image Source="avares://Noctra/Assets/Square71x71Logo.png"
                                Width="50" Height="50"
                                VerticalAlignment="Center" HorizontalAlignment="Center"
                                RenderTransformOrigin="50%,50%">

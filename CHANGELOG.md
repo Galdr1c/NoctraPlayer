@@ -32,6 +32,9 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 - **Search ranking strategy**: Search now uses one local scoring model for Live TV, Movies, and Series, weighting title matches first and local metadata fields second.
 - **Similar search results**: Similar results now come from the same scoring model with controlled thresholds, deduplication from primary results, and no TMDB/API calls.
 - **Refresh cancellation**: Settings refresh overlay now includes a Cancel action for long-running channel-list refreshes.
+- **Application executable name**: The Avalonia app now builds and packages as `Noctra.exe` while keeping the technical project folder/namespace separate.
+- **Localized provider diagnostics**: Playlist import preview summaries and Stalker progressive-load status text now use translation keys across supported languages.
+- **Stalker service interface cleanup**: Stalker service interface comments were rewritten as clean technical documentation and user-facing progress text was moved out of the DTO.
 - **README rewritten**: The project README was rebuilt into a shorter product, architecture, setup, and packaging guide.
 - **CHANGELOG rewritten**: The old long-form maintenance log was replaced with a compact Keep a Changelog structure.
 

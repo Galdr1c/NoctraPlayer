@@ -6,7 +6,7 @@
         xmlns:loc="using:Noctra.Avalonia.Localization"
         mc:Ignorable="d" d:DesignWidth="450" d:DesignHeight="300"
         x:Class="Noctra.Avalonia.Views.SplashWindow"
-        Icon="avares://Noctra.Avalonia/Assets/Square44x44Logo.targetsize-256.png"
+        Icon="avares://Noctra/Assets/Square44x44Logo.targetsize-256.png"
         Title="Noctra"
         Width="450" Height="350"
         WindowStartupLocation="CenterScreen"
@@ -30,7 +30,7 @@
                 <Panel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
                     <controls:PremiumSpinner>
                         <!-- Pulsing App Logo in Center -->
-                        <Image Source="avares://Noctra.Avalonia/Assets/Square71x71Logo.png" 
+                        <Image Source="avares://Noctra/Assets/Square71x71Logo.png"
                                Width="50" Height="50"
                                VerticalAlignment="Center" HorizontalAlignment="Center"
                                RenderTransformOrigin="50%,50%">

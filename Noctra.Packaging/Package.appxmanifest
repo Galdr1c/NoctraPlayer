@@ -47,7 +47,7 @@
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
       </uap:VisualElements>
       <Extensions>
-        <desktop:Extension Category="windows.fullTrustProcess" Executable="Noctra.Avalonia\Noctra.Avalonia.exe" />
+        <desktop:Extension Category="windows.fullTrustProcess" Executable="Noctra.Avalonia\Noctra.exe" />
       </Extensions>
     </Application>
   </Applications>

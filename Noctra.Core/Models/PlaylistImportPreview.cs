@@ -20,33 +20,64 @@ public class PlaylistImportPreview
     public int? StatusCode { get; init; }
     public long? LatencyMs { get; init; }
 
-    public string ToSummaryText()
+    public string ToSummaryText(Func<string, string>? localize = null)
     {
+        static string Fallback(string key) => key switch
+        {
+            "PlaylistPreview.ValidationFailedFormat" => "Validation failed: {0}{1}",
+            "PlaylistPreview.StatusCodeSuffixFormat" => " (Code: {0})",
+            "PlaylistPreview.Health.Good" => "Excellent",
+            "PlaylistPreview.Health.Weak" => "Fair",
+            "PlaylistPreview.Health.Bad" => "Poor",
+            "PlaylistPreview.Health.Unknown" => "Unknown",
+            "PlaylistPreview.LatencyFormat" => " | Latency: {0}ms ({1})",
+            "PlaylistPreview.DuplicateChannelFormat" => " | Duplicate channels: names {0}, URLs {1}",
+            "PlaylistPreview.ExistingAccountWarning" => " | Warning: another account already uses this connection",
+            "PlaylistPreview.SummaryFormat" => "{0} preview | Total {1} channels | Live {2} | VOD {3} | Series {4} | Categories {5}{6}{7}{8}",
+            _ => key
+        };
+
+        var t = localize ?? Fallback;
+
         if (!IsValid)
         {
-            var statusPart = StatusCode.HasValue ? $" (Kod: {StatusCode})" : "";
-            return $"Dogrulama basarisiz: {ErrorMessage}{statusPart}";
+            var statusPart = StatusCode.HasValue
+                ? string.Format(t("PlaylistPreview.StatusCodeSuffixFormat"), StatusCode)
+                : string.Empty;
+            return string.Format(t("PlaylistPreview.ValidationFailedFormat"), ErrorMessage, statusPart);
         }
 
         var healthText = Health switch
         {
-            ConnectionHealth.Good => "Mukemmel",
-            ConnectionHealth.Weak => "Orta",
-            ConnectionHealth.Bad => "Kotu",
-            _ => "Bilinmiyor"
+            ConnectionHealth.Good => t("PlaylistPreview.Health.Good"),
+            ConnectionHealth.Weak => t("PlaylistPreview.Health.Weak"),
+            ConnectionHealth.Bad => t("PlaylistPreview.Health.Bad"),
+            _ => t("PlaylistPreview.Health.Unknown")
         };
         
-        var latencyPart = LatencyMs.HasValue ? $" | Gecikme: {LatencyMs}ms ({healthText})" : "";
+        var latencyPart = LatencyMs.HasValue
+            ? string.Format(t("PlaylistPreview.LatencyFormat"), LatencyMs, healthText)
+            : string.Empty;
 
         var duplicateSuffix = DuplicateNameCount > 0 || DuplicateStreamUrlCount > 0
-            ? $" | Yinelenen Kanal: isim {DuplicateNameCount}, URL {DuplicateStreamUrlCount}"
+            ? string.Format(t("PlaylistPreview.DuplicateChannelFormat"), DuplicateNameCount, DuplicateStreamUrlCount)
             : string.Empty;
 
         var existingSuffix = HasExistingAccountDuplicate
-            ? " | Uyari: Bu baglantiyi kullanan baska hesap mevcut"
+            ? t("PlaylistPreview.ExistingAccountWarning")
             : string.Empty;
 
-        return $"{SourceType} Onizleme | Toplam {TotalChannels} kanal | Canli {LiveCount} | VOD {VodCount} | Dizi {SeriesCount} | Kategori {CategoryCount}{latencyPart}{duplicateSuffix}{existingSuffix}";
+        return string.Format(
+            t("PlaylistPreview.SummaryFormat"),
+            SourceType,
+            TotalChannels,
+            LiveCount,
+            VodCount,
+            SeriesCount,
+            CategoryCount,
+            latencyPart,
+            duplicateSuffix,
+            existingSuffix);
     }
 
     public static PlaylistImportPreview FromChannels(
@@ -116,4 +147,3 @@ public enum ConnectionHealth
     Bad,      // > 1000ms, 200 OK
     Critical  // Connection Failed / 4xx / 5xx
 }
-

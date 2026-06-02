@@ -630,6 +630,24 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    private string FormatStalkerLoadProgress(StalkerLoadProgress progress)
+    {
+        return progress.TotalChannels.HasValue
+            ? string.Format(
+                CultureInfo.CurrentCulture,
+                _localizationService.GetString("Stalker.Progress.WithTotalFormat"),
+                progress.CurrentCategory,
+                progress.LoadedChannels,
+                progress.TotalChannels.Value)
+            : string.Format(
+                CultureInfo.CurrentCulture,
+                _localizationService.GetString("Stalker.Progress.CategoryFormat"),
+                progress.CurrentCategory,
+                progress.LoadedChannels,
+                progress.LoadedCategories,
+                progress.TotalCategories);
+    }
+
     private void CompleteChannelRefreshProgress(string message)
     {
         ChannelLoadingProgress = 100;
@@ -996,8 +1014,9 @@ public partial class MainViewModel : ObservableObject
                                         lastProgressUpdate = now;
                                         BeginInvokeIfProfileScopeActive(profileScope, () =>
                                         {
-                                            StatusMessage = p.Message;
-                                            ChannelLoadingStats = p.Message;
+                                            var message = FormatStalkerLoadProgress(p);
+                                            StatusMessage = message;
+                                            ChannelLoadingStats = message;
                                             if (p.TotalCategories > 0)
                                             {
                                                 ChannelLoadingProgress = (double)p.LoadedCategories / p.TotalCategories * 100;
@@ -1459,12 +1478,13 @@ public partial class MainViewModel : ObservableObject
                             var percent = isFullRefresh
                                 ? MapChannelCategoryProgress(p.LoadedCategories, p.TotalCategories)
                                 : (double)p.LoadedCategories / p.TotalCategories * 100;
-                            ReportChannelRefreshProgress(percent, p.Message);
+                            ReportChannelRefreshProgress(percent, FormatStalkerLoadProgress(p));
                         }
                         else
                         {
-                            StatusMessage = p.Message;
-                            ChannelLoadingStats = p.Message;
+                            var message = FormatStalkerLoadProgress(p);
+                            StatusMessage = message;
+                            ChannelLoadingStats = message;
                         }
                     });
                 }

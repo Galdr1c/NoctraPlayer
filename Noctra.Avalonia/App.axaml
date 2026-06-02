@@ -7,24 +7,24 @@
       <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Default">
           <ResourceDictionary.MergedDictionaries>
-            <ResourceInclude Source="avares://Noctra.Avalonia/Resources/Themes/DarkTheme.axaml" />
+            <ResourceInclude Source="avares://Noctra/Resources/Themes/DarkTheme.axaml" />
           </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
         <ResourceDictionary x:Key="Dark">
           <ResourceDictionary.MergedDictionaries>
-            <ResourceInclude Source="avares://Noctra.Avalonia/Resources/Themes/DarkTheme.axaml" />
+            <ResourceInclude Source="avares://Noctra/Resources/Themes/DarkTheme.axaml" />
           </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
         <ResourceDictionary x:Key="Light">
           <ResourceDictionary.MergedDictionaries>
-            <ResourceInclude Source="avares://Noctra.Avalonia/Resources/Themes/LightTheme.axaml" />
+            <ResourceInclude Source="avares://Noctra/Resources/Themes/LightTheme.axaml" />
           </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
       </ResourceDictionary.ThemeDictionaries>
       <ResourceDictionary.MergedDictionaries>
-        <ResourceInclude Source="avares://Noctra.Avalonia/Resources/Colors.axaml" />
-        <ResourceInclude Source="avares://Noctra.Avalonia/Resources/Converters.axaml" />
-        <ResourceInclude Source="avares://Noctra.Avalonia/Resources/Styles.axaml" />
+        <ResourceInclude Source="avares://Noctra/Resources/Colors.axaml" />
+        <ResourceInclude Source="avares://Noctra/Resources/Converters.axaml" />
+        <ResourceInclude Source="avares://Noctra/Resources/Styles.axaml" />
       </ResourceDictionary.MergedDictionaries>
     </ResourceDictionary>
   </Application.Resources>
@@ -32,7 +32,7 @@
   <Application.Styles>
     <materialIcons:MaterialIconStyles />
     <FluentTheme />
-    <StyleInclude Source="avares://Noctra.Avalonia/Controls/PremiumSpinner.axaml" />
+    <StyleInclude Source="avares://Noctra/Controls/PremiumSpinner.axaml" />
     <Style Selector="Button">
         <Setter Property="Cursor" Value="Hand"/>
     </Style>
