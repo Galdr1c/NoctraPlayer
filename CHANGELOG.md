@@ -21,6 +21,7 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 - **On-demand image loading**: MainWindow image warmup and episode/card preload hooks were removed. Cards load their own images when they appear.
 - **Post-load background work reduced**: The old startup warmup path no longer reloads home/favorites just to prepare images.
 - **Provider poster ownership**: TMDB no longer replaces an existing provider poster just because it may be higher quality.
+- **Provider-scoped Series artwork**: Stalker Series list parsing now reads the broader poster field set returned by portal category responses, while visible Series TMDB enrichment remains limited to M3U profiles.
 - **Series enrichment deduplication**: Visible Series cards now avoid duplicate in-flight TMDB metadata and no-poster lookup work during repeated scroll/filter refreshes.
 - **Git ignore hygiene**: Local Vercel, Upstash, TMDB proxy, environment, database, trace, dump, playlist, and packaging outputs are ignored by default.
 - **Refresh UI state rebuild**: Channel-list refresh now reloads playlist, group, channel, and Series UI caches from the database for M3U, Xtream, and Stalker profiles.
@@ -47,17 +48,24 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Fixed
 
+- **Stalker progressive resume stalls**: Stalker category loading now times out stuck categories, clears their dummy card, and continues with the remaining queue instead of leaving progress frozen.
+- **Progressive load UI stalls**: Cached Xtream/Stalker resume now runs off the UI thread, and Series/Home refresh work is deferred until channel loading completes.
+- **Progress status overwrite**: Background aggregation no longer replaces active provider progress with "Channel List Ready" while the playlist is still loading.
+- **Stalker resume matching**: Pending dummy categories now expose both group names and provider category IDs, so resume works even when localized or special-character group names shift.
+- **Dummy Series aggregate leak**: Progressive `stalker-dummy://` and `xtream-dummy://` rows no longer create stale Series cards such as "Content loading".
+- **Duplicated progress status text**: Channel-loading status now renders one primary progress message instead of repeating the same text twice in the status bar.
 - **View-switch content bleed**: Live, Movies, and Series navigation now clears the target content surface before the new view renders, preventing old cards from flashing under the new page title.
 - **Profile switch background loading leak**: Large Xtream/Stalker progressive loads are now cancelled and prevented from updating progress/status after profile switch or app close.
 - **Connection health accuracy**: Connection badges no longer default to “good”; Add Profile and save validation now use the same provider auth/content rules, and M3U health checks are profile-scoped with GET fallback.
 - **Category image stall**: Categories that reached the end of visible scroll without creating enough scrollable height can now request additional pages.
 - **Search cards without posters**: Search and similar-result sections now queue visible VOD/series image fallback when provider posters are missing.
+- **Stalker Series posters only appearing after detail open**: Stalker category-list parsing now captures additional provider poster fields, so cards can populate from the original list response instead of waiting for detail-page metadata.
 - **120-image ceiling behavior**: Image loading is no longer tied to a fixed warmup count; visible cards decide their own image load.
 
 ### Verification
 
 - `dotnet build NoctraPlayer.sln` passes.
-- `dotnet test Noctra.Tests\Noctra.Tests.csproj --no-build` passes: 904 tests.
+- `dotnet test Noctra.Tests\Noctra.Tests.csproj --no-build` passes: 906 tests.
 
 ## [1.0.0] - 2026-06-01
 

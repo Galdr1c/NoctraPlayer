@@ -482,12 +482,46 @@ public partial class PlaylistService : IPlaylistService
     public async Task<List<string>> GetPendingDummyGroupsAsync(int playlistId)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
-        return await context.Channels
+        var dummies = await context.Channels
             .AsNoTracking()
             .Where(c => c.PlaylistId == playlistId && (c.StreamUrl.StartsWith("stalker-dummy://") || c.StreamUrl.StartsWith("xtream-dummy://")) && c.GroupTitle != null)
-            .Select(c => c.GroupTitle!)
+            .Select(c => new { c.GroupTitle, c.StreamUrl })
             .Distinct()
             .ToListAsync();
+
+        return dummies
+            .SelectMany(c => new[]
+            {
+                c.GroupTitle,
+                ExtractDummyCategoryKey(c.StreamUrl)
+            })
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .Select(v => v!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static string? ExtractDummyCategoryKey(string? streamUrl)
+    {
+        if (string.IsNullOrWhiteSpace(streamUrl))
+        {
+            return null;
+        }
+
+        const string stalkerPrefix = "stalker-dummy://";
+        const string xtreamPrefix = "xtream-dummy://";
+
+        if (streamUrl.StartsWith(stalkerPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return streamUrl[stalkerPrefix.Length..].Trim();
+        }
+
+        if (streamUrl.StartsWith(xtreamPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return streamUrl[xtreamPrefix.Length..].Trim();
+        }
+
+        return null;
     }
 
     public async Task DeleteAllDummiesAsync(int playlistId)

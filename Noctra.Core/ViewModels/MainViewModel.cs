@@ -105,6 +105,7 @@ public partial class MainViewModel : ObservableObject
     private BatchObservableCollection<Channel> _continueWatching = new();
 
     private List<Series> _allSeriesCache = new();
+    private int _deferredSeriesRefreshAfterChannelLoad;
 
     [ObservableProperty]
     private BatchObservableCollection<Series> _seriesViewItems = new();
@@ -404,9 +405,18 @@ public partial class MainViewModel : ObservableObject
                 {
                     try
                     {
+                        if (IsChannelLoading)
+                        {
+                            Interlocked.Exchange(ref _deferredSeriesRefreshAfterChannelLoad, 1);
+                            return;
+                        }
+
                         // Refresh content from DB (Aggregation finished)
                         await LoadHomeContentAsync();
-                        StatusMessage = _localizationService.GetString("Main.Status.ChannelsReady"); 
+                        if (!IsChannelLoading)
+                        {
+                            StatusMessage = _localizationService.GetString("Main.Status.ChannelsReady");
+                        }
                         System.Diagnostics.Debug.WriteLine($"[MainViewModel] Series refreshed after background aggregation for playlist {playlistId}");
 
                         // If series detail is open, refresh it with the newly aggregated data
@@ -623,10 +633,14 @@ public partial class MainViewModel : ObservableObject
     private void ReportChannelRefreshProgress(double percent, string message, bool updateStatusMessage = true)
     {
         ChannelLoadingProgress = Math.Clamp(percent, 0, 100);
-        ChannelLoadingStats = message;
         if (updateStatusMessage)
         {
             StatusMessage = message;
+            ChannelLoadingStats = string.Empty;
+        }
+        else
+        {
+            ChannelLoadingStats = message;
         }
     }
 
@@ -654,6 +668,21 @@ public partial class MainViewModel : ObservableObject
         ChannelLoadingStats = string.Empty;
         IsChannelLoading = false;
         StatusMessage = message;
+
+        if (Interlocked.Exchange(ref _deferredSeriesRefreshAfterChannelLoad, 0) == 1)
+        {
+            _dispatcherService.BeginInvoke(async () =>
+            {
+                try
+                {
+                    await LoadHomeContentAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogDebug(ex, "Deferred series refresh failed after channel load");
+                }
+            });
+        }
     }
 
     private static double MapChannelCategoryProgress(int loadedCategories, int totalCategories)
@@ -806,12 +835,12 @@ public partial class MainViewModel : ObservableObject
                                             if (profile.ProviderAccount.Type == ProfileType.StalkerPortal)
                                             {
                                                 _perfTrace?.Event("PROFILE", "ResumeStalkerProgressiveLoading queued", $"profile={profile.Id} playlist={existingPlaylists[0].Id}");
-                                                _ = ResumeStalkerProgressiveLoadingAsync(profile, existingPlaylists[0], profileScope: profileScope);
+                                                _ = Task.Run(() => ResumeStalkerProgressiveLoadingAsync(profile, existingPlaylists[0], profileScope: profileScope), profileScope.Token);
                                             }
                                             else if (profile.ProviderAccount.Type == ProfileType.XtreamCodes)
                                             {
                                                 _perfTrace?.Event("PROFILE", "ResumeXtreamProgressiveLoading queued", $"profile={profile.Id} playlist={existingPlaylists[0].Id}");
-                                                _ = ResumeXtreamProgressiveLoadingAsync(profile, existingPlaylists[0], profileScope: profileScope);
+                                                _ = Task.Run(() => ResumeXtreamProgressiveLoadingAsync(profile, existingPlaylists[0], profileScope: profileScope), profileScope.Token);
                                             }
                                             else
                                             {
@@ -1015,12 +1044,10 @@ public partial class MainViewModel : ObservableObject
                                         BeginInvokeIfProfileScopeActive(profileScope, () =>
                                         {
                                             var message = FormatStalkerLoadProgress(p);
-                                            StatusMessage = message;
-                                            ChannelLoadingStats = message;
-                                            if (p.TotalCategories > 0)
-                                            {
-                                                ChannelLoadingProgress = (double)p.LoadedCategories / p.TotalCategories * 100;
-                                            }
+                                            var percent = p.TotalCategories > 0
+                                                ? (double)p.LoadedCategories / p.TotalCategories * 100
+                                                : 0;
+                                            ReportChannelRefreshProgress(percent, message);
                                         });
                                     }
                                 });
@@ -1454,6 +1481,16 @@ public partial class MainViewModel : ObservableObject
                     return; // Everything is loaded!
                 }
 
+                try
+                {
+                    await _mediaService.AggregateContentAsync(playlist.Id, profileScope.Token);
+                    ThrowIfProfileLoadCancelled(profileScope);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _logger?.LogDebug(ex, "[Stalker] Pending-dummy aggregate cleanup failed for playlist {PlaylistId}", playlist.Id);
+                }
+
                 if (pendingGroups.Count > 0 && pendingGroups.Count < 15)
                 {
                     _logger?.LogInformation($"[Stalker] Pending clusters: {string.Join(", ", pendingGroups)}");
@@ -1482,9 +1519,7 @@ public partial class MainViewModel : ObservableObject
                         }
                         else
                         {
-                            var message = FormatStalkerLoadProgress(p);
-                            StatusMessage = message;
-                            ChannelLoadingStats = message;
+                            ReportChannelRefreshProgress(0, FormatStalkerLoadProgress(p));
                         }
                     });
                 }
@@ -1513,7 +1548,7 @@ public partial class MainViewModel : ObservableObject
                         var dummyChannels = categories.Select(c => new Channel
                         {
                             Name = _localizationService.GetString("Main.Status.LoadingContent"),
-                            StreamUrl = $"stalker-dummy://{c.Name}",
+                            StreamUrl = $"stalker-dummy://{c.Id}",
                             GroupTitle = c.Name,
                             Type = c.Type.Equals("series", StringComparison.OrdinalIgnoreCase)
                                 ? ChannelType.Series
@@ -1533,7 +1568,8 @@ public partial class MainViewModel : ObservableObject
 
                     // Yalnızca pendingCategories içinde olanları indirilecek listeye filtrele
                     var categoriesToDownload = categories
-                        .Where(c => pendingGroups.Contains(c.Name, StringComparer.OrdinalIgnoreCase))
+                        .Where(c => pendingGroups.Contains(c.Name, StringComparer.OrdinalIgnoreCase) ||
+                                    pendingGroups.Contains(c.Id, StringComparer.OrdinalIgnoreCase))
                         .ToList();
 
                     _logger?.LogInformation($"[Stalker] Filtered categories for resume: {categoriesToDownload.Count} categories will be downloaded (from {categories.Count} total).");
@@ -1934,7 +1970,11 @@ public partial class MainViewModel : ObservableObject
             if (_allSeriesCache.Count == 0 && playlistId > 0)
             {
                 var hasSeriesChannels = await PlaylistHasSeriesChannelsAsync(playlistId);
-                if (hasSeriesChannels)
+                if (hasSeriesChannels && IsChannelLoading)
+                {
+                    Interlocked.Exchange(ref _deferredSeriesRefreshAfterChannelLoad, 1);
+                }
+                else if (hasSeriesChannels)
                 {
                     _perfTrace?.Event("HOME", "Series cache empty; rebuilding aggregation", $"playlist={playlistId}");
                     await _mediaService.AggregateContentAsync(playlistId);
@@ -2724,32 +2764,35 @@ public partial class MainViewModel : ObservableObject
             OnPropertyChanged(nameof(SeriesViewItems));
             NotifyContentStateChanged();
 
-            // On-demand TMDB enrichment for newly visible series
-            var enrichPage = page
-                .Where(s => s.Id > 0 &&
-                            ((s.TmdbId == null && s.LastTmdbSync == null) || s.MetadataFetchedAt == null) &&
-                            _pendingSeriesMetadataEnrichmentIds.TryAdd(s.Id, 1))
-                .ToList();
-            if (enrichPage.Count > 0)
+            // M3U lists often lack poster metadata, so only they use TMDB enrichment here.
+            if (IsM3UProfile())
             {
-                _ = Task.Run(async () =>
+                var enrichPage = page
+                    .Where(s => s.Id > 0 &&
+                                ((s.TmdbId == null && s.LastTmdbSync == null) || s.MetadataFetchedAt == null) &&
+                                _pendingSeriesMetadataEnrichmentIds.TryAdd(s.Id, 1))
+                    .ToList();
+                if (enrichPage.Count > 0)
                 {
-                    try
+                    _ = Task.Run(async () =>
                     {
-                        await _tmdbSyncService.EnrichSeriesBatchAsync(enrichPage);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger?.LogDebug($"TMDB enrichment for page failed: {ex.Message}");
-                    }
-                    finally
-                    {
-                        foreach (var series in enrichPage)
+                        try
                         {
-                            _pendingSeriesMetadataEnrichmentIds.TryRemove(series.Id, out _);
+                            await _tmdbSyncService.EnrichSeriesBatchAsync(enrichPage);
                         }
-                    }
-                });
+                        catch (Exception ex)
+                        {
+                            _logger?.LogDebug($"TMDB enrichment for page failed: {ex.Message}");
+                        }
+                        finally
+                        {
+                            foreach (var series in enrichPage)
+                            {
+                                _pendingSeriesMetadataEnrichmentIds.TryRemove(series.Id, out _);
+                            }
+                        }
+                    });
+                }
             }
 
             QueueVisibleSeriesVisualEnrichment(page);
@@ -2762,7 +2805,7 @@ public partial class MainViewModel : ObservableObject
         return Task.CompletedTask;
     }
 
-    private bool ShouldUseLazyVisualEnrichment()
+    private bool ShouldUseLazyChannelVisualEnrichment()
         => IsM3UProfile();
 
     private static string GetSeriesVisualEnrichmentKey(int seriesId)
@@ -2770,7 +2813,7 @@ public partial class MainViewModel : ObservableObject
 
     private void QueueVisibleChannelVisualEnrichment(IReadOnlyCollection<Channel> page)
     {
-        if (!ShouldUseLazyVisualEnrichment())
+        if (!ShouldUseLazyChannelVisualEnrichment())
         {
             return;
         }
@@ -2813,7 +2856,7 @@ public partial class MainViewModel : ObservableObject
 
     private void QueueVisibleSeriesVisualEnrichment(IReadOnlyCollection<Series> page)
     {
-        if (!ShouldUseLazyVisualEnrichment())
+        if (!IsM3UProfile())
         {
             return;
         }

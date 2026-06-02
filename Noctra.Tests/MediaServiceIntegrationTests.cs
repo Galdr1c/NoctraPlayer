@@ -177,5 +177,53 @@ namespace Noctra.Tests
                 Assert.Equal(0, await context.Series.CountAsync(s => s.PlaylistId == playlistId));
             }
         }
+
+        [Fact]
+        public async Task AggregateContentAsync_IgnoresProgressiveDummySeriesChannels()
+        {
+            int playlistId = 5;
+            using (var context = new AppDbContext(_options))
+            {
+                context.Playlists.Add(new Playlist { Id = playlistId, Name = "Test 5", IsActive = true });
+                context.Series.Add(new Series
+                {
+                    PlaylistId = playlistId,
+                    Name = "Content loading",
+                    GroupTitle = "2026 Ramadan"
+                });
+                context.Channels.AddRange(
+                    new Channel
+                    {
+                        PlaylistId = playlistId,
+                        Name = "Content loading",
+                        GroupTitle = "2026 Ramadan",
+                        Type = ChannelType.Series,
+                        StreamUrl = "stalker-dummy://123"
+                    },
+                    new Channel
+                    {
+                        PlaylistId = playlistId,
+                        Name = "Dark",
+                        GroupTitle = "Series",
+                        Type = ChannelType.Series,
+                        StreamUrl = "stalker-series://456"
+                    });
+                await context.SaveChangesAsync();
+            }
+
+            await _service.AggregateContentAsync(playlistId);
+
+            using (var context = new AppDbContext(_options))
+            {
+                var series = await context.Series
+                    .Where(s => s.PlaylistId == playlistId)
+                    .OrderBy(s => s.Name)
+                    .ToListAsync();
+
+                var item = Assert.Single(series);
+                Assert.Equal("Dark", item.Name);
+                Assert.Equal("Series", item.GroupTitle);
+            }
+        }
     }
 }

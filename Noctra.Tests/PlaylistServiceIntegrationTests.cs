@@ -490,6 +490,44 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task GetPendingDummyGroupsAsync_ReturnsGroupNamesAndCategoryKeys()
+        {
+            var service = CreateService();
+            int playlistId;
+
+            using (var context = new AppDbContext(_options))
+            {
+                var playlist = new Playlist
+                {
+                    Name = "Stalker",
+                    Url = "http://provider.test/c/",
+                    IsActive = true,
+                    ChannelCount = 1,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                context.Playlists.Add(playlist);
+                await context.SaveChangesAsync();
+                playlistId = playlist.Id;
+
+                context.Channels.Add(new Channel
+                {
+                    PlaylistId = playlistId,
+                    Name = "Content loading",
+                    GroupTitle = "2026 Ramadan",
+                    StreamUrl = "stalker-dummy://1490",
+                    Type = ChannelType.Series
+                });
+                await context.SaveChangesAsync();
+            }
+
+            var pending = await service.GetPendingDummyGroupsAsync(playlistId);
+
+            Assert.Contains("2026 Ramadan", pending);
+            Assert.Contains("1490", pending);
+        }
+
+        [Fact]
         public async Task GetChannelsFilteredAsync_RepairsYearTitledProxyMoviesFromLiveToVod()
         {
             // Arrange

@@ -35,7 +35,10 @@ public partial class MediaService : IMediaService
         try
         {
             var channels = await context.Channels
-                .Where(c => c.PlaylistId == playlistId && c.Type == ChannelType.Series)
+                .Where(c => c.PlaylistId == playlistId &&
+                            c.Type == ChannelType.Series &&
+                            !c.StreamUrl.StartsWith("xtream-dummy://") &&
+                            !c.StreamUrl.StartsWith("stalker-dummy://"))
                 .ToListAsync(cancellationToken);
 
             if (!channels.Any())
@@ -307,14 +310,12 @@ public partial class MediaService : IMediaService
         }
     }
 
-    /// <summary>Xtream veya Stalker series-level placeholder URL'si mi?</summary>
+    /// <summary>Xtream or Stalker series-level placeholder URL?</summary>
     private static bool IsSeriesPlaceholder(string? streamUrl)
     {
         if (string.IsNullOrWhiteSpace(streamUrl)) return true;
         return streamUrl.StartsWith("xtream-series://", StringComparison.OrdinalIgnoreCase)
-            || streamUrl.StartsWith("stalker-series://", StringComparison.OrdinalIgnoreCase)
-            || streamUrl.StartsWith("xtream-dummy://", StringComparison.OrdinalIgnoreCase)
-            || streamUrl.StartsWith("stalker-dummy://", StringComparison.OrdinalIgnoreCase);
+            || streamUrl.StartsWith("stalker-series://", StringComparison.OrdinalIgnoreCase);
     }
 
     private static Episode? FindExistingEpisode(Season season, int episodeNumber, string? episodeName, string? streamUrl)

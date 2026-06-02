@@ -6,21 +6,20 @@
   <Grid IsVisible="{Binding IsVisible}">
     <Border Background="Transparent"
             CornerRadius="12"
-            Padding="12,6"
+            Padding="6,6"
             HorizontalAlignment="Right"
             VerticalAlignment="Bottom"
             Margin="0,0,24,60"
-            Opacity="{Binding Opacity}"
             IsHitTestVisible="False">
       <Border.RenderTransform>
         <TranslateTransform X="{Binding TranslateX}" Y="{Binding TranslateY}"/>
       </Border.RenderTransform>
 
       <TextBlock Text="Noctra - Free"
-                 FontWeight="SemiBold"
-                 FontSize="38"
+                 FontWeight="Bold"
+                 FontSize="40"
                  Foreground="White"
-                 Opacity="0.5"/>
+                 Opacity="0.27"/>
     </Border>
   </Grid>
 </UserControl>

@@ -29,6 +29,7 @@ public class StalkerPortalService : IStalkerPortalService
     private static readonly TimeSpan TokenTtl    = TimeSpan.FromMinutes(15);
     private static readonly TimeSpan EndpointTtl = TimeSpan.FromHours(24);
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(4);
+    private static readonly TimeSpan CategoryLoadTimeout = TimeSpan.FromSeconds(45);
 
     private static readonly string[] KnownPortalPaths =
     [
@@ -288,9 +289,12 @@ public class StalkerPortalService : IStalkerPortalService
                 try
                 {
                     Log($"[Worker] Loading category: {category.Name} ({category.Type})");
+                    using var categoryCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    categoryCts.CancelAfter(CategoryLoadTimeout);
+
                     var items = await GetAllPagesForCategoryAsync(
                         endpoint, token, macAddress,
-                        category.Type, category.Id, cancellationToken);
+                        category.Type, category.Id, categoryCts.Token);
 
                     // If zero items, call onCategoryLoaded anyway to clear the dummy channel from UI
                     if (items.Count == 0)
@@ -327,6 +331,17 @@ public class StalkerPortalService : IStalkerPortalService
 
                         await onCategoryLoaded(channels, category);
                     }
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (OperationCanceledException ex)
+                {
+                    Interlocked.Increment(ref loadedCategories);
+                    Log($"[Timeout] Category {category.Name} (ID: {category.Id}, Type: {category.Type}) exceeded {CategoryLoadTimeout.TotalSeconds:0}s: {ex.Message}");
+
+                    await onCategoryLoaded([], category);
                 }
                 catch (Exception ex)
                 {
@@ -1017,7 +1032,14 @@ public class StalkerPortalService : IStalkerPortalService
                     Logo      = GetString(item, "logo") ?? 
                                 GetString(item, "pic") ?? 
                                 GetString(item, "cover") ?? 
-                                GetString(item, "screenshot_uri"),
+                                GetString(item, "screenshot_uri") ??
+                                GetString(item, "screenshot_url") ??
+                                GetString(item, "icon") ??
+                                GetString(item, "movie_image") ??
+                                GetString(item, "cover_big") ??
+                                GetString(item, "poster") ??
+                                GetString(item, "poster_url") ??
+                                GetString(item, "image"),
                     TvGenreId = GetString(item, "tv_genre_id") ??
                                 GetString(item, "category_id") ??
                                 GetString(item, "genre_id"),
