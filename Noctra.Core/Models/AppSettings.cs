@@ -172,6 +172,33 @@ public class AppSettings
     /// </summary>
     public List<string> RedeemedPromoCodes { get; set; } = new();
 
+    // ============ Microsoft Store Degerlendirme Hatirlaticisi ============
+
+    /// <summary>
+    /// Ana uygulama ekraninin basarili acilis sayisi.
+    /// </summary>
+    public int ReviewPromptLaunchCount { get; set; } = 0;
+
+    /// <summary>
+    /// Degerlendirme hatirlaticisinin son gosterildigi UTC zaman.
+    /// </summary>
+    public DateTime? ReviewPromptLastShownAtUtc { get; set; }
+
+    /// <summary>
+    /// "Sonra" secenegi sonrasi tekrar sorulabilecek en erken UTC zaman.
+    /// </summary>
+    public DateTime? ReviewPromptSnoozedUntilUtc { get; set; }
+
+    /// <summary>
+    /// Kullanici tekrar sorulmasini istemediyse true.
+    /// </summary>
+    public bool ReviewPromptDismissed { get; set; } = false;
+
+    /// <summary>
+    /// Kullanici Store degerlendirme akisini actiysa zaman damgasi.
+    /// </summary>
+    public DateTime? ReviewPromptCompletedAtUtc { get; set; }
+
     // ============ Senkronizasyon Ayarlari ============
 
     /// <summary>
@@ -229,4 +256,3 @@ public class AppSettings
     public List<string> HiddenMovieGroups { get; set; } = new();
     public List<string> HiddenSeriesGroups { get; set; } = new();
 }
-

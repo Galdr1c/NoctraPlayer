@@ -244,6 +244,8 @@ foreach ($edition in $Editions) {
         "/p:StoreIdentityName=$($profile.storeIdentityName)",
         "/p:StorePublisher=$($profile.storePublisher)",
         "/p:StorePublisherDisplayName=$($profile.storePublisherDisplayName)",
+        "/p:NoctraStoreProductId=$($profile.storeProductId)",
+        "/p:NoctraStoreReviewLaunchUri=$($profile.storeReviewLaunchUri)",
         "/p:NoctraPremiumStoreProductId=$($profile.premiumStoreProductId)",
         "/p:NoctraPremiumStoreLaunchUri=$($profile.premiumStoreLaunchUri)",
         "/p:NoctraPremiumStoreWebUri=$($profile.premiumStoreWebUri)",

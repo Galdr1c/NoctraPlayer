@@ -11,6 +11,7 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Added
 
+- **Microsoft Store review prompt**: Main app sessions can now show a localized "rate Noctra" prompt after meaningful usage, with Rate, Later, and Don't ask again actions.
 - **Search image enrichment**: Search result cards now trigger the same visible-item metadata/image enrichment flow used by category pages.
 - **Viewport-aware paging**: Scroll paging now loads more content when the viewport is not filled yet, and starts loading earlier near the end of the page.
 
@@ -39,6 +40,7 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 - **Provider account display**: Settings account information now adapts to M3U, Xtream, and Stalker profiles with provider-specific labels and visible credential values.
 - **README rewritten**: The project README was rebuilt into a shorter product, architecture, setup, and packaging guide.
 - **CHANGELOG rewritten**: The old long-form maintenance log was replaced with a compact Keep a Changelog structure.
+- **Store review metadata**: Store builds can provide `NoctraStoreProductId` or `NoctraStoreReviewLaunchUri` separately from premium purchase metadata.
 
 ### Removed
 
@@ -57,6 +59,8 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 - **Xtream Series and episode artwork fallback**: Xtream Series detail, Series list, season, and episode parsing now use the same first-nonblank image fallback behavior across `cover`, `stream_icon`, `cover_big`, `movie_image`, `poster`, `image`, and `screenshot_uri`.
 - **Provider visual enrichment scope**: Stalker provider-detail visual enrichment and the temporary group-count policy were removed; Stalker and Xtream now trust provider list metadata, while TMDB visible-card enrichment remains limited to M3U profiles.
 - **M3U account URL layout**: Long M3U playlist links in Settings now wrap inside the account card instead of overflowing or rendering as a form input.
+- **Review prompt timing**: The review prompt is global across profiles, waits for an eligible main-menu surface, delays during the active session, never appears over video playback/overlay/PiP/details/global loading or other dialogs, and snoozes for 3 days when the user chooses Later.
+- **Review dialog ownership**: The review prompt is no longer topmost, so it stays owned by the main app instead of floating independently over fullscreen video, while existing app dialogs keep their established topmost behavior.
 - **Stalker progressive resume stalls**: Stalker category loading now times out stuck categories, clears their dummy card, and continues with the remaining queue instead of leaving progress frozen.
 - **Progressive load UI stalls**: Cached Xtream/Stalker resume now runs off the UI thread, and Series/Home refresh work is deferred until channel loading completes.
 - **Progress status overwrite**: Background aggregation no longer replaces active provider progress with "Channel List Ready" while the playlist is still loading.

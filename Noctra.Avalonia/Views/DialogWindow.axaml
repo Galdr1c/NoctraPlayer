@@ -89,7 +89,9 @@
                 <TextBlock Text="{Binding TitleText}" 
                            Foreground="{DynamicResource TextPrimaryBrush}" 
                            FontSize="20" FontWeight="Bold" 
-                           VerticalAlignment="Center"/>
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxWidth="300"/>
             </StackPanel>
 
             <!-- Content Area -->

@@ -1,0 +1,116 @@
+<Window x:Class="Noctra.Avalonia.Views.ReviewPromptWindow"
+        xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        xmlns:loc="using:Noctra.Avalonia.Localization"
+        x:CompileBindings="False"
+        Title="{Binding [ReviewPrompt.Title], Source={x:Static loc:LocalizationSource.Instance}}"
+        Width="480"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        Topmost="False"
+        SystemDecorations="None"
+        CanResize="False"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        FontFamily="{StaticResource DefaultFontFamily}">
+
+    <Window.Styles>
+        <Style Selector="Button.ReviewPrimary">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="Button.ReviewPrimary:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AccentLightBrush}"/>
+        </Style>
+
+        <Style Selector="Button.ReviewSecondary">
+            <Setter Property="Background" Value="{DynamicResource Surface0Brush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="18,10"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.ReviewSecondary:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
+        </Style>
+
+        <Style Selector="Button.ReviewQuiet">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.ReviewQuiet:pointerover">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+    </Window.Styles>
+
+    <Border Background="{DynamicResource BackgroundGradientBrush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1.5"
+            CornerRadius="16"
+            ClipToBounds="True"
+            BoxShadow="0 12 32 0 #90000000">
+        <Grid Margin="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,0,0,16">
+                <materialIcons:MaterialIcon Kind="StarOutline"
+                                             Width="30"
+                                             Height="30"
+                                             Foreground="{DynamicResource AccentLightBrush}"
+                                             VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding [ReviewPrompt.Title], Source={x:Static loc:LocalizationSource.Instance}}"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           FontSize="20"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <TextBlock Grid.Row="1"
+                       Text="{Binding [ReviewPrompt.Message], Source={x:Static loc:LocalizationSource.Instance}}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       FontSize="15"
+                       LineHeight="22"
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,22"/>
+
+            <StackPanel Grid.Row="2"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="10">
+                <Button Content="{Binding [ReviewPrompt.Action.Never], Source={x:Static loc:LocalizationSource.Instance}}"
+                        Classes="ReviewQuiet"
+                        Click="Never_Click"/>
+                <Button Content="{Binding [ReviewPrompt.Action.Later], Source={x:Static loc:LocalizationSource.Instance}}"
+                        Classes="ReviewSecondary"
+                        Click="Later_Click"/>
+                <Button Classes="ReviewPrimary"
+                        Click="Rate_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <materialIcons:MaterialIcon Kind="OpenInNew" Width="17" Height="17" Foreground="White"/>
+                        <TextBlock Text="{Binding [ReviewPrompt.Action.Rate], Source={x:Static loc:LocalizationSource.Instance}}"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

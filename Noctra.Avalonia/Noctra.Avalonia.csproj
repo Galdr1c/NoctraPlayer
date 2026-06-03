@@ -42,6 +42,14 @@
       <_Parameter2>$(NoctraPremiumStoreProductId)</_Parameter2>
     </AssemblyAttribute>
     <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>NoctraStoreProductId</_Parameter1>
+      <_Parameter2>$(NoctraStoreProductId)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>NoctraStoreReviewLaunchUri</_Parameter1>
+      <_Parameter2>$(NoctraStoreReviewLaunchUri)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
       <_Parameter1>NoctraPremiumStoreLaunchUri</_Parameter1>
       <_Parameter2>$(NoctraPremiumStoreLaunchUri)</_Parameter2>
     </AssemblyAttribute>

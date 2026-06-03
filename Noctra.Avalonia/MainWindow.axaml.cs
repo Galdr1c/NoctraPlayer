@@ -27,13 +27,38 @@ public partial class MainWindow : Window
     private readonly IWatchHistoryService _watchHistoryService;
     private readonly ISettingsService _settingsService;
     private readonly IPerformanceTraceService _perfTrace;
+    private readonly IReviewPromptService _reviewPromptService;
     private readonly MainViewModel _mainViewModel;
     private readonly PlayerViewModel _playerViewModel;
     private readonly WindowResizeService _windowResizeService;
     private readonly DispatcherTimer _uiStallTimer;
     private CancellationTokenSource _mediaSelectionCts = new();
+    private readonly CancellationTokenSource _reviewPromptCts = new();
     private DateTime _lastPointerInteractionUtc = DateTime.MinValue;
     private DateTime _lastUiHeartbeatUtc = DateTime.UtcNow;
+
+    internal bool IsVideoPlaybackSurfaceVisible =>
+        PlayerArea.IsVisible ||
+        _playerViewModel.IsPlaying ||
+        _playerViewModel.IsPiPMode;
+
+    internal bool IsReviewPromptAllowedSurface =>
+        IsVisible &&
+        HeaderBar.IsVisible &&
+        MainContentArea.IsVisible &&
+        StatusBar.IsVisible &&
+        !_mainViewModel.IsGlobalLoading &&
+        !_mainViewModel.IsSeriesDetailVisible &&
+        !IsVideoPlaybackSurfaceVisible &&
+        _mainViewModel.ActiveView is AppView.Home or
+            AppView.Live or
+            AppView.Movies or
+            AppView.Series or
+            AppView.Search or
+            AppView.MyList or
+            AppView.Favorites or
+            AppView.History or
+            AppView.Downloads;
 
     public MainWindow()
         : this(
@@ -42,6 +67,7 @@ public partial class MainWindow : Window
             ((App)Application.Current!).Services.GetRequiredService<IVideoPlayerService>(),
             ((App)Application.Current!).Services.GetRequiredService<IWatchHistoryService>(),
             ((App)Application.Current!).Services.GetRequiredService<ISettingsService>(),
+            ((App)Application.Current!).Services.GetRequiredService<IReviewPromptService>(),
             ((App)Application.Current!).Services.GetRequiredService<IPerformanceTraceService>())
     {
     }
@@ -52,6 +78,7 @@ public partial class MainWindow : Window
         IVideoPlayerService videoPlayerService,
         IWatchHistoryService watchHistoryService,
         ISettingsService settingsService,
+        IReviewPromptService reviewPromptService,
         IPerformanceTraceService? perfTraceService = null)
     {
         InitializeComponent();
@@ -61,6 +88,7 @@ public partial class MainWindow : Window
         _videoPlayerService = videoPlayerService;
         _watchHistoryService = watchHistoryService;
         _settingsService = settingsService;
+        _reviewPromptService = reviewPromptService;
         _perfTrace = perfTraceService ?? new PerformanceTraceService();
         _windowResizeService = new WindowResizeService(this);
         _uiStallTimer = new DispatcherTimer
@@ -85,6 +113,7 @@ public partial class MainWindow : Window
         // MiniVideoSurface.MediaPlayer = null;
 
         AddHandler(KeyDownEvent, MainWindow_KeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
+        Opened += MainWindow_Opened;
         PositionChanged += MainWindow_PositionChanged;
         Closed += OnClosed;
         _mainViewModel.OnMediaSelected += MainViewModel_OnMediaSelected;
@@ -129,7 +158,13 @@ public partial class MainWindow : Window
         };
 
         UpdateDownloadBadgeVisibility();
-        }
+    }
+
+    private void MainWindow_Opened(object? sender, EventArgs e)
+    {
+        _ = _reviewPromptService.TryShowMainWindowPromptAsync(_reviewPromptCts.Token);
+    }
+
     private void MainWindow_PositionChanged(object? sender, PixelPointEventArgs e)
     {
         // Pencere hareket ettiğinde (sürükleme dahil) PiP kontrollerini yenile
@@ -154,6 +189,8 @@ public partial class MainWindow : Window
     private void OnClosed(object? sender, EventArgs e)
     {
         _mainViewModel.CancelProfileBackgroundLoading();
+        _reviewPromptCts.Cancel();
+        _reviewPromptCts.Dispose();
 
         // Flush watch position before closing
         try
@@ -168,6 +205,7 @@ public partial class MainWindow : Window
         _mainViewModel.OnMediaSelected -= MainViewModel_OnMediaSelected;
         _mainViewModel.PropertyChanged -= MainViewModel_PropertyChanged;
         _mainViewModel.RequestEditChannel -= MainViewModel_RequestEditChannel;
+        Opened -= MainWindow_Opened;
         OverlayControl.EpgChannelSelected -= MainWindow_EpgChannelSelected;
         _playerViewModel.PropertyChanged -= PlayerViewModel_PropertyChanged;
         _playerViewModel.CloseRequested -= PlayerViewModel_CloseRequested;

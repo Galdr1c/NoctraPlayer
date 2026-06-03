@@ -122,6 +122,11 @@ public class SettingsService : ISettingsService
         target.ActivePromoCode = source.ActivePromoCode;
         target.PromoPremiumExpiresAtUtc = source.PromoPremiumExpiresAtUtc;
         target.RedeemedPromoCodes = source.RedeemedPromoCodes?.ToList() ?? new List<string>();
+        target.ReviewPromptLaunchCount = source.ReviewPromptLaunchCount;
+        target.ReviewPromptLastShownAtUtc = source.ReviewPromptLastShownAtUtc;
+        target.ReviewPromptSnoozedUntilUtc = source.ReviewPromptSnoozedUntilUtc;
+        target.ReviewPromptDismissed = source.ReviewPromptDismissed;
+        target.ReviewPromptCompletedAtUtc = source.ReviewPromptCompletedAtUtc;
     }
 
     public async Task<AppSettings?> PeekProfileSettingsAsync(int profileId)

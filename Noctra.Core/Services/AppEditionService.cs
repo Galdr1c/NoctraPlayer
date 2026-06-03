@@ -17,6 +17,9 @@ public sealed class AppEditionService : IAppEditionService
         PremiumStoreLaunchUri = GetMetadataValue(metadata, "NoctraPremiumStoreLaunchUri") ??
             BuildLaunchUri(PremiumStoreProductId);
         PremiumStoreWebUri = GetMetadataValue(metadata, "NoctraPremiumStoreWebUri") ?? string.Empty;
+        StoreProductId = GetMetadataValue(metadata, "NoctraStoreProductId") ?? string.Empty;
+        StoreReviewLaunchUri = GetMetadataValue(metadata, "NoctraStoreReviewLaunchUri") ??
+            BuildReviewUri(StoreProductId);
     }
 
     public AppEdition CurrentEdition { get; }
@@ -32,6 +35,10 @@ public sealed class AppEditionService : IAppEditionService
     public string PremiumStoreWebUri { get; }
 
     public string PremiumStoreProductId { get; }
+
+    public string StoreProductId { get; }
+
+    public string StoreReviewLaunchUri { get; }
 
     private static IEnumerable<AssemblyMetadataAttribute> ReadMetadata()
     {
@@ -64,5 +71,12 @@ public sealed class AppEditionService : IAppEditionService
         return string.IsNullOrWhiteSpace(productId)
             ? string.Empty
             : $"ms-windows-store://pdp/?productid={productId}";
+    }
+
+    private static string BuildReviewUri(string productId)
+    {
+        return string.IsNullOrWhiteSpace(productId)
+            ? string.Empty
+            : $"ms-windows-store://review/?productid={productId}";
     }
 }

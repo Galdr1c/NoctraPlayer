@@ -14,6 +14,8 @@
     <NoctraAppDisplayName Condition="'$(NoctraAppDisplayName)' == ''">Noctra</NoctraAppDisplayName>
 
     <!-- Premium Store cross-references (updated from store-profiles.json by build script) -->
+    <NoctraStoreProductId Condition="'$(NoctraStoreProductId)' == ''"></NoctraStoreProductId>
+    <NoctraStoreReviewLaunchUri Condition="'$(NoctraStoreReviewLaunchUri)' == ''"></NoctraStoreReviewLaunchUri>
     <NoctraPremiumStoreProductId Condition="'$(NoctraPremiumStoreProductId)' == ''">9PREMIUMPLACEHOLDER</NoctraPremiumStoreProductId>
     <NoctraPremiumStoreLaunchUri Condition="'$(NoctraPremiumStoreLaunchUri)' == ''">ms-windows-store://pdp/?productid=9PREMIUMPLACEHOLDER</NoctraPremiumStoreLaunchUri>
     <NoctraPremiumStoreWebUri Condition="'$(NoctraPremiumStoreWebUri)' == ''">https://apps.microsoft.com/detail/9PREMIUMPLACEHOLDER</NoctraPremiumStoreWebUri>

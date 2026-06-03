@@ -6,6 +6,8 @@
     "storeIdentityName": "Noctra.Free",
     "storePublisher": "CN=00000000-0000-0000-0000-000000000000",
     "storePublisherDisplayName": "Noctra",
+    "storeProductId": "",
+    "storeReviewLaunchUri": "",
     "premiumStoreProductId": "9PREMIUMPLACEHOLDER",
     "premiumStoreLaunchUri": "ms-windows-store://pdp/?productid=9PREMIUMPLACEHOLDER",
     "premiumStoreWebUri": "https://apps.microsoft.com/detail/9PREMIUMPLACEHOLDER"
@@ -17,6 +19,8 @@
     "storeIdentityName": "Noctra.Premium",
     "storePublisher": "CN=00000000-0000-0000-0000-000000000000",
     "storePublisherDisplayName": "Noctra",
+    "storeProductId": "",
+    "storeReviewLaunchUri": "",
     "premiumStoreProductId": "9PREMIUMPLACEHOLDER",
     "premiumStoreLaunchUri": "ms-windows-store://pdp/?productid=9PREMIUMPLACEHOLDER",
     "premiumStoreWebUri": "https://apps.microsoft.com/detail/9PREMIUMPLACEHOLDER"

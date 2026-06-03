@@ -361,6 +361,7 @@ public partial class App : Application
 
         services.AddSingleton<IDispatcherService, AvaloniaDispatcherService>();
         services.AddSingleton<IDialogService, AvaloniaDialogService>();
+        services.AddSingleton<IReviewPromptService, ReviewPromptService>();
         services.AddSingleton<IThemeService, AvaloniaThemeService>();
         services.AddSingleton<IVideoPlayerService, VideoPlayerService>(sp => 
             new VideoPlayerService(
@@ -406,6 +407,7 @@ public partial class App : Application
         services.AddTransient<EditChannelWindow>();
         services.AddTransient<AvatarPickerWindow>();
         services.AddTransient<UpsellWindow>();
+        services.AddTransient<ReviewPromptWindow>();
         services.AddTransient<ProfileLoadingWindow>();
     }
 

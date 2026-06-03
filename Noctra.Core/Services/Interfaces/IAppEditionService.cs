@@ -17,4 +17,8 @@ public interface IAppEditionService
     string PremiumStoreWebUri { get; }
 
     string PremiumStoreProductId { get; }
+
+    string StoreProductId { get; }
+
+    string StoreReviewLaunchUri { get; }
 }
