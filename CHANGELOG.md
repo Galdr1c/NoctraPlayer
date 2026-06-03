@@ -36,6 +36,7 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 - **Application executable name**: The Avalonia app now builds and packages as `Noctra.exe` while keeping the technical project folder/namespace separate.
 - **Localized provider diagnostics**: Playlist import preview summaries and Stalker progressive-load status text now use translation keys across supported languages.
 - **Stalker service interface cleanup**: Stalker service interface comments were rewritten as clean technical documentation and user-facing progress text was moved out of the DTO.
+- **Provider account display**: Settings account information now adapts to M3U, Xtream, and Stalker profiles with provider-specific labels and visible credential values.
 - **README rewritten**: The project README was rebuilt into a shorter product, architecture, setup, and packaging guide.
 - **CHANGELOG rewritten**: The old long-form maintenance log was replaced with a compact Keep a Changelog structure.
 
@@ -55,6 +56,7 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 - **Stalker Series episode artwork fallback**: Stalker Series and episode parsing now skips blank image fields and falls back through `screenshot_uri`, `icon`, `cover`, `movie_image`, `screenshot_url`, and the parent Series cover.
 - **Xtream Series and episode artwork fallback**: Xtream Series detail, Series list, season, and episode parsing now use the same first-nonblank image fallback behavior across `cover`, `stream_icon`, `cover_big`, `movie_image`, `poster`, `image`, and `screenshot_uri`.
 - **Provider visual enrichment scope**: Stalker provider-detail visual enrichment and the temporary group-count policy were removed; Stalker and Xtream now trust provider list metadata, while TMDB visible-card enrichment remains limited to M3U profiles.
+- **M3U account URL layout**: Long M3U playlist links in Settings now wrap inside the account card instead of overflowing or rendering as a form input.
 - **Stalker progressive resume stalls**: Stalker category loading now times out stuck categories, clears their dummy card, and continues with the remaining queue instead of leaving progress frozen.
 - **Progressive load UI stalls**: Cached Xtream/Stalker resume now runs off the UI thread, and Series/Home refresh work is deferred until channel loading completes.
 - **Progress status overwrite**: Background aggregation no longer replaces active provider progress with "Channel List Ready" while the playlist is still loading.

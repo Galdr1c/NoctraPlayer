@@ -377,7 +377,7 @@
                                     <StackPanel Grid.Column="1" Margin="10,0,0,0" IsVisible="{Binding !IsStalker}">
                                         <TextBlock Text="{loc:Translate Profiles.Account.Password}" Foreground="{DynamicResource TextMutedBrush}" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"/>
                                         <TextBox Text="{Binding Password}" Height="52"
-                                                 Watermark="{loc:Translate Profiles.Account.PasswordPlaceholder}" PasswordChar="•"/>
+                                                 Watermark="{loc:Translate Profiles.Account.PasswordPlaceholder}"/>
                                     </StackPanel>
                                 </Grid>
 

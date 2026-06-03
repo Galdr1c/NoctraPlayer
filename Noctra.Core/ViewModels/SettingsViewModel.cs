@@ -28,6 +28,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly ILicenseService _licenseService;
     private readonly IUpdateService _updateService;
     private readonly ILocalizationService _localizationService;
+    private readonly ISecurityService _securityService;
     private CancellationTokenSource? _epgRefreshWatchCts;
     private int _isRefreshOperationRunning;
     private string? _activeRefreshScope;
@@ -192,12 +193,27 @@ public partial class SettingsViewModel : ObservableObject
     
     [ObservableProperty]
     private string _providerUrl = string.Empty;
+
+    [ObservableProperty]
+    private string _providerUrlLabel = string.Empty;
     
     [ObservableProperty]
     private string _providerUsername = string.Empty;
+
+    [ObservableProperty]
+    private string _providerIdentityLabel = string.Empty;
     
     [ObservableProperty]
     private string _providerPassword = string.Empty;
+
+    [ObservableProperty]
+    private bool _showProviderIdentity;
+
+    [ObservableProperty]
+    private bool _showProviderPassword;
+
+    [ObservableProperty]
+    private bool _showProviderExpiration;
     
     [ObservableProperty]
     private DateTime? _expirationDate;
@@ -219,7 +235,9 @@ public partial class SettingsViewModel : ObservableObject
         IDbContextFactory<AppDbContext> contextFactory,
         IDiagnosticReportService diagnosticService,
         ILicenseService licenseService,
-        IUpdateService updateService, ILocalizationService localizationService)
+        IUpdateService updateService,
+        ILocalizationService localizationService,
+        ISecurityService securityService)
     {
         _settingsService = settingsService;
         _epgService = epgService;
@@ -233,6 +251,7 @@ public partial class SettingsViewModel : ObservableObject
         _licenseService = licenseService;
         _updateService = updateService;
         _localizationService = localizationService;
+        _securityService = securityService;
         
         _mainViewModel.PropertyChanged += MainViewModel_PropertyChanged;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
@@ -369,6 +388,8 @@ public partial class SettingsViewModel : ObservableObject
 
     private void LoadProfileInfo()
     {
+        ResetProviderAccountInfo();
+
         if (_mainViewModel.CurrentProfile != null)
         {
             CurrentProfileName = _mainViewModel.CurrentProfile.Name;
@@ -381,13 +402,19 @@ public partial class SettingsViewModel : ObservableObject
             if (_mainViewModel.CurrentProfile.ProviderAccount != null)
             {
                 var account = _mainViewModel.CurrentProfile.ProviderAccount;
+                var none = _localizationService.GetString("Common.None");
                 ProviderName = account.Name;
-                ProviderUrl = GetProviderBaseUrl(account.Url);
-                ProviderUsername = account.Username ?? _localizationService.GetString("Common.None");
-                
-                // Mask password
-                var pass = account.Password;
-                ProviderPassword = !string.IsNullOrEmpty(pass) ? new string('*', 10) : _localizationService.GetString("Common.None");
+                ProviderUrl = GetProviderDisplayUrl(account);
+                ProviderUrlLabel = GetProviderUrlLabel(account.Type);
+                ProviderIdentityLabel = GetProviderIdentityLabel(account.Type);
+                ProviderUsername = string.IsNullOrWhiteSpace(account.Username) ? none : account.Username;
+
+                ShowProviderIdentity = account.Type != ProfileType.M3U;
+                ShowProviderPassword = account.Type == ProfileType.XtreamCodes;
+                ShowProviderExpiration = account.Type is ProfileType.XtreamCodes or ProfileType.StalkerPortal;
+
+                var decryptedPassword = _securityService.Decrypt(account.Password);
+                ProviderPassword = string.IsNullOrWhiteSpace(decryptedPassword) ? none : decryptedPassword;
                 
                 ExpirationDate = account.ExpirationDate;
                 
@@ -405,6 +432,44 @@ public partial class SettingsViewModel : ObservableObject
             }
         }
     }
+
+    private void ResetProviderAccountInfo()
+    {
+        var none = _localizationService.GetString("Common.None");
+        ProviderName = string.Empty;
+        ProviderUrl = none;
+        ProviderUrlLabel = FormatAccountLabel(_localizationService.GetString("Settings.Account.Url"));
+        ProviderUsername = none;
+        ProviderIdentityLabel = FormatAccountLabel(_localizationService.GetString("Settings.Account.Username"));
+        ProviderPassword = none;
+        ShowProviderIdentity = false;
+        ShowProviderPassword = false;
+        ShowProviderExpiration = false;
+        ExpirationDate = null;
+        ExpirationStatus = _localizationService.GetString("Common.Unknown");
+    }
+
+    private string GetProviderUrlLabel(ProfileType type)
+        => FormatAccountLabel(type switch
+        {
+            ProfileType.M3U => _localizationService.GetString("Profiles.Account.M3uLink"),
+            _ => _localizationService.GetString("Profiles.Account.ServerUrl")
+        });
+
+    private string GetProviderIdentityLabel(ProfileType type)
+        => FormatAccountLabel(type == ProfileType.StalkerPortal
+            ? _localizationService.GetString("Profiles.Account.MacAddress")
+            : _localizationService.GetString("Profiles.Account.Username"));
+
+    private static string GetProviderDisplayUrl(ProviderAccount account)
+        => account.Type == ProfileType.M3U
+            ? account.Url
+            : GetProviderBaseUrl(account.Url);
+
+    private static string FormatAccountLabel(string value)
+        => string.IsNullOrWhiteSpace(value) || value.TrimEnd().EndsWith(':')
+            ? value
+            : $"{value}:";
 
     private static string GetProviderBaseUrl(string? rawUrl)
     {
