@@ -1435,13 +1435,15 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     partial void OnVolumeChanged(int value)
     {
-        if (!_isUpdatingFromService)
+        if (_isUpdatingFromService)
         {
-            _videoPlayerService.Volume = value;
-            if (value > 0)
-            {
-                _volumeBeforeMute = value;
-            }
+            return;
+        }
+
+        _videoPlayerService.Volume = value;
+        if (value > 0)
+        {
+            _volumeBeforeMute = value;
         }
 
         if (value > 0 && IsMuted)

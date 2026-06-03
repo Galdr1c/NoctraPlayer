@@ -392,6 +392,19 @@ namespace Noctra.Tests
             Assert.Equal(42, ctx.VM.Volume);
         }
 
+        [Fact]
+        public void VolumeChanged_FromService_WhenMuted_DoesNotUnmute()
+        {
+            var ctx = new PlayerTestContext();
+            ctx.VM.IsMuted = true;
+
+            ctx.VideoService.SimulateVolumeChanged(80);
+
+            Assert.True(ctx.VM.IsMuted);
+            Assert.True(ctx.VideoService.IsMuted);
+            Assert.Equal(80, ctx.VM.Volume);
+        }
+
         [Theory]
         [InlineData(0, true)]
         [InlineData(1, false)]

@@ -7,6 +7,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Video Overlay Ses ve Mute Senkronizasyonu (2026-06-03)
+
+- [Düzeltildi] **Muted UI ve Gerçek Player Sesi Eşitlendi**: Uygulama muted kapatılıp tekrar açıldığında UI muted görünürken gerçek player sesinin açık kalmasına yol açabilen state ayrışması giderildi.
+- [Düzeltildi] **Servis Volume Event'i Mute'u Bozmuyor**: Player motorundan gelen `VolumeChanged` event'i artık `Volume > 0` diye `IsMuted=false` yapmaz. Mute/unmute kararı yalnızca kullanıcı slider/komut etkileşiminden gelir.
+- [Düzeltildi] **LibVLC Audio State Tek Helper ile Uygulanıyor**: `VideoPlayerService` içinde mute state ayrı tutulur ve media opening/playing, settings changed ve volume changed akışlarında tek `ApplyAudioState` helper'ı ile uygulanır. Muted durumda VLC tarafında hem `Mute=true` hem efektif `Volume=0` zorlanır.
+- [Test] **Mute Regression Testi Eklendi**: `VolumeChanged_FromService_WhenMuted_DoesNotUnmute` testi, muted durumdayken servis nonzero volume bildirirse UI ve servis muted state'inin bozulmadığını doğrular.
+- [Doğrulama] `dotnet test Noctra.Tests\Noctra.Tests.csproj --filter "VolumeChanged_FromService_WhenMuted_DoesNotUnmute|ToggleMute|SetVolumeTo100_WhenMuted|IsMutedChanged|VolumeAndMute"` başarılı. `dotnet test Noctra.Tests\Noctra.Tests.csproj --filter "FullyQualifiedName~PlayerViewModelControlsTests|FullyQualifiedName~PlayerPlaybackSynchronizationTests" --no-build` sonucu `103/103` test geçti. `dotnet build NoctraPlayer.sln` başarılı.
+
 ### Ana Ekran Connection Health Kaldırıldı (2026-06-03)
 
 - [Kaldırıldı] **Status Bar Connection Health Badge**: Ana pencerenin en alt status bar sağ tarafındaki connection health göstergesi kaldırıldı. Status bar artık yalnızca içerik/progress mesajlarını ve yükleme durumunu gösterir.

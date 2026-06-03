@@ -53,6 +53,9 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 - **Duplicate provider restriction**: The check that prevented adding the same M3U/Xtream/Stalker provider in multiple profiles was removed. Users can now use the same provider account across different profiles.
 
 ### Fixed
+
+- **Mute state synchronization**: Restored mute persistence so reopening the app keeps UI mute state and actual player audio aligned; service volume events no longer unmute playback implicitly.
+
 - **Profile settings leakage**: Promo code state and Microsoft Store review prompt state are no longer written into per-profile settings files.
 - **Global settings leakage**: Profile-only values such as EPG refresh, custom EPG URLs, watch-history settings, and hidden group lists are no longer written into the global settings file.
 - **Tampered promo grant handling**: Invalid or manually edited promo grant values no longer crash settings/license loading and simply leave the app in Free mode.

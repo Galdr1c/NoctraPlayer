@@ -18,6 +18,7 @@ public class VideoPlayerService : IVideoPlayerService
     private readonly ILocalizationService _localizationService;
     private bool _disposed;
     private int _currentVolume = 100;
+    private bool _isMuted;
     private string _lastUserAgent;
     private int _lastSubtitleFontSize;
     private int _lastSubtitleBackgroundOpacity;
@@ -78,6 +79,7 @@ public class VideoPlayerService : IVideoPlayerService
         
         // Initialize volume and mute from settings
         _currentVolume = _settingsService.Settings.DefaultVolume;
+        _isMuted = _settingsService.Settings.IsMuted;
         _lastUserAgent = _settingsService.Settings.UserAgent;
         _lastSubtitleFontSize = _settingsService.Settings.SubtitleFontSize;
         _lastSubtitleBackgroundOpacity = _settingsService.Settings.SubtitleBackgroundOpacity;
@@ -95,6 +97,12 @@ public class VideoPlayerService : IVideoPlayerService
     {
         var settings = _settingsService.Settings;
         bool shouldReinit = false;
+
+        if (_isMuted != settings.IsMuted)
+        {
+            _isMuted = settings.IsMuted;
+            ApplyAudioState();
+        }
 
         if (_lastUserAgent != settings.UserAgent)
         {
@@ -321,8 +329,7 @@ public class VideoPlayerService : IVideoPlayerService
             // Set volume and mute as early as possible
             if (_mediaPlayer != null)
             {
-                _mediaPlayer.Volume = _currentVolume;
-                _mediaPlayer.Mute = _settingsService.Settings.IsMuted;
+                ApplyAudioState();
             }
         };
 
@@ -339,9 +346,9 @@ public class VideoPlayerService : IVideoPlayerService
                 {
                     if (_mediaPlayer != null && _mediaPlayer.IsPlaying)
                     {
-                        _mediaPlayer.Volume = _currentVolume;
-                        _mediaPlayer.Mute = _settingsService.Settings.IsMuted;
-                        if (_mediaPlayer.Volume == _currentVolume && _mediaPlayer.Mute == _settingsService.Settings.IsMuted) break; // Uygulandı!
+                        ApplyAudioState();
+                        var targetVolume = _isMuted ? 0 : _currentVolume;
+                        if (_mediaPlayer.Volume == targetVolume && _mediaPlayer.Mute == _isMuted) break; // Uygulandı!
                     }
                     await Task.Delay(100);
                 }
@@ -853,8 +860,7 @@ public class VideoPlayerService : IVideoPlayerService
             var oldVolume = _currentVolume;
             _currentVolume = Math.Clamp(value, 0, 100);
             
-            if (_mediaPlayer != null)
-                _mediaPlayer.Volume = _currentVolume;
+            ApplyAudioState();
 
             if (oldVolume != _currentVolume)
             {
@@ -892,13 +898,12 @@ public class VideoPlayerService : IVideoPlayerService
 
     public bool IsMuted
     {
-        get => _mediaPlayer?.Mute ?? _settingsService.Settings.IsMuted;
+        get => _isMuted;
         set
         {
-            var oldMuted = _mediaPlayer?.Mute ?? _settingsService.Settings.IsMuted;
-            
-            if (_mediaPlayer != null)
-                _mediaPlayer.Mute = value;
+            var oldMuted = _isMuted;
+            _isMuted = value;
+            ApplyAudioState();
             
             if (oldMuted != value)
             {
@@ -917,6 +922,17 @@ public class VideoPlayerService : IVideoPlayerService
                 });
             }
         }
+    }
+
+    private void ApplyAudioState()
+    {
+        if (_mediaPlayer == null)
+        {
+            return;
+        }
+
+        _mediaPlayer.Mute = _isMuted;
+        _mediaPlayer.Volume = _isMuted ? 0 : _currentVolume;
     }
 
     public bool IsPlaying => _mediaPlayer?.IsPlaying ?? false;
