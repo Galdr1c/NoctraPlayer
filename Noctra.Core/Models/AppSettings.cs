@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Noctra.Models;
 
 /// <summary>
@@ -155,21 +157,31 @@ public class AppSettings
     /// Developer tarafından sağlanabilecek uzak promosyon kodu JSON adresi.
     /// Boşsa ortam değişkeni veya LicenseService içindeki varsayılan uzak URL kullanılır.
     /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? PromoCodeConfigUrl { get; set; }
+
+    /// <summary>
+    /// DPAPI ile sifrelenmis promosyon hak kaydi.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PromoGrant { get; set; }
 
     /// <summary>
     /// Kullanılan son aktif promosyon kodu.
     /// </summary>
+    [JsonIgnore]
     public string? ActivePromoCode { get; set; }
 
     /// <summary>
     /// Promosyon ile açılan Premium bitiş zamanı (UTC). Null ise aktif promosyon yoktur.
     /// </summary>
+    [JsonIgnore]
     public DateTime? PromoPremiumExpiresAtUtc { get; set; }
 
     /// <summary>
     /// Aynı kodun bu cihazda tekrar tekrar kullanılmasını önlemek için yerel kullanım listesi.
     /// </summary>
+    [JsonIgnore]
     public List<string> RedeemedPromoCodes { get; set; } = new();
 
     // ============ Microsoft Store Degerlendirme Hatirlaticisi ============
@@ -177,26 +189,31 @@ public class AppSettings
     /// <summary>
     /// Ana uygulama ekraninin basarili acilis sayisi.
     /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int ReviewPromptLaunchCount { get; set; } = 0;
 
     /// <summary>
     /// Degerlendirme hatirlaticisinin son gosterildigi UTC zaman.
     /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public DateTime? ReviewPromptLastShownAtUtc { get; set; }
 
     /// <summary>
     /// "Sonra" secenegi sonrasi tekrar sorulabilecek en erken UTC zaman.
     /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public DateTime? ReviewPromptSnoozedUntilUtc { get; set; }
 
     /// <summary>
     /// Kullanici tekrar sorulmasini istemediyse true.
     /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool ReviewPromptDismissed { get; set; } = false;
 
     /// <summary>
     /// Kullanici Store degerlendirme akisini actiysa zaman damgasi.
     /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public DateTime? ReviewPromptCompletedAtUtc { get; set; }
 
     // ============ Senkronizasyon Ayarlari ============
@@ -204,11 +221,13 @@ public class AppSettings
     /// <summary>
     /// Kanal listesi otomatik yenileme sikligi (saat). 0 = Kapali (manuel)
     /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int ChannelListRefreshFrequencyHours { get; set; } = 0;
 
     /// <summary>
     /// EPG otomatik yenileme sikligi (saat). 0 = Kapali (manuel)
     /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int EpgRefreshFrequencyHours { get; set; } = 0;
 
     /// <summary>
@@ -219,6 +238,7 @@ public class AppSettings
     /// <summary>
     /// EPG için kullanıcının verdiği özel URL (opsiyonel)
     /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? CustomEpgUrl { get; set; }
 
     /// <summary>

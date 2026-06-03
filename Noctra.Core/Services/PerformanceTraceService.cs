@@ -135,10 +135,7 @@ public sealed class PerformanceTraceService : IPerformanceTraceService, IDisposa
             return Path.Combine(repoRoot, "artifacts", "perf-trace");
         }
 
-        return Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Noctra",
-            "perf-trace");
+        return AppPaths.PerfTraceDirectory;
     }
 
     private static string? FindRepoRoot(string startPath)

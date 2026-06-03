@@ -7,9 +7,7 @@ namespace Noctra.Core.Services;
 
 public class CacheService : ICacheService
 {
-    private static readonly string AppDataPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Noctra");
+    private static readonly string AppDataPath = AppPaths.UserDataDirectory;
 
     private static readonly string[] CacheDirectories =
     {
@@ -33,14 +31,14 @@ public class CacheService : ICacheService
             }
 
             // Include current database file (contains EPG)
-            var dbPath = Path.Combine(AppDataPath, "noctra_v1.db");
+            var dbPath = AppPaths.DatabasePath;
             if (File.Exists(dbPath))
             {
                 try { size += new FileInfo(dbPath).Length; } catch { }
             }
 
             // Include legacy database file
-            var legacyDbPath = Path.Combine(AppDataPath, "noctra.db");
+            var legacyDbPath = AppPaths.LegacyDatabasePath;
             if (File.Exists(legacyDbPath))
             {
                 try { size += new FileInfo(legacyDbPath).Length; } catch { }
@@ -94,7 +92,7 @@ public class CacheService : ICacheService
             }
 
             // Also delete legacy Database file to free space
-            var legacyDbPath = Path.Combine(AppDataPath, "noctra.db");
+            var legacyDbPath = AppPaths.LegacyDatabasePath;
             if (File.Exists(legacyDbPath))
             {
                 try

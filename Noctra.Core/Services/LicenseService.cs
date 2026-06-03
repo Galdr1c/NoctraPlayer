@@ -54,6 +54,7 @@ public class LicenseService : ObservableObject, ILicenseService
     private SubscriptionInfo _currentSubscription = new();
     private readonly IAppEditionService _appEditionService;
     private readonly ISettingsService _settingsService;
+    private readonly ISecurityService _securityService;
     private readonly HttpClient _httpClient;
     private readonly ILocalizationService? _localizationService;
     private bool _manualPremiumOverride;
@@ -101,7 +102,7 @@ public class LicenseService : ObservableObject, ILicenseService
     }
 
     public LicenseService(IAppEditionService appEditionService)
-        : this(appEditionService, new EphemeralSettingsService(), new HttpClient())
+        : this(appEditionService, new EphemeralSettingsService(), new HttpClient(), securityService: new SecurityService())
     {
     }
 
@@ -109,10 +110,12 @@ public class LicenseService : ObservableObject, ILicenseService
         IAppEditionService appEditionService,
         ISettingsService settingsService,
         HttpClient httpClient,
-        ILocalizationService? localizationService = null)
+        ILocalizationService? localizationService = null,
+        ISecurityService? securityService = null)
     {
         _appEditionService = appEditionService;
         _settingsService = settingsService;
+        _securityService = securityService ?? new SecurityService();
         _httpClient = httpClient;
         _localizationService = localizationService;
         _settingsService.SettingsChanged += OnSettingsChanged;
@@ -133,8 +136,8 @@ public class LicenseService : ObservableObject, ILicenseService
 
     public bool CanUpgradeToPremium => _appEditionService.IsFreeEdition;
     public bool IsEditionLockedPremium => _appEditionService.IsPremiumEdition;
-    public DateTime? PromoPremiumExpiresAtUtc => _settingsService.Settings.PromoPremiumExpiresAtUtc;
-    public string? ActivePromoCode => _settingsService.Settings.ActivePromoCode;
+    public DateTime? PromoPremiumExpiresAtUtc => ReadPromoGrant()?.ExpiresAtUtc;
+    public string? ActivePromoCode => ReadPromoGrant()?.ActivePromoCode;
 
     public void ActivatePremium()
     {
@@ -144,8 +147,7 @@ public class LicenseService : ObservableObject, ILicenseService
         }
 
         _manualPremiumOverride = true;
-        _settingsService.Settings.PromoPremiumExpiresAtUtc = null;
-        _settingsService.Settings.ActivePromoCode = null;
+        ClearPromoState();
         _currentSubscription.Tier = SubscriptionTier.Premium;
         _currentSubscription.ExpiresAt = null;
         _currentSubscription.IsTrialPeriod = false;
@@ -160,8 +162,7 @@ public class LicenseService : ObservableObject, ILicenseService
         }
 
         _manualPremiumOverride = false;
-        _settingsService.Settings.PromoPremiumExpiresAtUtc = null;
-        _settingsService.Settings.ActivePromoCode = null;
+        ClearPromoState();
         _currentSubscription.Tier = SubscriptionTier.Free;
         _currentSubscription.ExpiresAt = null;
         _currentSubscription.IsTrialPeriod = false;
@@ -218,9 +219,9 @@ public class LicenseService : ObservableObject, ILicenseService
             return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.Expired", "Bu promosyon kodunun kullanım süresi dolmuş."));
         }
 
-        var settings = _settingsService.Settings;
-        settings.RedeemedPromoCodes ??= new List<string>();
-        if (!matchedCode.AllowReuse && settings.RedeemedPromoCodes.Any(code =>
+        var promoGrant = ReadPromoGrant();
+        var redeemedPromoCodes = promoGrant?.RedeemedPromoCodes ?? new List<string>();
+        if (!matchedCode.AllowReuse && redeemedPromoCodes.Any(code =>
                 NormalizePromoCode(code).Equals(normalizedCode, StringComparison.OrdinalIgnoreCase)))
         {
             return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.AlreadyRedeemed", "Bu promosyon kodu daha önce bu cihazda kullanılmış."));
@@ -228,17 +229,21 @@ public class LicenseService : ObservableObject, ILicenseService
 
         _manualPremiumOverride = false;
 
-        var startDate = settings.PromoPremiumExpiresAtUtc.HasValue && settings.PromoPremiumExpiresAtUtc.Value > DateTime.UtcNow
-            ? settings.PromoPremiumExpiresAtUtc.Value
+        var currentExpiresAt = promoGrant?.ExpiresAtUtc;
+        var startDate = currentExpiresAt.HasValue && currentExpiresAt.Value > DateTime.UtcNow
+            ? currentExpiresAt.Value
             : DateTime.UtcNow;
         var expiresAt = startDate.AddDays(matchedCode.DurationDays);
 
-        settings.ActivePromoCode = normalizedCode;
-        settings.PromoPremiumExpiresAtUtc = expiresAt;
-        if (!settings.RedeemedPromoCodes.Any(code => NormalizePromoCode(code).Equals(normalizedCode, StringComparison.OrdinalIgnoreCase)))
+        if (!redeemedPromoCodes.Any(code => NormalizePromoCode(code).Equals(normalizedCode, StringComparison.OrdinalIgnoreCase)))
         {
-            settings.RedeemedPromoCodes.Add(normalizedCode);
+            redeemedPromoCodes.Add(normalizedCode);
         }
+
+        WritePromoGrant(new PromoGrant(
+            normalizedCode,
+            expiresAt,
+            redeemedPromoCodes));
 
         await _settingsService.SaveAsync();
         SyncSubscriptionFromSettings(notify: true);
@@ -317,6 +322,11 @@ public class LicenseService : ObservableObject, ILicenseService
             new(false, Array.Empty<PromoCodeDefinition>(), errorMessage);
     }
 
+    private sealed record PromoGrant(
+        string ActivePromoCode,
+        DateTime ExpiresAtUtc,
+        List<string> RedeemedPromoCodes);
+
     private void OnSettingsChanged()
     {
         SyncSubscriptionFromSettings(notify: true);
@@ -342,7 +352,7 @@ public class LicenseService : ObservableObject, ILicenseService
         }
         else
         {
-            var promoExpiresAt = _settingsService.Settings.PromoPremiumExpiresAtUtc;
+            var promoExpiresAt = ReadPromoGrant()?.ExpiresAtUtc;
             if (promoExpiresAt.HasValue && promoExpiresAt.Value > DateTime.UtcNow)
             {
                 _currentSubscription.Tier = SubscriptionTier.Premium;
@@ -371,6 +381,95 @@ public class LicenseService : ObservableObject, ILicenseService
         OnPropertyChanged(nameof(PromoPremiumExpiresAtUtc));
         OnPropertyChanged(nameof(ActivePromoCode));
         SubscriptionChanged?.Invoke();
+    }
+
+    private PromoGrant? ReadPromoGrant()
+    {
+        var encryptedGrant = _settingsService.Settings.PromoGrant;
+        if (string.IsNullOrWhiteSpace(encryptedGrant))
+        {
+            return ImportLegacyPromoGrant();
+        }
+
+        try
+        {
+            var json = _securityService.Decrypt(encryptedGrant);
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return null;
+            }
+
+            var grant = JsonSerializer.Deserialize<PromoGrant>(json, PromoJsonOptions);
+            if (grant == null ||
+                string.IsNullOrWhiteSpace(grant.ActivePromoCode) ||
+                grant.ExpiresAtUtc <= DateTime.MinValue)
+            {
+                return null;
+            }
+
+            return grant with
+            {
+                ActivePromoCode = NormalizePromoCode(grant.ActivePromoCode),
+                RedeemedPromoCodes = grant.RedeemedPromoCodes
+                    .Where(code => !string.IsNullOrWhiteSpace(NormalizePromoCode(code)))
+                    .Select(NormalizePromoCode)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList()
+            };
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private void WritePromoGrant(PromoGrant grant)
+    {
+        var json = JsonSerializer.Serialize(grant, PromoJsonOptions);
+        _settingsService.Settings.PromoGrant = _securityService.Encrypt(json);
+        _settingsService.Settings.ActivePromoCode = null;
+        _settingsService.Settings.PromoPremiumExpiresAtUtc = null;
+        _settingsService.Settings.RedeemedPromoCodes.Clear();
+    }
+
+    private PromoGrant? ImportLegacyPromoGrant()
+    {
+        var settings = _settingsService.Settings;
+        if (string.IsNullOrWhiteSpace(settings.ActivePromoCode) ||
+            !settings.PromoPremiumExpiresAtUtc.HasValue)
+        {
+            return null;
+        }
+
+        var grant = new PromoGrant(
+            NormalizePromoCode(settings.ActivePromoCode),
+            settings.PromoPremiumExpiresAtUtc.Value,
+            (settings.RedeemedPromoCodes ?? new List<string>())
+                .Where(code => !string.IsNullOrWhiteSpace(NormalizePromoCode(code)))
+                .Select(NormalizePromoCode)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList());
+
+        if (string.IsNullOrWhiteSpace(grant.ActivePromoCode) || grant.ExpiresAtUtc <= DateTime.MinValue)
+        {
+            return null;
+        }
+
+        if (!grant.RedeemedPromoCodes.Any(code => string.Equals(code, grant.ActivePromoCode, StringComparison.OrdinalIgnoreCase)))
+        {
+            grant.RedeemedPromoCodes.Add(grant.ActivePromoCode);
+        }
+
+        WritePromoGrant(grant);
+        return grant;
+    }
+
+    private void ClearPromoState()
+    {
+        _settingsService.Settings.PromoGrant = null;
+        _settingsService.Settings.ActivePromoCode = null;
+        _settingsService.Settings.PromoPremiumExpiresAtUtc = null;
+        _settingsService.Settings.RedeemedPromoCodes.Clear();
     }
 
     private static string NormalizePromoCode(string? code)

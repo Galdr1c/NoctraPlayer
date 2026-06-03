@@ -17,6 +17,10 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Changed
 
+- **Documents-based user data root**: Noctra user data now resolves under `Documents\Noctra` instead of `%LOCALAPPDATA%\Noctra` for settings, database, downloads, logs, and local runtime folders.
+- **Default download folder moved**: The default download folder is now `Documents\Noctra\Downloads`; saved references to the old `%LOCALAPPDATA%\Noctra\Downloads` default are normalized to the new location while custom user-selected folders are preserved.
+- **Settings file separation**: Global settings JSON now persists only global app state such as language/theme/update/hardware/promo/review data, while profile JSON files persist profile-specific playback, EPG, privacy, hidden category, and download preferences.
+- **Encrypted promo grant storage**: Promo state is now stored as a DPAPI-protected `promoGrant` value in the global settings file instead of plaintext active code, expiry, and redeemed-code fields.
 - **RemoteImage simplified**: The image control now has one job: normalize URL, use memory cache, download on demand, or show placeholder.
 - **Poster-first VOD cards**: Movie cards prefer `LogoUrl`/provider poster before falling back to backdrop images.
 - **On-demand image loading**: MainWindow image warmup and episode/card preload hooks were removed. Cards load their own images when they appear.
@@ -48,6 +52,9 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 - **Duplicate provider restriction**: The check that prevented adding the same M3U/Xtream/Stalker provider in multiple profiles was removed. Users can now use the same provider account across different profiles.
 
 ### Fixed
+- **Profile settings leakage**: Promo code state and Microsoft Store review prompt state are no longer written into per-profile settings files.
+- **Global settings leakage**: Profile-only values such as EPG refresh, custom EPG URLs, watch-history settings, and hidden group lists are no longer written into the global settings file.
+- **Tampered promo grant handling**: Invalid or manually edited promo grant values no longer crash settings/license loading and simply leave the app in Free mode.
 - **Poster preload pipeline**: `RemoteImage.PreloadAsync`, image warmup scheduling, and active-control cache notify code were removed.
 - **RemoteImage host escalation complexity**: Per-host failure escalation and known-bad-host state were removed from the control.
 - **Provider image probing for TMDB replacement**: Existing provider poster URLs are no longer probed and swapped with TMDB posters.

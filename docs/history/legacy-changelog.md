@@ -7,6 +7,17 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Documents Veri Kökü ve Settings Ayrımı (2026-06-03)
+
+- [Değişti] **Uygulama Veri Kökü Documents\Noctra Oldu**: Settings, profil settings, SQLite database, downloads, logs, temp playback ve perf trace fallback konumları `%LOCALAPPDATA%\Noctra` yerine `Documents\Noctra` altında toplanacak şekilde merkezi `AppPaths` helper'ına bağlandı.
+- [Değişti] **Varsayılan İndirme Klasörü Taşındı**: Yeni varsayılan indirme yolu `Documents\Noctra\Downloads`. Daha önce ayarlarda kalan eski default `%LOCALAPPDATA%\Noctra\Downloads` yolu otomatik olarak yeni default yola normalize edilir; kullanıcı özel olarak başka klasör seçtiyse korunur.
+- [Değişti] **Global ve Profil Settings Net Ayrıldı**: Global `settings.json` artık profil davranış ayarlarını yazmaz. `channelListRefreshFrequencyHours`, `epgRefreshFrequencyHours`, `epgEnabled`, `customEpgUrl`, `customEpgUrls`, `epgTimeOffsetHours`, `saveWatchHistory`, `watchHistoryRetentionDays`, `clearHistoryOnExit`, `hiddenLiveGroups`, `hiddenMovieGroups`, `hiddenSeriesGroups` yalnızca profil settings dosyalarında tutulur.
+- [Değişti] **Promo ve Review State Sadece Global**: `promoCodeConfigUrl`, `promoGrant`, eski `activePromoCode`/`promoPremiumExpiresAtUtc`/`redeemedPromoCodes` state'i ve `reviewPrompt*` alanları profil settings dosyalarına yazılmaz; sadece global `Documents\Noctra\settings.json` kapsamındadır.
+- [Güvenlik] **Promo State Şifreli Grant'e Taşındı**: Promosyon kodu, premium bitiş tarihi ve redeemed listesi plaintext JSON alanları yerine DPAPI ile korunan tek `promoGrant` blob'u olarak saklanır. Kullanıcı bu değeri rastgele değiştirirse uygulama çökmez; grant geçersiz kabul edilir ve Premium açılmaz.
+- [Uyumluluk] **Eski Plain Promo Alanları İçin Import**: Eski taşınmış settings dosyasında plaintext `activePromoCode`, `promoPremiumExpiresAtUtc` ve `redeemedPromoCodes` varsa servis bunları bellekte encrypted `promoGrant`'a çevirir; sonraki kayıtta açık alanlar yazılmaz.
+- [Test] **Settings/Premium Regression Testleri**: Global/profil settings serializer ayrımı, encrypted promo grant yazımı, bozuk grant'in Free moda düşmesi ve legacy promo import akışı `SettingsServiceTests` ve `LicenseServiceTests` kapsamına alındı.
+- [Doğrulama] `dotnet test Noctra.Tests\Noctra.Tests.csproj --filter SettingsServiceTests`, `dotnet test Noctra.Tests\Noctra.Tests.csproj --filter LicenseServiceTests`, `dotnet build NoctraPlayer.sln` ve `git diff --check` çalıştırıldı.
+
 ### Microsoft Store Değerlendirme Popup'ı (2026-06-03)
 
 - [Yeni] **Üç Seçenekli Değerlendirme Popup'ı**: Uygulamaya `Bizi değerlendirmek ister misiniz?` akışı eklendi. Popup, ana uygulama ekranı açıldıktan sonra çalışır; profil seçimi, ayarlar, profil ekleme, aktif dialog veya başka popup üstünde görünmez.

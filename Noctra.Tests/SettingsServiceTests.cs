@@ -3,6 +3,7 @@ using Noctra.Services;
 using Noctra.Models;
 using System;
 using System.IO;
+using System.Text.Json;
 
 namespace Noctra.Tests
 {
@@ -48,6 +49,104 @@ namespace Noctra.Tests
             // This is hard to objectively verify without reflection or mocks, 
             // but we can ensure it doesn't crash and returns valid data.
             Assert.NotNull(service.Settings);
+        }
+
+        [Fact]
+        public void CreatePersistableSettings_WhenProfileSettings_ShouldNotWritePromoState()
+        {
+            var settings = new AppSettings
+            {
+                ProfileId = 167,
+                PromoCodeConfigUrl = "https://example.com/promo.json",
+                PromoGrant = "encrypted-grant",
+                ActivePromoCode = "NOC-TEST",
+                PromoPremiumExpiresAtUtc = DateTime.UtcNow.AddDays(7),
+                RedeemedPromoCodes = new() { "NOC-TEST" },
+                ReviewPromptLaunchCount = 2,
+                ReviewPromptLastShownAtUtc = DateTime.UtcNow.AddDays(-1),
+                ReviewPromptSnoozedUntilUtc = DateTime.UtcNow.AddDays(3),
+                ReviewPromptDismissed = true,
+                ReviewPromptCompletedAtUtc = DateTime.UtcNow
+            };
+
+            var json = SettingsService.SerializePersistableSettings(settings, 167);
+
+            Assert.DoesNotContain("promoCodeConfigUrl", json);
+            Assert.DoesNotContain("promoGrant", json);
+            Assert.DoesNotContain("activePromoCode", json);
+            Assert.DoesNotContain("promoPremiumExpiresAtUtc", json);
+            Assert.DoesNotContain("redeemedPromoCodes", json);
+            Assert.DoesNotContain("reviewPromptLaunchCount", json);
+            Assert.DoesNotContain("reviewPromptLastShownAtUtc", json);
+            Assert.DoesNotContain("reviewPromptSnoozedUntilUtc", json);
+            Assert.DoesNotContain("reviewPromptDismissed", json);
+            Assert.DoesNotContain("reviewPromptCompletedAtUtc", json);
+        }
+
+        [Fact]
+        public void CreatePersistableSettings_WhenGlobalSettings_ShouldWriteEncryptedPromoGrant()
+        {
+            var settings = new AppSettings
+            {
+                ProfileId = 0,
+                PromoGrant = "encrypted-grant",
+                ActivePromoCode = "NOC-TEST",
+                PromoPremiumExpiresAtUtc = DateTime.UtcNow.AddDays(7),
+                RedeemedPromoCodes = new() { "NOC-TEST" },
+                ReviewPromptLaunchCount = 2,
+                ReviewPromptLastShownAtUtc = DateTime.UtcNow.AddDays(-1),
+                ReviewPromptSnoozedUntilUtc = DateTime.UtcNow.AddDays(3),
+                ReviewPromptDismissed = true,
+                ReviewPromptCompletedAtUtc = DateTime.UtcNow
+            };
+
+            var json = SettingsService.SerializePersistableSettings(settings, 0);
+
+            Assert.Contains("promoGrant", json);
+            Assert.DoesNotContain("activePromoCode", json);
+            Assert.DoesNotContain("promoPremiumExpiresAtUtc", json);
+            Assert.DoesNotContain("redeemedPromoCodes", json);
+            Assert.Contains("reviewPromptLaunchCount", json);
+            Assert.Contains("reviewPromptLastShownAtUtc", json);
+            Assert.Contains("reviewPromptSnoozedUntilUtc", json);
+            Assert.Contains("reviewPromptDismissed", json);
+            Assert.Contains("reviewPromptCompletedAtUtc", json);
+        }
+
+        [Fact]
+        public void CreatePersistableSettings_WhenGlobalSettings_ShouldNotWriteProfileOnlySettings()
+        {
+            var settings = new AppSettings
+            {
+                ProfileId = 0,
+                ChannelListRefreshFrequencyHours = 12,
+                EpgRefreshFrequencyHours = 24,
+                EpgEnabled = false,
+                CustomEpgUrl = "https://example.com/epg.xml",
+                CustomEpgUrls = new() { "https://example.com/epg.xml" },
+                EpgTimeOffsetHours = 3,
+                SaveWatchHistory = false,
+                WatchHistoryRetentionDays = 90,
+                ClearHistoryOnExit = true,
+                HiddenLiveGroups = new() { "Live" },
+                HiddenMovieGroups = new() { "Movies" },
+                HiddenSeriesGroups = new() { "Series" }
+            };
+
+            var json = SettingsService.SerializePersistableSettings(settings, 0);
+
+            Assert.DoesNotContain("channelListRefreshFrequencyHours", json);
+            Assert.DoesNotContain("epgRefreshFrequencyHours", json);
+            Assert.DoesNotContain("epgEnabled", json);
+            Assert.DoesNotContain("customEpgUrl", json);
+            Assert.DoesNotContain("customEpgUrls", json);
+            Assert.DoesNotContain("epgTimeOffsetHours", json);
+            Assert.DoesNotContain("saveWatchHistory", json);
+            Assert.DoesNotContain("watchHistoryRetentionDays", json);
+            Assert.DoesNotContain("clearHistoryOnExit", json);
+            Assert.DoesNotContain("hiddenLiveGroups", json);
+            Assert.DoesNotContain("hiddenMovieGroups", json);
+            Assert.DoesNotContain("hiddenSeriesGroups", json);
         }
 
         public void Dispose()

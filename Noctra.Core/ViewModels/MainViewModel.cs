@@ -5691,16 +5691,7 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private string ResolveGlobalDownloadRoot()
     {
-        var configured = _settingsService.Settings.DownloadPath;
-        if (!string.IsNullOrWhiteSpace(configured))
-        {
-            var trimmed = configured.Trim().Trim('"');
-            if (Path.IsPathFullyQualified(trimmed))
-                return trimmed;
-        }
-        return Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Noctra", "Downloads");
+        return Noctra.Core.Services.AppPaths.NormalizeDownloadDirectory(_settingsService.Settings.DownloadPath);
     }
 
     /// <summary>

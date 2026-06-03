@@ -1355,9 +1355,7 @@ public class ContentDownloadService : IContentDownloadService
 
     private static string EnsureGlobalDownloadDirectory(string? baseDownloadPath)
     {
-        var basePath = string.IsNullOrWhiteSpace(baseDownloadPath)
-            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Noctra", "Downloads")
-            : baseDownloadPath;
+        var basePath = Noctra.Core.Services.AppPaths.NormalizeDownloadDirectory(baseDownloadPath);
 
         // Phase 25: No longer append "Profile_X", use the basePath directly as the global root
         if (!Directory.Exists(basePath))

@@ -1,7 +1,9 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text;
 using Noctra.Models;
 using Microsoft.Extensions.Logging;
+using Noctra.Core.Services;
 
 namespace Noctra.Services;
 
@@ -28,9 +30,7 @@ public class SettingsService : ISettingsService
     {
         _logger = logger;
         
-        _basePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Noctra");
+        _basePath = AppPaths.UserDataDirectory;
         
         Directory.CreateDirectory(_basePath);
         
@@ -43,7 +43,7 @@ public class SettingsService : ISettingsService
         if (profileId == 0)
             return Path.Combine(_basePath, "settings.json");
 
-        var settingsDir = Path.Combine(_basePath, "Settings");
+        var settingsDir = AppPaths.SettingsDirectory;
         if (!Directory.Exists(settingsDir)) Directory.CreateDirectory(settingsDir);
 
         var newPath = Path.Combine(settingsDir, $"profile_{profileId}.json");
@@ -88,6 +88,7 @@ public class SettingsService : ISettingsService
             {
                 var json = await File.ReadAllTextAsync(path);
                 loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? CreateDefaultSettings(profileId);
+                ApplyLegacyPromoFields(json, loaded);
             }
 
             // Centralization Logic: Ensure global settings are synced from profile 0
@@ -119,9 +120,7 @@ public class SettingsService : ISettingsService
         target.Analytics = source.Analytics;
         target.AutoSelectLastProfile = source.AutoSelectLastProfile;
         target.PromoCodeConfigUrl = source.PromoCodeConfigUrl;
-        target.ActivePromoCode = source.ActivePromoCode;
-        target.PromoPremiumExpiresAtUtc = source.PromoPremiumExpiresAtUtc;
-        target.RedeemedPromoCodes = source.RedeemedPromoCodes?.ToList() ?? new List<string>();
+        target.PromoGrant = source.PromoGrant;
         target.ReviewPromptLaunchCount = source.ReviewPromptLaunchCount;
         target.ReviewPromptLastShownAtUtc = source.ReviewPromptLastShownAtUtc;
         target.ReviewPromptSnoozedUntilUtc = source.ReviewPromptSnoozedUntilUtc;
@@ -140,6 +139,7 @@ public class SettingsService : ISettingsService
             var loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
             if (loaded != null)
             {
+                ApplyLegacyPromoFields(json, loaded);
                 loaded.ProfileId = profileId;
                 // Peek should also reflect current global settings if it's not the active one
                 if (profileId != 0)
@@ -170,6 +170,10 @@ public class SettingsService : ISettingsService
             {
                 var json = File.ReadAllText(path);
                 loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
+                if (loaded != null)
+                {
+                    ApplyLegacyPromoFields(json, loaded);
+                }
             }
 
             if (loaded == null)
@@ -193,8 +197,78 @@ public class SettingsService : ISettingsService
         return new AppSettings
         {
             ProfileId = profileId,
-            DownloadPath = Path.Combine(_basePath, "Downloads")
+            DownloadPath = AppPaths.NormalizeDownloadDirectory(null)
         };
+    }
+
+    private static void ApplyLegacyPromoFields(string json, AppSettings settings)
+    {
+        if (!string.IsNullOrWhiteSpace(settings.PromoGrant))
+        {
+            return;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+
+            settings.ActivePromoCode = ReadString(root, "activePromoCode", "ActivePromoCode");
+            settings.PromoPremiumExpiresAtUtc = ReadDateTime(root, "promoPremiumExpiresAtUtc", "PromoPremiumExpiresAtUtc");
+            settings.RedeemedPromoCodes = ReadStringArray(root, "redeemedPromoCodes", "RedeemedPromoCodes");
+        }
+        catch
+        {
+            settings.ActivePromoCode = null;
+            settings.PromoPremiumExpiresAtUtc = null;
+            settings.RedeemedPromoCodes.Clear();
+        }
+    }
+
+    private static string? ReadString(JsonElement root, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String)
+            {
+                return value.GetString();
+            }
+        }
+
+        return null;
+    }
+
+    private static DateTime? ReadDateTime(JsonElement root, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (root.TryGetProperty(name, out var value) &&
+                value.ValueKind == JsonValueKind.String &&
+                value.TryGetDateTime(out var dateTime))
+            {
+                return dateTime;
+            }
+        }
+
+        return null;
+    }
+
+    private static List<string> ReadStringArray(JsonElement root, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Array)
+            {
+                return value.EnumerateArray()
+                    .Where(item => item.ValueKind == JsonValueKind.String)
+                    .Select(item => item.GetString())
+                    .Where(item => !string.IsNullOrWhiteSpace(item))
+                    .Select(item => item!)
+                    .ToList();
+            }
+        }
+
+        return new List<string>();
     }
     
     public async Task SaveAsync()
@@ -205,7 +279,7 @@ public class SettingsService : ISettingsService
             
             // 1. Save current profile settings
             var path = GetSettingsPath(profileId);
-            var json = JsonSerializer.Serialize(Settings, JsonOptions);
+            var json = SerializePersistableSettings(Settings, profileId);
             await WriteAllTextAtomicallyAsync(path, json);
             _logger?.LogInformation("Settings saved for profile {Id}", profileId);
 
@@ -218,7 +292,7 @@ public class SettingsService : ISettingsService
                 // Only sync if actual global values changed (optimization optionally, but let's be safe)
                 SyncGlobalSettings(globalSettings, Settings);
                 
-                var globalJson = JsonSerializer.Serialize(globalSettings, JsonOptions);
+                var globalJson = SerializePersistableSettings(globalSettings, 0);
                 await WriteAllTextAtomicallyAsync(globalPath, globalJson);
                 _logger?.LogInformation("Global settings updated from profile {Id}", profileId);
             }
@@ -228,6 +302,91 @@ public class SettingsService : ISettingsService
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to save settings");
+        }
+    }
+
+    internal static AppSettings CreatePersistableSettings(AppSettings source, int profileId)
+    {
+        var json = JsonSerializer.Serialize(source, JsonOptions);
+        var copy = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
+        copy.ProfileId = profileId;
+
+        if (profileId != 0)
+        {
+            copy.PromoCodeConfigUrl = null;
+            copy.PromoGrant = null;
+            copy.ActivePromoCode = null;
+            copy.PromoPremiumExpiresAtUtc = null;
+            copy.RedeemedPromoCodes.Clear();
+            copy.ReviewPromptLaunchCount = 0;
+            copy.ReviewPromptLastShownAtUtc = null;
+            copy.ReviewPromptSnoozedUntilUtc = null;
+            copy.ReviewPromptDismissed = false;
+            copy.ReviewPromptCompletedAtUtc = null;
+        }
+        else
+        {
+            copy.ChannelListRefreshFrequencyHours = 0;
+            copy.EpgRefreshFrequencyHours = 0;
+            copy.EpgEnabled = true;
+            copy.CustomEpgUrl = null;
+            copy.CustomEpgUrls?.Clear();
+            copy.EpgTimeOffsetHours = 0;
+            copy.SaveWatchHistory = true;
+            copy.WatchHistoryRetentionDays = 30;
+            copy.ClearHistoryOnExit = false;
+            copy.HiddenLiveGroups?.Clear();
+            copy.HiddenMovieGroups?.Clear();
+            copy.HiddenSeriesGroups?.Clear();
+        }
+
+        return copy;
+    }
+
+    internal static string SerializePersistableSettings(AppSettings source, int profileId)
+    {
+        var copy = CreatePersistableSettings(source, profileId);
+        var node = JsonSerializer.SerializeToNode(copy, JsonOptions) as JsonObject ?? new JsonObject();
+
+        if (profileId == 0)
+        {
+            RemoveProperties(node,
+                "channelListRefreshFrequencyHours",
+                "epgRefreshFrequencyHours",
+                "epgEnabled",
+                "customEpgUrl",
+                "customEpgUrls",
+                "epgTimeOffsetHours",
+                "saveWatchHistory",
+                "watchHistoryRetentionDays",
+                "clearHistoryOnExit",
+                "hiddenLiveGroups",
+                "hiddenMovieGroups",
+                "hiddenSeriesGroups");
+        }
+        else
+        {
+            RemoveProperties(node,
+                "promoCodeConfigUrl",
+                "promoGrant",
+                "activePromoCode",
+                "promoPremiumExpiresAtUtc",
+                "redeemedPromoCodes",
+                "reviewPromptLaunchCount",
+                "reviewPromptLastShownAtUtc",
+                "reviewPromptSnoozedUntilUtc",
+                "reviewPromptDismissed",
+                "reviewPromptCompletedAtUtc");
+        }
+
+        return JsonSerializer.Serialize(node, JsonOptions);
+    }
+
+    private static void RemoveProperties(JsonObject node, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            node.Remove(name);
         }
     }
 

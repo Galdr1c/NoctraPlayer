@@ -415,7 +415,7 @@ public partial class App : Application
     {
         var candidates = new[]
         {
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Noctra", "noctra_v1.db"),
+            AppPaths.DatabasePath,
             Path.Combine(Path.GetTempPath(), "Noctra", "noctra_v1.db")
         };
 

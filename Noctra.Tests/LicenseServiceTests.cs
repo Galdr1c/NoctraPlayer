@@ -129,6 +129,88 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task ApplyPromoCodeAsync_WhenCodeIsAccepted_ShouldPersistEncryptedPromoGrantOnly()
+        {
+            using var _ = TemporarilyClearPromoCodesUrl();
+            var settings = new TestSettingsService
+            {
+                Settings = { PromoCodeConfigUrl = "https://example.com/noctra-promo-codes.json" }
+            };
+            var json = JsonSerializer.Serialize(new PromoCodeConfiguration
+            {
+                Codes =
+                {
+                    new PromoCodeDefinition
+                    {
+                        Code = "PROMO-EXAMPLE-7D",
+                        DurationDays = 7,
+                        IsActive = true
+                    }
+                }
+            });
+            using var httpClient = CreateHttpClient(HttpStatusCode.OK, json);
+            var service = CreateLicenseService(settings, httpClient);
+
+            var result = await service.ApplyPromoCodeAsync("PROMO-EXAMPLE-7D");
+
+            Assert.True(result.Success);
+            Assert.True(service.IsPremium);
+            Assert.False(string.IsNullOrWhiteSpace(settings.Settings.PromoGrant));
+            Assert.Null(settings.Settings.ActivePromoCode);
+            Assert.Null(settings.Settings.PromoPremiumExpiresAtUtc);
+            Assert.Empty(settings.Settings.RedeemedPromoCodes);
+        }
+
+        [Fact]
+        public void CurrentTier_WhenPromoGrantIsTampered_ShouldStayFreeAndNotThrow()
+        {
+            var settings = new TestSettingsService();
+            settings.Settings.PromoGrant = "tampered-value";
+            var service = CreateLicenseService(settings);
+
+            Assert.Equal(SubscriptionTier.Free, service.CurrentTier);
+            Assert.False(service.IsPremium);
+            Assert.Null(service.ActivePromoCode);
+            Assert.Null(service.PromoPremiumExpiresAtUtc);
+        }
+
+        [Fact]
+        public void CurrentTier_WhenLegacyPlainPromoStateExists_ShouldImportEncryptedGrant()
+        {
+            var settings = new TestSettingsService();
+            settings.Settings.ActivePromoCode = "PROMO-EXAMPLE-7D";
+            settings.Settings.PromoPremiumExpiresAtUtc = DateTime.UtcNow.AddDays(7);
+            settings.Settings.RedeemedPromoCodes.Add("PROMO-EXAMPLE-7D");
+            var service = CreateLicenseService(settings);
+
+            Assert.True(service.IsPremium);
+            Assert.Equal("PROMO-EXAMPLE-7D", service.ActivePromoCode);
+            Assert.False(string.IsNullOrWhiteSpace(settings.Settings.PromoGrant));
+            Assert.Null(settings.Settings.ActivePromoCode);
+            Assert.Null(settings.Settings.PromoPremiumExpiresAtUtc);
+            Assert.Empty(settings.Settings.RedeemedPromoCodes);
+        }
+
+        [Fact]
+        public void AppSettingsJson_WhenPromoStateExists_ShouldOnlySerializeEncryptedGrant()
+        {
+            var settings = new AppSettings
+            {
+                PromoGrant = "encrypted-grant",
+                ActivePromoCode = "PROMO-EXAMPLE-7D",
+                PromoPremiumExpiresAtUtc = DateTime.UtcNow.AddDays(7),
+                RedeemedPromoCodes = new List<string> { "PROMO-EXAMPLE-7D" }
+            };
+
+            var json = JsonSerializer.Serialize(settings);
+
+            Assert.Contains("PromoGrant", json);
+            Assert.DoesNotContain("ActivePromoCode", json);
+            Assert.DoesNotContain("PromoPremiumExpiresAtUtc", json);
+            Assert.DoesNotContain("RedeemedPromoCodes", json);
+        }
+
+        [Fact]
         public async Task ApplyPromoCodeAsync_WhenLocalizationIsEnglish_ShouldReturnEnglishMessage()
         {
             using var _ = TemporarilyClearPromoCodesUrl();
