@@ -66,7 +66,6 @@ public partial class MainViewModel : ObservableObject
     private readonly LanguageDetectionService _languageDetectionService;
     private readonly EpgSourceResolver _epgSourceResolver;
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
-    private readonly HttpClient _httpClient;
     private readonly ITmdbSyncService _tmdbSyncService;
     private readonly ILicenseService _licenseService;
     private readonly IUpdateService _updateService;
@@ -271,12 +270,6 @@ public partial class MainViewModel : ObservableObject
     private string _channelLoadingStats = string.Empty;
 
     [ObservableProperty]
-    private ConnectionHealth _connectionQuality = ConnectionHealth.Unknown;
-
-    [ObservableProperty]
-    private string _connectionStatusText = "";
-
-    [ObservableProperty]
     private string? _channelListLastError;
 
     [ObservableProperty]
@@ -314,7 +307,6 @@ public partial class MainViewModel : ObservableObject
         EpgSourceResolver epgSourceResolver,
         IDbContextFactory<AppDbContext> contextFactory,
         ISecurityService securityService,
-        HttpClient httpClient,
         ITmdbSyncService tmdbSyncService,
         ILicenseService licenseService,
         IUpdateService updateService,
@@ -341,14 +333,12 @@ public partial class MainViewModel : ObservableObject
         _epgSourceResolver = epgSourceResolver;
         _contextFactory = contextFactory;
         _securityService = securityService;
-        _httpClient = httpClient;
         _tmdbSyncService = tmdbSyncService;
         _licenseService = licenseService;
         _updateService = updateService;
         _perfTrace = perfTraceService;
         RebuildSortOptions();
         StatusMessage = _localizationService.GetString("Common.Ready");
-        RefreshConnectionStatusText();
         _downloadLandingStoredBytes = 0;
         TotalDownloadedCount = 0;
         RefreshDownloadLandingLocalizedTexts();
@@ -356,7 +346,6 @@ public partial class MainViewModel : ObservableObject
         {
             _dispatcherService.BeginInvoke(() =>
             {
-                RefreshConnectionStatusText();
                 RebuildSortOptions();
                 RefreshDownloadLandingLocalizedTexts();
             });
@@ -457,23 +446,6 @@ public partial class MainViewModel : ObservableObject
         return Task.CompletedTask;
     }
 
-    partial void OnConnectionQualityChanged(ConnectionHealth value)
-    {
-        RefreshConnectionStatusText();
-    }
-
-    private void RefreshConnectionStatusText()
-    {
-        ConnectionStatusText = ConnectionQuality switch
-        {
-            ConnectionHealth.Good => _localizationService.GetString("Main.Connection.Good"),
-            ConnectionHealth.Weak => _localizationService.GetString("Main.Connection.Weak"),
-            ConnectionHealth.Bad => _localizationService.GetString("Main.Connection.Weak"),
-            ConnectionHealth.Critical => _localizationService.GetString("Main.Connection.Critical"),
-            _ => string.Empty
-        };
-    }
-
     private void RebuildSortOptions()
     {
         SortOptions = new List<KeyValuePair<ChannelSortOrder, string>>
@@ -517,92 +489,17 @@ public partial class MainViewModel : ObservableObject
             await Task.Delay(8_000, ct);
             if (ct.IsCancellationRequested) return;
 
-            ConnectionQuality = ConnectionHealth.Weak;
             LoadingWarningMessage = _localizationService.GetString("Main.Loading.Warning.Slow");
 
             await Task.Delay(12_000, ct);
             if (ct.IsCancellationRequested) return;
 
-            ConnectionQuality = ConnectionHealth.Critical;
             LoadingWarningMessage = _localizationService.GetString("Main.Loading.Warning.Unreachable");
         }
         catch (TaskCanceledException)
         {
             /* normal */
         }
-    }
-
-    private async Task CheckPlaylistUrlHealthAsync(string url, ProfileLoadScope scope)
-    {
-        try
-        {
-            if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                return;
-
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, scope.Token);
-            var stopwatch = Stopwatch.StartNew();
-            using var response = await SendPlaylistHealthRequestAsync(url, linkedCts.Token);
-            stopwatch.Stop();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                BeginInvokeIfProfileScopeActive(scope, () =>
-                {
-                    ConnectionQuality = ConnectionHealth.Critical;
-                    StatusMessage = string.Format(CultureInfo.CurrentCulture,
-                        _localizationService.GetString("Main.Error.PlaylistUnreachableFormat"),
-                        (int)response.StatusCode);
-                });
-                return;
-            }
-
-            BeginInvokeIfProfileScopeActive(scope, () =>
-            {
-                ConnectionQuality = stopwatch.ElapsedMilliseconds < 500
-                    ? ConnectionHealth.Good
-                    : stopwatch.ElapsedMilliseconds < 1500
-                        ? ConnectionHealth.Weak
-                        : ConnectionHealth.Bad;
-            });
-        }
-        catch (OperationCanceledException)
-        {
-            // Profile switch or timeout; do not update a stale profile.
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogDebug("[HealthCheck] Playlist URL erişim hatası: {Msg}", ex.Message);
-            BeginInvokeIfProfileScopeActive(scope, () =>
-            {
-                ConnectionQuality = ConnectionHealth.Critical;
-                StatusMessage = _localizationService.GetString("Main.Status.PlaylistUnreachable");
-            });
-        }
-    }
-
-    private async Task<HttpResponseMessage> SendPlaylistHealthRequestAsync(string url, CancellationToken cancellationToken)
-    {
-        static HttpRequestMessage CreateRequest(HttpMethod method, string requestUrl)
-        {
-            var request = new HttpRequestMessage(method, requestUrl);
-            request.Headers.TryAddWithoutValidation("User-Agent",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-            return request;
-        }
-
-        using var headRequest = CreateRequest(HttpMethod.Head, url);
-        var response = await _httpClient.SendAsync(
-            headRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-        if (response.StatusCode != System.Net.HttpStatusCode.MethodNotAllowed)
-        {
-            return response;
-        }
-
-        response.Dispose();
-        using var getRequest = CreateRequest(HttpMethod.Get, url);
-        return await _httpClient.SendAsync(
-            getRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
     }
 
     private int _activeLoadingOperations;
@@ -783,7 +680,6 @@ public partial class MainViewModel : ObservableObject
         IsChannelLoading = true;
         ChannelLoadingProgress = 0;
         ChannelLoadingStats = string.Empty;
-        ConnectionQuality = ConnectionHealth.Unknown;
         StatusMessage = _localizationService.GetString("Main.Status.PreparingContent");
         CurrentProfileId = profile.Id;
         CurrentProfile = profile;
@@ -824,13 +720,6 @@ public partial class MainViewModel : ObservableObject
                                 await LoadPlaylistsAsync();
                             }
                             ThrowIfProfileLoadCancelled(profileScope);
-            
-                            // Arka planda URL sağlık kontrolü yap (M3U için geçerli)
-                            var playlistUrl = existingPlaylists[0].Url;
-                            if (!string.IsNullOrWhiteSpace(playlistUrl) && profile.ProviderAccount.Type == ProfileType.M3U)
-                            {
-                                _ = CheckPlaylistUrlHealthAsync(playlistUrl, profileScope);
-                            }
             
                                             if (profile.ProviderAccount.Type == ProfileType.StalkerPortal)
                                             {

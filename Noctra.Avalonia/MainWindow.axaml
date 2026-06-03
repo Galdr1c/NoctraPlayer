@@ -1225,41 +1225,6 @@
                        VerticalAlignment="Center" Margin="8,0,0,0"/>
           </StackPanel>
 
-          <!-- Right: Badges -->
-          <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
-            <!-- Enhanced Connection Health Badge -->
-            <Border IsVisible="{Binding ConnectionQuality, Converter={StaticResource ConnectionHealthToVisibilityConverter}}"
-                    CornerRadius="20" Padding="10,4" 
-                    Background="{DynamicResource Surface1Brush}" 
-                    BorderBrush="{DynamicResource BorderBrush}" 
-                    BorderThickness="1">
-              <StackPanel Orientation="Horizontal" Spacing="8">
-                <Grid>
-                  <!-- Soft Glow -->
-                  <Ellipse Width="12" Height="12" 
-                           Fill="{Binding ConnectionQuality, Converter={StaticResource ConnectionHealthToBrushConverter}}" 
-                           Opacity="0.4"
-                           VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <Ellipse.Effect>
-                      <BlurEffect Radius="6"/>
-                    </Ellipse.Effect>
-                  </Ellipse>
-                  <!-- Inner Dot -->
-                  <Ellipse Width="7" Height="7" VerticalAlignment="Center" HorizontalAlignment="Center"
-                           Fill="{Binding ConnectionQuality, Converter={StaticResource ConnectionHealthToBrushConverter}}">
-                    <Ellipse.Transitions>
-                      <Transitions>
-                        <BrushTransition Property="Fill" Duration="0:0:0.5"/>
-                      </Transitions>
-                    </Ellipse.Transitions>
-                  </Ellipse>
-                </Grid>
-                <TextBlock Text="{Binding ConnectionStatusText}" FontSize="11" FontWeight="Bold" 
-                           Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"
-                           LetterSpacing="0.3"/>
-              </StackPanel>
-            </Border>
-          </StackPanel>
         </Grid>
       </Grid>
     </Border>

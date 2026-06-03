@@ -7,6 +7,15 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Ana Ekran Connection Health Kaldırıldı (2026-06-03)
+
+- [Kaldırıldı] **Status Bar Connection Health Badge**: Ana pencerenin en alt status bar sağ tarafındaki connection health göstergesi kaldırıldı. Status bar artık yalnızca içerik/progress mesajlarını ve yükleme durumunu gösterir.
+- [Kaldırıldı] **Ana Ekran Playlist URL Health Backend'i**: `MainViewModel` içindeki `ConnectionQuality`, `ConnectionStatusText`, `CheckPlaylistUrlHealthAsync` ve `SendPlaylistHealthRequestAsync` akışı silindi. M3U profil yükleme sırasında ana ekran badge'i için ekstra `HEAD/GET` URL sağlık isteği atılmaz.
+- [Temizlik] **MainViewModel HttpClient Bağımlılığı Kaldırıldı**: Health-check backend'i kalktığı için `MainViewModel` constructor'ındaki kullanılmayan `HttpClient` dependency'si ve test fixture placeholder'ları temizlendi.
+- [Temizlik] **Kullanılmayan Main.Connection Localization Key'leri Silindi**: Ana ekran badge metinleri artık kullanılmadığı için `Main.Connection.Good`, `Main.Connection.Weak` ve `Main.Connection.Critical` tüm dil dosyalarından kaldırıldı.
+- [Korundu] **Add Profile Bağlantı Analizi Ayrı Kaldı**: Add Profile ekranındaki `Bağlantıyı Analiz Et` health sonucu ve converter'ları korunur; bu değişiklik yalnızca ana ekran status bar health badge/backend akışını kaldırır.
+- [Doğrulama] `dotnet build NoctraPlayer.sln` başarılı. `git diff --check` yalnızca CRLF uyarıları veriyor.
+
 ### Documents Veri Kökü ve Settings Ayrımı (2026-06-03)
 
 - [Değişti] **Uygulama Veri Kökü Documents\Noctra Oldu**: Settings, profil settings, SQLite database, downloads, logs, temp playback ve perf trace fallback konumları `%LOCALAPPDATA%\Noctra` yerine `Documents\Noctra` altında toplanacak şekilde merkezi `AppPaths` helper'ına bağlandı.

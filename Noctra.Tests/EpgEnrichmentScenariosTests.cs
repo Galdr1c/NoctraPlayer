@@ -66,7 +66,6 @@ namespace Noctra.Tests
                 null!, // EpgSourceResolver
                 _contextFactoryMock.Object,
                 _securityServiceMock.Object,
-                null!, // HttpClient
                 _tmdbServiceMock.Object,
                 _licenseServiceMock.Object,
                 _updateServiceMock.Object,

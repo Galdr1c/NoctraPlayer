@@ -48,6 +48,7 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Removed
 
+- **Main status bar connection health**: The bottom status bar connection health badge and its M3U playlist URL health-check backend were removed from the main app surface.
 - **Header search popup**: The old header result popup and its async overlay search state were removed; header search now commits directly to the Search page.
 - **Duplicate provider restriction**: The check that prevented adding the same M3U/Xtream/Stalker provider in multiple profiles was removed. Users can now use the same provider account across different profiles.
 

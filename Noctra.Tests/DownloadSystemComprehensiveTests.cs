@@ -130,7 +130,6 @@ namespace Noctra.Tests
                 null!, // resolver
                 null!, // db context
                 null!, // security
-                null!, // http
                 null!, // tmdb sync
                 license,
                 null!, // update service
