@@ -813,13 +813,13 @@ public class StalkerPortalService : IStalkerPortalService
                 {
                     result.Description = GetString(item, "description");
                     result.Director = GetString(item, "director");
-                    result.Actors = GetString(item, "actors") ?? GetString(item, "actor");
+                    result.Actors = FirstNonBlank(GetString(item, "actors"), GetString(item, "actor"));
                     result.Year = GetString(item, "year");
-                    result.TmdbId = GetString(item, "tmdb_id") ?? GetString(item, "tmdb");
+                    result.TmdbId = FirstNonBlank(GetString(item, "tmdb_id"), GetString(item, "tmdb"));
                     result.RatingImdb = GetString(item, "rating_imdb");
                     result.Age = GetString(item, "age");
                     result.CoverUrl = NormalizeLogoUrl(
-                        GetString(item, "screenshot_uri") ?? GetString(item, "pic"),
+                        FirstNonBlank(GetString(item, "screenshot_uri"), GetString(item, "pic")),
                         ExtractBaseUrl(endpoint));
                     result.GenresStr = GetString(item, "genres_str");
                     metadataSet = true;
@@ -886,15 +886,16 @@ public class StalkerPortalService : IStalkerPortalService
                             EpisodeNumber = numId,
                             Name = rawEpisodeTitle,
                             Cmd = GetString(epObj, "cmd"),
-                            Description = GetString(epObj, "description") ?? GetString(epObj, "plot"),
+                            Description = FirstNonBlank(GetString(epObj, "description"), GetString(epObj, "plot")),
                             Pic = NormalizeLogoUrl(
-                                GetString(epObj, "pic")
-                                ?? GetString(epObj, "screenshot_uri")
-                                ?? GetString(epObj, "icon")
-                                ?? GetString(epObj, "cover")
-                                ?? GetString(epObj, "movie_image")
-                                ?? GetString(epObj, "screenshot_url")
-                                ?? result.CoverUrl,
+                                FirstNonBlank(
+                                    GetString(epObj, "pic"),
+                                    GetString(epObj, "screenshot_uri"),
+                                    GetString(epObj, "icon"),
+                                    GetString(epObj, "cover"),
+                                    GetString(epObj, "movie_image"),
+                                    GetString(epObj, "screenshot_url"),
+                                    result.CoverUrl),
                                 ExtractBaseUrl(endpoint)),
                             Duration = GetString(epObj, "duration"),
                             Added = GetString(epObj, "added")
@@ -1028,39 +1029,43 @@ public class StalkerPortalService : IStalkerPortalService
                 items.Add(new StalkerListItem
                 {
                     Id        = GetString(item, "id"),
-                    Name      = GetString(item, "name") ??
-                                GetString(item, "title") ??
-                                GetString(item, "o_name") ??
-                                GetString(item, "old_name"),
+                    Name      = FirstNonBlank(
+                                    GetString(item, "name"),
+                                    GetString(item, "title"),
+                                    GetString(item, "o_name"),
+                                    GetString(item, "old_name")),
                     Cmd       = GetString(item, "cmd"),
-                    Logo      = GetString(item, "logo") ?? 
-                                GetString(item, "pic") ?? 
-                                GetString(item, "cover") ?? 
-                                GetString(item, "screenshot_uri") ??
-                                GetString(item, "screenshot_url") ??
-                                GetString(item, "icon") ??
-                                GetString(item, "movie_image") ??
-                                GetString(item, "cover_big") ??
-                                GetString(item, "poster") ??
-                                GetString(item, "poster_url") ??
-                                GetString(item, "image_url") ??
-                                GetString(item, "thumbnail") ??
-                                GetString(item, "image"),
-                    TvGenreId = GetString(item, "tv_genre_id") ??
-                                GetString(item, "category_id") ??
-                                GetString(item, "genre_id"),
-                    CategoryName = GetString(item, "category_name") ??
-                                   GetString(item, "genre_name") ??
-                                   GetString(item, "category"),
+                    Logo      = FirstNonBlank(
+                                    GetString(item, "logo"),
+                                    GetString(item, "pic"),
+                                    GetString(item, "cover"),
+                                    GetString(item, "screenshot_uri"),
+                                    GetString(item, "screenshot_url"),
+                                    GetString(item, "icon"),
+                                    GetString(item, "movie_image"),
+                                    GetString(item, "cover_big"),
+                                    GetString(item, "poster"),
+                                    GetString(item, "poster_url"),
+                                    GetString(item, "image_url"),
+                                    GetString(item, "thumbnail"),
+                                    GetString(item, "image")),
+                    TvGenreId = FirstNonBlank(
+                                    GetString(item, "tv_genre_id"),
+                                    GetString(item, "category_id"),
+                                    GetString(item, "genre_id")),
+                    CategoryName = FirstNonBlank(
+                                    GetString(item, "category_name"),
+                                    GetString(item, "genre_name"),
+                                    GetString(item, "category")),
                     // Metadata — present in many Stalker portal VOD/Series list responses
-                    Description = GetString(item, "description") ?? GetString(item, "plot"),
+                    Description = FirstNonBlank(GetString(item, "description"), GetString(item, "plot")),
                     Director    = GetString(item, "director"),
-                    Actors      = GetString(item, "actors") ?? GetString(item, "actor"),
+                    Actors      = FirstNonBlank(GetString(item, "actors"), GetString(item, "actor")),
                     Year        = GetString(item, "year"),
-                    Rating      = GetString(item, "rating_imdb") ?? GetString(item, "rating"),
+                    Rating      = FirstNonBlank(GetString(item, "rating_imdb"), GetString(item, "rating")),
                     Age         = GetString(item, "age"),
-                    TmdbId      = GetString(item, "tmdb_id") ?? GetString(item, "tmdb"),
-                    Genres      = GetString(item, "genres_str") ?? GetString(item, "genre"),
+                    TmdbId      = FirstNonBlank(GetString(item, "tmdb_id"), GetString(item, "tmdb")),
+                    Genres      = FirstNonBlank(GetString(item, "genres_str"), GetString(item, "genre")),
                 });
             }
         }
@@ -1380,6 +1385,9 @@ public class StalkerPortalService : IStalkerPortalService
             _ => null
         };
     }
+
+    private static string? FirstNonBlank(params string?[] values)
+        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
 
     private static int? GetInt(JsonElement element, string propertyName)
     {

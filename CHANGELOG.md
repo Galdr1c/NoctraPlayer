@@ -51,6 +51,10 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Fixed
 
+- **Stalker VOD poster fallback**: Stalker VOD list parsing now ignores blank poster fields such as `pic=""` and falls through to populated fields like `screenshot_uri`, fixing gray VOD cards when the provider already returns poster URLs.
+- **Stalker Series episode artwork fallback**: Stalker Series and episode parsing now skips blank image fields and falls back through `screenshot_uri`, `icon`, `cover`, `movie_image`, `screenshot_url`, and the parent Series cover.
+- **Xtream Series and episode artwork fallback**: Xtream Series detail, Series list, season, and episode parsing now use the same first-nonblank image fallback behavior across `cover`, `stream_icon`, `cover_big`, `movie_image`, `poster`, `image`, and `screenshot_uri`.
+- **Provider visual enrichment scope**: Stalker provider-detail visual enrichment and the temporary group-count policy were removed; Stalker and Xtream now trust provider list metadata, while TMDB visible-card enrichment remains limited to M3U profiles.
 - **Stalker progressive resume stalls**: Stalker category loading now times out stuck categories, clears their dummy card, and continues with the remaining queue instead of leaving progress frozen.
 - **Progressive load UI stalls**: Cached Xtream/Stalker resume now runs off the UI thread, and Series/Home refresh work is deferred until channel loading completes.
 - **Progress status overwrite**: Background aggregation no longer replaces active provider progress with "Channel List Ready" while the playlist is still loading.

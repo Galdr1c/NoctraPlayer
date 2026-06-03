@@ -200,11 +200,20 @@ public class XtreamCodesService : IXtreamCodesService
             if (root.TryGetProperty("info", out var info) && info.ValueKind == JsonValueKind.Object)
             {
                 detail.Name = GetStringOrNull(info, "name");
-                detail.Cover = GetStringOrNull(info, "cover");
+                detail.Cover = FirstNonEmpty(
+                    GetStringOrNull(info, "cover"),
+                    GetStringOrNull(info, "movie_image"),
+                    GetStringOrNull(info, "cover_big"),
+                    GetStringOrNull(info, "poster"),
+                    GetStringOrNull(info, "poster_url"),
+                    GetStringOrNull(info, "image"),
+                    GetStringOrNull(info, "screenshot_uri"),
+                    GetStringOrNull(info, "stream_icon"));
                 // High-res backdrop: try backdrop_path, cover_big, movie_image
-                detail.BackdropUrl = GetStringOrNull(info, "backdrop_path")
-                                  ?? GetStringOrNull(info, "cover_big")
-                                  ?? GetStringOrNull(info, "movie_image");
+                detail.BackdropUrl = FirstNonEmpty(
+                    GetStringOrNull(info, "backdrop_path"),
+                    GetStringOrNull(info, "cover_big"),
+                    GetStringOrNull(info, "movie_image"));
                 detail.Plot = GetStringOrNull(info, "plot");
                 detail.Genre = GetStringOrNull(info, "genre");
                 detail.Cast = GetStringOrNull(info, "cast");
@@ -213,7 +222,7 @@ public class XtreamCodesService : IXtreamCodesService
                 detail.ReleaseYear = ParseInt(GetStringOrNull(info, "releaseDate")
                                         ?.Split('-').FirstOrDefault());
                 detail.ContentRating = GetStringOrNull(info, "age");
-                var tmdbRaw = GetStringOrNull(info, "tmdb_id") ?? GetStringOrNull(info, "tmdb");
+                var tmdbRaw = FirstNonEmpty(GetStringOrNull(info, "tmdb_id"), GetStringOrNull(info, "tmdb"));
                 if (int.TryParse(tmdbRaw, out var parsedTmdb) && parsedTmdb > 0)
                     detail.TmdbId = parsedTmdb;
             }
@@ -224,14 +233,19 @@ public class XtreamCodesService : IXtreamCodesService
             {
                 foreach (var s in seasons.EnumerateArray())
                 {
-                    var sn = ParseInt(GetStringOrNull(s, "season_number")
-                             ?? (s.TryGetProperty("season_number", out var snProp)
-                                ? snProp.GetRawText() : null));
+                    var sn = ParseInt(FirstNonEmpty(
+                        GetStringOrNull(s, "season_number"),
+                        s.TryGetProperty("season_number", out var snProp) ? snProp.GetRawText() : null));
                     detail.Seasons.Add(new XtreamSeasonDetail
                     {
                         SeasonNumber = sn ?? 0,
                         Name = GetStringOrNull(s, "name"),
-                        Cover = GetStringOrNull(s, "cover"),
+                        Cover = FirstNonEmpty(
+                            GetStringOrNull(s, "cover"),
+                            GetStringOrNull(s, "cover_big"),
+                            GetStringOrNull(s, "movie_image"),
+                            GetStringOrNull(s, "image"),
+                            GetStringOrNull(s, "screenshot_uri")),
                         AirDate = GetStringOrNull(s, "air_date")
                     });
                 }
@@ -507,7 +521,7 @@ public class XtreamCodesService : IXtreamCodesService
                     Name = SafeName(s.Name, _localizationService.GetString("Xtream.Channel.DefaultSeries")),
                     // ← ID'yi URL'e göm — lazy load için anahtar
                     StreamUrl = $"xtream-series://{s.SeriesId}",
-                    LogoUrl = s.Cover,
+                    LogoUrl = GetSeriesPoster(s),
                     GroupTitle = groupTitle,
                     Type = ChannelType.Series,
                     Plot = s.Plot,
@@ -636,8 +650,8 @@ public class XtreamCodesService : IXtreamCodesService
             }
 
             var episodeNum = ParseInt(GetStringOrNull(ep, "episode_num"));
-            var episodeTitle = GetStringOrNull(ep, "title") ?? GetStringOrNull(ep, "name") ?? $"Episode {episodeNum ?? 0}";
-            var extension = GetStringOrNull(ep, "container_extension") ?? "mp4";
+            var episodeTitle = FirstNonEmpty(GetStringOrNull(ep, "title"), GetStringOrNull(ep, "name")) ?? $"Episode {episodeNum ?? 0}";
+            var extension = FirstNonEmpty(GetStringOrNull(ep, "container_extension"), "mp4")!;
 
             string? plot = null;
             if (ep.TryGetProperty("info", out var infoElement) && infoElement.ValueKind == JsonValueKind.Object)
@@ -650,7 +664,7 @@ public class XtreamCodesService : IXtreamCodesService
             {
                 Name = $"{prefix} {episodeTitle}".Trim(),
                 StreamUrl = $"{baseUrl}/series/{Uri.EscapeDataString(username)}/{Uri.EscapeDataString(password)}/{id.Value}.{extension}",
-                LogoUrl = series.Cover,
+                LogoUrl = GetSeriesPoster(series),
                 GroupTitle = groupTitle,
                 Type = ChannelType.Series,
                 Plot = plot ?? series.Plot,
@@ -780,6 +794,18 @@ public class XtreamCodesService : IXtreamCodesService
 
     private static string? FirstNonEmpty(params string?[] values)
         => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+
+    private static string? GetSeriesPoster(XtreamSeriesDto series)
+        => FirstNonEmpty(
+            series.Cover,
+            series.StreamIcon,
+            series.CoverBig,
+            series.MovieImage,
+            series.Poster,
+            series.PosterUrl,
+            series.Image,
+            series.ScreenshotUri,
+            series.ScreenshotUrl);
 
     private static int? ParseInt(string? input)
     {
@@ -942,6 +968,30 @@ public class XtreamCodesService : IXtreamCodesService
         [JsonPropertyName("cover")]
         public string? Cover { get; set; }
 
+        [JsonPropertyName("stream_icon")]
+        public string? StreamIcon { get; set; }
+
+        [JsonPropertyName("cover_big")]
+        public string? CoverBig { get; set; }
+
+        [JsonPropertyName("movie_image")]
+        public string? MovieImage { get; set; }
+
+        [JsonPropertyName("poster")]
+        public string? Poster { get; set; }
+
+        [JsonPropertyName("poster_url")]
+        public string? PosterUrl { get; set; }
+
+        [JsonPropertyName("image")]
+        public string? Image { get; set; }
+
+        [JsonPropertyName("screenshot_uri")]
+        public string? ScreenshotUri { get; set; }
+
+        [JsonPropertyName("screenshot_url")]
+        public string? ScreenshotUrl { get; set; }
+
         [JsonPropertyName("plot")]
         public string? Plot { get; set; }
 
@@ -992,9 +1042,10 @@ public class XtreamCodesService : IXtreamCodesService
 
         foreach (var ep in array.EnumerateArray())
         {
-            var epIdStr = GetStringOrNull(ep, "id") 
-                       ?? GetStringOrNull(ep, "id") 
-                       ?? GetStringOrNull(ep, "stream_id");
+            var epIdStr = FirstNonEmpty(
+                GetStringOrNull(ep, "id"),
+                GetStringOrNull(ep, "episode_id"),
+                GetStringOrNull(ep, "stream_id"));
             var epId = ParseLong(epIdStr);
             if (epId is null or <= 0) continue;
 
@@ -1005,20 +1056,22 @@ public class XtreamCodesService : IXtreamCodesService
             double? epRating = null;
 
             // Get cover URL from various possible fields
-            coverUrl = GetStringOrNull(ep, "stream_icon")
-                      ?? GetStringOrNull(ep, "icon")
-                      ?? GetStringOrNull(ep, "cover");
+            coverUrl = FirstNonEmpty(
+                GetStringOrNull(ep, "stream_icon"),
+                GetStringOrNull(ep, "icon"),
+                GetStringOrNull(ep, "cover"));
 
             if (ep.TryGetProperty("info", out var epInfo) && epInfo.ValueKind == JsonValueKind.Object)
             {
-                coverUrl ??= GetStringOrNull(epInfo, "movie_image")
-                           ?? GetStringOrNull(epInfo, "cover")
-                           ?? GetStringOrNull(epInfo, "screenshot_uri")
-                           ?? GetStringOrNull(epInfo, "image");
+                coverUrl = FirstNonEmpty(
+                    coverUrl,
+                    GetStringOrNull(epInfo, "movie_image"),
+                    GetStringOrNull(epInfo, "cover"),
+                    GetStringOrNull(epInfo, "screenshot_uri"),
+                    GetStringOrNull(epInfo, "image"));
 
                 plot = GetStringOrNull(epInfo, "plot");
-                airDate = GetStringOrNull(epInfo, "releasedate")
-                           ?? GetStringOrNull(epInfo, "air_date");
+                airDate = FirstNonEmpty(GetStringOrNull(epInfo, "releasedate"), GetStringOrNull(epInfo, "air_date"));
                 epRating = ParseDouble(GetStringOrNull(epInfo, "rating"));
 
                 if (epInfo.TryGetProperty("duration_secs", out var ds) &&
@@ -1027,7 +1080,7 @@ public class XtreamCodesService : IXtreamCodesService
             }
 
             // --- FALLBACK ---
-            coverUrl ??= seriesCover;
+            coverUrl = FirstNonEmpty(coverUrl, seriesCover);
 
             if (!int.TryParse(seasonName, out var fallbackSeason))
                 fallbackSeason = 1;
@@ -1036,8 +1089,8 @@ public class XtreamCodesService : IXtreamCodesService
             {
                 Id = epId.Value,
                 EpisodeNum = ParseInt(GetStringOrNull(ep, "episode_num")) ?? 0,
-                Title = GetStringOrNull(ep, "title"),
-                ContainerExtension = GetStringOrNull(ep, "container_extension") ?? "mp4",
+                Title = FirstNonEmpty(GetStringOrNull(ep, "title"), GetStringOrNull(ep, "name")),
+                ContainerExtension = FirstNonEmpty(GetStringOrNull(ep, "container_extension"), "mp4")!,
                 Season = ParseInt(GetStringOrNull(ep, "season")) ?? fallbackSeason,
                 Plot = plot,
                 CoverUrl = coverUrl,

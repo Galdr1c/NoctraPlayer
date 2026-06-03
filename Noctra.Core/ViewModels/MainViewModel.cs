@@ -2765,7 +2765,7 @@ public partial class MainViewModel : ObservableObject
             NotifyContentStateChanged();
 
             // M3U lists often lack poster metadata, so only they use TMDB enrichment here.
-            if (IsM3UProfile())
+            if (ShouldUseTmdbVisualEnrichment())
             {
                 var enrichPage = page
                     .Where(s => s.Id > 0 &&
@@ -2805,15 +2805,15 @@ public partial class MainViewModel : ObservableObject
         return Task.CompletedTask;
     }
 
-    private bool ShouldUseLazyChannelVisualEnrichment()
-        => IsM3UProfile();
+    private bool ShouldUseTmdbVisualEnrichment()
+        => CurrentProfile?.ProviderAccount?.Type == ProfileType.M3U;
 
     private static string GetSeriesVisualEnrichmentKey(int seriesId)
         => $"series:{seriesId}";
 
     private void QueueVisibleChannelVisualEnrichment(IReadOnlyCollection<Channel> page)
     {
-        if (!ShouldUseLazyChannelVisualEnrichment())
+        if (!ShouldUseTmdbVisualEnrichment())
         {
             return;
         }
@@ -2835,12 +2835,20 @@ public partial class MainViewModel : ObservableObject
 
         _ = Task.Run(async () =>
         {
+            var token = _profileLoadCts?.Token ?? CancellationToken.None;
             foreach (var channel in candidates)
             {
+                var acquired = false;
                 try
                 {
-                    await _channelVisualEnrichmentSemaphore.WaitAsync();
-                    await EnrichChannelVisualAsync(channel);
+                    token.ThrowIfCancellationRequested();
+                    await _channelVisualEnrichmentSemaphore.WaitAsync(token);
+                    acquired = true;
+                    await EnrichChannelVisualAsync(channel, token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
                 }
                 catch (Exception ex)
                 {
@@ -2848,7 +2856,10 @@ public partial class MainViewModel : ObservableObject
                 }
                 finally
                 {
-                    _channelVisualEnrichmentSemaphore.Release();
+                    if (acquired)
+                    {
+                        _channelVisualEnrichmentSemaphore.Release();
+                    }
                 }
             }
         });
@@ -2856,7 +2867,7 @@ public partial class MainViewModel : ObservableObject
 
     private void QueueVisibleSeriesVisualEnrichment(IReadOnlyCollection<Series> page)
     {
-        if (!IsM3UProfile())
+        if (!ShouldUseTmdbVisualEnrichment())
         {
             return;
         }
@@ -2879,12 +2890,20 @@ public partial class MainViewModel : ObservableObject
 
         _ = Task.Run(async () =>
         {
+            var token = _profileLoadCts?.Token ?? CancellationToken.None;
             foreach (var series in candidates)
             {
+                var acquired = false;
                 try
                 {
-                    await _seriesVisualEnrichmentSemaphore.WaitAsync();
-                    await EnrichSeriesVisualAsync(series);
+                    token.ThrowIfCancellationRequested();
+                    await _seriesVisualEnrichmentSemaphore.WaitAsync(token);
+                    acquired = true;
+                    await EnrichSeriesVisualAsync(series, token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
                 }
                 catch (Exception ex)
                 {
@@ -2892,13 +2911,16 @@ public partial class MainViewModel : ObservableObject
                 }
                 finally
                 {
-                    _seriesVisualEnrichmentSemaphore.Release();
+                    if (acquired)
+                    {
+                        _seriesVisualEnrichmentSemaphore.Release();
+                    }
                 }
             }
         });
     }
 
-    private async Task EnrichChannelVisualAsync(Channel channel)
+    private async Task EnrichChannelVisualAsync(Channel channel, CancellationToken cancellationToken)
     {
         var key = $"vod:{channel.Id}";
         if (!_pendingVisualEnrichmentKeys.TryAdd(key, 1))
@@ -2912,6 +2934,7 @@ public partial class MainViewModel : ObservableObject
             {
                 return;
             }
+            cancellationToken.ThrowIfCancellationRequested();
 
             var languageCode = SeriesInfoParser.ExtractLanguageCode(channel.GroupTitle ?? channel.Name);
             var metadata = await _metadataService.FetchMetadataAsync(channel.Name, ChannelType.VOD, languageCode);
@@ -2925,7 +2948,7 @@ public partial class MainViewModel : ObservableObject
             }
 
             using var db = await _contextFactory.CreateDbContextAsync();
-            var dbChannel = await db.Channels.FirstOrDefaultAsync(c => c.Id == channel.Id);
+            var dbChannel = await db.Channels.FirstOrDefaultAsync(c => c.Id == channel.Id, cancellationToken);
             if (dbChannel == null)
             {
                 return;
@@ -2990,7 +3013,7 @@ public partial class MainViewModel : ObservableObject
 
             if (changed)
             {
-                await db.SaveChangesAsync();
+                await db.SaveChangesAsync(cancellationToken);
 
                 await _dispatcherService.InvokeAsync(() =>
                 {
@@ -3014,7 +3037,7 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private async Task EnrichSeriesVisualAsync(Series series)
+    private async Task EnrichSeriesVisualAsync(Series series, CancellationToken cancellationToken)
     {
         var key = GetSeriesVisualEnrichmentKey(series.Id);
         if (!_pendingVisualEnrichmentKeys.TryAdd(key, 1))
@@ -3028,6 +3051,7 @@ public partial class MainViewModel : ObservableObject
             {
                 return;
             }
+            cancellationToken.ThrowIfCancellationRequested();
 
             var languageCode = SeriesInfoParser.ExtractLanguageCode(series.GroupTitle ?? series.Genre ?? series.Name);
             var metadata = await _metadataService.SearchSeriesAsync(series.Name, languageCode);
@@ -3042,7 +3066,7 @@ public partial class MainViewModel : ObservableObject
             }
 
             using var db = await _contextFactory.CreateDbContextAsync();
-            var dbSeries = await db.Series.FirstOrDefaultAsync(s => s.Id == series.Id);
+            var dbSeries = await db.Series.FirstOrDefaultAsync(s => s.Id == series.Id, cancellationToken);
             if (dbSeries == null)
             {
                 return;
@@ -3077,7 +3101,7 @@ public partial class MainViewModel : ObservableObject
 
             if (changed)
             {
-                await db.SaveChangesAsync();
+                await db.SaveChangesAsync(cancellationToken);
 
                 await _dispatcherService.InvokeAsync(() =>
                 {
