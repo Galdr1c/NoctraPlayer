@@ -106,6 +106,8 @@
     "Series.Empty.Description": "No hay series disponibles en este perfil.",
     "Series.Episodes.Loading": "Cargando episodios...",
     "Series.Episodes.LoadingDetail": "El contenido se está cargando en segundo plano. Los episodios aparecerán automáticamente cuando estén listos.",
+    "Series.Episodes.Empty": "No se encontraron episodios",
+    "Series.Episodes.EmptyDetail": "Este proveedor no devolvió datos de temporadas ni episodios para esta serie.",
     "Series.Play": "Reproducir",
     "Series.WatchTrailer": "Ver tráiler",
     "Series.Seasons.Format": "Temporada {0}",

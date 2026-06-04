@@ -106,6 +106,8 @@
     "Series.Empty.Description": "There are no series items to show in this profile.",
     "Series.Episodes.Loading": "Loading episodes...",
     "Series.Episodes.LoadingDetail": "Content is loading in the background. Episodes will appear automatically when ready.",
+    "Series.Episodes.Empty": "No episodes found",
+    "Series.Episodes.EmptyDetail": "This provider did not return season or episode data for this series.",
     "Series.Play": "Play",
     "Series.WatchTrailer": "Watch Trailer",
     "Series.Seasons.Format": "Season {0}",

@@ -7,6 +7,25 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### UI Combobox, Yasal Onay, Tanılama ve Series Detail Düzeltmeleri (2026-06-04)
+
+- [Yeni] **İlk Açılış Yasal ve Gizlilik Onayı**: Uygulama girişine yasal/gizlilik kabul akışı eklendi. Kullanıcı devam etmeden önce Kullanım Şartları, Gizlilik Politikası, Noctra'nın kanal/film/dizi/playlist/EPG/yayın bağlantısı/IPTV aboneliği sağlamadığı ve yalnızca yasal erişim hakkı olan kaynakların eklenmesi gerektiği onaylarını işaretler.
+- [Yeni] **Onay Versiyonu ve Zamanı Saklanıyor**: Kabul durumu global settings içinde `LegalConsentAccepted`, `LegalConsentVersion` ve `LegalConsentAcceptedAtUtc` alanlarıyla tutulur. `AppSettings.CurrentLegalConsentVersion` değişirse kullanıcıdan yeniden onay istenir.
+- [Yeni] **Yasal Belgeler Dialog İçinden Açılıyor**: Legal consent penceresi Kullanım Şartları ve Gizlilik Politikası belgelerini ayrı modal belge penceresinde gösterir. Zorunlu checkbox'lar tamamlanmadan devam düğmesi aktif olmaz.
+- [Değişti] **Analytics Yerine Tanılama ve Çökme Raporları**: Global Settings içindeki eski kullanım istatistikleri/analytics dili kaldırıldı. Ayar artık gerçek ürün analytics'i gibi davranmaz; yalnızca kullanıcı rapor göndermeyi seçtiğinde isteğe bağlı tanılama/çökme bilgisi ekleme iznini temsil eder.
+- [Değişti] **`analytics` Ayarı Temizlendi**: `settings.json` tarafındaki yanıltıcı `analytics: true` alanı yerine `diagnosticDataConsent` modeli kullanılır. Varsayılan kapalıdır ve kullanıcı onayıyla açılır.
+- [Yeni] **Tanılama/Crash Rapor Servisi**: Uygulama global exception yollarında crash report servisinden faydalanır. Rapor akışı kullanıcı onayına ve açık kullanıcı eylemine bağlıdır; arka planda gerçek ürün analytics gönderimi yapılmaz.
+- [Değişti] **Global Modern ComboBox Standardı**: ComboBox seçili içerik alanı, padding, ok hizası ve text trimming davranışı ortak `ModernComboBox` stilinde toplandı. Settings, Global Settings ve ana içerik filtrelerindeki Combobox'lar tek tek özel layout taşımadan daha tutarlı render eder.
+- [Düzeltildi] **Refresh Frequency ve EPG Timezone Combobox Taşmaları**: Settings ekranındaki iki refresh frequency ComboBox ve EPG timezone ComboBox seçili metni artık sol kenardan kırpmaz; item template içindeki sabit genişlikli içerikler kaldırıldı.
+- [Düzeltildi] **Content Filter Combobox Genişlikleri**: Series/channel filtre ComboBox'ları uzun grup ve sıralama metinlerini daha rahat taşıyacak şekilde genişletildi. “Recently added...” gibi uzun sort seçenekleri artık clipping yaratmaz.
+- [Düzeltildi] **ComboBox Seçimi SlideTransition Tetiklemiyor**: SettingsWindow içindeki ComboBox seçimleri artık `Noctra.Avalonia\Behaviors` tab/slide animasyonunu yanlışlıkla tetiklemez; animasyon yalnızca gerçek bölüm/tab state değişimlerine bağlı kalır.
+- [Düzeltildi] **Series Detail Eski Episode State'i Taşımıyor**: Provider episode döndürmeyen bir seri açıldığında önceki seriden kalan `Continue from S1 E1` veya Play action'ı görünmez. `SelectedSeriesContinueEpisode`, `SelectedSeriesContinueText` ve `SelectedSeason` metadata yükleme başında temizlenir.
+- [Düzeltildi] **Boş Provider Sonucunda Sonsuz Loading Yok**: Series detayında episode spinner'ı artık global `IsChannelLoading` durumuna bağlı değildir. Yalnızca seçili seri metadata/lazy-load işlemi sürerken görünür; provider sezon/bölüm döndürmezse kullanıcıya “Bölüm bulunamadı” mesajı gösterilir.
+- [Düzeltildi] **PlayEpisode Null Parametreye Güvenli**: Play komutu nullable episode parametresini kabul eder ve episode yoksa sessizce döner. UI tarafında Play/Continue butonları `HasSelectedSeriesPlayableEpisode` ile yalnızca gerçek episode varken görünür.
+- [Lokalizasyon] **Legal Consent, Diagnostics ve No Episodes Metinleri**: TR/EN/DE/ES/FR çeviri dosyalarına yasal onay, tanılama/çökme raporu ve provider episode dönmedi boş durum metinleri eklendi/güncellendi.
+- [Test] **Regression Testleri Eklendi**: `ModernComboBoxStyleTests`, `ContentFilterLayoutTests`, `TabSlideTransitionBehaviorTests`, `LegalConsentWindowTests`, `LegalConsentStartupTests`, `DiagnosticConsentSettingsTests` ve `SeriesDetailStateTests` ilgili UI/state sözleşmelerini koruyacak şekilde eklendi veya güncellendi.
+- [Doğrulama] `dotnet test Noctra.Tests\Noctra.Tests.csproj --filter SeriesDetailStateTests /p:BaseOutputPath=.tmpbuild\` sonucu `5/5` test geçti. `dotnet build NoctraPlayer.sln /p:BaseOutputPath=.tmpbuild\` başarılı; yalnızca Tester projesindeki mevcut nullable uyarıları kaldı.
+
 ### Resume Dialog Süre Metni Boş Kalma Düzeltmesi (2026-06-04)
 
 - [Düzeltildi] **Where You Left Off Süresi Boş Kalmıyor**: `Where you left off:` satırında bazen sürenin boş görünmesine yol açan resume dialog state ayrışması düzeltildi.

@@ -136,6 +136,8 @@ public partial class MainViewModel : ObservableObject
     private Series? _selectedSeries;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowSelectedSeriesEpisodesLoading))]
+    [NotifyPropertyChangedFor(nameof(ShowSelectedSeriesNoEpisodes))]
     private bool _isSeriesDetailVisible;
 
     public Episode? CurrentEpisodePlaybackContext { get; private set; }
@@ -164,6 +166,8 @@ public partial class MainViewModel : ObservableObject
     private string _selectedSeriesYears = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowSelectedSeriesEpisodesLoading))]
+    [NotifyPropertyChangedFor(nameof(ShowSelectedSeriesNoEpisodes))]
     private int _selectedSeriesTotalEpisodesCount;
 
     [ObservableProperty]
@@ -182,12 +186,19 @@ public partial class MainViewModel : ObservableObject
     private string? _selectedSeriesContinueText;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedSeriesPlayableEpisode))]
     private Episode? _selectedSeriesContinueEpisode;
 
     [ObservableProperty]
     private Season? _selectedSeason;
 
+    public bool HasSelectedSeriesPlayableEpisode => SelectedSeriesContinueEpisode != null;
+    public bool ShowSelectedSeriesEpisodesLoading => IsSeriesDetailVisible && IsSelectedSeriesMetadataLoading && SelectedSeriesTotalEpisodesCount == 0;
+    public bool ShowSelectedSeriesNoEpisodes => IsSeriesDetailVisible && !IsSelectedSeriesMetadataLoading && SelectedSeriesTotalEpisodesCount == 0;
+
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowSelectedSeriesEpisodesLoading))]
+    [NotifyPropertyChangedFor(nameof(ShowSelectedSeriesNoEpisodes))]
     private bool _isSelectedSeriesMetadataLoading;
 
     [ObservableProperty]
@@ -7556,8 +7567,13 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void PlayEpisode(Episode episode)
+    private void PlayEpisode(Episode? episode)
     {
+        if (episode == null)
+        {
+            return;
+        }
+
         _ = PlayEpisodeSafeAsync(episode);
     }
 
@@ -7977,6 +7993,11 @@ public partial class MainViewModel : ObservableObject
         {
             IsSelectedSeriesMetadataLoading = true;
             NormalizeSeriesDetailForDisplay(series);
+            var previousSelectedSeasonNumber = SelectedSeason?.SeasonNumber;
+
+            SelectedSeriesContinueEpisode = null;
+            SelectedSeriesContinueText = string.Empty;
+            SelectedSeason = null;
 
             SelectedSeriesPosterUrl = series.CoverUrl;
             SelectedSeriesBackdropUrl = series.BackdropUrl;
@@ -8053,10 +8074,10 @@ public partial class MainViewModel : ObservableObject
             // Set first season by default
             if (series.Seasons.Count > 0)
             {
-                SelectedSeason = SelectedSeason == null
-                    ? series.Seasons.FirstOrDefault()
-                    : series.Seasons.FirstOrDefault(s => s.SeasonNumber == SelectedSeason.SeasonNumber)
-                      ?? series.Seasons.FirstOrDefault();
+                SelectedSeason = previousSelectedSeasonNumber.HasValue
+                    ? series.Seasons.FirstOrDefault(s => s.SeasonNumber == previousSelectedSeasonNumber.Value)
+                      ?? series.Seasons.FirstOrDefault()
+                    : series.Seasons.FirstOrDefault();
             }
         }
         catch (Exception ex)

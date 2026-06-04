@@ -106,6 +106,8 @@
     "Series.Empty.Description": "Bu profilde gösterilecek dizi içeriği yok.",
     "Series.Episodes.Loading": "Bölümler yükleniyor...",
     "Series.Episodes.LoadingDetail": "İçerikler arka planda yükleniyor. Bölümler hazır olduğunda otomatik görünecektir.",
+    "Series.Episodes.Empty": "Bölüm bulunamadı",
+    "Series.Episodes.EmptyDetail": "Bu sağlayıcı bu dizi için sezon veya bölüm bilgisi göndermedi.",
     "Series.Play": "Oynat",
     "Series.WatchTrailer": "Fragmanı İzle",
     "Series.Seasons.Format": "Sezon {0}",

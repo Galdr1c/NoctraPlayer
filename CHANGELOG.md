@@ -11,12 +11,16 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Added
 
+- **Legal and privacy consent gate**: First launch now requires users to accept legal/privacy acknowledgements that Noctra provides no IPTV content, playlists, EPG data, streams, or subscriptions and that users must add lawful sources.
+- **Diagnostics and crash-report consent**: Optional diagnostic/crash-report sharing is now represented as explicit consent instead of generic product analytics.
 - **Microsoft Store review prompt**: Main app sessions can now show a localized "rate Noctra" prompt after meaningful usage, with Rate, Later, and Don't ask again actions.
 - **Search image enrichment**: Search result cards now trigger the same visible-item metadata/image enrichment flow used by category pages.
 - **Viewport-aware paging**: Scroll paging now loads more content when the viewport is not filled yet, and starts loading earlier near the end of the page.
 
 ### Changed
 
+- **Global ComboBox styling**: ComboBox selected content, dropdown arrows, text trimming, and filter widths were standardized across settings and content filter surfaces.
+- **Global settings statistics wording**: The old analytics/statistics setting was replaced with diagnostics and crash-report wording, and the persisted settings model now uses `diagnosticDataConsent`.
 - **Documents-based user data root**: Noctra user data now resolves under `Documents\Noctra` instead of `%LOCALAPPDATA%\Noctra` for settings, database, downloads, logs, and local runtime folders.
 - **Default download folder moved**: The default download folder is now `Documents\Noctra\Downloads`; saved references to the old `%LOCALAPPDATA%\Noctra\Downloads` default are normalized to the new location while custom user-selected folders are preserved.
 - **Settings file separation**: Global settings JSON now persists only global app state such as language/theme/update/hardware/promo/review data, while profile JSON files persist profile-specific playback, EPG, privacy, hidden category, and download preferences.
@@ -54,6 +58,10 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Fixed
 
+- **Series detail empty-provider state**: Series with no provider seasons/episodes no longer keep stale Play/Continue episode actions, and the detail page now shows a no-episodes message instead of an endless loading spinner.
+- **Series detail loading scope**: Episode loading UI is now tied to selected-series metadata loading, not global channel-list background loading.
+- **Settings ComboBox overflow**: Refresh frequency, EPG timezone, and content filter ComboBoxes no longer clip selected text or resize awkwardly when labels are long.
+- **Settings selection animations**: Selecting settings ComboBox values no longer incorrectly triggers unrelated tab/slide transition behavior.
 - **Resume dialog time display**: The "Where you left off" time now restores itself while the resume dialog is visible, preventing blank position text when late playback state resets occur.
 - **Mute state synchronization**: Restored mute persistence so reopening the app keeps UI mute state and actual player audio aligned; service volume events no longer unmute playback implicitly.
 

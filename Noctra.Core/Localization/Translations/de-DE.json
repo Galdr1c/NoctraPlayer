@@ -106,6 +106,8 @@
     "Series.Empty.Description": "In diesem Profil sind keine Serien verfügbar.",
     "Series.Episodes.Loading": "Folgen werden geladen...",
     "Series.Episodes.LoadingDetail": "Inhalte werden im Hintergrund geladen. Folgen erscheinen automatisch, wenn sie bereit sind.",
+    "Series.Episodes.Empty": "Keine Folgen gefunden",
+    "Series.Episodes.EmptyDetail": "Dieser Anbieter hat keine Staffel- oder Folgendaten für diese Serie geliefert.",
     "Series.Play": "Abspielen",
     "Series.WatchTrailer": "Trailer ansehen",
     "Series.Seasons.Format": "Staffel {0}",

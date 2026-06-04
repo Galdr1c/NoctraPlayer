@@ -597,7 +597,8 @@
                             </Border.Styles>
                             <Button Command="{Binding PlayEpisodeCommand}" CommandParameter="{Binding SelectedSeriesContinueEpisode}"
                                     Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource TextPrimaryBrush}"
-                                    Padding="16,8" CornerRadius="8" Focusable="False">
+                                    Padding="16,8" CornerRadius="8" Focusable="False"
+                                    IsVisible="{Binding HasSelectedSeriesPlayableEpisode}">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Play" Width="18" Height="18" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                     <TextBlock Text="{loc:Translate Series.Play}" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
@@ -608,7 +609,7 @@
                         <Button Command="{Binding PlayEpisodeCommand}" CommandParameter="{Binding SelectedSeriesContinueEpisode}"
                                 Background="#1A8B5CF6" Foreground="{DynamicResource AccentBrush}"
                                 Padding="14,8" CornerRadius="8" Focusable="False"
-                                IsVisible="{Binding SelectedSeriesContinueText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+                                IsVisible="{Binding HasSelectedSeriesPlayableEpisode}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <materialIcons:MaterialIcon Kind="History" Width="16" Height="16" Foreground="{DynamicResource AccentBrush}"/>
                                 <TextBlock Text="{Binding SelectedSeriesContinueText}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
@@ -648,15 +649,10 @@
                   </Grid>
                 </Grid>
 
-                <!-- Episodes Loading Spinner (Stalker/Xtream progressive load in progress) -->
+                <!-- Episodes Loading Spinner -->
                 <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Top"
-                            Margin="0,80,0,0" Spacing="20">
-                    <StackPanel.IsVisible>
-                        <MultiBinding Converter="{x:Static BoolConverters.And}">
-                            <Binding Path="IsChannelLoading"/>
-                            <Binding Path="SelectedSeriesTotalEpisodesCount" Converter="{StaticResource CountToVisibilityConverter}" ConverterParameter="invert"/>
-                        </MultiBinding>
-                    </StackPanel.IsVisible>
+                            Margin="0,80,0,0" Spacing="20"
+                            IsVisible="{Binding ShowSelectedSeriesEpisodesLoading}">
                     <controls:PremiumSpinner Width="56" Height="56"
                                              HorizontalAlignment="Center"/>
                     <TextBlock Text="{loc:Translate Series.Episodes.Loading}"
@@ -666,6 +662,21 @@
                     <TextBlock Text="{loc:Translate Series.Episodes.LoadingDetail}"
                                FontSize="12" Opacity="0.6"
                                Foreground="{DynamicResource TextMutedBrush}"
+                               TextAlignment="Center"/>
+                </StackPanel>
+
+                <!-- No Episodes -->
+                <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Top"
+                            Margin="0,92,0,0" Spacing="8"
+                            IsVisible="{Binding ShowSelectedSeriesNoEpisodes}">
+                    <TextBlock Text="{loc:Translate Series.Episodes.Empty}"
+                               FontSize="16" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               TextAlignment="Center"/>
+                    <TextBlock Text="{loc:Translate Series.Episodes.EmptyDetail}"
+                               FontSize="12" Opacity="0.65" MaxWidth="520"
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               TextWrapping="Wrap"
                                TextAlignment="Center"/>
                 </StackPanel>
 
