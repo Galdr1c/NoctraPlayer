@@ -1281,6 +1281,42 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [ObservableProperty] private string _resumePositionText = string.Empty;
     [ObservableProperty] private bool _isPremiumResume;
 
+    partial void OnIsResumeDialogVisibleChanged(bool value)
+    {
+        if (value)
+        {
+            EnsureResumePositionText();
+        }
+    }
+
+    partial void OnResumePositionTextChanged(string value)
+    {
+        if (IsResumeDialogVisible && string.IsNullOrWhiteSpace(value))
+        {
+            EnsureResumePositionText();
+        }
+    }
+
+    private void EnsureResumePositionText()
+    {
+        if (!IsResumeDialogVisible || !string.IsNullOrWhiteSpace(ResumePositionText))
+        {
+            return;
+        }
+
+        ResumePositionText = FormatResumePosition(_oldResumePosition);
+    }
+
+    private static string FormatResumePosition(double positionSeconds)
+    {
+        if (double.IsNaN(positionSeconds) || double.IsInfinity(positionSeconds) || positionSeconds <= 0)
+        {
+            return "00:00:00";
+        }
+
+        return TimeSpan.FromSeconds(positionSeconds).ToString(@"hh\:mm\:ss");
+    }
+
     public Task<bool> ShowResumeDialogAsync(double positionSeconds)
     {
         // A new dialog replaces any older unanswered dialog. This prevents an old
@@ -1289,9 +1325,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         CancelResumeDialog();
 
         _oldResumePosition = positionSeconds;
-        ResumePositionText = positionSeconds > 0 
-            ? TimeSpan.FromSeconds(positionSeconds).ToString(@"hh\:mm\:ss")
-            : "00:00:00";
+        ResumePositionText = FormatResumePosition(positionSeconds);
         IsPremiumResume = _licenseService.IsFeatureAvailable("resume_playback");
         IsResumeDialogVisible = true;
         _resumeDialogTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);

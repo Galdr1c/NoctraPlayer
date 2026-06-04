@@ -7,6 +7,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Resume Dialog Süre Metni Boş Kalma Düzeltmesi (2026-06-04)
+
+- [Düzeltildi] **Where You Left Off Süresi Boş Kalmıyor**: `Where you left off:` satırında bazen sürenin boş görünmesine yol açan resume dialog state ayrışması düzeltildi.
+- [Kök Neden] **Görünür Dialog İçin Süre Invariant'ı Eksikti**: `ShowResumeDialogAsync` süreyi doğru set ediyordu; ancak geç gelen playback reset/iptal yolları `ResumePositionText` değerini dialog hâlâ görünürken boşaltabiliyordu. UI boş string'i aynen gösterdiği için sadece label kalıyordu.
+- [Düzeltildi] **ResumePositionText Kendini Onarır**: Resume dialog görünürken `ResumePositionText` boşalırsa `_oldResumePosition` üzerinden tekrar `hh:mm:ss` formatına döner. `NaN`, `Infinity` veya geçersiz pozisyonlarda güvenli fallback `00:00:00` kullanılır.
+- [Test] **Resume Dialog Regression Testi Eklendi**: `ShowResumeDialog_WhenVisible_RestoresPositionTextIfCleared` testi, görünür dialog sırasında süre metni boşaltılsa bile tekrar `00:21:17` gibi doğru formata döndüğünü doğrular.
+- [Doğrulama] `dotnet test Noctra.Tests\Noctra.Tests.csproj --filter "ShowResumeDialog|ResumeFromPosition|StartFromBeginning|PrepareForContentLoading_CancelsActiveResumeDialog|SetResumePosition_ReflectsInDialogPositionText"` başarılı. `dotnet test Noctra.Tests\Noctra.Tests.csproj --filter "FullyQualifiedName~PlayerViewModelControlsTests|FullyQualifiedName~PlayerCompletionLogicTests|FullyQualifiedName~CriticalScenarioTests" --no-build` sonucu `174/174` test geçti. `dotnet build NoctraPlayer.sln` başarılı.
+
 ### Video Overlay Ses ve Mute Senkronizasyonu (2026-06-03)
 
 - [Düzeltildi] **Muted UI ve Gerçek Player Sesi Eşitlendi**: Uygulama muted kapatılıp tekrar açıldığında UI muted görünürken gerçek player sesinin açık kalmasına yol açabilen state ayrışması giderildi.

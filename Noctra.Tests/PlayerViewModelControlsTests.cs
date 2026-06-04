@@ -801,6 +801,21 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task ShowResumeDialog_WhenVisible_RestoresPositionTextIfCleared()
+        {
+            var ctx = new PlayerTestContext();
+            var task = ctx.VM.ShowResumeDialogAsync(1277);
+
+            ctx.VM.ResumePositionText = string.Empty;
+
+            Assert.True(ctx.VM.IsResumeDialogVisible);
+            Assert.Equal("00:21:17", ctx.VM.ResumePositionText);
+
+            ctx.VM.CancelResumeDialog();
+            try { await task; } catch { }
+        }
+
+        [Fact]
         public async Task ResumeFromPosition_ResolvesTaskTrue_HidesDialog()
         {
             var ctx = new PlayerTestContext(isPremium: true);

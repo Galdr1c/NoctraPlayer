@@ -54,6 +54,7 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Fixed
 
+- **Resume dialog time display**: The "Where you left off" time now restores itself while the resume dialog is visible, preventing blank position text when late playback state resets occur.
 - **Mute state synchronization**: Restored mute persistence so reopening the app keeps UI mute state and actual player audio aligned; service volume events no longer unmute playback implicitly.
 
 - **Profile settings leakage**: Promo code state and Microsoft Store review prompt state are no longer written into per-profile settings files.
