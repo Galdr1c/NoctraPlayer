@@ -243,7 +243,7 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
             Language = s.Language,
             AutoUpdate = s.AutoUpdate,
             HardwareAcceleration = s.HardwareAcceleration,
-            Analytics = s.Analytics
+            DiagnosticDataConsent = s.DiagnosticDataConsent
         };
     }
 
@@ -413,7 +413,7 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         s.Language = Settings.Language;
         s.AutoUpdate = Settings.AutoUpdate;
         s.HardwareAcceleration = Settings.HardwareAcceleration;
-        s.Analytics = Settings.Analytics;
+        s.DiagnosticDataConsent = Settings.DiagnosticDataConsent;
         
         _ = _settingsService.SaveAsync();
     }
@@ -453,5 +453,5 @@ public partial class GlobalSettings : ObservableObject
     private bool _hardwareAcceleration = true;
 
     [ObservableProperty]
-    private bool _analytics = false;
+    private bool _diagnosticDataConsent = false;
 }

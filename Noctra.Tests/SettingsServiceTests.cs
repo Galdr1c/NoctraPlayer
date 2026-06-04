@@ -84,6 +84,83 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public void CreatePersistableSettings_WhenProfileSettings_ShouldNotWriteLegalConsentState()
+        {
+            var settings = new AppSettings
+            {
+                ProfileId = 167,
+                LegalConsentAccepted = true,
+                LegalConsentVersion = AppSettings.CurrentLegalConsentVersion,
+                LegalConsentAcceptedAtUtc = DateTime.UtcNow,
+                PrivacyNoticeVersion = AppSettings.CurrentPrivacyNoticeVersion,
+                DiagnosticDataConsent = true
+            };
+
+            var json = SettingsService.SerializePersistableSettings(settings, 167);
+
+            Assert.DoesNotContain("legalConsentAccepted", json);
+            Assert.DoesNotContain("legalConsentVersion", json);
+            Assert.DoesNotContain("legalConsentAcceptedAtUtc", json);
+            Assert.DoesNotContain("privacyNoticeVersion", json);
+            Assert.DoesNotContain("diagnosticDataConsent", json);
+        }
+
+        [Fact]
+        public void CreatePersistableSettings_WhenGlobalSettings_ShouldWriteLegalConsentState()
+        {
+            var acceptedAtUtc = DateTime.UtcNow;
+            var settings = new AppSettings
+            {
+                ProfileId = 0,
+                LegalConsentAccepted = true,
+                LegalConsentVersion = AppSettings.CurrentLegalConsentVersion,
+                LegalConsentAcceptedAtUtc = acceptedAtUtc,
+                PrivacyNoticeVersion = AppSettings.CurrentPrivacyNoticeVersion,
+                DiagnosticDataConsent = true
+            };
+
+            var json = SettingsService.SerializePersistableSettings(settings, 0);
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+
+            Assert.True(root.GetProperty("legalConsentAccepted").GetBoolean());
+            Assert.Equal(AppSettings.CurrentLegalConsentVersion, root.GetProperty("legalConsentVersion").GetString());
+            Assert.Equal(AppSettings.CurrentPrivacyNoticeVersion, root.GetProperty("privacyNoticeVersion").GetString());
+            Assert.True(root.GetProperty("diagnosticDataConsent").GetBoolean());
+            Assert.True(root.TryGetProperty("legalConsentAcceptedAtUtc", out _));
+        }
+
+        [Fact]
+        public void CreatePersistableSettings_WhenGlobalSettings_ShouldNotWriteLegacyAnalytics()
+        {
+            var settings = new AppSettings
+            {
+                ProfileId = 0,
+                DiagnosticDataConsent = true
+            };
+
+            var json = SettingsService.SerializePersistableSettings(settings, 0);
+
+            Assert.Contains("diagnosticDataConsent", json);
+            Assert.DoesNotContain("analytics", json);
+        }
+
+        [Fact]
+        public void ApplyLegacySettingsFields_WhenAnalyticsTrue_ShouldMigrateToDiagnosticConsent()
+        {
+            var json = """
+            {
+              "analytics": true
+            }
+            """;
+            var settings = new AppSettings();
+
+            SettingsService.ApplyLegacySettingsFields(json, settings);
+
+            Assert.True(settings.DiagnosticDataConsent);
+        }
+
+        [Fact]
         public void CreatePersistableSettings_WhenGlobalSettings_ShouldWriteEncryptedPromoGrant()
         {
             var settings = new AppSettings

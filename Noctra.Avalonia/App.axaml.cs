@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
@@ -14,6 +15,7 @@ using Noctra.Services;
 using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
 using Noctra.Core.Services;
+using Noctra.Models;
 using System.Globalization;
 using System.Net;
 using System.Net.Http;
@@ -154,6 +156,17 @@ public partial class App : Application
                             return win;
                         });
                         
+                        var canContinue = await Dispatcher.UIThread.InvokeAsync(async () =>
+                            await ShowLegalConsentAsync(settingsService, splashWindow));
+                        if (!canContinue)
+                        {
+                            await Dispatcher.UIThread.InvokeAsync(() =>
+                            {
+                                PerformanceTraceService.Shared?.Event("STARTUP", "Legal consent declined");
+                                desktop.Shutdown();
+                            });
+                            return;
+                        }
 
                         // 4. Update Check (Silent)
                         var packageIdentity = Services.GetRequiredService<IPackageIdentityService>();
@@ -408,7 +421,40 @@ public partial class App : Application
         services.AddTransient<AvatarPickerWindow>();
         services.AddTransient<UpsellWindow>();
         services.AddTransient<ReviewPromptWindow>();
+        services.AddTransient<LegalConsentWindow>();
         services.AddTransient<ProfileLoadingWindow>();
+    }
+
+    private async Task<bool> ShowLegalConsentAsync(ISettingsService settingsService, Window owner)
+    {
+        if (!RequiresLegalConsent(settingsService.Settings))
+        {
+            return true;
+        }
+
+        var settings = settingsService.Settings;
+        var dialog = Services.GetRequiredService<LegalConsentWindow>();
+        var result = await dialog.ShowDialog<LegalConsentResult?>(owner);
+        if (result?.IsAccepted != true)
+        {
+            return false;
+        }
+
+        settings.LegalConsentAccepted = true;
+        settings.LegalConsentVersion = AppSettings.CurrentLegalConsentVersion;
+        settings.PrivacyNoticeVersion = AppSettings.CurrentPrivacyNoticeVersion;
+        settings.LegalConsentAcceptedAtUtc = DateTime.UtcNow;
+        settings.DiagnosticDataConsent = result.DiagnosticDataConsent;
+        await settingsService.SaveAsync();
+
+        return true;
+    }
+
+    private static bool RequiresLegalConsent(AppSettings settings)
+    {
+        return !settings.LegalConsentAccepted ||
+               !string.Equals(settings.LegalConsentVersion, AppSettings.CurrentLegalConsentVersion, StringComparison.Ordinal) ||
+               !string.Equals(settings.PrivacyNoticeVersion, AppSettings.CurrentPrivacyNoticeVersion, StringComparison.Ordinal);
     }
 
     private static string ResolveDatabasePath()

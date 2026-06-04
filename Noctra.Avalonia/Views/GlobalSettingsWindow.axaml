@@ -373,7 +373,7 @@
                                              IsChecked="{Binding Settings.HardwareAcceleration}"/>
                             </Grid>
 
-                            <!-- Analytics -->
+                            <!-- Diagnostics -->
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -381,17 +381,17 @@
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel>
-                                    <TextBlock Text="{loc:Translate GlobalSettings.General.Analytics.Title}"
+                                    <TextBlock Text="{loc:Translate GlobalSettings.General.Diagnostics.Title}"
                                                FontSize="16"
                                                Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                    <TextBlock Text="{loc:Translate GlobalSettings.General.Analytics.Description}"
+                                    <TextBlock Text="{loc:Translate GlobalSettings.General.Diagnostics.Description}"
                                                FontSize="13"
                                                Foreground="{DynamicResource TextMutedBrush}"
                                                Margin="0,4,0,0"/>
                                 </StackPanel>
 
                                 <ToggleSwitch Grid.Column="1"
-                                             IsChecked="{Binding Settings.Analytics}"/>
+                                             IsChecked="{Binding Settings.DiagnosticDataConsent}"/>
                             </Grid>
                         </StackPanel>
                     </Border>

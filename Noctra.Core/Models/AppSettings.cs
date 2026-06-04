@@ -148,7 +148,25 @@ public class AppSettings
     public string Language { get; set; } = "en";
     public bool AutoUpdate { get; set; } = true;
     public bool HardwareAcceleration { get; set; } = true;
-    public bool Analytics { get; set; } = false;
+    // ============ Legal / Privacy Consent ============
+
+    public const string CurrentLegalConsentVersion = "2026-06-04";
+    public const string CurrentPrivacyNoticeVersion = "2026-05-22";
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool LegalConsentAccepted { get; set; } = false;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LegalConsentVersion { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DateTime? LegalConsentAcceptedAtUtc { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PrivacyNoticeVersion { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool DiagnosticDataConsent { get; set; } = false;
 
 
     // ============ Promosyon Kodu / Süreli Premium ============

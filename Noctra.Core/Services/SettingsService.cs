@@ -88,7 +88,7 @@ public class SettingsService : ISettingsService
             {
                 var json = await File.ReadAllTextAsync(path);
                 loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? CreateDefaultSettings(profileId);
-                ApplyLegacyPromoFields(json, loaded);
+                ApplyLegacySettingsFields(json, loaded);
             }
 
             // Centralization Logic: Ensure global settings are synced from profile 0
@@ -117,10 +117,14 @@ public class SettingsService : ISettingsService
         target.Language = source.Language;
         target.AutoUpdate = source.AutoUpdate;
         target.HardwareAcceleration = source.HardwareAcceleration;
-        target.Analytics = source.Analytics;
         target.AutoSelectLastProfile = source.AutoSelectLastProfile;
         target.PromoCodeConfigUrl = source.PromoCodeConfigUrl;
         target.PromoGrant = source.PromoGrant;
+        target.LegalConsentAccepted = source.LegalConsentAccepted;
+        target.LegalConsentVersion = source.LegalConsentVersion;
+        target.LegalConsentAcceptedAtUtc = source.LegalConsentAcceptedAtUtc;
+        target.PrivacyNoticeVersion = source.PrivacyNoticeVersion;
+        target.DiagnosticDataConsent = source.DiagnosticDataConsent;
         target.ReviewPromptLaunchCount = source.ReviewPromptLaunchCount;
         target.ReviewPromptLastShownAtUtc = source.ReviewPromptLastShownAtUtc;
         target.ReviewPromptSnoozedUntilUtc = source.ReviewPromptSnoozedUntilUtc;
@@ -139,7 +143,7 @@ public class SettingsService : ISettingsService
             var loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
             if (loaded != null)
             {
-                ApplyLegacyPromoFields(json, loaded);
+                ApplyLegacySettingsFields(json, loaded);
                 loaded.ProfileId = profileId;
                 // Peek should also reflect current global settings if it's not the active one
                 if (profileId != 0)
@@ -172,7 +176,7 @@ public class SettingsService : ISettingsService
                 loaded = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
                 if (loaded != null)
                 {
-                    ApplyLegacyPromoFields(json, loaded);
+                    ApplyLegacySettingsFields(json, loaded);
                 }
             }
 
@@ -201,21 +205,24 @@ public class SettingsService : ISettingsService
         };
     }
 
-    private static void ApplyLegacyPromoFields(string json, AppSettings settings)
+    internal static void ApplyLegacySettingsFields(string json, AppSettings settings)
     {
-        if (!string.IsNullOrWhiteSpace(settings.PromoGrant))
-        {
-            return;
-        }
-
         try
         {
             using var document = JsonDocument.Parse(json);
             var root = document.RootElement;
 
-            settings.ActivePromoCode = ReadString(root, "activePromoCode", "ActivePromoCode");
-            settings.PromoPremiumExpiresAtUtc = ReadDateTime(root, "promoPremiumExpiresAtUtc", "PromoPremiumExpiresAtUtc");
-            settings.RedeemedPromoCodes = ReadStringArray(root, "redeemedPromoCodes", "RedeemedPromoCodes");
+            if (string.IsNullOrWhiteSpace(settings.PromoGrant))
+            {
+                settings.ActivePromoCode = ReadString(root, "activePromoCode", "ActivePromoCode");
+                settings.PromoPremiumExpiresAtUtc = ReadDateTime(root, "promoPremiumExpiresAtUtc", "PromoPremiumExpiresAtUtc");
+                settings.RedeemedPromoCodes = ReadStringArray(root, "redeemedPromoCodes", "RedeemedPromoCodes");
+            }
+
+            if (!settings.DiagnosticDataConsent && ReadBoolean(root, "diagnosticDataConsent", "DiagnosticDataConsent", "analytics", "Analytics") == true)
+            {
+                settings.DiagnosticDataConsent = true;
+            }
         }
         catch
         {
@@ -223,6 +230,27 @@ public class SettingsService : ISettingsService
             settings.PromoPremiumExpiresAtUtc = null;
             settings.RedeemedPromoCodes.Clear();
         }
+    }
+
+    private static bool? ReadBoolean(JsonElement root, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (root.TryGetProperty(name, out var value))
+            {
+                if (value.ValueKind == JsonValueKind.True)
+                {
+                    return true;
+                }
+
+                if (value.ValueKind == JsonValueKind.False)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return null;
     }
 
     private static string? ReadString(JsonElement root, params string[] names)
@@ -318,6 +346,11 @@ public class SettingsService : ISettingsService
             copy.ActivePromoCode = null;
             copy.PromoPremiumExpiresAtUtc = null;
             copy.RedeemedPromoCodes.Clear();
+            copy.LegalConsentAccepted = false;
+            copy.LegalConsentVersion = null;
+            copy.LegalConsentAcceptedAtUtc = null;
+            copy.PrivacyNoticeVersion = null;
+            copy.DiagnosticDataConsent = false;
             copy.ReviewPromptLaunchCount = 0;
             copy.ReviewPromptLastShownAtUtc = null;
             copy.ReviewPromptSnoozedUntilUtc = null;
@@ -351,6 +384,7 @@ public class SettingsService : ISettingsService
         if (profileId == 0)
         {
             RemoveProperties(node,
+                "analytics",
                 "channelListRefreshFrequencyHours",
                 "epgRefreshFrequencyHours",
                 "epgEnabled",
@@ -367,11 +401,17 @@ public class SettingsService : ISettingsService
         else
         {
             RemoveProperties(node,
+                "analytics",
                 "promoCodeConfigUrl",
                 "promoGrant",
                 "activePromoCode",
                 "promoPremiumExpiresAtUtc",
                 "redeemedPromoCodes",
+                "legalConsentAccepted",
+                "legalConsentVersion",
+                "legalConsentAcceptedAtUtc",
+                "privacyNoticeVersion",
+                "diagnosticDataConsent",
                 "reviewPromptLaunchCount",
                 "reviewPromptLastShownAtUtc",
                 "reviewPromptSnoozedUntilUtc",
