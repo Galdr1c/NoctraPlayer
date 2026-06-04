@@ -62,6 +62,7 @@ public static class TabSlideTransitionBehavior
     private static void OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (sender is not TabControl tabControl) return;
+        if (!ReferenceEquals(e.Source, tabControl)) return;
 
         int newIndex = tabControl.SelectedIndex;
         int oldIndex = tabControl.GetValue(PreviousIndexProperty);

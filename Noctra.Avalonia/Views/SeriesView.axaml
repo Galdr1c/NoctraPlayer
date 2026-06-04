@@ -19,7 +19,7 @@
             <Grid Margin="0,0,0,24" ColumnDefinitions="*,Auto">
               <TextBlock Text="{loc:Translate Series.Title}" FontSize="24" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
               <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" IsVisible="{Binding ShowContentFilters}">
-                <ComboBox Width="260" Height="45" ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}" Theme="{StaticResource ModernComboBox}" IsVisible="{Binding ShowGroupFilter}">
+                <ComboBox Width="320" Height="45" ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}" Theme="{StaticResource ModernComboBox}" IsVisible="{Binding ShowGroupFilter}">
                   <ComboBox.ItemTemplate>
                     <DataTemplate>
                       <Grid ColumnDefinitions="Auto,*">
@@ -34,7 +34,7 @@
                   </ComboBox.ItemTemplate>
                 </ComboBox>
                 <Button Content="{loc:Translate Common.All}" Width="80" Height="45" Click="ClearGroupSelection_Click" Theme="{StaticResource FilterButtonStyle}" IsVisible="{Binding ShowGroupFilter}"/>
-                <ComboBox Width="240" Height="45" ItemsSource="{Binding SortOptions}" SelectedValue="{Binding SelectedSortOrder}" SelectedValueBinding="{Binding Key}" DisplayMemberBinding="{Binding Value}" Theme="{StaticResource ModernComboBox}"/>
+                <ComboBox Width="300" Height="45" ItemsSource="{Binding SortOptions}" SelectedValue="{Binding SelectedSortOrder}" SelectedValueBinding="{Binding Key}" DisplayMemberBinding="{Binding Value}" Theme="{StaticResource ModernComboBox}"/>
               </StackPanel>
             </Grid>
             <ItemsControl ItemsSource="{Binding SeriesViewItems}" Margin="0,0,-16,-16"

@@ -539,43 +539,43 @@
                                               HorizontalAlignment="Left">
                                         <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.Off}" Tag="0"/>
                                         <ComboBoxItem Tag="1" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                            <Grid ColumnDefinitions="*,Auto">
                                                 <TextBlock Text="{loc:Translate Settings.Channels.Frequency.1h}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="3" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                            <Grid ColumnDefinitions="*,Auto">
                                                 <TextBlock Text="{loc:Translate Settings.Channels.Frequency.3h}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="12" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                            <Grid ColumnDefinitions="*,Auto">
                                                 <TextBlock Text="{loc:Translate Settings.Channels.Frequency.12h}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="24" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                            <Grid ColumnDefinitions="*,Auto">
                                                 <TextBlock Text="{loc:Translate Settings.Channels.Frequency.24h}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="48" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                            <Grid ColumnDefinitions="*,Auto">
                                                 <TextBlock Text="{loc:Translate Settings.Channels.Frequency.2d}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="72" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                            <Grid ColumnDefinitions="*,Auto">
                                                 <TextBlock Text="{loc:Translate Settings.Channels.Frequency.3d}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="168" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                            <Grid ColumnDefinitions="*,Auto">
                                                 <TextBlock Text="{loc:Translate Settings.Channels.Frequency.7d}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
@@ -797,43 +797,43 @@
                                               Margin="0,0,0,20">
                                         <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.Off}" Tag="0"/>
                                         <ComboBoxItem Tag="1" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                            <Grid ColumnDefinitions="*,Auto">
                                                 <TextBlock Text="{loc:Translate Settings.Channels.Frequency.1h}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="3" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                            <Grid ColumnDefinitions="*,Auto">
                                                 <TextBlock Text="{loc:Translate Settings.Channels.Frequency.3h}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="12" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                            <Grid ColumnDefinitions="*,Auto">
                                                 <TextBlock Text="{loc:Translate Settings.Channels.Frequency.12h}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="24" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                            <Grid ColumnDefinitions="*,Auto">
                                                 <TextBlock Text="{loc:Translate Settings.Channels.Frequency.24h}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="48" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                            <Grid ColumnDefinitions="*,Auto">
                                                 <TextBlock Text="{loc:Translate Settings.Channels.Frequency.2d}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="72" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                            <Grid ColumnDefinitions="*,Auto">
                                                 <TextBlock Text="{loc:Translate Settings.Channels.Frequency.3d}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </ComboBoxItem>
                                         <ComboBoxItem Tag="168" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto" Width="175">
+                                            <Grid ColumnDefinitions="*,Auto">
                                                 <TextBlock Text="{loc:Translate Settings.Channels.Frequency.7d}" VerticalAlignment="Center"/>
                                                 <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
                                             </Grid>

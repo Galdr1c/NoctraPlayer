@@ -712,8 +712,9 @@
         <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
         <Setter Property="BorderThickness" Value="1.5"/>
-        <Setter Property="Padding" Value="16,12"/>
-        <Setter Property="FontSize" Value="15"/>
+        <Setter Property="Padding" Value="14,0"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="MinHeight" Value="44"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="MaxDropDownHeight" Value="600"/>
         <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}"/>
@@ -723,22 +724,24 @@
                         Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        Padding="{TemplateBinding Padding}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="32"/>
+                            <ColumnDefinition Width="30"/>
                         </Grid.ColumnDefinitions>
                         <ContentPresenter x:Name="ContentPresenter"
+                                          Grid.Column="0"
                                           Content="{TemplateBinding SelectionBoxItem}"
-                                          Margin="{TemplateBinding Padding}"
+                                          ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                           HorizontalAlignment="Left"
                                           VerticalAlignment="Center"/>
                         <materialIcons:MaterialIcon Grid.Column="1"
                                                     Kind="ChevronDown"
-                                                    Width="18" Height="18"
+                                                    Width="16" Height="16"
                                                     Foreground="{DynamicResource TextPrimaryBrush}"
-                                                    HorizontalAlignment="Center"
+                                                    HorizontalAlignment="Right"
                                                     VerticalAlignment="Center"/>
                         <Popup x:Name="PART_Popup"
                                IsLightDismissEnabled="True"
