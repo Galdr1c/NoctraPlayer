@@ -55,14 +55,14 @@ public partial class LegalConsentWindow : Window
     {
         await ShowLegalDocumentAsync(
             LocalizationSource.Instance["GlobalSettings.Terms.Title"],
-            LocalizationSource.Instance["GlobalSettings.Terms.Message"]);
+            LocalizationSource.Instance["GlobalSettings.Terms.Message.Current"]);
     }
 
     private async void Privacy_Click(object? sender, RoutedEventArgs e)
     {
         await ShowLegalDocumentAsync(
             LocalizationSource.Instance["GlobalSettings.Privacy.Title"],
-            LocalizationSource.Instance["GlobalSettings.Privacy.Message"]);
+            LocalizationSource.Instance["GlobalSettings.Privacy.Message.Current"]);
     }
 
     private async Task ShowLegalDocumentAsync(string title, string message)

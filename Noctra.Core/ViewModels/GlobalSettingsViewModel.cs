@@ -203,7 +203,7 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     {
         await _dialogService.ShowLegalDocumentAsync(
             _localizationService.GetString("GlobalSettings.Privacy.Title"),
-            _localizationService.GetString("GlobalSettings.Privacy.Message"));
+            _localizationService.GetString("GlobalSettings.Privacy.Message.Current"));
     }
 
     [RelayCommand]
@@ -211,7 +211,7 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     {
         await _dialogService.ShowLegalDocumentAsync(
             _localizationService.GetString("GlobalSettings.Terms.Title"),
-            _localizationService.GetString("GlobalSettings.Terms.Message"));
+            _localizationService.GetString("GlobalSettings.Terms.Message.Current"));
     }
 
     private async Task UpdateCacheSizeAsync()
