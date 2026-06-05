@@ -169,11 +169,6 @@ public class LicenseService : ObservableObject, ILicenseService
         RaiseSubscriptionChanged();
     }
 
-    public string GetPriceText()
-    {
-        return "499.95 TL (Tek Sefer)";
-    }
-
     // ==========================================
     // PROMO CODE SYSTEM
     // ==========================================

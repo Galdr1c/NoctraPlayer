@@ -11,6 +11,8 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Added
 
+- **Premium category hiding gate**: Category eye actions remain visible, but Free users now see the Premium upgrade window instead of hiding Live, Movies, or Series groups.
+- **Compact Premium comparison**: The Premium upgrade window now presents an updated Free/Premium feature comparison in a smaller theme-aware layout.
 - **Legal and privacy consent gate**: First launch now requires users to accept legal/privacy acknowledgements that Noctra provides no IPTV content, playlists, EPG data, streams, or subscriptions and that users must add lawful sources.
 - **Diagnostics and crash-report consent**: Optional diagnostic/crash-report sharing is now represented as explicit consent instead of generic product analytics.
 - **Microsoft Store review prompt**: Main app sessions can now show a localized "rate Noctra" prompt after meaningful usage, with Rate, Later, and Don't ask again actions.
@@ -19,6 +21,9 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Changed
 
+- **Premium feature list refreshed**: The upgrade window now highlights 12 profiles with PIN protection, 10 custom EPG sources with automatic refresh, resume playback, sleep timer, category hiding, advanced video buffering, and ad-free/watermark-free use.
+- **Premium upgrade actions simplified**: The purchase button now contains only the localized Buy Premium label, with an explicit Continue with Free action directly below it.
+- **Upsell theme integration**: Premium upgrade cards, borders, glow elements, typography, and actions now use shared light/dark theme resources.
 - **Global ComboBox styling**: ComboBox selected content, dropdown arrows, text trimming, and filter widths were standardized across settings and content filter surfaces.
 - **Global settings statistics wording**: The old analytics/statistics setting was replaced with diagnostics and crash-report wording, and the persisted settings model now uses `diagnosticDataConsent`.
 - **Documents-based user data root**: Noctra user data now resolves under `Documents\Noctra` instead of `%LOCALAPPDATA%\Noctra` for settings, database, downloads, logs, and local runtime folders.
@@ -52,6 +57,7 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Removed
 
+- **Hard-coded Premium pricing**: Price text, localized price keys, stale source comments, and the unused license-service price API were removed from active application code.
 - **Main status bar connection health**: The bottom status bar connection health badge and its M3U playlist URL health-check backend were removed from the main app surface.
 - **Header search popup**: The old header result popup and its async overlay search state were removed; header search now commits directly to the Search page.
 - **Duplicate provider restriction**: The check that prevented adding the same M3U/Xtream/Stalker provider in multiple profiles was removed. Users can now use the same provider account across different profiles.
@@ -98,7 +104,7 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 ### Verification
 
 - `dotnet build NoctraPlayer.sln` passes.
-- `dotnet test Noctra.Tests\Noctra.Tests.csproj --no-build` passes: 906 tests.
+- `dotnet test Noctra.Tests\Noctra.Tests.csproj --no-restore` passes: 944 tests.
 
 ## [1.0.0] - 2026-06-01
 

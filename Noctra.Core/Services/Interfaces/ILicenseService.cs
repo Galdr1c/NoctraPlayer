@@ -17,7 +17,6 @@ public interface ILicenseService
         Task.FromResult(PromoCodeRedemptionResult.Fail("Promosyon kodu bu lisans servisinde desteklenmiyor."));
     void ActivatePremium();
     void DeactivatePremium();
-    string GetPriceText();
     
     // New tier system
     SubscriptionTier CurrentTier { get; }
@@ -31,4 +30,3 @@ public interface ILicenseService
     
     event Action? SubscriptionChanged;
 }
-

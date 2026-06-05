@@ -7,7 +7,7 @@
         xmlns:loc="using:Noctra.Avalonia.Localization"
         mc:Ignorable="d"
         x:CompileBindings="False"
-        Title="{Binding [Upsell.Title], Source={x:Static loc:LocalizationSource.Instance}}" Height="650" Width="900"
+        Title="{Binding [Upsell.Title], Source={x:Static loc:LocalizationSource.Instance}}" Height="520" Width="760"
         WindowStartupLocation="CenterScreen"
         ShowInTaskbar="False"
         SystemDecorations="None"
@@ -21,7 +21,7 @@
         <Style Selector="Button.BuyBtn">
             <Setter Property="Background" Value="{DynamicResource PrimaryGradientBrush}"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="CornerRadius" Value="28"/>
+            <Setter Property="CornerRadius" Value="22"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="BorderThickness" Value="0"/>
         </Style>
@@ -31,14 +31,14 @@
 
         <!-- Close Button Style (Matching ProfilesWindow) -->
         <Style Selector="Button.CloseButtonStyle">
-            <Setter Property="Width" Value="40"/>
-            <Setter Property="Height" Value="40"/>
+            <Setter Property="Width" Value="36"/>
+            <Setter Property="Height" Value="36"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <ControlTemplate>
-                    <Border x:Name="CloseBg" Background="{TemplateBinding Background}" CornerRadius="20">
-                        <materialIcons:MaterialIcon x:Name="CloseIcon" Kind="Close" Width="20" Height="20"
+                    <Border x:Name="CloseBg" Background="{TemplateBinding Background}" CornerRadius="18">
+                        <materialIcons:MaterialIcon x:Name="CloseIcon" Kind="Close" Width="18" Height="18"
                                                     Foreground="{DynamicResource TextMutedBrush}"
                                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
@@ -58,7 +58,8 @@
             <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="12,6"/>
         </Style>
         <Style Selector="Button.DismissBtn:pointerover">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
@@ -68,142 +69,150 @@
     <Border CornerRadius="{DynamicResource RadiusLarge}"
             ClipToBounds="True"
             Background="{DynamicResource BackgroundGradientBrush}"
-            BorderBrush="{DynamicResource AccentBrush}"
+            BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1">
         <Grid>
-            <!-- Decorative Elements -->
-            <Ellipse Width="400" Height="400" Fill="{DynamicResource AccentBrush}" Opacity="0.08"
-                     VerticalAlignment="Top" HorizontalAlignment="Right" Margin="-100"/>
-            <Ellipse Width="300" Height="300" Fill="{DynamicResource GlowBrush}" Opacity="0.04"
-                     VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="-50"/>
+            <Ellipse Width="300" Height="300" Fill="{DynamicResource AccentBrush}" Opacity="0.07"
+                     VerticalAlignment="Top" HorizontalAlignment="Right" Margin="-80"/>
+            <Ellipse Width="240" Height="240" Fill="{DynamicResource GlowBrush}" Opacity="0.04"
+                     VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="-55"/>
 
-            <Grid Margin="40">
+            <Grid Margin="28,22,28,20">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- HEADER -->
-                <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,30">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8" Margin="0,0,0,8">
-                        <materialIcons:MaterialIcon Kind="Crown" Width="20" Height="20" Foreground="{DynamicResource AccentLightBrush}"/>
-                        <TextBlock Text="{Binding [Upsell.Badge], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource AccentLightBrush}"/>
+                <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,14">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6" Margin="0,0,0,4">
+                        <materialIcons:MaterialIcon Kind="Crown" Width="17" Height="17" Foreground="{DynamicResource AccentLightBrush}"/>
+                        <TextBlock Text="{Binding [Upsell.Badge], Source={x:Static loc:LocalizationSource.Instance}}"
+                                   FontSize="13" FontWeight="Bold" Foreground="{DynamicResource AccentLightBrush}"/>
                     </StackPanel>
 
-                    <TextBlock Text="{Binding [Upsell.Headline], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="36" FontWeight="Bold"
+                    <TextBlock Text="{Binding [Upsell.Headline], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="28" FontWeight="Bold"
                                Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
                     <TextBlock Text="{Binding [Upsell.Subheadline], Source={x:Static loc:LocalizationSource.Instance}}"
-                               FontSize="16" Foreground="{DynamicResource TextMutedBrush}"
-                               HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                               FontSize="13" Foreground="{DynamicResource TextMutedBrush}"
+                               HorizontalAlignment="Center" Margin="0,4,0,0"/>
                 </StackPanel>
 
-                <!-- COMPARISON -->
-                <Grid Grid.Row="1" Margin="0,0,0,30">
+                <Grid Grid.Row="1" Margin="0,0,0,14">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="40"/>
+                        <ColumnDefinition Width="20"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- FREE CARD -->
-                    <Border Grid.Column="0" Background="{DynamicResource Surface0Brush}" CornerRadius="12" Padding="24">
+                    <Border Grid.Column="0"
+                            Background="{DynamicResource Surface0Brush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="10"
+                            Padding="18">
                         <StackPanel>
-                            <TextBlock Text="{Binding [Upsell.Free.Title], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="{Binding [Upsell.Free.Subtitle], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20"/>
+                            <TextBlock Text="{Binding [Upsell.Free.Title], Source={x:Static loc:LocalizationSource.Instance}}"
+                                       FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Text="{Binding [Upsell.Free.Subtitle], Source={x:Static loc:LocalizationSource.Instance}}"
+                                       FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,1,0,12"/>
 
-                            <StackPanel Margin="0,0,0,8" Spacing="8">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                    <TextBlock Text="{Binding [Upsell.Free.Feature1], Source={x:Static loc:LocalizationSource.Instance}}" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <StackPanel Spacing="7">
+                                <StackPanel Orientation="Horizontal" Spacing="7">
+                                    <materialIcons:MaterialIcon Kind="Check" Width="15" Height="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="{Binding [Upsell.Free.Feature1], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 </StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                    <TextBlock Text="{Binding [Upsell.Free.Feature2], Source={x:Static loc:LocalizationSource.Instance}}" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <StackPanel Orientation="Horizontal" Spacing="7">
+                                    <materialIcons:MaterialIcon Kind="Check" Width="15" Height="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="{Binding [Upsell.Free.Feature2], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 </StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                    <TextBlock Text="{Binding [Upsell.Free.Feature3], Source={x:Static loc:LocalizationSource.Instance}}" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <StackPanel Orientation="Horizontal" Spacing="7">
+                                    <materialIcons:MaterialIcon Kind="Check" Width="15" Height="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                    <TextBlock Text="{Binding [Upsell.Free.Feature3], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 </StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource TextMutedBrush}"/>
-                                    <TextBlock Text="{Binding [Upsell.Free.Feature4], Source={x:Static loc:LocalizationSource.Instance}}" Foreground="{DynamicResource TextMutedBrush}"/>
+                                <StackPanel Orientation="Horizontal" Spacing="7">
+                                    <materialIcons:MaterialIcon Kind="Check" Width="15" Height="15" Foreground="{DynamicResource TextMutedBrush}"/>
+                                    <TextBlock Text="{Binding [Upsell.Free.Feature4], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}"/>
                                 </StackPanel>
                             </StackPanel>
                         </StackPanel>
                     </Border>
 
-                    <!-- PREMIUM CARD -->
-                    <Border Grid.Column="2" CornerRadius="12" Padding="24" BorderThickness="2" BorderBrush="{DynamicResource AccentBrush}"
-                            Background="{DynamicResource PremiumCardBackgroundBrush}"
-                            BoxShadow="0 0 30 0 #33A855F7">
-
+                    <Border Grid.Column="2"
+                            CornerRadius="10"
+                            Padding="18"
+                            BorderThickness="1.5"
+                            BorderBrush="{DynamicResource AccentBrush}"
+                            Background="{DynamicResource PremiumCardBackgroundBrush}">
                         <StackPanel>
                             <Grid>
                                 <StackPanel>
-                                    <TextBlock Text="{Binding [Upsell.Premium.Title], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="{Binding [Upsell.Premium.Subtitle], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20"/>
+                                    <TextBlock Text="{Binding [Upsell.Premium.Title], Source={x:Static loc:LocalizationSource.Instance}}"
+                                               FontSize="20" FontWeight="Bold" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
+                                    <TextBlock Text="{Binding [Upsell.Premium.Subtitle], Source={x:Static loc:LocalizationSource.Instance}}"
+                                               FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,1,0,10"/>
                                 </StackPanel>
                                 <Border HorizontalAlignment="Right" VerticalAlignment="Top"
-                                        Background="{DynamicResource AccentBrush}" CornerRadius="4" Padding="8,4">
-                                    <TextBlock Text="{Binding [Upsell.Premium.Recommended], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                                        Background="{DynamicResource AccentBrush}" CornerRadius="4" Padding="7,3">
+                                    <TextBlock Text="{Binding [Upsell.Premium.Recommended], Source={x:Static loc:LocalizationSource.Instance}}"
+                                               FontSize="9" FontWeight="Bold" Foreground="White"/>
                                 </Border>
                             </Grid>
-                            
-                            <StackPanel Margin="0,0,0,8" Spacing="8">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="{Binding [Upsell.Premium.Feature1], Source={x:Static loc:LocalizationSource.Instance}}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="{Binding [Upsell.Premium.Feature2], Source={x:Static loc:LocalizationSource.Instance}}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="{Binding [Upsell.Premium.Feature3], Source={x:Static loc:LocalizationSource.Instance}}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="{Binding [Upsell.Premium.Feature4], Source={x:Static loc:LocalizationSource.Instance}}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="{Binding [Upsell.Premium.Feature5], Source={x:Static loc:LocalizationSource.Instance}}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
-                                </StackPanel>
 
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="{Binding [Upsell.Premium.Feature6], Source={x:Static loc:LocalizationSource.Instance}}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
+                            <StackPanel Spacing="5">
+                                <StackPanel Orientation="Horizontal" Spacing="7">
+                                    <materialIcons:MaterialIcon Kind="Check" Width="14" Height="14" Foreground="{DynamicResource AccentLightBrush}"/>
+                                    <TextBlock Text="{Binding [Upsell.Premium.Feature1], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="12" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
                                 </StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <materialIcons:MaterialIcon Kind="Check" Width="16" Height="16" Foreground="{DynamicResource PremiumCardForegroundBrush}"/>
-                                    <TextBlock Text="{Binding [Upsell.Premium.Feature7], Source={x:Static loc:LocalizationSource.Instance}}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
+                                <StackPanel Orientation="Horizontal" Spacing="7">
+                                    <materialIcons:MaterialIcon Kind="Check" Width="14" Height="14" Foreground="{DynamicResource AccentLightBrush}"/>
+                                    <TextBlock Text="{Binding [Upsell.Premium.Feature2], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="12" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="7">
+                                    <materialIcons:MaterialIcon Kind="Check" Width="14" Height="14" Foreground="{DynamicResource AccentLightBrush}"/>
+                                    <TextBlock Text="{Binding [Upsell.Premium.Feature3], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="12" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="7">
+                                    <materialIcons:MaterialIcon Kind="Check" Width="14" Height="14" Foreground="{DynamicResource AccentLightBrush}"/>
+                                    <TextBlock Text="{Binding [Upsell.Premium.Feature4], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="12" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="7">
+                                    <materialIcons:MaterialIcon Kind="Check" Width="14" Height="14" Foreground="{DynamicResource AccentLightBrush}"/>
+                                    <TextBlock Text="{Binding [Upsell.Premium.Feature5], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="12" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="7">
+                                    <materialIcons:MaterialIcon Kind="Check" Width="14" Height="14" Foreground="{DynamicResource AccentLightBrush}"/>
+                                    <TextBlock Text="{Binding [Upsell.Premium.Feature6], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="12" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="7">
+                                    <materialIcons:MaterialIcon Kind="Check" Width="14" Height="14" Foreground="{DynamicResource AccentLightBrush}"/>
+                                    <TextBlock Text="{Binding [Upsell.Premium.Feature7], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="12" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="7">
+                                    <materialIcons:MaterialIcon Kind="Check" Width="14" Height="14" Foreground="{DynamicResource AccentLightBrush}"/>
+                                    <TextBlock Text="{Binding [Upsell.Premium.Feature8], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="12" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold"/>
                                 </StackPanel>
                             </StackPanel>
                         </StackPanel>
                     </Border>
                 </Grid>
 
-                <!-- FOOTER / ACTIONS -->
                 <StackPanel Grid.Row="2" HorizontalAlignment="Center">
-                    <Button Click="Buy_Click" Width="320" Height="56"
-                            Classes="BuyBtn">
+                    <Button Click="Buy_Click" Width="290" Height="44" Classes="BuyBtn">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="Crown" Width="20" Height="20" Foreground="White" Margin="0,0,8,0"/>
-                            <TextBlock Text="{Binding [Upsell.Action.Buy], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="18" FontWeight="Bold" Foreground="White"/>
-                            <TextBlock Text="{Binding [Upsell.Action.Buy.Price], Source={x:Static loc:LocalizationSource.Instance}}" FontSize="16" FontWeight="Normal" Foreground="White" Opacity="0.9"/>
+                            <materialIcons:MaterialIcon Kind="Crown" Width="17" Height="17" Foreground="White" Margin="0,0,7,0"/>
+                            <TextBlock Text="{Binding [Upsell.Action.Buy], Source={x:Static loc:LocalizationSource.Instance}}"
+                                       FontSize="15" FontWeight="Bold" Foreground="White"/>
                         </StackPanel>
                     </Button>
 
                     <Button Content="{Binding [Upsell.Action.Dismiss], Source={x:Static loc:LocalizationSource.Instance}}" Click="ContinueFree_Click"
-                            Classes="DismissBtn" Margin="0,20,0,0"
+                            Classes="DismissBtn" Margin="0,5,0,0"
                             HorizontalAlignment="Center"/>
                 </StackPanel>
             </Grid>
 
-            <!-- Close Button -->
-            <Button Click="Close_Click" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="20"
+            <Button Click="Close_Click" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12"
                     Classes="CloseButtonStyle" ToolTip.Tip="{Binding [Upsell.Action.Close], Source={x:Static loc:LocalizationSource.Instance}}"/>
         </Grid>
     </Border>

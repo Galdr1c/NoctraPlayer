@@ -4099,9 +4099,15 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void HideGroup(string? groupName)
+    private async Task HideGroup(string? groupName)
     {
         if (string.IsNullOrWhiteSpace(groupName)) return;
+
+        if (!_licenseService.IsPremium)
+        {
+            await _dialogService.ShowUpsellAsync();
+            return;
+        }
 
         var s = _settingsService.Settings;
         var list = SelectedChannelType switch

@@ -7,6 +7,21 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### Premium Kategori Gizleme ve Kompakt Upsell Penceresi (2026-06-05)
+
+- [Değişti] **Kategori Gizleme Premium Özellik Oldu**: Live TV, Movies ve Series grup başlıklarının yanındaki göz ikonu tüm kullanıcılarda görünmeye devam eder. Ücretsiz kullanıcı ikona bastığında kategori durumu değiştirilmeden Premium yükseltme penceresi açılır.
+- [Korundu] **Premium Kullanıcı Gizleme Akışı Değişmedi**: Premium kullanıcıda grup ilgili `HiddenLiveGroups`, `HiddenMovieGroups` veya `HiddenSeriesGroups` listesine eklenir, görünür grup listesinden kaldırılır, filtre yenilenir ve profil ayarları kaydedilir.
+- [Korundu] **Önceden Gizlenmiş Kategoriler**: Daha önce gizlenmiş kategoriler ücretsiz moda geçildiğinde silinmez veya yeniden görünür yapılmaz. Premium kontrolü yalnızca yeni göz ikonu işlemlerini sınırlar.
+- [UI] **UpsellWindow Kompakt Hale Getirildi**: Premium yükseltme penceresi `900 x 650` ölçüsünden `760 x 520` ölçüsüne düşürüldü. Free/Premium iki kartlı karşılaştırma korunurken dış boşluklar, kart padding değerleri, başlıklar, ikonlar ve aksiyon yüksekliği sıkılaştırıldı.
+- [UI] **Ana Tema Renkleriyle Uyum**: Upsell arka planı, kartları, kenarlıkları, glow öğeleri ve butonları sabit renkler yerine `BackgroundGradientBrush`, `Surface0Brush`, `BorderBrush`, `AccentBrush`, `PrimaryGradientBrush` ve diğer ortak tema kaynaklarını kullanır. Açık ve koyu tema davranışı aynı kaynaklardan gelir.
+- [Değişti] **Premium Özellik Listesi Güncellendi**: Eski ve genel özellik listesi yerine 12 profil ve PIN koruması, 10 özel EPG ve otomatik yenileme, kaldığın yerden devam, uyku zamanlayıcısı, kategori gizleme, gelişmiş video buffer ve reklamsız/filigransız kullanım gösterilir.
+- [Değişti] **Satın Alma Aksiyonları Sadeleştirildi**: Birincil butonda yalnızca yerelleştirilmiş `Premium Satın Al` metni gösterilir. Hemen altında açık şekilde `Ücretsiz Sürümle Devam Et` aksiyonu bulunur.
+- [Kaldırıldı] **Uygulama İçindeki Fiyat Bilgileri**: Upsell fiyat binding'i, beş dildeki `Upsell.Action.Buy.Price` anahtarları, `ILicenseService.GetPriceText()`, `LicenseService.GetPriceText()` ve aktif kaynak yorumlarındaki eski fiyat referansı kaldırıldı. Microsoft Store satın alma yönlendirmesi değişmedi.
+- [Lokalizasyon] **TR/EN/DE/ES/FR Upsell Metinleri Yenilendi**: Premium özellikleri, Premium alt başlığı ve ücretsiz sürümle devam aksiyonu tüm desteklenen dillerde güncellendi.
+- [Test] **Kategori Gizleme Regression Testleri**: Ücretsiz kullanıcının upsell görüp kategori state'ini değiştirmediği, Premium kullanıcının kategoriyi gizleyip ayarları kaydettiği ve boş grup adının işlem yapmadığı komut seviyesinde doğrulandı.
+- [Test] **Upsell Layout ve Fiyat Temizliği Testleri**: Pencere ölçüsü, tema kaynakları, satın al/devam aksiyon sırası, güncel yedi Premium özellik, fiyat anahtarı/API/literal yokluğu statik XAML ve localization testleriyle güvenceye alındı.
+- [Doğrulama] `dotnet test Noctra.Tests\Noctra.Tests.csproj --no-restore` sonucu `944/944` test geçti. Aktif `Noctra.Core` ve `Noctra.Avalonia` kaynaklarında fiyat literal'i, `GetPriceText` veya `Upsell.Action.Buy.Price` kalmadığı doğrulandı.
+
 ### UI Combobox, Yasal Onay, Tanılama ve Series Detail Düzeltmeleri (2026-06-04)
 
 - [Yeni] **İlk Açılış Yasal ve Gizlilik Onayı**: Uygulama girişine yasal/gizlilik kabul akışı eklendi. Kullanıcı devam etmeden önce Kullanım Şartları, Gizlilik Politikası, Noctra'nın kanal/film/dizi/playlist/EPG/yayın bağlantısı/IPTV aboneliği sağlamadığı ve yalnızca yasal erişim hakkı olan kaynakların eklenmesi gerektiği onaylarını işaretler.

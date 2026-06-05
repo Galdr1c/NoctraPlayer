@@ -27,7 +27,7 @@ public static class TierLimits
     }
 
     // ==========================================
-    // PREMIUM TIER (Lifetime / 499.50 TL)
+    // PREMIUM TIER
     // ==========================================
     public static class Premium
     {
@@ -56,5 +56,4 @@ public class SubscriptionInfo
     public bool IsPremiumOrHigher => Tier >= SubscriptionTier.Premium;
     public bool IsExpired => ExpiresAt.HasValue && ExpiresAt.Value < DateTime.UtcNow;
 }
-
 
