@@ -2,22 +2,54 @@
 
 ## Supported Versions
 
-We only provide security updates for the latest major release of Noctra.
+Kynora Studio provides security fixes for the latest publicly released version
+of Noctra. Older builds may be required to update before receiving support.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.x.x   | :white_check_mark: |
-| < 1.0   | :x:                |
+| Release | Security support |
+| --- | --- |
+| Latest Microsoft Store release | Supported |
+| Preview, development, or modified builds | Best effort |
+| Older public releases | Not supported |
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability within Noctra, please do not open a public issue.
+Do not publish suspected vulnerabilities, proof-of-concept code, credentials,
+provider data, license bypass details, or user information in a public issue.
 
-Instead, please send an e-mail to the maintainer(s) directly or use GitHub's private vulnerability reporting tool if available on this repository.
+Report security concerns privately to:
 
-Please include:
-* A description of the vulnerability.
-* Steps to reproduce.
-* Potential impact.
+**kynora.studio@gmail.com**
 
-We will acknowledge receipt of your vulnerability report and strive to send you regular updates about our progress. If the vulnerability is confirmed, we will release a patch as soon as possible.
+Include, when available:
+
+- The affected Noctra version and edition.
+- Windows version and processor architecture.
+- A clear description of the issue and its potential impact.
+- Reproduction steps or a minimal proof of concept.
+- Relevant logs with credentials, playlist URLs, tokens, and personal data removed.
+- Whether the issue is currently being exploited or publicly discussed.
+
+Kynora Studio will make a reasonable effort to acknowledge a complete report,
+investigate it, and communicate material status changes. Fix timing depends on
+severity, reproducibility, Store release requirements, and third-party
+dependencies.
+
+## Scope
+
+Security reports may cover the official Noctra application, packaging,
+update flow, local data protection, authentication or entitlement handling,
+and Kynora Studio-operated services used by Noctra.
+
+Issues in IPTV providers, playlists, streams, portals, EPG sources, Microsoft
+Store, operating systems, or other third-party services should normally be
+reported to their operators unless Noctra introduces the vulnerability.
+
+## Safe Research
+
+Testing must use accounts, devices, providers, and content you own or are
+authorized to access. Do not disrupt services, access another person's data,
+perform social engineering, or retain unnecessary personal information.
+
+This policy does not grant permission to reverse engineer, modify, redistribute,
+or otherwise use Noctra beyond applicable law and the proprietary
+[`LICENSE`](./LICENSE).

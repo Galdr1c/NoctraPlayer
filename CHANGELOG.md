@@ -21,6 +21,7 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Changed
 
+- **Proprietary licensing and ownership**: The unintended MIT license was replaced with a Kynora Studio proprietary license; README, security, contribution, collaboration, and package ownership metadata now reflect the closed-source distribution model.
 - **Premium feature list refreshed**: The upgrade window now highlights 12 profiles with PIN protection, 10 custom EPG sources with automatic refresh, resume playback, sleep timer, category hiding, advanced video buffering, and ad-free/watermark-free use.
 - **Premium upgrade actions simplified**: The purchase button now contains only the localized Buy Premium label, with an explicit Continue with Free action directly below it.
 - **Upsell theme integration**: Premium upgrade cards, borders, glow elements, typography, and actions now use shared light/dark theme resources.

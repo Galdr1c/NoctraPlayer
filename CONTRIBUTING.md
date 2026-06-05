@@ -1,51 +1,47 @@
 # Contributing to Noctra
 
-First off, thank you for considering contributing to Noctra! It's people like you that make open-source tools great.
+Noctra is proprietary software owned by Kynora Studio. This repository is not
+an open-source contribution project.
 
-## Development Setup
+## Authorization
 
-1. **Prerequisites:**
-   - .NET 8.0 SDK
-   - Avalonia UI extensions for your IDE (Visual Studio, Rider, or VS Code)
-   - Node.js (Optional, for any frontend tooling if added later)
+Code, documentation, translation, design, and testing contributions are
+accepted only from Kynora Studio personnel or contributors who have received
+prior written authorization.
 
-2. **Building the Project:**
-   ```powershell
-   dotnet restore
-   dotnet build Noctra.sln
-   ```
+Do not fork, copy, modify, publish, or redistribute the repository unless a
+written agreement with Kynora Studio expressly permits it. Access to the
+repository does not grant a software license.
 
-3. **Running the Application:**
-   ```powershell
-   dotnet run --project Noctra.Avalonia/Noctra.Avalonia.csproj
-   ```
+Authorized contributors must ensure they have the right to submit their work
+and that Kynora Studio may use it under the applicable contributor, employment,
+or contractor agreement. Do not submit third-party code or assets without
+compatible written permission and required notices.
 
-4. **Running Tests:**
-   We strictly enforce tests for new features. Ensure existing tests pass:
-   ```powershell
-   dotnet test Noctra.Tests/Noctra.Tests.csproj
-   ```
+## Development Requirements
 
-## Workflow
+- Follow the existing architecture and `.editorconfig`.
+- Keep UI concerns out of `Noctra.Core`.
+- Add focused tests for behavioral changes and regressions.
+- Run `dotnet test .\Noctra.Tests\Noctra.Tests.csproj` before review.
+- Do not commit credentials, provider accounts, playlist URLs, tokens, personal
+  data, production secrets, or private signing material.
+- Keep user data intact during provider refresh and migration work.
+- Document user-visible changes in `CHANGELOG.md`.
 
-1. **Fork & Clone:** Fork the repository and clone your fork locally.
-2. **Branch:** Create a feature branch (`git checkout -b feature/amazing-feature`).
-3. **Code:** Write your code, adhering to the existing `.editorconfig` style guidelines.
-4. **Test:** Add unit tests for your changes. Run the full test suite.
-5. **Commit:** Write clear, concise commit messages.
-6. **Pull Request:** Open a PR against the `main` branch. Describe your changes in detail.
+## Review Workflow
 
-## Code Style
+Authorized contributors should work in a Kynora Studio-approved branch and
+submit changes through the review process designated by the maintainer. A
+submission may be rejected, revised, or incorporated at Kynora Studio's
+discretion.
 
-- We use standard C# conventions enforced by `.editorconfig`.
-- Avoid `async void` unless it's an event handler (and wrap it in try-catch).
-- Use `CommunityToolkit.Mvvm` attributes (`[ObservableProperty]`, `[RelayCommand]`) for ViewModels.
-- Keep UI logic out of the Core project.
+## Bug and Security Reports
 
-## Reporting Issues
+General bug reports should include reproducible steps, expected and actual
+behavior, the Noctra version, and sanitized logs where relevant.
 
-If you find a bug, please create an issue with:
-- Steps to reproduce
-- Expected vs actual behavior
-- OS and .NET version
-- App logs (if applicable)
+Security vulnerabilities must be reported privately according to
+[`SECURITY.md`](./SECURITY.md).
+
+Licensing and contribution inquiries: **kynora.studio@gmail.com**

@@ -11,6 +11,7 @@
     <img src="https://img.shields.io/badge/platform-Windows-0078d4?style=flat-square" alt="Windows" />
     <img src="https://img.shields.io/badge/runtime-.NET%208-512bd4?style=flat-square" alt=".NET 8" />
     <img src="https://img.shields.io/badge/UI-Avalonia-ff3d8b?style=flat-square" alt="Avalonia" />
+    <img src="https://img.shields.io/badge/license-Proprietary-5b4b8a?style=flat-square" alt="Proprietary License" />
   </p>
   <br />
 </div>
@@ -66,7 +67,7 @@ NoctraPlayer.sln
 ### Runtime Data
 
 ```text
-%LOCALAPPDATA%\Noctra\
+Documents\Noctra\
 |-- noctra_v1.db
 |-- settings.json
 |-- Settings\profile_{id}.json
@@ -120,13 +121,18 @@ Images are loaded on demand by visible cards. There is no app-wide poster preloa
 Default layout:
 
 ```text
-%LOCALAPPDATA%\Noctra\Downloads\profile_{id}\Filmler\...
-%LOCALAPPDATA%\Noctra\Downloads\profile_{id}\Diziler\...\Sezon 01\...
+Documents\Noctra\Downloads\profile_{id}\Filmler\...
+Documents\Noctra\Downloads\profile_{id}\Diziler\...\Sezon 01\...
 ```
 
 ---
 
-## Quick Start
+## Authorized Development
+
+This repository contains proprietary Kynora Studio source code. The commands
+below are intended only for Kynora Studio personnel and contributors who have
+received prior written authorization. Repository access does not grant
+permission to copy, modify, distribute, publish, sublicense, or sell Noctra.
 
 ### Prerequisites
 
@@ -286,4 +292,9 @@ Current focus:
 
 ## License
 
-See [`LICENSE`](./LICENSE).
+Noctra is proprietary software owned by Kynora Studio. It is not open source.
+No right to copy, modify, redistribute, sublicense, sell, or create derivative
+works is granted by access to this repository.
+
+Third-party dependencies remain subject to their respective licenses. See
+[`LICENSE`](./LICENSE) for the complete Noctra license notice.

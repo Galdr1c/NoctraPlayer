@@ -1,21 +1,33 @@
-MIT License
+NOCTRA PROPRIETARY SOFTWARE LICENSE
 
-Copyright (c) 2026 Noctra
+Copyright (c) 2026 Kynora Studio. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Noctra, including its source code, executable code, user interface,
+documentation, artwork, branding, and related materials (collectively, the
+"Software"), is proprietary to Kynora Studio.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+No permission is granted to use, copy, reproduce, modify, adapt, translate,
+publish, distribute, sublicense, sell, rent, lease, reverse engineer,
+decompile, disassemble, create derivative works from, or otherwise exploit
+the Software or any substantial portion of it except:
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+1. as expressly permitted by a separate written agreement with Kynora Studio;
+2. as necessary to use an authorized copy of the Software in accordance with
+   the applicable end-user terms; or
+3. to the limited extent such a restriction is prohibited by applicable law.
+
+Access to this repository or possession of a copy of the Software does not
+grant any license or ownership right.
+
+Third-party libraries, frameworks, media components, and other dependencies
+included with or referenced by the Software remain subject to their respective
+licenses and notices. This license does not restrict rights granted directly
+by those third-party licenses.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE", WITHOUT WARRANTIES OF
+ANY KIND, EXPRESS OR IMPLIED, TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE
+LAW. KYNORA STUDIO SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL,
+CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING FROM THE SOFTWARE, EXCEPT WHERE
+SUCH LIABILITY CANNOT LAWFULLY BE EXCLUDED.
+
+For licensing inquiries, contact: kynora.studio@gmail.com

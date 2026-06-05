@@ -5,8 +5,8 @@
   <PropertyGroup>
     <NoctraVersionPrefix Condition="'$(NoctraVersionPrefix)' == ''">1.0.0</NoctraVersionPrefix>
     <NoctraPackageVersion Condition="'$(NoctraPackageVersion)' == ''">$(NoctraVersionPrefix).0</NoctraPackageVersion>
-    <NoctraAuthors Condition="'$(NoctraAuthors)' == ''">Noctra</NoctraAuthors>
-    <NoctraCompany Condition="'$(NoctraCompany)' == ''">Noctra</NoctraCompany>
+    <NoctraAuthors Condition="'$(NoctraAuthors)' == ''">Kynora Studio</NoctraAuthors>
+    <NoctraCompany Condition="'$(NoctraCompany)' == ''">Kynora Studio</NoctraCompany>
 
     <!-- Edition: Free | Premium  (set by build script for Store builds) -->
     <NoctraEdition Condition="'$(NoctraEdition)' == ''">Free</NoctraEdition>
