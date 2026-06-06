@@ -7,6 +7,19 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ## [Unreleased]
 
+### VLC Airspace Overlay, PiP ve Odak Geri Dönüş Düzeltmeleri (2026-06-06)
+
+- [Kök Neden] **Foreground Polling Overlay'i Kalıcı Gizliyordu**: `MemoryVideoView`, 200 ms aralıkla `GetForegroundWindow` ve process ID kontrolü yapıyor; başka uygulama öne geçtiğinde detached overlay penceresine `Hide()` çağırıyordu. Bu state PiP ve normal player geçişlerinden sonra overlay'in yeniden görünmemesine yol açabiliyordu.
+- [Değişti] **Foreground Process Kontrolü Kaldırıldı**: `GetForegroundWindow`, `GetWindowThreadProcessId`, process ID state'i ve 200 ms `DispatcherTimer` polling akışı kaldırıldı. Overlay görünürlüğü artık yalnızca video layout görünürlüğü, root pencere görünürlüğü ve minimize durumuna bağlıdır.
+- [Değişti] **Overlay Owner-Relative Çalışıyor**: Overlay pencere ana pencereye owner olarak bağlı kalır. Normal modda başka uygulamaların üstüne zorla çıkmaz; PiP sırasında ana pencerenin `Topmost` state'ini takip eder ve PiP'den çıkınca tekrar normal z-order'a döner.
+- [Düzeltildi] **Uygulamaya Dönüşte Overlay Z-Order Yenileniyor**: Noctra yeniden aktive olduğunda overlay HWND, `SetWindowPos` ve `SWP_NOACTIVATE` ile VLC native video HWND'inin üzerine yeniden taşınır. Bu işlem odağı overlay pencereye çalmaz.
+- [Düzeltildi] **Auto-Hide Sonrası Pointer Olayları Kaybolmuyor**: Kontroller alfa 0 olduğunda tamamen saydam top-level pencerenin Windows hit-test dışına düşmesi engellendi. Overlay window arka planı ve `MouseCaptureLayer`, görsel olarak fark edilmeyen `#01000000` alfa değeriyle native pointer olaylarını almaya devam eder.
+- [Düzeltildi] **PiP Kontrolleri Tek Seferlik Kalmıyor**: PiP kontrolleri auto-hide sonrası mouse hareketiyle yeniden açılır. PiP'den normal player'a dönüşte aynı overlay penceresi pointer ve z-order işlevini korur.
+- [Düzeltildi] **Watermark İlk Harfi Random Konumlarda Kesilmiyor**: `TranslateTransform` içteki dar ölçülmüş `Border` yerine tüm `WatermarkView` kontrolüne taşındı. Böylece negatif X hareketlerinde içerik kendi `UserControl` sınırının dışına çıkmıyor ve `Noctra - Free` metninin ilk `N` harfi kırpılmıyor.
+- [Temizlik] **OverlayFocusController Sadeleştirildi**: Focus, debug sayaçları ve dinamik topmost state makinesi kaldırıldı; yerine idempotent show/hide ve owner topmost senkronizasyonu yapan `OverlayVisibilityController` eklendi.
+- [Test] **Overlay ve Watermark Regression Kapsamı Yenilendi**: Görünürlük geçişleri, tekrarlı show/hide koruması, PiP topmost giriş/çıkışı, minimum alfa input yüzeyi, owner activation sonrası native z-order yenilemesi ve watermark transform seviyesi testlerle güvenceye alındı.
+- [Doğrulama] `dotnet test Noctra.Tests\Noctra.Tests.csproj --no-restore` sonucu `902/902` test geçti. `dotnet build Noctra.Avalonia\Noctra.Avalonia.csproj -c Release --no-restore` başarılı; `0` hata ve mevcut `13` uyarı raporlandı.
+
 ### Premium Kategori Gizleme ve Kompakt Upsell Penceresi (2026-06-05)
 
 - [Değişti] **Kategori Gizleme Premium Özellik Oldu**: Live TV, Movies ve Series grup başlıklarının yanındaki göz ikonu tüm kullanıcılarda görünmeye devam eder. Ücretsiz kullanıcı ikona bastığında kategori durumu değiştirilmeden Premium yükseltme penceresi açılır.

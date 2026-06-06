@@ -905,7 +905,7 @@
                       <views:WatermarkView x:Name="PiPWatermark" ZIndex="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,100"/>
                       <Border x:Name="MouseCaptureLayer"
                               ZIndex="2500"
-                              Background="Transparent"
+                              Background="#01000000"
                               PointerMoved="MouseCaptureLayer_PointerMoved"
                               PointerPressed="MouseCaptureLayer_PointerPressed"
                               PointerReleased="MouseCaptureLayer_PointerReleased"/>

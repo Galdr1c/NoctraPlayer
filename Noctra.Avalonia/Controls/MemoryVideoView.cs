@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
@@ -27,21 +26,28 @@ public class MemoryVideoView : NativeControlHost
     public static readonly StyledProperty<Control?> OverlayContentProperty =
         AvaloniaProperty.Register<MemoryVideoView, Control?>(nameof(OverlayContent));
 
-    // Win32 interop for reliable foreground window detection
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetForegroundWindow();
-
-    [DllImport("user32.dll")]
-    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
-
     [DllImport("user32.dll")]
     private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
 
     [DllImport("user32.dll")]
     private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool SetWindowPos(
+        IntPtr hWnd,
+        IntPtr hWndInsertAfter,
+        int x,
+        int y,
+        int cx,
+        int cy,
+        uint flags);
+
     private const int GWL_EXSTYLE = -20;
     private const int WS_EX_TOOLWINDOW = 0x00000080;
+    private static readonly IntPtr HWND_TOP = IntPtr.Zero;
+    private const uint SWP_NOSIZE = 0x0001;
+    private const uint SWP_NOMOVE = 0x0002;
+    private const uint SWP_NOACTIVATE = 0x0010;
 
     private MediaPlayer? _mediaPlayer;
     private IPlatformHandle? _platformHandle;
@@ -51,9 +57,7 @@ public class MemoryVideoView : NativeControlHost
     private Window? _rootWindow;
     private bool _isAttached;
     private bool _overlayPositionUpdateQueued;
-    private DispatcherTimer? _focusCheckTimer;
-    private readonly uint _currentProcessId = (uint)Environment.ProcessId;
-    private OverlayFocusController _focusController = null!;
+    private OverlayVisibilityController _visibilityController = null!;
 
     public MediaPlayer? MediaPlayer
     {
@@ -199,38 +203,35 @@ public class MemoryVideoView : NativeControlHost
 
     private void InitializeOverlay()
     {
-        _focusController = new OverlayFocusController(
-            isOurProcessActive:        IsOurProcessActive,
-            isEffectivelyVisible:      () => this.IsEffectivelyVisible,
+        _visibilityController = new OverlayVisibilityController(
             isOverlayCurrentlyVisible: () => _overlayWindow?.IsVisible == true,
             showOverlay: () =>
             {
-                if (_overlayWindow == null) CreateOverlayWindow();
-                if (_overlayWindow != null)
+                if (_overlayWindow == null)
                 {
-                    QueueOverlayPositionUpdate();
-                    _overlayWindow.Show();
+                    CreateOverlayWindow();
+                    return;
                 }
+
+                QueueOverlayPositionUpdate();
+                _overlayWindow.Show();
             },
             hideOverlay: () => _overlayWindow?.Hide(),
-            setTopmost: v =>
+            isOverlayTopmost: () => _overlayWindow?.Topmost == true,
+            setOverlayTopmost: value =>
             {
-                if (_overlayWindow != null && _overlayWindow.Topmost != v)
-                    _overlayWindow.Topmost = v;
+                if (_overlayWindow != null)
+                    _overlayWindow.Topmost = value;
             }
         );
 
         LayoutUpdated += OnLayoutUpdated;
-        // Foreground window polling — reliable focus detection on Windows
-        _focusCheckTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
-        _focusCheckTimer.Tick += FocusCheckTimer_Tick;
-        _focusCheckTimer.Start();
-
         if (_rootWindow != null)
         {
             _rootWindow.PositionChanged += Root_PositionChanged;
             _rootWindow.SizeChanged += Root_SizeChanged;
             _rootWindow.PropertyChanged += Root_PropertyChanged;
+            _rootWindow.Activated += Root_Activated;
         }
 
         // Initial update
@@ -238,39 +239,16 @@ public class MemoryVideoView : NativeControlHost
         OnLayoutUpdated(this, EventArgs.Empty);
     }
 
-    private bool IsOurProcessActive()
-    {
-        // Win32 foreground window detection (GetForegroundWindow) is Windows-only.
-        // On Linux/macOS there is no native HWND airspace issue, so we always
-        // report active to keep the overlay fully functional on those platforms.
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            return true;
-
-        try
-        {
-            var fg = GetForegroundWindow();
-            GetWindowThreadProcessId(fg, out var fgPid);
-            return fgPid == _currentProcessId;
-        }
-        catch { return false; }
-    }
-
     private void DestroyOverlay()
     {
         LayoutUpdated -= OnLayoutUpdated;
-
-        if (_focusCheckTimer != null)
-        {
-            _focusCheckTimer.Stop();
-            _focusCheckTimer.Tick -= FocusCheckTimer_Tick;
-            _focusCheckTimer = null;
-        }
 
         if (_rootWindow != null)
         {
             _rootWindow.PositionChanged -= Root_PositionChanged;
             _rootWindow.SizeChanged -= Root_SizeChanged;
             _rootWindow.PropertyChanged -= Root_PropertyChanged;
+            _rootWindow.Activated -= Root_Activated;
         }
 
         if (_overlayWindow != null)
@@ -282,9 +260,10 @@ public class MemoryVideoView : NativeControlHost
 
     private void Root_PropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
     {
-        if (e.Property == Window.IsVisibleProperty)
+        if (e.Property == Window.IsVisibleProperty ||
+            e.Property.Name is "WindowState" or "Topmost")
         {
-            _focusController?.OnLayoutChanged(this.IsEffectivelyVisible);
+            UpdateOverlayVisibility();
         }
 
         if (e.Property.Name is "WindowState" or "ClientSize")
@@ -295,30 +274,28 @@ public class MemoryVideoView : NativeControlHost
 
     private void OnLayoutUpdated(object? sender, EventArgs e)
     {
-        _focusController?.OnLayoutChanged(this.IsEffectivelyVisible);
+        UpdateOverlayVisibility();
         QueueOverlayPositionUpdate();
-
-        // CPU/battery optimization: only poll focus while the video view is visible.
-        // When the user navigates to another tab, stop the timer to avoid unnecessary 200ms polling.
-        if (_focusCheckTimer != null)
-        {
-            bool shouldRun = this.IsEffectivelyVisible;
-            if (shouldRun && !_focusCheckTimer.IsEnabled)
-                _focusCheckTimer.Start();
-            else if (!shouldRun && _focusCheckTimer.IsEnabled)
-                _focusCheckTimer.Stop();
-        }
     }
 
-    private void FocusCheckTimer_Tick(object? sender, EventArgs e)
+    private void UpdateOverlayVisibility()
     {
-        _focusController?.OnTimerTick();
+        bool isVisible = IsEffectivelyVisible
+            && _rootWindow?.IsVisible == true
+            && _rootWindow.WindowState != WindowState.Minimized;
+
+        _visibilityController?.Update(isVisible, _rootWindow?.Topmost == true);
     }
 
 
     private void Root_PositionChanged(object? sender, PixelPointEventArgs e)
     {
         HandleWindowMovement();
+    }
+
+    private void Root_Activated(object? sender, EventArgs e)
+    {
+        RestoreOverlayZOrder();
     }
 
     private void Root_SizeChanged(object? sender, SizeChangedEventArgs e)
@@ -340,12 +317,12 @@ public class MemoryVideoView : NativeControlHost
         {
             SystemDecorations = SystemDecorations.None,
             TransparencyLevelHint = [WindowTransparencyLevel.Transparent],
-            Background = Brushes.Transparent,
+            Background = new SolidColorBrush(Color.FromArgb(1, 0, 0, 0)),
             ShowInTaskbar = false,
             CanResize = false,
             Title = "", // Empty title to help hide from Alt-Tab
             SizeToContent = SizeToContent.Manual,
-            Topmost = false,
+            Topmost = _rootWindow.Topmost,
             Focusable = false,
             Content = OverlayContent
         };
@@ -372,6 +349,29 @@ public class MemoryVideoView : NativeControlHost
 
         _overlayWindow.Show(_rootWindow);
         QueueOverlayPositionUpdate();
+        RestoreOverlayZOrder();
+    }
+
+    private void RestoreOverlayZOrder()
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ||
+            _overlayWindow?.IsVisible != true)
+        {
+            return;
+        }
+
+        var handle = _overlayWindow.TryGetPlatformHandle()?.Handle;
+        if (!handle.HasValue || handle.Value == IntPtr.Zero)
+            return;
+
+        SetWindowPos(
+            handle.Value,
+            HWND_TOP,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     }
 
     private void QueueOverlayPositionUpdate()

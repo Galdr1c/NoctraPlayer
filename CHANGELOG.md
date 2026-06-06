@@ -65,6 +65,11 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Fixed
 
+- **VLC airspace overlay focus recovery**: Video controls no longer disappear permanently after switching to another application and returning to Noctra. The detached overlay window restores its native z-order above the VLC HWND without taking activation.
+- **Overlay controls after auto-hide**: Hidden playback controls can be shown again by pointer movement because the transparent overlay and mouse-capture surfaces remain native hit-testable.
+- **PiP overlay lifecycle**: PiP controls remain recoverable after auto-hide, and leaving PiP restores normal player controls instead of leaving the overlay behind the video surface.
+- **Owner-relative overlay behavior**: The video overlay follows the main window's visibility, minimized state, and PiP topmost state without foreground-process polling or forcing controls above unrelated applications.
+- **Watermark text clipping**: Random watermark movement now transforms the complete watermark control instead of its inner border, preventing the first letter of "Noctra - Free" from being clipped at some positions.
 - **Series detail empty-provider state**: Series with no provider seasons/episodes no longer keep stale Play/Continue episode actions, and the detail page now shows a no-episodes message instead of an endless loading spinner.
 - **Series detail loading scope**: Episode loading UI is now tied to selected-series metadata loading, not global channel-list background loading.
 - **Settings ComboBox overflow**: Refresh frequency, EPG timezone, and content filter ComboBoxes no longer clip selected text or resize awkwardly when labels are long.
@@ -105,7 +110,7 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 ### Verification
 
 - `dotnet build NoctraPlayer.sln` passes.
-- `dotnet test Noctra.Tests\Noctra.Tests.csproj --no-restore` passes: 944 tests.
+- `dotnet test Noctra.Tests\Noctra.Tests.csproj --no-restore` passes: 902 tests.
 
 ## [1.0.0] - 2026-06-01
 

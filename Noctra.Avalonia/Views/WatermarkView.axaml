@@ -3,6 +3,10 @@
              xmlns:vm="using:Noctra.ViewModels"
              x:Class="Noctra.Avalonia.Views.WatermarkView"
              x:DataType="vm:WatermarkViewModel">
+  <UserControl.RenderTransform>
+    <TranslateTransform X="{Binding TranslateX}" Y="{Binding TranslateY}"/>
+  </UserControl.RenderTransform>
+
   <Grid IsVisible="{Binding IsVisible}">
     <Border Background="Transparent"
             CornerRadius="12"
@@ -11,10 +15,6 @@
             VerticalAlignment="Bottom"
             Margin="0,0,24,60"
             IsHitTestVisible="False">
-      <Border.RenderTransform>
-        <TranslateTransform X="{Binding TranslateX}" Y="{Binding TranslateY}"/>
-      </Border.RenderTransform>
-
       <TextBlock Text="Noctra - Free"
                  FontWeight="Bold"
                  FontSize="40"
