@@ -69,7 +69,6 @@ public partial class MainViewModel : ObservableObject
     private readonly ITmdbSyncService _tmdbSyncService;
     private readonly ILicenseService _licenseService;
     private readonly IUpdateService _updateService;
-    private readonly IPerformanceTraceService? _perfTrace;
     private readonly DateTime _downloadCenterSessionStartUtc = DateTime.UtcNow;
     private readonly ConcurrentDictionary<string, byte> _pendingVisualEnrichmentKeys = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<int, byte> _pendingSeriesMetadataEnrichmentIds = new();
@@ -82,7 +81,6 @@ public partial class MainViewModel : ObservableObject
     private int _profileLoadGeneration;
     private readonly ILocalizationService _localizationService;
     private bool _suppressNavigationFilterRefresh;
-    private int _navigationTraceId;
     private bool _suppressSelectedPlaylistChanged;
     private bool _isNavigationContentResetPending;
 
@@ -322,8 +320,7 @@ public partial class MainViewModel : ObservableObject
         ILicenseService licenseService,
         IUpdateService updateService,
         ILocalizationService localizationService,
-        ILogger<MainViewModel>? logger = null,
-        IPerformanceTraceService? perfTraceService = null)
+        ILogger<MainViewModel>? logger = null)
     {
         _localizationService = localizationService;
         _settingsService = settingsService;
@@ -347,7 +344,6 @@ public partial class MainViewModel : ObservableObject
         _tmdbSyncService = tmdbSyncService;
         _licenseService = licenseService;
         _updateService = updateService;
-        _perfTrace = perfTraceService;
         RebuildSortOptions();
         StatusMessage = _localizationService.GetString("Common.Ready");
         _downloadLandingStoredBytes = 0;
@@ -629,7 +625,6 @@ public partial class MainViewModel : ObservableObject
         try
         {
             cts.Cancel();
-            _perfTrace?.Event("PROFILE", "Profile load scope cancelled", reason);
         }
         catch (ObjectDisposedException)
         {
@@ -679,13 +674,10 @@ public partial class MainViewModel : ObservableObject
     public async Task LoadProfileAsync(Profile profile)
     {
         if (profile == null) return;
-        using var trace = _perfTrace?.BeginOperation("PROFILE", "LoadProfileAsync", $"profile={profile.Id} type={profile.ProviderAccount?.Type}");
         var profileScope = BeginProfileLoadScope(profile.Id);
 
         // Clear UI state from previous profile
-        _perfTrace?.Event("PROFILE", "ClearProfileState begin", $"profile={profile.Id}");
         ClearProfileState();
-        _perfTrace?.Event("PROFILE", "ClearProfileState end", $"profile={profile.Id}");
 
         IsLoading = true;
         IsChannelLoading = true;
@@ -696,7 +688,6 @@ public partial class MainViewModel : ObservableObject
         CurrentProfile = profile;
 
         // Load profile-specific settings
-        using (_perfTrace?.BeginOperation("PROFILE", "LoadProfileSettingsAsync", $"profile={profile.Id}"))
         {
             await _settingsService.LoadProfileSettingsAsync(profile.Id);
         }
@@ -715,18 +706,15 @@ public partial class MainViewModel : ObservableObject
 
                         // Check if playlist already exists (cache-first approach)
                         List<Playlist> existingPlaylists;
-                        using (_perfTrace?.BeginOperation("PROFILE", "GetAllPlaylists", $"profile={profile.Id}"))
                         {
                             existingPlaylists = await _playlistService.GetAllAsync(profile.Id);
                         }
-                        _perfTrace?.Counter("PROFILE", "ExistingPlaylists", existingPlaylists.Count, $"profile={profile.Id}");
             
                         if (existingPlaylists.Count > 0)
                         {
                             // Use cached playlist - much faster!
                             _logger?.LogDebug($"[MainViewModel] Using cached playlist for profile {profile.Id}");
                             StatusMessage = _localizationService.GetString("Main.Status.FastLoading");
-                            using (_perfTrace?.BeginOperation("PROFILE", "LoadPlaylists cached", $"profile={profile.Id}"))
                             {
                                 await LoadPlaylistsAsync();
                             }
@@ -734,12 +722,10 @@ public partial class MainViewModel : ObservableObject
             
                                             if (profile.ProviderAccount.Type == ProfileType.StalkerPortal)
                                             {
-                                                _perfTrace?.Event("PROFILE", "ResumeStalkerProgressiveLoading queued", $"profile={profile.Id} playlist={existingPlaylists[0].Id}");
                                                 _ = Task.Run(() => ResumeStalkerProgressiveLoadingAsync(profile, existingPlaylists[0], profileScope: profileScope), profileScope.Token);
                                             }
                                             else if (profile.ProviderAccount.Type == ProfileType.XtreamCodes)
                                             {
-                                                _perfTrace?.Event("PROFILE", "ResumeXtreamProgressiveLoading queued", $"profile={profile.Id} playlist={existingPlaylists[0].Id}");
                                                 _ = Task.Run(() => ResumeXtreamProgressiveLoadingAsync(profile, existingPlaylists[0], profileScope: profileScope), profileScope.Token);
                                             }
                                             else
@@ -1786,10 +1772,6 @@ public partial class MainViewModel : ObservableObject
 
     private async Task ReloadCurrentPlaylistUiAfterRefreshAsync(int playlistId, bool resetUi)
     {
-        using var trace = _perfTrace?.BeginOperation(
-            "REFRESH",
-            "ReloadCurrentPlaylistUiAfterRefreshAsync",
-            $"playlist={playlistId} resetUi={resetUi} activeView={ActiveView}");
 
         if (resetUi)
         {
@@ -1839,10 +1821,8 @@ public partial class MainViewModel : ObservableObject
 
     private async Task RunPostChannelLoadBackgroundTasksAsync()
     {
-        using var trace = _perfTrace?.BeginOperation("BG", "RunPostChannelLoadBackgroundTasksAsync");
         if (Interlocked.Exchange(ref _isBackgroundEpgSyncRunning, 1) == 1)
         {
-            _perfTrace?.Event("BG", "Post-load EPG skipped", "already running");
             return;
         }
 
@@ -1862,7 +1842,6 @@ public partial class MainViewModel : ObservableObject
 
     private async Task LoadHomeContentAsync()
     {
-        using var trace = _perfTrace?.BeginOperation("HOME", "LoadHomeContentAsync", $"playlist={SelectedPlaylist?.Id ?? 0}");
         try 
         {
             var playlistId = SelectedPlaylist?.Id ?? 0;
@@ -1876,14 +1855,12 @@ public partial class MainViewModel : ObservableObject
                 }
                 else if (hasSeriesChannels)
                 {
-                    _perfTrace?.Event("HOME", "Series cache empty; rebuilding aggregation", $"playlist={playlistId}");
                     await _mediaService.AggregateContentAsync(playlistId);
                     _mediaService.RaiseAggregationCompleted(playlistId);
                     _allSeriesCache = await _mediaService.GetSeriesListAsync(playlistId);
                 }
             }
 
-            _perfTrace?.Counter("HOME", "AllSeriesCache", _allSeriesCache.Count, $"playlist={playlistId}");
 
             _isEpisodeContinueDirty = true;
             _cachedEpisodeContinue = null;
@@ -2442,13 +2419,8 @@ public partial class MainViewModel : ObservableObject
 
     public async Task LoadMoreChannelsAsync(CancellationToken cancellationToken = default)
     {
-        using var trace = _perfTrace?.BeginOperation(
-            "LOAD",
-            "LoadMoreChannelsAsync",
-            $"nav={Volatile.Read(ref _navigationTraceId)} view={ActiveView} type={SelectedChannelType} group={SelectedGroup ?? "<all>"} page={_currentPage}");
         if (cancellationToken.IsCancellationRequested)
         {
-            _perfTrace?.Event("LOAD", "LoadMoreChannelsAsync canceled-before-start");
             return;
         }
 
@@ -2475,10 +2447,6 @@ public partial class MainViewModel : ObservableObject
             };
 
             List<Channel> page;
-            using (_perfTrace?.BeginOperation(
-                "LOAD",
-                "GetChannelsFilteredPageAsync",
-                $"playlist={SelectedPlaylist.Id} skip={_currentPage * IncrementalPageSize} take={IncrementalPageSize} type={effectiveType} group={effectiveGroup ?? "<all>"} hidden={hiddenGroups.Count}"))
             {
                 page = await _playlistService.GetChannelsFilteredPageAsync(
                     SelectedPlaylist.Id,
@@ -2491,7 +2459,6 @@ public partial class MainViewModel : ObservableObject
                     sortOrder: SelectedSortOrder,
                     hiddenGroups: hiddenGroups);
             }
-            _perfTrace?.Counter("LOAD", "GetChannelsFilteredPageAsync count", page.Count, $"page={_currentPage}");
 
             // If selected group returns nothing on first page, fallback to "all" to avoid false empty UI.
             if (_currentPage == 0 &&
@@ -2500,7 +2467,6 @@ public partial class MainViewModel : ObservableObject
                 !string.IsNullOrWhiteSpace(effectiveGroup))
             {
                 List<Channel> fallbackPage;
-                using (_perfTrace?.BeginOperation("LOAD", "GetChannelsFilteredPageAsync fallback", $"playlist={SelectedPlaylist.Id} type={effectiveType}"))
                 {
                     fallbackPage = await _playlistService.GetChannelsFilteredPageAsync(
                         SelectedPlaylist.Id,
@@ -2537,7 +2503,6 @@ public partial class MainViewModel : ObservableObject
             if (page.Count == 0)
             {
                 _hasMoreChannels = false;
-                _perfTrace?.Event("LOAD", "LoadMoreChannelsAsync empty-page", $"page={_currentPage}");
                 UpdateSearchBuckets();
                 return;
             }
@@ -2545,7 +2510,6 @@ public partial class MainViewModel : ObservableObject
             _currentPage++;
             _hasMoreChannels = page.Count == IncrementalPageSize;
 
-            using var uiTrace = _perfTrace?.BeginOperation("LOAD", "LoadMoreChannels UI update", $"items={page.Count}");
             _dispatcherService.Invoke(() =>
             {
                 FilteredChannels.AddRange(page);
@@ -2553,7 +2517,6 @@ public partial class MainViewModel : ObservableObject
                 {
                     Channels.AddRange(page);
                 }
-                _perfTrace?.Counter("LOAD", "LoadMoreChannelsAsync added", page.Count, $"filtered={FilteredChannels.CountedItemCount} channels={Channels.Count}");
                 
                 // Fire and forget EPG enrichment for the new page
                 _ = EnrichChannelsWithEpgAsync(page);
@@ -2588,7 +2551,6 @@ public partial class MainViewModel : ObservableObject
     {
         if (ActiveView is not (AppView.Home or AppView.Live or AppView.Movies or AppView.Search))
         {
-            _perfTrace?.Event("LOAD", "LoadMoreChannelsIfNeeded skipped by view", $"view={ActiveView}");
             return;
         }
 
@@ -2612,7 +2574,6 @@ public partial class MainViewModel : ObservableObject
     {
         if (ActiveView is not (AppView.Home or AppView.Series or AppView.Search))
         {
-            _perfTrace?.Event("LOAD", "LoadMoreSeriesIfNeeded skipped by view", $"view={ActiveView}");
             return;
         }
 
@@ -2634,10 +2595,6 @@ public partial class MainViewModel : ObservableObject
 
     public Task LoadMoreSeriesAsync()
     {
-        using var trace = _perfTrace?.BeginOperation(
-            "LOAD",
-            "LoadMoreSeriesAsync",
-            $"nav={Volatile.Read(ref _navigationTraceId)} source={_seriesFilteredSource.Count} page={_currentSeriesPage}");
         if (!_hasMoreSeriesItems || _isLoadingMoreSeriesItems || _seriesFilteredSource.Count == 0)
         {
             return Task.CompletedTask;
@@ -2652,7 +2609,6 @@ public partial class MainViewModel : ObservableObject
             if (page.Count == 0)
             {
                 _hasMoreSeriesItems = false;
-                _perfTrace?.Event("LOAD", "LoadMoreSeriesAsync empty-page", $"page={_currentSeriesPage}");
                 return Task.CompletedTask;
             }
 
@@ -2660,7 +2616,6 @@ public partial class MainViewModel : ObservableObject
             _hasMoreSeriesItems = page.Count == IncrementalPageSize;
 
             SeriesViewItems.AddRange(page);
-            _perfTrace?.Counter("LOAD", "LoadMoreSeriesAsync added", page.Count, $"visible={SeriesViewItems.Count}");
             OnPropertyChanged(nameof(SeriesViewItems));
             NotifyContentStateChanged();
 
@@ -2728,10 +2683,6 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        _perfTrace?.Event(
-            "IMAGE",
-            "QueueVisibleChannelVisualEnrichment",
-            $"candidates={candidates.Count} page={page.Count}");
 
         _ = Task.Run(async () =>
         {
@@ -2783,10 +2734,6 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        _perfTrace?.Event(
-            "IMAGE",
-            "QueueVisibleSeriesVisualEnrichment",
-            $"candidates={candidates.Count} page={page.Count}");
 
         _ = Task.Run(async () =>
         {
@@ -2840,10 +2787,6 @@ public partial class MainViewModel : ObservableObject
             var metadata = await _metadataService.FetchMetadataAsync(channel.Name, ChannelType.VOD, languageCode);
             if (metadata == null || string.IsNullOrWhiteSpace(metadata.PosterUrl))
             {
-                _perfTrace?.Event(
-                    "IMAGE",
-                    "EnrichChannelVisualAsync no-poster",
-                    $"id={channel.Id} name={channel.Name} language={languageCode ?? "<none>"}");
                 return;
             }
 
@@ -2861,10 +2804,6 @@ public partial class MainViewModel : ObservableObject
             {
                 dbChannel.LogoUrl = metadata.PosterUrl;
                 changed = true;
-                _perfTrace?.Event(
-                    "IMAGE",
-                    "EnrichChannelVisualAsync poster",
-                    $"id={channel.Id}");
             }
 
             // --- Backdrop ---
@@ -2958,10 +2897,6 @@ public partial class MainViewModel : ObservableObject
             if (metadata == null || string.IsNullOrWhiteSpace(metadata.PosterUrl))
             {
                 _seriesVisualNoPosterKeys.TryAdd(key, 1);
-                _perfTrace?.Event(
-                    "IMAGE",
-                    "EnrichSeriesVisualAsync no-poster",
-                    $"id={series.Id} name={series.Name} language={languageCode ?? "<none>"}");
                 return;
             }
 
@@ -2978,10 +2913,6 @@ public partial class MainViewModel : ObservableObject
             {
                 dbSeries.CoverUrl = metadata.PosterUrl;
                 changed = true;
-                _perfTrace?.Event(
-                    "IMAGE",
-                    "EnrichSeriesVisualAsync poster",
-                    $"id={series.Id}");
             }
 
             if (string.IsNullOrWhiteSpace(dbSeries.BackdropUrl) && !string.IsNullOrWhiteSpace(metadata.BackdropUrl))
@@ -3023,11 +2954,9 @@ public partial class MainViewModel : ObservableObject
     {
         if (_suppressNavigationFilterRefresh)
         {
-            _perfTrace?.Event("SEARCH", "OnSearchTextChanged suppressed", $"len={value?.Length ?? 0} view={ActiveView}");
             return;
         }
 
-        _perfTrace?.Event("SEARCH", "OnSearchTextChanged", $"len={value?.Length ?? 0} view={ActiveView}");
 
         // Debounce logic
         _filterCts?.Cancel();
@@ -3036,20 +2965,12 @@ public partial class MainViewModel : ObservableObject
         var token = _filterCts.Token;
         var version = Interlocked.Increment(ref _filterRequestVersion);
 
-        _perfTrace?.Event(
-            "FILTER",
-            "ScheduleDelayedFilter",
-            $"version={version} caller={nameof(OnSearchTextChanged)} delayMs={_filterDelayMs} nav={Volatile.Read(ref _navigationTraceId)} view={ActiveView} type={SelectedChannelType} group={SelectedGroup ?? "<all>"} search={(string.IsNullOrWhiteSpace(SearchText) ? "<empty>" : SearchText)}");
 
         _ = ApplyFiltersWithDelayAsync(token, version, "search", nameof(OnSearchTextChanged));
     }
 
     partial void OnSelectedGroupChanged(string? value)
     {
-        _perfTrace?.Event(
-            "FILTER",
-            "OnSelectedGroupChanged",
-            $"value={value ?? "<all>"} suppress={_suppressFilterRefresh} navSuppress={_suppressNavigationFilterRefresh} view={ActiveView} type={SelectedChannelType}");
 
         if (_suppressFilterRefresh || _suppressNavigationFilterRefresh)
         {
@@ -3066,10 +2987,6 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSelectedChannelTypeChanged(ChannelType? value)
     {
-        _perfTrace?.Event(
-            "FILTER",
-            "OnSelectedChannelTypeChanged",
-            $"value={value?.ToString() ?? "<all>"} suppress={_suppressFilterRefresh} navSuppress={_suppressNavigationFilterRefresh} view={ActiveView} group={SelectedGroup ?? "<all>"}");
 
         UpdateGroupsForSelectedType();
         if (_suppressNavigationFilterRefresh)
@@ -3226,7 +3143,6 @@ public partial class MainViewModel : ObservableObject
         {
             // Eğer dil koduyla eşleşen grup yoksa, listenin en başındaki (Adult olmayan) grubu seç
             SelectedGroup = preferred ?? Groups.FirstOrDefault();
-            _perfTrace?.Event("FILTER", "EnsurePreferredDefaultGroupSelected", $"selected={SelectedGroup ?? "<all>"} preferred={preferred ?? "<none>"} count={Groups.Count}");
         }
         finally
         {
@@ -3256,17 +3172,12 @@ public partial class MainViewModel : ObservableObject
         };
 
         _dispatcherService.Invoke(() => Groups = new BatchObservableCollection<string>(nextGroups));
-        _perfTrace?.Event(
-            "FILTER",
-            "UpdateGroupsForSelectedType",
-            $"effectiveType={effectiveType?.ToString() ?? "<all>"} groups={nextGroups.Count} selected={SelectedGroup ?? "<all>"} view={ActiveView}");
 
         if (!string.IsNullOrWhiteSpace(SelectedGroup) && !Groups.Contains(SelectedGroup))
         {
             _suppressFilterRefresh = true;
             try
             {
-                _perfTrace?.Event("FILTER", "SelectedGroup invalidated", $"old={SelectedGroup} effectiveType={effectiveType?.ToString() ?? "<all>"}");
                 SelectedGroup = null;
             }
             finally
@@ -3334,10 +3245,6 @@ public partial class MainViewModel : ObservableObject
     public void ScheduleImmediateFilter(string reason = "immediate", [CallerMemberName] string caller = "")
     {
         var version = Interlocked.Increment(ref _filterRequestVersion);
-        _perfTrace?.Event(
-            "FILTER",
-            "ScheduleImmediateFilter",
-            $"version={version} caller={caller} reason={reason} running={Volatile.Read(ref _isFilterApplyRunning)} pending={Volatile.Read(ref _pendingFilterRequest)} nav={Volatile.Read(ref _navigationTraceId)} view={ActiveView} type={SelectedChannelType} group={SelectedGroup ?? "<all>"} search={(string.IsNullOrWhiteSpace(SearchText) ? "<empty>" : SearchText)}");
         _filterCts?.Cancel();
         _filterCts?.Dispose();
         _filterCts = new CancellationTokenSource();
@@ -3392,10 +3299,6 @@ public partial class MainViewModel : ObservableObject
             Interlocked.Exchange(ref _pendingFilterRequest, 1);
             _pendingFilterReason = reason;
             _pendingFilterCaller = caller;
-            _perfTrace?.Event(
-                "FILTER",
-                "Filter request coalesced",
-                $"version={version} latest={Volatile.Read(ref _filterRequestVersion)} caller={caller} reason={reason} nav={Volatile.Read(ref _navigationTraceId)} view={ActiveView} type={SelectedChannelType} group={SelectedGroup ?? "<all>"}");
             return;
         }
 
@@ -3412,18 +3315,15 @@ public partial class MainViewModel : ObservableObject
                 var currentVersion = Volatile.Read(ref _filterRequestVersion);
                 if (currentToken.IsCancellationRequested)
                 {
-                    _perfTrace?.Event("FILTER", "Filter request canceled-before-run", $"version={currentVersion} caller={currentCaller} reason={currentReason}");
                     break;
                 }
 
                 var signature = BuildFilterSignature();
                 if (ShouldSkipDuplicateFilter(signature))
                 {
-                    _perfTrace?.Event("FILTER", "Filter duplicate skipped", $"version={currentVersion} caller={currentCaller} reason={currentReason} signature={signature}");
                 }
                 else
                 {
-                    _perfTrace?.Event("FILTER", "Filter request run", $"version={currentVersion} caller={currentCaller} reason={currentReason} signature={signature}");
                     var applied = await ApplyFiltersAsync(currentToken);
                     if (applied)
                     {
@@ -3440,7 +3340,6 @@ public partial class MainViewModel : ObservableObject
                 currentCaller = _pendingFilterCaller ?? currentCaller;
                 _pendingFilterReason = null;
                 _pendingFilterCaller = null;
-                _perfTrace?.Event("FILTER", "Filter pending replay", $"latest={Volatile.Read(ref _filterRequestVersion)} caller={currentCaller} reason={currentReason}");
 
                 currentToken = _filterCts?.Token ?? currentToken;
                 await Task.Delay(ImmediateFilterCoalesceDelayMs, currentToken);
@@ -3486,10 +3385,6 @@ public partial class MainViewModel : ObservableObject
 
     private async Task<bool> ApplyFiltersAsync(CancellationToken token)
     {
-        using var trace = _perfTrace?.BeginOperation(
-            "FILTER",
-            "ApplyFiltersAsync",
-            $"nav={Volatile.Read(ref _navigationTraceId)} view={ActiveView} type={SelectedChannelType} group={SelectedGroup ?? "<all>"} search={(string.IsNullOrWhiteSpace(SearchText) ? "<empty>" : SearchText)}");
         if (SelectedPlaylist == null || token.IsCancellationRequested)
         {
             CompleteNavigationContentReset();
@@ -3505,7 +3400,6 @@ public partial class MainViewModel : ObservableObject
             var needsChannels = view is AppView.Home or AppView.Live or AppView.Movies or AppView.Search;
             var needsSeries = view is AppView.Home or AppView.Series or AppView.Search;
 
-            _perfTrace?.Event("FILTER", "ApplyFilters view-plan", $"view={view} channels={needsChannels} series={needsSeries}");
 
             if (needsChannels)
             {
@@ -3516,7 +3410,6 @@ public partial class MainViewModel : ObservableObject
                 _hasMoreChannels = false;
                 _isLoadingMoreChannels = false;
                 FilteredChannels = new BatchObservableCollection<Channel>(c => !IsDummyChannel(c));
-                _perfTrace?.Event("FILTER", "Preserve channel cache for non-grid view", $"view={view} channels={Channels?.Count ?? 0}");
                 NotifyContentStateChanged();
             }
 
@@ -3541,7 +3434,6 @@ public partial class MainViewModel : ObservableObject
             }
             else
             {
-                _perfTrace?.Event("FILTER", "LoadMoreChannels skipped by view", $"view={view}");
             }
 
             if (token.IsCancellationRequested) return false;
@@ -3552,7 +3444,6 @@ public partial class MainViewModel : ObservableObject
             }
             else
             {
-                _perfTrace?.Event("FILTER", "UpdateSeriesViewItems skipped by view", $"view={view}");
             }
 
             return !token.IsCancellationRequested;
@@ -3879,13 +3770,8 @@ public partial class MainViewModel : ObservableObject
 
     public async Task RefreshSelectedPlaylistAsync(bool isBackground = false)
     {
-        using var trace = _perfTrace?.BeginOperation(
-            "REFRESH",
-            "RefreshSelectedPlaylistAsync",
-            $"background={isBackground} profile={CurrentProfileId?.ToString() ?? "<none>"} playlist={SelectedPlaylist?.Id.ToString() ?? "<none>"}");
         if (SelectedPlaylist == null)
         {
-            _perfTrace?.Event("REFRESH", "RefreshSelectedPlaylist no selected playlist", $"background={isBackground}");
             if (CurrentProfile != null && !isBackground)
             {
                 // If profile has no playlist record, try to load/create it
@@ -3901,7 +3787,6 @@ public partial class MainViewModel : ObservableObject
             noChangeUntil > DateTime.UtcNow)
         {
             StatusMessage = _localizationService.GetString("Main.Status.AlreadyUpToDate");
-            _perfTrace?.Event("REFRESH", "RefreshSelectedPlaylist no-change-cache", $"playlist={playlistId}");
             await TouchPlaylistLastUpdatedAsync(playlistId);
             return;
         }
@@ -3912,7 +3797,6 @@ public partial class MainViewModel : ObservableObject
             {
                 StatusMessage = _localizationService.GetString("Main.Status.PlaylistRefreshAlreadyInProgress");
             }
-            _perfTrace?.Event("REFRESH", "RefreshSelectedPlaylist skipped busy", $"playlist={playlistId}");
             return;
         }
 
@@ -3922,7 +3806,6 @@ public partial class MainViewModel : ObservableObject
             {
                 StatusMessage = _localizationService.GetString("Main.Status.OtherRefreshInProgress");
                 Interlocked.Exchange(ref _isRefreshingPlaylist, 0);
-                _perfTrace?.Event("REFRESH", "RefreshSelectedPlaylist skipped manual-refresh-busy", $"playlist={playlistId}");
                 return;
             }
         }
@@ -3941,7 +3824,6 @@ public partial class MainViewModel : ObservableObject
             {
                 if (profile.ProviderAccount.Type == ProfileType.StalkerPortal)
                 {
-                    _perfTrace?.Event("REFRESH", "RefreshSelectedPlaylist provider", $"type=Stalker playlist={playlistId}");
                     var refreshScope = BeginProfileLoadScope(profile.Id);
                     await ResumeStalkerProgressiveLoadingAsync(profile, SelectedPlaylist, isFullRefresh: true, profileScope: refreshScope);
                     ThrowIfProfileLoadCancelled(refreshScope);
@@ -3961,7 +3843,6 @@ public partial class MainViewModel : ObservableObject
                 }
                 else if (profile.ProviderAccount.Type == ProfileType.XtreamCodes)
                 {
-                    _perfTrace?.Event("REFRESH", "RefreshSelectedPlaylist provider", $"type=Xtream playlist={playlistId}");
                     var refreshScope = BeginProfileLoadScope(profile.Id);
                     await ResumeXtreamProgressiveLoadingAsync(profile, SelectedPlaylist, isFullRefresh: true, profileScope: refreshScope);
                     ThrowIfProfileLoadCancelled(refreshScope);
@@ -3984,7 +3865,6 @@ public partial class MainViewModel : ObservableObject
             // Varsayılan M3U mantığı
             int beforeCount;
             int afterCount;
-            using (_perfTrace?.BeginOperation("REFRESH", "GetChannelCount before", $"playlist={playlistId}"))
             {
                 if (!isBackground)
                 {
@@ -3993,7 +3873,6 @@ public partial class MainViewModel : ObservableObject
                 beforeCount = await _playlistService.GetChannelCountAsync(playlistId);
             }
 
-            using (_perfTrace?.BeginOperation("REFRESH", "PlaylistService.RefreshAsync", $"playlist={playlistId}"))
             {
                 if (!isBackground)
                 {
@@ -4002,7 +3881,6 @@ public partial class MainViewModel : ObservableObject
                 await _playlistService.RefreshAsync(playlistId);
             }
 
-            using (_perfTrace?.BeginOperation("REFRESH", "GetChannelCount after", $"playlist={playlistId}"))
             {
                 if (!isBackground)
                 {
@@ -4010,7 +3888,6 @@ public partial class MainViewModel : ObservableObject
                 }
                 afterCount = await _playlistService.GetChannelCountAsync(playlistId);
             }
-            _perfTrace?.Counter("REFRESH", "ChannelCountDelta", afterCount - beforeCount, $"before={beforeCount} after={afterCount}");
             
             // Refresh replaces playlist content, so rebuild the active UI from DB even
             // when channel count is unchanged but group names or series changed.
@@ -4036,7 +3913,6 @@ public partial class MainViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            _perfTrace?.Event("REFRESH", "RefreshSelectedPlaylist cancelled", $"playlist={playlistId}");
         }
         catch (Exception ex)
         {
@@ -4197,7 +4073,6 @@ public partial class MainViewModel : ObservableObject
             Volatile.Read(ref _isManualEpgRefreshRunning) == 1)
         {
             StatusMessage = _localizationService.GetString("Main.Status.OtherRefreshInProgress");
-            _perfTrace?.Event("EPG", "ForceRefreshEpgInBackground skipped", "busy");
             return false;
         }
 
@@ -4221,10 +4096,6 @@ public partial class MainViewModel : ObservableObject
 
     private async Task LoadEpgInternalAsync(bool isBackgroundSync, bool forceRefresh = false, bool setBusyState = true)
     {
-        using var trace = _perfTrace?.BeginOperation(
-            "EPG",
-            "LoadEpgInternalAsync",
-            $"background={isBackgroundSync} force={forceRefresh} busy={setBusyState} profile={CurrentProfileId?.ToString() ?? "<none>"} playlist={SelectedPlaylist?.Id.ToString() ?? "<none>"}");
         if (CurrentProfile == null) return;
 
         if (!isBackgroundSync)
@@ -4253,7 +4124,6 @@ public partial class MainViewModel : ObservableObject
             }
 
             using var db = await _contextFactory.CreateDbContextAsync();
-            _perfTrace?.Event("EPG", "DbContext created");
 
             // Clear old errors from the database before starting the long-running download
             if (SelectedPlaylist != null)
@@ -4270,7 +4140,6 @@ public partial class MainViewModel : ObservableObject
             IEnumerable<Channel> channelsForMapping = Channels;
             if (SelectedPlaylist != null)
             {
-                using (_perfTrace?.BeginOperation("EPG", "GetChannelsForMapping", $"playlist={SelectedPlaylist.Id}"))
                 {
                     channelsForMapping = await _playlistService.GetChannelsAsync(SelectedPlaylist.Id);
                 }
@@ -4280,7 +4149,6 @@ public partial class MainViewModel : ObservableObject
             var liveChannels = channelsForMapping
                 .Where(c => c.Type == ChannelType.Live)
                 .ToList();
-            _perfTrace?.Counter("EPG", "LiveChannelsForMapping", liveChannels.Count, $"playlist={SelectedPlaylist?.Id.ToString() ?? "<none>"}");
 
             if (liveChannels.Count == 0)
             {
@@ -4288,7 +4156,6 @@ public partial class MainViewModel : ObservableObject
                 {
                     StatusMessage = _localizationService.GetString("Main.Status.NoLiveChannelsSkipEpg");
                 }
-                _perfTrace?.Event("EPG", "LoadEpgInternal no-live-channels");
                 return;
             }
 
@@ -4296,12 +4163,10 @@ public partial class MainViewModel : ObservableObject
             if (!forceRefresh && SelectedPlaylist != null)
             {
                 bool hasCachedPrograms;
-                using (_perfTrace?.BeginOperation("EPG", "HasEpgForChannelsAsync", $"channels={liveChannels.Count}"))
                 {
                     hasCachedPrograms = await HasEpgForChannelsAsync(db, liveChannels);
                 }
                 var refreshThresholdHours = _settingsService.Settings.EpgRefreshFrequencyHours;
-                _perfTrace?.Event("EPG", "CacheCheck", $"hasCached={hasCachedPrograms} thresholdHours={refreshThresholdHours}");
 
                 if (hasCachedPrograms)
                 {
@@ -4316,7 +4181,6 @@ public partial class MainViewModel : ObservableObject
                         var lastUpdated = SelectedPlaylist.EpgLastUpdated ?? DateTime.MinValue;
                         if ((DateTime.UtcNow - lastUpdated).TotalHours < refreshThresholdHours)
                         {
-                            _perfTrace?.Event("EPG", "LoadEpgInternal cached-skip", $"lastUpdated={lastUpdated:o}");
                             if (isBackgroundSync) return;
                         }
                     }
@@ -4365,7 +4229,6 @@ public partial class MainViewModel : ObservableObject
                 hasUsableTvgIds,
                 preferredLanguageCode: appLanguage,
                 providerHeaders: providerHeaders);
-            _perfTrace?.Counter("EPG", "ResolvedSources", epgSources.Count, $"providerUrl={!string.IsNullOrWhiteSpace(providerEpgUrl)} custom={customEpgUrls.Count}");
 
             if (!isBackgroundSync)
             {
@@ -4396,7 +4259,6 @@ public partial class MainViewModel : ObservableObject
 
                 try
                 {
-                    using var sourceTrace = _perfTrace?.BeginOperation("EPG", "LoadEpgSource", $"type={source.Type} primary={source.IsPrimary}");
                     if (!isBackgroundSync)
                     {
                         StatusMessage = string.Format(CultureInfo.CurrentCulture,
@@ -4415,7 +4277,6 @@ public partial class MainViewModel : ObservableObject
                         progress: epgProgressReporter,
                         clearBeforeSave: source.ClearBeforeLoad,
                         headers: source.Headers); // ATOMIC CLEAR: Only clear if we actually start saving programs
-                    _perfTrace?.Counter("EPG", "LoadedPrograms", loadedPrograms, $"source={source.Type}");
 
                     if (loadedPrograms > 0)
                     {
@@ -4437,7 +4298,6 @@ public partial class MainViewModel : ObservableObject
                 catch (Exception ex)
                 {
                     lastSourceError = $"{source.Type}: {UserFriendlyErrorMessage.FromException(ex)}";
-                    _perfTrace?.Event("EPG", "LoadEpgSource failed", $"source={source.Type} error={ex.GetType().Name}:{ex.Message}");
                     _logger?.LogDebug($"[MainViewModel] EPG source failed: {source.Type} - {ex.Message}");
                 }
             }
@@ -4457,7 +4317,6 @@ public partial class MainViewModel : ObservableObject
 
             if (SelectedPlaylist != null)
             {
-                _perfTrace?.Event("EPG", "Persist EPG result", $"success={anySuccess} playlist={SelectedPlaylist.Id}");
                 var playlistToUpdate = await db.Playlists.FirstOrDefaultAsync(p => p.Id == SelectedPlaylist.Id);
                 if (playlistToUpdate != null)
                 {
@@ -4621,7 +4480,6 @@ public partial class MainViewModel : ObservableObject
 
     private async Task EnrichVisibleChannelsWithEpgAsync()
     {
-        using var trace = _perfTrace?.BeginOperation("BG", "EnrichVisibleChannelsWithEpgAsync", $"visible={FilteredChannels.CountedItemCount}");
         // Check for EPG expiration (All programs in database have ended)
         if (_settingsService.Settings.EpgEnabled)
         {
@@ -4853,11 +4711,6 @@ public partial class MainViewModel : ObservableObject
     private void Navigate(AppView view)
     {
         var previousView = ActiveView;
-        var traceId = Interlocked.Increment(ref _navigationTraceId);
-        using var trace = _perfTrace?.BeginOperation(
-            "NAV",
-            $"NAV#{traceId} {previousView}->{view}",
-            $"currentItems={CurrentViewItemCount} type={SelectedChannelType} group={SelectedGroup ?? "<all>"} search={(string.IsNullOrWhiteSpace(SearchText) ? "<empty>" : SearchText)}");
         _suppressNavigationFilterRefresh = true;
         try
         {
@@ -4972,13 +4825,11 @@ public partial class MainViewModel : ObservableObject
         }
         else
         {
-            _perfTrace?.Event("NAV", $"NAV#{traceId} filter-skipped", $"view={view} previous={previousView} currentItems={CurrentViewItemCount}");
         }
     }
 
     private void UpdateMyList()
     {
-        using var trace = _perfTrace?.BeginOperation("LIST", "UpdateMyList", $"channels={Channels?.Count ?? 0} series={_allSeriesCache.Count}");
         try
         {
             var channelsSnapshot = Channels?.ToList() ?? new List<Channel>();
@@ -5044,7 +4895,6 @@ public partial class MainViewModel : ObservableObject
 
     private void UpdateFavoriteChannels()
     {
-        using var trace = _perfTrace?.BeginOperation("LIST", "UpdateFavoriteChannels", $"channels={Channels?.Count ?? 0} series={_allSeriesCache.Count}");
         try
         {
             var channelsSnapshot = Channels?.ToList() ?? new List<Channel>();
@@ -6608,7 +6458,6 @@ public partial class MainViewModel : ObservableObject
 
     private void UpdateSearchBuckets()
     {
-        using var trace = _perfTrace?.BeginOperation("SEARCH", "UpdateSearchBuckets", $"len={SearchText?.Length ?? 0}");
         if (string.IsNullOrWhiteSpace(SearchText))
         {
             SearchLiveChannels.Clear();
@@ -6620,7 +6469,6 @@ public partial class MainViewModel : ObservableObject
             SearchSimilarVodChannels.Clear();
             ShowSearchSimilarSection = false;
             ShowSearchEmptyState = false;
-            _perfTrace?.Event("SEARCH", "UpdateSearchBuckets cleared");
             return;
         }
 
@@ -6671,9 +6519,6 @@ public partial class MainViewModel : ObservableObject
         SetItems(SearchVodChannels, rankedVod.Select(x => x.Item));
 
         UpdateSearchSuggestionAndSimilar(query, channelsSnapshot, seriesSnapshot);
-        _perfTrace?.Counter("SEARCH", "SearchLiveChannels", SearchLiveChannels.Count);
-        _perfTrace?.Counter("SEARCH", "SearchSeriesChannels", SearchSeriesChannels.Count);
-        _perfTrace?.Counter("SEARCH", "SearchVodChannels", SearchVodChannels.Count);
 
         var hasAnyExact = SearchLiveChannels.Count > 0
             || SearchSeriesChannels.Count > 0
@@ -7184,10 +7029,6 @@ public partial class MainViewModel : ObservableObject
 
     private void UpdateSeriesViewItems()
     {
-        using var trace = _perfTrace?.BeginOperation(
-            "FILTER",
-            "UpdateSeriesViewItems",
-            $"source={_allSeriesCache.Count} group={SelectedGroup ?? "<all>"} search={(string.IsNullOrWhiteSpace(SearchText) ? "<empty>" : SearchText)}");
         var source = _allSeriesCache;
         if (source.Count == 0)
         {
@@ -7241,7 +7082,6 @@ public partial class MainViewModel : ObservableObject
         };
 
         _seriesFilteredSource = filtered.ToList();
-        _perfTrace?.Counter("FILTER", "SeriesFilteredSource", _seriesFilteredSource.Count, $"source={source.Count}");
         _currentSeriesPage = 0;
         _hasMoreSeriesItems = true;
         SeriesViewItems.Clear();
@@ -7253,7 +7093,6 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void CommitSearch()
     {
-        _perfTrace?.Event("SEARCH", "CommitSearch", $"len={SearchQuery?.Length ?? 0}");
         if (!string.IsNullOrWhiteSpace(SearchQuery))
         {
             // Sync with global search and navigate
@@ -7265,7 +7104,6 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void ApplySearchSuggestion()
     {
-        _perfTrace?.Event("SEARCH", "ApplySearchSuggestion", $"len={SearchSuggestion?.Length ?? 0}");
         if (string.IsNullOrWhiteSpace(SearchSuggestion))
         {
             return;

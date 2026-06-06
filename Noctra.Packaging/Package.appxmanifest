@@ -21,12 +21,15 @@
     <TargetDeviceFamily
       Name="Windows.Desktop"
       MinVersion="10.0.17763.0"
-      MaxVersionTested="10.0.19045.0" />
+      MaxVersionTested="10.0.26100.0" />
   </Dependencies>
 
   <Resources>
     <Resource Language="tr-tr" />
     <Resource Language="en-us" />
+    <Resource Language="de-de" />
+    <Resource Language="es-es" />
+    <Resource Language="fr-fr" />
   </Resources>
 
   <Applications>

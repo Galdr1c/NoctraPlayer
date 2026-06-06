@@ -30,7 +30,6 @@ public partial class MetadataService : IMetadataService
     // TMDB credential. v4 access tokens use Bearer auth; v3 API keys must stay in the query string.
     private string _apiKey = string.Empty;
     private bool _useQueryApiKey;
-    private bool _credentialTraceEmitted;
     
     // Genre cache: LanguageCode -> (GenreID -> GenreName)
     private readonly ConcurrentDictionary<string, Dictionary<int, string>> _genreCache = new();
@@ -69,10 +68,10 @@ public partial class MetadataService : IMetadataService
     /// </summary>
     public void SetApiKey(string apiKey)
     {
-        ApplyApiCredential(apiKey, forceBearer: true, traceSource: "SetApiKey");
+        ApplyApiCredential(apiKey, forceBearer: true);
     }
 
-    private void ApplyApiCredential(string? credential, bool forceBearer, string traceSource)
+    private void ApplyApiCredential(string? credential, bool forceBearer)
     {
         _apiKey = credential?.Trim() ?? string.Empty;
         _useQueryApiKey = !forceBearer && IsLikelyV3ApiKey(_apiKey);
@@ -86,12 +85,6 @@ public partial class MetadataService : IMetadataService
         _httpClient.DefaultRequestHeaders.Authorization = IsUsingProxy || _useQueryApiKey
             ? null
             : new AuthenticationHeaderValue("Bearer", _apiKey);
-
-        if (!_credentialTraceEmitted)
-        {
-            _credentialTraceEmitted = true;
-            PerformanceTraceService.Shared?.Event("TMDB", "Credential loaded", $"source={traceSource} authMode={GetAuthModeForTrace()} keyType={GetCredentialTypeForTrace(_apiKey)}");
-        }
     }
 
     private void LoadApiKeyFromEnvironment()
@@ -99,14 +92,14 @@ public partial class MetadataService : IMetadataService
         var bearerToken = Environment.GetEnvironmentVariable("TMDB_BEARER_TOKEN");
         if (!string.IsNullOrWhiteSpace(bearerToken))
         {
-            ApplyApiCredential(bearerToken, forceBearer: true, traceSource: "env:TMDB_BEARER_TOKEN");
+            ApplyApiCredential(bearerToken, forceBearer: true);
             return;
         }
 
         var apiKey = Environment.GetEnvironmentVariable("TMDB_API_KEY");
         if (!string.IsNullOrWhiteSpace(apiKey))
         {
-            ApplyApiCredential(apiKey, forceBearer: false, traceSource: "env:TMDB_API_KEY");
+            ApplyApiCredential(apiKey, forceBearer: false);
         }
     }
 
@@ -201,7 +194,7 @@ public partial class MetadataService : IMetadataService
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "Direct TMDB API fallback failed for: {Url}", TrimForTrace(fallbackUrl));
+            _logger?.LogError(ex, "Direct TMDB API fallback failed for: {Url}", TrimForLog(fallbackUrl));
             return null;
         }
     }
@@ -235,23 +228,6 @@ public partial class MetadataService : IMetadataService
         return credential.Length == 32 && Regex.IsMatch(credential, "^[a-fA-F0-9]{32}$", RegexOptions.CultureInvariant);
     }
 
-    private string GetAuthModeForTrace()
-    {
-        return _useQueryApiKey ? "v3-query" : "bearer";
-    }
-
-    private static string GetCredentialTypeForTrace(string credential)
-    {
-        if (IsLikelyV3ApiKey(credential))
-        {
-            return "v3-api-key";
-        }
-
-        return credential.Count(c => c == '.') >= 2 || credential.StartsWith("eyJ", StringComparison.Ordinal)
-            ? "v4-token"
-            : "unknown";
-    }
-    
     public async Task<ChannelMetadata?> FetchMetadataAsync(string searchQuery, ChannelType? type = null, string? languageCode = null, CancellationToken cancellationToken = default)
     {
         if (!IsUsingProxy)
@@ -610,7 +586,6 @@ public partial class MetadataService : IMetadataService
 
             if (string.IsNullOrEmpty(_apiKey))
             {
-                PerformanceTraceService.Shared?.Event("TMDB", "SearchSeriesAsync skipped", $"reason=missing-api-key query={TrimForTrace(searchQuery)} language={languageCode}");
                 return null;
             }
         }
@@ -632,10 +607,6 @@ public partial class MetadataService : IMetadataService
                         if (!string.Equals(queryCandidate, cleanQuery, StringComparison.OrdinalIgnoreCase) ||
                             !string.Equals(lang, languageCode, StringComparison.OrdinalIgnoreCase))
                         {
-                            PerformanceTraceService.Shared?.Event(
-                                "TMDB",
-                                "SearchSeriesAsync fallback-hit",
-                                $"query={TrimForTrace(searchQuery)} candidate={TrimForTrace(queryCandidate)} language={lang} title={TrimForTrace(metadata.Title)}");
                         }
 
                         return metadata;
@@ -643,13 +614,11 @@ public partial class MetadataService : IMetadataService
                 }
             }
 
-            PerformanceTraceService.Shared?.Event("TMDB", "SearchSeriesAsync no-poster", $"query={TrimForTrace(searchQuery)} clean={TrimForTrace(cleanQuery)} language={languageCode}");
             return null;
         }
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "TMDB series search failed for: {Query}", searchQuery);
-            PerformanceTraceService.Shared?.Event("TMDB", "SearchSeriesAsync exception", $"query={TrimForTrace(searchQuery)} error={ex.GetType().Name}");
             return null;
         }
     }
@@ -671,14 +640,12 @@ public partial class MetadataService : IMetadataService
         var response = await GetWithFallbackAsync(url, cancellationToken);
         if (response == null)
         {
-            PerformanceTraceService.Shared?.Event("TMDB", "SearchSeriesAsync http-failed", $"query={TrimForTrace(queryWithoutYear)} language={languageCode}");
             return null;
         }
 
         var data = await response.Content.ReadFromJsonAsync<TmdbSearchResponse>(cancellationToken: cancellationToken);
         if (data?.Results == null || data.Results.Count == 0)
         {
-            PerformanceTraceService.Shared?.Event("TMDB", "SearchSeriesAsync no-results", $"query={TrimForTrace(queryWithoutYear)} language={languageCode}");
             return null;
         }
 
@@ -703,7 +670,6 @@ public partial class MetadataService : IMetadataService
 
         if (best == null)
         {
-            PerformanceTraceService.Shared?.Event("TMDB", "SearchSeriesAsync results-without-poster", $"query={TrimForTrace(queryWithoutYear)} language={languageCode} results={data.Results.Count}");
             return null;
         }
 
@@ -736,7 +702,7 @@ public partial class MetadataService : IMetadataService
         }
     }
 
-    private static string TrimForTrace(string? value)
+    private static string TrimForLog(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
         {

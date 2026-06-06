@@ -14,7 +14,6 @@ public static class AppPaths
     public static string LegacyDatabasePath => Path.Combine(UserDataDirectory, "noctra.db");
     public static string TempPlaybackDirectory => Path.Combine(UserDataDirectory, "TempPlayback");
     public static string LogsDirectory => Path.Combine(UserDataDirectory, "Logs");
-    public static string PerfTraceDirectory => Path.Combine(UserDataDirectory, "perf-trace");
 
     public static void EnsureUserDataDirectory()
     {

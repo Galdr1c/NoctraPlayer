@@ -26,7 +26,7 @@ internal sealed class Program
         }
         catch
         {
-            // Keep startup resilient even if trace write fails.
+            // Keep startup resilient even if environment loading fails.
         }
 
         try

@@ -78,7 +78,7 @@ public partial class WatermarkViewModel : ObservableObject, IDisposable
 
     private void ShiftPosition()
     {
-        // Shift within a small range (-20 to +20 px)
+        // The watermark is anchored to the bottom-right, so only move it inward.
         if (!IsVisible)
         {
             return;
@@ -86,8 +86,8 @@ public partial class WatermarkViewModel : ObservableObject, IDisposable
 
         _dispatcherService.BeginInvoke(() =>
         {
-            TranslateX = _random.Next(-20, 21);
-            TranslateY = _random.Next(-20, 21);
+            TranslateX = _random.Next(-20, 1);
+            TranslateY = _random.Next(-20, 1);
         });
     }
 

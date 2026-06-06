@@ -100,7 +100,6 @@ public partial class VideoOverlayView : UserControl
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        PerformanceTraceService.Shared?.Event("OVERLAY", "VideoOverlay attached");
         // Subscribe to slider events explicitly to handle bubbled/tunnelled events correctly
         var slider = this.FindControl<Slider>("TimelineSlider");
         if (slider != null)
@@ -130,20 +129,17 @@ public partial class VideoOverlayView : UserControl
     private void TimelineSlider_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         _playerViewModel?.LogDebug("UI Action: TimelineSlider PointerPressed");
-        PerformanceTraceService.Shared?.Event("OVERLAY", "TimelineSlider PointerPressed");
         _isTimelinePointerDown = true;
         _playerViewModel?.StartSeekingCommand.Execute(null);
     }
 
     private void TimelineSlider_PointerReleased(object? sender, PointerReleasedEventArgs e)
     {
-        PerformanceTraceService.Shared?.Event("OVERLAY", "TimelineSlider PointerReleased");
         CommitSeek(sender);
     }
 
     private void TimelineSlider_PointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
     {
-        PerformanceTraceService.Shared?.Event("OVERLAY", "TimelineSlider PointerCaptureLost");
         CommitSeek(sender);
     }
 
@@ -157,7 +153,6 @@ public partial class VideoOverlayView : UserControl
         if (_isCommittingSeek) return; // double-fire koruması
 
         _playerViewModel?.LogDebug("UI Action: CommitSeek triggered");
-        PerformanceTraceService.Shared?.Event("OVERLAY", "CommitSeek");
         _isTimelinePointerDown = false;
         _isCommittingSeek = true;
 
@@ -181,7 +176,6 @@ public partial class VideoOverlayView : UserControl
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);
-        PerformanceTraceService.Shared?.Event("OVERLAY", "DataContextChanged", DataContext?.GetType().Name ?? "null");
 
         if (_playerViewModel != null)
         {
@@ -469,7 +463,6 @@ public partial class VideoOverlayView : UserControl
 
     private void OverlayRoot_KeyDown(object? sender, KeyEventArgs e)
     {
-        PerformanceTraceService.Shared?.Event("OVERLAY", "KeyDown", e.Key.ToString());
         // MainWindow_KeyDown (Tunnel) zaten işlediyse tekrar işleme
         if (e.Handled || _playerViewModel == null)
         {
@@ -551,7 +544,6 @@ public partial class VideoOverlayView : UserControl
         _lastVolumeToastShownUtc = now;
 
         _playerViewModel?.LogDebug("UI State: Volume Toast visible");
-        PerformanceTraceService.Shared?.Event("OVERLAY", "VolumeToast");
         IsVolumeToastVisible = true;
         _volumeToastTimer.Stop();
         _volumeToastTimer.Start();
@@ -597,7 +589,6 @@ public partial class VideoOverlayView : UserControl
     private void ShowSeekToast()
     {
         _playerViewModel?.LogDebug($"UI State: Seek Toast visible ({SeekToastText})");
-        PerformanceTraceService.Shared?.Event("OVERLAY", "SeekToast", SeekToastText);
         IsSeekToastVisible = true;
         _seekToastTimer.Stop();
         _seekToastTimer.Start();
@@ -606,7 +597,6 @@ public partial class VideoOverlayView : UserControl
     private void ShowDownloadToast()
     {
         _playerViewModel?.LogDebug($"UI State: Download Toast visible ({_playerViewModel?.DownloadStatusMessage})");
-        PerformanceTraceService.Shared?.Event("OVERLAY", "DownloadToast", _playerViewModel?.DownloadStatusMessage ?? string.Empty);
         IsDownloadToastVisible = true;
         _downloadToastTimer.Stop();
         _downloadToastTimer.Start();
@@ -732,7 +722,6 @@ public partial class VideoOverlayView : UserControl
 
         if (row != null)
         {
-            PerformanceTraceService.Shared?.Event("OVERLAY", "EpgChannelRow selected", row.Channel?.Name ?? "unknown");
             _playerViewModel?.ToggleEpgPanelCommand.Execute(null); // paneli kapat
             // MainWindow handler'ına yönlendir
             RaiseEvent(new EpgChannelSelectedRoutedEventArgs(EpgChannelSelectedEvent, row.Channel));

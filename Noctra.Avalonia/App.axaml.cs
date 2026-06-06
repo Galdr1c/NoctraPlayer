@@ -43,15 +43,10 @@ public partial class App : Application
             var services = new ServiceCollection();
             ConfigureServices(services);
             Services = services.BuildServiceProvider();
-            var perfTrace = Services.GetRequiredService<IPerformanceTraceService>();
-            perfTrace.Event("STARTUP", "Services built");
 
             using var scope = Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            using (perfTrace.BeginOperation("STARTUP", "Database.EnsureCreated"))
-            {
-                db.Database.EnsureCreated();
-            }
+            db.Database.EnsureCreated();
             
             // Phase 29: Move blocking schema fixups to an async flow to avoid deadlock
             // ApplySchemaFixupsAsync(db).GetAwaiter().GetResult(); 
@@ -61,13 +56,10 @@ public partial class App : Application
             var settings = scope.ServiceProvider.GetRequiredService<ISettingsService>();
             var themeService = Services.GetRequiredService<IThemeService>();
             var localizationService = Services.GetRequiredService<ILocalizationService>();
-            using (perfTrace.BeginOperation("STARTUP", "Apply language/theme"))
-            {
-                ApplyApplicationLanguage(settings.Settings.Language);
-                themeService.SetTheme(settings.Settings.IsDarkTheme);
-                localizationService.SetLanguage(settings.Settings.Language ?? "en");
-                LocalizationSource.Instance.Initialize(localizationService);
-            }
+            ApplyApplicationLanguage(settings.Settings.Language);
+            themeService.SetTheme(settings.Settings.IsDarkTheme);
+            localizationService.SetLanguage(settings.Settings.Language ?? "en");
+            LocalizationSource.Instance.Initialize(localizationService);
 
             settings.SettingsChanged += () =>
             {
@@ -105,16 +97,13 @@ public partial class App : Application
                 // Fire and forget warmup
                 _ = Task.Run(async () =>
                 {
-                    using var startupTrace = PerformanceTraceService.Shared?.BeginOperation("STARTUP", "Framework warmup task");
                     var startupStopwatch = System.Diagnostics.Stopwatch.StartNew();
                     try
                     {
                         
                         // 1. Warmup Settings (Lazy load trigger)
                         var settingsService = Services.GetRequiredService<ISettingsService>();
-                        PerformanceTraceService.Shared?.Event("STARTUP", "Settings warmup begin");
                         _ = settingsService.Settings; 
-                        PerformanceTraceService.Shared?.Event("STARTUP", "Settings warmup end");
 
                         // 2. Warmup EF Core (Triggers first-time model compilation)
                         using (var scope = Services.CreateScope())
@@ -122,22 +111,14 @@ public partial class App : Application
                             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                             
                             // Phase 29: Apply schema fixups here (async) to avoid UI hang
-                            using (PerformanceTraceService.Shared?.BeginOperation("STARTUP", "ApplySchemaFixupsAsync"))
-                            {
                             await ApplySchemaFixupsAsync(db);
-                            }
-                            
-                            using (PerformanceTraceService.Shared?.BeginOperation("STARTUP", "Profiles.AnyAsync"))
-                            {
                             await db.Profiles.AnyAsync();
-                            }
                         }
 
                         // 2.1 Purge profiles with expired deletion countdown
                         try
                         {
                             var profileService = Services.GetRequiredService<IProfileService>();
-                            using var purgeTrace = PerformanceTraceService.Shared?.BeginOperation("STARTUP", "PurgeExpiredProfilesAsync");
                             await profileService.PurgeExpiredProfilesAsync();
                         }
                         catch (Exception ex)
@@ -149,10 +130,8 @@ public partial class App : Application
                         // 3. Resolve MainWindow/ProfilesWindow early
                         var profilesWindow = await Dispatcher.UIThread.InvokeAsync(() => 
                         {
-                            PerformanceTraceService.Shared?.Event("STARTUP", "Resolve ProfilesWindow begin");
                             var win = Services.GetRequiredService<ProfilesWindow>();
                             win.DisableAutoSelect = true;
-                            PerformanceTraceService.Shared?.Event("STARTUP", "Resolve ProfilesWindow end");
                             return win;
                         });
                         
@@ -162,7 +141,6 @@ public partial class App : Application
                         {
                             await Dispatcher.UIThread.InvokeAsync(() =>
                             {
-                                PerformanceTraceService.Shared?.Event("STARTUP", "Legal consent declined");
                                 desktop.Shutdown();
                             });
                             return;
@@ -208,7 +186,6 @@ public partial class App : Application
                         // Transition to Main Window
                         await Dispatcher.UIThread.InvokeAsync(() =>
                         {
-                            PerformanceTraceService.Shared?.Event("STARTUP", "Show ProfilesWindow");
                             desktop.MainWindow = profilesWindow;
                             profilesWindow.Show();
                             splashWindow.Close();
@@ -220,7 +197,6 @@ public partial class App : Application
                         // Fallback: Just try to open the app anyway if warmup fails
                         await Dispatcher.UIThread.InvokeAsync(() =>
                         {
-                            PerformanceTraceService.Shared?.Event("STARTUP", "Fallback open ProfilesWindow", ex.GetType().Name);
                             var win = Services.GetRequiredService<ProfilesWindow>();
                             win.DisableAutoSelect = true;
                             desktop.MainWindow = win;
@@ -370,7 +346,6 @@ public partial class App : Application
 
         services.AddSingleton<ITmdbSyncService, TmdbSyncService>();
         services.AddSingleton<IDiagnosticReportService, DiagnosticReportService>();
-        services.AddSingleton<IPerformanceTraceService, PerformanceTraceService>();
 
         services.AddSingleton<IDispatcherService, AvaloniaDispatcherService>();
         services.AddSingleton<IDialogService, AvaloniaDialogService>();

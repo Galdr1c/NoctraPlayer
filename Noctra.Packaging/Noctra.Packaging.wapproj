@@ -12,7 +12,7 @@
   <PropertyGroup>
     <ProjectGuid>35A3F562-33E4-4F73-8A76-45A10E6B2F3A</ProjectGuid>
     <TargetPlatformIdentifier>UAP</TargetPlatformIdentifier>
-    <TargetPlatformVersion>10.0.19041.0</TargetPlatformVersion>
+    <TargetPlatformVersion>10.0.26100.0</TargetPlatformVersion>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <DefaultLanguage>tr-TR</DefaultLanguage>
     <AppxBundle>Never</AppxBundle>

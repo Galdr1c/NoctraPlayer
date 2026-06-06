@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
-    <StoreIdentityName Condition="'$(StoreIdentityName)' == ''">Noctra.Noctra</StoreIdentityName>
-    <StorePublisher Condition="'$(StorePublisher)' == ''">CN=00000000-0000-0000-0000-000000000000</StorePublisher>
-    <StorePublisherDisplayName Condition="'$(StorePublisherDisplayName)' == ''">Noctra</StorePublisherDisplayName>
+    <StoreIdentityName Condition="'$(StoreIdentityName)' == ''">KynoraStudio.Noctra</StoreIdentityName>
+    <StorePublisher Condition="'$(StorePublisher)' == ''">CN=04656601-52D3-46A0-9923-865AED08FC7B</StorePublisher>
+    <StorePublisherDisplayName Condition="'$(StorePublisherDisplayName)' == ''">Kynora Studio</StorePublisherDisplayName>
   </PropertyGroup>
 </Project>

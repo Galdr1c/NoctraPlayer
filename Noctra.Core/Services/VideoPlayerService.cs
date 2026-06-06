@@ -44,7 +44,6 @@ public class VideoPlayerService : IVideoPlayerService
     private void LogDebug(string msg)
     {
         System.Diagnostics.Debug.WriteLine($"[VideoPlayerService] {msg}");
-        PerformanceTraceService.Shared?.Event("VIDEO", msg);
     }
 
 
@@ -438,7 +437,6 @@ public class VideoPlayerService : IVideoPlayerService
 
     public async Task PlayAsync(string url, double startTimeSeconds = 0)
     {
-        using var trace = PerformanceTraceService.Shared?.BeginOperation("VIDEO", "PlayAsync", $"start={startTimeSeconds:F1} url={DescribeStreamUrl(url)}");
         LogDebug($"PlayAsync Called -> URL: {url}, StartTime: {startTimeSeconds}s");
         CurrentUrl = url;
 
@@ -502,7 +500,6 @@ public class VideoPlayerService : IVideoPlayerService
         var url = CurrentUrl;
         if (string.IsNullOrEmpty(url)) return;
 
-        using var trace = PerformanceTraceService.Shared?.BeginOperation("VIDEO", "HardSeekAsync", $"seconds={seconds:F1} url={DescribeStreamUrl(url)}");
         LogDebug($"HardSeekAsync Called -> URL: {url}, StartTime: {seconds}s");
 
         Interlocked.Exchange(ref _retryCount, 0); // İstenirse retry devrede kalabilir
@@ -752,10 +749,6 @@ public class VideoPlayerService : IVideoPlayerService
                             _mediaPlayer.State == VLCState.Playing ||
                             _mediaPlayer.State == VLCState.Buffering)
                         {
-                            PerformanceTraceService.Shared?.Event(
-                                "VIDEO",
-                                "PlayAsync started",
-                                $"state={_mediaPlayer.State} probeMs={(i + 1) * 100}");
                             break;
                         }
 
@@ -1006,31 +999,22 @@ public class VideoPlayerService : IVideoPlayerService
 
     public void SetAudioTrack(int trackId)
     {
-        using var trace = PerformanceTraceService.Shared?.BeginOperation("VIDEO", "SetAudioTrack", $"trackId={trackId}");
         if (_mediaPlayer != null)
         {
             _mediaPlayer.SetAudioTrack(trackId);
-            PerformanceTraceService.Shared?.Event("VIDEO", "AudioTrack applied", $"trackId={trackId} current={_mediaPlayer.AudioTrack}");
-        }
-        else
-        {
-            PerformanceTraceService.Shared?.Event("VIDEO", "AudioTrack skipped", "mediaPlayer=null");
         }
     }
 
     public void SetSubtitleTrack(int trackId)
     {
-        using var trace = PerformanceTraceService.Shared?.BeginOperation("VIDEO", "SetSubtitleTrack", $"trackId={trackId}");
         if (_mediaPlayer == null)
         {
-            PerformanceTraceService.Shared?.Event("VIDEO", "SubtitleTrack skipped", "mediaPlayer=null");
             return;
         }
 
         if (trackId >= 0)
         {
             _mediaPlayer.SetSpu(trackId);
-            PerformanceTraceService.Shared?.Event("VIDEO", "SubtitleTrack applied", $"trackId={trackId} current={_mediaPlayer.Spu}");
             return;
         }
 
@@ -1043,24 +1027,8 @@ public class VideoPlayerService : IVideoPlayerService
         {
             _mediaPlayer.SetSpu(0);
         }
-        PerformanceTraceService.Shared?.Event("VIDEO", "SubtitleTrack disabled", $"requested={trackId} current={_mediaPlayer.Spu}");
     }
 
-    private static string DescribeStreamUrl(string? url)
-    {
-        if (string.IsNullOrWhiteSpace(url))
-        {
-            return "<empty>";
-        }
-
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
-        {
-            return "<invalid>";
-        }
-
-        var ext = Path.GetExtension(uri.AbsolutePath);
-        return $"{uri.Host}{ext}";
-    }
     private void StartQualityMonitoring()
     {
         StopQualityMonitoring();

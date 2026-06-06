@@ -429,10 +429,6 @@ public class RemoteImage : Image
         {
             Source = bitmap;
             IsImageLoaded = bitmap != null;
-            if (bitmap != null && !string.IsNullOrWhiteSpace(sourceUrl))
-            {
-                PerformanceTraceService.Shared?.Event("IMAGE", "RemoteImage source-applied", ExtractHost(sourceUrl));
-            }
         }
 
         if (Dispatcher.UIThread.CheckAccess())
@@ -570,6 +566,4 @@ public class RemoteImage : Image
         return false;
     }
 
-    private static string ExtractHost(string url)
-        => Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Host : "<invalid>";
 }

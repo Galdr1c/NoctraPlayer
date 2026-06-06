@@ -711,7 +711,6 @@ public partial class PlaylistService : IPlaylistService
 
     private static async Task<int> RepairLinearStreamChannelTypesAsync(AppDbContext context, int playlistId)
     {
-        using var trace = PerformanceTraceService.Shared?.BeginOperation("DB", "RepairLinearStreamChannelTypesAsync", $"playlist={playlistId}");
         var liveType = (int)ChannelType.Live;
         var vodType = (int)ChannelType.VOD;
         var linearRepaired = await context.Database.ExecuteSqlInterpolatedAsync($@"
@@ -806,7 +805,6 @@ WHERE PlaylistId = {playlistId}
 
         if (repaired > 0)
         {
-            PerformanceTraceService.Shared?.Counter("DB", "LinearStreamChannelTypesRepaired", repaired, $"playlist={playlistId}");
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] Repaired {repaired} linear stream channel type(s) to Live for playlist {playlistId}.");
         }
 

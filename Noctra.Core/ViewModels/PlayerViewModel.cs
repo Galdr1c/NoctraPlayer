@@ -497,7 +497,6 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     internal void LogDebug(string msg) {
         System.Diagnostics.Debug.WriteLine($"[PVM] {msg}");
-        PerformanceTraceService.Shared?.Event("PLAYER", msg);
     }
 
     public int? CurrentProfileId { get; set; }

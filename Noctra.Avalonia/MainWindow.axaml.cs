@@ -26,16 +26,13 @@ public partial class MainWindow : Window
     private readonly IVideoPlayerService _videoPlayerService;
     private readonly IWatchHistoryService _watchHistoryService;
     private readonly ISettingsService _settingsService;
-    private readonly IPerformanceTraceService _perfTrace;
     private readonly IReviewPromptService _reviewPromptService;
     private readonly MainViewModel _mainViewModel;
     private readonly PlayerViewModel _playerViewModel;
     private readonly WindowResizeService _windowResizeService;
-    private readonly DispatcherTimer _uiStallTimer;
     private CancellationTokenSource _mediaSelectionCts = new();
     private readonly CancellationTokenSource _reviewPromptCts = new();
     private DateTime _lastPointerInteractionUtc = DateTime.MinValue;
-    private DateTime _lastUiHeartbeatUtc = DateTime.UtcNow;
 
     internal bool IsVideoPlaybackSurfaceVisible =>
         PlayerArea.IsVisible ||
@@ -67,8 +64,7 @@ public partial class MainWindow : Window
             ((App)Application.Current!).Services.GetRequiredService<IVideoPlayerService>(),
             ((App)Application.Current!).Services.GetRequiredService<IWatchHistoryService>(),
             ((App)Application.Current!).Services.GetRequiredService<ISettingsService>(),
-            ((App)Application.Current!).Services.GetRequiredService<IReviewPromptService>(),
-            ((App)Application.Current!).Services.GetRequiredService<IPerformanceTraceService>())
+            ((App)Application.Current!).Services.GetRequiredService<IReviewPromptService>())
     {
     }
 
@@ -78,8 +74,7 @@ public partial class MainWindow : Window
         IVideoPlayerService videoPlayerService,
         IWatchHistoryService watchHistoryService,
         ISettingsService settingsService,
-        IReviewPromptService reviewPromptService,
-        IPerformanceTraceService? perfTraceService = null)
+        IReviewPromptService reviewPromptService)
     {
         InitializeComponent();
 
@@ -89,15 +84,7 @@ public partial class MainWindow : Window
         _watchHistoryService = watchHistoryService;
         _settingsService = settingsService;
         _reviewPromptService = reviewPromptService;
-        _perfTrace = perfTraceService ?? new PerformanceTraceService();
         _windowResizeService = new WindowResizeService(this);
-        _uiStallTimer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(250)
-        };
-        _uiStallTimer.Tick += UiStallTimer_Tick;
-        _uiStallTimer.Start();
-        _perfTrace.Event("UI", "MainWindow constructed", $"traceFile={_perfTrace.LogFilePath}");
         DataContext = _mainViewModel;
 
         PlayerOverlayLayer.DataContext = _playerViewModel;
@@ -174,18 +161,6 @@ public partial class MainWindow : Window
         }
     }
 
-    private void UiStallTimer_Tick(object? sender, EventArgs e)
-    {
-        var now = DateTime.UtcNow;
-        var gapMs = (now - _lastUiHeartbeatUtc).TotalMilliseconds;
-        _lastUiHeartbeatUtc = now;
-
-        if (gapMs >= 500)
-        {
-            _perfTrace.Event("UI_STALL", "Dispatcher heartbeat delayed", $"gapMs={gapMs:F0}");
-        }
-    }
-
     private void OnClosed(object? sender, EventArgs e)
     {
         _mainViewModel.CancelProfileBackgroundLoading();
@@ -216,8 +191,6 @@ public partial class MainWindow : Window
         _playerViewModel.PreviousLiveChannelRequested -= PlayerViewModel_PreviousLiveChannelRequested;
         _playerViewModel.PiPRequested -= PlayerViewModel_PiPRequested;
         _videoPlayerService.MediaPlayerReady -= VideoPlayerService_MediaPlayerReady;
-        _uiStallTimer.Stop();
-        _uiStallTimer.Tick -= UiStallTimer_Tick;
 
         // VideoSurface.MediaPlayer = null; // Handled in ClosePiP or let it be cleared
         ClosePiP(false); 
