@@ -626,53 +626,130 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task SaveSettingsAsync()
     {
-        var s = _settingsService.Settings;
-        
-        // Playback
-        s.UserAgent = UserAgent?.Trim() ?? string.Empty;
-        s.AutoPlayNext = AutoPlayNext;
-
-        if (IsBufferSmall && IsPremium) s.VideoBufferSize = BufferSize.Small;
-        else if (IsBufferLarge && IsPremium) s.VideoBufferSize = BufferSize.Large;
-        else s.VideoBufferSize = BufferSize.Normal;
-
-        s.DataUsage = (DataUsageLevel)SelectedDataUsage;
-        s.SubtitleEnabled = SubtitleEnabled;
-        s.SubtitleLanguage = SubtitleLanguage;
-        s.SubtitleFontSize = SubtitleFontSize;
-        s.PreferredAudioLanguage = PreferredAudioLanguage;
-        
-        // Downloads
-        s.DownloadQuality = (DownloadQuality)SelectedDownloadQuality;
-        s.DownloadWifiOnly = DownloadWifiOnly;
         DownloadPath = NormalizeDownloadPath(DownloadPath);
-        s.DownloadPath = DownloadPath;
-        s.ShowDownloadNotification = ShowDownloadNotification;
-        
-        // Appearance
-        s.IsDarkTheme = IsDarkTheme;
-        s.Language = string.IsNullOrWhiteSpace(AppLanguage) ? "en" : AppLanguage;
-        s.ChannelListRefreshFrequencyHours = Math.Max(0, ChannelListRefreshFrequencyHours);
-        s.EpgRefreshFrequencyHours = Math.Max(0, EpgRefreshFrequencyHours);
-        s.CustomEpgUrl = string.IsNullOrWhiteSpace(CustomEpgUrl) ? null : CustomEpgUrl.Trim();
-        s.CustomEpgUrls = CustomEpgUrls.Where(u => !string.IsNullOrWhiteSpace(u.Url)).Select(u => u.Url.Trim()).ToList();
-        s.EpgEnabled = EpgEnabled;
-        s.EpgTimeOffsetHours = EpgTimeOffsetHours;
+        var snapshot = new SettingsFormSnapshot(
+            UserAgent?.Trim() ?? string.Empty,
+            AutoPlayNext,
+            IsBufferSmall && IsPremium
+                ? BufferSize.Small
+                : IsBufferLarge && IsPremium
+                    ? BufferSize.Large
+                    : BufferSize.Normal,
+            (DataUsageLevel)SelectedDataUsage,
+            SubtitleEnabled,
+            SubtitleLanguage,
+            SubtitleFontSize,
+            PreferredAudioLanguage,
+            (DownloadQuality)SelectedDownloadQuality,
+            DownloadWifiOnly,
+            DownloadPath,
+            ShowDownloadNotification,
+            IsDarkTheme,
+            string.IsNullOrWhiteSpace(AppLanguage) ? "en" : AppLanguage,
+            Math.Max(0, ChannelListRefreshFrequencyHours),
+            Math.Max(0, EpgRefreshFrequencyHours),
+            string.IsNullOrWhiteSpace(CustomEpgUrl) ? null : CustomEpgUrl.Trim(),
+            CustomEpgUrls
+                .Where(u => !string.IsNullOrWhiteSpace(u.Url))
+                .Select(u => u.Url.Trim())
+                .ToList(),
+            EpgEnabled,
+            EpgTimeOffsetHours,
+            SaveWatchHistory,
+            ClearHistoryOnExit,
+            WatchHistoryRetentionIndex switch
+            {
+                1 => 3,
+                2 => 7,
+                3 => 14,
+                4 => 30,
+                _ => 0
+            });
 
-        // Privacy
-        s.SaveWatchHistory = SaveWatchHistory;
-        s.ClearHistoryOnExit = ClearHistoryOnExit;
-        s.WatchHistoryRetentionDays = WatchHistoryRetentionIndex switch
+        var saved = await SaveForActiveProfileAsync(
+            _settingsService,
+            _mainViewModel.CurrentProfile?.Id,
+            snapshot.ApplyTo);
+
+        if (!saved)
         {
-            1 => 3,
-            2 => 7,
-            3 => 14,
-            4 => 30,
-            _ => 0
-        };
-        
-        await _settingsService.SaveAsync();
+            return;
+        }
+
         StatusMessage = _localizationService.GetString("Settings.Status.Saved");
+    }
+
+    internal static async Task<bool> SaveForActiveProfileAsync(
+        ISettingsService settingsService,
+        int? activeProfileId,
+        Action<AppSettings> applyChanges)
+    {
+        if (!activeProfileId.HasValue || activeProfileId.Value <= 0)
+        {
+            return false;
+        }
+
+        if (settingsService.Settings.ProfileId != activeProfileId.Value)
+        {
+            await settingsService.LoadProfileSettingsAsync(activeProfileId.Value);
+        }
+
+        applyChanges(settingsService.Settings);
+        await settingsService.SaveAsync();
+        return true;
+    }
+
+    private sealed record SettingsFormSnapshot(
+        string UserAgent,
+        bool AutoPlayNext,
+        BufferSize VideoBufferSize,
+        DataUsageLevel DataUsage,
+        bool SubtitleEnabled,
+        string SubtitleLanguage,
+        int SubtitleFontSize,
+        string PreferredAudioLanguage,
+        DownloadQuality DownloadQuality,
+        bool DownloadWifiOnly,
+        string DownloadPath,
+        bool ShowDownloadNotification,
+        bool IsDarkTheme,
+        string Language,
+        int ChannelListRefreshFrequencyHours,
+        int EpgRefreshFrequencyHours,
+        string? CustomEpgUrl,
+        List<string> CustomEpgUrls,
+        bool EpgEnabled,
+        int EpgTimeOffsetHours,
+        bool SaveWatchHistory,
+        bool ClearHistoryOnExit,
+        int WatchHistoryRetentionDays)
+    {
+        public void ApplyTo(AppSettings settings)
+        {
+            settings.UserAgent = UserAgent;
+            settings.AutoPlayNext = AutoPlayNext;
+            settings.VideoBufferSize = VideoBufferSize;
+            settings.DataUsage = DataUsage;
+            settings.SubtitleEnabled = SubtitleEnabled;
+            settings.SubtitleLanguage = SubtitleLanguage;
+            settings.SubtitleFontSize = SubtitleFontSize;
+            settings.PreferredAudioLanguage = PreferredAudioLanguage;
+            settings.DownloadQuality = DownloadQuality;
+            settings.DownloadWifiOnly = DownloadWifiOnly;
+            settings.DownloadPath = DownloadPath;
+            settings.ShowDownloadNotification = ShowDownloadNotification;
+            settings.IsDarkTheme = IsDarkTheme;
+            settings.Language = Language;
+            settings.ChannelListRefreshFrequencyHours = ChannelListRefreshFrequencyHours;
+            settings.EpgRefreshFrequencyHours = EpgRefreshFrequencyHours;
+            settings.CustomEpgUrl = CustomEpgUrl;
+            settings.CustomEpgUrls = CustomEpgUrls;
+            settings.EpgEnabled = EpgEnabled;
+            settings.EpgTimeOffsetHours = EpgTimeOffsetHours;
+            settings.SaveWatchHistory = SaveWatchHistory;
+            settings.ClearHistoryOnExit = ClearHistoryOnExit;
+            settings.WatchHistoryRetentionDays = WatchHistoryRetentionDays;
+        }
     }
 
     [ObservableProperty]
