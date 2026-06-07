@@ -34,7 +34,7 @@ tmdb-proxy/.env.*
 *.epg.xml
 providers.json
 
-#
+# Local-only assets and MSIX packaging (never push)
 Noctra.Avalonia/Assets/
 Noctra.Packaging/
 

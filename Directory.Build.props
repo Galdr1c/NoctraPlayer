@@ -14,11 +14,11 @@
     <NoctraAppDisplayName Condition="'$(NoctraAppDisplayName)' == ''">Noctra</NoctraAppDisplayName>
 
     <!-- Premium Store cross-references (updated from store-profiles.json by build script) -->
-    <NoctraStoreProductId Condition="'$(NoctraStoreProductId)' == ''"></NoctraStoreProductId>
-    <NoctraStoreReviewLaunchUri Condition="'$(NoctraStoreReviewLaunchUri)' == ''"></NoctraStoreReviewLaunchUri>
-    <NoctraPremiumStoreProductId Condition="'$(NoctraPremiumStoreProductId)' == ''">9PREMIUMPLACEHOLDER</NoctraPremiumStoreProductId>
-    <NoctraPremiumStoreLaunchUri Condition="'$(NoctraPremiumStoreLaunchUri)' == ''">ms-windows-store://pdp/?productid=9PREMIUMPLACEHOLDER</NoctraPremiumStoreLaunchUri>
-    <NoctraPremiumStoreWebUri Condition="'$(NoctraPremiumStoreWebUri)' == ''">https://apps.microsoft.com/detail/9PREMIUMPLACEHOLDER</NoctraPremiumStoreWebUri>
+    <NoctraStoreProductId Condition="'$(NoctraStoreProductId)' == ''">9ND0ZPR1T1JP</NoctraStoreProductId>
+    <NoctraStoreReviewLaunchUri Condition="'$(NoctraStoreReviewLaunchUri)' == ''">ms-windows-store://review/?ProductId=9ND0ZPR1T1JP</NoctraStoreReviewLaunchUri>
+    <NoctraPremiumStoreProductId Condition="'$(NoctraPremiumStoreProductId)' == ''">9NL2DS44RFXF</NoctraPremiumStoreProductId>
+    <NoctraPremiumStoreLaunchUri Condition="'$(NoctraPremiumStoreLaunchUri)' == ''">ms-windows-store://pdp/?productid=9NL2DS44RFXF</NoctraPremiumStoreLaunchUri>
+    <NoctraPremiumStoreWebUri Condition="'$(NoctraPremiumStoreWebUri)' == ''">https://apps.microsoft.com/detail/9NL2DS44RFXF</NoctraPremiumStoreWebUri>
   </PropertyGroup>
 
 </Project>
