@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-android36.0</TargetFramework>
+    <SupportedOSPlatformVersion>31</SupportedOSPlatformVersion>
+    <Nullable>enable</Nullable>
+    <ApplicationId>studio.kynora.noctra</ApplicationId>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <RuntimeIdentifiers Condition="'$(Configuration)' == 'Debug'">android-arm64;android-x64</RuntimeIdentifiers>
+    <RuntimeIdentifier Condition="'$(Configuration)' == 'Release'">android-arm64</RuntimeIdentifier>
+    <AndroidPackageFormat Condition="'$(Configuration)' == 'Debug'">apk</AndroidPackageFormat>
+    <AndroidPackageFormat Condition="'$(Configuration)' == 'Release'">aab</AndroidPackageFormat>
+    <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AndroidResource Include="Icon.png">
+      <Link>Resources\drawable\Icon.png</Link>
+    </AndroidResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Android" Version="$(AvaloniaVersion)" />
+    <PackageReference Include="Xamarin.AndroidX.Core.SplashScreen" Version="1.0.1.15" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Noctra.Mobile\Noctra.Mobile.csproj" />
+    <ProjectReference Include="..\Noctra.Core\Noctra.Core.csproj" />
+  </ItemGroup>
+</Project>

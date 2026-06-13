@@ -14,7 +14,7 @@
         Title="{loc:Translate Settings.Title}" Height="750" Width="850"
         WindowStartupLocation="CenterScreen"
         ShowInTaskbar="False"
-        SystemDecorations="None"
+        WindowDecorations="None"
         CanResize="False"
         TransparencyLevelHint="Transparent"
         Background="Transparent"
@@ -322,7 +322,7 @@
                                             <TextBlock Text="{loc:Translate Settings.Playback.UserAgent}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                         </StackPanel>
                                     </Grid>
-                                    <TextBox Text="{Binding UserAgent, Mode=TwoWay}" Watermark="VLC/3.0.x LibVLC/3.0.x" Padding="12" Margin="0,12,0,0"/>
+                                    <TextBox Text="{Binding UserAgent, Mode=TwoWay}" PlaceholderText="VLC/3.0.x LibVLC/3.0.x" Padding="12" Margin="0,12,0,0"/>
                                 </StackPanel>
                             </Border>
 
@@ -906,7 +906,7 @@
                                             <DataTemplate>
                                                 <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
                                                     <TextBox Text="{Binding Url, Mode=TwoWay}"
-                                                             Watermark="{loc:Translate Settings.Epg.UrlPlaceholder}"
+                                                             PlaceholderText="{loc:Translate Settings.Epg.UrlPlaceholder}"
                                                              Padding="12"
                                                              Height="45"
                                                              VerticalContentAlignment="Center"/>

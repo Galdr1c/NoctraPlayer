@@ -367,20 +367,18 @@ public class PlayerPlaybackController
                     return;
                 }
 
-                var mediaPlayer = _vm.VideoPlayerService.GetMediaPlayer();
-                _vm._lastPausedTimeMs = mediaPlayer?.Time ?? 0;
+                _vm._lastPausedTimeMs = _vm.VideoPlayerService.CurrentTimeMilliseconds;
                 _vm._lastPausedPosition = _vm._lastPausedTimeMs > 0 ? _vm._lastPausedTimeMs / 1000.0 : _vm.Position;
                 _vm.VideoPlayerService.Pause();
             }
             else if (_vm.CurrentChannel != null)
             {
                 _vm._isIntentionallyPaused = false;
-                var mediaPlayer = _vm.VideoPlayerService.GetMediaPlayer();
-                var state = mediaPlayer?.State ?? LibVLCSharp.Shared.VLCState.NothingSpecial;
-                var isStreamDead = state == LibVLCSharp.Shared.VLCState.Stopped || 
-                                   state == LibVLCSharp.Shared.VLCState.Ended || 
-                                   state == LibVLCSharp.Shared.VLCState.Error || 
-                                   state == LibVLCSharp.Shared.VLCState.NothingSpecial;
+                var state = _vm.VideoPlayerService.State;
+                var isStreamDead = state is PlaybackState.Stopped or
+                    PlaybackState.Ended or
+                    PlaybackState.Error or
+                    PlaybackState.Idle;
                 
                 if (isStreamDead) 
                 {
@@ -391,7 +389,7 @@ public class PlayerPlaybackController
                     }
                 }
 
-                var isResumable = mediaPlayer?.Media != null && !isStreamDead;
+                var isResumable = _vm.VideoPlayerService.HasLoadedMedia && !isStreamDead;
                 await ResumePlaybackAsync(_vm.CurrentChannel.StreamUrl, isResumable);
             }
             
@@ -484,8 +482,7 @@ public class PlayerPlaybackController
             await Task.Delay(220);
             if (!IsStillCurrent()) return;
 
-            var resumePlayer = _vm.VideoPlayerService.GetMediaPlayer();
-            var resumedMs = resumePlayer?.Time ?? 0;
+            var resumedMs = _vm.VideoPlayerService.CurrentTimeMilliseconds;
             if (resumedMs > 0)
             {
                 var driftMs = targetTimeMs - resumedMs;
@@ -550,10 +547,9 @@ public class PlayerPlaybackController
                 return;
             }
 
-            var mediaPlayer = _vm.VideoPlayerService.GetMediaPlayer();
-            if (mediaPlayer != null && targetTimeMs > 0)
+            if (_vm.VideoPlayerService.HasLoadedMedia && targetTimeMs > 0)
             {
-                mediaPlayer.Time = targetTimeMs;
+                _vm.VideoPlayerService.SeekToTime(targetTimeMs);
             }
             else
             {
@@ -562,7 +558,7 @@ public class PlayerPlaybackController
             await Task.Delay(120);
             if (!IsStillCurrent()) return;
 
-            var currentTimeMs = mediaPlayer?.Time ?? 0;
+            var currentTimeMs = _vm.VideoPlayerService.CurrentTimeMilliseconds;
             if (currentTimeMs > 0 && currentTimeMs + 1200 >= targetTimeMs)
             {
                 _vm._pendingResumeSeekPosition = 0;
@@ -630,15 +626,14 @@ public class PlayerPlaybackController
             return;
         }
 
-        var mediaPlayer = _vm.VideoPlayerService.GetMediaPlayer();
         var pendingTimeMs = _vm._lastPausedTimeMs > 0 ? _vm._lastPausedTimeMs : (long)(_vm._pendingResumeSeekPosition * 1000);
         _vm.LogDebug($"TryApplyPendingResumeSeek: Current Position={_vm.Position}, PendingResumeSeekPosition={_vm._pendingResumeSeekPosition}, PendingTimeMs={pendingTimeMs}");
 
-        if (mediaPlayer != null && pendingTimeMs > 0)
+        if (_vm.VideoPlayerService.HasLoadedMedia && pendingTimeMs > 0)
         {
-            if (mediaPlayer.Time + 1000 >= pendingTimeMs)
+            if (_vm.VideoPlayerService.CurrentTimeMilliseconds + 1000 >= pendingTimeMs)
             {
-                _vm.LogDebug($"TryApplyPendingResumeSeek: mediaPlayer.Time ({mediaPlayer.Time}) is close enough to pendingTimeMs ({pendingTimeMs}). Resetting pending seek.");
+                _vm.LogDebug($"TryApplyPendingResumeSeek: current time ({_vm.VideoPlayerService.CurrentTimeMilliseconds}) is close enough to pendingTimeMs ({pendingTimeMs}). Resetting pending seek.");
                 _vm._pendingResumeSeekPosition = 0;
                 _vm._pendingResumeSeekAttempts = 0;
                 return;
@@ -662,9 +657,9 @@ public class PlayerPlaybackController
         }
 
         _vm._pendingResumeSeekAttempts++;
-        if (mediaPlayer != null && pendingTimeMs > 0)
+        if (_vm.VideoPlayerService.HasLoadedMedia && pendingTimeMs > 0)
         {
-            var driftMs = pendingTimeMs - mediaPlayer.Time;
+            var driftMs = pendingTimeMs - _vm.VideoPlayerService.CurrentTimeMilliseconds;
             if (driftMs <= 1000)
             {
                 _vm.LogDebug($"TryApplyPendingResumeSeek: Drift ({driftMs}ms) is within tolerance. Resetting pending seek.");
@@ -674,19 +669,18 @@ public class PlayerPlaybackController
             }
         }
 
-        if (mediaPlayer != null && pendingTimeMs > 0)
+        if (_vm.VideoPlayerService.HasLoadedMedia && pendingTimeMs > 0)
         {
             var duration = _vm.VideoPlayerService.Duration;
             if (duration > 0)
             {
-                var fraction = (float)(_vm._pendingResumeSeekPosition / duration);
-                _vm.LogDebug($"TryApplyPendingResumeSeek: Setting mediaPlayer.Position fraction={fraction} for {pendingTimeMs}ms");
-                mediaPlayer.Position = Math.Clamp(fraction, 0f, 1f);
+                _vm.LogDebug($"TryApplyPendingResumeSeek: Setting playback position to {_vm._pendingResumeSeekPosition}s for {pendingTimeMs}ms");
+                _vm.VideoPlayerService.Position = _vm._pendingResumeSeekPosition;
             }
             else
             {
                 _vm.LogDebug($"TryApplyPendingResumeSeek: Duration is 0, falling back to Time={pendingTimeMs}");
-                mediaPlayer.Time = pendingTimeMs;
+                _vm.VideoPlayerService.SeekToTime(pendingTimeMs);
             }
         }
         else
@@ -902,10 +896,9 @@ public class PlayerPlaybackController
                 return;
             }
 
-            var existingPlayer = _vm.VideoPlayerService.GetMediaPlayer();
-            if (existingPlayer?.Media != null)
+            if (_vm.VideoPlayerService.HasLoadedMedia)
             {
-                existingPlayer.Play();
+                _vm.VideoPlayerService.PlayLoadedMedia();
                 await Task.Delay(180);
                 if (!IsStillCurrent()) return;
                 if (_vm.IsPlaying)
@@ -1080,18 +1073,17 @@ public class PlayerPlaybackController
         if (targetFraction < 0f) targetFraction = 0f;
         if (targetFraction > 1f) targetFraction = 1f;
 
-        var mediaPlayer = _vm.VideoPlayerService.GetMediaPlayer();
-        if (mediaPlayer != null)
+        if (_vm.VideoPlayerService.HasLoadedMedia)
         {
             if (duration > 0)
             {
                 _vm.LogDebug($"SetPlaybackPosition: Executing internal Position seek to {targetFraction} (Time: {targetTimeMs}ms)");
-                mediaPlayer.Position = targetFraction;
+                _vm.VideoPlayerService.Position = clamped;
             }
             else
             {
                 _vm.LogDebug($"SetPlaybackPosition: Fallback executing internal Time seek to {targetTimeMs}ms");
-                mediaPlayer.Time = targetTimeMs;
+                _vm.VideoPlayerService.SeekToTime(targetTimeMs);
             }
             return;
         }

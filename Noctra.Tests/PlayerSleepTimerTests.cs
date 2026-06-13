@@ -114,16 +114,32 @@ namespace Noctra.Tests
             Assert.Equal(PlayerViewModel.SleepTimerOption.EndOfEpisode, ctx.VM.SleepTimerMode);
             
             // Simulate PlaybackEnded
+            ctx.VideoService.Position = ctx.VideoService.Duration - 1;
             ctx.VideoService.SimulatePlayingChanged(true);
             ctx.VideoService.SimulatePlaybackEnded();
             
-            // The logic has a 1500ms delay:
-            // _ = Task.Delay(1500).ContinueWith(_ => _dispatcherService.BeginInvoke(TriggerSleepShutdown));
-            
-            await Task.Delay(2000); // Wait for the delay and invocation
+            await WaitForAsync(
+                () => !ctx.VideoService.IsPlaying &&
+                      ctx.VM.SleepTimerMode == PlayerViewModel.SleepTimerOption.Off,
+                TimeSpan.FromSeconds(5));
             
             Assert.False(ctx.VideoService.IsPlaying);
             Assert.Equal(PlayerViewModel.SleepTimerOption.Off, ctx.VM.SleepTimerMode);
+        }
+
+        private static async Task WaitForAsync(Func<bool> condition, TimeSpan timeout)
+        {
+            var startedAt = DateTime.UtcNow;
+            while (!condition())
+            {
+                if (DateTime.UtcNow - startedAt >= timeout)
+                {
+                    throw new TimeoutException(
+                        $"Condition was not met within {timeout.TotalSeconds:0.#} seconds.");
+                }
+
+                await Task.Delay(20);
+            }
         }
     }
 }

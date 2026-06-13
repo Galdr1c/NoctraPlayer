@@ -12,7 +12,7 @@
         Title="{loc:Translate Profile.Loading.Title}"
         Width="450" Height="350"
         WindowStartupLocation="CenterScreen"
-        SystemDecorations="None"
+        WindowDecorations="None"
         CanResize="False"
         Background="Transparent"
         TransparencyLevelHint="Transparent"

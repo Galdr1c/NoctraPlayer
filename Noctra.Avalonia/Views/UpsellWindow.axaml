@@ -10,7 +10,7 @@
         Title="{Binding [Upsell.Title], Source={x:Static loc:LocalizationSource.Instance}}" Height="520" Width="760"
         WindowStartupLocation="CenterScreen"
         ShowInTaskbar="False"
-        SystemDecorations="None"
+        WindowDecorations="None"
         CanResize="False"
         TransparencyLevelHint="Transparent"
         Background="Transparent"

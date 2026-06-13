@@ -122,7 +122,7 @@ public class MemoryVideoView : NativeControlHost
     {
         base.OnAttachedToVisualTree(e);
         _isAttached = true;
-        _rootWindow = e.Root as Window;
+        _rootWindow = TopLevel.GetTopLevel(this) as Window;
         InitializeOverlay();
     }
 
@@ -315,7 +315,7 @@ public class MemoryVideoView : NativeControlHost
 
         _overlayWindow = new Window
         {
-            SystemDecorations = SystemDecorations.None,
+            WindowDecorations = WindowDecorations.None,
             TransparencyLevelHint = [WindowTransparencyLevel.Transparent],
             Background = new SolidColorBrush(Color.FromArgb(1, 0, 0, 0)),
             ShowInTaskbar = false,
@@ -397,7 +397,7 @@ public class MemoryVideoView : NativeControlHost
             // device-independent pixels (dips). Divide by RenderScaling to fix
             // HiDPI (125%/150%) and multi-monitor positioning issues.
             var physicalPos = this.PointToScreen(new Point(0, 0));
-            var scaling = this.GetVisualRoot()?.RenderScaling ?? 1.0;
+            var scaling = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1.0;
             var dipPos = new PixelPoint(
                 (int)Math.Round(physicalPos.X / scaling),
                 (int)Math.Round(physicalPos.Y / scaling)

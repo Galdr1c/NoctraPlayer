@@ -1703,12 +1703,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     internal void ApplyVideoFillMode()
     {
-        var mediaPlayer = _videoPlayerService.GetMediaPlayer();
-        if (mediaPlayer == null) return;
-
         try
         {
-            mediaPlayer.AspectRatio = VideoFillMode switch
+            var aspectRatio = VideoFillMode switch
             {
                 FillMode.Fill => "16:9",
                 FillMode.Stretch => "16:9",
@@ -1717,7 +1714,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                     : null,
                 _ => null
             };
-            mediaPlayer.CropGeometry = VideoFillMode == FillMode.Fill ? "16:9" : null;
+            _videoPlayerService.SetVideoLayout(
+                aspectRatio,
+                VideoFillMode == FillMode.Fill ? "16:9" : null);
             
             LogDebug($"VM: VideoFillMode applied: {VideoFillMode}");
         }

@@ -1,11 +1,10 @@
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using Noctra.Services.Interfaces;
 
 namespace Noctra.Services;
 
-public class SecurityService : ISecurityService
+public class DesktopSecurityService : ISecurityService
 {
     // DPAPI entropy to make the encryption even more specific to this app
     private static readonly byte[] Entropy = "N0ctra_P1ayer_Security_Entropy_2024"u8.ToArray();
@@ -20,26 +19,15 @@ public class SecurityService : ISecurityService
         if (string.IsNullOrEmpty(plainText))
             return null;
 
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (!OperatingSystem.IsWindows())
         {
-            // DPAPI only works on Windows. For other platforms, we return plain text for now.
-            // In the future, specialized implementations for KeyChain (macOS) or KWallet (Linux) can be added here.
-            return plainText;
+            throw new PlatformNotSupportedException(
+                "Desktop DPAPI credential protection is available only on Windows.");
         }
 
-        try
-        {
-            var data = Encoding.UTF8.GetBytes(plainText);
-            var encrypted = ProtectedData.Protect(data, Entropy, DataProtectionScope.CurrentUser);
-            return Convert.ToBase64String(encrypted);
-        }
-        catch
-        {
-            // Fallback: If encryption fails for some reason (rare on Windows), 
-            // we return the plain text or handle accordingly. 
-            // In a real app, you might want to log this.
-            return plainText;
-        }
+        var data = Encoding.UTF8.GetBytes(plainText);
+        var encrypted = ProtectedData.Protect(data, Entropy, DataProtectionScope.CurrentUser);
+        return Convert.ToBase64String(encrypted);
     }
 
     public string? Decrypt(string? cipherText)
@@ -47,9 +35,10 @@ public class SecurityService : ISecurityService
         if (string.IsNullOrEmpty(cipherText))
             return null;
 
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (!OperatingSystem.IsWindows())
         {
-            return cipherText;
+            throw new PlatformNotSupportedException(
+                "Desktop DPAPI credential protection is available only on Windows.");
         }
 
         try
@@ -146,4 +135,9 @@ public class SecurityService : ISecurityService
             Encoding.ASCII.GetBytes(legacyHash),
             Encoding.ASCII.GetBytes(hash.ToUpperInvariant()));
     }
+
+}
+
+public sealed class SecurityService : DesktopSecurityService
+{
 }

@@ -12,7 +12,7 @@
         Title="{loc:Translate Channels.Edit.Title}" Height="600" Width="500"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        SystemDecorations="None"
+        WindowDecorations="None"
         CanResize="False"
         TransparencyLevelHint="Transparent"
         Background="Transparent"
@@ -113,7 +113,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBox Text="{Binding MetadataSearchQuery}"
-                                         Watermark="{loc:Translate Channels.Edit.TmdbPlaceholder}"/>
+                                         PlaceholderText="{loc:Translate Channels.Edit.TmdbPlaceholder}"/>
                                 <Button Grid.Column="1" Command="{Binding SearchMetadataCommand}"
                                         Classes="EditPrimaryBtn"
                                         Margin="8,0,0,0"

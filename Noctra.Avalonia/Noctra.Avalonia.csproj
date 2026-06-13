@@ -57,10 +57,10 @@
       <_Parameter1>NoctraPremiumStoreWebUri</_Parameter1>
       <_Parameter2>$(NoctraPremiumStoreWebUri)</_Parameter2>
     </AssemblyAttribute>
-    <PackageReference Include="Avalonia" Version="11.2.1" />
-    <PackageReference Include="Avalonia.Desktop" Version="11.2.1" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.1" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.1" />
+    <PackageReference Include="Avalonia" Version="$(AvaloniaVersion)" />
+    <PackageReference Include="Avalonia.Desktop" Version="$(AvaloniaVersion)" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="$(AvaloniaVersion)" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="$(AvaloniaVersion)" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="DotNetEnv" Version="3.1.1" />
     <PackageReference Include="LibVLCSharp" Version="3.9.5" />

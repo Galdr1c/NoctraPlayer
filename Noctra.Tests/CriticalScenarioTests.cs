@@ -30,6 +30,9 @@ namespace Noctra.Tests
         public string? CurrentUrl { get; private set; }
         public StreamQualityInfo? StreamQuality => null;
         public bool IsPlaying { get; private set; }
+        public PlaybackState State => IsPlaying ? PlaybackState.Playing : PlaybackState.Stopped;
+        public bool HasLoadedMedia => CurrentUrl != null;
+        public long CurrentTimeMilliseconds => (long)(Position * 1000);
         public double Position { get; set; }
         public double Duration { get; set; } = 3600;
         public float PlaybackRate { get; set; } = 1f;
@@ -48,7 +51,7 @@ namespace Noctra.Tests
         public event EventHandler<StreamQualityInfo>? QualityDetected;
         public event EventHandler<int>? VolumeChanged;
         public event EventHandler<float>? BufferingChanged;
-        public event EventHandler<LibVLCSharp.Shared.MediaPlayer?>? MediaPlayerReady;
+        public event EventHandler? PlayerReady;
 
         public Task PlayAsync(string url, double startTimeSeconds = 0)
         {
@@ -67,7 +70,9 @@ namespace Noctra.Tests
         public void Stop() { IsPlaying = false; CurrentUrl = null; StopCallCount++; }
         public void SetAudioTrack(int trackId) { }
         public void SetSubtitleTrack(int trackId) { }
-        public LibVLCSharp.Shared.MediaPlayer? GetMediaPlayer() => null;
+        public void SeekToTime(long milliseconds) => Position = milliseconds / 1000.0;
+        public void PlayLoadedMedia() => Resume();
+        public void SetVideoLayout(string? aspectRatio, string? cropGeometry) { }
         public void Dispose() { }
 
         // ─── Trigger helpers ───────────────────────────────────────────────────

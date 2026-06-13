@@ -6,11 +6,11 @@ namespace Noctra.Tests
 {
     public class SecurityServiceTests
     {
-        private readonly SecurityService _securityService;
+        private readonly DesktopSecurityService _securityService;
 
         public SecurityServiceTests()
         {
-            _securityService = new SecurityService();
+            _securityService = new DesktopSecurityService();
         }
 
         [Fact]
@@ -31,14 +31,12 @@ namespace Noctra.Tests
 
             // Assert
             Assert.NotNull(encrypted);
-            // On Windows, if DPAPI is available, it should be different. 
-            // If it falls back to plain text, it's a "pass" in terms of non-crashing but a "fail" for security.
-            // Our logic returns plain text on failure.
+            Assert.NotEqual(original, encrypted);
             Assert.Equal(original, decrypted);
         }
 
         [Fact]
-        public void Encrypt_ShouldReturnPlainText_OnNonWindows()
+        public void Encrypt_ShouldRejectUnsupportedPlatforms()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -49,10 +47,8 @@ namespace Noctra.Tests
             string original = "SecretPassword123";
 
             // Act
-            string? encrypted = _securityService.Encrypt(original);
-
-            // Assert
-            Assert.Equal(original, encrypted);
+            Assert.Throws<PlatformNotSupportedException>(() =>
+                _securityService.Encrypt(original));
         }
 
         [Fact]

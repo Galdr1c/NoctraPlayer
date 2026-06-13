@@ -13,6 +13,7 @@ namespace Noctra.Services;
 public class SettingsService : ISettingsService
 {
     private readonly ILogger<SettingsService>? _logger;
+    private readonly IAppPathService _appPaths;
     private readonly string _basePath;
     private AppSettings _currentSettings;
 
@@ -27,10 +28,18 @@ public class SettingsService : ISettingsService
     };
     
     public SettingsService(ILogger<SettingsService>? logger = null)
+        : this(new DesktopAppPathService(), logger)
     {
+    }
+
+    public SettingsService(
+        IAppPathService appPaths,
+        ILogger<SettingsService>? logger = null)
+    {
+        _appPaths = appPaths;
         _logger = logger;
         
-        _basePath = AppPaths.UserDataDirectory;
+        _basePath = _appPaths.UserDataDirectory;
         
         Directory.CreateDirectory(_basePath);
         
@@ -43,7 +52,7 @@ public class SettingsService : ISettingsService
         if (profileId == 0)
             return Path.Combine(_basePath, "settings.json");
 
-        var settingsDir = AppPaths.SettingsDirectory;
+        var settingsDir = _appPaths.SettingsDirectory;
         if (!Directory.Exists(settingsDir)) Directory.CreateDirectory(settingsDir);
 
         var newPath = Path.Combine(settingsDir, $"profile_{profileId}.json");
@@ -201,7 +210,7 @@ public class SettingsService : ISettingsService
         return new AppSettings
         {
             ProfileId = profileId,
-            DownloadPath = AppPaths.NormalizeDownloadDirectory(null)
+            DownloadPath = _appPaths.NormalizeDownloadDirectory(null)
         };
     }
 

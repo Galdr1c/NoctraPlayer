@@ -10,7 +10,7 @@
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
         Topmost="False"
-        SystemDecorations="None"
+        WindowDecorations="None"
         CanResize="False"
         TransparencyLevelHint="Transparent"
         Background="Transparent"
@@ -111,20 +111,16 @@
                 <StackPanel>
                     <CheckBox x:Name="TermsAcceptedCheckBox"
                               Content="{loc:Translate LegalConsent.Check.Terms}"
-                              Checked="RequiredCheckBox_Changed"
-                              Unchecked="RequiredCheckBox_Changed"/>
+                              IsCheckedChanged="RequiredCheckBox_Changed"/>
                     <CheckBox x:Name="NoContentCheckBox"
                               Content="{loc:Translate LegalConsent.Check.NoContent}"
-                              Checked="RequiredCheckBox_Changed"
-                              Unchecked="RequiredCheckBox_Changed"/>
+                              IsCheckedChanged="RequiredCheckBox_Changed"/>
                     <CheckBox x:Name="LawfulSourcesCheckBox"
                               Content="{loc:Translate LegalConsent.Check.LawfulSources}"
-                              Checked="RequiredCheckBox_Changed"
-                              Unchecked="RequiredCheckBox_Changed"/>
+                              IsCheckedChanged="RequiredCheckBox_Changed"/>
                     <CheckBox x:Name="PrivacyAcceptedCheckBox"
                               Content="{loc:Translate LegalConsent.Check.Privacy}"
-                              Checked="RequiredCheckBox_Changed"
-                              Unchecked="RequiredCheckBox_Changed"/>
+                              IsCheckedChanged="RequiredCheckBox_Changed"/>
                     <CheckBox x:Name="DiagnosticDataCheckBox"
                               Content="{loc:Translate LegalConsent.Check.Diagnostics}"
                               Margin="0"/>

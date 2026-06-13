@@ -11,7 +11,7 @@
         Title="{loc:Translate PinEntry.EnterPin}"
         Width="320" Height="500"
         WindowStartupLocation="CenterOwner"
-        SystemDecorations="None"
+        WindowDecorations="None"
         ShowInTaskbar="False"
         CanResize="False"
         TransparencyLevelHint="Transparent"

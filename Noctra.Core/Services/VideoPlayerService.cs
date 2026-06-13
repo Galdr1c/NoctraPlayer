@@ -47,7 +47,7 @@ public class VideoPlayerService : IVideoPlayerService
     }
 
 
-    public event EventHandler<MediaPlayer?>? MediaPlayerReady;
+    public event EventHandler? PlayerReady;
     public event EventHandler<bool>? PlayingChanged;
 
     public event EventHandler<double>? PositionChanged;
@@ -58,6 +58,19 @@ public class VideoPlayerService : IVideoPlayerService
 
     public string? CurrentUrl { get; private set; }
     public StreamQualityInfo? StreamQuality { get; private set; }
+    public PlaybackState State => _mediaPlayer?.State switch
+    {
+        VLCState.Opening => PlaybackState.Opening,
+        VLCState.Buffering => PlaybackState.Buffering,
+        VLCState.Playing => PlaybackState.Playing,
+        VLCState.Paused => PlaybackState.Paused,
+        VLCState.Stopped => PlaybackState.Stopped,
+        VLCState.Ended => PlaybackState.Ended,
+        VLCState.Error => PlaybackState.Error,
+        _ => PlaybackState.Idle
+    };
+    public bool HasLoadedMedia => _mediaPlayer?.Media != null;
+    public long CurrentTimeMilliseconds => _mediaPlayer?.Time ?? 0;
 
 
     private int GetNetworkCaching() => _settingsService.Settings.VideoBufferSize switch
@@ -246,7 +259,7 @@ public class VideoPlayerService : IVideoPlayerService
             
             await _dispatcherService.InvokeAsync(() =>
             {
-                MediaPlayerReady?.Invoke(this, _mediaPlayer);
+                PlayerReady?.Invoke(this, EventArgs.Empty);
                 return Task.CompletedTask;
             });
         }
@@ -281,7 +294,7 @@ public class VideoPlayerService : IVideoPlayerService
         // 3. UI üzerindeki MediaPlayer referansını kaldır (crash önlemek için çok kritik)
         await _dispatcherService.InvokeAsync(() =>
         {
-            MediaPlayerReady?.Invoke(this, null);
+            PlayerReady?.Invoke(this, EventArgs.Empty);
             return Task.CompletedTask;
         });
         
@@ -433,7 +446,31 @@ public class VideoPlayerService : IVideoPlayerService
 
     public event EventHandler<float>? BufferingChanged;
 
-    public MediaPlayer? GetMediaPlayer() => _mediaPlayer;
+    internal MediaPlayer? GetDesktopMediaPlayer() => _mediaPlayer;
+
+    public void SeekToTime(long milliseconds)
+    {
+        if (_mediaPlayer != null)
+        {
+            _mediaPlayer.Time = milliseconds;
+        }
+    }
+
+    public void PlayLoadedMedia()
+    {
+        _mediaPlayer?.Play();
+    }
+
+    public void SetVideoLayout(string? aspectRatio, string? cropGeometry)
+    {
+        if (_mediaPlayer == null)
+        {
+            return;
+        }
+
+        _mediaPlayer.AspectRatio = aspectRatio;
+        _mediaPlayer.CropGeometry = cropGeometry;
+    }
 
     public async Task PlayAsync(string url, double startTimeSeconds = 0)
     {

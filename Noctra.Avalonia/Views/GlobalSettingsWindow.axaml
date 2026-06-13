@@ -9,7 +9,7 @@
         Width="800" Height="600"
         WindowStartupLocation="CenterScreen"
         ShowInTaskbar="False"
-        SystemDecorations="None"
+        WindowDecorations="None"
         CanResize="False"
         TransparencyLevelHint="Transparent"
         Background="Transparent"
@@ -619,7 +619,7 @@
                                             
                                             <Grid ColumnDefinitions="*,Auto">
                                                 <TextBox Text="{Binding PromoCodeInput, Mode=TwoWay}" 
-                                                         Watermark="{loc:Translate GlobalSettings.Promo.Placeholder}" 
+                                                         PlaceholderText="{loc:Translate GlobalSettings.Promo.Placeholder}"
                                                          Padding="16,12"
                                                          CornerRadius="10"
                                                          BorderThickness="1"

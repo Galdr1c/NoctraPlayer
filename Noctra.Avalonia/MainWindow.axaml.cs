@@ -95,8 +95,8 @@ public partial class MainWindow : Window
         PiPCentralControls.DataContext = _playerViewModel;
         PiPBottomControls.DataContext = _playerViewModel;
         PiPWatermark.DataContext = _mainViewModel.WatermarkViewModel;
-        VideoSurface.MediaPlayer = _videoPlayerService.GetMediaPlayer();
-        _videoPlayerService.MediaPlayerReady += VideoPlayerService_MediaPlayerReady;
+        VideoSurface.MediaPlayer = GetDesktopMediaPlayer();
+        _videoPlayerService.PlayerReady += VideoPlayerService_PlayerReady;
         // MiniVideoSurface.MediaPlayer = null;
 
         AddHandler(KeyDownEvent, MainWindow_KeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
@@ -190,7 +190,7 @@ public partial class MainWindow : Window
         _playerViewModel.NextLiveChannelRequested -= PlayerViewModel_NextLiveChannelRequested;
         _playerViewModel.PreviousLiveChannelRequested -= PlayerViewModel_PreviousLiveChannelRequested;
         _playerViewModel.PiPRequested -= PlayerViewModel_PiPRequested;
-        _videoPlayerService.MediaPlayerReady -= VideoPlayerService_MediaPlayerReady;
+        _videoPlayerService.PlayerReady -= VideoPlayerService_PlayerReady;
 
         // VideoSurface.MediaPlayer = null; // Handled in ClosePiP or let it be cleared
         ClosePiP(false); 
@@ -199,10 +199,13 @@ public partial class MainWindow : Window
 
     }
 
-    private void VideoPlayerService_MediaPlayerReady(object? sender, LibVLCSharp.Shared.MediaPlayer? mp)
+    private void VideoPlayerService_PlayerReady(object? sender, EventArgs e)
     {
-        VideoSurface.MediaPlayer = mp;
+        VideoSurface.MediaPlayer = GetDesktopMediaPlayer();
     }
+
+    private LibVLCSharp.Shared.MediaPlayer? GetDesktopMediaPlayer() =>
+        (_videoPlayerService as VideoPlayerService)?.GetDesktopMediaPlayer();
 
     // === Window Chrome ===
 
@@ -645,7 +648,7 @@ public partial class MainWindow : Window
     private WindowState _savedWindowState;
     private Size _savedWindowSize;
     private PixelPoint _savedWindowPosition;
-    private SystemDecorations _savedSystemDecorations;
+    private WindowDecorations _savedWindowDecorations;
 
     private void PlayerViewModel_PiPRequested(object? sender, EventArgs e)
     {
@@ -663,11 +666,11 @@ public partial class MainWindow : Window
         _savedWindowState = WindowState;
         _savedWindowSize = new Size(Width, Height);
         _savedWindowPosition = Position;
-        _savedSystemDecorations = SystemDecorations;
+        _savedWindowDecorations = WindowDecorations;
 
         // 2. Normal moda geç ve dekorasyonları kaldır
         WindowState = WindowState.Normal;
-        SystemDecorations = SystemDecorations.None;
+        WindowDecorations = WindowDecorations.None;
 
         // 3. UI bileşenlerini gizle, sadece PlayerArea kalsın
         HeaderBar.IsVisible = false;
@@ -717,7 +720,7 @@ public partial class MainWindow : Window
 
         // 1. Önce pencere boyutlarını ve dekorasyonları geri al (Layout için kritik)
         Topmost = false;
-        SystemDecorations = _savedSystemDecorations;
+        WindowDecorations = _savedWindowDecorations;
         
         MinWidth = 1000; // Orijinal min değerler
         MinHeight = 600;

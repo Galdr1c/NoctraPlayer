@@ -304,7 +304,9 @@ public partial class App : Application
                 sp.GetRequiredService<HttpClient>(),
                 sp.GetRequiredService<ILocalizationService>()
             ));
-        services.AddTransient<ICacheService, CacheService>();
+        services.AddSingleton<IAppPathService, DesktopAppPathService>();
+        services.AddTransient<ICacheService>(sp =>
+            new CacheService(sp.GetRequiredService<IAppPathService>()));
 
         // Domain services changed to Singleton/Transient because they manually manage DB Context lifetimes
         services.AddSingleton<IPlaylistService, PlaylistService>(sp => 
@@ -326,7 +328,8 @@ public partial class App : Application
         services.AddSingleton<IWatchHistoryService, WatchHistoryService>();
         
         services.AddSingleton<IAvatarService, AvatarService>();
-        services.AddSingleton<ISettingsService, SettingsService>();
+        services.AddSingleton<ISettingsService>(sp =>
+            new SettingsService(sp.GetRequiredService<IAppPathService>()));
         services.AddSingleton<IAppEditionService, AppEditionService>();
         services.AddSingleton<IContentDownloadService, ContentDownloadService>(sp => 
             new ContentDownloadService(
@@ -357,7 +360,7 @@ public partial class App : Application
                 sp.GetRequiredService<ISettingsService>(),
                 sp.GetRequiredService<ILocalizationService>()
             ));
-        services.AddSingleton<ISecurityService, SecurityService>();
+        services.AddSingleton<ISecurityService, DesktopSecurityService>();
         services.AddSingleton<IProfileService, ProfileService>();
         services.AddTransient<WatermarkViewModel>();
         

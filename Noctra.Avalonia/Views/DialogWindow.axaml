@@ -11,7 +11,7 @@
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
         Topmost="True"
-        SystemDecorations="None"
+        WindowDecorations="None"
         CanResize="False"
         TransparencyLevelHint="Transparent"
         Background="Transparent"

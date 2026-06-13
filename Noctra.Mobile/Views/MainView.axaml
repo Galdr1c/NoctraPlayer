@@ -1,0 +1,131 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Noctra.Mobile.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="390" d:DesignHeight="844"
+             x:Class="Noctra.Mobile.Views.MainView"
+             x:DataType="vm:MainViewModel"
+             Background="#090B10">
+  <Design.DataContext>
+    <vm:MainViewModel />
+  </Design.DataContext>
+
+  <UserControl.Styles>
+    <Style Selector="Button.nav">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="#AEB5C5" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="12,10" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.nav:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#202638" />
+      <Setter Property="TextElement.Foreground" Value="#FFFFFF" />
+    </Style>
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="#151923" />
+      <Setter Property="CornerRadius" Value="18" />
+      <Setter Property="Padding" Value="18" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="Auto,*">
+    <Border Grid.Row="0"
+            Grid.ColumnSpan="2"
+            Padding="20,18,20,14"
+            Background="#0E1118">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="2">
+          <TextBlock Text="NOCTRA"
+                     FontSize="12"
+                     FontWeight="Bold"
+                     Foreground="#8F7CFF"
+                     LetterSpacing="2" />
+          <TextBlock Text="{Binding PageTitle}"
+                     FontSize="26"
+                     FontWeight="SemiBold"
+                     Foreground="#FFFFFF" />
+        </StackPanel>
+        <Border Grid.Column="1"
+                Width="40"
+                Height="40"
+                CornerRadius="20"
+                Background="#8F7CFF">
+          <TextBlock Text="N"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center"
+                     FontWeight="Bold"
+                     Foreground="#FFFFFF" />
+        </Border>
+      </Grid>
+    </Border>
+
+    <Border x:Name="NavigationRail"
+            Grid.Row="1"
+            Grid.Column="0"
+            Width="128"
+            Padding="12,20"
+            Background="#0E1118"
+            IsVisible="False">
+      <StackPanel Spacing="8">
+        <Button Classes="nav" Tag="Home" Content="Home" Click="OnDestinationClick" />
+        <Button Classes="nav" Tag="Live" Content="Live" Click="OnDestinationClick" />
+        <Button Classes="nav" Tag="Movies" Content="Movies" Click="OnDestinationClick" />
+        <Button Classes="nav" Tag="Series" Content="Series" Click="OnDestinationClick" />
+        <Button Classes="nav" Tag="More" Content="More" Click="OnDestinationClick" />
+      </StackPanel>
+    </Border>
+
+    <ScrollViewer Grid.Row="1" Grid.Column="1">
+      <StackPanel Margin="20" Spacing="16">
+        <TextBlock Text="{Binding PageDescription}"
+                   FontSize="15"
+                   Foreground="#AEB5C5"
+                   TextWrapping="Wrap" />
+
+        <Border Classes="card">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Continue watching"
+                       FontSize="18"
+                       FontWeight="SemiBold"
+                       Foreground="#FFFFFF" />
+            <TextBlock Text="Your recent content will appear here after profile setup."
+                       Foreground="#AEB5C5"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+          <Border Classes="card">
+            <StackPanel Spacing="6">
+              <TextBlock Text="Live" FontWeight="SemiBold" Foreground="#FFFFFF" />
+              <TextBlock Text="Channels" Foreground="#8F7CFF" />
+            </StackPanel>
+          </Border>
+          <Border Grid.Column="1" Classes="card">
+            <StackPanel Spacing="6">
+              <TextBlock Text="Library" FontWeight="SemiBold" Foreground="#FFFFFF" />
+              <TextBlock Text="Movies and series" Foreground="#8F7CFF" />
+            </StackPanel>
+          </Border>
+        </Grid>
+      </StackPanel>
+    </ScrollViewer>
+
+    <Border x:Name="BottomNavigation"
+            Grid.Row="2"
+            Grid.ColumnSpan="2"
+            Padding="8,6,8,10"
+            Background="#0E1118">
+      <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="4">
+        <Button Grid.Column="0" Classes="nav" Tag="Home" Content="Home" Click="OnDestinationClick" />
+        <Button Grid.Column="1" Classes="nav" Tag="Live" Content="Live" Click="OnDestinationClick" />
+        <Button Grid.Column="2" Classes="nav" Tag="Movies" Content="Movies" Click="OnDestinationClick" />
+        <Button Grid.Column="3" Classes="nav" Tag="Series" Content="Series" Click="OnDestinationClick" />
+        <Button Grid.Column="4" Classes="nav" Tag="More" Content="More" Click="OnDestinationClick" />
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>
