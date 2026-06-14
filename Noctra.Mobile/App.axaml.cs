@@ -1,3 +1,4 @@
+using System;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -8,6 +9,10 @@ namespace Noctra.Mobile;
 
 public partial class App : Application
 {
+    public static Func<IServiceProvider>? ServiceProviderFactory { get; set; }
+
+    public IServiceProvider? Services { get; private set; }
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -15,28 +20,36 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        Services = ServiceProviderFactory?.Invoke();
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.MainWindow = new MainWindow
             {
-                DataContext = new MainViewModel()
+                DataContext = CreateMainViewModel()
             };
         }
         else if (ApplicationLifetime is IActivityApplicationLifetime activity)
         {
             activity.MainViewFactory = () => new MainView
             {
-                DataContext = new MainViewModel()
+                DataContext = CreateMainViewModel()
             };
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
         {
             singleViewPlatform.MainView = new MainView
             {
-                DataContext = new MainViewModel()
+                DataContext = CreateMainViewModel()
             };
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private MainViewModel CreateMainViewModel()
+    {
+        return Services?.GetService(typeof(MainViewModel)) as MainViewModel
+            ?? new MainViewModel();
     }
 }

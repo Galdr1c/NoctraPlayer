@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
 using System.Collections.ObjectModel;
+using Noctra.Core.Services;
 
 namespace Noctra.ViewModels;
 
@@ -29,6 +30,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IUpdateService _updateService;
     private readonly ILocalizationService _localizationService;
     private readonly ISecurityService _securityService;
+    private readonly IAppPathService _appPaths;
     private CancellationTokenSource? _epgRefreshWatchCts;
     private int _isRefreshOperationRunning;
     private string? _activeRefreshScope;
@@ -237,7 +239,8 @@ public partial class SettingsViewModel : ObservableObject
         ILicenseService licenseService,
         IUpdateService updateService,
         ILocalizationService localizationService,
-        ISecurityService securityService)
+        ISecurityService securityService,
+        IAppPathService? appPaths = null)
     {
         _settingsService = settingsService;
         _epgService = epgService;
@@ -252,6 +255,7 @@ public partial class SettingsViewModel : ObservableObject
         _updateService = updateService;
         _localizationService = localizationService;
         _securityService = securityService;
+        _appPaths = appPaths ?? new DesktopAppPathService();
         
         _mainViewModel.PropertyChanged += MainViewModel_PropertyChanged;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
@@ -1221,9 +1225,9 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
-    private static string NormalizeDownloadPath(string? rawPath)
+    private string NormalizeDownloadPath(string? rawPath)
     {
-        return Noctra.Core.Services.AppPaths.NormalizeDownloadDirectory(rawPath);
+        return _appPaths.NormalizeDownloadDirectory(rawPath);
     }
 
     [RelayCommand]

@@ -101,12 +101,29 @@ Installed Android components:
 
 Current verification:
 
-- Full tests: 913 passed, 0 failed, 0 skipped
+- Full tests: 917 passed, 0 failed, 0 skipped
 - Windows Release rebuild: 0 errors, 20 existing warnings
 - Android Debug APK build: 0 errors, 0 warnings
 - Vulnerable NuGet packages in the Android graph: none
 - Signed APK:
   `Noctra.Android/bin/Debug/net10.0-android36.0/studio.kynora.noctra-Signed.apk`
+
+Current platform separation:
+
+- Shared service registrations live in
+  `Noctra.Core/DependencyInjection/ServiceCollectionExtensions.cs`.
+- Desktop and Android provide their own `IAppPathService` implementations.
+- Android stores the database, settings, and logs in application-private
+  storage, uses the application cache for temporary playback files, and uses
+  the app-specific external downloads directory when available.
+- Shared download flows resolve and validate paths through `IAppPathService`;
+  they no longer use the desktop-only static `AppPaths` helper.
+- Android startup builds its own dependency graph and reuses the shared
+  `AddNoctraCoreServices` registrations.
+- Provider credentials use an Android Keystore-backed AES-GCM key; invalid or
+  undecryptable payloads are rejected instead of being treated as plaintext.
+- Android connectivity changes are observed through `ConnectivityManager`
+  without treating network presence as proof that a provider is reachable.
 
 Android 16 native page-size compatibility is provided by:
 

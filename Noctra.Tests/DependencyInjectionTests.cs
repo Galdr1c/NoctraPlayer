@@ -1,0 +1,65 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
+using Noctra.Core.DependencyInjection;
+using Noctra.Core.Services;
+using Noctra.Data;
+using Noctra.Models;
+using Noctra.Services;
+using Noctra.Services.Interfaces;
+
+namespace Noctra.Tests;
+
+public sealed class DependencyInjectionTests
+{
+    [Fact]
+    public void AddNoctraCoreServices_ResolvesSharedServiceGraph()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "Noctra.Tests", Guid.NewGuid().ToString("N"));
+        var services = new ServiceCollection();
+
+        services.AddSingleton<IAppPathService>(new DesktopAppPathService(root, root));
+        services.AddSingleton(new HttpClient());
+        services.AddSingleton<ILicenseService, TestLicenseService>();
+        services.AddSingleton<IDispatcherService, TestDispatcherService>();
+
+        services.AddNoctraCoreServices();
+
+        using var provider = services.BuildServiceProvider(
+            new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+
+        Assert.NotNull(provider.GetRequiredService<IDbContextFactory<AppDbContext>>());
+        Assert.NotNull(provider.GetRequiredService<IProfileService>());
+        Assert.NotNull(provider.GetRequiredService<IPlaylistService>());
+        Assert.NotNull(provider.GetRequiredService<IEpgService>());
+        Assert.NotNull(provider.GetRequiredService<IMetadataService>());
+        Assert.NotNull(provider.GetRequiredService<ISettingsService>());
+    }
+
+    private sealed class TestDispatcherService : IDispatcherService
+    {
+        public void Invoke(Action action) => action();
+        public void BeginInvoke(Action action) => action();
+        public Task InvokeAsync(Func<Task> func) => func();
+        public Task<T> InvokeAsync<T>(Func<T> func) => Task.FromResult(func());
+        public Task<T> InvokeAsync<T>(Func<Task<T>> func) => func();
+    }
+
+    private sealed class TestLicenseService : ILicenseService
+    {
+        public bool IsPremium => true;
+        public bool CanUpgradeToPremium => false;
+        public bool IsEditionLockedPremium => false;
+        public SubscriptionTier CurrentTier => SubscriptionTier.Premium;
+        public event Action? SubscriptionChanged;
+
+        public void ActivatePremium() => SubscriptionChanged?.Invoke();
+        public void DeactivatePremium() => SubscriptionChanged?.Invoke();
+        public SubscriptionInfo GetCurrentSubscription() => new() { Tier = CurrentTier };
+        public bool IsFeatureAvailable(string featureName) => true;
+        public bool IsWithinLimit(string limitName, int currentCount) => true;
+        public int GetLimit(string limitName) => int.MaxValue;
+        public Task<bool> StartPurchaseFlowAsync(SubscriptionTier targetTier) => Task.FromResult(false);
+        public Task RefreshSubscriptionStatusAsync() => Task.CompletedTask;
+        public void SetTierForTesting(SubscriptionTier tier) { }
+    }
+}

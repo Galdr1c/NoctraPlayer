@@ -7,6 +7,7 @@ using Xunit;
 
 namespace Noctra.Tests
 {
+    [Collection("SequentialSleepTimerTests")]
     public class PlayerSleepTimerTests
     {
         [Fact]

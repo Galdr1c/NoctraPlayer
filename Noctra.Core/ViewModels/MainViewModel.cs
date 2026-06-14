@@ -69,6 +69,7 @@ public partial class MainViewModel : ObservableObject
     private readonly ITmdbSyncService _tmdbSyncService;
     private readonly ILicenseService _licenseService;
     private readonly IUpdateService _updateService;
+    private readonly IAppPathService _appPaths;
     private readonly DateTime _downloadCenterSessionStartUtc = DateTime.UtcNow;
     private readonly ConcurrentDictionary<string, byte> _pendingVisualEnrichmentKeys = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<int, byte> _pendingSeriesMetadataEnrichmentIds = new();
@@ -320,7 +321,8 @@ public partial class MainViewModel : ObservableObject
         ILicenseService licenseService,
         IUpdateService updateService,
         ILocalizationService localizationService,
-        ILogger<MainViewModel>? logger = null)
+        ILogger<MainViewModel>? logger = null,
+        IAppPathService? appPaths = null)
     {
         _localizationService = localizationService;
         _settingsService = settingsService;
@@ -344,6 +346,7 @@ public partial class MainViewModel : ObservableObject
         _tmdbSyncService = tmdbSyncService;
         _licenseService = licenseService;
         _updateService = updateService;
+        _appPaths = appPaths ?? new DesktopAppPathService();
         RebuildSortOptions();
         StatusMessage = _localizationService.GetString("Common.Ready");
         _downloadLandingStoredBytes = 0;
@@ -5447,7 +5450,7 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private string ResolveGlobalDownloadRoot()
     {
-        return Noctra.Core.Services.AppPaths.NormalizeDownloadDirectory(_settingsService.Settings.DownloadPath);
+        return _appPaths.NormalizeDownloadDirectory(_settingsService.Settings.DownloadPath);
     }
 
     /// <summary>

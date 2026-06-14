@@ -6,9 +6,9 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Noctra.Avalonia.Localization;
 using Noctra.Avalonia.Services;
+using Noctra.Core.DependencyInjection;
 using Noctra.Avalonia.Views;
 using Noctra.Data;
 using Noctra.Services;
@@ -270,84 +270,21 @@ public partial class App : Application
 
     private static void ConfigureServices(IServiceCollection services)
     {
-        var dbPath = ResolveDatabasePath();
-        
-        // Register IDbContextFactory instead of a scoped DbContext
-        services.AddDbContextFactory<AppDbContext>(options =>
-            options.UseSqlite($"Data Source={dbPath}"));
-
         // HttpClient as Singleton: SocketsHttpHandler already manages connection pooling.
         // Transient would create new handler per resolution, defeating pooling and causing socket exhaustion.
         // PooledConnectionLifetime (5min) handles DNS rotation for long-lived instances.
         // The shared timeout prevents playlist/EPG/API requests from hanging forever;
         // streaming-style operations still pass their own CancellationToken where needed.
         services.AddSingleton(_ => CreateOptimizedHttpClient());
-
-        services.AddTransient<IM3UParser, M3UParser>();
-        services.AddSingleton<IEpgService, EpgService>(sp => 
-            new EpgService(
-                sp.GetRequiredService<IDbContextFactory<AppDbContext>>(),
-                sp.GetRequiredService<HttpClient>(),
-                sp.GetRequiredService<ISettingsService>(),
-                sp.GetRequiredService<ILocalizationService>(),
-                sp.GetRequiredService<LanguageDetectionService>(),
-                sp.GetService<ILogger<EpgService>>()
-            ));
-        services.AddTransient<IMetadataService, MetadataService>();
-        services.AddSingleton<IXtreamCodesService, XtreamCodesService>(sp => 
-            new XtreamCodesService(
-                sp.GetRequiredService<HttpClient>(),
-                sp.GetRequiredService<ILocalizationService>()
-            ));
-        services.AddTransient<IStalkerPortalService, StalkerPortalService>(sp => 
-            new StalkerPortalService(
-                sp.GetRequiredService<HttpClient>(),
-                sp.GetRequiredService<ILocalizationService>()
-            ));
         services.AddSingleton<IAppPathService, DesktopAppPathService>();
-        services.AddTransient<ICacheService>(sp =>
-            new CacheService(sp.GetRequiredService<IAppPathService>()));
+        services.AddNoctraCoreServices();
 
-        // Domain services changed to Singleton/Transient because they manually manage DB Context lifetimes
-        services.AddSingleton<IPlaylistService, PlaylistService>(sp => 
-            new PlaylistService(
-                sp.GetRequiredService<IDbContextFactory<AppDbContext>>(),
-                sp.GetRequiredService<IM3UParser>(),
-                sp.GetRequiredService<IMediaService>(),
-                sp.GetRequiredService<IPlaylistOrganizerService>(),
-                sp.GetRequiredService<LanguageDetectionService>(),
-                sp.GetRequiredService<EpgSourceResolver>(),
-                sp.GetRequiredService<IEpgService>(),
-                sp.GetRequiredService<HttpClient>(),
-                sp.GetRequiredService<ISettingsService>(),
-                sp.GetRequiredService<ILocalizationService>()
-            ));
-        services.AddSingleton<IPlaylistOrganizerService, PlaylistOrganizerService>();
-        services.AddSingleton<IMediaService, MediaService>();
-        services.AddSingleton<IChannelService, ChannelService>();
-        services.AddSingleton<IWatchHistoryService, WatchHistoryService>();
-        
-        services.AddSingleton<IAvatarService, AvatarService>();
-        services.AddSingleton<ISettingsService>(sp =>
-            new SettingsService(sp.GetRequiredService<IAppPathService>()));
         services.AddSingleton<IAppEditionService, AppEditionService>();
-        services.AddSingleton<IContentDownloadService, ContentDownloadService>(sp => 
-            new ContentDownloadService(
-                sp.GetRequiredService<ISettingsService>(),
-                sp.GetRequiredService<IDbContextFactory<AppDbContext>>(),
-                sp.GetRequiredService<HttpClient>(),
-                sp.GetRequiredService<ILocalizationService>(),
-                sp.GetService<ILogger<ContentDownloadService>>()
-            ));
         services.AddSingleton<ILicenseService, LicenseService>();
         services.AddSingleton<IPackageIdentityService, PackageIdentityService>();
-        services.AddSingleton<LanguageDetectionService>();
-        services.AddSingleton<ILocalizationService, LocalizationService>();
-        services.AddSingleton<EpgSourceResolver>();
         services.AddSingleton<INetworkService, NetworkService>();
         services.AddSingleton<IUpdateService, UpdateService>();
 
-        services.AddSingleton<ITmdbSyncService, TmdbSyncService>();
         services.AddSingleton<IDiagnosticReportService, DiagnosticReportService>();
 
         services.AddSingleton<IDispatcherService, AvaloniaDispatcherService>();
@@ -361,7 +298,6 @@ public partial class App : Application
                 sp.GetRequiredService<ILocalizationService>()
             ));
         services.AddSingleton<ISecurityService, DesktopSecurityService>();
-        services.AddSingleton<IProfileService, ProfileService>();
         services.AddTransient<WatermarkViewModel>();
         
         services.AddSingleton<MainViewModel>();
@@ -433,40 +369,6 @@ public partial class App : Application
         return !settings.LegalConsentAccepted ||
                !string.Equals(settings.LegalConsentVersion, AppSettings.CurrentLegalConsentVersion, StringComparison.Ordinal) ||
                !string.Equals(settings.PrivacyNoticeVersion, AppSettings.CurrentPrivacyNoticeVersion, StringComparison.Ordinal);
-    }
-
-    private static string ResolveDatabasePath()
-    {
-        var candidates = new[]
-        {
-            AppPaths.DatabasePath,
-            Path.Combine(Path.GetTempPath(), "Noctra", "noctra_v1.db")
-        };
-
-        foreach (var candidate in candidates)
-        {
-            try
-            {
-                var dir = Path.GetDirectoryName(candidate);
-                if (string.IsNullOrWhiteSpace(dir))
-                {
-                    continue;
-                }
-
-                Directory.CreateDirectory(dir);
-                using (File.Open(candidate, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
-                {
-                }
-
-                return candidate;
-            }
-            catch
-            {
-                // Try next candidate path.
-            }
-        }
-
-        return candidates.Last();
     }
 
     private static HttpClient CreateOptimizedHttpClient()

@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Noctra.Core.Services;
 using Noctra.Data;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
@@ -25,6 +26,7 @@ public class ContentDownloadService : IContentDownloadService
     private readonly HttpClient _httpClient;
     private readonly ILocalizationService _localizationService;
     private readonly ILogger<ContentDownloadService>? _logger;
+    private readonly IAppPathService _appPaths;
     private readonly SemaphoreSlim _queueSignal = new(0);
     private readonly ConcurrentQueue<int> _pendingIds = new();
     private readonly ConcurrentDictionary<int, byte> _queuedIds = new();
@@ -44,13 +46,15 @@ public class ContentDownloadService : IContentDownloadService
         IDbContextFactory<AppDbContext> contextFactory,
         HttpClient httpClient,
         ILocalizationService localizationService,
-        ILogger<ContentDownloadService>? logger = null)
+        ILogger<ContentDownloadService>? logger = null,
+        IAppPathService? appPaths = null)
     {
         _settingsService = settingsService;
         _contextFactory = contextFactory;
         _httpClient = httpClient;
         _localizationService = localizationService;
         _logger = logger;
+        _appPaths = appPaths ?? new DesktopAppPathService();
 
         // Ensure worker starts on app launch to process pending/interrupted downloads
         EnsureQueueWorkerStarted();
@@ -1353,9 +1357,9 @@ public class ContentDownloadService : IContentDownloadService
         return Path.Combine(directory, $"{fileNameWithoutExtension}_{DateTime.UtcNow:yyyyMMdd_HHmmss}{extension}");
     }
 
-    private static string EnsureGlobalDownloadDirectory(string? baseDownloadPath)
+    private string EnsureGlobalDownloadDirectory(string? baseDownloadPath)
     {
-        var basePath = Noctra.Core.Services.AppPaths.NormalizeDownloadDirectory(baseDownloadPath);
+        var basePath = _appPaths.NormalizeDownloadDirectory(baseDownloadPath);
 
         // Phase 25: No longer append "Profile_X", use the basePath directly as the global root
         if (!Directory.Exists(basePath))

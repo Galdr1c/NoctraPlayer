@@ -220,6 +220,91 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("MainViewFactory", appSource);
     }
 
+    [Fact]
+    public void AndroidAppPaths_UseApplicationPrivateStorage()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var pathServicePath = Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "Services",
+            "AndroidAppPathService.cs");
+
+        Assert.True(File.Exists(pathServicePath));
+
+        var source = File.ReadAllText(pathServicePath);
+        Assert.Contains("IAppPathService", source);
+        Assert.Contains("FilesDir", source);
+        Assert.Contains("CacheDir", source);
+        Assert.Contains("GetExternalFilesDir", source);
+        Assert.DoesNotContain("SpecialFolder", source);
+        Assert.DoesNotContain("ExternalStorageDirectory", source);
+    }
+
+    [Fact]
+    public void AndroidPlatformServices_AreRegisteredAndUseNativeFacilities()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var androidRoot = Path.Combine(repositoryRoot, "Noctra.Android");
+        var registrationSource = File.ReadAllText(Path.Combine(
+            androidRoot,
+            "DependencyInjection",
+            "AndroidServiceCollectionExtensions.cs"));
+        var securitySource = File.ReadAllText(Path.Combine(
+            androidRoot,
+            "Services",
+            "AndroidSecurityService.cs"));
+        var networkSource = File.ReadAllText(Path.Combine(
+            androidRoot,
+            "Services",
+            "AndroidNetworkService.cs"));
+        var dispatcherSource = File.ReadAllText(Path.Combine(
+            androidRoot,
+            "Services",
+            "AndroidDispatcherService.cs"));
+        var activitySource = File.ReadAllText(Path.Combine(androidRoot, "MainActivity.cs"));
+        var appSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "App.axaml.cs"));
+
+        Assert.Contains("AddNoctraAndroidServices", registrationSource);
+        Assert.Contains("AddNoctraCoreServices", registrationSource);
+        Assert.Contains("AndroidAppPathService", registrationSource);
+        Assert.Contains("AndroidSecurityService", registrationSource);
+        Assert.Contains("AndroidNetworkService", registrationSource);
+        Assert.Contains("AndroidDispatcherService", registrationSource);
+
+        Assert.Contains("AndroidKeyStore", securitySource);
+        Assert.Contains("AES/GCM/NoPadding", securitySource);
+        Assert.DoesNotContain("plainText;", securitySource);
+
+        Assert.Contains("ConnectivityManager", networkSource);
+        Assert.Contains("RegisterDefaultNetworkCallback", networkSource);
+        Assert.Contains("Dispatcher.UIThread", dispatcherSource);
+
+        Assert.Contains("ServiceProviderFactory", activitySource);
+        Assert.Contains("ServiceProviderFactory", appSource);
+    }
+
+    [Fact]
+    public void SharedDownloadFlows_DoNotUseStaticDesktopPaths()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var sourcePaths = new[]
+        {
+            Path.Combine(repositoryRoot, "Noctra.Core", "Services", "ContentDownloadService.cs"),
+            Path.Combine(repositoryRoot, "Noctra.Core", "ViewModels", "MainViewModel.cs"),
+            Path.Combine(repositoryRoot, "Noctra.Core", "ViewModels", "SettingsViewModel.cs")
+        };
+
+        foreach (var sourcePath in sourcePaths)
+        {
+            var source = File.ReadAllText(sourcePath);
+            Assert.DoesNotContain("AppPaths.", source, StringComparison.Ordinal);
+        }
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
