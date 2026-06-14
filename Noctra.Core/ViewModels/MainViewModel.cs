@@ -746,8 +746,12 @@ public partial class MainViewModel : ObservableObject
                                             {
                                                 case ProfileType.M3U:
                                                 {
-                                                    var m3uUrl = profile.ProviderAccount.Url;
-                                                    _ = CheckM3UExpirationAsync(profile.ProviderAccount);
+                                                    var m3uSource = profile.ProviderAccount.Url;
+                                                    var isRemoteM3u = IsHttpPlaylistSource(m3uSource);
+                                                    if (isRemoteM3u)
+                                                    {
+                                                        _ = CheckM3UExpirationAsync(profile.ProviderAccount);
+                                                    }
                                                     StatusMessage = _localizationService.GetString("Main.Status.BackgroundLoading");
                                                     
                                                     _ = Task.Run(async () =>
@@ -755,7 +759,14 @@ public partial class MainViewModel : ObservableObject
                                                         try
                                                         {
                                                             ThrowIfProfileLoadCancelled(profileScope);
-                                                            await _playlistService.AddFromUrlAsync(profile.Name, m3uUrl, profile.Id);
+                                                            if (isRemoteM3u)
+                                                            {
+                                                                await _playlistService.AddFromUrlAsync(profile.Name, m3uSource, profile.Id);
+                                                            }
+                                                            else
+                                                            {
+                                                                await _playlistService.AddFromFileAsync(profile.Name, m3uSource, profile.Id);
+                                                            }
                                                             BeginInvokeIfProfileScopeActive(profileScope, async () =>
                                                             {
                                                                 await LoadPlaylistsAsync();
@@ -8225,6 +8236,13 @@ public partial class MainViewModel : ObservableObject
 
     private bool IsM3UProfile()
         => IsCurrentProviderType(ProfileType.M3U);
+
+    private static bool IsHttpPlaylistSource(string source)
+    {
+        return Uri.TryCreate(source, UriKind.Absolute, out var uri) &&
+            (string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase));
+    }
 
     private bool PrepareProviderOnlySeriesMetadata(Series series)
         => ShouldUseProviderOnlySeriesMetadata() && ClearTmdbSeasonAndEpisodeMetadata(series);

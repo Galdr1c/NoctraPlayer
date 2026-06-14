@@ -2,8 +2,10 @@ using System;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Noctra.Mobile.Localization;
 using Noctra.Mobile.ViewModels;
 using Noctra.Mobile.Views;
+using Noctra.Services.Interfaces;
 
 namespace Noctra.Mobile;
 
@@ -21,6 +23,10 @@ public partial class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         Services = ServiceProviderFactory?.Invoke();
+        if (Services?.GetService(typeof(ILocalizationService)) is ILocalizationService localization)
+        {
+            LocalizationSource.Instance.Initialize(localization);
+        }
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {

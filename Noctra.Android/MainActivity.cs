@@ -1,9 +1,12 @@
 using System;
 using Android.App;
+using Android.Content;
 using Android.Content.PM;
 using Android.OS;
 using Avalonia.Android;
+using Microsoft.Extensions.DependencyInjection;
 using Noctra.Android.DependencyInjection;
+using Noctra.Android.Services;
 
 namespace Noctra.Android;
 
@@ -23,5 +26,32 @@ public class MainActivity : AvaloniaMainActivity
             () => applicationContext.CreateNoctraAndroidServiceProvider();
 
         base.OnCreate(savedInstanceState);
+
+        if (Avalonia.Application.Current is Noctra.Mobile.App app)
+        {
+            app.Services?.GetRequiredService<AndroidActivityProvider>().SetCurrent(this);
+        }
+    }
+
+    protected override void OnActivityResult(int requestCode, Result resultCode, Intent? data)
+    {
+        if (Avalonia.Application.Current is Noctra.Mobile.App app &&
+            app.Services?.GetService<AndroidFilePickerService>() is { } filePicker &&
+            filePicker.TryHandleActivityResult(requestCode, resultCode, data))
+        {
+            return;
+        }
+
+        base.OnActivityResult(requestCode, resultCode, data);
+    }
+
+    protected override void OnDestroy()
+    {
+        if (Avalonia.Application.Current is Noctra.Mobile.App app)
+        {
+            app.Services?.GetService<AndroidActivityProvider>()?.Clear(this);
+        }
+
+        base.OnDestroy();
     }
 }

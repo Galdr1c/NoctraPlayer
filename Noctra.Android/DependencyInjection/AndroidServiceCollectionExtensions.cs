@@ -5,9 +5,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Noctra.Android.Services;
 using Noctra.Core.DependencyInjection;
 using Noctra.Core.Services;
-using Noctra.Mobile.ViewModels;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
+using AddProfileViewModel = Noctra.ViewModels.AddProfileViewModel;
+using MobileMainViewModel = Noctra.Mobile.ViewModels.MainViewModel;
 
 namespace Noctra.Android.DependencyInjection;
 
@@ -29,6 +30,11 @@ public static class AndroidServiceCollectionExtensions
         services.AddSingleton<IDispatcherService, AndroidDispatcherService>();
         services.AddSingleton<INetworkService, AndroidNetworkService>();
         services.AddSingleton<ISecurityService, AndroidSecurityService>();
+        services.AddSingleton<AndroidActivityProvider>();
+        services.AddSingleton<AndroidFilePickerService>();
+        services.AddSingleton<IPlaylistFilePickerService>(serviceProvider =>
+            serviceProvider.GetRequiredService<AndroidFilePickerService>());
+        services.AddSingleton<IDialogService, AndroidDialogService>();
         services.AddSingleton<IAppEditionService, AppEditionService>();
         services.AddNoctraCoreServices();
         services.AddSingleton<ILicenseService>(serviceProvider =>
@@ -38,7 +44,8 @@ public static class AndroidServiceCollectionExtensions
                 serviceProvider.GetRequiredService<HttpClient>(),
                 serviceProvider.GetRequiredService<ILocalizationService>(),
                 serviceProvider.GetRequiredService<ISecurityService>()));
-        services.AddSingleton<MainViewModel>();
+        services.AddSingleton<MobileMainViewModel>();
+        services.AddTransient<AddProfileViewModel>();
 
         return services;
     }

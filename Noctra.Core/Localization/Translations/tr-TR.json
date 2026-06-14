@@ -304,6 +304,7 @@
     "Profiles.Account.Password": "Şifre",
     "Profiles.Account.PasswordPlaceholder": "Şifre",
     "Profiles.Account.Analyze": "Bağlantıyı Analiz Et",
+    "Profiles.Account.SelectM3uFile": "M3U Dosyası Seç",
     "Profiles.Account.HealthTooltip": "Yeşil: Mükemmel (<300ms) | Sarı: Orta (300ms-1s) | Kırmızı: Kötü (>1s)",
     "Profiles.Add.DeleteProfile": "Profili Sil",
     "Profiles.Add.Cancel": "İptal",

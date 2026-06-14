@@ -304,6 +304,7 @@
     "Profiles.Account.Password": "Passwort",
     "Profiles.Account.PasswordPlaceholder": "Passwort",
     "Profiles.Account.Analyze": "Verbindung analysieren",
+    "Profiles.Account.SelectM3uFile": "M3U-Datei auswählen",
     "Profiles.Account.HealthTooltip": "Grün: Ausgezeichnet (<300ms) | Gelb: Mittel (300ms-1s) | Rot: Schlecht (>1s)",
     "Profiles.Add.DeleteProfile": "Profil löschen",
     "Profiles.Add.Cancel": "Abbrechen",

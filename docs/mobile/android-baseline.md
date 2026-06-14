@@ -101,7 +101,7 @@ Installed Android components:
 
 Current verification:
 
-- Full tests: 917 passed, 0 failed, 0 skipped
+- Full tests: 924 passed, 0 failed, 0 skipped
 - Windows Release rebuild: 0 errors, 20 existing warnings
 - Android Debug APK build: 0 errors, 0 warnings
 - Vulnerable NuGet packages in the Android graph: none
@@ -124,6 +124,18 @@ Current platform separation:
   undecryptable payloads are rejected instead of being treated as plaintext.
 - Android connectivity changes are observed through `ConnectivityManager`
   without treating network presence as proof that a provider is reachable.
+- M3U document import uses Android's Storage Access Framework. Selected
+  documents are copied into the application-private `Imports` directory and
+  shared parsing code receives a normal local file path instead of a
+  platform-specific `content://` URI.
+- The first mobile profile setup form reuses the desktop
+  `AddProfileViewModel` for Xtream, M3U, Stalker, validation, connection
+  analysis, profile limits, PIN rules, encryption, and save behavior.
+- Local M3U files are preserved as file paths through selection, analysis,
+  saving, initial catalog loading, refresh, and profile editing. Remote HTTP
+  and HTTPS M3U sources retain the existing URL flow.
+- Mobile profile labels use the same localization service and translation
+  resources as the desktop application.
 
 Android 16 native page-size compatibility is provided by:
 

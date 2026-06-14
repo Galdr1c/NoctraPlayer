@@ -23,6 +23,7 @@ public partial class AddProfileViewModel : ObservableObject
     private readonly IStalkerPortalService _stalkerPortalService;
     private readonly ISecurityService _securityService;
     private readonly ILocalizationService _localizationService;
+    private readonly IPlaylistFilePickerService? _playlistFilePickerService;
 
     // Simplified Account Details
     [ObservableProperty]
@@ -32,12 +33,17 @@ public partial class AddProfileViewModel : ObservableObject
     private string _url = string.Empty;
 
     private bool _isUpdatingUrl = false;
+    private bool _isLocalM3uFileSource;
+
+    public bool IsLocalM3uFileSource => _isLocalM3uFileSource;
 
     partial void OnUrlChanged(string value)
     {
         PlaylistPreviewSummary = string.Empty;
 
         if (_isUpdatingUrl || string.IsNullOrEmpty(value)) return;
+        _isLocalM3uFileSource = false;
+        OnPropertyChanged(nameof(IsLocalM3uFileSource));
         
         try
         {
@@ -84,6 +90,41 @@ public partial class AddProfileViewModel : ObservableObject
         }
 
         ValidateRealtimeInputs();
+    }
+
+    public void SetM3uFileSource(string filePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+
+        _isUpdatingUrl = true;
+        IsM3U = true;
+        IsXtream = false;
+        IsStalker = false;
+        Url = filePath;
+        Username = string.Empty;
+        Password = string.Empty;
+        _isLocalM3uFileSource = true;
+        _isUpdatingUrl = false;
+
+        PlaylistPreviewSummary = string.Empty;
+        ClearAnalysisResults();
+        OnPropertyChanged(nameof(IsLocalM3uFileSource));
+        ValidateRealtimeInputs();
+    }
+
+    [RelayCommand]
+    private async Task PickM3uFileAsync()
+    {
+        if (_playlistFilePickerService is null)
+        {
+            return;
+        }
+
+        var filePath = await _playlistFilePickerService.PickM3uFileAsync();
+        if (!string.IsNullOrWhiteSpace(filePath))
+        {
+            SetM3uFileSource(filePath);
+        }
     }
 
     private void ParseCredentialsFromUrl(string url)
@@ -403,6 +444,14 @@ public partial class AddProfileViewModel : ObservableObject
             return;
         }
 
+        if (IsM3U && IsLocalM3uFileSource)
+        {
+            UrlError = File.Exists(Url)
+                ? null
+                : _localizationService.GetString("AddProfile.Error.M3uUrlRequirement");
+            return;
+        }
+
         var normalizedUrl = Url.Trim();
         if (!normalizedUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
             !normalizedUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
@@ -566,7 +615,8 @@ public partial class AddProfileViewModel : ObservableObject
         IXtreamCodesService xtreamCodesService,
         IStalkerPortalService stalkerPortalService,
         ISecurityService securityService,
-        ILocalizationService localizationService)
+        ILocalizationService localizationService,
+        IPlaylistFilePickerService? playlistFilePickerService = null)
     {
         _profileService = profileService;
         _dispatcherService = dispatcherService;
@@ -578,6 +628,7 @@ public partial class AddProfileViewModel : ObservableObject
         _stalkerPortalService = stalkerPortalService;
         _securityService = securityService;
         _localizationService = localizationService;
+        _playlistFilePickerService = playlistFilePickerService;
 
         // Initialize with default avatar
         var avatars = _avatarService.GetAvatarsByCategory().Values.FirstOrDefault();
@@ -614,8 +665,10 @@ public partial class AddProfileViewModel : ObservableObject
             IsXtream = profile.ProviderAccount.Type == ProfileType.XtreamCodes;
             IsM3U = profile.ProviderAccount.Type == ProfileType.M3U;
             IsStalker = profile.ProviderAccount.Type == ProfileType.StalkerPortal;
+            _isLocalM3uFileSource = IsM3U && !IsHttpSource(Url);
 
             _isUpdatingUrl = false;
+            OnPropertyChanged(nameof(IsLocalM3uFileSource));
 
             // Eğer M3U linkiyse ve credentials varsa, parse et
             if (IsM3U && Url.Contains("get.php"))
@@ -623,6 +676,13 @@ public partial class AddProfileViewModel : ObservableObject
                 ParseCredentialsFromUrl(Url);
             }
         }
+    }
+
+    private static bool IsHttpSource(string source)
+    {
+        return Uri.TryCreate(source, UriKind.Absolute, out var uri) &&
+            (string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase));
     }
 
 
@@ -678,6 +738,18 @@ public partial class AddProfileViewModel : ObservableObject
         {
             UrlError = _localizationService.GetString("AddProfile.Error.UrlRequired");
             return false;
+        }
+
+        if (IsM3U && IsLocalM3uFileSource)
+        {
+            if (!File.Exists(Url))
+            {
+                UrlError = _localizationService.GetString("AddProfile.Error.M3uUrlRequirement");
+                return false;
+            }
+
+            UrlError = null;
+            return true;
         }
 
         if (!Url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
@@ -736,6 +808,12 @@ public partial class AddProfileViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(urlToCheck))
         {
             StatusMessage = _localizationService.GetString("AddProfile.Error.UrlRequired");
+            return;
+        }
+
+        if (IsM3U && IsLocalM3uFileSource)
+        {
+            await AnalyzeLocalM3uFileAsync(urlToCheck);
             return;
         }
 
@@ -848,6 +926,46 @@ public partial class AddProfileViewModel : ObservableObject
             StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("AddProfile.Analysis.ErrorPrefix"), ex);
             ConnectionHealth = ConnectionHealth.Critical;
             DetailedStatus = _localizationService.GetString("AddProfile.Analysis.UnexpectedError");
+        }
+        finally
+        {
+            IsAnalyzingConnection = false;
+        }
+    }
+
+    private async Task AnalyzeLocalM3uFileAsync(string filePath)
+    {
+        IsAnalyzingConnection = true;
+        HasError = false;
+        StatusMessage = _localizationService.GetString("AddProfile.Status.Analyzing");
+        PlaylistPreviewSummary = string.Empty;
+        ConnectionHealth = ConnectionHealth.Unknown;
+        DetailedStatus = string.Empty;
+
+        try
+        {
+            var channels = await _m3uParser.ParseFromFileAsync(filePath);
+            if (channels.Count == 0)
+            {
+                HasError = true;
+                ConnectionHealth = ConnectionHealth.Critical;
+                StatusMessage = _localizationService.GetString("AddProfile.Analysis.Failed");
+                DetailedStatus = _localizationService.GetString("Playlist.Error.EmptyNoDelete");
+                return;
+            }
+
+            ConnectionHealth = ConnectionHealth.Good;
+            DetailedStatus = $"{channels.Count} M3U";
+            StatusMessage = _localizationService.GetString("AddProfile.Analysis.Completed");
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            ConnectionHealth = ConnectionHealth.Critical;
+            StatusMessage = UserFriendlyErrorMessage.WithPrefix(
+                _localizationService.GetString("AddProfile.Analysis.ErrorPrefix"),
+                ex);
+            DetailedStatus = UserFriendlyErrorMessage.FromException(ex);
         }
         finally
         {

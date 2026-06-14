@@ -288,6 +288,109 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void AndroidM3uFilePicker_UsesStorageAccessFrameworkAndPrivateImportCopy()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var interfaceSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Core",
+            "Services",
+            "Interfaces",
+            "IPlaylistFilePickerService.cs"));
+        var androidRoot = Path.Combine(repositoryRoot, "Noctra.Android");
+        var pickerSource = File.ReadAllText(Path.Combine(
+            androidRoot,
+            "Services",
+            "AndroidFilePickerService.cs"));
+        var activitySource = File.ReadAllText(Path.Combine(androidRoot, "MainActivity.cs"));
+        var registrationSource = File.ReadAllText(Path.Combine(
+            androidRoot,
+            "DependencyInjection",
+            "AndroidServiceCollectionExtensions.cs"));
+
+        Assert.Contains("PickM3uFileAsync", interfaceSource);
+        Assert.Contains("Intent.ActionOpenDocument", pickerSource);
+        Assert.Contains("CategoryOpenable", pickerSource);
+        Assert.Contains("TakePersistableUriPermission", pickerSource);
+        Assert.Contains("OpenInputStream", pickerSource);
+        Assert.Contains("\"Imports\"", pickerSource);
+        Assert.Contains("IPlaylistFilePickerService", registrationSource);
+        Assert.Contains("OnActivityResult", activitySource);
+        Assert.Contains("TryHandleActivityResult", activitySource);
+    }
+
+    [Fact]
+    public void MobileProfileSetup_ReusesDesktopAddProfileBehaviorContract()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var viewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "ProfileSetupView.axaml"));
+        var mainViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml"));
+        var registrationSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "DependencyInjection",
+            "AndroidServiceCollectionExtensions.cs"));
+
+        Assert.Contains("vm:AddProfileViewModel", viewSource);
+        Assert.Contains("xmlns:loc=\"using:Noctra.Mobile.Localization\"", viewSource);
+        Assert.Contains("{loc:Translate Profiles.Add.Title}", viewSource);
+        Assert.Contains("{loc:Translate Profiles.Account.Analyze}", viewSource);
+        Assert.Contains("{loc:Translate Profiles.Add.Save}", viewSource);
+        foreach (var binding in new[]
+        {
+            "ProfileName",
+            "IsXtream",
+            "IsM3U",
+            "IsStalker",
+            "Url",
+            "Username",
+            "Password",
+            "IsChild",
+            "HasPin",
+            "PinCode",
+            "PinConfirm",
+            "AnalyzeConnectionCommand",
+            "PickM3uFileCommand",
+            "SaveCommand",
+            "CancelCommand",
+            "UrlError",
+            "PinError",
+            "StatusMessage"
+        })
+        {
+            Assert.Contains($"{{Binding {binding}", viewSource);
+        }
+
+        Assert.Contains("OpenProfileSetup", mainViewSource);
+        Assert.Contains("ProfileSetupHost", mainViewSource);
+        Assert.Contains("AddTransient<AddProfileViewModel>", registrationSource);
+        Assert.Contains("IDialogService", registrationSource);
+    }
+
+    [Fact]
+    public void MainProfileLoading_SupportsLocalAndRemoteM3uSources()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var source = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Core",
+            "ViewModels",
+            "MainViewModel.cs"));
+
+        Assert.Contains("IsHttpPlaylistSource", source);
+        Assert.Contains("AddFromFileAsync(profile.Name, m3uSource, profile.Id)", source);
+        Assert.Contains("AddFromUrlAsync(profile.Name, m3uSource, profile.Id)", source);
+    }
+
+    [Fact]
     public void SharedDownloadFlows_DoNotUseStaticDesktopPaths()
     {
         var repositoryRoot = FindRepositoryRoot();

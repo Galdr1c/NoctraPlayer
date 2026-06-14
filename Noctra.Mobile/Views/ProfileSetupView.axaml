@@ -1,0 +1,203 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Noctra.ViewModels"
+             xmlns:loc="using:Noctra.Mobile.Localization"
+             x:Class="Noctra.Mobile.Views.ProfileSetupView"
+             x:DataType="vm:AddProfileViewModel"
+             x:CompileBindings="False"
+             mc:Ignorable="d"
+             d:DesignWidth="390"
+             d:DesignHeight="844"
+             Background="#090B10">
+  <UserControl.Styles>
+    <Style Selector="TextBox">
+      <Setter Property="MinHeight" Value="48" />
+      <Setter Property="CornerRadius" Value="10" />
+    </Style>
+    <Style Selector="Button.action">
+      <Setter Property="MinHeight" Value="48" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="16,10" />
+    </Style>
+    <Style Selector="Border.section">
+      <Setter Property="Background" Value="#151923" />
+      <Setter Property="CornerRadius" Value="16" />
+      <Setter Property="Padding" Value="16" />
+    </Style>
+    <Style Selector="TextBlock.label">
+      <Setter Property="Foreground" Value="#AEB5C5" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,*">
+    <Border Padding="16,14" Background="#0E1118">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Button Classes="action"
+                Command="{Binding CancelCommand}"
+                Content="{loc:Translate Profiles.Add.Cancel}"
+                Background="Transparent"
+                Foreground="#FFFFFF" />
+        <StackPanel Grid.Column="1"
+                    HorizontalAlignment="Center"
+                    Spacing="2">
+          <TextBlock Text="{loc:Translate Profiles.Add.Title}"
+                     FontSize="20"
+                     FontWeight="SemiBold"
+                     Foreground="#FFFFFF" />
+          <TextBlock Text="{loc:Translate Profiles.Add.Description}"
+                     FontSize="11"
+                     Foreground="#AEB5C5" />
+        </StackPanel>
+        <Button Grid.Column="2"
+                Classes="action"
+                Command="{Binding SaveCommand}"
+                Content="{loc:Translate Profiles.Add.Save}"
+                Background="#8F7CFF"
+                Foreground="#FFFFFF"
+                IsEnabled="{Binding !IsSaving}" />
+      </Grid>
+    </Border>
+
+    <ScrollViewer Grid.Row="1">
+      <StackPanel MaxWidth="560"
+                  Margin="16,18,16,32"
+                  HorizontalAlignment="Center"
+                  Spacing="16">
+        <Border Classes="section">
+          <StackPanel Spacing="10">
+            <TextBlock Classes="label" Text="{loc:Translate Profiles.Add.ProfileName}" />
+            <TextBox Text="{Binding ProfileName}"
+                     PlaceholderText="{loc:Translate Profiles.Add.ProfileNamePlaceholder}" />
+            <TextBlock Text="{Binding ProfileNameError}"
+                       Foreground="#FF6B6B"
+                       TextWrapping="Wrap" />
+            <CheckBox Content="{loc:Translate Profiles.Add.IsChild}"
+                      IsChecked="{Binding IsChild}"
+                      IsEnabled="{Binding CanEditIsChild}"
+                      IsVisible="{Binding IsChildVisible}" />
+          </StackPanel>
+        </Border>
+
+        <Border Classes="section">
+          <StackPanel Spacing="12">
+            <TextBlock Text="{loc:Translate Profiles.Account.Settings}"
+                       FontSize="18"
+                       FontWeight="SemiBold"
+                       Foreground="#FFFFFF" />
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+              <RadioButton Content="Xtream"
+                           GroupName="ProviderType"
+                           IsChecked="{Binding IsXtream}" />
+              <RadioButton Grid.Column="1"
+                           Content="M3U"
+                           GroupName="ProviderType"
+                           IsChecked="{Binding IsM3U}" />
+              <RadioButton Grid.Column="2"
+                           Content="Stalker"
+                           GroupName="ProviderType"
+                           IsChecked="{Binding IsStalker}" />
+            </Grid>
+
+            <TextBlock Classes="label"
+                       Text="{loc:Translate Profiles.Account.ServerUrl}" />
+            <TextBox Text="{Binding Url}"
+                     PlaceholderText="{loc:Translate Profiles.Account.ServerUrlPlaceholder}" />
+
+            <Button Classes="action"
+                    Command="{Binding PickM3uFileCommand}"
+                    Content="{loc:Translate Profiles.Account.SelectM3uFile}"
+                    IsVisible="{Binding IsM3U}"
+                    Background="#252B3D"
+                    Foreground="#FFFFFF" />
+
+            <TextBlock Classes="label"
+                       Text="{loc:Translate Profiles.Account.Username}"
+                       IsVisible="{Binding IsXtream}" />
+            <TextBlock Classes="label"
+                       Text="{loc:Translate Profiles.Account.MacAddress}"
+                       IsVisible="{Binding IsStalker}" />
+            <TextBox Text="{Binding Username}"
+                     PlaceholderText="{loc:Translate Profiles.Account.UsernamePlaceholder}"
+                     IsVisible="{Binding !IsM3U}" />
+
+            <TextBlock Classes="label"
+                       Text="{loc:Translate Profiles.Account.Password}"
+                       IsVisible="{Binding IsXtream}" />
+            <TextBox Text="{Binding Password}"
+                     PasswordChar="*"
+                     PlaceholderText="{loc:Translate Profiles.Account.PasswordPlaceholder}"
+                     IsVisible="{Binding IsXtream}" />
+
+            <TextBlock Text="{Binding UrlError}"
+                       Foreground="#FF6B6B"
+                       TextWrapping="Wrap" />
+
+            <Button Classes="action"
+                    Command="{Binding AnalyzeConnectionCommand}"
+                    Content="{loc:Translate Profiles.Account.Analyze}"
+                    IsEnabled="{Binding !IsAnalyzingConnection}"
+                    Background="#252B3D"
+                    Foreground="#FFFFFF" />
+            <TextBlock Text="{Binding DetailedStatus}"
+                       Foreground="#AEB5C5"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Border Classes="section">
+          <StackPanel Spacing="12">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel>
+                <TextBlock Text="{loc:Translate Profiles.Add.PinLock}"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           Foreground="#FFFFFF" />
+                <TextBlock Text="{loc:Translate Profiles.Add.PinLockDescription}"
+                           FontSize="12"
+                           Foreground="#AEB5C5" />
+              </StackPanel>
+              <ToggleSwitch Grid.Column="1"
+                            IsChecked="{Binding HasPin}"
+                            IsEnabled="{Binding IsPinAvailable}" />
+            </Grid>
+            <StackPanel IsVisible="{Binding HasPin}" Spacing="10">
+              <TextBlock Classes="label" Text="{loc:Translate Profiles.Add.Pin}" />
+              <TextBox Text="{Binding PinCode}"
+                       MaxLength="4"
+                       PasswordChar="*" />
+              <TextBlock Classes="label" Text="{loc:Translate Profiles.Add.ConfirmPin}" />
+              <TextBox Text="{Binding PinConfirm}"
+                       MaxLength="4"
+                       PasswordChar="*" />
+              <TextBlock Text="{Binding PinError}"
+                         Foreground="#FF6B6B"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <TextBlock Text="{Binding StatusMessage}"
+                   Foreground="#AEB5C5"
+                   TextWrapping="Wrap"
+                   HorizontalAlignment="Center" />
+        <Button Classes="action"
+                Command="{Binding SaveCommand}"
+                Content="{loc:Translate Profiles.Add.Save}"
+                Background="#8F7CFF"
+                Foreground="#FFFFFF"
+                IsEnabled="{Binding !IsSaving}" />
+        <Button Classes="action"
+                Command="{Binding CancelCommand}"
+                Content="{loc:Translate Profiles.Add.Cancel}"
+                Background="Transparent"
+                BorderBrush="#394057"
+                BorderThickness="1"
+                Foreground="#FFFFFF" />
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

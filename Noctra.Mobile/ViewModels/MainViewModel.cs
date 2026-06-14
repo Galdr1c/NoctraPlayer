@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using System;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Noctra.Mobile.ViewModels;
 
@@ -13,9 +14,15 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string _pageDescription = "Your channels, movies and series in one place.";
 
+    public bool IsMoreSelected => string.Equals(
+        SelectedDestination,
+        "More",
+        StringComparison.Ordinal);
+
     public void SelectDestination(string destination)
     {
         SelectedDestination = destination;
+        OnPropertyChanged(nameof(IsMoreSelected));
         (PageTitle, PageDescription) = destination switch
         {
             "Live" => ("Live TV", "Browse live channels and current programs."),
