@@ -101,7 +101,7 @@ Installed Android components:
 
 Current verification:
 
-- Full tests: 929 passed, 0 failed, 0 skipped
+- Full tests: 930 passed, 0 failed, 0 skipped
 - Windows Release rebuild: 0 errors, 20 existing warnings
 - Android Debug APK build: 0 errors, 0 warnings
 - Vulnerable NuGet packages in the Android graph: none
@@ -161,6 +161,10 @@ Current platform separation:
   exposes selected content, connection/error state, and basic pause/stop/close
   controls. Android quality metadata remains unsupported until a richer native
   video surface/player layer is added.
+- Android playback now creates a native `SurfaceView` through an
+  `IVideoSurfaceService` bridge and binds it to `Android.Media.MediaPlayer` via
+  `SetSurface`. The mobile shell shows the surface before starting
+  `PlayerViewModel.PlayChannelAsync` and hides it when the player closes.
 
 Android 16 native page-size compatibility is provided by:
 

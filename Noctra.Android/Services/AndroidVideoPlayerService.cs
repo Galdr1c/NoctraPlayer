@@ -8,6 +8,7 @@ namespace Noctra.Android.Services;
 
 public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerService
 {
+    private readonly AndroidVideoSurfaceService _videoSurfaceService;
     private global::Android.Media.MediaPlayer? _mediaPlayer;
     private string? _currentUrl;
     private bool _isDisposed;
@@ -38,6 +39,11 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     {
         add { }
         remove { }
+    }
+
+    public AndroidVideoPlayerService(AndroidVideoSurfaceService videoSurfaceService)
+    {
+        _videoSurfaceService = videoSurfaceService;
     }
 
     public int Volume
@@ -165,6 +171,13 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
         try
         {
+            await _videoSurfaceService.ShowAsync().ConfigureAwait(false);
+            var surface = await _videoSurfaceService.WaitForSurfaceAsync().ConfigureAwait(false);
+            if (surface is not null)
+            {
+                player.SetSurface(surface);
+            }
+
             player.SetDataSource(url);
             player.PrepareAsync();
             await completion.Task.ConfigureAwait(false);

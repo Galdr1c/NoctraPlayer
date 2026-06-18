@@ -40,6 +40,9 @@ public static class AndroidServiceCollectionExtensions
         services.AddSingleton<IAppEditionService, AppEditionService>();
         services.AddNoctraCoreServices();
         services.AddSingleton<IUpdateService, UpdateService>();
+        services.AddSingleton<AndroidVideoSurfaceService>();
+        services.AddSingleton<IVideoSurfaceService>(serviceProvider =>
+            serviceProvider.GetRequiredService<AndroidVideoSurfaceService>());
         services.AddSingleton<IVideoPlayerService, AndroidVideoPlayerService>();
         services.AddSingleton<ILicenseService>(serviceProvider =>
             new LicenseService(

@@ -1,9 +1,11 @@
+using System;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Models;
+using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
 using CoreMainViewModel = Noctra.ViewModels.MainViewModel;
 using MobileMainViewModel = Noctra.Mobile.ViewModels.MainViewModel;
@@ -115,6 +117,14 @@ public partial class MainView : UserControl
         }
 
         _playerViewModel ??= app.Services.GetRequiredService<PlayerViewModel>();
+        var videoSurfaceService = app.Services.GetService<IVideoSurfaceService>();
+        if (videoSurfaceService is not null)
+        {
+            await videoSurfaceService.ShowAsync();
+        }
+
+        _playerViewModel.CloseRequested -= PlayerViewModel_CloseRequested;
+        _playerViewModel.CloseRequested += PlayerViewModel_CloseRequested;
         _playerViewModel.CurrentProfileId = _coreMainViewModel?.CurrentProfileId;
         if (channel.Type == ChannelType.Series && _coreMainViewModel?.CurrentEpisodePlaybackContext is not null)
         {
@@ -131,5 +141,14 @@ public partial class MainView : UserControl
         MobilePlayerContent.DataContext = _playerViewModel;
         PlayerHost.IsVisible = true;
         await _playerViewModel.PlayChannelAsync(channel);
+    }
+
+    private void PlayerViewModel_CloseRequested(object? sender, EventArgs e)
+    {
+        PlayerHost.IsVisible = false;
+        if (Application.Current is App app && app.Services is not null)
+        {
+            app.Services.GetService<IVideoSurfaceService>()?.Hide();
+        }
     }
 }

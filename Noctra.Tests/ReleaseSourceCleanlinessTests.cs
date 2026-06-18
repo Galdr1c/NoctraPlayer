@@ -691,6 +691,59 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void AndroidPlaybackSurface_BindsMediaPlayerToNativeSurfaceView()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var surfaceInterface = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Core",
+            "Services",
+            "Interfaces",
+            "IVideoSurfaceService.cs"));
+        var surfaceService = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "Services",
+            "AndroidVideoSurfaceService.cs"));
+        var videoService = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "Services",
+            "AndroidVideoPlayerService.cs"));
+        var registrationSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "DependencyInjection",
+            "AndroidServiceCollectionExtensions.cs"));
+        var mainViewCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml.cs"));
+
+        Assert.Contains("interface IVideoSurfaceService", surfaceInterface);
+        Assert.Contains("ShowAsync", surfaceInterface);
+        Assert.Contains("Hide", surfaceInterface);
+
+        Assert.Contains("SurfaceView", surfaceService);
+        Assert.Contains("ISurfaceHolderCallback", surfaceService);
+        Assert.Contains("AndroidActivityProvider", surfaceService);
+        Assert.Contains("WaitForSurfaceAsync", surfaceService);
+        Assert.Contains("SetZOrderMediaOverlay", surfaceService);
+
+        Assert.Contains("AndroidVideoSurfaceService", videoService);
+        Assert.Contains("WaitForSurfaceAsync", videoService);
+        Assert.Contains("SetSurface", videoService);
+
+        Assert.Contains("AddSingleton<AndroidVideoSurfaceService>", registrationSource);
+        Assert.Contains("AddSingleton<IVideoSurfaceService>", registrationSource);
+
+        Assert.Contains("IVideoSurfaceService", mainViewCode);
+        Assert.Contains("ShowAsync", mainViewCode);
+        Assert.Contains("Hide", mainViewCode);
+    }
+
+    [Fact]
     public void MainProfileLoading_SupportsLocalAndRemoteM3uSources()
     {
         var repositoryRoot = FindRepositoryRoot();
