@@ -101,7 +101,7 @@ Installed Android components:
 
 Current verification:
 
-- Full tests: 924 passed, 0 failed, 0 skipped
+- Full tests: 925 passed, 0 failed, 0 skipped
 - Windows Release rebuild: 0 errors, 20 existing warnings
 - Android Debug APK build: 0 errors, 0 warnings
 - Vulnerable NuGet packages in the Android graph: none
@@ -136,6 +136,11 @@ Current platform separation:
   and HTTPS M3U sources retain the existing URL flow.
 - Mobile profile labels use the same localization service and translation
   resources as the desktop application.
+- The mobile More/profile area reuses the desktop `ProfilesViewModel`,
+  `AddProfileViewModel`, and `AvatarPickerViewModel` contracts for listing,
+  add/edit navigation, avatar selection, profile validation, and save behavior.
+  Avatar PNG resources are linked from the desktop asset set into the mobile
+  Avalonia package instead of maintaining a second copy.
 
 Android 16 native page-size compatibility is provided by:
 

@@ -8,6 +8,8 @@
   
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
+    <AvaloniaResource Include="..\Noctra.Avalonia\Assets\Avatars\**"
+                      Link="Assets\Avatars\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

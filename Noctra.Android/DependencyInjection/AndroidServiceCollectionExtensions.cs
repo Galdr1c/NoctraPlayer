@@ -7,6 +7,7 @@ using Noctra.Core.DependencyInjection;
 using Noctra.Core.Services;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
+using Noctra.ViewModels;
 using AddProfileViewModel = Noctra.ViewModels.AddProfileViewModel;
 using MobileMainViewModel = Noctra.Mobile.ViewModels.MainViewModel;
 
@@ -45,7 +46,9 @@ public static class AndroidServiceCollectionExtensions
                 serviceProvider.GetRequiredService<ILocalizationService>(),
                 serviceProvider.GetRequiredService<ISecurityService>()));
         services.AddSingleton<MobileMainViewModel>();
+        services.AddSingleton<ProfilesViewModel>();
         services.AddTransient<AddProfileViewModel>();
+        services.AddTransient<AvatarPickerViewModel>();
 
         return services;
     }

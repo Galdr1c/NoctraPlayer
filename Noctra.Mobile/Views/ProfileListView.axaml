@@ -1,0 +1,111 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:models="using:Noctra.Models"
+             xmlns:vm="using:Noctra.ViewModels"
+             xmlns:loc="using:Noctra.Mobile.Localization"
+             x:Class="Noctra.Mobile.Views.ProfileListView"
+             x:Name="ProfileListRoot"
+             x:DataType="vm:ProfilesViewModel"
+             x:CompileBindings="False"
+             mc:Ignorable="d"
+             d:DesignWidth="390"
+             d:DesignHeight="420">
+  <Grid RowDefinitions="Auto,*,Auto">
+    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+      <TextBlock Text="{loc:Translate Profiles.Title}"
+                 FontSize="20"
+                 FontWeight="SemiBold"
+                 Foreground="#FFFFFF" />
+      <Button Grid.Column="1"
+              Command="{Binding ToggleManageModeCommand}"
+              Content="{loc:Translate Profiles.ManageMode.Manage}"
+              Background="Transparent"
+              BorderBrush="#394057"
+              BorderThickness="1"
+              Foreground="#FFFFFF"
+              Padding="12,8"
+              CornerRadius="10" />
+    </Grid>
+
+    <ScrollViewer Grid.Row="1">
+      <ItemsControl ItemsSource="{Binding DisplayItems}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <WrapPanel />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.DataTemplates>
+          <DataTemplate DataType="models:Profile">
+            <Button Command="{Binding #ProfileListRoot.DataContext.SelectProfileCommand}"
+                    CommandParameter="{Binding}"
+                    Width="138"
+                    Margin="6"
+                    Padding="10"
+                    Background="#151923"
+                    BorderThickness="0"
+                    CornerRadius="16">
+              <StackPanel Spacing="8">
+                <Border Width="64"
+                        Height="64"
+                        CornerRadius="14"
+                        Background="#8F7CFF"
+                        HorizontalAlignment="Center">
+                  <Image Source="{Binding Avatar, Converter={StaticResource AvatarPathConverter}}"
+                         Stretch="UniformToFill" />
+                </Border>
+                <TextBlock Text="{Binding Name}"
+                           Foreground="#FFFFFF"
+                           TextAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+            </Button>
+          </DataTemplate>
+
+          <DataTemplate DataType="vm:AddProfilePlaceholder">
+            <Button Command="{Binding #ProfileListRoot.DataContext.AddProfileCommand}"
+                    Width="138"
+                    Margin="6"
+                    Padding="10"
+                    Background="#151923"
+                    BorderBrush="#394057"
+                    BorderThickness="1"
+                    CornerRadius="16">
+              <StackPanel Spacing="8">
+                <Border Width="64"
+                        Height="64"
+                        CornerRadius="32"
+                        BorderBrush="#AEB5C5"
+                        BorderThickness="2">
+                  <TextBlock Text="+"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"
+                             FontSize="32"
+                             Foreground="#FFFFFF" />
+                </Border>
+                <TextBlock Text="{loc:Translate Profiles.AddProfile}"
+                           Foreground="#FFFFFF"
+                           TextAlignment="Center" />
+              </StackPanel>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.DataTemplates>
+      </ItemsControl>
+    </ScrollViewer>
+
+    <TextBlock Grid.Row="2"
+               Text="{loc:Translate Profiles.Add.Description}"
+               Foreground="#AEB5C5"
+               FontSize="12"
+               TextWrapping="Wrap"
+               Margin="0,12,0,0" />
+
+    <Border x:Name="ProfileSetupHost"
+            Grid.RowSpan="3"
+            Background="#090B10"
+            IsVisible="False">
+      <ContentControl x:Name="ProfileSetupContent" />
+    </Border>
+  </Grid>
+</UserControl>

@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Noctra.ViewModels"
+             xmlns:views="using:Noctra.Mobile.Views"
              xmlns:loc="using:Noctra.Mobile.Localization"
              x:Class="Noctra.Mobile.Views.ProfileSetupView"
              x:DataType="vm:AddProfileViewModel"
@@ -69,6 +70,25 @@
                   Spacing="16">
         <Border Classes="section">
           <StackPanel Spacing="10">
+            <Button Command="{Binding OpenAvatarPickerCommand}"
+                    Background="#252B3D"
+                    BorderThickness="0"
+                    CornerRadius="16"
+                    Padding="14">
+              <StackPanel Spacing="6">
+                <Border Width="72"
+                        Height="72"
+                        CornerRadius="18"
+                        Background="#8F7CFF"
+                        HorizontalAlignment="Center">
+                  <Image Source="{Binding SelectedAvatar, Converter={StaticResource AvatarPathConverter}}"
+                         Stretch="UniformToFill" />
+                </Border>
+                <TextBlock Text="{loc:Translate AvatarPicker.Title}"
+                           HorizontalAlignment="Center"
+                           Foreground="#FFFFFF" />
+              </StackPanel>
+            </Button>
             <TextBlock Classes="label" Text="{loc:Translate Profiles.Add.ProfileName}" />
             <TextBox Text="{Binding ProfileName}"
                      PlaceholderText="{loc:Translate Profiles.Add.ProfileNamePlaceholder}" />
@@ -199,5 +219,26 @@
                 Foreground="#FFFFFF" />
       </StackPanel>
     </ScrollViewer>
+
+    <Border x:Name="AvatarPickerHost"
+            Grid.RowSpan="2"
+            Background="#CC090B10"
+            Padding="18"
+            IsVisible="False">
+      <Grid RowDefinitions="*,Auto">
+        <views:AvatarPickerView x:Name="AvatarPickerContent"
+                                VerticalAlignment="Center" />
+        <Button Grid.Row="1"
+                Content="{loc:Translate Profiles.Add.Cancel}"
+                Click="OnCloseAvatarPicker"
+                Margin="0,12,0,0"
+                MinHeight="48"
+                Background="#151923"
+                Foreground="#FFFFFF"
+                BorderBrush="#394057"
+                BorderThickness="1"
+                CornerRadius="12" />
+      </Grid>
+    </Border>
   </Grid>
 </UserControl>

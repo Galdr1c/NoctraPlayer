@@ -1,10 +1,9 @@
-using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Microsoft.Extensions.DependencyInjection;
-using Noctra.Mobile.ViewModels;
-using AddProfileViewModel = Noctra.ViewModels.AddProfileViewModel;
+using Noctra.ViewModels;
+using MobileMainViewModel = Noctra.Mobile.ViewModels.MainViewModel;
 
 namespace Noctra.Mobile.Views;
 
@@ -33,36 +32,15 @@ public partial class MainView : UserControl
     private void OnDestinationClick(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: string destination } &&
-            DataContext is MainViewModel viewModel)
+            DataContext is MobileMainViewModel viewModel)
         {
             viewModel.SelectDestination(destination);
+            if (destination == "More" &&
+                Application.Current is App app &&
+                app.Services is not null)
+            {
+                MobileProfileList.DataContext = app.Services.GetRequiredService<ProfilesViewModel>();
+            }
         }
-    }
-
-    private void OnOpenProfileSetup(object? sender, RoutedEventArgs e)
-    {
-        if (Application.Current is not App app || app.Services is null)
-        {
-            return;
-        }
-
-        var viewModel = app.Services.GetRequiredService<AddProfileViewModel>();
-        viewModel.RequestClose += OnProfileSetupClosed;
-        ProfileSetupContent.Content = new ProfileSetupView
-        {
-            DataContext = viewModel
-        };
-        ProfileSetupHost.IsVisible = true;
-    }
-
-    private void OnProfileSetupClosed(object? sender, EventArgs e)
-    {
-        if (sender is AddProfileViewModel viewModel)
-        {
-            viewModel.RequestClose -= OnProfileSetupClosed;
-        }
-
-        ProfileSetupHost.IsVisible = false;
-        ProfileSetupContent.Content = null;
     }
 }

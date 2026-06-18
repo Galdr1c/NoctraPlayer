@@ -333,6 +333,16 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MainView.axaml"));
+        var profileListSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "ProfileListView.axaml"));
+        var profileListCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "ProfileListView.axaml.cs"));
         var registrationSource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Android",
@@ -369,10 +379,79 @@ public sealed class ReleaseSourceCleanlinessTests
             Assert.Contains($"{{Binding {binding}", viewSource);
         }
 
-        Assert.Contains("OpenProfileSetup", mainViewSource);
-        Assert.Contains("ProfileSetupHost", mainViewSource);
+        Assert.Contains("ProfileListView", mainViewSource);
+        Assert.Contains("OpenProfileSetup", profileListCode);
+        Assert.Contains("ProfileSetupHost", profileListSource);
         Assert.Contains("AddTransient<AddProfileViewModel>", registrationSource);
         Assert.Contains("IDialogService", registrationSource);
+    }
+
+    [Fact]
+    public void MobileProfiles_ReusesDesktopProfilesAndAvatarContracts()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var profileListSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "ProfileListView.axaml"));
+        var profileListCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "ProfileListView.axaml.cs"));
+        var setupSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "ProfileSetupView.axaml"));
+        var setupCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "ProfileSetupView.axaml.cs"));
+        var avatarSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "AvatarPickerView.axaml"));
+        var mobileProjectSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Noctra.Mobile.csproj"));
+        var mobileAppSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "App.axaml"));
+        var registrationSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "DependencyInjection",
+            "AndroidServiceCollectionExtensions.cs"));
+
+        Assert.Contains("vm:ProfilesViewModel", profileListSource);
+        Assert.Contains("DisplayItems", profileListSource);
+        Assert.Contains("SelectProfileCommand", profileListSource);
+        Assert.Contains("AddProfileCommand", profileListSource);
+        Assert.Contains("ToggleManageModeCommand", profileListSource);
+        Assert.Contains("OnProfileAddRequested", profileListCode);
+        Assert.Contains("OnProfileEditRequested", profileListCode);
+        Assert.Contains("RefreshProfilesAsync", profileListCode);
+
+        Assert.Contains("OpenAvatarPickerCommand", setupSource);
+        Assert.Contains("SelectedAvatar", setupSource);
+        Assert.Contains("AvatarPathConverter", setupSource);
+        Assert.Contains("RequestAvatarPicker", setupCode);
+        Assert.Contains("AvatarPickerViewModel", setupCode);
+        Assert.Contains("SetAvatar", setupCode);
+
+        Assert.Contains("vm:AvatarPickerViewModel", avatarSource);
+        Assert.Contains("SelectAvatarCommand", avatarSource);
+        Assert.Contains("AvatarPathConverter", avatarSource);
+        Assert.Contains("Noctra.Avalonia\\Assets\\Avatars", mobileProjectSource);
+        Assert.Contains("AvatarPathConverter", mobileAppSource);
+        Assert.Contains("AddSingleton<ProfilesViewModel>", registrationSource);
+        Assert.Contains("AddTransient<AvatarPickerViewModel>", registrationSource);
     }
 
     [Fact]

@@ -1,8 +1,13 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="using:Noctra.Mobile"
+             xmlns:converters="using:Noctra.Mobile.Converters"
              x:Class="Noctra.Mobile.App"
              RequestedThemeVariant="Dark">
+
+    <Application.Resources>
+        <converters:AvatarPathConverter x:Key="AvatarPathConverter" />
+    </Application.Resources>
 
     <Application.DataTemplates>
         <local:ViewLocator/>
