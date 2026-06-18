@@ -101,7 +101,7 @@ Installed Android components:
 
 Current verification:
 
-- Full tests: 927 passed, 0 failed, 0 skipped
+- Full tests: 928 passed, 0 failed, 0 skipped
 - Windows Release rebuild: 0 errors, 20 existing warnings
 - Android Debug APK build: 0 errors, 0 warnings
 - Vulnerable NuGet packages in the Android graph: none
@@ -151,6 +151,10 @@ Current platform separation:
   `SeriesViewItems`, group and sort selection, content loading/empty states,
   `NavigateCommand`, and the existing incremental load methods while presenting
   the data in phone-friendly vertical layouts.
+- Mobile content cards now invoke the same `SelectMediaCommand` used by the
+  desktop cards. The shared `MainViewModel.OnMediaSelected` event is subscribed
+  from the mobile shell and surfaced as a temporary Android playback-readiness
+  status until the native Android video surface is implemented.
 
 Android 16 native page-size compatibility is provided by:
 

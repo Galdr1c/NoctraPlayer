@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Microsoft.Extensions.DependencyInjection;
+using Noctra.Models;
 using Noctra.ViewModels;
 using CoreMainViewModel = Noctra.ViewModels.MainViewModel;
 using MobileMainViewModel = Noctra.Mobile.ViewModels.MainViewModel;
@@ -51,6 +52,8 @@ public partial class MainView : UserControl
             if (destination is "Live" or "Movies" or "Series")
             {
                 _coreMainViewModel ??= app.Services.GetRequiredService<CoreMainViewModel>();
+                _coreMainViewModel.OnMediaSelected -= CoreMainViewModel_OnMediaSelected;
+                _coreMainViewModel.OnMediaSelected += CoreMainViewModel_OnMediaSelected;
                 CoreContentHost.DataContext = _coreMainViewModel;
                 MobileLiveContent.DataContext = _coreMainViewModel;
                 MobileMoviesContent.DataContext = _coreMainViewModel;
@@ -78,5 +81,28 @@ public partial class MainView : UserControl
         MobileLiveContent.IsVisible = destination == "Live";
         MobileMoviesContent.IsVisible = destination == "Movies";
         MobileSeriesContent.IsVisible = destination == "Series";
+    }
+
+    private void CoreMainViewModel_OnMediaSelected(object media)
+    {
+        switch (media)
+        {
+            case Channel channel:
+                SelectedMediaTitle.Text = channel.Name;
+                SelectedMediaSubtitle.Text = channel.Type == ChannelType.Live
+                    ? "Live selection is ready for Android playback."
+                    : "Movie selection is ready for Android playback.";
+                break;
+            case Series series:
+                SelectedMediaTitle.Text = series.Name;
+                SelectedMediaSubtitle.Text = "Series detail selection is ready for Android playback.";
+                break;
+            default:
+                SelectedMediaTitle.Text = media.GetType().Name;
+                SelectedMediaSubtitle.Text = "Media selection is ready.";
+                break;
+        }
+
+        SelectedMediaHost.IsVisible = true;
     }
 }

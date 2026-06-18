@@ -599,6 +599,44 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobileMediaSelection_ReusesDesktopSelectMediaContract()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mainViewCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml.cs"));
+        var liveSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileLiveView.axaml"));
+        var moviesSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileMoviesView.axaml"));
+        var seriesSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileSeriesView.axaml"));
+
+        foreach (var contentSource in new[] { liveSource, moviesSource, seriesSource })
+        {
+            Assert.Contains("SelectMediaCommand", contentSource);
+            Assert.Contains("CommandParameter=\"{Binding}\"", contentSource);
+        }
+
+        Assert.Contains("OnMediaSelected", mainViewCode);
+        Assert.Contains("CoreMainViewModel_OnMediaSelected", mainViewCode);
+        Assert.Contains("SelectedMediaHost", mainViewCode);
+        Assert.Contains("SelectedMediaTitle", mainViewCode);
+        Assert.Contains("SelectedMediaSubtitle", mainViewCode);
+    }
+
+    [Fact]
     public void MainProfileLoading_SupportsLocalAndRemoteM3uSources()
     {
         var repositoryRoot = FindRepositoryRoot();

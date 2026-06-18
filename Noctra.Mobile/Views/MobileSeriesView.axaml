@@ -41,12 +41,17 @@
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="models:Series">
-            <Border Width="154"
+            <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
+                    CommandParameter="{Binding}"
+                    Width="154"
                     MinHeight="230"
                     Background="#151923"
+                    BorderThickness="0"
                     CornerRadius="16"
                     Padding="10"
-                    Margin="0,0,10,10">
+                    Margin="0,0,10,10"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch">
               <StackPanel Spacing="8">
                 <Border Height="150"
                         CornerRadius="12"
@@ -61,7 +66,7 @@
                            FontSize="12"
                            TextTrimming="CharacterEllipsis" />
               </StackPanel>
-            </Border>
+            </Button>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
