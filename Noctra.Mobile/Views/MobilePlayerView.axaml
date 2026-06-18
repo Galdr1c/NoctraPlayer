@@ -94,6 +94,38 @@
                 MinHeight="44" />
       </Grid>
 
+      <Grid ColumnDefinitions="*,*,*,*,*"
+            ColumnSpacing="8">
+        <Button Content="-10s"
+                Command="{Binding SkipBackwardCommand}"
+                CommandParameter="10"
+                IsVisible="{Binding !IsLiveContent}"
+                MinHeight="40" />
+        <Button Grid.Column="1"
+                Content="+10s"
+                Command="{Binding SkipForwardCommand}"
+                CommandParameter="10"
+                IsVisible="{Binding !IsLiveContent}"
+                MinHeight="40" />
+        <Button Grid.Column="2"
+                Content="Favorite"
+                Command="{Binding ToggleLiveFavoriteCommand}"
+                MinHeight="40" />
+        <Button Grid.Column="3"
+                Content="{Binding VideoFillMode}"
+                Command="{Binding CycleVideoFillModeCommand}"
+                MinHeight="40" />
+        <Button Grid.Column="4"
+                Content="{Binding SleepTimerLabel}"
+                Command="{Binding ShowSleepTimerMenuCommand}"
+                MinHeight="40" />
+      </Grid>
+
+      <TextBlock Text="{Binding SleepTimerCountdown}"
+                 Foreground="#AEB5C5"
+                 FontSize="12"
+                 HorizontalAlignment="Right" />
+
       <Grid ColumnDefinitions="*,*,*"
             ColumnSpacing="8">
         <Border Background="#1FFFFFFF"

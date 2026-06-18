@@ -715,6 +715,27 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobilePlayerSecondaryControls_ReusesDesktopPlayerControlContract()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var playerViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml"));
+
+        Assert.Contains("SkipBackwardCommand", playerViewSource);
+        Assert.Contains("SkipForwardCommand", playerViewSource);
+        Assert.Contains("CommandParameter=\"10\"", playerViewSource);
+        Assert.Contains("ToggleLiveFavoriteCommand", playerViewSource);
+        Assert.Contains("CycleVideoFillModeCommand", playerViewSource);
+        Assert.Contains("VideoFillMode", playerViewSource);
+        Assert.Contains("ShowSleepTimerMenuCommand", playerViewSource);
+        Assert.Contains("SleepTimerLabel", playerViewSource);
+        Assert.Contains("SleepTimerCountdown", playerViewSource);
+    }
+
+    [Fact]
     public void AndroidPlaybackSurface_BindsMediaPlayerToNativeSurfaceView()
     {
         var repositoryRoot = FindRepositoryRoot();

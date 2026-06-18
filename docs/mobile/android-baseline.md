@@ -160,8 +160,10 @@ Current platform separation:
   `PlayerViewModel.PlayChannelAsync` path. The mobile player overlay exposes
   selected content, connection/error state, play-pause/stop/close, seek,
   volume/mute, remaining time, stream info, and quality summary bindings from
-  the same desktop player contract. Android quality metadata remains limited
-  until richer native track/metadata extraction is added.
+  the same desktop player contract. Secondary mobile controls now bind to the
+  desktop skip backward/forward, live favorite, video fill mode, and sleep timer
+  commands. Android quality metadata remains limited until richer native
+  track/metadata extraction is added.
 - Android playback now creates a native `SurfaceView` through an
   `IVideoSurfaceService` bridge and binds it to `Android.Media.MediaPlayer` via
   `SetSurface`. The mobile shell shows the surface before starting
