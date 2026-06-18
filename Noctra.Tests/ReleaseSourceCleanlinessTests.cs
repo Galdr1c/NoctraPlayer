@@ -736,6 +736,27 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobilePlayerSleepTimerPanel_ReusesDesktopSleepTimerContract()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var playerViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml"));
+
+        Assert.Contains("IsSleepTimerPanelOpen", playerViewSource);
+        Assert.Contains("SetSleepTimerCommand", playerViewSource);
+        Assert.Contains("CancelSleepTimerCommand", playerViewSource);
+        Assert.Contains("PlayerViewModel+SleepTimerOption.Off", playerViewSource);
+        Assert.Contains("PlayerViewModel+SleepTimerOption.Minutes15", playerViewSource);
+        Assert.Contains("PlayerViewModel+SleepTimerOption.Minutes30", playerViewSource);
+        Assert.Contains("PlayerViewModel+SleepTimerOption.Minutes60", playerViewSource);
+        Assert.Contains("PlayerViewModel+SleepTimerOption.EndOfEpisode", playerViewSource);
+        Assert.Contains("IsSleepTimerActive", playerViewSource);
+    }
+
+    [Fact]
     public void AndroidPlaybackSurface_BindsMediaPlayerToNativeSurfaceView()
     {
         var repositoryRoot = FindRepositoryRoot();

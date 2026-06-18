@@ -126,6 +126,54 @@
                  FontSize="12"
                  HorizontalAlignment="Right" />
 
+      <Border Background="#1FFFFFFF"
+              CornerRadius="14"
+              Padding="12"
+              IsVisible="{Binding IsSleepTimerPanelOpen}">
+        <StackPanel Spacing="8">
+          <TextBlock Text="{Binding SleepTimerLabel}"
+                     Foreground="#FFFFFF"
+                     FontSize="13"
+                     FontWeight="SemiBold" />
+          <Grid ColumnDefinitions="*,*"
+                RowDefinitions="Auto,Auto,Auto"
+                ColumnSpacing="8"
+                RowSpacing="8">
+            <Button Content="Off"
+                    Command="{Binding SetSleepTimerCommand}"
+                    CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Off}"
+                    MinHeight="40" />
+            <Button Grid.Column="1"
+                    Content="15 min"
+                    Command="{Binding SetSleepTimerCommand}"
+                    CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes15}"
+                    MinHeight="40" />
+            <Button Grid.Row="1"
+                    Content="30 min"
+                    Command="{Binding SetSleepTimerCommand}"
+                    CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes30}"
+                    MinHeight="40" />
+            <Button Grid.Row="1"
+                    Grid.Column="1"
+                    Content="60 min"
+                    Command="{Binding SetSleepTimerCommand}"
+                    CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes60}"
+                    MinHeight="40" />
+            <Button Grid.Row="2"
+                    Content="End"
+                    Command="{Binding SetSleepTimerCommand}"
+                    CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.EndOfEpisode}"
+                    MinHeight="40" />
+            <Button Grid.Row="2"
+                    Grid.Column="1"
+                    Content="Cancel"
+                    Command="{Binding CancelSleepTimerCommand}"
+                    IsVisible="{Binding IsSleepTimerActive}"
+                    MinHeight="40" />
+          </Grid>
+        </StackPanel>
+      </Border>
+
       <Grid ColumnDefinitions="*,*,*"
             ColumnSpacing="8">
         <Border Background="#1FFFFFFF"

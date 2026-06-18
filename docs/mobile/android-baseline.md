@@ -162,8 +162,10 @@ Current platform separation:
   volume/mute, remaining time, stream info, and quality summary bindings from
   the same desktop player contract. Secondary mobile controls now bind to the
   desktop skip backward/forward, live favorite, video fill mode, and sleep timer
-  commands. Android quality metadata remains limited until richer native
-  track/metadata extraction is added.
+  commands. The mobile sleep timer panel exposes the same Off, 15 minute,
+  30 minute, 60 minute, end-of-content, and cancel actions through
+  `SetSleepTimerCommand` and `CancelSleepTimerCommand`. Android quality metadata
+  remains limited until richer native track/metadata extraction is added.
 - Android playback now creates a native `SurfaceView` through an
   `IVideoSurfaceService` bridge and binds it to `Android.Media.MediaPlayer` via
   `SetSurface`. The mobile shell shows the surface before starting
