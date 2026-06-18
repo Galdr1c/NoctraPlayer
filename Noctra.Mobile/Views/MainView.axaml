@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Noctra.Mobile.ViewModels"
              xmlns:views="using:Noctra.Mobile.Views"
+             xmlns:corevm="using:Noctra.ViewModels"
              mc:Ignorable="d" d:DesignWidth="390" d:DesignHeight="844"
              x:Class="Noctra.Mobile.Views.MainView"
              x:DataType="vm:MainViewModel"
@@ -79,8 +80,10 @@
       </StackPanel>
     </Border>
 
-    <ScrollViewer Grid.Row="1" Grid.Column="1">
-      <StackPanel Margin="20" Spacing="16">
+    <Grid Grid.Row="1" Grid.Column="1">
+      <StackPanel x:Name="ShellContent"
+                  Margin="20"
+                  Spacing="16">
         <TextBlock Text="{Binding PageDescription}"
                    FontSize="15"
                    Foreground="#AEB5C5"
@@ -116,7 +119,17 @@
           </Border>
         </Grid>
       </StackPanel>
-    </ScrollViewer>
+
+      <Grid x:Name="CoreContentHost"
+            IsVisible="False">
+        <views:MobileLiveView x:Name="MobileLiveContent"
+                              IsVisible="False" />
+        <views:MobileMoviesView x:Name="MobileMoviesContent"
+                                IsVisible="False" />
+        <views:MobileSeriesView x:Name="MobileSeriesContent"
+                                IsVisible="False" />
+      </Grid>
+    </Grid>
 
     <Border x:Name="BottomNavigation"
             Grid.Row="2"

@@ -101,7 +101,7 @@ Installed Android components:
 
 Current verification:
 
-- Full tests: 926 passed, 0 failed, 0 skipped
+- Full tests: 927 passed, 0 failed, 0 skipped
 - Windows Release rebuild: 0 errors, 20 existing warnings
 - Android Debug APK build: 0 errors, 0 warnings
 - Vulnerable NuGet packages in the Android graph: none
@@ -146,6 +146,11 @@ Current platform separation:
   `ProfileLoadingViewModel` backs the loading overlay, and the selected profile
   is reloaded with its provider account before `MainViewModel.LoadProfileAsync`
   runs.
+- Mobile Live, Movies, and Series surfaces now bind to the desktop
+  `MainViewModel` content contracts. They reuse `FilteredChannels`,
+  `SeriesViewItems`, group and sort selection, content loading/empty states,
+  `NavigateCommand`, and the existing incremental load methods while presenting
+  the data in phone-friendly vertical layouts.
 
 Android 16 native page-size compatibility is provided by:
 

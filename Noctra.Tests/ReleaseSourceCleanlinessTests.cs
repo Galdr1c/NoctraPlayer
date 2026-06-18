@@ -522,6 +522,83 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobileContentViews_ReusesDesktopMainViewModelContracts()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mainViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml"));
+        var mainViewCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml.cs"));
+        var liveSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileLiveView.axaml"));
+        var liveCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileLiveView.axaml.cs"));
+        var moviesSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileMoviesView.axaml"));
+        var moviesCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileMoviesView.axaml.cs"));
+        var seriesSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileSeriesView.axaml"));
+        var seriesCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileSeriesView.axaml.cs"));
+
+        Assert.Contains("CoreContentHost", mainViewSource);
+        Assert.Contains("MobileLiveView", mainViewSource);
+        Assert.Contains("MobileMoviesView", mainViewSource);
+        Assert.Contains("MobileSeriesView", mainViewSource);
+        Assert.Contains("CoreMainViewModel", mainViewCode);
+        Assert.Contains("NavigateCommand", mainViewCode);
+        Assert.Contains("CoreContentHost.DataContext", mainViewCode);
+
+        foreach (var contentSource in new[] { liveSource, moviesSource })
+        {
+            Assert.Contains("vm:MainViewModel", contentSource);
+            Assert.Contains("FilteredChannels", contentSource);
+            Assert.Contains("Groups", contentSource);
+            Assert.Contains("SelectedGroup", contentSource);
+            Assert.Contains("SelectedSortOrder", contentSource);
+            Assert.Contains("IsContentLoading", contentSource);
+            Assert.Contains("ShowEmptyChannels", contentSource);
+        }
+
+        Assert.Contains("LoadMoreChannelsIfNeededAsync", liveCode);
+        Assert.Contains("LoadMoreChannelsIfNeededAsync", moviesCode);
+
+        Assert.Contains("vm:MainViewModel", seriesSource);
+        Assert.Contains("SeriesViewItems", seriesSource);
+        Assert.Contains("Groups", seriesSource);
+        Assert.Contains("SelectedGroup", seriesSource);
+        Assert.Contains("SelectedSortOrder", seriesSource);
+        Assert.Contains("IsContentLoading", seriesSource);
+        Assert.Contains("ShowEmptyChannels", seriesSource);
+        Assert.Contains("LoadMoreSeriesIfNeededAsync", seriesCode);
+    }
+
+    [Fact]
     public void MainProfileLoading_SupportsLocalAndRemoteM3uSources()
     {
         var repositoryRoot = FindRepositoryRoot();

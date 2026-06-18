@@ -1,0 +1,93 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Noctra.ViewModels"
+             xmlns:models="using:Noctra.Models"
+             xmlns:loc="using:Noctra.Mobile.Localization"
+             x:Class="Noctra.Mobile.Views.MobileMoviesView"
+             x:DataType="vm:MainViewModel"
+             x:CompileBindings="False"
+             mc:Ignorable="d"
+             d:DesignWidth="390"
+             d:DesignHeight="720">
+  <ScrollViewer x:Name="MoviesScrollViewer"
+                ScrollChanged="MoviesScrollViewer_ScrollChanged">
+    <StackPanel Margin="20" Spacing="14">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Text="{loc:Translate Movies.Title}"
+                   FontSize="24"
+                   FontWeight="SemiBold"
+                   Foreground="#FFFFFF" />
+        <ComboBox Grid.Column="1"
+                  Width="150"
+                  ItemsSource="{Binding SortOptions}"
+                  SelectedValue="{Binding SelectedSortOrder}"
+                  SelectedValueBinding="{Binding Key}"
+                  DisplayMemberBinding="{Binding Value}"
+                  IsVisible="{Binding ShowContentFilters}" />
+      </Grid>
+      <ComboBox ItemsSource="{Binding Groups}"
+                SelectedItem="{Binding SelectedGroup}"
+                PlaceholderText="{loc:Translate Common.All}"
+                IsVisible="{Binding ShowGroupFilter}" />
+
+      <ItemsControl ItemsSource="{Binding FilteredChannels}"
+                    IsVisible="{Binding !IsContentLoading}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <WrapPanel />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="models:Channel">
+            <Border Width="154"
+                    MinHeight="230"
+                    Background="#151923"
+                    CornerRadius="16"
+                    Padding="10"
+                    Margin="0,0,10,10">
+              <StackPanel Spacing="8">
+                <Border Height="150"
+                        CornerRadius="12"
+                        Background="#252B3D" />
+                <TextBlock Text="{Binding Name}"
+                           Foreground="#FFFFFF"
+                           FontWeight="SemiBold"
+                           TextWrapping="Wrap"
+                           MaxLines="2" />
+                <TextBlock Text="{Binding GroupTitle}"
+                           Foreground="#AEB5C5"
+                           FontSize="12"
+                           TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <StackPanel Spacing="10"
+                  Margin="0,60,0,0"
+                  HorizontalAlignment="Center"
+                  IsVisible="{Binding IsContentLoading}">
+        <ProgressBar IsIndeterminate="True" Width="180" />
+        <TextBlock Text="{loc:Translate Movies.Loading}"
+                   Foreground="#AEB5C5" />
+      </StackPanel>
+
+      <StackPanel Spacing="8"
+                  Margin="0,60,0,0"
+                  HorizontalAlignment="Center"
+                  IsVisible="{Binding ShowEmptyChannels}">
+        <TextBlock Text="{loc:Translate Movies.Empty.Title}"
+                   Foreground="#FFFFFF"
+                   FontSize="18"
+                   FontWeight="SemiBold" />
+        <TextBlock Text="{loc:Translate Movies.Empty.Description}"
+                   Foreground="#AEB5C5"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap" />
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>
