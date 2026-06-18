@@ -1,0 +1,46 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Noctra.ViewModels"
+             x:Class="Noctra.Mobile.Views.MobilePlayerView"
+             x:DataType="vm:PlayerViewModel"
+             x:CompileBindings="False"
+             mc:Ignorable="d"
+             d:DesignWidth="390"
+             d:DesignHeight="260">
+  <Border Background="#F5090B10"
+          Padding="16"
+          CornerRadius="18"
+          VerticalAlignment="Bottom"
+          Margin="14">
+    <StackPanel Spacing="10">
+      <TextBlock Text="{Binding CurrentChannel.Name}"
+                 Foreground="#FFFFFF"
+                 FontSize="18"
+                 FontWeight="SemiBold"
+                 TextWrapping="Wrap" />
+      <TextBlock Text="{Binding ConnectionStatus}"
+                 Foreground="#AEB5C5"
+                 TextWrapping="Wrap" />
+      <TextBlock Text="{Binding ErrorMessage}"
+                 Foreground="#FF6B6B"
+                 TextWrapping="Wrap" />
+      <Grid ColumnDefinitions="*,*,*"
+            ColumnSpacing="8">
+        <Button Content="Pause"
+                Command="{Binding PauseCommand}"
+                IsEnabled="{Binding IsPlaying}"
+                MinHeight="44" />
+        <Button Grid.Column="1"
+                Content="Stop"
+                Command="{Binding StopCommand}"
+                MinHeight="44" />
+        <Button Grid.Column="2"
+                Content="Close"
+                Command="{Binding CloseCommand}"
+                MinHeight="44" />
+      </Grid>
+    </StackPanel>
+  </Border>
+</UserControl>

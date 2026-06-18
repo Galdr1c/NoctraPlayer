@@ -637,6 +637,60 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void AndroidPlayback_ReusesDesktopPlayerViewModelContract()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var androidVideoService = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "Services",
+            "AndroidVideoPlayerService.cs"));
+        var registrationSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "DependencyInjection",
+            "AndroidServiceCollectionExtensions.cs"));
+        var mainViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml"));
+        var mainViewCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml.cs"));
+        var playerViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml"));
+
+        Assert.Contains("IVideoPlayerService", androidVideoService);
+        Assert.Contains("Android.Media.MediaPlayer", androidVideoService);
+        Assert.Contains("PlayingChanged", androidVideoService);
+        Assert.Contains("ErrorOccurred", androidVideoService);
+        Assert.Contains("PositionChanged", androidVideoService);
+        Assert.Contains("PlaybackEnded", androidVideoService);
+
+        Assert.Contains("AddSingleton<IVideoPlayerService, AndroidVideoPlayerService>", registrationSource);
+        Assert.Contains("AddSingleton<PlayerViewModel>", registrationSource);
+
+        Assert.Contains("MobilePlayerView", mainViewSource);
+        Assert.Contains("PlayerViewModel", mainViewCode);
+        Assert.Contains("PlayChannelAsync", mainViewCode);
+        Assert.Contains("PlayerHost", mainViewCode);
+        Assert.Contains("MobilePlayerContent.DataContext", mainViewCode);
+
+        Assert.Contains("vm:PlayerViewModel", playerViewSource);
+        Assert.Contains("CurrentChannel.Name", playerViewSource);
+        Assert.Contains("PauseCommand", playerViewSource);
+        Assert.Contains("StopCommand", playerViewSource);
+        Assert.Contains("CloseCommand", playerViewSource);
+        Assert.Contains("IsPlaying", playerViewSource);
+    }
+
+    [Fact]
     public void MainProfileLoading_SupportsLocalAndRemoteM3uSources()
     {
         var repositoryRoot = FindRepositoryRoot();

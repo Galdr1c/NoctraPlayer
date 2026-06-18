@@ -101,7 +101,7 @@ Installed Android components:
 
 Current verification:
 
-- Full tests: 928 passed, 0 failed, 0 skipped
+- Full tests: 929 passed, 0 failed, 0 skipped
 - Windows Release rebuild: 0 errors, 20 existing warnings
 - Android Debug APK build: 0 errors, 0 warnings
 - Vulnerable NuGet packages in the Android graph: none
@@ -155,6 +155,12 @@ Current platform separation:
   desktop cards. The shared `MainViewModel.OnMediaSelected` event is subscribed
   from the mobile shell and surfaced as a temporary Android playback-readiness
   status until the native Android video surface is implemented.
+- Android now registers an `IVideoPlayerService` implementation backed by
+  `Android.Media.MediaPlayer` and wires the mobile shell to the shared
+  `PlayerViewModel.PlayChannelAsync` path. The first mobile player overlay
+  exposes selected content, connection/error state, and basic pause/stop/close
+  controls. Android quality metadata remains unsupported until a richer native
+  video surface/player layer is added.
 
 Android 16 native page-size compatibility is provided by:
 

@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -13,6 +14,7 @@ public partial class MainView : UserControl
 {
     private const double TabletBreakpoint = 720;
     private CoreMainViewModel? _coreMainViewModel;
+    private PlayerViewModel? _playerViewModel;
 
     public MainView()
     {
@@ -83,19 +85,18 @@ public partial class MainView : UserControl
         MobileSeriesContent.IsVisible = destination == "Series";
     }
 
-    private void CoreMainViewModel_OnMediaSelected(object media)
+    private async void CoreMainViewModel_OnMediaSelected(object media)
     {
         switch (media)
         {
             case Channel channel:
                 SelectedMediaTitle.Text = channel.Name;
-                SelectedMediaSubtitle.Text = channel.Type == ChannelType.Live
-                    ? "Live selection is ready for Android playback."
-                    : "Movie selection is ready for Android playback.";
+                SelectedMediaSubtitle.Text = "Starting Android playback.";
+                await PlaySelectedChannelAsync(channel);
                 break;
             case Series series:
                 SelectedMediaTitle.Text = series.Name;
-                SelectedMediaSubtitle.Text = "Series detail selection is ready for Android playback.";
+                SelectedMediaSubtitle.Text = "Series detail selection is ready.";
                 break;
             default:
                 SelectedMediaTitle.Text = media.GetType().Name;
@@ -104,5 +105,31 @@ public partial class MainView : UserControl
         }
 
         SelectedMediaHost.IsVisible = true;
+    }
+
+    private async Task PlaySelectedChannelAsync(Channel channel)
+    {
+        if (Application.Current is not App app || app.Services is null)
+        {
+            return;
+        }
+
+        _playerViewModel ??= app.Services.GetRequiredService<PlayerViewModel>();
+        _playerViewModel.CurrentProfileId = _coreMainViewModel?.CurrentProfileId;
+        if (channel.Type == ChannelType.Series && _coreMainViewModel?.CurrentEpisodePlaybackContext is not null)
+        {
+            _playerViewModel.SetCurrentEpisode(
+                _coreMainViewModel.CurrentEpisodePlaybackContext,
+                _coreMainViewModel.NextEpisodePlaybackContext,
+                _coreMainViewModel.CurrentSeriesPlaybackContext);
+        }
+        else
+        {
+            _playerViewModel.SetCurrentEpisode(null, null);
+        }
+
+        MobilePlayerContent.DataContext = _playerViewModel;
+        PlayerHost.IsVisible = true;
+        await _playerViewModel.PlayChannelAsync(channel);
     }
 }

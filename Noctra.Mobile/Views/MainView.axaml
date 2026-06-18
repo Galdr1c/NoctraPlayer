@@ -148,6 +148,13 @@
                      TextWrapping="Wrap" />
         </StackPanel>
       </Border>
+
+      <Border x:Name="PlayerHost"
+              IsVisible="False"
+              Background="#CC090B10">
+        <views:MobilePlayerView x:Name="MobilePlayerContent"
+                                VerticalAlignment="Bottom" />
+      </Border>
     </Grid>
 
     <Border x:Name="BottomNavigation"

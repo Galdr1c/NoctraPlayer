@@ -40,6 +40,7 @@ public static class AndroidServiceCollectionExtensions
         services.AddSingleton<IAppEditionService, AppEditionService>();
         services.AddNoctraCoreServices();
         services.AddSingleton<IUpdateService, UpdateService>();
+        services.AddSingleton<IVideoPlayerService, AndroidVideoPlayerService>();
         services.AddSingleton<ILicenseService>(serviceProvider =>
             new LicenseService(
                 serviceProvider.GetRequiredService<IAppEditionService>(),
@@ -49,6 +50,7 @@ public static class AndroidServiceCollectionExtensions
                 serviceProvider.GetRequiredService<ISecurityService>())); 
         services.AddTransient<WatermarkViewModel>();
         services.AddSingleton<CoreMainViewModel>();
+        services.AddSingleton<PlayerViewModel>();
         services.AddSingleton<MobileMainViewModel>();
         services.AddSingleton<ProfilesViewModel>();
         services.AddTransient<AddProfileViewModel>();
