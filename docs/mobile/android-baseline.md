@@ -101,7 +101,7 @@ Installed Android components:
 
 Current verification:
 
-- Full tests: 925 passed, 0 failed, 0 skipped
+- Full tests: 926 passed, 0 failed, 0 skipped
 - Windows Release rebuild: 0 errors, 20 existing warnings
 - Android Debug APK build: 0 errors, 0 warnings
 - Vulnerable NuGet packages in the Android graph: none
@@ -141,6 +141,11 @@ Current platform separation:
   add/edit navigation, avatar selection, profile validation, and save behavior.
   Avatar PNG resources are linked from the desktop asset set into the mobile
   Avalonia package instead of maintaining a second copy.
+- Mobile profile selection now mirrors the desktop PIN gate and loading flow:
+  `PinEntryViewModel` handles PIN attempts, lockout, and forgot-PIN behavior,
+  `ProfileLoadingViewModel` backs the loading overlay, and the selected profile
+  is reloaded with its provider account before `MainViewModel.LoadProfileAsync`
+  runs.
 
 Android 16 native page-size compatibility is provided by:
 

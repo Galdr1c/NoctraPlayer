@@ -431,7 +431,7 @@ public sealed class ReleaseSourceCleanlinessTests
 
         Assert.Contains("vm:ProfilesViewModel", profileListSource);
         Assert.Contains("DisplayItems", profileListSource);
-        Assert.Contains("SelectProfileCommand", profileListSource);
+        Assert.Contains("SelectProfileCommand", profileListCode);
         Assert.Contains("AddProfileCommand", profileListSource);
         Assert.Contains("ToggleManageModeCommand", profileListSource);
         Assert.Contains("OnProfileAddRequested", profileListCode);
@@ -452,6 +452,73 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("AvatarPathConverter", mobileAppSource);
         Assert.Contains("AddSingleton<ProfilesViewModel>", registrationSource);
         Assert.Contains("AddTransient<AvatarPickerViewModel>", registrationSource);
+    }
+
+    [Fact]
+    public void MobileProfileSelection_ReusesDesktopPinAndLoadingContracts()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var profileListSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "ProfileListView.axaml"));
+        var profileListCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "ProfileListView.axaml.cs"));
+        var pinEntrySource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "PinEntryView.axaml"));
+        var pinEntryCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "PinEntryView.axaml.cs"));
+        var profileLoadingSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "ProfileLoadingView.axaml"));
+        var registrationSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "DependencyInjection",
+            "AndroidServiceCollectionExtensions.cs"));
+
+        Assert.Contains("Click=\"SelectProfile_Click\"", profileListSource);
+        Assert.Contains("PinEntryHost", profileListSource);
+        Assert.Contains("ProfileLoadingHost", profileListSource);
+        Assert.Contains("PinEntryView", profileListSource);
+        Assert.Contains("ProfileLoadingView", profileListSource);
+
+        Assert.Contains("new PinEntryViewModel", profileListCode);
+        Assert.Contains("VerifyPinIfRequired", profileListCode);
+        Assert.Contains("CancelProfileDeletionAsync", profileListCode);
+        Assert.Contains("ScheduleProfileDeletionAsync", profileListCode);
+        Assert.Contains("LoadProfileAsync", profileListCode);
+        Assert.Contains("ProfileLoadingViewModel", profileListCode);
+        Assert.Contains("OnProfileSelected", profileListCode);
+
+        Assert.Contains("vm:PinEntryViewModel", pinEntrySource);
+        Assert.Contains("PressDigitCommand", pinEntrySource);
+        Assert.Contains("BackspaceCommand", pinEntrySource);
+        Assert.Contains("CancelCommand", pinEntrySource);
+        Assert.Contains("ForgotPinCommand", pinEntrySource);
+        Assert.Contains("AvatarPathConverter", pinEntrySource);
+        Assert.Contains("KeyDown", pinEntryCode);
+
+        Assert.Contains("vm:ProfileLoadingViewModel", profileLoadingSource);
+        Assert.Contains("StatusMessage", profileLoadingSource);
+        Assert.Contains("LoadingWarningMessage", profileLoadingSource);
+        Assert.Contains("IsError", profileLoadingSource);
+        Assert.Contains("AvatarPathConverter", profileLoadingSource);
+
+        Assert.Contains("AddTransient<ProfileLoadingViewModel>", registrationSource);
+        Assert.Contains("CoreMainViewModel", registrationSource);
     }
 
     [Fact]

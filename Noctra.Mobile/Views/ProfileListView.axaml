@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:models="using:Noctra.Models"
              xmlns:vm="using:Noctra.ViewModels"
+             xmlns:views="using:Noctra.Mobile.Views"
              xmlns:loc="using:Noctra.Mobile.Localization"
              x:Class="Noctra.Mobile.Views.ProfileListView"
              x:Name="ProfileListRoot"
@@ -38,8 +39,7 @@
         </ItemsControl.ItemsPanel>
         <ItemsControl.DataTemplates>
           <DataTemplate DataType="models:Profile">
-            <Button Command="{Binding #ProfileListRoot.DataContext.SelectProfileCommand}"
-                    CommandParameter="{Binding}"
+            <Button Click="SelectProfile_Click"
                     Width="138"
                     Margin="6"
                     Padding="10"
@@ -106,6 +106,22 @@
             Background="#090B10"
             IsVisible="False">
       <ContentControl x:Name="ProfileSetupContent" />
+    </Border>
+
+    <Border x:Name="PinEntryHost"
+            Grid.RowSpan="3"
+            Background="#DD090B10"
+            Padding="18"
+            IsVisible="False">
+      <views:PinEntryView x:Name="PinEntryContent" />
+    </Border>
+
+    <Border x:Name="ProfileLoadingHost"
+            Grid.RowSpan="3"
+            Background="#DD090B10"
+            Padding="18"
+            IsVisible="False">
+      <views:ProfileLoadingView x:Name="ProfileLoadingContent" />
     </Border>
   </Grid>
 </UserControl>

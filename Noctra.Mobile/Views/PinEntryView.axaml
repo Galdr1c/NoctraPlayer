@@ -1,0 +1,110 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Noctra.ViewModels"
+             xmlns:loc="using:Noctra.Mobile.Localization"
+             x:Class="Noctra.Mobile.Views.PinEntryView"
+             x:DataType="vm:PinEntryViewModel"
+             x:CompileBindings="False"
+             mc:Ignorable="d"
+             d:DesignWidth="390"
+             d:DesignHeight="560"
+             Focusable="True">
+  <UserControl.Styles>
+    <Style Selector="Button.pin-key">
+      <Setter Property="Width" Value="64" />
+      <Setter Property="Height" Value="64" />
+      <Setter Property="CornerRadius" Value="32" />
+      <Setter Property="Background" Value="#252B3D" />
+      <Setter Property="Foreground" Value="#FFFFFF" />
+      <Setter Property="FontSize" Value="22" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Margin" Value="5" />
+    </Style>
+  </UserControl.Styles>
+
+  <Border Background="#151923"
+          CornerRadius="20"
+          Padding="26"
+          MaxWidth="360"
+          HorizontalAlignment="Center"
+          VerticalAlignment="Center">
+    <StackPanel Spacing="14"
+                HorizontalAlignment="Center">
+      <Border Width="72"
+              Height="72"
+              CornerRadius="18"
+              ClipToBounds="True"
+              Background="#8F7CFF">
+        <Image Source="{Binding ProfileAvatar, Converter={StaticResource AvatarPathConverter}}"
+               Stretch="UniformToFill" />
+      </Border>
+
+      <TextBlock Text="{Binding ProfileName}"
+                 FontSize="20"
+                 FontWeight="SemiBold"
+                 Foreground="#FFFFFF"
+                 HorizontalAlignment="Center" />
+      <TextBlock Text="{Binding Purpose}"
+                 FontSize="13"
+                 Foreground="#AEB5C5"
+                 TextAlignment="Center"
+                 TextWrapping="Wrap" />
+
+      <TextBlock Text="{Binding PinLength, StringFormat='{}{0}/4'}"
+                 Foreground="#FFFFFF"
+                 FontSize="18"
+                 FontWeight="SemiBold"
+                 HorizontalAlignment="Center" />
+
+      <TextBlock Text="{Binding ErrorMessage}"
+                 Foreground="#FF6B6B"
+                 FontSize="12"
+                 MinHeight="18"
+                 TextAlignment="Center"
+                 TextWrapping="Wrap"
+                 IsVisible="{Binding ShowErrorMessage}" />
+
+      <StackPanel Orientation="Horizontal"
+                  HorizontalAlignment="Center"
+                  IsVisible="{Binding IsLocked}">
+        <TextBlock Text="{loc:Translate PinEntry.LockoutCountdown}"
+                   Foreground="#FFA500"
+                   FontSize="12" />
+        <TextBlock Text="{Binding LockSecondsRemaining}"
+                   Foreground="#FFA500"
+                   FontSize="12" />
+        <TextBlock Text="s"
+                   Foreground="#FFA500"
+                   FontSize="12" />
+      </StackPanel>
+
+      <UniformGrid Rows="4"
+                   Columns="3"
+                   IsEnabled="{Binding !IsLocked}">
+        <Button Classes="pin-key" Content="1" Command="{Binding PressDigitCommand}" CommandParameter="1" />
+        <Button Classes="pin-key" Content="2" Command="{Binding PressDigitCommand}" CommandParameter="2" />
+        <Button Classes="pin-key" Content="3" Command="{Binding PressDigitCommand}" CommandParameter="3" />
+        <Button Classes="pin-key" Content="4" Command="{Binding PressDigitCommand}" CommandParameter="4" />
+        <Button Classes="pin-key" Content="5" Command="{Binding PressDigitCommand}" CommandParameter="5" />
+        <Button Classes="pin-key" Content="6" Command="{Binding PressDigitCommand}" CommandParameter="6" />
+        <Button Classes="pin-key" Content="7" Command="{Binding PressDigitCommand}" CommandParameter="7" />
+        <Button Classes="pin-key" Content="8" Command="{Binding PressDigitCommand}" CommandParameter="8" />
+        <Button Classes="pin-key" Content="9" Command="{Binding PressDigitCommand}" CommandParameter="9" />
+        <Button Classes="pin-key"
+                FontSize="9"
+                Content="{loc:Translate PinEntry.ForgotPin}"
+                Command="{Binding ForgotPinCommand}" />
+        <Button Classes="pin-key" Content="0" Command="{Binding PressDigitCommand}" CommandParameter="0" />
+        <Button Classes="pin-key" Content="⌫" Command="{Binding BackspaceCommand}" />
+      </UniformGrid>
+
+      <Button Content="{loc:Translate Dialog.Cancel}"
+              Command="{Binding CancelCommand}"
+              Background="Transparent"
+              Foreground="#AEB5C5"
+              BorderThickness="0" />
+    </StackPanel>
+  </Border>
+</UserControl>

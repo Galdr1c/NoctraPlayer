@@ -9,6 +9,7 @@ using Noctra.Services;
 using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
 using AddProfileViewModel = Noctra.ViewModels.AddProfileViewModel;
+using CoreMainViewModel = Noctra.ViewModels.MainViewModel;
 using MobileMainViewModel = Noctra.Mobile.ViewModels.MainViewModel;
 
 namespace Noctra.Android.DependencyInjection;
@@ -38,17 +39,21 @@ public static class AndroidServiceCollectionExtensions
         services.AddSingleton<IDialogService, AndroidDialogService>();
         services.AddSingleton<IAppEditionService, AppEditionService>();
         services.AddNoctraCoreServices();
+        services.AddSingleton<IUpdateService, UpdateService>();
         services.AddSingleton<ILicenseService>(serviceProvider =>
             new LicenseService(
                 serviceProvider.GetRequiredService<IAppEditionService>(),
                 serviceProvider.GetRequiredService<ISettingsService>(),
                 serviceProvider.GetRequiredService<HttpClient>(),
                 serviceProvider.GetRequiredService<ILocalizationService>(),
-                serviceProvider.GetRequiredService<ISecurityService>()));
+                serviceProvider.GetRequiredService<ISecurityService>())); 
+        services.AddTransient<WatermarkViewModel>();
+        services.AddSingleton<CoreMainViewModel>();
         services.AddSingleton<MobileMainViewModel>();
         services.AddSingleton<ProfilesViewModel>();
         services.AddTransient<AddProfileViewModel>();
         services.AddTransient<AvatarPickerViewModel>();
+        services.AddTransient<ProfileLoadingViewModel>();
 
         return services;
     }
