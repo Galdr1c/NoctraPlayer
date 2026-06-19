@@ -749,6 +749,16 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("EpgTimeOffsetIndex", settingsSource);
         Assert.Contains("EpgLastError", settingsSource);
         Assert.Contains("WatchHistoryRetentionIndex", settingsSource);
+        Assert.Contains("CurrentVersion", settingsSource);
+        Assert.Contains("IsPremium", settingsSource);
+        Assert.Contains("ShowUpsellCommand", settingsSource);
+        Assert.Contains("UpdateStatusText", settingsSource);
+        Assert.Contains("IsCheckingUpdates", settingsSource);
+        Assert.Contains("IsIdle", settingsSource);
+        Assert.Contains("IsUpdateAvailable", settingsSource);
+        Assert.Contains("CheckForUpdatesCommand", settingsSource);
+        Assert.Contains("StartUpdateCommand", settingsSource);
+        Assert.Contains("ReportBugCommand", settingsSource);
         Assert.Contains("StatusMessage", settingsSource);
         Assert.Contains("SaveSettingsCommand", settingsSource);
         Assert.Contains("ResetToDefaultsCommand", settingsSource);
