@@ -121,6 +121,18 @@
                 MinHeight="40" />
       </Grid>
 
+      <Grid ColumnDefinitions="*,*"
+            ColumnSpacing="8"
+            IsVisible="{Binding IsLiveContent}">
+        <Button Content="Previous"
+                Command="{Binding PlayPreviousLiveChannelCommand}"
+                MinHeight="40" />
+        <Button Grid.Column="1"
+                Content="Next"
+                Command="{Binding PlayNextLiveChannelCommand}"
+                MinHeight="40" />
+      </Grid>
+
       <TextBlock Text="{Binding SleepTimerCountdown}"
                  Foreground="#AEB5C5"
                  FontSize="12"

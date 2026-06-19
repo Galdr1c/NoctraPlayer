@@ -736,6 +736,33 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobilePlayerLiveChannelNavigation_ReusesDesktopEventBridge()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var playerViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml"));
+        var mainViewCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml.cs"));
+
+        Assert.Contains("PlayPreviousLiveChannelCommand", playerViewSource);
+        Assert.Contains("PlayNextLiveChannelCommand", playerViewSource);
+        Assert.Contains("IsLiveContent", playerViewSource);
+
+        Assert.Contains("NextLiveChannelRequested", mainViewCode);
+        Assert.Contains("PreviousLiveChannelRequested", mainViewCode);
+        Assert.Contains("PlayerViewModel_NextLiveChannelRequested", mainViewCode);
+        Assert.Contains("PlayerViewModel_PreviousLiveChannelRequested", mainViewCode);
+        Assert.Contains("PlayNextLiveChannelCommand.Execute(null)", mainViewCode);
+        Assert.Contains("PlayPreviousLiveChannelCommand.Execute(null)", mainViewCode);
+    }
+
+    [Fact]
     public void MobilePlayerSleepTimerPanel_ReusesDesktopSleepTimerContract()
     {
         var repositoryRoot = FindRepositoryRoot();

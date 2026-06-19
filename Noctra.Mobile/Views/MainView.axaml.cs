@@ -125,6 +125,10 @@ public partial class MainView : UserControl
 
         _playerViewModel.CloseRequested -= PlayerViewModel_CloseRequested;
         _playerViewModel.CloseRequested += PlayerViewModel_CloseRequested;
+        _playerViewModel.NextLiveChannelRequested -= PlayerViewModel_NextLiveChannelRequested;
+        _playerViewModel.NextLiveChannelRequested += PlayerViewModel_NextLiveChannelRequested;
+        _playerViewModel.PreviousLiveChannelRequested -= PlayerViewModel_PreviousLiveChannelRequested;
+        _playerViewModel.PreviousLiveChannelRequested += PlayerViewModel_PreviousLiveChannelRequested;
         _playerViewModel.CurrentProfileId = _coreMainViewModel?.CurrentProfileId;
         if (channel.Type == ChannelType.Series && _coreMainViewModel?.CurrentEpisodePlaybackContext is not null)
         {
@@ -150,5 +154,15 @@ public partial class MainView : UserControl
         {
             app.Services.GetService<IVideoSurfaceService>()?.Hide();
         }
+    }
+
+    private void PlayerViewModel_NextLiveChannelRequested(object? sender, EventArgs e)
+    {
+        _coreMainViewModel?.PlayNextLiveChannelCommand.Execute(null);
+    }
+
+    private void PlayerViewModel_PreviousLiveChannelRequested(object? sender, EventArgs e)
+    {
+        _coreMainViewModel?.PlayPreviousLiveChannelCommand.Execute(null);
     }
 }

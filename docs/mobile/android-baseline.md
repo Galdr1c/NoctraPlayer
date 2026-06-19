@@ -177,6 +177,10 @@ Current platform separation:
   after preparation, so the mobile quality panel can show the real stream
   resolution. Android quality metadata remains limited until richer native
   track/metadata extraction is added.
+- Mobile live playback now exposes previous/next live channel controls and
+  bridges `PlayerViewModel.NextLiveChannelRequested` and
+  `PreviousLiveChannelRequested` to the shared `MainViewModel` live-channel
+  navigation commands, matching the desktop event flow.
 - Android playback now creates a native `SurfaceView` through an
   `IVideoSurfaceService` bridge and binds it to `Android.Media.MediaPlayer` via
   `SetSurface`. The mobile shell shows the surface before starting
