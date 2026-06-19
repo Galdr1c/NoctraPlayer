@@ -50,12 +50,82 @@
           <TextBlock Text="Playback"
                      Foreground="#FFFFFF"
                      FontWeight="SemiBold" />
+          <TextBlock Text="User agent"
+                     Foreground="#AEB5C5"
+                     FontSize="12" />
+          <TextBox Text="{Binding UserAgent, Mode=TwoWay}"
+                   PlaceholderText="VLC/3.0.x LibVLC/3.0.x"
+                   MinHeight="44" />
           <CheckBox Content="Auto play next episode"
                     IsChecked="{Binding AutoPlayNext}" />
+          <TextBlock Text="Streaming quality"
+                     Foreground="#AEB5C5"
+                     FontSize="12" />
+          <ComboBox SelectedIndex="{Binding SelectedDataUsage}"
+                    MinHeight="44">
+            <ComboBoxItem Content="Low" />
+            <ComboBoxItem Content="Medium" />
+            <ComboBoxItem Content="High" />
+            <ComboBoxItem Content="Auto" />
+          </ComboBox>
+          <TextBlock Text="Buffer"
+                     Foreground="#AEB5C5"
+                     FontSize="12" />
+          <StackPanel Spacing="4">
+            <RadioButton Content="Small"
+                         GroupName="MobileBuffer"
+                         IsChecked="{Binding IsBufferSmall}" />
+            <RadioButton Content="Normal"
+                         GroupName="MobileBuffer"
+                         IsChecked="{Binding IsBufferNormal}" />
+            <RadioButton Content="Large"
+                         GroupName="MobileBuffer"
+                         IsChecked="{Binding IsBufferLarge}" />
+          </StackPanel>
           <CheckBox Content="Save watch history"
                     IsChecked="{Binding SaveWatchHistory}" />
           <CheckBox Content="Clear history on exit"
                     IsChecked="{Binding ClearHistoryOnExit}" />
+        </StackPanel>
+      </Border>
+
+      <Border Background="#151923"
+              CornerRadius="16"
+              Padding="14">
+        <StackPanel Spacing="12">
+          <TextBlock Text="Audio and subtitles"
+                     Foreground="#FFFFFF"
+                     FontWeight="SemiBold" />
+          <CheckBox Content="Enable subtitles automatically"
+                    IsChecked="{Binding SubtitleEnabled}" />
+          <TextBlock Text="Preferred subtitle"
+                     Foreground="#AEB5C5"
+                     FontSize="12" />
+          <ComboBox SelectedValue="{Binding SubtitleLanguage, Mode=TwoWay}"
+                    SelectedValueBinding="{Binding Tag}"
+                    MinHeight="44">
+            <ComboBoxItem Content="Turkish" Tag="tr" />
+            <ComboBoxItem Content="English" Tag="en" />
+            <ComboBoxItem Content="Deutsch" Tag="de" />
+            <ComboBoxItem Content="Francais" Tag="fr" />
+            <ComboBoxItem Content="Espanol" Tag="es" />
+            <ComboBoxItem Content="Italiano" Tag="it" />
+            <ComboBoxItem Content="Portugues" Tag="pt" />
+          </ComboBox>
+          <TextBlock Text="Preferred audio"
+                     Foreground="#AEB5C5"
+                     FontSize="12" />
+          <ComboBox SelectedValue="{Binding PreferredAudioLanguage, Mode=TwoWay}"
+                    SelectedValueBinding="{Binding Tag}"
+                    MinHeight="44">
+            <ComboBoxItem Content="Turkish" Tag="tr" />
+            <ComboBoxItem Content="English" Tag="en" />
+            <ComboBoxItem Content="Deutsch" Tag="de" />
+            <ComboBoxItem Content="Francais" Tag="fr" />
+            <ComboBoxItem Content="Espanol" Tag="es" />
+            <ComboBoxItem Content="Italiano" Tag="it" />
+            <ComboBoxItem Content="Portugues" Tag="pt" />
+          </ComboBox>
         </StackPanel>
       </Border>
 

@@ -708,6 +708,14 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("IsDarkTheme", settingsSource);
         Assert.Contains("AppLanguage", settingsSource);
         Assert.Contains("AutoPlayNext", settingsSource);
+        Assert.Contains("UserAgent", settingsSource);
+        Assert.Contains("SelectedDataUsage", settingsSource);
+        Assert.Contains("IsBufferSmall", settingsSource);
+        Assert.Contains("IsBufferNormal", settingsSource);
+        Assert.Contains("IsBufferLarge", settingsSource);
+        Assert.Contains("SubtitleEnabled", settingsSource);
+        Assert.Contains("SubtitleLanguage", settingsSource);
+        Assert.Contains("PreferredAudioLanguage", settingsSource);
         Assert.Contains("SaveWatchHistory", settingsSource);
         Assert.Contains("ClearHistoryOnExit", settingsSource);
         Assert.Contains("DownloadWifiOnly", settingsSource);
