@@ -748,6 +748,11 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("EpgRefreshFrequencyIndex", settingsSource);
         Assert.Contains("EpgTimeOffsetIndex", settingsSource);
         Assert.Contains("EpgLastError", settingsSource);
+        Assert.Contains("CustomEpgUrls", settingsSource);
+        Assert.Contains("AddCustomEpgCommand", settingsSource);
+        Assert.Contains("RemoveCustomEpgCommand", settingsSource);
+        Assert.Contains("IsGlobalLoading", settingsSource);
+        Assert.Contains("CancelRefreshOperationCommand", settingsSource);
         Assert.Contains("WatchHistoryRetentionIndex", settingsSource);
         Assert.Contains("CurrentVersion", settingsSource);
         Assert.Contains("IsPremium", settingsSource);

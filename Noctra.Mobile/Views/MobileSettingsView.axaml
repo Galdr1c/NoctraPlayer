@@ -9,8 +9,9 @@
              mc:Ignorable="d"
              d:DesignWidth="390"
              d:DesignHeight="720">
-  <ScrollViewer>
-    <StackPanel Margin="20" Spacing="14">
+  <Grid>
+    <ScrollViewer>
+      <StackPanel Margin="20" Spacing="14">
       <StackPanel Spacing="4">
         <TextBlock Text="Settings"
                    FontSize="24"
@@ -373,6 +374,7 @@
                     IsChecked="{Binding EpgEnabled}" />
           <Button Content="Refresh EPG now"
                   Command="{Binding RefreshEpgNowCommand}"
+                  IsEnabled="{Binding !IsGlobalLoading}"
                   MinHeight="44" />
           <TextBlock Text="{Binding EpgLastError}"
                      Foreground="#FF6B6B"
@@ -422,6 +424,53 @@
             <ComboBoxItem Content="+11" />
             <ComboBoxItem Content="+12" />
           </ComboBox>
+
+          <Border Background="#202638"
+                  CornerRadius="12"
+                  Padding="12">
+            <StackPanel Spacing="10">
+              <Grid ColumnDefinitions="*,Auto"
+                    ColumnSpacing="10">
+                <StackPanel>
+                  <TextBlock Text="Custom EPG sources"
+                             Foreground="#FFFFFF"
+                             FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding CustomEpgUrls.Count}"
+                             Foreground="#AEB5C5"
+                             FontSize="12" />
+                </StackPanel>
+                <Button Grid.Column="1"
+                        Content="Add"
+                        Command="{Binding AddCustomEpgCommand}"
+                        IsEnabled="{Binding !IsGlobalLoading}"
+                        MinHeight="40" />
+              </Grid>
+
+              <TextBlock Text="More EPG sources can slow down refresh depending on provider response time."
+                         Foreground="#FFA500"
+                         FontSize="12"
+                         TextWrapping="Wrap" />
+
+              <ItemsControl ItemsSource="{Binding CustomEpgUrls}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="8"
+                          Margin="0,0,0,8">
+                      <TextBox Text="{Binding Url, Mode=TwoWay}"
+                               PlaceholderText="EPG URL"
+                               MinHeight="44" />
+                      <Button Grid.Column="1"
+                              Content="Remove"
+                              Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).RemoveCustomEpgCommand}"
+                              CommandParameter="{Binding .}"
+                              MinHeight="44" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
         </StackPanel>
       </Border>
 
@@ -542,6 +591,32 @@
                 Command="{Binding SaveSettingsCommand}"
                 MinHeight="44" />
       </Grid>
-    </StackPanel>
-  </ScrollViewer>
+      </StackPanel>
+    </ScrollViewer>
+
+    <Grid Background="#AA000000"
+          IsVisible="{Binding IsGlobalLoading}">
+      <Border Background="#151923"
+              CornerRadius="18"
+              Padding="24"
+              Width="300"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center">
+        <StackPanel Spacing="14">
+          <TextBlock Text="Loading"
+                     Foreground="#FFFFFF"
+                     FontSize="20"
+                     FontWeight="SemiBold"
+                     HorizontalAlignment="Center" />
+          <TextBlock Text="{Binding StatusMessage}"
+                     Foreground="#AEB5C5"
+                     TextWrapping="Wrap"
+                     TextAlignment="Center" />
+          <Button Content="Cancel"
+                  Command="{Binding CancelRefreshOperationCommand}"
+                  MinHeight="44" />
+        </StackPanel>
+      </Border>
+    </Grid>
+  </Grid>
 </UserControl>
