@@ -129,13 +129,24 @@ public partial class MainView : UserControl
         _playerViewModel.NextLiveChannelRequested += PlayerViewModel_NextLiveChannelRequested;
         _playerViewModel.PreviousLiveChannelRequested -= PlayerViewModel_PreviousLiveChannelRequested;
         _playerViewModel.PreviousLiveChannelRequested += PlayerViewModel_PreviousLiveChannelRequested;
-        _playerViewModel.CurrentProfileId = _coreMainViewModel?.CurrentProfileId;
-        if (channel.Type == ChannelType.Series && _coreMainViewModel?.CurrentEpisodePlaybackContext is not null)
+        _playerViewModel.NextEpisodeRequested -= PlayerViewModel_NextEpisodeRequested;
+        _playerViewModel.NextEpisodeRequested += PlayerViewModel_NextEpisodeRequested;
+        _playerViewModel.EpisodeRequested -= PlayerViewModel_EpisodeRequested;
+        _playerViewModel.EpisodeRequested += PlayerViewModel_EpisodeRequested;
+        var coreViewModel = _coreMainViewModel;
+        _playerViewModel.CurrentProfileId = coreViewModel?.CurrentProfileId;
+
+        if (channel.Type == ChannelType.Series && coreViewModel?.CurrentEpisodePlaybackContext is null)
+        {
+            coreViewModel?.TryPrepareEpisodePlaybackContext(channel);
+        }
+
+        if (channel.Type == ChannelType.Series && coreViewModel?.CurrentEpisodePlaybackContext is not null)
         {
             _playerViewModel.SetCurrentEpisode(
-                _coreMainViewModel.CurrentEpisodePlaybackContext,
-                _coreMainViewModel.NextEpisodePlaybackContext,
-                _coreMainViewModel.CurrentSeriesPlaybackContext);
+                coreViewModel.CurrentEpisodePlaybackContext,
+                coreViewModel.NextEpisodePlaybackContext,
+                coreViewModel.CurrentSeriesPlaybackContext);
         }
         else
         {
@@ -164,5 +175,15 @@ public partial class MainView : UserControl
     private void PlayerViewModel_PreviousLiveChannelRequested(object? sender, EventArgs e)
     {
         _coreMainViewModel?.PlayPreviousLiveChannelCommand.Execute(null);
+    }
+
+    private void PlayerViewModel_NextEpisodeRequested(object? sender, Episode episode)
+    {
+        _coreMainViewModel?.PlayEpisodeCommand.Execute(episode);
+    }
+
+    private void PlayerViewModel_EpisodeRequested(object? sender, Episode episode)
+    {
+        _coreMainViewModel?.PlayEpisodeCommand.Execute(episode);
     }
 }

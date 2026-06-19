@@ -2,8 +2,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:models="using:Noctra.Models"
              xmlns:vm="using:Noctra.ViewModels"
              x:Class="Noctra.Mobile.Views.MobilePlayerView"
+             x:Name="PlayerRoot"
              x:DataType="vm:PlayerViewModel"
              x:CompileBindings="False"
              mc:Ignorable="d"
@@ -133,6 +135,18 @@
                 MinHeight="40" />
       </Grid>
 
+      <Grid ColumnDefinitions="*,*"
+            ColumnSpacing="8"
+            IsVisible="{Binding IsSeriesContent}">
+        <Button Content="Episodes"
+                Command="{Binding OpenEpisodesCommand}"
+                MinHeight="40" />
+        <Button Grid.Column="1"
+                Content="Next Episode"
+                Command="{Binding PlayNextEpisodeCommand}"
+                MinHeight="40" />
+      </Grid>
+
       <TextBlock Text="{Binding SleepTimerCountdown}"
                  Foreground="#AEB5C5"
                  FontSize="12"
@@ -204,6 +218,67 @@
                  Foreground="#AEB5C5"
                  FontSize="12"
                  TextWrapping="Wrap" />
+
+      <Border Background="#1FFFFFFF"
+              CornerRadius="14"
+              Padding="12"
+              IsVisible="{Binding IsEpisodesPanelOpen}">
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{Binding EpisodesPanelTitle}"
+                       Foreground="#FFFFFF"
+                       FontSize="14"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap" />
+            <Button Grid.Column="1"
+                    Content="Close"
+                    Command="{Binding ClosePanelsCommand}"
+                    MinHeight="36"
+                    Margin="10,0,0,0" />
+          </Grid>
+          <ScrollViewer MaxHeight="240"
+                        HorizontalScrollBarVisibility="Disabled"
+                        VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding EpisodeSeasons}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Season">
+                  <StackPanel Spacing="8"
+                              Margin="0,0,0,12">
+                    <TextBlock Text="{Binding SeasonNumber, StringFormat='Season {0}'}"
+                               Foreground="#AEB5C5"
+                               FontSize="12"
+                               FontWeight="SemiBold" />
+                    <ItemsControl ItemsSource="{Binding Episodes}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="models:Episode">
+                          <Button Command="{Binding #PlayerRoot.DataContext.PlayEpisodeFromOverlayCommand}"
+                                  CommandParameter="{Binding}"
+                                  MinHeight="44"
+                                  Margin="0,0,0,8"
+                                  HorizontalContentAlignment="Stretch">
+                            <Grid ColumnDefinitions="Auto,*"
+                                  ColumnSpacing="10">
+                              <TextBlock Text="{Binding EpisodeNumber}"
+                                         Foreground="#AEB5C5"
+                                         FontWeight="SemiBold"
+                                         VerticalAlignment="Center" />
+                              <TextBlock Grid.Column="1"
+                                         Text="{Binding Name}"
+                                         Foreground="#FFFFFF"
+                                         TextWrapping="Wrap"
+                                         VerticalAlignment="Center" />
+                            </Grid>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </StackPanel>
+      </Border>
 
       <Border Background="#1FFFFFFF"
               CornerRadius="14"
