@@ -157,13 +157,15 @@
           <StackPanel Spacing="4">
             <RadioButton Content="Small"
                          GroupName="MobileBuffer"
-                         IsChecked="{Binding IsBufferSmall}" />
+                         IsChecked="{Binding IsBufferSmall}"
+                         IsEnabled="{Binding IsPremium}" />
             <RadioButton Content="Normal"
                          GroupName="MobileBuffer"
                          IsChecked="{Binding IsBufferNormal}" />
             <RadioButton Content="Large"
                          GroupName="MobileBuffer"
-                         IsChecked="{Binding IsBufferLarge}" />
+                         IsChecked="{Binding IsBufferLarge}"
+                         IsEnabled="{Binding IsPremium}" />
           </StackPanel>
           <CheckBox Content="Save watch history"
                     IsChecked="{Binding SaveWatchHistory}" />
@@ -271,13 +273,20 @@
           <ComboBox SelectedIndex="{Binding ChannelListRefreshFrequencyIndex, Mode=TwoWay}"
                     MinHeight="44">
             <ComboBoxItem Content="Off" />
-            <ComboBoxItem Content="1 hour" />
-            <ComboBoxItem Content="3 hours" />
-            <ComboBoxItem Content="12 hours" />
-            <ComboBoxItem Content="24 hours" />
-            <ComboBoxItem Content="2 days" />
-            <ComboBoxItem Content="3 days" />
-            <ComboBoxItem Content="7 days" />
+            <ComboBoxItem Content="1 hour"
+                          IsEnabled="{Binding IsPremium}" />
+            <ComboBoxItem Content="3 hours"
+                          IsEnabled="{Binding IsPremium}" />
+            <ComboBoxItem Content="12 hours"
+                          IsEnabled="{Binding IsPremium}" />
+            <ComboBoxItem Content="24 hours"
+                          IsEnabled="{Binding IsPremium}" />
+            <ComboBoxItem Content="2 days"
+                          IsEnabled="{Binding IsPremium}" />
+            <ComboBoxItem Content="3 days"
+                          IsEnabled="{Binding IsPremium}" />
+            <ComboBoxItem Content="7 days"
+                          IsEnabled="{Binding IsPremium}" />
           </ComboBox>
 
           <TextBlock Text="Hidden live groups"
@@ -385,13 +394,20 @@
           <ComboBox SelectedIndex="{Binding EpgRefreshFrequencyIndex, Mode=TwoWay}"
                     MinHeight="44">
             <ComboBoxItem Content="Off" />
-            <ComboBoxItem Content="1 hour" />
-            <ComboBoxItem Content="3 hours" />
-            <ComboBoxItem Content="12 hours" />
-            <ComboBoxItem Content="24 hours" />
-            <ComboBoxItem Content="2 days" />
-            <ComboBoxItem Content="3 days" />
-            <ComboBoxItem Content="7 days" />
+            <ComboBoxItem Content="1 hour"
+                          IsEnabled="{Binding IsPremium}" />
+            <ComboBoxItem Content="3 hours"
+                          IsEnabled="{Binding IsPremium}" />
+            <ComboBoxItem Content="12 hours"
+                          IsEnabled="{Binding IsPremium}" />
+            <ComboBoxItem Content="24 hours"
+                          IsEnabled="{Binding IsPremium}" />
+            <ComboBoxItem Content="2 days"
+                          IsEnabled="{Binding IsPremium}" />
+            <ComboBoxItem Content="3 days"
+                          IsEnabled="{Binding IsPremium}" />
+            <ComboBoxItem Content="7 days"
+                          IsEnabled="{Binding IsPremium}" />
           </ComboBox>
           <TextBlock Text="EPG time offset"
                      Foreground="#AEB5C5"

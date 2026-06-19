@@ -726,6 +726,9 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("IsBufferSmall", settingsSource);
         Assert.Contains("IsBufferNormal", settingsSource);
         Assert.Contains("IsBufferLarge", settingsSource);
+        Assert.True(
+            CountOccurrences(settingsSource, "IsEnabled=\"{Binding IsPremium}\"") >= 16,
+            "Mobile settings should gate premium-only buffer and refresh frequency options with IsPremium.");
         Assert.Contains("SubtitleEnabled", settingsSource);
         Assert.Contains("SubtitleLanguage", settingsSource);
         Assert.Contains("PreferredAudioLanguage", settingsSource);
@@ -1323,5 +1326,19 @@ public sealed class ReleaseSourceCleanlinessTests
         }
 
         throw new DirectoryNotFoundException("Could not locate the repository root.");
+    }
+
+    private static int CountOccurrences(string source, string value)
+    {
+        var count = 0;
+        var index = 0;
+
+        while ((index = source.IndexOf(value, index, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            index += value.Length;
+        }
+
+        return count;
     }
 }
