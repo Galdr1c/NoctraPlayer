@@ -28,6 +28,8 @@ public partial class MainViewModel : ViewModelBase
             "Live" => ("Live TV", "Browse live channels and current programs."),
             "Movies" => ("Movies", "Continue watching or explore your movie library."),
             "Series" => ("Series", "Pick up your episodes and discover new series."),
+            "Search" => ("Search", "Find live channels, movies and series."),
+            "Favorites" => ("Favorites", "Your saved live channels, movies and series."),
             "More" => ("More", "Profiles, favorites, settings and premium features."),
             _ => ("Home", "Your channels, movies and series in one place.")
         };

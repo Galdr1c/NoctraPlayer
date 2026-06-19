@@ -565,11 +565,23 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobileSeriesView.axaml.cs"));
+        var searchSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileSearchView.axaml"));
+        var favoritesSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileFavoritesView.axaml"));
 
         Assert.Contains("CoreContentHost", mainViewSource);
         Assert.Contains("MobileLiveView", mainViewSource);
         Assert.Contains("MobileMoviesView", mainViewSource);
         Assert.Contains("MobileSeriesView", mainViewSource);
+        Assert.Contains("MobileSearchView", mainViewSource);
+        Assert.Contains("MobileFavoritesView", mainViewSource);
         Assert.Contains("CoreMainViewModel", mainViewCode);
         Assert.Contains("NavigateCommand", mainViewCode);
         Assert.Contains("CoreContentHost.DataContext", mainViewCode);
@@ -596,6 +608,21 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("IsContentLoading", seriesSource);
         Assert.Contains("ShowEmptyChannels", seriesSource);
         Assert.Contains("LoadMoreSeriesIfNeededAsync", seriesCode);
+
+        Assert.Contains("vm:MainViewModel", searchSource);
+        Assert.Contains("SearchQuery", searchSource);
+        Assert.Contains("CommitSearchCommand", searchSource);
+        Assert.Contains("ApplySearchSuggestionCommand", searchSource);
+        Assert.Contains("SearchLiveChannels", searchSource);
+        Assert.Contains("SearchSeriesChannels", searchSource);
+        Assert.Contains("SearchVodChannels", searchSource);
+        Assert.Contains("ShowSearchEmptyState", searchSource);
+
+        Assert.Contains("vm:MainViewModel", favoritesSource);
+        Assert.Contains("FavoriteLiveChannels", favoritesSource);
+        Assert.Contains("FavoriteSeriesItems", favoritesSource);
+        Assert.Contains("FavoriteVodChannels", favoritesSource);
+        Assert.Contains("ShowFavoritesEmptyState", favoritesSource);
     }
 
     [Fact]
@@ -634,6 +661,30 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("SelectedMediaHost", mainViewCode);
         Assert.Contains("SelectedMediaTitle", mainViewCode);
         Assert.Contains("SelectedMediaSubtitle", mainViewCode);
+    }
+
+    [Fact]
+    public void MobileSearchAndFavoritesNavigation_ReusesDesktopAppViews()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mainViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml"));
+        var mainViewCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml.cs"));
+
+        Assert.Contains("Tag=\"Search\"", mainViewSource);
+        Assert.Contains("Tag=\"Favorites\"", mainViewSource);
+        Assert.Contains("MobileSearchContent.DataContext", mainViewCode);
+        Assert.Contains("MobileFavoritesContent.DataContext", mainViewCode);
+        Assert.Contains("\"Search\" => AppView.Search", mainViewCode);
+        Assert.Contains("\"Favorites\" => AppView.Favorites", mainViewCode);
+        Assert.Contains("destination is \"Live\" or \"Movies\" or \"Series\" or \"Search\" or \"Favorites\"", mainViewCode);
     }
 
     [Fact]

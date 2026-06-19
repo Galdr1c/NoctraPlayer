@@ -77,6 +77,8 @@
         <Button Classes="nav" Tag="Live" Content="Live" Click="OnDestinationClick" />
         <Button Classes="nav" Tag="Movies" Content="Movies" Click="OnDestinationClick" />
         <Button Classes="nav" Tag="Series" Content="Series" Click="OnDestinationClick" />
+        <Button Classes="nav" Tag="Search" Content="Search" Click="OnDestinationClick" />
+        <Button Classes="nav" Tag="Favorites" Content="Favorites" Click="OnDestinationClick" />
         <Button Classes="nav" Tag="More" Content="More" Click="OnDestinationClick" />
       </StackPanel>
     </Border>
@@ -129,6 +131,10 @@
                                 IsVisible="False" />
         <views:MobileSeriesView x:Name="MobileSeriesContent"
                                 IsVisible="False" />
+        <views:MobileSearchView x:Name="MobileSearchContent"
+                                IsVisible="False" />
+        <views:MobileFavoritesView x:Name="MobileFavoritesContent"
+                                   IsVisible="False" />
       </Grid>
 
       <Border x:Name="SelectedMediaHost"
@@ -163,12 +169,14 @@
             Grid.ColumnSpan="2"
             Padding="8,6,8,10"
             Background="#0E1118">
-      <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="4">
+      <Grid ColumnDefinitions="*,*,*,*,*,*,*" ColumnSpacing="4">
         <Button Grid.Column="0" Classes="nav" Tag="Home" Content="Home" Click="OnDestinationClick" />
         <Button Grid.Column="1" Classes="nav" Tag="Live" Content="Live" Click="OnDestinationClick" />
         <Button Grid.Column="2" Classes="nav" Tag="Movies" Content="Movies" Click="OnDestinationClick" />
         <Button Grid.Column="3" Classes="nav" Tag="Series" Content="Series" Click="OnDestinationClick" />
-        <Button Grid.Column="4" Classes="nav" Tag="More" Content="More" Click="OnDestinationClick" />
+        <Button Grid.Column="4" Classes="nav" Tag="Search" Content="Search" Click="OnDestinationClick" />
+        <Button Grid.Column="5" Classes="nav" Tag="Favorites" Content="Fav" Click="OnDestinationClick" />
+        <Button Grid.Column="6" Classes="nav" Tag="More" Content="More" Click="OnDestinationClick" />
       </Grid>
     </Border>
 
