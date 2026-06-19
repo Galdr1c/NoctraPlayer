@@ -174,6 +174,54 @@
         </StackPanel>
       </Border>
 
+      <Grid ColumnDefinitions="*,*"
+            ColumnSpacing="8">
+        <Button Content="Download"
+                Command="{Binding DownloadCurrentContentCommand}"
+                IsVisible="{Binding CanShowDownloadButton}"
+                IsEnabled="{Binding CanDownloadCurrentContent}"
+                MinHeight="40" />
+        <Button Grid.Column="1"
+                Content="Info"
+                Command="{Binding OpenInfoPanelCommand}"
+                IsVisible="{Binding CanShowInfoButton}"
+                MinHeight="40" />
+      </Grid>
+
+      <TextBlock Text="{Binding DownloadStatusMessage}"
+                 Foreground="#AEB5C5"
+                 FontSize="12"
+                 TextWrapping="Wrap" />
+
+      <Border Background="#1FFFFFFF"
+              CornerRadius="14"
+              Padding="12"
+              IsVisible="{Binding IsInfoPanelOpen}">
+        <StackPanel Spacing="8">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{Binding CurrentChannel.Name}"
+                       Foreground="#FFFFFF"
+                       FontSize="14"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap" />
+            <Button Grid.Column="1"
+                    Content="Close"
+                    Command="{Binding OpenInfoPanelCommand}"
+                    MinHeight="36"
+                    Margin="10,0,0,0" />
+          </Grid>
+          <TextBlock Text="{Binding OverlaySecondaryText}"
+                     Foreground="#AEB5C5"
+                     FontSize="12"
+                     TextWrapping="Wrap" />
+          <TextBlock Text="{Binding CurrentChannel.Plot}"
+                     Foreground="#E6FFFFFF"
+                     FontSize="12"
+                     TextWrapping="Wrap"
+                     MaxHeight="120" />
+        </StackPanel>
+      </Border>
+
       <Grid ColumnDefinitions="*,*,*"
             ColumnSpacing="8">
         <Border Background="#1FFFFFFF"

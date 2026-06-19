@@ -757,6 +757,27 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobilePlayerInfoAndDownload_ReusesDesktopPlayerContract()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var playerViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml"));
+
+        Assert.Contains("DownloadCurrentContentCommand", playerViewSource);
+        Assert.Contains("CanShowDownloadButton", playerViewSource);
+        Assert.Contains("CanDownloadCurrentContent", playerViewSource);
+        Assert.Contains("DownloadStatusMessage", playerViewSource);
+        Assert.Contains("OpenInfoPanelCommand", playerViewSource);
+        Assert.Contains("CanShowInfoButton", playerViewSource);
+        Assert.Contains("IsInfoPanelOpen", playerViewSource);
+        Assert.Contains("OverlaySecondaryText", playerViewSource);
+        Assert.Contains("CurrentChannel.Plot", playerViewSource);
+    }
+
+    [Fact]
     public void AndroidPlaybackSurface_BindsMediaPlayerToNativeSurfaceView()
     {
         var repositoryRoot = FindRepositoryRoot();
