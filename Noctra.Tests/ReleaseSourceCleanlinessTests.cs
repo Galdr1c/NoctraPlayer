@@ -605,6 +605,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("MobileMyListView", mainViewSource);
         Assert.Contains("MobileHistoryView", mainViewSource);
         Assert.Contains("MobileDownloadsView", mainViewSource);
+        Assert.Contains("MobileSettingsView", mainViewSource);
         Assert.Contains("CoreMainViewModel", mainViewCode);
         Assert.Contains("NavigateCommand", mainViewCode);
         Assert.Contains("CoreContentHost.DataContext", mainViewCode);
@@ -676,6 +677,54 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("ClearQueueCommand", downloadsSource);
         Assert.Contains("TogglePauseDownloadCommand", downloadsSource);
         Assert.Contains("CancelDownloadCommand", downloadsSource);
+    }
+
+    [Fact]
+    public void MobileSettings_ReusesDesktopSettingsViewModelContract()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var settingsSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileSettingsView.axaml"));
+        var mainViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml"));
+        var mainViewCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml.cs"));
+        var registrationSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "DependencyInjection",
+            "AndroidServiceCollectionExtensions.cs"));
+
+        Assert.Contains("vm:SettingsViewModel", settingsSource);
+        Assert.Contains("IsDarkTheme", settingsSource);
+        Assert.Contains("AppLanguage", settingsSource);
+        Assert.Contains("AutoPlayNext", settingsSource);
+        Assert.Contains("SaveWatchHistory", settingsSource);
+        Assert.Contains("ClearHistoryOnExit", settingsSource);
+        Assert.Contains("DownloadWifiOnly", settingsSource);
+        Assert.Contains("SelectedDownloadQuality", settingsSource);
+        Assert.Contains("ShowDownloadNotification", settingsSource);
+        Assert.Contains("StatusMessage", settingsSource);
+        Assert.Contains("SaveSettingsCommand", settingsSource);
+        Assert.Contains("ResetToDefaultsCommand", settingsSource);
+        Assert.Contains("ClearHistoryCommand", settingsSource);
+
+        Assert.Contains("Tag=\"Settings\"", mainViewSource);
+        Assert.Contains("MobileSettingsView", mainViewSource);
+        Assert.Contains("MobileSettingsContent.DataContext", mainViewCode);
+        Assert.Contains("SettingsViewModel", mainViewCode);
+        Assert.Contains("destination == \"Settings\"", mainViewCode);
+        Assert.Contains("SelectDestination(\"Settings\")", mainViewCode);
+        Assert.Contains("AddTransient<SettingsViewModel>", registrationSource);
     }
 
     [Fact]

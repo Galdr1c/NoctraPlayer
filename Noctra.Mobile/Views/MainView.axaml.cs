@@ -55,6 +55,11 @@ public partial class MainView : UserControl
                 MobileProfileList.DataContext = app.Services.GetRequiredService<ProfilesViewModel>();
             }
 
+            if (destination == "Settings")
+            {
+                MobileSettingsContent.DataContext = app.Services.GetRequiredService<SettingsViewModel>();
+            }
+
             if (destination is "Live" or "Movies" or "Series" or "Search" or "Favorites" or "MyList" or "History" or "Downloads")
             {
                 _coreMainViewModel ??= app.Services.GetRequiredService<CoreMainViewModel>();
@@ -91,7 +96,7 @@ public partial class MainView : UserControl
 
     private void UpdateContentVisibility(string destination)
     {
-        var showCoreContent = destination is "Live" or "Movies" or "Series" or "Search" or "Favorites" or "MyList" or "History" or "Downloads";
+        var showCoreContent = destination is "Live" or "Movies" or "Series" or "Search" or "Favorites" or "MyList" or "History" or "Downloads" or "Settings";
         ShellContent.IsVisible = !showCoreContent;
         CoreContentHost.IsVisible = showCoreContent;
         MobileLiveContent.IsVisible = destination == "Live";
@@ -102,6 +107,21 @@ public partial class MainView : UserControl
         MobileMyListContent.IsVisible = destination == "MyList";
         MobileHistoryContent.IsVisible = destination == "History";
         MobileDownloadsContent.IsVisible = destination == "Downloads";
+        MobileSettingsContent.IsVisible = destination == "Settings";
+    }
+
+    private void OnSettingsClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MobileMainViewModel viewModel)
+        {
+            viewModel.SelectDestination("Settings");
+            if (Application.Current is App { Services: not null } app)
+            {
+                MobileSettingsContent.DataContext = app.Services.GetRequiredService<SettingsViewModel>();
+            }
+
+            UpdateContentVisibility("Settings");
+        }
     }
 
     private async void CoreMainViewModel_OnMediaSelected(object media)

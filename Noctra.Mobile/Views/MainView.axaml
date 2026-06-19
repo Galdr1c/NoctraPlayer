@@ -82,6 +82,7 @@
         <Button Classes="nav" Tag="MyList" Content="My List" Click="OnDestinationClick" />
         <Button Classes="nav" Tag="History" Content="History" Click="OnDestinationClick" />
         <Button Classes="nav" Tag="Downloads" Content="Downloads" Click="OnDestinationClick" />
+        <Button Classes="nav" Tag="Settings" Content="Settings" Click="OnDestinationClick" />
         <Button Classes="nav" Tag="More" Content="More" Click="OnDestinationClick" />
       </StackPanel>
     </Border>
@@ -109,6 +110,11 @@
 
         <views:ProfileListView x:Name="MobileProfileList"
                                IsVisible="{Binding IsMoreSelected}" />
+
+        <Button Classes="nav"
+                Content="Settings"
+                IsVisible="{Binding IsMoreSelected}"
+                Click="OnSettingsClick" />
 
         <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
           <Border Classes="card">
@@ -144,6 +150,8 @@
                                  IsVisible="False" />
         <views:MobileDownloadsView x:Name="MobileDownloadsContent"
                                    IsVisible="False" />
+        <views:MobileSettingsView x:Name="MobileSettingsContent"
+                                  IsVisible="False" />
       </Grid>
 
       <Border x:Name="SelectedMediaHost"

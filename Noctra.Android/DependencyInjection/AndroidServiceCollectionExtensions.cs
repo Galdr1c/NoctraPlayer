@@ -57,6 +57,7 @@ public static class AndroidServiceCollectionExtensions
         services.AddTransient<WatermarkViewModel>();
         services.AddSingleton<CoreMainViewModel>();
         services.AddSingleton<PlayerViewModel>();
+        services.AddTransient<SettingsViewModel>();
         services.AddSingleton<MobileMainViewModel>();
         services.AddSingleton<ProfilesViewModel>();
         services.AddTransient<AddProfileViewModel>();
