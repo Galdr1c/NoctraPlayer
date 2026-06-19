@@ -667,6 +667,15 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("DownloadedVodChannels", downloadsSource);
         Assert.Contains("DeleteDownloadedMediaCommand", downloadsSource);
         Assert.Contains("ShowDownloadsEmptyState", downloadsSource);
+        Assert.Contains("DownloadTabIndex", downloadsSource);
+        Assert.Contains("ActiveDownloadCount", downloadsSource);
+        Assert.Contains("ActiveDownloadsTotalSpeedText", downloadsSource);
+        Assert.Contains("ActiveDownloadingItems", downloadsSource);
+        Assert.Contains("QueuedDownloadItems", downloadsSource);
+        Assert.Contains("StopAllDownloadsCommand", downloadsSource);
+        Assert.Contains("ClearQueueCommand", downloadsSource);
+        Assert.Contains("TogglePauseDownloadCommand", downloadsSource);
+        Assert.Contains("CancelDownloadCommand", downloadsSource);
     }
 
     [Fact]
