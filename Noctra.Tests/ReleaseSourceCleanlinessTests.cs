@@ -575,6 +575,21 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobileFavoritesView.axaml"));
+        var myListSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileMyListView.axaml"));
+        var historySource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileHistoryView.axaml"));
+        var historyCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileHistoryView.axaml.cs"));
 
         Assert.Contains("CoreContentHost", mainViewSource);
         Assert.Contains("MobileLiveView", mainViewSource);
@@ -582,6 +597,8 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("MobileSeriesView", mainViewSource);
         Assert.Contains("MobileSearchView", mainViewSource);
         Assert.Contains("MobileFavoritesView", mainViewSource);
+        Assert.Contains("MobileMyListView", mainViewSource);
+        Assert.Contains("MobileHistoryView", mainViewSource);
         Assert.Contains("CoreMainViewModel", mainViewCode);
         Assert.Contains("NavigateCommand", mainViewCode);
         Assert.Contains("CoreContentHost.DataContext", mainViewCode);
@@ -623,6 +640,19 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("FavoriteSeriesItems", favoritesSource);
         Assert.Contains("FavoriteVodChannels", favoritesSource);
         Assert.Contains("ShowFavoritesEmptyState", favoritesSource);
+
+        Assert.Contains("vm:MainViewModel", myListSource);
+        Assert.Contains("MyListLiveChannels", myListSource);
+        Assert.Contains("MyListSeriesItems", myListSource);
+        Assert.Contains("MyListVodChannels", myListSource);
+        Assert.Contains("ShowMyListEmptyState", myListSource);
+
+        Assert.Contains("vm:MainViewModel", historySource);
+        Assert.Contains("HistoryLiveChannels", historySource);
+        Assert.Contains("HistorySeriesItems", historySource);
+        Assert.Contains("HistoryVodChannels", historySource);
+        Assert.Contains("ShowHistoryEmptyState", historySource);
+        Assert.Contains("LoadMoreHistoryIfNeededAsync", historyCode);
     }
 
     [Fact]
@@ -664,7 +694,7 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
-    public void MobileSearchAndFavoritesNavigation_ReusesDesktopAppViews()
+    public void MobilePersonalViewsNavigation_ReusesDesktopAppViews()
     {
         var repositoryRoot = FindRepositoryRoot();
         var mainViewSource = File.ReadAllText(Path.Combine(
@@ -680,11 +710,17 @@ public sealed class ReleaseSourceCleanlinessTests
 
         Assert.Contains("Tag=\"Search\"", mainViewSource);
         Assert.Contains("Tag=\"Favorites\"", mainViewSource);
+        Assert.Contains("Tag=\"MyList\"", mainViewSource);
+        Assert.Contains("Tag=\"History\"", mainViewSource);
         Assert.Contains("MobileSearchContent.DataContext", mainViewCode);
         Assert.Contains("MobileFavoritesContent.DataContext", mainViewCode);
+        Assert.Contains("MobileMyListContent.DataContext", mainViewCode);
+        Assert.Contains("MobileHistoryContent.DataContext", mainViewCode);
         Assert.Contains("\"Search\" => AppView.Search", mainViewCode);
         Assert.Contains("\"Favorites\" => AppView.Favorites", mainViewCode);
-        Assert.Contains("destination is \"Live\" or \"Movies\" or \"Series\" or \"Search\" or \"Favorites\"", mainViewCode);
+        Assert.Contains("\"MyList\" => AppView.MyList", mainViewCode);
+        Assert.Contains("\"History\" => AppView.History", mainViewCode);
+        Assert.Contains("destination is \"Live\" or \"Movies\" or \"Series\" or \"Search\" or \"Favorites\" or \"MyList\" or \"History\"", mainViewCode);
     }
 
     [Fact]
