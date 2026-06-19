@@ -200,7 +200,7 @@
         </StackPanel>
       </Border>
 
-      <Grid ColumnDefinitions="*,*"
+      <Grid ColumnDefinitions="*,*,*"
             ColumnSpacing="8">
         <Button Content="Download"
                 Command="{Binding DownloadCurrentContentCommand}"
@@ -212,12 +212,149 @@
                 Command="{Binding OpenInfoPanelCommand}"
                 IsVisible="{Binding CanShowInfoButton}"
                 MinHeight="40" />
+        <Button Grid.Column="2"
+                Content="Audio"
+                Command="{Binding OpenAudioSettingsCommand}"
+                MinHeight="40" />
       </Grid>
 
       <TextBlock Text="{Binding DownloadStatusMessage}"
                  Foreground="#AEB5C5"
                  FontSize="12"
                  TextWrapping="Wrap" />
+
+      <Border Background="#1FFFFFFF"
+              CornerRadius="14"
+              Padding="12"
+              IsVisible="{Binding IsAudioSettingsOpen}">
+        <StackPanel Spacing="12">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="Audio &amp; Subtitles"
+                       Foreground="#FFFFFF"
+                       FontSize="14"
+                       FontWeight="SemiBold" />
+            <Button Grid.Column="1"
+                    Content="Close"
+                    Command="{Binding ClosePanelsCommand}"
+                    MinHeight="36"
+                    Margin="10,0,0,0" />
+          </Grid>
+
+          <StackPanel Spacing="8"
+                      IsVisible="{Binding !IsLiveContent}">
+            <TextBlock Text="Subtitle Size"
+                       Foreground="#8090A0"
+                       FontSize="10"
+                       FontWeight="Bold" />
+            <Grid ColumnDefinitions="*,*,*"
+                  ColumnSpacing="8">
+              <Button Content="Small"
+                      Command="{Binding SetSubtitleSizeCommand}"
+                      CommandParameter="28"
+                      MinHeight="40" />
+              <Button Grid.Column="1"
+                      Content="Normal"
+                      Command="{Binding SetSubtitleSizeCommand}"
+                      CommandParameter="40"
+                      MinHeight="40" />
+              <Button Grid.Column="2"
+                      Content="Large"
+                      Command="{Binding SetSubtitleSizeCommand}"
+                      CommandParameter="60"
+                      MinHeight="40" />
+            </Grid>
+          </StackPanel>
+
+          <StackPanel Spacing="8"
+                      IsVisible="{Binding !IsLiveContent}">
+            <TextBlock Text="Subtitle Background"
+                       Foreground="#8090A0"
+                       FontSize="10"
+                       FontWeight="Bold" />
+            <Grid ColumnDefinitions="*,*,*"
+                  ColumnSpacing="8">
+              <Button Content="Off"
+                      Command="{Binding SetSubtitleBackgroundCommand}"
+                      CommandParameter="0"
+                      MinHeight="40" />
+              <Button Grid.Column="1"
+                      Content="Semi"
+                      Command="{Binding SetSubtitleBackgroundCommand}"
+                      CommandParameter="128"
+                      MinHeight="40" />
+              <Button Grid.Column="2"
+                      Content="Black"
+                      Command="{Binding SetSubtitleBackgroundCommand}"
+                      CommandParameter="255"
+                      MinHeight="40" />
+            </Grid>
+          </StackPanel>
+
+          <StackPanel Spacing="8"
+                      IsVisible="{Binding !IsLiveContent}">
+            <TextBlock Text="Subtitle Position"
+                       Foreground="#8090A0"
+                       FontSize="10"
+                       FontWeight="Bold" />
+            <Grid ColumnDefinitions="*,*"
+                  ColumnSpacing="8">
+              <Button Content="Bottom"
+                      Command="{Binding SetSubtitlePositionCommand}"
+                      CommandParameter="40"
+                      MinHeight="40" />
+              <Button Grid.Column="1"
+                      Content="Top"
+                      Command="{Binding SetSubtitlePositionCommand}"
+                      CommandParameter="900"
+                      MinHeight="40" />
+            </Grid>
+          </StackPanel>
+
+          <ScrollViewer MaxHeight="220"
+                        HorizontalScrollBarVisibility="Disabled"
+                        VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="12">
+              <StackPanel Spacing="8">
+                <TextBlock Text="Audio"
+                           Foreground="#8090A0"
+                           FontSize="10"
+                           FontWeight="Bold" />
+                <ItemsControl ItemsSource="{Binding AudioTracks}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Button Content="{Binding Name}"
+                              Command="{Binding #PlayerRoot.DataContext.SetAudioTrackCommand}"
+                              CommandParameter="{Binding Id}"
+                              MinHeight="40"
+                              Margin="0,0,0,8"
+                              HorizontalContentAlignment="Stretch" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+
+              <StackPanel Spacing="8">
+                <TextBlock Text="Subtitles"
+                           Foreground="#8090A0"
+                           FontSize="10"
+                           FontWeight="Bold" />
+                <ItemsControl ItemsSource="{Binding SubtitleTracks}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Button Content="{Binding Name}"
+                              Command="{Binding #PlayerRoot.DataContext.SetSubtitleTrackCommand}"
+                              CommandParameter="{Binding Id}"
+                              MinHeight="40"
+                              Margin="0,0,0,8"
+                              HorizontalContentAlignment="Stretch" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+        </StackPanel>
+      </Border>
 
       <Border Background="#1FFFFFFF"
               CornerRadius="14"

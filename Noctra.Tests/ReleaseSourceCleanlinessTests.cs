@@ -831,6 +831,27 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobilePlayerAudioAndSubtitleSettings_ReusesDesktopPlayerContract()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var playerViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml"));
+
+        Assert.Contains("OpenAudioSettingsCommand", playerViewSource);
+        Assert.Contains("IsAudioSettingsOpen", playerViewSource);
+        Assert.Contains("SetSubtitleSizeCommand", playerViewSource);
+        Assert.Contains("SetSubtitleBackgroundCommand", playerViewSource);
+        Assert.Contains("SetSubtitlePositionCommand", playerViewSource);
+        Assert.Contains("AudioTracks", playerViewSource);
+        Assert.Contains("SetAudioTrackCommand", playerViewSource);
+        Assert.Contains("SubtitleTracks", playerViewSource);
+        Assert.Contains("SetSubtitleTrackCommand", playerViewSource);
+    }
+
+    [Fact]
     public void MobilePlayerQualityPanel_ReusesDesktopQualityContract()
     {
         var repositoryRoot = FindRepositoryRoot();
