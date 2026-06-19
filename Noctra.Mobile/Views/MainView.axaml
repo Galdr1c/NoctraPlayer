@@ -34,7 +34,8 @@
   </UserControl.Styles>
 
   <Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="Auto,*">
-    <Border Grid.Row="0"
+    <Border x:Name="HeaderBar"
+            Grid.Row="0"
             Grid.ColumnSpan="2"
             Padding="20,18,20,14"
             Background="#0E1118">

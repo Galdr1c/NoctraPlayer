@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -17,6 +18,7 @@ public partial class MainView : UserControl
     private const double TabletBreakpoint = 720;
     private CoreMainViewModel? _coreMainViewModel;
     private PlayerViewModel? _playerViewModel;
+    private bool _isPlayerFullScreen;
 
     public MainView()
     {
@@ -32,8 +34,8 @@ public partial class MainView : UserControl
     private void UpdateNavigationMode(double width)
     {
         var useNavigationRail = width >= TabletBreakpoint;
-        NavigationRail.IsVisible = useNavigationRail;
-        BottomNavigation.IsVisible = !useNavigationRail;
+        NavigationRail.IsVisible = useNavigationRail && !_isPlayerFullScreen;
+        BottomNavigation.IsVisible = !useNavigationRail && !_isPlayerFullScreen;
     }
 
     private void OnDestinationClick(object? sender, RoutedEventArgs e)
@@ -133,6 +135,18 @@ public partial class MainView : UserControl
         _playerViewModel.NextEpisodeRequested += PlayerViewModel_NextEpisodeRequested;
         _playerViewModel.EpisodeRequested -= PlayerViewModel_EpisodeRequested;
         _playerViewModel.EpisodeRequested += PlayerViewModel_EpisodeRequested;
+        _playerViewModel.PiPRequested -= PlayerViewModel_PiPRequested;
+        _playerViewModel.PiPRequested += PlayerViewModel_PiPRequested;
+        _playerViewModel.PropertyChanged -= PlayerViewModel_PropertyChanged;
+        _playerViewModel.PropertyChanged += PlayerViewModel_PropertyChanged;
+
+        var pictureInPictureService = app.Services.GetService<IPictureInPictureService>();
+        if (pictureInPictureService is not null)
+        {
+            pictureInPictureService.PictureInPictureModeChanged -= PictureInPictureService_ModeChanged;
+            pictureInPictureService.PictureInPictureModeChanged += PictureInPictureService_ModeChanged;
+        }
+
         var coreViewModel = _coreMainViewModel;
         _playerViewModel.CurrentProfileId = coreViewModel?.CurrentProfileId;
 
@@ -155,12 +169,21 @@ public partial class MainView : UserControl
 
         MobilePlayerContent.DataContext = _playerViewModel;
         PlayerHost.IsVisible = true;
+        UpdatePlayerChromeState();
         await _playerViewModel.PlayChannelAsync(channel);
     }
 
     private void PlayerViewModel_CloseRequested(object? sender, EventArgs e)
     {
+        if (_playerViewModel is not null)
+        {
+            _playerViewModel.IsFullScreen = false;
+            _playerViewModel.IsLocked = false;
+            _playerViewModel.IsPiPMode = false;
+        }
+
         PlayerHost.IsVisible = false;
+        UpdatePlayerChromeState();
         if (Application.Current is App app && app.Services is not null)
         {
             app.Services.GetService<IVideoSurfaceService>()?.Hide();
@@ -185,5 +208,51 @@ public partial class MainView : UserControl
     private void PlayerViewModel_EpisodeRequested(object? sender, Episode episode)
     {
         _coreMainViewModel?.PlayEpisodeCommand.Execute(episode);
+    }
+
+    private async void PlayerViewModel_PiPRequested(object? sender, EventArgs e)
+    {
+        if (Application.Current is not App app || app.Services is null)
+        {
+            return;
+        }
+
+        var pictureInPictureService = app.Services.GetService<IPictureInPictureService>();
+        if (pictureInPictureService is null)
+        {
+            return;
+        }
+
+        var entered = await pictureInPictureService.EnterPictureInPictureAsync();
+        if (_playerViewModel is not null)
+        {
+            _playerViewModel.IsPiPMode = entered;
+        }
+    }
+
+    private void PictureInPictureService_ModeChanged(
+        object? sender,
+        PictureInPictureModeChangedEventArgs e)
+    {
+        if (_playerViewModel is not null)
+        {
+            _playerViewModel.IsPiPMode = e.IsInPictureInPictureMode;
+        }
+    }
+
+    private void PlayerViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PlayerViewModel.IsFullScreen))
+        {
+            UpdatePlayerChromeState();
+        }
+    }
+
+    private void UpdatePlayerChromeState()
+    {
+        _isPlayerFullScreen = PlayerHost.IsVisible && _playerViewModel?.IsFullScreen == true;
+        HeaderBar.IsVisible = !_isPlayerFullScreen;
+        SelectedMediaHost.IsVisible = !_isPlayerFullScreen && SelectedMediaHost.IsVisible;
+        UpdateNavigationMode(Bounds.Width);
     }
 }

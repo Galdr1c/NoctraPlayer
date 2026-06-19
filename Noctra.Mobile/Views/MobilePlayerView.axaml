@@ -36,6 +36,21 @@
                 Margin="12,0,0,0" />
       </Grid>
 
+      <Grid ColumnDefinitions="*,*,*"
+            ColumnSpacing="8">
+        <Button Content="{Binding IsLocked, StringFormat='Lock: {0}'}"
+                Command="{Binding ToggleLockCommand}"
+                MinHeight="40" />
+        <Button Grid.Column="1"
+                Content="{Binding IsFullScreen, StringFormat='Fullscreen: {0}'}"
+                Command="{Binding ToggleFullScreenCommand}"
+                MinHeight="40" />
+        <Button Grid.Column="2"
+                Content="PiP"
+                Command="{Binding EnterPiPCommand}"
+                MinHeight="40" />
+      </Grid>
+
       <TextBlock Text="{Binding ErrorMessage}"
                  Foreground="#FF6B6B"
                  TextWrapping="Wrap" />

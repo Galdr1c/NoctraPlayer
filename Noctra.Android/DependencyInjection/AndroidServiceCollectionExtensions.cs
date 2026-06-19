@@ -43,6 +43,9 @@ public static class AndroidServiceCollectionExtensions
         services.AddSingleton<AndroidVideoSurfaceService>();
         services.AddSingleton<IVideoSurfaceService>(serviceProvider =>
             serviceProvider.GetRequiredService<AndroidVideoSurfaceService>());
+        services.AddSingleton<AndroidPictureInPictureService>();
+        services.AddSingleton<IPictureInPictureService>(serviceProvider =>
+            serviceProvider.GetRequiredService<AndroidPictureInPictureService>());
         services.AddSingleton<IVideoPlayerService, AndroidVideoPlayerService>();
         services.AddSingleton<ILicenseService>(serviceProvider =>
             new LicenseService(

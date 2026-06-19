@@ -890,6 +890,78 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobilePlayerWindowControls_ReusesDesktopPlayerContract()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var playerViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml"));
+        var mainViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml"));
+        var mainViewCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml.cs"));
+
+        Assert.Contains("ToggleLockCommand", playerViewSource);
+        Assert.Contains("ToggleFullScreenCommand", playerViewSource);
+        Assert.Contains("EnterPiPCommand", playerViewSource);
+        Assert.Contains("IsLocked", playerViewSource);
+        Assert.Contains("IsFullScreen", playerViewSource);
+
+        Assert.Contains("x:Name=\"HeaderBar\"", mainViewSource);
+        Assert.Contains("PlayerViewModel_PropertyChanged", mainViewCode);
+        Assert.Contains("UpdatePlayerChromeState", mainViewCode);
+        Assert.Contains("nameof(PlayerViewModel.IsFullScreen)", mainViewCode);
+        Assert.Contains("PiPRequested", mainViewCode);
+        Assert.Contains("IPictureInPictureService", mainViewCode);
+    }
+
+    [Fact]
+    public void AndroidPictureInPicture_ReusesPlayerPiPEventBridge()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var pipInterface = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Core",
+            "Services",
+            "Interfaces",
+            "IPictureInPictureService.cs"));
+        var pipService = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "Services",
+            "AndroidPictureInPictureService.cs"));
+        var activitySource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "MainActivity.cs"));
+        var registrationSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "DependencyInjection",
+            "AndroidServiceCollectionExtensions.cs"));
+
+        Assert.Contains("interface IPictureInPictureService", pipInterface);
+        Assert.Contains("EnterPictureInPictureAsync", pipInterface);
+        Assert.Contains("PictureInPictureModeChanged", pipInterface);
+
+        Assert.Contains("PictureInPictureParams", pipService);
+        Assert.Contains("EnterPictureInPictureMode", pipService);
+        Assert.Contains("Rational(16, 9)", pipService);
+        Assert.Contains("OnPictureInPictureModeChanged", activitySource);
+        Assert.Contains("SupportsPictureInPicture = true", activitySource);
+        Assert.Contains("AndroidPictureInPictureService", registrationSource);
+        Assert.Contains("AddSingleton<IPictureInPictureService>", registrationSource);
+    }
+
+    [Fact]
     public void AndroidPlaybackSpeed_ReappliesRateWhenPlaybackStartsAndResumes()
     {
         var repositoryRoot = FindRepositoryRoot();

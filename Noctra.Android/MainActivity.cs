@@ -2,6 +2,7 @@ using System;
 using Android.App;
 using Android.Content;
 using Android.Content.PM;
+using Android.Content.Res;
 using Android.OS;
 using Avalonia.Android;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,7 +16,8 @@ namespace Noctra.Android;
     Theme = "@style/MyTheme.NoActionBar",
     Icon = "@drawable/icon",
     MainLauncher = true,
-    ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
+    SupportsPictureInPicture = true,
+    ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.SmallestScreenSize | ConfigChanges.UiMode)]
 public class MainActivity : AvaloniaMainActivity
 {
     protected override void OnCreate(Bundle? savedInstanceState)
@@ -43,6 +45,20 @@ public class MainActivity : AvaloniaMainActivity
         }
 
         base.OnActivityResult(requestCode, resultCode, data);
+    }
+
+    public override void OnPictureInPictureModeChanged(
+        bool isInPictureInPictureMode,
+        Configuration? newConfig)
+    {
+        base.OnPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
+
+        if (Avalonia.Application.Current is Noctra.Mobile.App app)
+        {
+            app.Services?
+                .GetService<AndroidPictureInPictureService>()?
+                .NotifyPictureInPictureModeChanged(isInPictureInPictureMode);
+        }
     }
 
     protected override void OnDestroy()
