@@ -154,6 +154,117 @@
       <Border Background="#151923"
               CornerRadius="16"
               Padding="14">
+        <StackPanel Spacing="12">
+          <TextBlock Text="Channels"
+                     Foreground="#FFFFFF"
+                     FontWeight="SemiBold" />
+          <Button Content="Refresh channels now"
+                  Command="{Binding RefreshChannelListNowCommand}"
+                  MinHeight="44" />
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="Total channels"
+                       Foreground="#AEB5C5"
+                       FontSize="12" />
+            <TextBlock Grid.Column="1"
+                       Text="{Binding TotalChannels}"
+                       Foreground="#FFFFFF"
+                       FontWeight="SemiBold" />
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="Last update"
+                       Foreground="#AEB5C5"
+                       FontSize="12" />
+            <TextBlock Grid.Column="1"
+                       Text="{Binding ChannelListLastUpdated}"
+                       Foreground="#FFFFFF"
+                       FontSize="12" />
+          </Grid>
+          <TextBlock Text="{Binding ChannelListLastError}"
+                     Foreground="#FF6B6B"
+                     TextWrapping="Wrap" />
+          <TextBlock Text="Refresh frequency"
+                     Foreground="#AEB5C5"
+                     FontSize="12" />
+          <ComboBox SelectedIndex="{Binding ChannelListRefreshFrequencyIndex, Mode=TwoWay}"
+                    MinHeight="44">
+            <ComboBoxItem Content="Off" />
+            <ComboBoxItem Content="1 hour" />
+            <ComboBoxItem Content="3 hours" />
+            <ComboBoxItem Content="12 hours" />
+            <ComboBoxItem Content="24 hours" />
+            <ComboBoxItem Content="2 days" />
+            <ComboBoxItem Content="3 days" />
+            <ComboBoxItem Content="7 days" />
+          </ComboBox>
+        </StackPanel>
+      </Border>
+
+      <Border Background="#151923"
+              CornerRadius="16"
+              Padding="14">
+        <StackPanel Spacing="12">
+          <TextBlock Text="EPG"
+                     Foreground="#FFFFFF"
+                     FontWeight="SemiBold" />
+          <CheckBox Content="Enable EPG"
+                    IsChecked="{Binding EpgEnabled}" />
+          <Button Content="Refresh EPG now"
+                  Command="{Binding RefreshEpgNowCommand}"
+                  MinHeight="44" />
+          <TextBlock Text="{Binding EpgLastError}"
+                     Foreground="#FF6B6B"
+                     TextWrapping="Wrap" />
+          <TextBlock Text="EPG refresh frequency"
+                     Foreground="#AEB5C5"
+                     FontSize="12" />
+          <ComboBox SelectedIndex="{Binding EpgRefreshFrequencyIndex, Mode=TwoWay}"
+                    MinHeight="44">
+            <ComboBoxItem Content="Off" />
+            <ComboBoxItem Content="1 hour" />
+            <ComboBoxItem Content="3 hours" />
+            <ComboBoxItem Content="12 hours" />
+            <ComboBoxItem Content="24 hours" />
+            <ComboBoxItem Content="2 days" />
+            <ComboBoxItem Content="3 days" />
+            <ComboBoxItem Content="7 days" />
+          </ComboBox>
+          <TextBlock Text="EPG time offset"
+                     Foreground="#AEB5C5"
+                     FontSize="12" />
+          <ComboBox SelectedIndex="{Binding EpgTimeOffsetIndex, Mode=TwoWay}"
+                    MinHeight="44">
+            <ComboBoxItem Content="-12" />
+            <ComboBoxItem Content="-11" />
+            <ComboBoxItem Content="-10" />
+            <ComboBoxItem Content="-9" />
+            <ComboBoxItem Content="-8" />
+            <ComboBoxItem Content="-7" />
+            <ComboBoxItem Content="-6" />
+            <ComboBoxItem Content="-5" />
+            <ComboBoxItem Content="-4" />
+            <ComboBoxItem Content="-3" />
+            <ComboBoxItem Content="-2" />
+            <ComboBoxItem Content="-1" />
+            <ComboBoxItem Content="0" />
+            <ComboBoxItem Content="+1" />
+            <ComboBoxItem Content="+2" />
+            <ComboBoxItem Content="+3" />
+            <ComboBoxItem Content="+4" />
+            <ComboBoxItem Content="+5" />
+            <ComboBoxItem Content="+6" />
+            <ComboBoxItem Content="+7" />
+            <ComboBoxItem Content="+8" />
+            <ComboBoxItem Content="+9" />
+            <ComboBoxItem Content="+10" />
+            <ComboBoxItem Content="+11" />
+            <ComboBoxItem Content="+12" />
+          </ComboBox>
+        </StackPanel>
+      </Border>
+
+      <Border Background="#151923"
+              CornerRadius="16"
+              Padding="14">
         <StackPanel Spacing="10">
           <TextBlock Text="Privacy"
                      Foreground="#FFFFFF"

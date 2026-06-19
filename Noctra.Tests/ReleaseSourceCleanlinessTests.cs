@@ -721,6 +721,16 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("DownloadWifiOnly", settingsSource);
         Assert.Contains("SelectedDownloadQuality", settingsSource);
         Assert.Contains("ShowDownloadNotification", settingsSource);
+        Assert.Contains("RefreshChannelListNowCommand", settingsSource);
+        Assert.Contains("TotalChannels", settingsSource);
+        Assert.Contains("ChannelListLastUpdated", settingsSource);
+        Assert.Contains("ChannelListLastError", settingsSource);
+        Assert.Contains("ChannelListRefreshFrequencyIndex", settingsSource);
+        Assert.Contains("EpgEnabled", settingsSource);
+        Assert.Contains("RefreshEpgNowCommand", settingsSource);
+        Assert.Contains("EpgRefreshFrequencyIndex", settingsSource);
+        Assert.Contains("EpgTimeOffsetIndex", settingsSource);
+        Assert.Contains("EpgLastError", settingsSource);
         Assert.Contains("StatusMessage", settingsSource);
         Assert.Contains("SaveSettingsCommand", settingsSource);
         Assert.Contains("ResetToDefaultsCommand", settingsSource);
