@@ -816,6 +816,32 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void AndroidPlaybackSpeed_ReappliesRateWhenPlaybackStartsAndResumes()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var androidVideoService = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "Services",
+            "AndroidVideoPlayerService.cs"));
+
+        Assert.Contains("ApplyPlaybackRate", androidVideoService);
+        Assert.Contains("ApplyPlaybackRate();", androidVideoService);
+        Assert.Contains("player.Start();", androidVideoService);
+        Assert.Contains("Resume()", androidVideoService);
+        Assert.Contains("PlaybackParams", androidVideoService);
+        Assert.Contains("SetSpeed(_playbackRate)", androidVideoService);
+
+        var startIndex = androidVideoService.IndexOf("player.Start();", StringComparison.Ordinal);
+        var preparedApplyIndex = androidVideoService.IndexOf("ApplyPlaybackRate();", startIndex, StringComparison.Ordinal);
+        Assert.True(preparedApplyIndex > startIndex);
+
+        var resumeIndex = androidVideoService.IndexOf("public void Resume()", StringComparison.Ordinal);
+        var resumeApplyIndex = androidVideoService.IndexOf("ApplyPlaybackRate();", resumeIndex, StringComparison.Ordinal);
+        Assert.True(resumeApplyIndex > resumeIndex);
+    }
+
+    [Fact]
     public void AndroidPlaybackSurface_BindsMediaPlayerToNativeSurfaceView()
     {
         var repositoryRoot = FindRepositoryRoot();

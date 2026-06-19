@@ -97,21 +97,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         set
         {
             _playbackRate = value <= 0 ? 1f : value;
-            try
-            {
-                if (_mediaPlayer is not null)
-                {
-                    var playbackParams = _mediaPlayer.PlaybackParams?.SetSpeed(_playbackRate);
-                    if (playbackParams is not null)
-                    {
-                        _mediaPlayer.PlaybackParams = playbackParams;
-                    }
-                }
-            }
-            catch
-            {
-                // Android versions/devices may reject speed changes for a source.
-            }
+            ApplyPlaybackRate();
         }
     }
 
@@ -141,6 +127,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
                 ApplyVolume();
                 player.Start();
+                ApplyPlaybackRate();
                 _state = PlaybackState.Playing;
                 PlayingChanged?.Invoke(this, true);
                 BufferingChanged?.Invoke(this, 100);
@@ -217,6 +204,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         if (_mediaPlayer is not null && _hasLoadedMedia)
         {
             _mediaPlayer.Start();
+            ApplyPlaybackRate();
             _state = PlaybackState.Playing;
             PlayingChanged?.Invoke(this, true);
         }
@@ -288,6 +276,27 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
         var level = _isMuted ? 0f : _volume / 100f;
         _mediaPlayer.SetVolume(level, level);
+    }
+
+    private void ApplyPlaybackRate()
+    {
+        if (_mediaPlayer is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var playbackParams = _mediaPlayer.PlaybackParams?.SetSpeed(_playbackRate);
+            if (playbackParams is not null)
+            {
+                _mediaPlayer.PlaybackParams = playbackParams;
+            }
+        }
+        catch
+        {
+            // Android versions/devices may reject speed changes for a source.
+        }
     }
 
     private void ThrowIfDisposed()
