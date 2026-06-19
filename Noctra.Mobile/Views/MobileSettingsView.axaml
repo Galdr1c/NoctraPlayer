@@ -278,6 +278,87 @@
             <ComboBoxItem Content="3 days" />
             <ComboBoxItem Content="7 days" />
           </ComboBox>
+
+          <TextBlock Text="Hidden live groups"
+                     Foreground="#AEB5C5"
+                     FontSize="12" />
+          <ItemsControl ItemsSource="{Binding HiddenLiveGroups}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Background="#202638"
+                        CornerRadius="10"
+                        Padding="10"
+                        Margin="0,0,0,6">
+                  <Grid ColumnDefinitions="*,Auto"
+                        ColumnSpacing="8">
+                    <TextBlock Text="{Binding}"
+                               Foreground="#FFFFFF"
+                               TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center" />
+                    <Button Grid.Column="1"
+                            Content="Show"
+                            Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
+                            CommandParameter="{Binding}"
+                            MinHeight="34" />
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <TextBlock Text="Hidden movie groups"
+                     Foreground="#AEB5C5"
+                     FontSize="12" />
+          <ItemsControl ItemsSource="{Binding HiddenMovieGroups}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Background="#202638"
+                        CornerRadius="10"
+                        Padding="10"
+                        Margin="0,0,0,6">
+                  <Grid ColumnDefinitions="*,Auto"
+                        ColumnSpacing="8">
+                    <TextBlock Text="{Binding}"
+                               Foreground="#FFFFFF"
+                               TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center" />
+                    <Button Grid.Column="1"
+                            Content="Show"
+                            Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
+                            CommandParameter="{Binding}"
+                            MinHeight="34" />
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <TextBlock Text="Hidden series groups"
+                     Foreground="#AEB5C5"
+                     FontSize="12" />
+          <ItemsControl ItemsSource="{Binding HiddenSeriesGroups}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Background="#202638"
+                        CornerRadius="10"
+                        Padding="10"
+                        Margin="0,0,0,6">
+                  <Grid ColumnDefinitions="*,Auto"
+                        ColumnSpacing="8">
+                    <TextBlock Text="{Binding}"
+                               Foreground="#FFFFFF"
+                               TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center" />
+                    <Button Grid.Column="1"
+                            Content="Show"
+                            Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
+                            CommandParameter="{Binding}"
+                            MinHeight="34" />
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
         </StackPanel>
       </Border>
 
@@ -351,6 +432,17 @@
           <TextBlock Text="Privacy"
                      Foreground="#FFFFFF"
                      FontWeight="SemiBold" />
+          <TextBlock Text="Watch history retention"
+                     Foreground="#AEB5C5"
+                     FontSize="12" />
+          <ComboBox SelectedIndex="{Binding WatchHistoryRetentionIndex}"
+                    MinHeight="44">
+            <ComboBoxItem Content="Forever" />
+            <ComboBoxItem Content="3 days" />
+            <ComboBoxItem Content="7 days" />
+            <ComboBoxItem Content="14 days" />
+            <ComboBoxItem Content="30 days" />
+          </ComboBox>
           <Button Content="Clear watch history"
                   Command="{Binding ClearHistoryCommand}"
                   MinHeight="44" />
