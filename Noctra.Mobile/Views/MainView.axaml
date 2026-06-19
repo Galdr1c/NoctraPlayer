@@ -81,6 +81,7 @@
         <Button Classes="nav" Tag="Favorites" Content="Favorites" Click="OnDestinationClick" />
         <Button Classes="nav" Tag="MyList" Content="My List" Click="OnDestinationClick" />
         <Button Classes="nav" Tag="History" Content="History" Click="OnDestinationClick" />
+        <Button Classes="nav" Tag="Downloads" Content="Downloads" Click="OnDestinationClick" />
         <Button Classes="nav" Tag="More" Content="More" Click="OnDestinationClick" />
       </StackPanel>
     </Border>
@@ -141,6 +142,8 @@
                                 IsVisible="False" />
         <views:MobileHistoryView x:Name="MobileHistoryContent"
                                  IsVisible="False" />
+        <views:MobileDownloadsView x:Name="MobileDownloadsContent"
+                                   IsVisible="False" />
       </Grid>
 
       <Border x:Name="SelectedMediaHost"

@@ -590,6 +590,11 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobileHistoryView.axaml.cs"));
+        var downloadsSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileDownloadsView.axaml"));
 
         Assert.Contains("CoreContentHost", mainViewSource);
         Assert.Contains("MobileLiveView", mainViewSource);
@@ -599,6 +604,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("MobileFavoritesView", mainViewSource);
         Assert.Contains("MobileMyListView", mainViewSource);
         Assert.Contains("MobileHistoryView", mainViewSource);
+        Assert.Contains("MobileDownloadsView", mainViewSource);
         Assert.Contains("CoreMainViewModel", mainViewCode);
         Assert.Contains("NavigateCommand", mainViewCode);
         Assert.Contains("CoreContentHost.DataContext", mainViewCode);
@@ -653,6 +659,14 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("HistoryVodChannels", historySource);
         Assert.Contains("ShowHistoryEmptyState", historySource);
         Assert.Contains("LoadMoreHistoryIfNeededAsync", historyCode);
+
+        Assert.Contains("vm:MainViewModel", downloadsSource);
+        Assert.Contains("TotalDownloadsInfoText", downloadsSource);
+        Assert.Contains("SelectedDownloadSortOrder", downloadsSource);
+        Assert.Contains("DownloadedSeriesItems", downloadsSource);
+        Assert.Contains("DownloadedVodChannels", downloadsSource);
+        Assert.Contains("DeleteDownloadedMediaCommand", downloadsSource);
+        Assert.Contains("ShowDownloadsEmptyState", downloadsSource);
     }
 
     [Fact]
@@ -712,15 +726,18 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("Tag=\"Favorites\"", mainViewSource);
         Assert.Contains("Tag=\"MyList\"", mainViewSource);
         Assert.Contains("Tag=\"History\"", mainViewSource);
+        Assert.Contains("Tag=\"Downloads\"", mainViewSource);
         Assert.Contains("MobileSearchContent.DataContext", mainViewCode);
         Assert.Contains("MobileFavoritesContent.DataContext", mainViewCode);
         Assert.Contains("MobileMyListContent.DataContext", mainViewCode);
         Assert.Contains("MobileHistoryContent.DataContext", mainViewCode);
+        Assert.Contains("MobileDownloadsContent.DataContext", mainViewCode);
         Assert.Contains("\"Search\" => AppView.Search", mainViewCode);
         Assert.Contains("\"Favorites\" => AppView.Favorites", mainViewCode);
         Assert.Contains("\"MyList\" => AppView.MyList", mainViewCode);
         Assert.Contains("\"History\" => AppView.History", mainViewCode);
-        Assert.Contains("destination is \"Live\" or \"Movies\" or \"Series\" or \"Search\" or \"Favorites\" or \"MyList\" or \"History\"", mainViewCode);
+        Assert.Contains("\"Downloads\" => AppView.Downloads", mainViewCode);
+        Assert.Contains("destination is \"Live\" or \"Movies\" or \"Series\" or \"Search\" or \"Favorites\" or \"MyList\" or \"History\" or \"Downloads\"", mainViewCode);
     }
 
     [Fact]

@@ -32,6 +32,7 @@ public partial class MainViewModel : ViewModelBase
             "Favorites" => ("Favorites", "Your saved live channels, movies and series."),
             "MyList" => ("My List", "Everything you saved for later."),
             "History" => ("History", "Continue from recently watched content."),
+            "Downloads" => ("Downloads", "Watch saved movies and series offline."),
             "More" => ("More", "Profiles, favorites, settings and premium features."),
             _ => ("Home", "Your channels, movies and series in one place.")
         };

@@ -55,7 +55,7 @@ public partial class MainView : UserControl
                 MobileProfileList.DataContext = app.Services.GetRequiredService<ProfilesViewModel>();
             }
 
-            if (destination is "Live" or "Movies" or "Series" or "Search" or "Favorites" or "MyList" or "History")
+            if (destination is "Live" or "Movies" or "Series" or "Search" or "Favorites" or "MyList" or "History" or "Downloads")
             {
                 _coreMainViewModel ??= app.Services.GetRequiredService<CoreMainViewModel>();
                 _coreMainViewModel.OnMediaSelected -= CoreMainViewModel_OnMediaSelected;
@@ -68,6 +68,7 @@ public partial class MainView : UserControl
                 MobileFavoritesContent.DataContext = _coreMainViewModel;
                 MobileMyListContent.DataContext = _coreMainViewModel;
                 MobileHistoryContent.DataContext = _coreMainViewModel;
+                MobileDownloadsContent.DataContext = _coreMainViewModel;
 
                 var targetView = destination switch
                 {
@@ -78,6 +79,7 @@ public partial class MainView : UserControl
                     "Favorites" => AppView.Favorites,
                     "MyList" => AppView.MyList,
                     "History" => AppView.History,
+                    "Downloads" => AppView.Downloads,
                     _ => AppView.Home
                 };
                 _coreMainViewModel.NavigateCommand.Execute(targetView);
@@ -89,7 +91,7 @@ public partial class MainView : UserControl
 
     private void UpdateContentVisibility(string destination)
     {
-        var showCoreContent = destination is "Live" or "Movies" or "Series" or "Search" or "Favorites" or "MyList" or "History";
+        var showCoreContent = destination is "Live" or "Movies" or "Series" or "Search" or "Favorites" or "MyList" or "History" or "Downloads";
         ShellContent.IsVisible = !showCoreContent;
         CoreContentHost.IsVisible = showCoreContent;
         MobileLiveContent.IsVisible = destination == "Live";
@@ -99,6 +101,7 @@ public partial class MainView : UserControl
         MobileFavoritesContent.IsVisible = destination == "Favorites";
         MobileMyListContent.IsVisible = destination == "MyList";
         MobileHistoryContent.IsVisible = destination == "History";
+        MobileDownloadsContent.IsVisible = destination == "Downloads";
     }
 
     private async void CoreMainViewModel_OnMediaSelected(object media)
