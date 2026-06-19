@@ -705,6 +705,19 @@ public sealed class ReleaseSourceCleanlinessTests
             "AndroidServiceCollectionExtensions.cs"));
 
         Assert.Contains("vm:SettingsViewModel", settingsSource);
+        Assert.Contains("CurrentProfileName", settingsSource);
+        Assert.Contains("CurrentProfileAvatar", settingsSource);
+        Assert.Contains("ProfileCreatedAt", settingsSource);
+        Assert.Contains("ProviderUrlLabel", settingsSource);
+        Assert.Contains("ProviderUrl", settingsSource);
+        Assert.Contains("ShowProviderIdentity", settingsSource);
+        Assert.Contains("ProviderIdentityLabel", settingsSource);
+        Assert.Contains("ProviderUsername", settingsSource);
+        Assert.Contains("ShowProviderPassword", settingsSource);
+        Assert.Contains("ProviderPassword", settingsSource);
+        Assert.Contains("ShowProviderExpiration", settingsSource);
+        Assert.Contains("ExpirationDate", settingsSource);
+        Assert.Contains("ExpirationStatus", settingsSource);
         Assert.Contains("IsDarkTheme", settingsSource);
         Assert.Contains("AppLanguage", settingsSource);
         Assert.Contains("AutoPlayNext", settingsSource);

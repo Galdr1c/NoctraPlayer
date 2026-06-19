@@ -25,6 +25,88 @@
       <Border Background="#151923"
               CornerRadius="16"
               Padding="14">
+        <Grid ColumnDefinitions="Auto,*"
+              ColumnSpacing="14">
+          <Border Width="64"
+                  Height="64"
+                  CornerRadius="32"
+                  ClipToBounds="True"
+                  Background="#8F7CFF">
+            <Image Source="{Binding CurrentProfileAvatar, Converter={StaticResource AvatarPathConverter}}"
+                   Stretch="UniformToFill" />
+          </Border>
+          <StackPanel Grid.Column="1"
+                      Spacing="4"
+                      VerticalAlignment="Center">
+            <TextBlock Text="{Binding CurrentProfileName}"
+                       Foreground="#FFFFFF"
+                       FontSize="20"
+                       FontWeight="SemiBold"
+                       TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding ProfileCreatedAt}"
+                       Foreground="#AEB5C5"
+                       FontSize="12" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Border Background="#151923"
+              CornerRadius="16"
+              Padding="14">
+        <StackPanel Spacing="10">
+          <TextBlock Text="Account"
+                     Foreground="#FFFFFF"
+                     FontWeight="SemiBold" />
+          <Grid ColumnDefinitions="Auto,*"
+                ColumnSpacing="10">
+            <TextBlock Text="{Binding ProviderUrlLabel}"
+                       Foreground="#AEB5C5"
+                       FontSize="12" />
+            <TextBlock Grid.Column="1"
+                       Text="{Binding ProviderUrl}"
+                       Foreground="#FFFFFF"
+                       TextWrapping="Wrap" />
+          </Grid>
+          <Grid ColumnDefinitions="Auto,*"
+                ColumnSpacing="10"
+                IsVisible="{Binding ShowProviderIdentity}">
+            <TextBlock Text="{Binding ProviderIdentityLabel}"
+                       Foreground="#AEB5C5"
+                       FontSize="12" />
+            <TextBlock Grid.Column="1"
+                       Text="{Binding ProviderUsername}"
+                       Foreground="#FFFFFF"
+                       TextWrapping="Wrap" />
+          </Grid>
+          <Grid ColumnDefinitions="Auto,*"
+                ColumnSpacing="10"
+                IsVisible="{Binding ShowProviderPassword}">
+            <TextBlock Text="Password"
+                       Foreground="#AEB5C5"
+                       FontSize="12" />
+            <TextBlock Grid.Column="1"
+                       Text="{Binding ProviderPassword}"
+                       Foreground="#FFFFFF"
+                       TextWrapping="Wrap" />
+          </Grid>
+          <StackPanel Spacing="3"
+                      IsVisible="{Binding ShowProviderExpiration}">
+            <TextBlock Text="Expiration"
+                       Foreground="#AEB5C5"
+                       FontSize="12" />
+            <TextBlock Text="{Binding ExpirationDate}"
+                       Foreground="#FFFFFF"
+                       FontWeight="SemiBold" />
+            <TextBlock Text="{Binding ExpirationStatus}"
+                       Foreground="#8F7CFF"
+                       FontSize="12" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <Border Background="#151923"
+              CornerRadius="16"
+              Padding="14">
         <StackPanel Spacing="12">
           <TextBlock Text="Appearance"
                      Foreground="#FFFFFF"
