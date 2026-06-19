@@ -167,8 +167,11 @@ Current platform separation:
   `SetSleepTimerCommand` and `CancelSleepTimerCommand`. Mobile player
   info/download controls now bind to the desktop `OpenInfoPanelCommand`,
   `DownloadCurrentContentCommand`, visibility/can-execute flags, download
-  status, and current-content metadata. Android quality metadata remains limited
-  until richer native track/metadata extraction is added.
+  status, and current-content metadata. Mobile quality settings now bind to
+  `OpenQualitySettingsCommand`, `IsQualitySettingsOpen`, the desktop quality
+  text properties, and `SetPlaybackSpeedCommand` through a mobile
+  `DoubleToFloatConverter`. Android quality metadata remains limited until
+  richer native track/metadata extraction is added.
 - Android playback now creates a native `SurfaceView` through an
   `IVideoSurfaceService` bridge and binds it to `Android.Media.MediaPlayer` via
   `SetSurface`. The mobile shell shows the surface before starting

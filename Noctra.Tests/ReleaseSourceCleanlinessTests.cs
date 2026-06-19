@@ -778,6 +778,44 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobilePlayerQualityPanel_ReusesDesktopQualityContract()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var playerViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml"));
+        var mobileAppSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "App.axaml"));
+        var converterSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Converters",
+            "DoubleToFloatConverter.cs"));
+
+        Assert.Contains("OpenQualitySettingsCommand", playerViewSource);
+        Assert.Contains("IsQualitySettingsOpen", playerViewSource);
+        Assert.Contains("QualityResolutionText", playerViewSource);
+        Assert.Contains("QualityFpsText", playerViewSource);
+        Assert.Contains("QualityVideoCodecText", playerViewSource);
+        Assert.Contains("QualityVideoBitrateText", playerViewSource);
+        Assert.Contains("QualityAudioText", playerViewSource);
+        Assert.Contains("SetPlaybackSpeedCommand", playerViewSource);
+        Assert.Contains("ConverterParameter=0.5", playerViewSource);
+        Assert.Contains("ConverterParameter=0.75", playerViewSource);
+        Assert.Contains("ConverterParameter=1.0", playerViewSource);
+        Assert.Contains("ConverterParameter=1.25", playerViewSource);
+        Assert.Contains("ConverterParameter=1.5", playerViewSource);
+        Assert.Contains("ConverterParameter=2.0", playerViewSource);
+        Assert.Contains("DoubleToFloatConverter", playerViewSource);
+        Assert.Contains("DoubleToFloatConverter", mobileAppSource);
+        Assert.Contains("class DoubleToFloatConverter", converterSource);
+    }
+
+    [Fact]
     public void AndroidPlaybackSurface_BindsMediaPlayerToNativeSurfaceView()
     {
         var repositoryRoot = FindRepositoryRoot();

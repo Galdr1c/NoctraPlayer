@@ -222,6 +222,133 @@
         </StackPanel>
       </Border>
 
+      <Button Content="Quality"
+              Command="{Binding OpenQualitySettingsCommand}"
+              MinHeight="40" />
+
+      <Border Background="#1FFFFFFF"
+              CornerRadius="14"
+              Padding="12"
+              IsVisible="{Binding IsQualitySettingsOpen}">
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="Quality"
+                       Foreground="#FFFFFF"
+                       FontSize="14"
+                       FontWeight="SemiBold" />
+            <Button Grid.Column="1"
+                    Content="Close"
+                    Command="{Binding OpenQualitySettingsCommand}"
+                    MinHeight="36"
+                    Margin="10,0,0,0" />
+          </Grid>
+
+          <Grid ColumnDefinitions="*,*"
+                RowDefinitions="Auto,Auto,Auto"
+                ColumnSpacing="10"
+                RowSpacing="8">
+            <StackPanel Spacing="2">
+              <TextBlock Text="Resolution"
+                         Foreground="#8090A0"
+                         FontSize="10"
+                         FontWeight="Bold" />
+              <TextBlock Text="{Binding QualityResolutionText}"
+                         Foreground="#FFFFFF"
+                         FontSize="12"
+                         FontWeight="SemiBold" />
+            </StackPanel>
+            <StackPanel Grid.Column="1"
+                        Spacing="2">
+              <TextBlock Text="FPS"
+                         Foreground="#8090A0"
+                         FontSize="10"
+                         FontWeight="Bold" />
+              <TextBlock Text="{Binding QualityFpsText}"
+                         Foreground="#FFFFFF"
+                         FontSize="12"
+                         FontWeight="SemiBold" />
+            </StackPanel>
+            <StackPanel Grid.Row="1"
+                        Spacing="2">
+              <TextBlock Text="Codec"
+                         Foreground="#8090A0"
+                         FontSize="10"
+                         FontWeight="Bold" />
+              <TextBlock Text="{Binding QualityVideoCodecText}"
+                         Foreground="#FFFFFF"
+                         FontSize="12"
+                         FontWeight="SemiBold" />
+            </StackPanel>
+            <StackPanel Grid.Row="1"
+                        Grid.Column="1"
+                        Spacing="2">
+              <TextBlock Text="Bitrate"
+                         Foreground="#8090A0"
+                         FontSize="10"
+                         FontWeight="Bold" />
+              <TextBlock Text="{Binding QualityVideoBitrateText}"
+                         Foreground="#FFFFFF"
+                         FontSize="12"
+                         FontWeight="SemiBold" />
+            </StackPanel>
+            <StackPanel Grid.Row="2"
+                        Grid.ColumnSpan="2"
+                        Spacing="2">
+              <TextBlock Text="Audio"
+                         Foreground="#8090A0"
+                         FontSize="10"
+                         FontWeight="Bold" />
+              <TextBlock Text="{Binding QualityAudioText}"
+                         Foreground="#FFFFFF"
+                         FontSize="12"
+                         FontWeight="SemiBold"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Grid>
+
+          <TextBlock Text="Speed"
+                     Foreground="#8090A0"
+                     FontSize="10"
+                     FontWeight="Bold" />
+          <Grid ColumnDefinitions="*,*,*"
+                RowDefinitions="Auto,Auto"
+                ColumnSpacing="8"
+                RowSpacing="8">
+            <Button Content="0.5x"
+                    Command="{Binding SetPlaybackSpeedCommand}"
+                    CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=0.5}"
+                    MinHeight="38" />
+            <Button Grid.Column="1"
+                    Content="0.75x"
+                    Command="{Binding SetPlaybackSpeedCommand}"
+                    CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=0.75}"
+                    MinHeight="38" />
+            <Button Grid.Column="2"
+                    Content="1.0x"
+                    Command="{Binding SetPlaybackSpeedCommand}"
+                    CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=1.0}"
+                    MinHeight="38" />
+            <Button Grid.Row="1"
+                    Content="1.25x"
+                    Command="{Binding SetPlaybackSpeedCommand}"
+                    CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=1.25}"
+                    MinHeight="38" />
+            <Button Grid.Row="1"
+                    Grid.Column="1"
+                    Content="1.5x"
+                    Command="{Binding SetPlaybackSpeedCommand}"
+                    CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=1.5}"
+                    MinHeight="38" />
+            <Button Grid.Row="1"
+                    Grid.Column="2"
+                    Content="2.0x"
+                    Command="{Binding SetPlaybackSpeedCommand}"
+                    CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=2.0}"
+                    MinHeight="38" />
+          </Grid>
+        </StackPanel>
+      </Border>
+
       <Grid ColumnDefinitions="*,*,*"
             ColumnSpacing="8">
         <Border Background="#1FFFFFFF"
