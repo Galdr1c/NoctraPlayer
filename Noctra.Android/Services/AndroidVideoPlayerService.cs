@@ -35,11 +35,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     public event EventHandler? PlaybackEnded;
     public event EventHandler<float>? BufferingChanged;
     public event EventHandler<string>? ErrorOccurred;
-    public event EventHandler<StreamQualityInfo>? QualityDetected
-    {
-        add { }
-        remove { }
-    }
+    public event EventHandler<StreamQualityInfo>? QualityDetected;
 
     public AndroidVideoPlayerService(AndroidVideoSurfaceService videoSurfaceService)
     {
@@ -120,6 +116,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             {
                 _hasLoadedMedia = true;
                 PlayerReady?.Invoke(this, EventArgs.Empty);
+                UpdateStreamQualityFromPreparedPlayer(player);
                 if (startTimeSeconds > 0)
                 {
                     player.SeekTo((int)(startTimeSeconds * 1000));
@@ -297,6 +294,23 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         {
             // Android versions/devices may reject speed changes for a source.
         }
+    }
+
+    private void UpdateStreamQualityFromPreparedPlayer(global::Android.Media.MediaPlayer player)
+    {
+        var width = player.VideoWidth;
+        var height = player.VideoHeight;
+        if (width <= 0 || height <= 0)
+        {
+            return;
+        }
+
+        StreamQuality = new StreamQualityInfo
+        {
+            Width = width,
+            Height = height
+        };
+        QualityDetected?.Invoke(this, StreamQuality);
     }
 
     private void ThrowIfDisposed()

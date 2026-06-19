@@ -842,6 +842,29 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void AndroidPlaybackQuality_PublishesPreparedVideoResolution()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var androidVideoService = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "Services",
+            "AndroidVideoPlayerService.cs"));
+
+        Assert.Contains("event EventHandler<StreamQualityInfo>? QualityDetected;", androidVideoService);
+        Assert.Contains("UpdateStreamQualityFromPreparedPlayer", androidVideoService);
+        Assert.Contains("VideoWidth", androidVideoService);
+        Assert.Contains("VideoHeight", androidVideoService);
+        Assert.Contains("new StreamQualityInfo", androidVideoService);
+        Assert.Contains("StreamQuality =", androidVideoService);
+        Assert.Contains("QualityDetected?.Invoke(this, StreamQuality)", androidVideoService);
+
+        var preparedIndex = androidVideoService.IndexOf("player.Prepared += (_, _) =>", StringComparison.Ordinal);
+        var qualityIndex = androidVideoService.IndexOf("UpdateStreamQualityFromPreparedPlayer", preparedIndex, StringComparison.Ordinal);
+        Assert.True(qualityIndex > preparedIndex);
+    }
+
+    [Fact]
     public void AndroidPlaybackSurface_BindsMediaPlayerToNativeSurfaceView()
     {
         var repositoryRoot = FindRepositoryRoot();

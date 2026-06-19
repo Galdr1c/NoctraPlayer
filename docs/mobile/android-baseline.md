@@ -172,8 +172,11 @@ Current platform separation:
   text properties, and `SetPlaybackSpeedCommand` through a mobile
   `DoubleToFloatConverter`. Android playback speed is applied through
   `MediaPlayer.PlaybackParams` when the rate changes, when playback starts, and
-  when playback resumes. Android quality metadata remains limited until richer
-  native track/metadata extraction is added.
+  when playback resumes. Android playback publishes an initial
+  `StreamQualityInfo` snapshot from `MediaPlayer.VideoWidth` and `VideoHeight`
+  after preparation, so the mobile quality panel can show the real stream
+  resolution. Android quality metadata remains limited until richer native
+  track/metadata extraction is added.
 - Android playback now creates a native `SurfaceView` through an
   `IVideoSurfaceService` bridge and binds it to `Android.Media.MediaPlayer` via
   `SetSurface`. The mobile shell shows the surface before starting
