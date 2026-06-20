@@ -231,6 +231,17 @@
             <ComboBoxItem Content="Standard" />
             <ComboBoxItem Content="High" />
           </ComboBox>
+          <TextBlock Text="Download location"
+                     Foreground="#AEB5C5"
+                     FontSize="12" />
+          <TextBox Text="{Binding DownloadPath}"
+                   IsReadOnly="True"
+                   TextWrapping="Wrap"
+                   MinHeight="44" />
+          <TextBlock Text="Android stores downloads in the app storage location shown above."
+                     Foreground="#AEB5C5"
+                     FontSize="12"
+                     TextWrapping="Wrap" />
           <CheckBox Content="Show download notifications"
                     IsChecked="{Binding ShowDownloadNotification}" />
         </StackPanel>

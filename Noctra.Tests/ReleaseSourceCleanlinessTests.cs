@@ -736,6 +736,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("ClearHistoryOnExit", settingsSource);
         Assert.Contains("DownloadWifiOnly", settingsSource);
         Assert.Contains("SelectedDownloadQuality", settingsSource);
+        Assert.Contains("DownloadPath", settingsSource);
         Assert.Contains("ShowDownloadNotification", settingsSource);
         Assert.Contains("RefreshChannelListNowCommand", settingsSource);
         Assert.Contains("TotalChannels", settingsSource);
