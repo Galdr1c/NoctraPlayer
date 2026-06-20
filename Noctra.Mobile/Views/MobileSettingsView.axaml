@@ -44,7 +44,7 @@
                        FontSize="20"
                        FontWeight="SemiBold"
                        TextTrimming="CharacterEllipsis" />
-            <TextBlock Text="{Binding ProfileCreatedAt}"
+            <TextBlock Text="{Binding ProfileCreatedAt, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Profile.CreatedAtFormat'}"
                        Foreground="#AEB5C5"
                        FontSize="12" />
           </StackPanel>
@@ -95,7 +95,7 @@
             <TextBlock Text="Expiration"
                        Foreground="#AEB5C5"
                        FontSize="12" />
-            <TextBlock Text="{Binding ExpirationDate}"
+            <TextBlock Text="{Binding ExpirationDate, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Account.ExpiryFormat'}"
                        Foreground="#FFFFFF"
                        FontWeight="SemiBold" />
             <TextBlock Text="{Binding ExpirationStatus}"
@@ -199,6 +199,9 @@
             <ComboBoxItem Content="Espanol" Tag="es" />
             <ComboBoxItem Content="Italiano" Tag="it" />
             <ComboBoxItem Content="Portugues" Tag="pt" />
+            <ComboBoxItem Content="Russian" Tag="ru" />
+            <ComboBoxItem Content="Arabic" Tag="ar" />
+            <ComboBoxItem Content="Dutch" Tag="nl" />
           </ComboBox>
           <TextBlock Text="Preferred audio"
                      Foreground="#AEB5C5"
@@ -213,6 +216,9 @@
             <ComboBoxItem Content="Espanol" Tag="es" />
             <ComboBoxItem Content="Italiano" Tag="it" />
             <ComboBoxItem Content="Portugues" Tag="pt" />
+            <ComboBoxItem Content="Russian" Tag="ru" />
+            <ComboBoxItem Content="Arabic" Tag="ar" />
+            <ComboBoxItem Content="Dutch" Tag="nl" />
           </ComboBox>
         </StackPanel>
       </Border>
@@ -274,7 +280,7 @@
                        Foreground="#AEB5C5"
                        FontSize="12" />
             <TextBlock Grid.Column="1"
-                       Text="{Binding ChannelListLastUpdated}"
+                       Text="{Binding ChannelListLastUpdated, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Channels.DateFormat'}"
                        Foreground="#FFFFFF"
                        FontSize="12" />
           </Grid>
@@ -442,7 +448,7 @@
                        Foreground="#AEB5C5"
                        FontSize="12" />
             <TextBlock Grid.Column="1"
-                       Text="{Binding LastEpgUpdate}"
+                       Text="{Binding LastEpgUpdate, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Channels.DateFormat'}"
                        Foreground="#FFFFFF"
                        FontSize="12" />
           </Grid>
@@ -618,7 +624,12 @@
                              FontWeight="Bold" />
                 </Border>
               </StackPanel>
-              <TextBlock Text="{Binding CurrentVersion}"
+              <TextBlock Text="{Binding CurrentVersion, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.About.PremiumVersionFormat'}"
+                         IsVisible="{Binding IsPremium}"
+                         Foreground="#AEB5C5"
+                         FontSize="12" />
+              <TextBlock Text="{Binding CurrentVersion, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.About.VersionFormat'}"
+                         IsVisible="{Binding !IsPremium}"
                          Foreground="#AEB5C5"
                          FontSize="12" />
             </StackPanel>

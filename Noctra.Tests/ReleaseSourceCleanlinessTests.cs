@@ -688,6 +688,15 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobileSettingsView.axaml"));
+        var appSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "App.axaml"));
+        var stringFormatConverterSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Converters",
+            "StringFormatConverter.cs"));
         var mainViewSource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Mobile",
@@ -705,9 +714,13 @@ public sealed class ReleaseSourceCleanlinessTests
             "AndroidServiceCollectionExtensions.cs"));
 
         Assert.Contains("vm:SettingsViewModel", settingsSource);
+        Assert.Contains("StringFormatConverter", appSource);
+        Assert.Contains("class StringFormatConverter", stringFormatConverterSource);
+        Assert.Contains("LocalizationSource.Instance", stringFormatConverterSource);
         Assert.Contains("CurrentProfileName", settingsSource);
         Assert.Contains("CurrentProfileAvatar", settingsSource);
         Assert.Contains("ProfileCreatedAt", settingsSource);
+        Assert.Contains("Settings.Profile.CreatedAtFormat", settingsSource);
         Assert.Contains("ProviderUrlLabel", settingsSource);
         Assert.Contains("ProviderUrl", settingsSource);
         Assert.Contains("ShowProviderIdentity", settingsSource);
@@ -717,6 +730,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("ProviderPassword", settingsSource);
         Assert.Contains("ShowProviderExpiration", settingsSource);
         Assert.Contains("ExpirationDate", settingsSource);
+        Assert.Contains("Settings.Account.ExpiryFormat", settingsSource);
         Assert.Contains("ExpirationStatus", settingsSource);
         Assert.Contains("IsDarkTheme", settingsSource);
         Assert.Contains("AppLanguage", settingsSource);
@@ -741,6 +755,15 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("SubtitleEnabled", settingsSource);
         Assert.Contains("SubtitleLanguage", settingsSource);
         Assert.Contains("PreferredAudioLanguage", settingsSource);
+        Assert.True(
+            CountOccurrences(settingsSource, "Tag=\"ru\"") >= 2,
+            "Mobile subtitle and audio language pickers should include Russian.");
+        Assert.True(
+            CountOccurrences(settingsSource, "Tag=\"ar\"") >= 2,
+            "Mobile subtitle and audio language pickers should include Arabic.");
+        Assert.True(
+            CountOccurrences(settingsSource, "Tag=\"nl\"") >= 2,
+            "Mobile subtitle and audio language pickers should include Dutch.");
         Assert.Contains("SaveWatchHistory", settingsSource);
         Assert.Contains("ClearHistoryOnExit", settingsSource);
         Assert.Contains("DownloadWifiOnly", settingsSource);
@@ -750,6 +773,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("RefreshChannelListNowCommand", settingsSource);
         Assert.Contains("TotalChannels", settingsSource);
         Assert.Contains("ChannelListLastUpdated", settingsSource);
+        Assert.Contains("Settings.Channels.DateFormat", settingsSource);
         Assert.Contains("ChannelListLastError", settingsSource);
         Assert.Contains("ChannelListRefreshFrequencyIndex", settingsSource);
         Assert.Contains("HiddenLiveGroups", settingsSource);
@@ -774,6 +798,8 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("CancelRefreshOperationCommand", settingsSource);
         Assert.Contains("WatchHistoryRetentionIndex", settingsSource);
         Assert.Contains("CurrentVersion", settingsSource);
+        Assert.Contains("Settings.About.VersionFormat", settingsSource);
+        Assert.Contains("Settings.About.PremiumVersionFormat", settingsSource);
         Assert.Contains("IsPremium", settingsSource);
         Assert.Contains("ShowUpsellCommand", settingsSource);
         Assert.Contains("UpdateStatusText", settingsSource);

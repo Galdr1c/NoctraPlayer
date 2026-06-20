@@ -8,6 +8,7 @@
     <Application.Resources>
         <converters:AvatarPathConverter x:Key="AvatarPathConverter" />
         <converters:DoubleToFloatConverter x:Key="DoubleToFloatConverter" />
+        <converters:StringFormatConverter x:Key="StringFormatConverter" />
     </Application.Resources>
 
     <Application.DataTemplates>
