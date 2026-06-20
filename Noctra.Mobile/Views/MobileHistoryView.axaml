@@ -6,6 +6,7 @@
              xmlns:models="using:Noctra.Models"
              xmlns:converters="using:Noctra.Mobile.Converters"
              xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:controls="using:Noctra.Mobile.Controls"
              x:Class="Noctra.Mobile.Views.MobileHistoryView"
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False"
@@ -48,13 +49,17 @@
                   <Border Width="42"
                           Height="42"
                           CornerRadius="10"
+                          ClipToBounds="True"
                           Background="{DynamicResource Surface1Brush}">
-                    <TextBlock Text="TV"
-                               Foreground="{DynamicResource AccentBrush}"
-                               FontWeight="Bold"
-                               FontSize="12"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center" />
+                    <Grid>
+                      <TextBlock Text="TV"
+                                 Foreground="{DynamicResource AccentBrush}"
+                                 FontWeight="Bold"
+                                 FontSize="12"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center" />
+                      <controls:RemoteImage Url="{Binding CoverUrl}" Stretch="Uniform" />
+                    </Grid>
                   </Border>
                   <StackPanel Grid.Column="1"
                               Spacing="3"
@@ -99,13 +104,17 @@
                   <Border Width="42"
                           Height="42"
                           CornerRadius="10"
+                          ClipToBounds="True"
                           Background="{DynamicResource Surface1Brush}">
-                    <TextBlock Text="EP"
-                               Foreground="{DynamicResource AccentBrush}"
-                               FontWeight="Bold"
-                               FontSize="12"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center" />
+                    <Grid>
+                      <TextBlock Text="EP"
+                                 Foreground="{DynamicResource AccentBrush}"
+                                 FontWeight="Bold"
+                                 FontSize="12"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center" />
+                      <controls:RemoteImage Url="{Binding CoverUrl}" Stretch="Uniform" />
+                    </Grid>
                   </Border>
                   <StackPanel Grid.Column="1"
                               Spacing="3"
@@ -150,13 +159,17 @@
                   <Border Width="42"
                           Height="42"
                           CornerRadius="10"
+                          ClipToBounds="True"
                           Background="{DynamicResource Surface1Brush}">
-                    <TextBlock Text="VOD"
-                               Foreground="{DynamicResource AccentBrush}"
-                               FontWeight="Bold"
-                               FontSize="12"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center" />
+                    <Grid>
+                      <TextBlock Text="VOD"
+                                 Foreground="{DynamicResource AccentBrush}"
+                                 FontWeight="Bold"
+                                 FontSize="12"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center" />
+                      <controls:RemoteImage Url="{Binding CoverUrl}" Stretch="Uniform" />
+                    </Grid>
                   </Border>
                   <StackPanel Grid.Column="1"
                               Spacing="3"

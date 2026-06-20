@@ -1,0 +1,53 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:Noctra.Mobile.Controls">
+    <Design.PreviewWith>
+        <controls:PremiumSpinner Width="100" Height="100" />
+    </Design.PreviewWith>
+
+    <Style Selector="controls|PremiumSpinner">
+        <Setter Property="Width" Value="80"/>
+        <Setter Property="Height" Value="80"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Grid Width="{TemplateBinding Width}" Height="{TemplateBinding Height}">
+                    <!-- Background Ring -->
+                    <Arc Width="{TemplateBinding Width}" Height="{TemplateBinding Height}" 
+                         Stroke="{DynamicResource BorderBrush}" StrokeThickness="3" 
+                         StartAngle="0" SweepAngle="360"
+                         Opacity="0.1"
+                         VerticalAlignment="Center" HorizontalAlignment="Center"/>
+
+                    <!-- Rotating Indicator Arc -->
+                    <Arc Width="{TemplateBinding Width}" Height="{TemplateBinding Height}" 
+                         Stroke="{DynamicResource AccentBrush}" StrokeThickness="4" 
+                         StartAngle="0" SweepAngle="90"
+                         VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <Arc.RenderTransform>
+                            <RotateTransform />
+                        </Arc.RenderTransform>
+                        <Arc.Styles>
+                            <Style Selector="Arc">
+                                <Style.Animations>
+                                    <Animation Duration="0:0:1.2" IterationCount="Infinite">
+                                        <KeyFrame KeyTime="0:0:0">
+                                            <Setter Property="RotateTransform.Angle" Value="0"/>
+                                        </KeyFrame>
+                                        <KeyFrame KeyTime="0:0:1.2">
+                                            <Setter Property="RotateTransform.Angle" Value="360"/>
+                                        </KeyFrame>
+                                    </Animation>
+                                </Style.Animations>
+                            </Style>
+                        </Arc.Styles>
+                    </Arc>
+
+                    <!-- Center Content (Logo etc.) -->
+                    <ContentPresenter Content="{TemplateBinding Content}" 
+                                      VerticalAlignment="Center" 
+                                      HorizontalAlignment="Center"/>
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+</Styles>

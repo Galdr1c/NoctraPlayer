@@ -33,8 +33,12 @@ public partial class App : Application
     {
         try
         {
+            StartupLogger.Log("========= NOCTRA DESKTOP INITIALIZE =========");
             RegisterCrashHandlers();
+            StartupLogger.Log("Crash handlers registered");
+            
             AvaloniaXamlLoader.Load(this);
+            StartupLogger.Log("XAML loaded");
 
             ServicePointManager.DefaultConnectionLimit = 100;
             ServicePointManager.MaxServicePointIdleTime = 1000;
@@ -42,11 +46,15 @@ public partial class App : Application
 
             var services = new ServiceCollection();
             ConfigureServices(services);
+            StartupLogger.Log("Services configured");
+            
             Services = services.BuildServiceProvider();
+            StartupLogger.Log("Service provider built");
 
             using var scope = Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Database.EnsureCreated();
+            StartupLogger.Log("Database ensured");
             
             // Phase 29: Move blocking schema fixups to an async flow to avoid deadlock
             // ApplySchemaFixupsAsync(db).GetAwaiter().GetResult(); 
@@ -56,10 +64,13 @@ public partial class App : Application
             var settings = scope.ServiceProvider.GetRequiredService<ISettingsService>();
             var themeService = Services.GetRequiredService<IThemeService>();
             var localizationService = Services.GetRequiredService<ILocalizationService>();
+            StartupLogger.Log("Core services retrieved");
+            
             ApplyApplicationLanguage(settings.Settings.Language);
             themeService.SetTheme(settings.Settings.IsDarkTheme);
             localizationService.SetLanguage(settings.Settings.Language ?? "en");
             LocalizationSource.Instance.Initialize(localizationService);
+            StartupLogger.Log("Theme and localization applied");
 
             settings.SettingsChanged += () =>
             {
@@ -76,9 +87,12 @@ public partial class App : Application
                     }
                 });
             };
+            
+            StartupLogger.Log("✅ Initialize completed successfully");
         }
         catch (Exception ex)
         {
+            StartupLogger.LogError("Initialize", ex);
             throw;
         }
     }
@@ -100,45 +114,60 @@ public partial class App : Application
                     var startupStopwatch = System.Diagnostics.Stopwatch.StartNew();
                     try
                     {
+                        StartupLogger.Log("========= WARMUP SEQUENCE START =========");
                         
                         // 1. Warmup Settings (Lazy load trigger)
+                        StartupLogger.Log("Step 1: Loading settings...");
                         var settingsService = Services.GetRequiredService<ISettingsService>();
-                        _ = settingsService.Settings; 
+                        _ = settingsService.Settings;
+                        StartupLogger.Log("Step 1: ✅ Settings loaded");
 
                         // 2. Warmup EF Core (Triggers first-time model compilation)
+                        StartupLogger.Log("Step 2: Warming up EF Core...");
                         using (var scope = Services.CreateScope())
                         {
                             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                             
                             // Phase 29: Apply schema fixups here (async) to avoid UI hang
+                            StartupLogger.Log("Step 2a: Applying schema fixups...");
                             await ApplySchemaFixupsAsync(db);
+                            StartupLogger.Log("Step 2b: Checking profiles table...");
                             await db.Profiles.AnyAsync();
+                            StartupLogger.Log("Step 2: ✅ EF Core ready");
                         }
 
                         // 2.1 Purge profiles with expired deletion countdown
+                        StartupLogger.Log("Step 3: Purging expired profiles...");
                         try
                         {
                             var profileService = Services.GetRequiredService<IProfileService>();
                             await profileService.PurgeExpiredProfilesAsync();
+                            StartupLogger.Log("Step 3: ✅ Profiles purged");
                         }
                         catch (Exception ex)
                         {
+                            StartupLogger.LogError("Step 3 (profile purge)", ex);
                         }
 
                         // 2.5 TMDB Sync Service is now on-demand (no background processing)
 
                         // 3. Resolve MainWindow/ProfilesWindow early
+                        StartupLogger.Log("Step 4: Creating ProfilesWindow...");
                         var profilesWindow = await Dispatcher.UIThread.InvokeAsync(() => 
                         {
                             var win = Services.GetRequiredService<ProfilesWindow>();
                             win.DisableAutoSelect = true;
+                            StartupLogger.Log("Step 4: ✅ ProfilesWindow created on UI thread");
                             return win;
                         });
                         
+                        StartupLogger.Log("Step 5: Checking legal consent...");
                         var canContinue = await Dispatcher.UIThread.InvokeAsync(async () =>
                             await ShowLegalConsentAsync(settingsService, splashWindow));
+                        StartupLogger.Log($"Step 5: Legal consent = {canContinue}");
                         if (!canContinue)
                         {
+                            StartupLogger.Log("User declined consent, shutting down...");
                             await Dispatcher.UIThread.InvokeAsync(() =>
                             {
                                 desktop.Shutdown();
@@ -147,9 +176,11 @@ public partial class App : Application
                         }
 
                         // 4. Update Check (Silent)
+                        StartupLogger.Log("Step 6: Checking for updates...");
                         var packageIdentity = Services.GetRequiredService<IPackageIdentityService>();
                         if (!packageIdentity.IsPackaged && settingsService.Settings.AutoUpdate)
                         {
+                            StartupLogger.Log("Step 6: Update check enabled (background)");
                             _ = Task.Run(async () =>
                             {
                                 try
@@ -175,33 +206,52 @@ public partial class App : Application
                                 catch { /* Ignore background update check failures */ }
                             });
                         }
+                        else
+                        {
+                            StartupLogger.Log("Step 6: Update check skipped");
+                        }
 
                         // Ensure a minimum splash duration (e.g., 1.5 seconds) for premium feel
                         var elapsed = startupStopwatch.ElapsedMilliseconds;
+                        StartupLogger.Log($"Warmup completed in {elapsed}ms");
                         if (elapsed < 1500)
                         {
-                            await Task.Delay(1500 - (int)elapsed);
+                            var waitTime = 1500 - (int)elapsed;
+                            StartupLogger.Log($"Waiting {waitTime}ms for minimum splash...");
+                            await Task.Delay(waitTime);
                         }
 
                         // Transition to Main Window
+                        StartupLogger.Log("Step 7: Transitioning to main window...");
                         await Dispatcher.UIThread.InvokeAsync(() =>
                         {
                             desktop.MainWindow = profilesWindow;
                             profilesWindow.Show();
                             splashWindow.Close();
+                            StartupLogger.Log("========= ✅ STARTUP COMPLETE =========");
                         });
                     }
                     catch (Exception ex)
                     {
+                        StartupLogger.LogError("WARMUP SEQUENCE", ex);
                         
                         // Fallback: Just try to open the app anyway if warmup fails
                         await Dispatcher.UIThread.InvokeAsync(() =>
                         {
-                            var win = Services.GetRequiredService<ProfilesWindow>();
-                            win.DisableAutoSelect = true;
-                            desktop.MainWindow = win;
-                            win.Show();
-                            splashWindow.Close();
+                            try
+                            {
+                                StartupLogger.Log("⚠️ Attempting fallback window creation...");
+                                var win = Services.GetRequiredService<ProfilesWindow>();
+                                win.DisableAutoSelect = true;
+                                desktop.MainWindow = win;
+                                win.Show();
+                                splashWindow.Close();
+                                StartupLogger.Log("⚠️ Fallback startup complete");
+                            }
+                            catch (Exception fallbackEx)
+                            {
+                                StartupLogger.LogError("FALLBACK", fallbackEx);
+                            }
                         });
                     }
                 });

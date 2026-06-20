@@ -33,6 +33,8 @@
         <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
         <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
         <converters:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibilityConverter" />
+        <converters:MediaSupportsFavoriteConverter x:Key="MediaSupportsFavoriteConverter" />
+        <converters:MediaSupportsMyListConverter x:Key="MediaSupportsMyListConverter" />
       </ResourceDictionary>
     </Application.Resources>
 
@@ -42,6 +44,7 @@
 
     <Application.Styles>
         <FluentTheme />
+        <StyleInclude Source="avares://Noctra.Mobile/Controls/PremiumSpinner.axaml" />
         <Style Selector="Button">
             <Setter Property="Cursor" Value="Hand"/>
         </Style>

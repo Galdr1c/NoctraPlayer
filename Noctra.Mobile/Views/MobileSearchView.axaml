@@ -6,6 +6,7 @@
              xmlns:models="using:Noctra.Models"
              xmlns:converters="using:Noctra.Mobile.Converters"
              xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:controls="using:Noctra.Mobile.Controls"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:materialIcons="clr-namespace:Material.Icons;assembly=Material.Icons"
              x:Class="Noctra.Mobile.Views.MobileSearchView"
@@ -86,11 +87,15 @@
                   <Border Width="42"
                           Height="42"
                           CornerRadius="10"
+                          ClipToBounds="True"
                           Background="{DynamicResource Surface1Brush}">
-                    <icons:MaterialIcon Kind="{x:Static materialIcons:MaterialIconKind.Tv}"
-                               Foreground="{DynamicResource AccentBrush}"
-                               Width="20"
-                               Height="20" />
+                    <Grid>
+                      <icons:MaterialIcon Kind="{x:Static materialIcons:MaterialIconKind.Tv}"
+                                 Foreground="{DynamicResource AccentBrush}"
+                                 Width="20"
+                                 Height="20" />
+                      <controls:RemoteImage Url="{Binding CoverUrl}" Stretch="Uniform" />
+                    </Grid>
                   </Border>
                   <StackPanel Grid.Column="1"
                               Spacing="3"
@@ -135,11 +140,15 @@
                   <Border Width="42"
                           Height="42"
                           CornerRadius="10"
+                          ClipToBounds="True"
                           Background="{DynamicResource Surface1Brush}">
-                    <icons:MaterialIcon Kind="{x:Static materialIcons:MaterialIconKind.Collections}"
-                               Foreground="{DynamicResource AccentBrush}"
-                               Width="20"
-                               Height="20" />
+                    <Grid>
+                      <icons:MaterialIcon Kind="{x:Static materialIcons:MaterialIconKind.Collections}"
+                                 Foreground="{DynamicResource AccentBrush}"
+                                 Width="20"
+                                 Height="20" />
+                      <controls:RemoteImage Url="{Binding CoverUrl}" Stretch="Uniform" />
+                    </Grid>
                   </Border>
                   <StackPanel Grid.Column="1"
                               Spacing="3"
@@ -184,11 +193,15 @@
                   <Border Width="42"
                           Height="42"
                           CornerRadius="10"
+                          ClipToBounds="True"
                           Background="{DynamicResource Surface1Brush}">
-                    <icons:MaterialIcon Kind="{x:Static materialIcons:MaterialIconKind.Movie}"
-                               Foreground="{DynamicResource AccentBrush}"
-                               Width="20"
-                               Height="20" />
+                    <Grid>
+                      <icons:MaterialIcon Kind="{x:Static materialIcons:MaterialIconKind.Movie}"
+                                 Foreground="{DynamicResource AccentBrush}"
+                                 Width="20"
+                                 Height="20" />
+                      <controls:RemoteImage Url="{Binding CoverUrl}" Stretch="Uniform" />
+                    </Grid>
                   </Border>
                   <StackPanel Grid.Column="1"
                               Spacing="3"

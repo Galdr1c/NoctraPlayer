@@ -5,6 +5,7 @@
              xmlns:vm="using:Noctra.ViewModels"
              xmlns:models="using:Noctra.Models"
              xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:controls="using:Noctra.Mobile.Controls"
              x:Class="Noctra.Mobile.Views.MobileMoviesView"
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False"
@@ -41,32 +42,7 @@
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="models:Channel">
-            <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
-                    CommandParameter="{Binding}"
-                    Width="154"
-                    MinHeight="230"
-                    Background="{DynamicResource Surface0Brush}"
-                    BorderThickness="0"
-                    CornerRadius="16"
-                    Padding="10"
-                    Margin="0,0,10,10"
-                    HorizontalContentAlignment="Stretch"
-                    VerticalContentAlignment="Stretch">
-              <StackPanel Spacing="8">
-                <Border Height="150"
-                        CornerRadius="12"
-                        Background="{DynamicResource Surface1Brush}" />
-                <TextBlock Text="{Binding Name}"
-                           Foreground="{DynamicResource TextPrimaryBrush}"
-                           FontWeight="SemiBold"
-                           TextWrapping="Wrap"
-                           MaxLines="2" />
-                <TextBlock Text="{Binding GroupTitle}"
-                           Foreground="{DynamicResource TextMutedBrush}"
-                           FontSize="12"
-                           TextTrimming="CharacterEllipsis" />
-              </StackPanel>
-            </Button>
+            <controls:MobileVodCard Margin="0,0,10,10" />
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
@@ -75,7 +51,7 @@
                   Margin="0,60,0,0"
                   HorizontalAlignment="Center"
                   IsVisible="{Binding IsContentLoading}">
-        <ProgressBar IsIndeterminate="True" Width="180" />
+        <controls:PremiumSpinner Width="56" Height="56" HorizontalAlignment="Center" />
         <TextBlock Text="{loc:Translate Movies.Loading}"
                    Foreground="{DynamicResource TextMutedBrush}" />
       </StackPanel>

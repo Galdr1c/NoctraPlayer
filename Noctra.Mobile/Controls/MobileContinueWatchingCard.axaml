@@ -1,0 +1,71 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="using:Noctra.Models"
+             xmlns:vm="using:Noctra.ViewModels"
+             xmlns:controls="using:Noctra.Mobile.Controls"
+             xmlns:loc="using:Noctra.Mobile.Localization"
+             x:Class="Noctra.Mobile.Controls.MobileContinueWatchingCard"
+             x:DataType="models:Channel"
+             Width="170" Height="120">
+  <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
+          CommandParameter="{Binding}"
+          Background="Transparent"
+          BorderThickness="0"
+          Padding="0"
+          HorizontalContentAlignment="Stretch"
+          VerticalContentAlignment="Stretch">
+    <Button.ContextFlyout>
+      <MenuFlyout>
+        <MenuItem Header="{loc:Translate Context.MyList.Toggle}"
+                  Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).AddToMyListCommand}"
+                  CommandParameter="{Binding}"
+                  IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
+        <MenuItem Header="{loc:Translate Context.Favorite.Toggle}"
+                  Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}"
+                  CommandParameter="{Binding}"
+                  IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
+      </MenuFlyout>
+    </Button.ContextFlyout>
+    <Border CornerRadius="14"
+            Background="{DynamicResource Surface0Brush}"
+            ClipToBounds="True">
+      <Grid>
+        <Border Background="{DynamicResource Surface1Brush}">
+            <controls:RemoteImage Url="{Binding CoverUrl}" Stretch="UniformToFill" />
+        </Border>
+        <StackPanel VerticalAlignment="Bottom"
+                    Spacing="0">
+          <Border Padding="12,14,12,8">
+            <Border.Background>
+              <LinearGradientBrush StartPoint="0%,100%" EndPoint="0%,0%">
+                <GradientStop Offset="0" Color="#CC000000" />
+                <GradientStop Offset="1" Color="#00000000" />
+              </LinearGradientBrush>
+            </Border.Background>
+            <StackPanel Spacing="2">
+              <TextBlock Text="{Binding Name}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="13"
+                         FontWeight="SemiBold"
+                         TextTrimming="CharacterEllipsis"
+                         MaxLines="1" />
+              <TextBlock Text="{Binding GroupTitle}"
+                         Foreground="{DynamicResource TextSecondaryBrush}" Opacity="0.65"
+                         FontSize="11"
+                         TextTrimming="CharacterEllipsis"
+                         MaxLines="1" />
+            </StackPanel>
+          </Border>
+          <ProgressBar Height="3"
+                       CornerRadius="0"
+                       Minimum="0"
+                       Maximum="100"
+                       Value="{Binding WatchedPercentage}"
+                       Foreground="{DynamicResource AccentBrush}"
+                       Background="{DynamicResource Surface1Brush}"
+                       BorderThickness="0" />
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Button>
+</UserControl>

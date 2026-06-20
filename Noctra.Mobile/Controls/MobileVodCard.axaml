@@ -1,0 +1,53 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="using:Noctra.Models"
+             xmlns:vm="using:Noctra.ViewModels"
+             xmlns:controls="using:Noctra.Mobile.Controls"
+             xmlns:loc="using:Noctra.Mobile.Localization"
+             x:Class="Noctra.Mobile.Controls.MobileVodCard"
+             x:DataType="models:Channel"
+             Width="154" Height="230">
+  <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
+          CommandParameter="{Binding}"
+          Background="Transparent"
+          BorderThickness="0"
+          CornerRadius="16"
+          Padding="0"
+          HorizontalContentAlignment="Stretch"
+          VerticalContentAlignment="Stretch">
+    <Button.ContextFlyout>
+      <MenuFlyout>
+        <MenuItem Header="{loc:Translate Context.MyList.Toggle}"
+                  Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).AddToMyListCommand}"
+                  CommandParameter="{Binding}"
+                  IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
+        <MenuItem Header="{loc:Translate Context.Favorite.Toggle}"
+                  Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}"
+                  CommandParameter="{Binding}"
+                  IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
+      </MenuFlyout>
+    </Button.ContextFlyout>
+    <Border CornerRadius="16" ClipToBounds="True" Background="{DynamicResource Surface0Brush}">
+      <Grid>
+        <Border Background="{DynamicResource Surface1Brush}">
+          <controls:RemoteImage Url="{Binding CoverUrl}" Stretch="UniformToFill" />
+        </Border>
+        <Border VerticalAlignment="Bottom" Background="#CC000000" Padding="10,8">
+          <StackPanel Spacing="4">
+            <TextBlock Text="{Binding Name}"
+                       Foreground="White"
+                       FontSize="13"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap"
+                       MaxLines="2"
+                       TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding GroupTitle}"
+                       Foreground="#A6FFFFFF"
+                       FontSize="11"
+                       TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Border>
+  </Button>
+</UserControl>
