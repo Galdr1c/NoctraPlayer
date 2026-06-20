@@ -55,6 +55,23 @@
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="10">
+          <TextBlock Text="Profile management"
+                     Foreground="#FFFFFF"
+                     FontWeight="SemiBold" />
+          <TextBlock Text="Return to the profile list to switch, add, or manage profiles."
+                     Foreground="#AEB5C5"
+                     FontSize="12"
+                     TextWrapping="Wrap" />
+          <Button Content="Back to Profiles"
+                  Click="BackToProfiles_Click"
+                  MinHeight="44" />
+        </StackPanel>
+      </Border>
+
+      <Border Background="#151923"
+              CornerRadius="16"
+              Padding="14">
+        <StackPanel Spacing="10">
           <TextBlock Text="Account"
                      Foreground="#FFFFFF"
                      FontWeight="SemiBold" />

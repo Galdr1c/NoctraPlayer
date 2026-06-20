@@ -707,6 +707,11 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MainView.axaml.cs"));
+        var settingsCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileSettingsView.axaml.cs"));
         var registrationSource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Android",
@@ -721,6 +726,10 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("CurrentProfileAvatar", settingsSource);
         Assert.Contains("ProfileCreatedAt", settingsSource);
         Assert.Contains("Settings.Profile.CreatedAtFormat", settingsSource);
+        Assert.Contains("Profile management", settingsSource);
+        Assert.Contains("Back to Profiles", settingsSource);
+        Assert.Contains("BackToProfiles_Click", settingsSource);
+        Assert.Contains("BackToProfilesRequested", settingsCode);
         Assert.Contains("ProviderUrlLabel", settingsSource);
         Assert.Contains("ProviderUrl", settingsSource);
         Assert.Contains("ShowProviderIdentity", settingsSource);
@@ -817,6 +826,9 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("Tag=\"Settings\"", mainViewSource);
         Assert.Contains("MobileSettingsView", mainViewSource);
         Assert.Contains("MobileSettingsContent.DataContext", mainViewCode);
+        Assert.Contains("MobileSettingsContent.BackToProfilesRequested", mainViewCode);
+        Assert.Contains("ShowProfileSelection", mainViewCode);
+        Assert.Contains("SelectDestination(\"More\")", mainViewCode);
         Assert.Contains("SettingsViewModel", mainViewCode);
         Assert.Contains("destination == \"Settings\"", mainViewCode);
         Assert.Contains("SelectDestination(\"Settings\")", mainViewCode);

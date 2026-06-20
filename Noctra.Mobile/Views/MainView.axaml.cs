@@ -23,6 +23,7 @@ public partial class MainView : UserControl
     public MainView()
     {
         InitializeComponent();
+        MobileSettingsContent.BackToProfilesRequested += (_, _) => ShowProfileSelection();
         SizeChanged += OnSizeChanged;
     }
 
@@ -122,6 +123,21 @@ public partial class MainView : UserControl
 
             UpdateContentVisibility("Settings");
         }
+    }
+
+    private void ShowProfileSelection()
+    {
+        if (DataContext is MobileMainViewModel viewModel)
+        {
+            viewModel.SelectDestination("More");
+        }
+
+        if (Application.Current is App { Services: not null } app)
+        {
+            MobileProfileList.DataContext = app.Services.GetRequiredService<ProfilesViewModel>();
+        }
+
+        UpdateContentVisibility("More");
     }
 
     private async void CoreMainViewModel_OnMediaSelected(object media)
