@@ -62,6 +62,7 @@
     "Mobile.Settings.About.Title": "Hakkında",
     "Mobile.Status.Playback.Starting": "Android oynatma başlatılıyor.",
     "Mobile.Status.Media.Ready": "Medya seçimi hazır.",
+    "Android.Dialog.PremiumRequired": "Bu özellik Noctra Premium gerektirir.",
     "Settings.Title": "Ayarlar",
     "Settings.Close.Tooltip": "Kapat",
     "Settings.Section.Appearance": "Görünüm",

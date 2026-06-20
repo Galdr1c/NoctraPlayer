@@ -9,10 +9,14 @@ namespace Noctra.Android.Services;
 public sealed class AndroidDialogService : IDialogService
 {
     private readonly AndroidActivityProvider _activityProvider;
+    private readonly ILocalizationService _localizationService;
 
-    public AndroidDialogService(AndroidActivityProvider activityProvider)
+    public AndroidDialogService(
+        AndroidActivityProvider activityProvider,
+        ILocalizationService localizationService)
     {
         _activityProvider = activityProvider;
+        _localizationService = localizationService;
     }
 
     public Task ShowMessageAsync(string title, string message) =>
@@ -34,8 +38,12 @@ public sealed class AndroidDialogService : IDialogService
             using var builder = new AlertDialog.Builder(activity);
             builder.SetTitle(title);
             builder.SetMessage(message);
-            builder.SetPositiveButton("OK", (_, _) => completion.TrySetResult(true));
-            builder.SetNegativeButton("Cancel", (_, _) => completion.TrySetResult(false));
+            builder.SetPositiveButton(
+                _localizationService.GetString("Dialog.Ok"),
+                (_, _) => completion.TrySetResult(true));
+            builder.SetNegativeButton(
+                _localizationService.GetString("Dialog.Cancel"),
+                (_, _) => completion.TrySetResult(false));
             builder.SetOnCancelListener(
                 new CancelListener(() => completion.TrySetResult(false)));
             var dialog = builder.Create()
@@ -46,7 +54,9 @@ public sealed class AndroidDialogService : IDialogService
     }
 
     public Task ShowUpsellAsync() =>
-        ShowAlertAsync("Noctra Premium", "This feature requires Noctra Premium.");
+        ShowAlertAsync(
+            _localizationService.GetString("Upsell.Title"),
+            _localizationService.GetString("Android.Dialog.PremiumRequired"));
 
     public Task<bool> ShowAddProfileAsync() => Task.FromResult(false);
 
@@ -70,7 +80,9 @@ public sealed class AndroidDialogService : IDialogService
             using var builder = new AlertDialog.Builder(activity);
             builder.SetTitle(title);
             builder.SetMessage(message);
-            builder.SetPositiveButton("OK", (_, _) => completion.TrySetResult(null));
+            builder.SetPositiveButton(
+                _localizationService.GetString("Dialog.Ok"),
+                (_, _) => completion.TrySetResult(null));
             builder.SetOnCancelListener(
                 new CancelListener(() => completion.TrySetResult(null)));
             var dialog = builder.Create()

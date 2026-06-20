@@ -62,6 +62,7 @@
     "Mobile.Settings.About.Title": "About",
     "Mobile.Status.Playback.Starting": "Starting Android playback.",
     "Mobile.Status.Media.Ready": "Media selection is ready.",
+    "Android.Dialog.PremiumRequired": "This feature requires Noctra Premium.",
     "Settings.Title": "Settings",
     "Settings.Close.Tooltip": "Close",
     "Settings.Section.Appearance": "Appearance",

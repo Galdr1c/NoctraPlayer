@@ -522,6 +522,40 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void AndroidDialogService_UsesLocalizedDialogChrome()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var dialogServiceSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "Services",
+            "AndroidDialogService.cs"));
+        var registrationSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "DependencyInjection",
+            "AndroidServiceCollectionExtensions.cs"));
+        var enTranslations = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Core",
+            "Localization",
+            "Translations",
+            "en-US.json"));
+
+        Assert.Contains("ILocalizationService", dialogServiceSource);
+        Assert.Contains("_localizationService.GetString(\"Dialog.Ok\")", dialogServiceSource);
+        Assert.Contains("_localizationService.GetString(\"Dialog.Cancel\")", dialogServiceSource);
+        Assert.Contains("_localizationService.GetString(\"Upsell.Title\")", dialogServiceSource);
+        Assert.Contains("_localizationService.GetString(\"Android.Dialog.PremiumRequired\")", dialogServiceSource);
+        Assert.Contains("AddSingleton<IDialogService, AndroidDialogService>", registrationSource);
+        Assert.Contains("\"Android.Dialog.PremiumRequired\"", enTranslations);
+        Assert.DoesNotContain("SetPositiveButton(\"OK\"", dialogServiceSource);
+        Assert.DoesNotContain("SetNegativeButton(\"Cancel\"", dialogServiceSource);
+        Assert.DoesNotContain("ShowAlertAsync(\"Noctra Premium\"", dialogServiceSource);
+        Assert.DoesNotContain("This feature requires Noctra Premium.", dialogServiceSource);
+    }
+
+    [Fact]
     public void MobileContentViews_ReusesDesktopMainViewModelContracts()
     {
         var repositoryRoot = FindRepositoryRoot();
