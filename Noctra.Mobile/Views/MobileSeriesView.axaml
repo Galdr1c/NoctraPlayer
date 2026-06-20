@@ -18,7 +18,7 @@
         <TextBlock Text="{loc:Translate Series.Title}"
                    FontSize="24"
                    FontWeight="SemiBold"
-                   Foreground="#FFFFFF" />
+                   Foreground="{DynamicResource TextPrimaryBrush}" />
         <ComboBox Grid.Column="1"
                   Width="150"
                   ItemsSource="{Binding SortOptions}"
@@ -45,7 +45,7 @@
                     CommandParameter="{Binding}"
                     Width="154"
                     MinHeight="230"
-                    Background="#151923"
+                    Background="{DynamicResource Surface0Brush}"
                     BorderThickness="0"
                     CornerRadius="16"
                     Padding="10"
@@ -55,14 +55,14 @@
               <StackPanel Spacing="8">
                 <Border Height="150"
                         CornerRadius="12"
-                        Background="#252B3D" />
+                        Background="{DynamicResource Surface1Brush}" />
                 <TextBlock Text="{Binding Name}"
-                           Foreground="#FFFFFF"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
                            FontWeight="SemiBold"
                            TextWrapping="Wrap"
                            MaxLines="2" />
                 <TextBlock Text="{Binding GroupTitle}"
-                           Foreground="#AEB5C5"
+                           Foreground="{DynamicResource TextMutedBrush}"
                            FontSize="12"
                            TextTrimming="CharacterEllipsis" />
               </StackPanel>
@@ -77,7 +77,7 @@
                   IsVisible="{Binding IsContentLoading}">
         <ProgressBar IsIndeterminate="True" Width="180" />
         <TextBlock Text="{loc:Translate Series.Loading}"
-                   Foreground="#AEB5C5" />
+                   Foreground="{DynamicResource TextMutedBrush}" />
       </StackPanel>
 
       <StackPanel Spacing="8"
@@ -85,11 +85,11 @@
                   HorizontalAlignment="Center"
                   IsVisible="{Binding ShowEmptyChannels}">
         <TextBlock Text="{loc:Translate Series.Empty.Title}"
-                   Foreground="#FFFFFF"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
                    FontSize="18"
                    FontWeight="SemiBold" />
         <TextBlock Text="{loc:Translate Series.Empty.Description}"
-                   Foreground="#AEB5C5"
+                   Foreground="{DynamicResource TextMutedBrush}"
                    TextAlignment="Center"
                    TextWrapping="Wrap" />
       </StackPanel>

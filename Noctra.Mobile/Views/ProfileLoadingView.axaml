@@ -9,7 +9,7 @@
              mc:Ignorable="d"
              d:DesignWidth="390"
              d:DesignHeight="420">
-  <Border Background="#151923"
+  <Border Background="{DynamicResource Surface0Brush}"
           CornerRadius="20"
           Padding="24"
           MaxWidth="360"
@@ -20,26 +20,30 @@
       <ProgressBar IsIndeterminate="{Binding IsIndeterminate}"
                    Width="220"
                    Height="8"
-                   Foreground="#8F7CFF" />
+                   Foreground="{DynamicResource AccentBrush}" />
       <TextBlock Text="Noctra"
                  FontSize="24"
                  FontWeight="Bold"
-                 Foreground="#FFFFFF"
+                 Foreground="{DynamicResource TextPrimaryBrush}"
                  HorizontalAlignment="Center" />
       <TextBlock Text="{Binding StatusMessage}"
-                 Foreground="#AEB5C5"
+                 Foreground="{DynamicResource TextMutedBrush}"
                  TextAlignment="Center"
                  TextWrapping="Wrap"
                  MaxWidth="300"
                  Tag="{Binding IsError}" />
-      <Border Background="#1AFFA500"
-              BorderBrush="#80FFA500"
-              BorderThickness="1"
+      <Border BorderThickness="1"
               CornerRadius="10"
               Padding="12,8"
               IsVisible="{Binding LoadingWarningMessage}">
+        <Border.Background>
+          <SolidColorBrush Color="{DynamicResource WarningColor}" Opacity="0.1" />
+        </Border.Background>
+        <Border.BorderBrush>
+          <SolidColorBrush Color="{DynamicResource WarningColor}" Opacity="0.5" />
+        </Border.BorderBrush>
         <TextBlock Text="{Binding LoadingWarningMessage}"
-                   Foreground="#FFA500"
+                   Foreground="{DynamicResource WarningBrush}"
                    TextAlignment="Center"
                    TextWrapping="Wrap" />
       </Border>
@@ -47,12 +51,12 @@
               Height="52"
               CornerRadius="13"
               ClipToBounds="True"
-              Background="#8F7CFF">
+              Background="{DynamicResource AccentBrush}">
         <Image Source="{Binding Avatar, Converter={StaticResource AvatarPathConverter}}"
                Stretch="UniformToFill" />
       </Border>
       <TextBlock Text="{Binding ProfileName}"
-                 Foreground="#FFFFFF"
+                 Foreground="{DynamicResource TextPrimaryBrush}"
                  FontWeight="SemiBold"
                  HorizontalAlignment="Center" />
     </StackPanel>

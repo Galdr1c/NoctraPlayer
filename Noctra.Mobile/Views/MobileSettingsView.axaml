@@ -10,21 +10,21 @@
              mc:Ignorable="d"
              d:DesignWidth="390"
              d:DesignHeight="720">
-  <Grid>
+  <Grid Background="{DynamicResource Bg0Brush}">
     <ScrollViewer>
       <StackPanel Margin="20" Spacing="14">
       <StackPanel Spacing="4">
         <TextBlock Text="Settings"
                    FontSize="24"
                    FontWeight="SemiBold"
-                   Foreground="#FFFFFF" />
+                   Foreground="{DynamicResource TextPrimaryBrush}" />
         <TextBlock Text="{Binding StatusMessage}"
-                   Foreground="#AEB5C5"
+                   Foreground="{DynamicResource TextMutedBrush}"
                    FontSize="12"
                    TextWrapping="Wrap" />
       </StackPanel>
 
-      <Border Background="#151923"
+      <Border Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
         <Grid ColumnDefinitions="Auto,*"
@@ -33,7 +33,7 @@
                   Height="64"
                   CornerRadius="32"
                   ClipToBounds="True"
-                  Background="#8F7CFF">
+                  Background="{DynamicResource AccentBrush}">
             <Image Source="{Binding CurrentProfileAvatar, Converter={StaticResource AvatarPathConverter}}"
                    Stretch="UniformToFill" />
           </Border>
@@ -41,26 +41,26 @@
                       Spacing="4"
                       VerticalAlignment="Center">
             <TextBlock Text="{Binding CurrentProfileName}"
-                       Foreground="#FFFFFF"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        FontSize="20"
                        FontWeight="SemiBold"
                        TextTrimming="CharacterEllipsis" />
             <TextBlock Text="{Binding ProfileCreatedAt, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Profile.CreatedAtFormat'}"
-                       Foreground="#AEB5C5"
+                       Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
           </StackPanel>
         </Grid>
       </Border>
 
-      <Border Background="#151923"
+      <Border Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="10">
           <TextBlock Text="Profile management"
-                     Foreground="#FFFFFF"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
                      FontWeight="SemiBold" />
           <TextBlock Text="Return to the profile list to switch, add, or manage profiles."
-                     Foreground="#AEB5C5"
+                     Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12"
                      TextWrapping="Wrap" />
           <Button Content="Back to Profiles"
@@ -69,71 +69,71 @@
         </StackPanel>
       </Border>
 
-      <Border Background="#151923"
+      <Border Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="10">
           <TextBlock Text="Account"
-                     Foreground="#FFFFFF"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
                      FontWeight="SemiBold" />
           <Grid ColumnDefinitions="Auto,*"
                 ColumnSpacing="10">
             <TextBlock Text="{Binding ProviderUrlLabel}"
-                       Foreground="#AEB5C5"
+                       Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
             <TextBlock Grid.Column="1"
                        Text="{Binding ProviderUrl}"
-                       Foreground="#FFFFFF"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        TextWrapping="Wrap" />
           </Grid>
           <Grid ColumnDefinitions="Auto,*"
                 ColumnSpacing="10"
                 IsVisible="{Binding ShowProviderIdentity}">
             <TextBlock Text="{Binding ProviderIdentityLabel}"
-                       Foreground="#AEB5C5"
+                       Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
             <TextBlock Grid.Column="1"
                        Text="{Binding ProviderUsername}"
-                       Foreground="#FFFFFF"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        TextWrapping="Wrap" />
           </Grid>
           <Grid ColumnDefinitions="Auto,*"
                 ColumnSpacing="10"
                 IsVisible="{Binding ShowProviderPassword}">
             <TextBlock Text="Password"
-                       Foreground="#AEB5C5"
+                       Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
             <TextBlock Grid.Column="1"
                        Text="{Binding ProviderPassword}"
-                       Foreground="#FFFFFF"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        TextWrapping="Wrap" />
           </Grid>
           <StackPanel Spacing="3"
                       IsVisible="{Binding ShowProviderExpiration}">
             <TextBlock Text="Expiration"
-                       Foreground="#AEB5C5"
+                       Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
             <TextBlock Text="{Binding ExpirationDate, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Account.ExpiryFormat'}"
-                       Foreground="#FFFFFF"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        FontWeight="SemiBold" />
             <TextBlock Text="{Binding ExpirationStatus}"
-                       Foreground="#8F7CFF"
+                       Foreground="{DynamicResource AccentBrush}"
                        FontSize="12" />
           </StackPanel>
         </StackPanel>
       </Border>
 
-      <Border Background="#151923"
+      <Border Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
           <TextBlock Text="Appearance"
-                     Foreground="#FFFFFF"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
                      FontWeight="SemiBold" />
           <CheckBox Content="Dark theme"
                     IsChecked="{Binding IsDarkTheme}" />
           <TextBlock Text="Language"
-                     Foreground="#AEB5C5"
+                     Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedValue="{Binding AppLanguage, Mode=TwoWay}"
                     SelectedValueBinding="{Binding Tag}"
@@ -147,15 +147,15 @@
         </StackPanel>
       </Border>
 
-      <Border Background="#151923"
+      <Border Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
           <TextBlock Text="Playback"
-                     Foreground="#FFFFFF"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
                      FontWeight="SemiBold" />
           <TextBlock Text="User agent"
-                     Foreground="#AEB5C5"
+                     Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <TextBox Text="{Binding UserAgent, Mode=TwoWay}"
                    PlaceholderText="VLC/3.0.x LibVLC/3.0.x"
@@ -163,7 +163,7 @@
           <CheckBox Content="Auto play next episode"
                     IsChecked="{Binding AutoPlayNext}" />
           <TextBlock Text="Streaming quality"
-                     Foreground="#AEB5C5"
+                     Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedIndex="{Binding SelectedDataUsage}"
                     MinHeight="44">
@@ -173,7 +173,7 @@
             <ComboBoxItem Content="Auto" />
           </ComboBox>
           <TextBlock Text="Buffer"
-                     Foreground="#AEB5C5"
+                     Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <StackPanel Spacing="4">
             <RadioButton Content="Small"
@@ -195,17 +195,17 @@
         </StackPanel>
       </Border>
 
-      <Border Background="#151923"
+      <Border Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
           <TextBlock Text="Audio and subtitles"
-                     Foreground="#FFFFFF"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
                      FontWeight="SemiBold" />
           <CheckBox Content="Enable subtitles automatically"
                     IsChecked="{Binding SubtitleEnabled}" />
           <TextBlock Text="Preferred subtitle"
-                     Foreground="#AEB5C5"
+                     Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedValue="{Binding SubtitleLanguage, Mode=TwoWay}"
                     SelectedValueBinding="{Binding Tag}"
@@ -222,7 +222,7 @@
             <ComboBoxItem Content="Dutch" Tag="nl" />
           </ComboBox>
           <TextBlock Text="Preferred audio"
-                     Foreground="#AEB5C5"
+                     Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedValue="{Binding PreferredAudioLanguage, Mode=TwoWay}"
                     SelectedValueBinding="{Binding Tag}"
@@ -241,17 +241,17 @@
         </StackPanel>
       </Border>
 
-      <Border Background="#151923"
+      <Border Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
           <TextBlock Text="Downloads"
-                     Foreground="#FFFFFF"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
                      FontWeight="SemiBold" />
           <CheckBox Content="Download on Wi-Fi only"
                     IsChecked="{Binding DownloadWifiOnly}" />
           <TextBlock Text="Download quality"
-                     Foreground="#AEB5C5"
+                     Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedIndex="{Binding SelectedDownloadQuality}"
                     MinHeight="44">
@@ -259,14 +259,14 @@
             <ComboBoxItem Content="High" />
           </ComboBox>
           <TextBlock Text="Download location"
-                     Foreground="#AEB5C5"
+                     Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <TextBox Text="{Binding DownloadPath}"
                    IsReadOnly="True"
                    TextWrapping="Wrap"
                    MinHeight="44" />
           <TextBlock Text="Android stores downloads in the app storage location shown above."
-                     Foreground="#AEB5C5"
+                     Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12"
                      TextWrapping="Wrap" />
           <CheckBox Content="Show download notifications"
@@ -274,39 +274,39 @@
         </StackPanel>
       </Border>
 
-      <Border Background="#151923"
+      <Border Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
           <TextBlock Text="Channels"
-                     Foreground="#FFFFFF"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
                      FontWeight="SemiBold" />
           <Button Content="Refresh channels now"
                   Command="{Binding RefreshChannelListNowCommand}"
                   MinHeight="44" />
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="Total channels"
-                       Foreground="#AEB5C5"
+                       Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
             <TextBlock Grid.Column="1"
                        Text="{Binding TotalChannels}"
-                       Foreground="#FFFFFF"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        FontWeight="SemiBold" />
           </Grid>
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="Last update"
-                       Foreground="#AEB5C5"
+                       Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
             <TextBlock Grid.Column="1"
                        Text="{Binding ChannelListLastUpdated, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Channels.DateFormat'}"
-                       Foreground="#FFFFFF"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        FontSize="12" />
           </Grid>
           <TextBlock Text="{Binding ChannelListLastError}"
-                     Foreground="#FF6B6B"
+                     Foreground="{DynamicResource ErrorBrush}"
                      TextWrapping="Wrap" />
           <TextBlock Text="Refresh frequency"
-                     Foreground="#AEB5C5"
+                     Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedIndex="{Binding ChannelListRefreshFrequencyIndex, Mode=TwoWay}"
                     MinHeight="44">
@@ -329,25 +329,25 @@
 
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="Hidden live groups"
-                       Foreground="#AEB5C5"
+                       Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
             <TextBlock Grid.Column="1"
                        Text="{Binding HiddenLiveGroups.Count}"
-                       Foreground="#FFFFFF"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        FontSize="12"
                        FontWeight="SemiBold" />
           </Grid>
           <ItemsControl ItemsSource="{Binding HiddenLiveGroups}">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Border Background="#202638"
+                <Border Background="{DynamicResource Surface1Brush}"
                         CornerRadius="10"
                         Padding="10"
                         Margin="0,0,0,6">
                   <Grid ColumnDefinitions="*,Auto"
                         ColumnSpacing="8">
                     <TextBlock Text="{Binding}"
-                               Foreground="#FFFFFF"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center" />
                     <Button Grid.Column="1"
@@ -361,31 +361,31 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
           <TextBlock Text="No hidden live groups"
-                     Foreground="#AEB5C5"
+                     Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12"
                      IsVisible="{Binding !HiddenLiveGroups.Count}" />
 
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="Hidden movie groups"
-                       Foreground="#AEB5C5"
+                       Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
             <TextBlock Grid.Column="1"
                        Text="{Binding HiddenMovieGroups.Count}"
-                       Foreground="#FFFFFF"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        FontSize="12"
                        FontWeight="SemiBold" />
           </Grid>
           <ItemsControl ItemsSource="{Binding HiddenMovieGroups}">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Border Background="#202638"
+                <Border Background="{DynamicResource Surface1Brush}"
                         CornerRadius="10"
                         Padding="10"
                         Margin="0,0,0,6">
                   <Grid ColumnDefinitions="*,Auto"
                         ColumnSpacing="8">
                     <TextBlock Text="{Binding}"
-                               Foreground="#FFFFFF"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center" />
                     <Button Grid.Column="1"
@@ -399,31 +399,31 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
           <TextBlock Text="No hidden movie groups"
-                     Foreground="#AEB5C5"
+                     Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12"
                      IsVisible="{Binding !HiddenMovieGroups.Count}" />
 
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="Hidden series groups"
-                       Foreground="#AEB5C5"
+                       Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
             <TextBlock Grid.Column="1"
                        Text="{Binding HiddenSeriesGroups.Count}"
-                       Foreground="#FFFFFF"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        FontSize="12"
                        FontWeight="SemiBold" />
           </Grid>
           <ItemsControl ItemsSource="{Binding HiddenSeriesGroups}">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Border Background="#202638"
+                <Border Background="{DynamicResource Surface1Brush}"
                         CornerRadius="10"
                         Padding="10"
                         Margin="0,0,0,6">
                   <Grid ColumnDefinitions="*,Auto"
                         ColumnSpacing="8">
                     <TextBlock Text="{Binding}"
-                               Foreground="#FFFFFF"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center" />
                     <Button Grid.Column="1"
@@ -437,46 +437,46 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
           <TextBlock Text="No hidden series groups"
-                     Foreground="#AEB5C5"
+                     Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12"
                      IsVisible="{Binding !HiddenSeriesGroups.Count}" />
         </StackPanel>
       </Border>
 
-      <Border Background="#151923"
+      <Border Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
           <TextBlock Text="EPG"
-                     Foreground="#FFFFFF"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
                      FontWeight="SemiBold" />
           <CheckBox Content="Enable EPG"
                     IsChecked="{Binding EpgEnabled}" />
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="EPG programs"
-                       Foreground="#AEB5C5"
+                       Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
             <TextBlock Grid.Column="1"
                        Text="{Binding TotalEpgPrograms}"
-                       Foreground="#FFFFFF"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        FontWeight="SemiBold" />
           </Grid>
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="EPG channels"
-                       Foreground="#AEB5C5"
+                       Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
             <TextBlock Grid.Column="1"
                        Text="{Binding TotalEpgChannels}"
-                       Foreground="#FFFFFF"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        FontWeight="SemiBold" />
           </Grid>
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="Last EPG update"
-                       Foreground="#AEB5C5"
+                       Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
             <TextBlock Grid.Column="1"
                        Text="{Binding LastEpgUpdate, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Channels.DateFormat'}"
-                       Foreground="#FFFFFF"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        FontSize="12" />
           </Grid>
           <Button Content="Refresh EPG now"
@@ -484,10 +484,10 @@
                   IsEnabled="{Binding !IsGlobalLoading}"
                   MinHeight="44" />
           <TextBlock Text="{Binding EpgLastError}"
-                     Foreground="#FF6B6B"
+                     Foreground="{DynamicResource ErrorBrush}"
                      TextWrapping="Wrap" />
           <TextBlock Text="EPG refresh frequency"
-                     Foreground="#AEB5C5"
+                     Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedIndex="{Binding EpgRefreshFrequencyIndex, Mode=TwoWay}"
                     MinHeight="44">
@@ -508,7 +508,7 @@
                           IsEnabled="{Binding IsPremium}" />
           </ComboBox>
           <TextBlock Text="EPG time offset"
-                     Foreground="#AEB5C5"
+                     Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedIndex="{Binding EpgTimeOffsetIndex, Mode=TwoWay}"
                     MinHeight="44">
@@ -539,7 +539,7 @@
             <ComboBoxItem Content="{Binding Source=12, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
           </ComboBox>
 
-          <Border Background="#202638"
+          <Border Background="{DynamicResource Surface1Brush}"
                   CornerRadius="12"
                   Padding="12">
             <StackPanel Spacing="10">
@@ -547,10 +547,10 @@
                     ColumnSpacing="10">
                 <StackPanel>
                   <TextBlock Text="Custom EPG sources"
-                             Foreground="#FFFFFF"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
                              FontWeight="SemiBold" />
                   <TextBlock Text="{Binding CustomEpgUrls.Count, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.SourcesCountFormat'}"
-                             Foreground="#AEB5C5"
+                             Foreground="{DynamicResource TextMutedBrush}"
                              FontSize="12" />
                 </StackPanel>
                 <Button Grid.Column="1"
@@ -561,7 +561,7 @@
               </Grid>
 
               <TextBlock Text="More EPG sources can slow down refresh depending on provider response time."
-                         Foreground="#FFA500"
+                         Foreground="{DynamicResource WarningBrush}"
                          FontSize="12"
                          TextWrapping="Wrap" />
 
@@ -588,15 +588,15 @@
         </StackPanel>
       </Border>
 
-      <Border Background="#151923"
+      <Border Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="10">
           <TextBlock Text="Privacy"
-                     Foreground="#FFFFFF"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
                      FontWeight="SemiBold" />
           <TextBlock Text="Watch history retention"
-                     Foreground="#AEB5C5"
+                     Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedIndex="{Binding WatchHistoryRetentionIndex}"
                     MinHeight="44">
@@ -612,12 +612,12 @@
         </StackPanel>
       </Border>
 
-      <Border Background="#151923"
+      <Border Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
           <TextBlock Text="About"
-                     Foreground="#FFFFFF"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
                      FontWeight="SemiBold" />
 
           <Grid ColumnDefinitions="Auto,*"
@@ -638,26 +638,26 @@
               <StackPanel Orientation="Horizontal"
                           Spacing="8">
                 <TextBlock Text="Noctra"
-                           Foreground="#FFFFFF"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
                            FontSize="18"
                            FontWeight="SemiBold" />
-                <Border Background="#F5C842"
+                <Border Background="{DynamicResource PremiumBadgeBrush}"
                         CornerRadius="6"
                         Padding="8,2"
                         IsVisible="{Binding IsPremium}">
                   <TextBlock Text="PREMIUM"
-                             Foreground="#000000"
+                             Foreground="{DynamicResource PremiumBadgeTextBrush}"
                              FontSize="10"
                              FontWeight="Bold" />
                 </Border>
               </StackPanel>
               <TextBlock Text="{Binding CurrentVersion, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.About.PremiumVersionFormat'}"
                          IsVisible="{Binding IsPremium}"
-                         Foreground="#AEB5C5"
+                         Foreground="{DynamicResource TextMutedBrush}"
                          FontSize="12" />
               <TextBlock Text="{Binding CurrentVersion, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.About.VersionFormat'}"
                          IsVisible="{Binding !IsPremium}"
-                         Foreground="#AEB5C5"
+                         Foreground="{DynamicResource TextMutedBrush}"
                          FontSize="12" />
             </StackPanel>
           </Grid>
@@ -667,19 +667,19 @@
                   IsVisible="{Binding !IsPremium}"
                   MinHeight="44" />
 
-          <Border Background="#202638"
+          <Border Background="{DynamicResource Surface1Brush}"
                   CornerRadius="12"
                   Padding="12">
             <StackPanel Spacing="10">
               <TextBlock Text="Updates"
-                         Foreground="#FFFFFF"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
                          FontWeight="SemiBold" />
               <TextBlock Text="{Binding UpdateStatusText}"
-                         Foreground="#AEB5C5"
+                         Foreground="{DynamicResource TextMutedBrush}"
                          FontSize="12"
                          TextWrapping="Wrap" />
               <TextBlock Text="Checking for updates..."
-                         Foreground="#8F7CFF"
+                         Foreground="{DynamicResource AccentBrush}"
                          FontSize="12"
                          IsVisible="{Binding IsCheckingUpdates}" />
               <Button Content="Check for updates"
@@ -713,9 +713,9 @@
       </StackPanel>
     </ScrollViewer>
 
-    <Grid Background="#AA000000"
+    <Grid Background="{DynamicResource OverlayDimBrush}"
           IsVisible="{Binding IsGlobalLoading}">
-      <Border Background="#151923"
+      <Border Background="{DynamicResource Surface0Brush}"
               CornerRadius="18"
               Padding="24"
               Width="300"
@@ -723,16 +723,16 @@
               VerticalAlignment="Center">
         <StackPanel Spacing="14">
           <TextBlock Text="Loading"
-                     Foreground="#FFFFFF"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
                      FontSize="20"
                      FontWeight="SemiBold"
                      HorizontalAlignment="Center" />
           <TextBlock Text="{Binding GlobalLoadingMessage}"
-                     Foreground="#FFFFFF"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
                      TextWrapping="Wrap"
                      TextAlignment="Center" />
           <TextBlock Text="{Binding StatusMessage}"
-                     Foreground="#AEB5C5"
+                     Foreground="{DynamicResource TextMutedBrush}"
                      TextWrapping="Wrap"
                      TextAlignment="Center" />
           <Button Content="Cancel"

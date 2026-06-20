@@ -1,0 +1,274 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Noctra.ViewModels"
+             xmlns:models="using:Noctra.Models"
+             xmlns:converters="using:Noctra.Mobile.Converters"
+             xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:materialIcons="clr-namespace:Material.Icons;assembly=Material.Icons"
+             x:Class="Noctra.Mobile.Views.MobileHomeView"
+             x:DataType="vm:MainViewModel"
+             x:CompileBindings="False"
+             mc:Ignorable="d"
+             d:DesignWidth="390"
+             d:DesignHeight="720">
+  <UserControl.Resources>
+    <converters:CountToVisibilityConverter x:Key="CountToVisibility" />
+    <converters:InverseBoolConverter x:Key="InverseBool" />
+  </UserControl.Resources>
+
+  <ScrollViewer x:Name="HomeScrollViewer"
+                ScrollChanged="HomeScrollViewer_ScrollChanged"
+                VerticalScrollBarVisibility="Auto"
+                HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="20" Spacing="24">
+
+      <!-- Continue Watching Section -->
+      <StackPanel Spacing="12"
+                  IsVisible="{Binding ContinueWatching.Count, Converter={StaticResource CountToVisibility}}">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Text="{loc:Translate Home.ContinueWatching}"
+                     FontSize="18"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
+                     VerticalAlignment="Center" />
+          <TextBlock Grid.Column="1"
+                     Text="{Binding ContinueWatching.Count, StringFormat={loc:Translate Home.ContinueWatching.CountFormat}}"
+                     FontSize="12"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     VerticalAlignment="Center" />
+        </Grid>
+        <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding ContinueWatching}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="12" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="models:Channel">
+                <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
+                        CommandParameter="{Binding}"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Padding="0"
+                        Width="170"
+                        MinHeight="120"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch">
+                  <Border CornerRadius="14"
+                          Background="{DynamicResource Surface0Brush}"
+                          ClipToBounds="True">
+                    <Grid>
+                      <Border Background="{DynamicResource Surface1Brush}" />
+                      <StackPanel VerticalAlignment="Bottom"
+                                  Spacing="0">
+                        <Border Padding="12,14,12,8">
+                          <Border.Background>
+                            <LinearGradientBrush StartPoint="0%,100%" EndPoint="0%,0%">
+                              <GradientStop Offset="0" Color="#CC000000" />
+                              <GradientStop Offset="1" Color="#00000000" />
+                            </LinearGradientBrush>
+                          </Border.Background>
+                          <StackPanel Spacing="2">
+                            <TextBlock Text="{Binding Name}"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="1" />
+                            <TextBlock Text="{Binding GroupTitle}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" Opacity="0.65"
+                                       FontSize="11"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="1" />
+                          </StackPanel>
+                        </Border>
+                        <ProgressBar Height="3"
+                                     CornerRadius="0"
+                                     Minimum="0"
+                                     Maximum="100"
+                                     Value="{Binding WatchedPercentage}"
+                                     Foreground="{DynamicResource AccentBrush}"
+                                     Background="{DynamicResource Surface1Brush}"
+                                     BorderThickness="0" />
+                      </StackPanel>
+                    </Grid>
+                  </Border>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </StackPanel>
+
+      <!-- Quick Access Section -->
+      <StackPanel Spacing="12">
+        <TextBlock Text="{loc:Translate Home.QuickAccess.Title}"
+                   FontSize="18"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextPrimaryBrush}" />
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+          <Button Background="{DynamicResource Surface0Brush}"
+                  BorderThickness="0"
+                  CornerRadius="16"
+                  Padding="18"
+                  HorizontalContentAlignment="Stretch"
+                  VerticalContentAlignment="Stretch"
+                  Tag="Live"
+                  Click="OnQuickAccessClick">
+            <StackPanel Spacing="8">
+              <Border Width="40"
+                      Height="40"
+                      CornerRadius="12"
+                      Background="{DynamicResource Surface1Brush}">
+                <icons:MaterialIcon Kind="{x:Static materialIcons:MaterialIconKind.Tv}"
+                           Foreground="{DynamicResource AccentBrush}"
+                           Width="22"
+                           Height="22" />
+              </Border>
+              <StackPanel Spacing="2">
+                <TextBlock Text="{loc:Translate Shell.Nav.Live}"
+                           FontSize="15"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBlock Text="{loc:Translate Home.QuickAccess.Live.Description}"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           FontSize="12" />
+              </StackPanel>
+            </StackPanel>
+          </Button>
+          <Button Grid.Column="1"
+                  Background="{DynamicResource Surface0Brush}"
+                  BorderThickness="0"
+                  CornerRadius="16"
+                  Padding="18"
+                  HorizontalContentAlignment="Stretch"
+                  VerticalContentAlignment="Stretch"
+                  Tag="Movies"
+                  Click="OnQuickAccessClick">
+            <StackPanel Spacing="8">
+              <Border Width="40"
+                      Height="40"
+                      CornerRadius="12"
+                      Background="{DynamicResource Surface1Brush}">
+                <icons:MaterialIcon Kind="{x:Static materialIcons:MaterialIconKind.Movie}"
+                           Foreground="{DynamicResource AccentBrush}"
+                           Width="22"
+                           Height="22" />
+              </Border>
+              <StackPanel Spacing="2">
+                <TextBlock Text="{loc:Translate Shell.Nav.Movies}"
+                           FontSize="15"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBlock Text="{loc:Translate Home.QuickAccess.Movies.Description}"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           FontSize="12" />
+              </StackPanel>
+            </StackPanel>
+          </Button>
+        </Grid>
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+          <Button Background="{DynamicResource Surface0Brush}"
+                  BorderThickness="0"
+                  CornerRadius="16"
+                  Padding="18"
+                  HorizontalContentAlignment="Stretch"
+                  VerticalContentAlignment="Stretch"
+                  Tag="Series"
+                  Click="OnQuickAccessClick">
+            <StackPanel Spacing="8">
+              <Border Width="40"
+                      Height="40"
+                      CornerRadius="12"
+                      Background="{DynamicResource Surface1Brush}">
+                <icons:MaterialIcon Kind="{x:Static materialIcons:MaterialIconKind.Collections}"
+                           Foreground="{DynamicResource AccentBrush}"
+                           Width="22"
+                           Height="22" />
+              </Border>
+              <StackPanel Spacing="2">
+                <TextBlock Text="{loc:Translate Shell.Nav.Series}"
+                           FontSize="15"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBlock Text="{loc:Translate Home.QuickAccess.Series.Description}"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           FontSize="12" />
+              </StackPanel>
+            </StackPanel>
+          </Button>
+          <Button Grid.Column="1"
+                  Background="{DynamicResource Surface0Brush}"
+                  BorderThickness="0"
+                  CornerRadius="16"
+                  Padding="18"
+                  HorizontalContentAlignment="Stretch"
+                  VerticalContentAlignment="Stretch"
+                  Tag="Search"
+                  Click="OnQuickAccessClick">
+            <StackPanel Spacing="8">
+              <Border Width="40"
+                      Height="40"
+                      CornerRadius="12"
+                      Background="{DynamicResource Surface1Brush}">
+                <icons:MaterialIcon Kind="{x:Static materialIcons:MaterialIconKind.Magnify}"
+                           Foreground="{DynamicResource AccentBrush}"
+                           Width="22"
+                           Height="22" />
+              </Border>
+              <StackPanel Spacing="2">
+                <TextBlock Text="{loc:Translate Shell.Search.Tooltip}"
+                           FontSize="15"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBlock Text="{loc:Translate Home.QuickAccess.Search.Description}"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           FontSize="12" />
+              </StackPanel>
+            </StackPanel>
+          </Button>
+        </Grid>
+      </StackPanel>
+
+      <!-- Empty State (shown when no Continue Watching) -->
+      <StackPanel Spacing="14"
+                  Margin="0,30,0,0"
+                  HorizontalAlignment="Center"
+                  IsVisible="{Binding ContinueWatching.Count, Converter={StaticResource CountToVisibility}, ConverterParameter=invert}">
+        <Border Width="80"
+                Height="80"
+                CornerRadius="40"
+                Background="{DynamicResource Surface0Brush}"
+                HorizontalAlignment="Center">
+          <icons:MaterialIcon Kind="{x:Static materialIcons:MaterialIconKind.Home}"
+                     Foreground="{DynamicResource AccentBrush}"
+                     Width="40"
+                     Height="40" />
+        </Border>
+        <TextBlock Text="{loc:Translate Home.Welcome}"
+                   FontSize="22"
+                   FontWeight="Bold"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   HorizontalAlignment="Center" />
+        <TextBlock Text="{loc:Translate Home.EmptyState.Subtitle}"
+                   FontSize="15"
+                   Foreground="{DynamicResource TextMutedBrush}"
+                   HorizontalAlignment="Center" />
+        <TextBlock Text="{loc:Translate Home.EmptyState.Description}"
+                   FontSize="13"
+                   Foreground="{DynamicResource TextDisabledBrush}"
+                   HorizontalAlignment="Center"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"
+                   MaxWidth="300"
+                   Margin="0,4,0,0" />
+      </StackPanel>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

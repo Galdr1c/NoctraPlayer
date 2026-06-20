@@ -24,7 +24,7 @@
     </Style>
   </UserControl.Styles>
 
-  <Border Background="#151923"
+  <Border Background="{DynamicResource Surface0Brush}"
           CornerRadius="20"
           Padding="26"
           MaxWidth="360"
@@ -36,7 +36,7 @@
               Height="72"
               CornerRadius="18"
               ClipToBounds="True"
-              Background="#8F7CFF">
+              Background="{DynamicResource AccentBrush}">
         <Image Source="{Binding ProfileAvatar, Converter={StaticResource AvatarPathConverter}}"
                Stretch="UniformToFill" />
       </Border>
@@ -44,22 +44,22 @@
       <TextBlock Text="{Binding ProfileName}"
                  FontSize="20"
                  FontWeight="SemiBold"
-                 Foreground="#FFFFFF"
+                 Foreground="{DynamicResource TextPrimaryBrush}"
                  HorizontalAlignment="Center" />
       <TextBlock Text="{Binding Purpose}"
                  FontSize="13"
-                 Foreground="#AEB5C5"
+                 Foreground="{DynamicResource TextMutedBrush}"
                  TextAlignment="Center"
                  TextWrapping="Wrap" />
 
       <TextBlock Text="{Binding PinLength, StringFormat='{}{0}/4'}"
-                 Foreground="#FFFFFF"
+                 Foreground="{DynamicResource TextPrimaryBrush}"
                  FontSize="18"
                  FontWeight="SemiBold"
                  HorizontalAlignment="Center" />
 
       <TextBlock Text="{Binding ErrorMessage}"
-                 Foreground="#FF6B6B"
+                 Foreground="{DynamicResource ErrorBrush}"
                  FontSize="12"
                  MinHeight="18"
                  TextAlignment="Center"
@@ -70,13 +70,13 @@
                   HorizontalAlignment="Center"
                   IsVisible="{Binding IsLocked}">
         <TextBlock Text="{loc:Translate PinEntry.LockoutCountdown}"
-                   Foreground="#FFA500"
+                   Foreground="{DynamicResource WarningBrush}"
                    FontSize="12" />
         <TextBlock Text="{Binding LockSecondsRemaining}"
-                   Foreground="#FFA500"
+                   Foreground="{DynamicResource WarningBrush}"
                    FontSize="12" />
         <TextBlock Text="s"
-                   Foreground="#FFA500"
+                   Foreground="{DynamicResource WarningBrush}"
                    FontSize="12" />
       </StackPanel>
 
@@ -103,7 +103,7 @@
       <Button Content="{loc:Translate Dialog.Cancel}"
               Command="{Binding CancelCommand}"
               Background="Transparent"
-              Foreground="#AEB5C5"
+              Foreground="{DynamicResource TextMutedBrush}"
               BorderThickness="0" />
     </StackPanel>
   </Border>

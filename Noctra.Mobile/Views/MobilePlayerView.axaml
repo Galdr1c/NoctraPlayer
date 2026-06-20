@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:models="using:Noctra.Models"
              xmlns:vm="using:Noctra.ViewModels"
+             xmlns:loc="using:Noctra.Mobile.Localization"
              x:Class="Noctra.Mobile.Views.MobilePlayerView"
              x:Name="PlayerRoot"
              x:DataType="vm:PlayerViewModel"
@@ -11,7 +12,7 @@
              mc:Ignorable="d"
              d:DesignWidth="390"
              d:DesignHeight="260">
-  <Border Background="#F5090B10"
+  <Border Background="{DynamicResource Bg0Brush}"
           Padding="16"
           CornerRadius="18"
           VerticalAlignment="Bottom"
@@ -20,16 +21,16 @@
       <Grid ColumnDefinitions="*,Auto">
         <StackPanel Spacing="4">
           <TextBlock Text="{Binding CurrentChannel.Name}"
-                     Foreground="#FFFFFF"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
                      FontSize="18"
                      FontWeight="SemiBold"
                      TextWrapping="Wrap" />
           <TextBlock Text="{Binding ConnectionStatus}"
-                     Foreground="#AEB5C5"
+                     Foreground="{DynamicResource TextMutedBrush}"
                      TextWrapping="Wrap" />
         </StackPanel>
         <Button Grid.Column="1"
-                Content="Close"
+                Content="{loc:Translate Common.Close}"
                 Command="{Binding CloseCommand}"
                 MinHeight="42"
                 MinWidth="72"
@@ -52,14 +53,14 @@
       </Grid>
 
       <TextBlock Text="{Binding ErrorMessage}"
-                 Foreground="#FF6B6B"
+                 Foreground="{DynamicResource ErrorBrush}"
                  TextWrapping="Wrap" />
 
       <Grid ColumnDefinitions="Auto,*,Auto"
             ColumnSpacing="10"
             VerticalAlignment="Center">
         <TextBlock Text="{Binding PositionText}"
-                   Foreground="#E6FFFFFF"
+                   Foreground="{DynamicResource OverlayTextBrush}"
                    FontSize="12"
                    FontWeight="SemiBold"
                    VerticalAlignment="Center" />
@@ -70,7 +71,7 @@
                 IsEnabled="{Binding IsPlaying}" />
         <TextBlock Grid.Column="2"
                    Text="{Binding DurationText}"
-                   Foreground="#AEB5C5"
+                   Foreground="{DynamicResource TextMutedBrush}"
                    FontSize="12"
                    FontWeight="SemiBold"
                    VerticalAlignment="Center" />
@@ -79,12 +80,12 @@
       <Grid ColumnDefinitions="*,Auto"
             ColumnSpacing="10">
         <TextBlock Text="{Binding RemainingTime}"
-                   Foreground="#AEB5C5"
+                   Foreground="{DynamicResource TextMutedBrush}"
                    FontSize="12"
                    VerticalAlignment="Center" />
         <TextBlock Grid.Column="1"
                    Text="{Binding StreamInfo}"
-                   Foreground="#AEB5C5"
+                   Foreground="{DynamicResource TextMutedBrush}"
                    FontSize="12"
                    TextAlignment="Right"
                    VerticalAlignment="Center" />
@@ -93,11 +94,11 @@
       <Grid ColumnDefinitions="Auto,Auto,*,Auto"
             ColumnSpacing="8"
             VerticalAlignment="Center">
-        <Button Content="Play/Pause"
+        <Button Content="{loc:Translate Player.Overlay.PlayPause.Tooltip}"
                 Command="{Binding PlayPauseCommand}"
                 MinHeight="44" />
         <Button Grid.Column="1"
-                Content="Stop"
+                Content="{loc:Translate Player.Mobile.Stop}"
                 Command="{Binding StopCommand}"
                 MinHeight="44" />
         <Slider Grid.Column="2"
@@ -106,7 +107,7 @@
                 Value="{Binding Volume, Mode=TwoWay}"
                 VerticalAlignment="Center" />
         <Button Grid.Column="3"
-                Content="Mute"
+                Content="{loc:Translate Player.Mobile.Mute}"
                 Command="{Binding ToggleMuteCommand}"
                 MinHeight="44" />
       </Grid>
@@ -125,7 +126,7 @@
                 IsVisible="{Binding !IsLiveContent}"
                 MinHeight="40" />
         <Button Grid.Column="2"
-                Content="Favorite"
+                Content="{loc:Translate Player.Mobile.Favorite}"
                 Command="{Binding ToggleLiveFavoriteCommand}"
                 MinHeight="40" />
         <Button Grid.Column="3"
@@ -141,11 +142,11 @@
       <Grid ColumnDefinitions="*,*"
             ColumnSpacing="8"
             IsVisible="{Binding IsLiveContent}">
-        <Button Content="Previous"
+        <Button Content="{loc:Translate Player.Mobile.Previous}"
                 Command="{Binding PlayPreviousLiveChannelCommand}"
                 MinHeight="40" />
         <Button Grid.Column="1"
-                Content="Next"
+                Content="{loc:Translate Player.Mobile.Next}"
                 Command="{Binding PlayNextLiveChannelCommand}"
                 MinHeight="40" />
       </Grid>
@@ -153,61 +154,61 @@
       <Grid ColumnDefinitions="*,*"
             ColumnSpacing="8"
             IsVisible="{Binding IsSeriesContent}">
-        <Button Content="Episodes"
+        <Button Content="{loc:Translate Player.Overlay.Episodes.Tooltip}"
                 Command="{Binding OpenEpisodesCommand}"
                 MinHeight="40" />
         <Button Grid.Column="1"
-                Content="Next Episode"
+                Content="{loc:Translate Player.Overlay.NextEpisode}"
                 Command="{Binding PlayNextEpisodeCommand}"
                 MinHeight="40" />
       </Grid>
 
       <TextBlock Text="{Binding SleepTimerCountdown}"
-                 Foreground="#AEB5C5"
+                 Foreground="{DynamicResource TextMutedBrush}"
                  FontSize="12"
                  HorizontalAlignment="Right" />
 
-      <Border Background="#1FFFFFFF"
+      <Border Background="{DynamicResource OverlayBackgroundBrush}"
               CornerRadius="14"
               Padding="12"
               IsVisible="{Binding IsSleepTimerPanelOpen}">
         <StackPanel Spacing="8">
           <TextBlock Text="{Binding SleepTimerLabel}"
-                     Foreground="#FFFFFF"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
                      FontSize="13"
                      FontWeight="SemiBold" />
           <Grid ColumnDefinitions="*,*"
                 RowDefinitions="Auto,Auto,Auto"
                 ColumnSpacing="8"
                 RowSpacing="8">
-            <Button Content="Off"
+            <Button Content="{loc:Translate Player.Mobile.Sleep.Off}"
                     Command="{Binding SetSleepTimerCommand}"
                     CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Off}"
                     MinHeight="40" />
             <Button Grid.Column="1"
-                    Content="15 min"
+                    Content="{loc:Translate Player.Mobile.Sleep.15min}"
                     Command="{Binding SetSleepTimerCommand}"
                     CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes15}"
                     MinHeight="40" />
             <Button Grid.Row="1"
-                    Content="30 min"
+                    Content="{loc:Translate Player.Mobile.Sleep.30min}"
                     Command="{Binding SetSleepTimerCommand}"
                     CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes30}"
                     MinHeight="40" />
             <Button Grid.Row="1"
                     Grid.Column="1"
-                    Content="60 min"
+                    Content="{loc:Translate Player.Mobile.Sleep.60min}"
                     Command="{Binding SetSleepTimerCommand}"
                     CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes60}"
                     MinHeight="40" />
             <Button Grid.Row="2"
-                    Content="End"
+                    Content="{loc:Translate Player.Mobile.Sleep.End}"
                     Command="{Binding SetSleepTimerCommand}"
                     CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.EndOfEpisode}"
                     MinHeight="40" />
             <Button Grid.Row="2"
                     Grid.Column="1"
-                    Content="Cancel"
+                    Content="{loc:Translate Player.Mobile.Sleep.Cancel}"
                     Command="{Binding CancelSleepTimerCommand}"
                     IsVisible="{Binding IsSleepTimerActive}"
                     MinHeight="40" />
@@ -217,39 +218,39 @@
 
       <Grid ColumnDefinitions="*,*,*"
             ColumnSpacing="8">
-        <Button Content="Download"
+        <Button Content="{loc:Translate Player.Overlay.Download.Tooltip}"
                 Command="{Binding DownloadCurrentContentCommand}"
                 IsVisible="{Binding CanShowDownloadButton}"
                 IsEnabled="{Binding CanDownloadCurrentContent}"
                 MinHeight="40" />
         <Button Grid.Column="1"
-                Content="Info"
+                Content="{loc:Translate Player.Overlay.Info.Tooltip}"
                 Command="{Binding OpenInfoPanelCommand}"
                 IsVisible="{Binding CanShowInfoButton}"
                 MinHeight="40" />
         <Button Grid.Column="2"
-                Content="Audio"
+                Content="{loc:Translate Player.Settings.Audio}"
                 Command="{Binding OpenAudioSettingsCommand}"
                 MinHeight="40" />
       </Grid>
 
       <TextBlock Text="{Binding DownloadStatusMessage}"
-                 Foreground="#AEB5C5"
+                 Foreground="{DynamicResource TextMutedBrush}"
                  FontSize="12"
                  TextWrapping="Wrap" />
 
-      <Border Background="#1FFFFFFF"
+      <Border Background="{DynamicResource OverlayBackgroundBrush}"
               CornerRadius="14"
               Padding="12"
               IsVisible="{Binding IsAudioSettingsOpen}">
         <StackPanel Spacing="12">
           <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="Audio &amp; Subtitles"
-                       Foreground="#FFFFFF"
+            <TextBlock Text="{loc:Translate Player.Mobile.AudioSubtitles}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        FontSize="14"
                        FontWeight="SemiBold" />
             <Button Grid.Column="1"
-                    Content="Close"
+                    Content="{loc:Translate Common.Close}"
                     Command="{Binding ClosePanelsCommand}"
                     MinHeight="36"
                     Margin="10,0,0,0" />
@@ -257,23 +258,23 @@
 
           <StackPanel Spacing="8"
                       IsVisible="{Binding !IsLiveContent}">
-            <TextBlock Text="Subtitle Size"
-                       Foreground="#8090A0"
+            <TextBlock Text="{loc:Translate Player.Mobile.SubtitleSize}"
+                       Foreground="{DynamicResource TextDisabledBrush}"
                        FontSize="10"
                        FontWeight="Bold" />
             <Grid ColumnDefinitions="*,*,*"
                   ColumnSpacing="8">
-              <Button Content="Small"
+              <Button Content="{loc:Translate Player.Settings.SubtitleSize.Small}"
                       Command="{Binding SetSubtitleSizeCommand}"
                       CommandParameter="28"
                       MinHeight="40" />
               <Button Grid.Column="1"
-                      Content="Normal"
+                      Content="{loc:Translate Player.Settings.SubtitleSize.Normal}"
                       Command="{Binding SetSubtitleSizeCommand}"
                       CommandParameter="40"
                       MinHeight="40" />
               <Button Grid.Column="2"
-                      Content="Large"
+                      Content="{loc:Translate Player.Settings.SubtitleSize.Large}"
                       Command="{Binding SetSubtitleSizeCommand}"
                       CommandParameter="60"
                       MinHeight="40" />
@@ -282,23 +283,23 @@
 
           <StackPanel Spacing="8"
                       IsVisible="{Binding !IsLiveContent}">
-            <TextBlock Text="Subtitle Background"
-                       Foreground="#8090A0"
+            <TextBlock Text="{loc:Translate Player.Mobile.SubtitleBackground}"
+                       Foreground="{DynamicResource TextDisabledBrush}"
                        FontSize="10"
                        FontWeight="Bold" />
             <Grid ColumnDefinitions="*,*,*"
                   ColumnSpacing="8">
-              <Button Content="Off"
+              <Button Content="{loc:Translate Player.Settings.SubtitleBackground.Off}"
                       Command="{Binding SetSubtitleBackgroundCommand}"
                       CommandParameter="0"
                       MinHeight="40" />
               <Button Grid.Column="1"
-                      Content="Semi"
+                      Content="{loc:Translate Player.Settings.SubtitleBackground.Semi}"
                       Command="{Binding SetSubtitleBackgroundCommand}"
                       CommandParameter="128"
                       MinHeight="40" />
               <Button Grid.Column="2"
-                      Content="Black"
+                      Content="{loc:Translate Player.Settings.SubtitleBackground.Black}"
                       Command="{Binding SetSubtitleBackgroundCommand}"
                       CommandParameter="255"
                       MinHeight="40" />
@@ -307,18 +308,18 @@
 
           <StackPanel Spacing="8"
                       IsVisible="{Binding !IsLiveContent}">
-            <TextBlock Text="Subtitle Position"
-                       Foreground="#8090A0"
+            <TextBlock Text="{loc:Translate Player.Mobile.SubtitlePosition}"
+                       Foreground="{DynamicResource TextDisabledBrush}"
                        FontSize="10"
                        FontWeight="Bold" />
             <Grid ColumnDefinitions="*,*"
                   ColumnSpacing="8">
-              <Button Content="Bottom"
+              <Button Content="{loc:Translate Player.Settings.SubtitlePosition.Bottom}"
                       Command="{Binding SetSubtitlePositionCommand}"
                       CommandParameter="40"
                       MinHeight="40" />
               <Button Grid.Column="1"
-                      Content="Top"
+                      Content="{loc:Translate Player.Settings.SubtitlePosition.Top}"
                       Command="{Binding SetSubtitlePositionCommand}"
                       CommandParameter="900"
                       MinHeight="40" />
@@ -330,8 +331,8 @@
                         VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="12">
               <StackPanel Spacing="8">
-                <TextBlock Text="Audio"
-                           Foreground="#8090A0"
+                <TextBlock Text="{loc:Translate Player.Settings.Audio}"
+                           Foreground="{DynamicResource TextDisabledBrush}"
                            FontSize="10"
                            FontWeight="Bold" />
                 <ItemsControl ItemsSource="{Binding AudioTracks}">
@@ -349,8 +350,8 @@
               </StackPanel>
 
               <StackPanel Spacing="8">
-                <TextBlock Text="Subtitles"
-                           Foreground="#8090A0"
+                <TextBlock Text="{loc:Translate Player.Settings.Subtitle}"
+                           Foreground="{DynamicResource TextDisabledBrush}"
                            FontSize="10"
                            FontWeight="Bold" />
                 <ItemsControl ItemsSource="{Binding SubtitleTracks}">
@@ -371,19 +372,19 @@
         </StackPanel>
       </Border>
 
-      <Border Background="#1FFFFFFF"
+      <Border Background="{DynamicResource OverlayBackgroundBrush}"
               CornerRadius="14"
               Padding="12"
               IsVisible="{Binding IsEpisodesPanelOpen}">
         <StackPanel Spacing="10">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="{Binding EpisodesPanelTitle}"
-                       Foreground="#FFFFFF"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        FontSize="14"
                        FontWeight="SemiBold"
                        TextWrapping="Wrap" />
             <Button Grid.Column="1"
-                    Content="Close"
+                    Content="{loc:Translate Common.Close}"
                     Command="{Binding ClosePanelsCommand}"
                     MinHeight="36"
                     Margin="10,0,0,0" />
@@ -397,7 +398,7 @@
                   <StackPanel Spacing="8"
                               Margin="0,0,0,12">
                     <TextBlock Text="{Binding SeasonNumber, StringFormat='Season {0}'}"
-                               Foreground="#AEB5C5"
+                               Foreground="{DynamicResource TextMutedBrush}"
                                FontSize="12"
                                FontWeight="SemiBold" />
                     <ItemsControl ItemsSource="{Binding Episodes}">
@@ -411,12 +412,12 @@
                             <Grid ColumnDefinitions="Auto,*"
                                   ColumnSpacing="10">
                               <TextBlock Text="{Binding EpisodeNumber}"
-                                         Foreground="#AEB5C5"
+                                         Foreground="{DynamicResource TextMutedBrush}"
                                          FontWeight="SemiBold"
                                          VerticalAlignment="Center" />
                               <TextBlock Grid.Column="1"
                                          Text="{Binding Name}"
-                                         Foreground="#FFFFFF"
+                                         Foreground="{DynamicResource TextPrimaryBrush}"
                                          TextWrapping="Wrap"
                                          VerticalAlignment="Center" />
                             </Grid>
@@ -432,51 +433,51 @@
         </StackPanel>
       </Border>
 
-      <Border Background="#1FFFFFFF"
+      <Border Background="{DynamicResource OverlayBackgroundBrush}"
               CornerRadius="14"
               Padding="12"
               IsVisible="{Binding IsInfoPanelOpen}">
         <StackPanel Spacing="8">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="{Binding CurrentChannel.Name}"
-                       Foreground="#FFFFFF"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        FontSize="14"
                        FontWeight="SemiBold"
                        TextWrapping="Wrap" />
             <Button Grid.Column="1"
-                    Content="Close"
+                    Content="{loc:Translate Common.Close}"
                     Command="{Binding OpenInfoPanelCommand}"
                     MinHeight="36"
                     Margin="10,0,0,0" />
           </Grid>
           <TextBlock Text="{Binding OverlaySecondaryText}"
-                     Foreground="#AEB5C5"
+                     Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12"
                      TextWrapping="Wrap" />
           <TextBlock Text="{Binding CurrentChannel.Plot}"
-                     Foreground="#E6FFFFFF"
+                     Foreground="{DynamicResource OverlayTextBrush}"
                      FontSize="12"
                      TextWrapping="Wrap"
                      MaxHeight="120" />
         </StackPanel>
       </Border>
 
-      <Button Content="Quality"
+      <Button Content="{loc:Translate Player.Mobile.Quality}"
               Command="{Binding OpenQualitySettingsCommand}"
               MinHeight="40" />
 
-      <Border Background="#1FFFFFFF"
+      <Border Background="{DynamicResource OverlayBackgroundBrush}"
               CornerRadius="14"
               Padding="12"
               IsVisible="{Binding IsQualitySettingsOpen}">
         <StackPanel Spacing="10">
           <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="Quality"
-                       Foreground="#FFFFFF"
+            <TextBlock Text="{loc:Translate Player.Mobile.Quality}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        FontSize="14"
                        FontWeight="SemiBold" />
             <Button Grid.Column="1"
-                    Content="Close"
+                    Content="{loc:Translate Common.Close}"
                     Command="{Binding OpenQualitySettingsCommand}"
                     MinHeight="36"
                     Margin="10,0,0,0" />
@@ -487,66 +488,66 @@
                 ColumnSpacing="10"
                 RowSpacing="8">
             <StackPanel Spacing="2">
-              <TextBlock Text="Resolution"
-                         Foreground="#8090A0"
+              <TextBlock Text="{loc:Translate Player.Quality.Resolution}"
+                         Foreground="{DynamicResource TextDisabledBrush}"
                          FontSize="10"
                          FontWeight="Bold" />
               <TextBlock Text="{Binding QualityResolutionText}"
-                         Foreground="#FFFFFF"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
                          FontSize="12"
                          FontWeight="SemiBold" />
             </StackPanel>
             <StackPanel Grid.Column="1"
                         Spacing="2">
-              <TextBlock Text="FPS"
-                         Foreground="#8090A0"
+              <TextBlock Text="{loc:Translate Player.Quality.Fps}"
+                         Foreground="{DynamicResource TextDisabledBrush}"
                          FontSize="10"
                          FontWeight="Bold" />
               <TextBlock Text="{Binding QualityFpsText}"
-                         Foreground="#FFFFFF"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
                          FontSize="12"
                          FontWeight="SemiBold" />
             </StackPanel>
             <StackPanel Grid.Row="1"
                         Spacing="2">
-              <TextBlock Text="Codec"
-                         Foreground="#8090A0"
+              <TextBlock Text="{loc:Translate Player.Quality.Codec}"
+                         Foreground="{DynamicResource TextDisabledBrush}"
                          FontSize="10"
                          FontWeight="Bold" />
               <TextBlock Text="{Binding QualityVideoCodecText}"
-                         Foreground="#FFFFFF"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
                          FontSize="12"
                          FontWeight="SemiBold" />
             </StackPanel>
             <StackPanel Grid.Row="1"
                         Grid.Column="1"
                         Spacing="2">
-              <TextBlock Text="Bitrate"
-                         Foreground="#8090A0"
+              <TextBlock Text="{loc:Translate Player.Quality.Bitrate}"
+                         Foreground="{DynamicResource TextDisabledBrush}"
                          FontSize="10"
                          FontWeight="Bold" />
               <TextBlock Text="{Binding QualityVideoBitrateText}"
-                         Foreground="#FFFFFF"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
                          FontSize="12"
                          FontWeight="SemiBold" />
             </StackPanel>
             <StackPanel Grid.Row="2"
                         Grid.ColumnSpan="2"
                         Spacing="2">
-              <TextBlock Text="Audio"
-                         Foreground="#8090A0"
+              <TextBlock Text="{loc:Translate Player.Quality.Audio}"
+                         Foreground="{DynamicResource TextDisabledBrush}"
                          FontSize="10"
                          FontWeight="Bold" />
               <TextBlock Text="{Binding QualityAudioText}"
-                         Foreground="#FFFFFF"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
                          FontSize="12"
                          FontWeight="SemiBold"
                          TextWrapping="Wrap" />
             </StackPanel>
           </Grid>
 
-          <TextBlock Text="Speed"
-                     Foreground="#8090A0"
+          <TextBlock Text="{loc:Translate Player.Mobile.Speed}"
+                     Foreground="{DynamicResource TextDisabledBrush}"
                      FontSize="10"
                      FontWeight="Bold" />
           <Grid ColumnDefinitions="*,*,*"
@@ -590,46 +591,46 @@
 
       <Grid ColumnDefinitions="*,*,*"
             ColumnSpacing="8">
-        <Border Background="#1FFFFFFF"
+        <Border Background="{DynamicResource OverlayBackgroundBrush}"
                 CornerRadius="10"
                 Padding="10,8">
           <StackPanel Spacing="2">
-            <TextBlock Text="Resolution"
-                       Foreground="#8090A0"
+            <TextBlock Text="{loc:Translate Player.Quality.Resolution}"
+                       Foreground="{DynamicResource TextDisabledBrush}"
                        FontSize="10"
                        FontWeight="Bold" />
             <TextBlock Text="{Binding QualityResolutionText}"
-                       Foreground="#FFFFFF"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        FontSize="12"
                        FontWeight="SemiBold" />
           </StackPanel>
         </Border>
         <Border Grid.Column="1"
-                Background="#1FFFFFFF"
+                Background="{DynamicResource OverlayBackgroundBrush}"
                 CornerRadius="10"
                 Padding="10,8">
           <StackPanel Spacing="2">
-            <TextBlock Text="FPS"
-                       Foreground="#8090A0"
+            <TextBlock Text="{loc:Translate Player.Quality.Fps}"
+                       Foreground="{DynamicResource TextDisabledBrush}"
                        FontSize="10"
                        FontWeight="Bold" />
             <TextBlock Text="{Binding QualityFpsText}"
-                       Foreground="#FFFFFF"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        FontSize="12"
                        FontWeight="SemiBold" />
           </StackPanel>
         </Border>
         <Border Grid.Column="2"
-                Background="#1FFFFFFF"
+                Background="{DynamicResource OverlayBackgroundBrush}"
                 CornerRadius="10"
                 Padding="10,8">
           <StackPanel Spacing="2">
-            <TextBlock Text="Audio"
-                       Foreground="#8090A0"
+            <TextBlock Text="{loc:Translate Player.Quality.Audio}"
+                       Foreground="{DynamicResource TextDisabledBrush}"
                        FontSize="10"
                        FontWeight="Bold" />
             <TextBlock Text="{Binding QualityAudioText}"
-                       Foreground="#FFFFFF"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
                        FontSize="12"
                        FontWeight="SemiBold"
                        TextTrimming="CharacterEllipsis" />

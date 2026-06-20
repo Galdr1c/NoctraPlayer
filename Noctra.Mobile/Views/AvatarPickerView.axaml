@@ -11,14 +11,14 @@
              mc:Ignorable="d"
              d:DesignWidth="390"
              d:DesignHeight="500">
-  <Border Background="#151923"
+  <Border Background="{DynamicResource Surface0Brush}"
           CornerRadius="18"
           Padding="18">
     <Grid RowDefinitions="Auto,*,Auto">
       <TextBlock Text="{loc:Translate AvatarPicker.SelectProfilePicture}"
                  FontSize="20"
                  FontWeight="SemiBold"
-                 Foreground="#FFFFFF" />
+                 Foreground="{DynamicResource TextPrimaryBrush}" />
 
       <ScrollViewer Grid.Row="1" Margin="0,16">
         <ItemsControl ItemsSource="{Binding Avatars}">
@@ -35,7 +35,7 @@
                       Height="72"
                       Margin="6"
                       Padding="0"
-                      Background="#252B3D"
+                      Background="{DynamicResource Surface1Brush}"
                       BorderThickness="0"
                       CornerRadius="14">
                 <Image Source="{Binding Converter={StaticResource AvatarPathConverter}}"
@@ -48,7 +48,7 @@
 
       <TextBlock Grid.Row="2"
                  Text="{loc:Translate AvatarPicker.Hint}"
-                 Foreground="#AEB5C5"
+                 Foreground="{DynamicResource TextMutedBrush}"
                  TextWrapping="Wrap" />
     </Grid>
   </Border>

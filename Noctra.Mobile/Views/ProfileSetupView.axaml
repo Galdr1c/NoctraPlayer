@@ -11,7 +11,7 @@
              mc:Ignorable="d"
              d:DesignWidth="390"
              d:DesignHeight="844"
-             Background="#090B10">
+             Background="{DynamicResource Bg0Brush}">
   <UserControl.Styles>
     <Style Selector="TextBox">
       <Setter Property="MinHeight" Value="48" />
@@ -23,42 +23,42 @@
       <Setter Property="Padding" Value="16,10" />
     </Style>
     <Style Selector="Border.section">
-      <Setter Property="Background" Value="#151923" />
+      <Setter Property="Background" Value="{DynamicResource Surface0Brush}" />
       <Setter Property="CornerRadius" Value="16" />
       <Setter Property="Padding" Value="16" />
     </Style>
     <Style Selector="TextBlock.label">
-      <Setter Property="Foreground" Value="#AEB5C5" />
+      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
       <Setter Property="FontSize" Value="13" />
       <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
   </UserControl.Styles>
 
   <Grid RowDefinitions="Auto,*">
-    <Border Padding="16,14" Background="#0E1118">
+    <Border Padding="16,14" Background="{DynamicResource Bg1Brush}">
       <Grid ColumnDefinitions="Auto,*,Auto">
         <Button Classes="action"
                 Command="{Binding CancelCommand}"
                 Content="{loc:Translate Profiles.Add.Cancel}"
                 Background="Transparent"
-                Foreground="#FFFFFF" />
+                Foreground="{DynamicResource TextPrimaryBrush}" />
         <StackPanel Grid.Column="1"
                     HorizontalAlignment="Center"
                     Spacing="2">
           <TextBlock Text="{loc:Translate Profiles.Add.Title}"
                      FontSize="20"
                      FontWeight="SemiBold"
-                     Foreground="#FFFFFF" />
+                     Foreground="{DynamicResource TextPrimaryBrush}" />
           <TextBlock Text="{loc:Translate Profiles.Add.Description}"
                      FontSize="11"
-                     Foreground="#AEB5C5" />
+                     Foreground="{DynamicResource TextMutedBrush}" />
         </StackPanel>
         <Button Grid.Column="2"
                 Classes="action"
                 Command="{Binding SaveCommand}"
                 Content="{loc:Translate Profiles.Add.Save}"
-                Background="#8F7CFF"
-                Foreground="#FFFFFF"
+                Background="{DynamicResource AccentBrush}"
+                Foreground="{DynamicResource TextPrimaryBrush}"
                 IsEnabled="{Binding !IsSaving}" />
       </Grid>
     </Border>
@@ -71,7 +71,7 @@
         <Border Classes="section">
           <StackPanel Spacing="10">
             <Button Command="{Binding OpenAvatarPickerCommand}"
-                    Background="#252B3D"
+                    Background="{DynamicResource Surface1Brush}"
                     BorderThickness="0"
                     CornerRadius="16"
                     Padding="14">
@@ -79,21 +79,21 @@
                 <Border Width="72"
                         Height="72"
                         CornerRadius="18"
-                        Background="#8F7CFF"
+                        Background="{DynamicResource AccentBrush}"
                         HorizontalAlignment="Center">
                   <Image Source="{Binding SelectedAvatar, Converter={StaticResource AvatarPathConverter}}"
                          Stretch="UniformToFill" />
                 </Border>
                 <TextBlock Text="{loc:Translate AvatarPicker.Title}"
                            HorizontalAlignment="Center"
-                           Foreground="#FFFFFF" />
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
               </StackPanel>
             </Button>
             <TextBlock Classes="label" Text="{loc:Translate Profiles.Add.ProfileName}" />
             <TextBox Text="{Binding ProfileName}"
                      PlaceholderText="{loc:Translate Profiles.Add.ProfileNamePlaceholder}" />
             <TextBlock Text="{Binding ProfileNameError}"
-                       Foreground="#FF6B6B"
+                       Foreground="{DynamicResource ErrorBrush}"
                        TextWrapping="Wrap" />
             <CheckBox Content="{loc:Translate Profiles.Add.IsChild}"
                       IsChecked="{Binding IsChild}"
@@ -107,7 +107,7 @@
             <TextBlock Text="{loc:Translate Profiles.Account.Settings}"
                        FontSize="18"
                        FontWeight="SemiBold"
-                       Foreground="#FFFFFF" />
+                       Foreground="{DynamicResource TextPrimaryBrush}" />
             <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
               <RadioButton Content="Xtream"
                            GroupName="ProviderType"
@@ -131,8 +131,8 @@
                     Command="{Binding PickM3uFileCommand}"
                     Content="{loc:Translate Profiles.Account.SelectM3uFile}"
                     IsVisible="{Binding IsM3U}"
-                    Background="#252B3D"
-                    Foreground="#FFFFFF" />
+                    Background="{DynamicResource Surface1Brush}"
+                    Foreground="{DynamicResource TextPrimaryBrush}" />
 
             <TextBlock Classes="label"
                        Text="{loc:Translate Profiles.Account.Username}"
@@ -153,17 +153,17 @@
                      IsVisible="{Binding IsXtream}" />
 
             <TextBlock Text="{Binding UrlError}"
-                       Foreground="#FF6B6B"
+                       Foreground="{DynamicResource ErrorBrush}"
                        TextWrapping="Wrap" />
 
             <Button Classes="action"
                     Command="{Binding AnalyzeConnectionCommand}"
                     Content="{loc:Translate Profiles.Account.Analyze}"
                     IsEnabled="{Binding !IsAnalyzingConnection}"
-                    Background="#252B3D"
-                    Foreground="#FFFFFF" />
+                    Background="{DynamicResource Surface1Brush}"
+                    Foreground="{DynamicResource TextPrimaryBrush}" />
             <TextBlock Text="{Binding DetailedStatus}"
-                       Foreground="#AEB5C5"
+                       Foreground="{DynamicResource TextMutedBrush}"
                        TextWrapping="Wrap" />
           </StackPanel>
         </Border>
@@ -175,10 +175,10 @@
                 <TextBlock Text="{loc:Translate Profiles.Add.PinLock}"
                            FontSize="16"
                            FontWeight="SemiBold"
-                           Foreground="#FFFFFF" />
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
                 <TextBlock Text="{loc:Translate Profiles.Add.PinLockDescription}"
                            FontSize="12"
-                           Foreground="#AEB5C5" />
+                           Foreground="{DynamicResource TextMutedBrush}" />
               </StackPanel>
               <ToggleSwitch Grid.Column="1"
                             IsChecked="{Binding HasPin}"
@@ -194,35 +194,35 @@
                        MaxLength="4"
                        PasswordChar="*" />
               <TextBlock Text="{Binding PinError}"
-                         Foreground="#FF6B6B"
+                         Foreground="{DynamicResource ErrorBrush}"
                          TextWrapping="Wrap" />
             </StackPanel>
           </StackPanel>
         </Border>
 
         <TextBlock Text="{Binding StatusMessage}"
-                   Foreground="#AEB5C5"
+                   Foreground="{DynamicResource TextMutedBrush}"
                    TextWrapping="Wrap"
                    HorizontalAlignment="Center" />
         <Button Classes="action"
                 Command="{Binding SaveCommand}"
                 Content="{loc:Translate Profiles.Add.Save}"
-                Background="#8F7CFF"
-                Foreground="#FFFFFF"
+                Background="{DynamicResource AccentBrush}"
+                Foreground="{DynamicResource TextPrimaryBrush}"
                 IsEnabled="{Binding !IsSaving}" />
         <Button Classes="action"
                 Command="{Binding CancelCommand}"
                 Content="{loc:Translate Profiles.Add.Cancel}"
                 Background="Transparent"
-                BorderBrush="#394057"
+                BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
-                Foreground="#FFFFFF" />
+                Foreground="{DynamicResource TextPrimaryBrush}" />
       </StackPanel>
     </ScrollViewer>
 
     <Border x:Name="AvatarPickerHost"
             Grid.RowSpan="2"
-            Background="#CC090B10"
+            Background="{DynamicResource OverlayDarkBrush}"
             Padding="18"
             IsVisible="False">
       <Grid RowDefinitions="*,Auto">
@@ -233,9 +233,9 @@
                 Click="OnCloseAvatarPicker"
                 Margin="0,12,0,0"
                 MinHeight="48"
-                Background="#151923"
-                Foreground="#FFFFFF"
-                BorderBrush="#394057"
+                Background="{DynamicResource Surface0Brush}"
+                Foreground="{DynamicResource TextPrimaryBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
                 CornerRadius="12" />
       </Grid>

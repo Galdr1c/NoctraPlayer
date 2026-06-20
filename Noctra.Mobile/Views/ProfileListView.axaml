@@ -18,14 +18,14 @@
       <TextBlock Text="{loc:Translate Profiles.Title}"
                  FontSize="20"
                  FontWeight="SemiBold"
-                 Foreground="#FFFFFF" />
+                 Foreground="{DynamicResource TextPrimaryBrush}" />
       <Button Grid.Column="1"
               Command="{Binding ToggleManageModeCommand}"
               Content="{loc:Translate Profiles.ManageMode.Manage}"
               Background="Transparent"
-              BorderBrush="#394057"
+              BorderBrush="{DynamicResource BorderBrush}"
               BorderThickness="1"
-              Foreground="#FFFFFF"
+              Foreground="{DynamicResource TextPrimaryBrush}"
               Padding="12,8"
               CornerRadius="10" />
     </Grid>
@@ -43,20 +43,20 @@
                     Width="138"
                     Margin="6"
                     Padding="10"
-                    Background="#151923"
+                    Background="{DynamicResource Surface0Brush}"
                     BorderThickness="0"
                     CornerRadius="16">
               <StackPanel Spacing="8">
                 <Border Width="64"
                         Height="64"
                         CornerRadius="14"
-                        Background="#8F7CFF"
+                        Background="{DynamicResource AccentBrush}"
                         HorizontalAlignment="Center">
                   <Image Source="{Binding Avatar, Converter={StaticResource AvatarPathConverter}}"
                          Stretch="UniformToFill" />
                 </Border>
                 <TextBlock Text="{Binding Name}"
-                           Foreground="#FFFFFF"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
                            TextAlignment="Center"
                            TextTrimming="CharacterEllipsis" />
               </StackPanel>
@@ -68,24 +68,24 @@
                     Width="138"
                     Margin="6"
                     Padding="10"
-                    Background="#151923"
-                    BorderBrush="#394057"
+                    Background="{DynamicResource Surface0Brush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1"
                     CornerRadius="16">
               <StackPanel Spacing="8">
                 <Border Width="64"
                         Height="64"
                         CornerRadius="32"
-                        BorderBrush="#AEB5C5"
+                        BorderBrush="{DynamicResource TextMutedBrush}"
                         BorderThickness="2">
                   <TextBlock Text="+"
                              HorizontalAlignment="Center"
                              VerticalAlignment="Center"
                              FontSize="32"
-                             Foreground="#FFFFFF" />
+                             Foreground="{DynamicResource TextPrimaryBrush}" />
                 </Border>
                 <TextBlock Text="{loc:Translate Profiles.AddProfile}"
-                           Foreground="#FFFFFF"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
                            TextAlignment="Center" />
               </StackPanel>
             </Button>
@@ -96,21 +96,21 @@
 
     <TextBlock Grid.Row="2"
                Text="{loc:Translate Profiles.Add.Description}"
-               Foreground="#AEB5C5"
+               Foreground="{DynamicResource TextMutedBrush}"
                FontSize="12"
                TextWrapping="Wrap"
                Margin="0,12,0,0" />
 
     <Border x:Name="ProfileSetupHost"
             Grid.RowSpan="3"
-            Background="#090B10"
+            Background="{DynamicResource Bg0Brush}"
             IsVisible="False">
       <ContentControl x:Name="ProfileSetupContent" />
     </Border>
 
     <Border x:Name="PinEntryHost"
             Grid.RowSpan="3"
-            Background="#DD090B10"
+            Background="{DynamicResource Bg0Brush}" Opacity="0.87"
             Padding="18"
             IsVisible="False">
       <views:PinEntryView x:Name="PinEntryContent" />
@@ -118,7 +118,7 @@
 
     <Border x:Name="ProfileLoadingHost"
             Grid.RowSpan="3"
-            Background="#DD090B10"
+            Background="{DynamicResource Bg0Brush}" Opacity="0.87"
             Padding="18"
             IsVisible="False">
       <views:ProfileLoadingView x:Name="ProfileLoadingContent" />

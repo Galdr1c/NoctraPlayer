@@ -4,21 +4,28 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Noctra.ViewModels"
              xmlns:models="using:Noctra.Models"
+             xmlns:converters="using:Noctra.Mobile.Converters"
+             xmlns:avaloniaConverters="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
+             xmlns:loc="using:Noctra.Mobile.Localization"
              x:Class="Noctra.Mobile.Views.MobileDownloadsView"
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False"
              mc:Ignorable="d"
              d:DesignWidth="390"
              d:DesignHeight="720">
+  <UserControl.Resources>
+    <converters:CountToVisibilityConverter x:Key="CountToVisibility" />
+  </UserControl.Resources>
+
   <ScrollViewer>
     <StackPanel Margin="20" Spacing="14">
       <StackPanel Spacing="4">
-        <TextBlock Text="Downloads"
+        <TextBlock Text="{loc:Translate Downloads.Title}"
                    FontSize="24"
                    FontWeight="SemiBold"
-                   Foreground="#FFFFFF" />
+                   Foreground="{DynamicResource TextPrimaryBrush}" />
         <TextBlock Text="{Binding TotalDownloadsInfoText}"
-                   Foreground="#AEB5C5"
+                   Foreground="{DynamicResource TextMutedBrush}"
                    FontSize="12"
                    TextWrapping="Wrap" />
       </StackPanel>
@@ -26,108 +33,191 @@
       <TabControl SelectedIndex="{Binding DownloadTabIndex, Mode=TwoWay}"
                   Background="Transparent"
                   Padding="0">
-        <TabItem Header="Library">
+        <TabItem Header="{loc:Translate Downloads.Tabs.Library}">
           <StackPanel Spacing="14"
                       Margin="0,14,0,0">
+
+            <!-- Storage Info -->
+            <Border Background="{DynamicResource Surface0Brush}"
+                    CornerRadius="16"
+                    Padding="16"
+                    IsVisible="{Binding StorageUsageDetailText, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <Border Width="36"
+                        Height="36"
+                        CornerRadius="18"
+                        Background="{DynamicResource Surface1Brush}">
+                  <TextBlock Text="HDD"
+                             Foreground="{DynamicResource AccentBrush}"
+                             FontWeight="Bold"
+                             FontSize="10"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center" />
+                </Border>
+                <StackPanel Grid.Column="1"
+                            Margin="12,0"
+                            VerticalAlignment="Center"
+                            Spacing="4">
+                  <TextBlock Text="{Binding StorageUsageDetailText}"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             FontWeight="SemiBold"
+                             FontSize="13" />
+                  <TextBlock Text="{Binding StorageNoctraDetailText}"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             FontSize="11" />
+                </StackPanel>
+                <Button Grid.Column="2"
+                        Command="{Binding OpenDownloadsFolderCommand}"
+                        Content="{loc:Translate Downloads.Action.OpenFolder}"
+                        MinHeight="34"
+                        Padding="12,0"
+                        Background="{DynamicResource Surface1Brush}"
+                        Foreground="{DynamicResource TextPrimaryBrush}"
+                        BorderThickness="0"
+                        CornerRadius="8"
+                        FontSize="12" />
+              </Grid>
+            </Border>
+
+            <!-- Delete All -->
+            <Button Command="{Binding DeleteAllDownloadsCommand}"
+                    Content="{loc:Translate Downloads.Action.DeleteAll}"
+                    HorizontalAlignment="Right"
+                    MinHeight="34"
+                    Padding="14,0"
+                    Background="Transparent"
+                    Foreground="{DynamicResource ErrorBrush}"
+                    BorderThickness="1"
+                    BorderBrush="{DynamicResource ErrorBrush}"
+                    CornerRadius="8"
+                    FontSize="12" />
+
+            <!-- Sort -->
             <ComboBox SelectedIndex="{Binding SelectedDownloadSortOrder}"
-                      MinHeight="44">
-              <ComboBoxItem Content="Recent" />
-              <ComboBoxItem Content="Name" />
-              <ComboBoxItem Content="Size" />
+                      MinHeight="44"
+                      PlaceholderText="{loc:Translate Downloads.Sort.Recent}">
+              <ComboBoxItem Content="{loc:Translate Downloads.Sort.Recent}" />
+              <ComboBoxItem Content="{loc:Translate Downloads.Sort.Name}" />
+              <ComboBoxItem Content="{loc:Translate Downloads.Sort.Size}" />
             </ComboBox>
 
-            <TextBlock Text="Series"
-                       Foreground="#AEB5C5"
-                       FontSize="12"
-                       FontWeight="Bold" />
-            <ItemsControl ItemsSource="{Binding DownloadedSeriesItems}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="models:Series">
-                  <Border Background="#151923"
-                          CornerRadius="16"
-                          Padding="14"
-                          Margin="0,0,0,10">
-                    <Grid ColumnDefinitions="*,Auto"
-                          ColumnSpacing="10">
-                      <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
-                              CommandParameter="{Binding}"
-                              Background="Transparent"
-                              BorderThickness="0"
-                              Padding="0"
-                              HorizontalContentAlignment="Stretch">
-                        <StackPanel Spacing="3">
-                          <TextBlock Text="{Binding Name}"
-                                     Foreground="#FFFFFF"
-                                     FontWeight="SemiBold"
-                                     TextTrimming="CharacterEllipsis" />
-                          <TextBlock Text="{Binding LocalSizeText}"
-                                     Foreground="#AEB5C5"
-                                     FontSize="12"
-                                     TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
-                      </Button>
-                      <Button Grid.Column="1"
-                              Content="Delete"
-                              Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).DeleteDownloadedMediaCommand}"
-                              CommandParameter="{Binding}"
-                              MinHeight="38" />
-                    </Grid>
-                  </Border>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <!-- Series Section -->
+            <StackPanel Spacing="8"
+                        IsVisible="{Binding DownloadedSeriesItems.Count, Converter={StaticResource CountToVisibility}}">
+              <TextBlock Text="{loc:Translate History.Series}"
+                         Foreground="{DynamicResource TextMutedBrush}"
+                         FontSize="12"
+                         FontWeight="Bold"
+                         LetterSpacing="1" />
+              <ItemsControl ItemsSource="{Binding DownloadedSeriesItems}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="models:Series">
+                    <Border Background="{DynamicResource Surface0Brush}"
+                            CornerRadius="16"
+                            Padding="14"
+                            Margin="0,0,0,10">
+                      <Grid ColumnDefinitions="*,Auto"
+                            ColumnSpacing="10">
+                        <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
+                                CommandParameter="{Binding}"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Padding="0"
+                                HorizontalContentAlignment="Stretch">
+                          <StackPanel Spacing="4">
+                            <TextBlock Text="{Binding Name}"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding LocalSizeText}"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       FontSize="12"
+                                       TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                        </Button>
+                        <Button Grid.Column="1"
+                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).DeleteDownloadedMediaCommand}"
+                                CommandParameter="{Binding}"
+                                Content="{loc:Translate Downloads.Action.Delete}"
+                                MinHeight="34"
+                                Padding="12,0"
+                                Background="Transparent"
+                                Foreground="{DynamicResource ErrorBrush}"
+                                BorderThickness="1"
+                                BorderBrush="{DynamicResource ErrorBrush}"
+                                CornerRadius="8"
+                                FontSize="12" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
 
-            <TextBlock Text="Movies"
-                       Foreground="#AEB5C5"
-                       FontSize="12"
-                       FontWeight="Bold" />
-            <ItemsControl ItemsSource="{Binding DownloadedVodChannels}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="models:Channel">
-                  <Border Background="#151923"
-                          CornerRadius="16"
-                          Padding="14"
-                          Margin="0,0,0,10">
-                    <Grid ColumnDefinitions="*,Auto"
-                          ColumnSpacing="10">
-                      <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
-                              CommandParameter="{Binding}"
-                              Background="Transparent"
-                              BorderThickness="0"
-                              Padding="0"
-                              HorizontalContentAlignment="Stretch">
-                        <StackPanel Spacing="3">
-                          <TextBlock Text="{Binding Name}"
-                                     Foreground="#FFFFFF"
-                                     FontWeight="SemiBold"
-                                     TextTrimming="CharacterEllipsis" />
-                          <TextBlock Text="{Binding LocalSizeText}"
-                                     Foreground="#AEB5C5"
-                                     FontSize="12"
-                                     TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
-                      </Button>
-                      <Button Grid.Column="1"
-                              Content="Delete"
-                              Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).DeleteDownloadedMediaCommand}"
-                              CommandParameter="{Binding}"
-                              MinHeight="38" />
-                    </Grid>
-                  </Border>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <!-- Movies Section -->
+            <StackPanel Spacing="8"
+                        IsVisible="{Binding DownloadedVodChannels.Count, Converter={StaticResource CountToVisibility}}">
+              <TextBlock Text="{loc:Translate History.Movies}"
+                         Foreground="{DynamicResource TextMutedBrush}"
+                         FontSize="12"
+                         FontWeight="Bold"
+                         LetterSpacing="1" />
+              <ItemsControl ItemsSource="{Binding DownloadedVodChannels}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="models:Channel">
+                    <Border Background="{DynamicResource Surface0Brush}"
+                            CornerRadius="16"
+                            Padding="14"
+                            Margin="0,0,0,10">
+                      <Grid ColumnDefinitions="*,Auto"
+                            ColumnSpacing="10">
+                        <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
+                                CommandParameter="{Binding}"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Padding="0"
+                                HorizontalContentAlignment="Stretch">
+                          <StackPanel Spacing="4">
+                            <TextBlock Text="{Binding Name}"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding LocalSizeText}"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       FontSize="12"
+                                       TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                        </Button>
+                        <Button Grid.Column="1"
+                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).DeleteDownloadedMediaCommand}"
+                                CommandParameter="{Binding}"
+                                Content="{loc:Translate Downloads.Action.Delete}"
+                                MinHeight="34"
+                                Padding="12,0"
+                                Background="Transparent"
+                                Foreground="{DynamicResource ErrorBrush}"
+                                BorderThickness="1"
+                                BorderBrush="{DynamicResource ErrorBrush}"
+                                CornerRadius="8"
+                                FontSize="12" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
 
+            <!-- Empty State -->
             <StackPanel Spacing="8"
                         Margin="0,60,0,0"
                         HorizontalAlignment="Center"
                         IsVisible="{Binding ShowDownloadsEmptyState}">
-              <TextBlock Text="No downloads"
-                         Foreground="#FFFFFF"
+              <TextBlock Text="{loc:Translate Downloads.Empty.Title}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
                          FontSize="18"
                          FontWeight="SemiBold" />
-              <TextBlock Text="Downloaded movies and series will appear here."
-                         Foreground="#AEB5C5"
+              <TextBlock Text="{loc:Translate Downloads.Empty.Description}"
+                         Foreground="{DynamicResource TextMutedBrush}"
                          TextAlignment="Center"
                          TextWrapping="Wrap" />
             </StackPanel>
@@ -138,12 +228,12 @@
           <TabItem.Header>
             <StackPanel Orientation="Horizontal"
                         Spacing="6">
-              <TextBlock Text="Center" />
-              <Border Background="#7C3AED"
+              <TextBlock Text="{loc:Translate Downloads.Tabs.Center}" />
+              <Border Background="{DynamicResource AccentHoverBrush}"
                       CornerRadius="10"
                       Padding="6,1">
                 <TextBlock Text="{Binding ActiveDownloadCount}"
-                           Foreground="#FFFFFF"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
                            FontSize="10"
                            FontWeight="Bold" />
               </Border>
@@ -152,43 +242,50 @@
 
           <StackPanel Spacing="14"
                       Margin="0,14,0,0">
-            <Border Background="#151923"
+            <Border Background="{DynamicResource Surface0Brush}"
                     CornerRadius="16"
                     Padding="14">
               <Grid ColumnDefinitions="*,Auto"
                     RowDefinitions="Auto,Auto"
                     RowSpacing="4">
-                <TextBlock Text="Download Center"
-                           Foreground="#FFFFFF"
+                <TextBlock Text="{loc:Translate Downloads.Stats.Speed.Label}"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
                            FontWeight="SemiBold" />
                 <TextBlock Grid.Column="1"
                            Text="{Binding ActiveDownloadCount, StringFormat='{}{0} active'}"
-                           Foreground="#AEB5C5"
+                           Foreground="{DynamicResource TextMutedBrush}"
                            FontSize="12" />
                 <TextBlock Grid.Row="1"
                            Grid.ColumnSpan="2"
                            Text="{Binding ActiveDownloadsTotalSpeedText}"
-                           Foreground="#AEB5C5"
+                           Foreground="{DynamicResource TextMutedBrush}"
                            FontSize="12" />
               </Grid>
             </Border>
 
+            <!-- Ongoing Section -->
             <Grid ColumnDefinitions="*,Auto"
                   ColumnSpacing="10">
-              <TextBlock Text="Ongoing"
-                         Foreground="#FFFFFF"
+              <TextBlock Text="{loc:Translate Downloads.Ongoing.Title}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
                          FontSize="18"
                          FontWeight="SemiBold" />
               <Button Grid.Column="1"
-                      Content="Stop all"
                       Command="{Binding StopAllDownloadsCommand}"
-                      MinHeight="38" />
+                      Content="{loc:Translate Downloads.Action.StopAll}"
+                      MinHeight="34"
+                      Padding="12,0"
+                      Background="{DynamicResource Surface1Brush}"
+                      Foreground="{DynamicResource TextPrimaryBrush}"
+                      BorderThickness="0"
+                      CornerRadius="8"
+                      FontSize="12" />
             </Grid>
 
             <ItemsControl ItemsSource="{Binding ActiveDownloadingItems}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="models:DownloadItem">
-                  <Border Background="#151923"
+                  <Border Background="{DynamicResource Surface0Brush}"
                           CornerRadius="16"
                           Padding="14"
                           Margin="0,0,0,10">
@@ -197,17 +294,17 @@
                             ColumnSpacing="10">
                         <StackPanel Spacing="3">
                           <TextBlock Text="{Binding BaseDisplayName}"
-                                     Foreground="#FFFFFF"
+                                     Foreground="{DynamicResource TextPrimaryBrush}"
                                      FontWeight="SemiBold"
                                      TextTrimming="CharacterEllipsis" />
                           <TextBlock Text="{Binding StatusText}"
-                                     Foreground="#AEB5C5"
+                                     Foreground="{DynamicResource TextMutedBrush}"
                                      FontSize="12"
                                      TextTrimming="CharacterEllipsis" />
                         </StackPanel>
                         <TextBlock Grid.Column="1"
                                    Text="{Binding ProgressText}"
-                                   Foreground="#FFFFFF"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
                                    FontWeight="SemiBold" />
                       </Grid>
 
@@ -220,23 +317,36 @@
                             ColumnSpacing="10">
                         <StackPanel Spacing="2">
                           <TextBlock Text="{Binding SizeText}"
-                                     Foreground="#AEB5C5"
+                                     Foreground="{DynamicResource TextMutedBrush}"
                                      FontSize="12" />
                           <TextBlock Text="{Binding SpeedText}"
-                                     Foreground="#AEB5C5"
+                                     Foreground="{DynamicResource TextMutedBrush}"
                                      FontSize="12" />
                         </StackPanel>
                         <StackPanel Grid.Column="1"
                                     Orientation="Horizontal"
                                     Spacing="8">
-                          <Button Content="Pause"
-                                  Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).TogglePauseDownloadCommand}"
+                          <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).TogglePauseDownloadCommand}"
                                   CommandParameter="{Binding}"
-                                  MinHeight="38" />
-                          <Button Content="Cancel"
-                                  Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).CancelDownloadCommand}"
+                                  Content="{loc:Translate Downloads.Action.Pause}"
+                                  MinHeight="34"
+                                  Padding="12,0"
+                                  Background="{DynamicResource Surface1Brush}"
+                                  Foreground="{DynamicResource TextPrimaryBrush}"
+                                  BorderThickness="0"
+                                  CornerRadius="8"
+                                  FontSize="12" />
+                          <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).CancelDownloadCommand}"
                                   CommandParameter="{Binding}"
-                                  MinHeight="38" />
+                                  Content="{loc:Translate Downloads.Action.Cancel}"
+                                  MinHeight="34"
+                                  Padding="12,0"
+                                  Background="Transparent"
+                                  Foreground="{DynamicResource ErrorBrush}"
+                                  BorderThickness="1"
+                                  BorderBrush="{DynamicResource ErrorBrush}"
+                                  CornerRadius="8"
+                                  FontSize="12" />
                         </StackPanel>
                       </Grid>
                     </StackPanel>
@@ -245,22 +355,30 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
 
+            <!-- Queue Section -->
             <Grid ColumnDefinitions="*,Auto"
-                  ColumnSpacing="10">
-              <TextBlock Text="Queue"
-                         Foreground="#FFFFFF"
+                  ColumnSpacing="10"
+                  IsVisible="{Binding QueuedDownloadItems.Count, Converter={StaticResource CountToVisibility}}">
+              <TextBlock Text="{loc:Translate Downloads.Queue.Title}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
                          FontSize="18"
                          FontWeight="SemiBold" />
               <Button Grid.Column="1"
-                      Content="Clear"
                       Command="{Binding ClearQueueCommand}"
-                      MinHeight="38" />
+                      Content="{loc:Translate Downloads.Action.ClearQueue}"
+                      MinHeight="34"
+                      Padding="12,0"
+                      Background="{DynamicResource Surface1Brush}"
+                      Foreground="{DynamicResource TextPrimaryBrush}"
+                      BorderThickness="0"
+                      CornerRadius="8"
+                      FontSize="12" />
             </Grid>
 
             <ItemsControl ItemsSource="{Binding QueuedDownloadItems}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="models:DownloadItem">
-                  <Border Background="#151923"
+                  <Border Background="{DynamicResource Surface0Brush}"
                           CornerRadius="14"
                           Padding="12"
                           Margin="0,0,0,8"
@@ -268,24 +386,31 @@
                     <Grid ColumnDefinitions="Auto,*,Auto"
                           ColumnSpacing="10">
                       <TextBlock Text="{Binding QueueOrder}"
-                                 Foreground="#AEB5C5"
+                                 Foreground="{DynamicResource TextMutedBrush}"
                                  FontWeight="Bold"
                                  VerticalAlignment="Center" />
                       <StackPanel Grid.Column="1"
                                   Spacing="2">
                         <TextBlock Text="{Binding BaseDisplayName}"
-                                   Foreground="#FFFFFF"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
                                    TextTrimming="CharacterEllipsis" />
                         <TextBlock Text="{Binding StatusText}"
-                                   Foreground="#AEB5C5"
+                                   Foreground="{DynamicResource TextMutedBrush}"
                                    FontSize="12"
                                    TextTrimming="CharacterEllipsis" />
                       </StackPanel>
                       <Button Grid.Column="2"
-                              Content="Cancel"
                               Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).CancelDownloadCommand}"
                               CommandParameter="{Binding}"
-                              MinHeight="36" />
+                              Content="{loc:Translate Downloads.Action.Cancel}"
+                              MinHeight="32"
+                              Padding="10,0"
+                              Background="Transparent"
+                              Foreground="{DynamicResource ErrorBrush}"
+                              BorderThickness="1"
+                              BorderBrush="{DynamicResource ErrorBrush}"
+                              CornerRadius="8"
+                              FontSize="11" />
                     </Grid>
                   </Border>
                 </DataTemplate>

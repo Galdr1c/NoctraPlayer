@@ -8,8 +8,7 @@
   
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
-    <AvaloniaResource Include="..\Noctra.Avalonia\Assets\Avatars\**"
-                      Link="Assets\Avatars\%(RecursiveDir)%(Filename)%(Extension)" />
+    <AvaloniaResource Include="..\Noctra.Avalonia\Assets\Avatars\**" Link="Assets\Avatars\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>
@@ -17,6 +16,7 @@
     <PackageReference Include="Avalonia.Themes.Fluent" Version="$(AvaloniaVersion)" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="$(AvaloniaVersion)" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Material.Icons.Avalonia" Version="3.0.2" />
   </ItemGroup>
 
   <ItemGroup>

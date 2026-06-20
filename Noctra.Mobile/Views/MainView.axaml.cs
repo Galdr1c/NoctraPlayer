@@ -44,65 +44,18 @@ public partial class MainView : UserControl
 
     private void OnDestinationClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: string destination } &&
-            DataContext is MobileMainViewModel viewModel)
+        if (sender is Button { Tag: string destination })
         {
-            viewModel.SelectDestination(destination);
-            var resolver = GetViewModelResolver();
-            if (resolver is null)
-            {
-                return;
-            }
-
-            if (destination == "More")
-            {
-                MobileProfileList.DataContext = resolver.GetProfilesViewModel();
-            }
-
-            if (destination == "Settings")
-            {
-                MobileSettingsContent.DataContext = resolver.GetSettingsViewModel();
-            }
-
-            if (destination is "Live" or "Movies" or "Series" or "Search" or "Favorites" or "MyList" or "History" or "Downloads")
-            {
-                _coreMainViewModel ??= resolver.GetCoreMainViewModel();
-                _coreMainViewModel.OnMediaSelected -= CoreMainViewModel_OnMediaSelected;
-                _coreMainViewModel.OnMediaSelected += CoreMainViewModel_OnMediaSelected;
-                CoreContentHost.DataContext = _coreMainViewModel;
-                MobileLiveContent.DataContext = _coreMainViewModel;
-                MobileMoviesContent.DataContext = _coreMainViewModel;
-                MobileSeriesContent.DataContext = _coreMainViewModel;
-                MobileSearchContent.DataContext = _coreMainViewModel;
-                MobileFavoritesContent.DataContext = _coreMainViewModel;
-                MobileMyListContent.DataContext = _coreMainViewModel;
-                MobileHistoryContent.DataContext = _coreMainViewModel;
-                MobileDownloadsContent.DataContext = _coreMainViewModel;
-
-                var targetView = destination switch
-                {
-                    "Live" => AppView.Live,
-                    "Movies" => AppView.Movies,
-                    "Series" => AppView.Series,
-                    "Search" => AppView.Search,
-                    "Favorites" => AppView.Favorites,
-                    "MyList" => AppView.MyList,
-                    "History" => AppView.History,
-                    "Downloads" => AppView.Downloads,
-                    _ => AppView.Home
-                };
-                _coreMainViewModel.NavigateCommand.Execute(targetView);
-            }
-
-            UpdateContentVisibility(destination);
+            NavigateToDestination(destination);
         }
     }
 
     private void UpdateContentVisibility(string destination)
     {
-        var showCoreContent = destination is "Live" or "Movies" or "Series" or "Search" or "Favorites" or "MyList" or "History" or "Downloads" or "Settings";
+        var showCoreContent = destination is "Home" or "Live" or "Movies" or "Series" or "Search" or "Favorites" or "MyList" or "History" or "Downloads" or "Settings";
         ShellContent.IsVisible = !showCoreContent;
         CoreContentHost.IsVisible = showCoreContent;
+        MobileHomeContent.IsVisible = destination == "Home";
         MobileLiveContent.IsVisible = destination == "Live";
         MobileMoviesContent.IsVisible = destination == "Movies";
         MobileSeriesContent.IsVisible = destination == "Series";
@@ -175,6 +128,64 @@ public partial class MainView : UserControl
 
         _platformServiceResolver = app.Services.GetRequiredService<MobilePlatformServiceResolver>();
         return _platformServiceResolver;
+    }
+
+    internal void NavigateToDestination(string destination)
+    {
+        if (DataContext is not MobileMainViewModel viewModel)
+        {
+            return;
+        }
+
+        viewModel.SelectDestination(destination);
+        var resolver = GetViewModelResolver();
+        if (resolver is null)
+        {
+            return;
+        }
+
+        if (destination == "More")
+        {
+            MobileProfileList.DataContext = resolver.GetProfilesViewModel();
+        }
+
+        if (destination == "Settings")
+        {
+            MobileSettingsContent.DataContext = resolver.GetSettingsViewModel();
+        }
+
+        if (destination is "Home" or "Live" or "Movies" or "Series" or "Search" or "Favorites" or "MyList" or "History" or "Downloads")
+        {
+            _coreMainViewModel ??= resolver.GetCoreMainViewModel();
+            _coreMainViewModel.OnMediaSelected -= CoreMainViewModel_OnMediaSelected;
+            _coreMainViewModel.OnMediaSelected += CoreMainViewModel_OnMediaSelected;
+            CoreContentHost.DataContext = _coreMainViewModel;
+            MobileHomeContent.DataContext = _coreMainViewModel;
+            MobileLiveContent.DataContext = _coreMainViewModel;
+            MobileMoviesContent.DataContext = _coreMainViewModel;
+            MobileSeriesContent.DataContext = _coreMainViewModel;
+            MobileSearchContent.DataContext = _coreMainViewModel;
+            MobileFavoritesContent.DataContext = _coreMainViewModel;
+            MobileMyListContent.DataContext = _coreMainViewModel;
+            MobileHistoryContent.DataContext = _coreMainViewModel;
+            MobileDownloadsContent.DataContext = _coreMainViewModel;
+
+            var targetView = destination switch
+            {
+                "Live" => AppView.Live,
+                "Movies" => AppView.Movies,
+                "Series" => AppView.Series,
+                "Search" => AppView.Search,
+                "Favorites" => AppView.Favorites,
+                "MyList" => AppView.MyList,
+                "History" => AppView.History,
+                "Downloads" => AppView.Downloads,
+                _ => AppView.Home
+            };
+            _coreMainViewModel.NavigateCommand.Execute(targetView);
+        }
+
+        UpdateContentVisibility(destination);
     }
 
     private async void CoreMainViewModel_OnMediaSelected(object media)

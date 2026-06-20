@@ -6,9 +6,34 @@
              RequestedThemeVariant="Dark">
 
     <Application.Resources>
+      <ResourceDictionary>
+        <ResourceDictionary.ThemeDictionaries>
+          <ResourceDictionary x:Key="Default">
+            <ResourceDictionary.MergedDictionaries>
+              <ResourceInclude Source="avares://Noctra.Mobile/Resources/Themes/DarkTheme.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+          </ResourceDictionary>
+          <ResourceDictionary x:Key="Dark">
+            <ResourceDictionary.MergedDictionaries>
+              <ResourceInclude Source="avares://Noctra.Mobile/Resources/Themes/DarkTheme.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+          </ResourceDictionary>
+          <ResourceDictionary x:Key="Light">
+            <ResourceDictionary.MergedDictionaries>
+              <ResourceInclude Source="avares://Noctra.Mobile/Resources/Themes/LightTheme.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+          </ResourceDictionary>
+        </ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary.MergedDictionaries>
+          <ResourceInclude Source="avares://Noctra.Mobile/Resources/Colors.axaml" />
+        </ResourceDictionary.MergedDictionaries>
         <converters:AvatarPathConverter x:Key="AvatarPathConverter" />
         <converters:DoubleToFloatConverter x:Key="DoubleToFloatConverter" />
         <converters:StringFormatConverter x:Key="StringFormatConverter" />
+        <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
+        <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
+        <converters:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibilityConverter" />
+      </ResourceDictionary>
     </Application.Resources>
 
     <Application.DataTemplates>
@@ -17,5 +42,35 @@
 
     <Application.Styles>
         <FluentTheme />
+        <Style Selector="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Slider">
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="ComboBox">
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="ListBox">
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="ToggleSwitch">
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="CheckBox">
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="RadioButton">
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="ScrollBar">
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="ScrollBar Thumb">
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="ScrollBar RepeatButton">
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
     </Application.Styles>
 </Application>
