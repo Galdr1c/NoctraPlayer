@@ -843,6 +843,9 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("Settings.Account.ExpiryFormat", settingsSource);
         Assert.Contains("ExpirationStatus", settingsSource);
         Assert.Contains("IsDarkTheme", settingsSource);
+        Assert.Contains("GlobalSettings.Appearance.Title", settingsSource);
+        Assert.Contains("Settings.Theme.Dark", settingsSource);
+        Assert.Contains("Settings.Language.Title", settingsSource);
         Assert.Contains("AppLanguage", settingsSource);
         Assert.True(
             CountOccurrences(settingsSource, "Tag=\"de\"") >= 3,
@@ -855,12 +858,26 @@ public sealed class ReleaseSourceCleanlinessTests
             "Mobile appearance language picker should include Spanish in addition to subtitle and audio language pickers.");
         Assert.Contains("AutoPlayNext", settingsSource);
         Assert.Contains("UserAgent", settingsSource);
+        Assert.Contains("Settings.Playback.Network", settingsSource);
+        Assert.Contains("Settings.Playback.UserAgent", settingsSource);
+        Assert.Contains("Settings.Playback.AutoPlayNext", settingsSource);
+        Assert.Contains("Settings.Playback.Quality", settingsSource);
+        Assert.Contains("Settings.Playback.Quality.Low", settingsSource);
+        Assert.Contains("Settings.Playback.Quality.Medium", settingsSource);
+        Assert.Contains("Settings.Playback.Quality.High", settingsSource);
+        Assert.Contains("Settings.Playback.Quality.Auto", settingsSource);
+        Assert.Contains("Settings.Playback.Buffer", settingsSource);
+        Assert.Contains("Settings.Playback.Buffer.Small", settingsSource);
+        Assert.Contains("Settings.Playback.Buffer.Normal", settingsSource);
+        Assert.Contains("Settings.Playback.Buffer.Large", settingsSource);
+        Assert.Contains("Settings.Privacy.SaveHistory", settingsSource);
+        Assert.Contains("Settings.Privacy.ClearOnExit", settingsSource);
         Assert.Contains("SelectedDataUsage", settingsSource);
         var dataUsageIndex = settingsSource.IndexOf("SelectedIndex=\"{Binding SelectedDataUsage}", StringComparison.Ordinal);
-        var bufferLabelIndex = settingsSource.IndexOf("Text=\"Buffer\"", dataUsageIndex, StringComparison.Ordinal);
+        var bufferLabelIndex = settingsSource.IndexOf("Settings.Playback.Buffer", dataUsageIndex, StringComparison.Ordinal);
         Assert.True(dataUsageIndex >= 0 && bufferLabelIndex > dataUsageIndex);
         var dataUsageBlock = settingsSource[dataUsageIndex..bufferLabelIndex];
-        Assert.Contains("<ComboBoxItem Content=\"Auto\" />", dataUsageBlock);
+        Assert.Contains("Settings.Playback.Quality.Auto", dataUsageBlock);
         Assert.Contains("IsBufferSmall", settingsSource);
         Assert.Contains("IsBufferNormal", settingsSource);
         Assert.Contains("IsBufferLarge", settingsSource);
@@ -868,6 +885,10 @@ public sealed class ReleaseSourceCleanlinessTests
             CountOccurrences(settingsSource, "IsEnabled=\"{Binding IsPremium}\"") >= 16,
             "Mobile settings should gate premium-only buffer and refresh frequency options with IsPremium.");
         Assert.Contains("SubtitleEnabled", settingsSource);
+        Assert.Contains("Settings.Playback.AudioSubtitle", settingsSource);
+        Assert.Contains("Settings.Playback.SubtitlesAuto", settingsSource);
+        Assert.Contains("Settings.Playback.PreferredSubtitle", settingsSource);
+        Assert.Contains("Settings.Playback.PreferredAudio", settingsSource);
         Assert.Contains("SubtitleLanguage", settingsSource);
         Assert.Contains("PreferredAudioLanguage", settingsSource);
         Assert.True(
@@ -888,6 +909,8 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("Settings.Download.Quality.Standard", settingsSource);
         Assert.Contains("Settings.Download.Quality.High", settingsSource);
         Assert.Contains("Settings.Download.Path", settingsSource);
+        Assert.Contains("Mobile.Settings.Download.AndroidStorage", settingsSource);
+        Assert.Contains("Settings.Notifications.Download", settingsSource);
         Assert.Contains("SelectedDownloadQuality", settingsSource);
         Assert.Contains("DownloadPath", settingsSource);
         Assert.Contains("ShowDownloadNotification", settingsSource);
@@ -903,10 +926,17 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("ChannelListLastError", settingsSource);
         Assert.Contains("ChannelListRefreshFrequencyIndex", settingsSource);
         Assert.Contains("HiddenLiveGroups", settingsSource);
+        Assert.Contains("Settings.Channels.Hidden.Live", settingsSource);
+        Assert.Contains("Settings.Channels.Hidden.Show", settingsSource);
+        Assert.Contains("Settings.Channels.Hidden.Empty.Live", settingsSource);
         Assert.Contains("HiddenLiveGroups.Count", settingsSource);
         Assert.Contains("HiddenMovieGroups", settingsSource);
+        Assert.Contains("Settings.Channels.Hidden.Movies", settingsSource);
+        Assert.Contains("Settings.Channels.Hidden.Empty.Movies", settingsSource);
         Assert.Contains("HiddenMovieGroups.Count", settingsSource);
         Assert.Contains("HiddenSeriesGroups", settingsSource);
+        Assert.Contains("Settings.Channels.Hidden.Series", settingsSource);
+        Assert.Contains("Settings.Channels.Hidden.Empty.Series", settingsSource);
         Assert.Contains("HiddenSeriesGroups.Count", settingsSource);
         Assert.Contains("UnhideGroupCommand", settingsSource);
         Assert.Contains("EpgEnabled", settingsSource);
@@ -914,6 +944,10 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("Settings.Epg.Enabled", settingsSource);
         Assert.Contains("Settings.Epg.Count", settingsSource);
         Assert.Contains("Settings.Epg.RefreshNow", settingsSource);
+        Assert.Contains("Mobile.Settings.Epg.Channels", settingsSource);
+        Assert.Contains("Mobile.Settings.Epg.LastUpdate", settingsSource);
+        Assert.Contains("Settings.Epg.Refresh", settingsSource);
+        Assert.Contains("Settings.Epg.Timezone", settingsSource);
         Assert.Contains("RefreshEpgNowCommand", settingsSource);
         Assert.Contains("EpgRefreshFrequencyIndex", settingsSource);
         Assert.Contains("EpgTimeOffsetIndex", settingsSource);
@@ -926,7 +960,12 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("TotalEpgChannels", settingsSource);
         Assert.Contains("LastEpgUpdate", settingsSource);
         Assert.Contains("CustomEpgUrls", settingsSource);
+        Assert.Contains("Settings.Epg.CustomSources", settingsSource);
         Assert.Contains("Settings.Epg.SourcesCountFormat", settingsSource);
+        Assert.Contains("Settings.Epg.AddNew", settingsSource);
+        Assert.Contains("Settings.Epg.PerformanceWarning", settingsSource);
+        Assert.Contains("Settings.Epg.UrlPlaceholder", settingsSource);
+        Assert.Contains("Settings.Epg.RemoveSource.Tooltip", settingsSource);
         Assert.Contains("AddCustomEpgCommand", settingsSource);
         Assert.Contains("RemoveCustomEpgCommand", settingsSource);
         Assert.Contains("IsGlobalLoading", settingsSource);
@@ -941,6 +980,9 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("Settings.Privacy.Retention.30d", settingsSource);
         Assert.Contains("Settings.Privacy.ClearAllNow", settingsSource);
         Assert.Contains("CurrentVersion", settingsSource);
+        Assert.Contains("Mobile.Settings.About.Title", settingsSource);
+        Assert.Contains("GlobalSettings.Update.Title", settingsSource);
+        Assert.Contains("GlobalSettings.Update.Checking", settingsSource);
         Assert.Contains("Settings.About.VersionFormat", settingsSource);
         Assert.Contains("Settings.About.PremiumVersionFormat", settingsSource);
         Assert.Contains("IsPremium", settingsSource);
@@ -968,6 +1010,20 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.DoesNotContain("Text=\"Account\"", settingsSource);
         Assert.DoesNotContain("Text=\"Downloads\"", settingsSource);
         Assert.DoesNotContain("Text=\"Channels\"", settingsSource);
+        Assert.DoesNotContain("Text=\"Appearance\"", settingsSource);
+        Assert.DoesNotContain("Content=\"Dark theme\"", settingsSource);
+        Assert.DoesNotContain("Text=\"Playback\"", settingsSource);
+        Assert.DoesNotContain("Content=\"Auto play next episode\"", settingsSource);
+        Assert.DoesNotContain("Text=\"Audio and subtitles\"", settingsSource);
+        Assert.DoesNotContain("Text=\"Android stores downloads in the app storage location shown above.\"", settingsSource);
+        Assert.DoesNotContain("Text=\"Hidden live groups\"", settingsSource);
+        Assert.DoesNotContain("Content=\"Show\"", settingsSource);
+        Assert.DoesNotContain("Text=\"EPG channels\"", settingsSource);
+        Assert.DoesNotContain("Text=\"Custom EPG sources\"", settingsSource);
+        Assert.DoesNotContain("PlaceholderText=\"EPG URL\"", settingsSource);
+        Assert.DoesNotContain("Text=\"About\"", settingsSource);
+        Assert.DoesNotContain("Text=\"Updates\"", settingsSource);
+        Assert.DoesNotContain("Text=\"Checking for updates...\"", settingsSource);
         Assert.DoesNotContain("Content=\"Save\"", settingsSource);
         Assert.DoesNotContain("Content=\"Cancel\"", settingsSource);
 

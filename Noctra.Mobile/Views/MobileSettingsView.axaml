@@ -127,12 +127,12 @@
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
-          <TextBlock Text="Appearance"
+          <TextBlock Text="{loc:Translate GlobalSettings.Appearance.Title}"
                      Foreground="{DynamicResource TextPrimaryBrush}"
                      FontWeight="SemiBold" />
-          <CheckBox Content="Dark theme"
+          <CheckBox Content="{loc:Translate Settings.Theme.Dark}"
                     IsChecked="{Binding IsDarkTheme}" />
-          <TextBlock Text="Language"
+          <TextBlock Text="{loc:Translate Settings.Language.Title}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedValue="{Binding AppLanguage, Mode=TwoWay}"
@@ -151,46 +151,46 @@
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
-          <TextBlock Text="Playback"
+          <TextBlock Text="{loc:Translate Settings.Playback.Network}"
                      Foreground="{DynamicResource TextPrimaryBrush}"
                      FontWeight="SemiBold" />
-          <TextBlock Text="User agent"
+          <TextBlock Text="{loc:Translate Settings.Playback.UserAgent}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <TextBox Text="{Binding UserAgent, Mode=TwoWay}"
                    PlaceholderText="VLC/3.0.x LibVLC/3.0.x"
                    MinHeight="44" />
-          <CheckBox Content="Auto play next episode"
+          <CheckBox Content="{loc:Translate Settings.Playback.AutoPlayNext}"
                     IsChecked="{Binding AutoPlayNext}" />
-          <TextBlock Text="Streaming quality"
+          <TextBlock Text="{loc:Translate Settings.Playback.Quality}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedIndex="{Binding SelectedDataUsage}"
                     MinHeight="44">
-            <ComboBoxItem Content="Low" />
-            <ComboBoxItem Content="Medium" />
-            <ComboBoxItem Content="High" />
-            <ComboBoxItem Content="Auto" />
+            <ComboBoxItem Content="{loc:Translate Settings.Playback.Quality.Low}" />
+            <ComboBoxItem Content="{loc:Translate Settings.Playback.Quality.Medium}" />
+            <ComboBoxItem Content="{loc:Translate Settings.Playback.Quality.High}" />
+            <ComboBoxItem Content="{loc:Translate Settings.Playback.Quality.Auto}" />
           </ComboBox>
-          <TextBlock Text="Buffer"
+          <TextBlock Text="{loc:Translate Settings.Playback.Buffer}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <StackPanel Spacing="4">
-            <RadioButton Content="Small"
+            <RadioButton Content="{loc:Translate Settings.Playback.Buffer.Small}"
                          GroupName="MobileBuffer"
                          IsChecked="{Binding IsBufferSmall}"
                          IsEnabled="{Binding IsPremium}" />
-            <RadioButton Content="Normal"
+            <RadioButton Content="{loc:Translate Settings.Playback.Buffer.Normal}"
                          GroupName="MobileBuffer"
                          IsChecked="{Binding IsBufferNormal}" />
-            <RadioButton Content="Large"
+            <RadioButton Content="{loc:Translate Settings.Playback.Buffer.Large}"
                          GroupName="MobileBuffer"
                          IsChecked="{Binding IsBufferLarge}"
                          IsEnabled="{Binding IsPremium}" />
           </StackPanel>
-          <CheckBox Content="Save watch history"
+          <CheckBox Content="{loc:Translate Settings.Privacy.SaveHistory}"
                     IsChecked="{Binding SaveWatchHistory}" />
-          <CheckBox Content="Clear history on exit"
+          <CheckBox Content="{loc:Translate Settings.Privacy.ClearOnExit}"
                     IsChecked="{Binding ClearHistoryOnExit}" />
         </StackPanel>
       </Border>
@@ -199,12 +199,12 @@
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
-          <TextBlock Text="Audio and subtitles"
+          <TextBlock Text="{loc:Translate Settings.Playback.AudioSubtitle}"
                      Foreground="{DynamicResource TextPrimaryBrush}"
                      FontWeight="SemiBold" />
-          <CheckBox Content="Enable subtitles automatically"
+          <CheckBox Content="{loc:Translate Settings.Playback.SubtitlesAuto}"
                     IsChecked="{Binding SubtitleEnabled}" />
-          <TextBlock Text="Preferred subtitle"
+          <TextBlock Text="{loc:Translate Settings.Playback.PreferredSubtitle}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedValue="{Binding SubtitleLanguage, Mode=TwoWay}"
@@ -221,7 +221,7 @@
             <ComboBoxItem Content="Arabic" Tag="ar" />
             <ComboBoxItem Content="Dutch" Tag="nl" />
           </ComboBox>
-          <TextBlock Text="Preferred audio"
+          <TextBlock Text="{loc:Translate Settings.Playback.PreferredAudio}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedValue="{Binding PreferredAudioLanguage, Mode=TwoWay}"
@@ -265,11 +265,11 @@
                    IsReadOnly="True"
                    TextWrapping="Wrap"
                    MinHeight="44" />
-          <TextBlock Text="Android stores downloads in the app storage location shown above."
+          <TextBlock Text="{loc:Translate Mobile.Settings.Download.AndroidStorage}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12"
                      TextWrapping="Wrap" />
-          <CheckBox Content="Show download notifications"
+          <CheckBox Content="{loc:Translate Settings.Notifications.Download}"
                     IsChecked="{Binding ShowDownloadNotification}" />
         </StackPanel>
       </Border>
@@ -310,25 +310,25 @@
                      FontSize="12" />
           <ComboBox SelectedIndex="{Binding ChannelListRefreshFrequencyIndex, Mode=TwoWay}"
                     MinHeight="44">
-            <ComboBoxItem Content="Off" />
-            <ComboBoxItem Content="1 hour"
+            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.Off}" />
+            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.1h}"
                           IsEnabled="{Binding IsPremium}" />
-            <ComboBoxItem Content="3 hours"
+            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.3h}"
                           IsEnabled="{Binding IsPremium}" />
-            <ComboBoxItem Content="12 hours"
+            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.12h}"
                           IsEnabled="{Binding IsPremium}" />
-            <ComboBoxItem Content="24 hours"
+            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.24h}"
                           IsEnabled="{Binding IsPremium}" />
-            <ComboBoxItem Content="2 days"
+            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.2d}"
                           IsEnabled="{Binding IsPremium}" />
-            <ComboBoxItem Content="3 days"
+            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.3d}"
                           IsEnabled="{Binding IsPremium}" />
-            <ComboBoxItem Content="7 days"
+            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.7d}"
                           IsEnabled="{Binding IsPremium}" />
           </ComboBox>
 
           <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="Hidden live groups"
+            <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Live}"
                        Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
             <TextBlock Grid.Column="1"
@@ -351,7 +351,7 @@
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center" />
                     <Button Grid.Column="1"
-                            Content="Show"
+                            Content="{loc:Translate Settings.Channels.Hidden.Show}"
                             Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
                             CommandParameter="{Binding}"
                             MinHeight="34" />
@@ -360,13 +360,13 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
-          <TextBlock Text="No hidden live groups"
+          <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Empty.Live}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12"
                      IsVisible="{Binding !HiddenLiveGroups.Count}" />
 
           <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="Hidden movie groups"
+            <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Movies}"
                        Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
             <TextBlock Grid.Column="1"
@@ -389,7 +389,7 @@
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center" />
                     <Button Grid.Column="1"
-                            Content="Show"
+                            Content="{loc:Translate Settings.Channels.Hidden.Show}"
                             Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
                             CommandParameter="{Binding}"
                             MinHeight="34" />
@@ -398,13 +398,13 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
-          <TextBlock Text="No hidden movie groups"
+          <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Empty.Movies}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12"
                      IsVisible="{Binding !HiddenMovieGroups.Count}" />
 
           <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="Hidden series groups"
+            <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Series}"
                        Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
             <TextBlock Grid.Column="1"
@@ -427,7 +427,7 @@
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center" />
                     <Button Grid.Column="1"
-                            Content="Show"
+                            Content="{loc:Translate Settings.Channels.Hidden.Show}"
                             Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
                             CommandParameter="{Binding}"
                             MinHeight="34" />
@@ -436,7 +436,7 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
-          <TextBlock Text="No hidden series groups"
+          <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Empty.Series}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12"
                      IsVisible="{Binding !HiddenSeriesGroups.Count}" />
@@ -462,7 +462,7 @@
                        FontWeight="SemiBold" />
           </Grid>
           <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="EPG channels"
+            <TextBlock Text="{loc:Translate Mobile.Settings.Epg.Channels}"
                        Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
             <TextBlock Grid.Column="1"
@@ -471,7 +471,7 @@
                        FontWeight="SemiBold" />
           </Grid>
           <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="Last EPG update"
+            <TextBlock Text="{loc:Translate Mobile.Settings.Epg.LastUpdate}"
                        Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
             <TextBlock Grid.Column="1"
@@ -486,28 +486,28 @@
           <TextBlock Text="{Binding EpgLastError}"
                      Foreground="{DynamicResource ErrorBrush}"
                      TextWrapping="Wrap" />
-          <TextBlock Text="EPG refresh frequency"
+          <TextBlock Text="{loc:Translate Settings.Epg.Refresh}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedIndex="{Binding EpgRefreshFrequencyIndex, Mode=TwoWay}"
                     MinHeight="44">
-            <ComboBoxItem Content="Off" />
-            <ComboBoxItem Content="1 hour"
+            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.Off}" />
+            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.1h}"
                           IsEnabled="{Binding IsPremium}" />
-            <ComboBoxItem Content="3 hours"
+            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.3h}"
                           IsEnabled="{Binding IsPremium}" />
-            <ComboBoxItem Content="12 hours"
+            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.12h}"
                           IsEnabled="{Binding IsPremium}" />
-            <ComboBoxItem Content="24 hours"
+            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.24h}"
                           IsEnabled="{Binding IsPremium}" />
-            <ComboBoxItem Content="2 days"
+            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.2d}"
                           IsEnabled="{Binding IsPremium}" />
-            <ComboBoxItem Content="3 days"
+            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.3d}"
                           IsEnabled="{Binding IsPremium}" />
-            <ComboBoxItem Content="7 days"
+            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.7d}"
                           IsEnabled="{Binding IsPremium}" />
           </ComboBox>
-          <TextBlock Text="EPG time offset"
+          <TextBlock Text="{loc:Translate Settings.Epg.Timezone}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedIndex="{Binding EpgTimeOffsetIndex, Mode=TwoWay}"
@@ -546,7 +546,7 @@
               <Grid ColumnDefinitions="*,Auto"
                     ColumnSpacing="10">
                 <StackPanel>
-                  <TextBlock Text="Custom EPG sources"
+                  <TextBlock Text="{loc:Translate Settings.Epg.CustomSources}"
                              Foreground="{DynamicResource TextPrimaryBrush}"
                              FontWeight="SemiBold" />
                   <TextBlock Text="{Binding CustomEpgUrls.Count, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.SourcesCountFormat'}"
@@ -554,13 +554,13 @@
                              FontSize="12" />
                 </StackPanel>
                 <Button Grid.Column="1"
-                        Content="Add"
+                        Content="{loc:Translate Settings.Epg.AddNew}"
                         Command="{Binding AddCustomEpgCommand}"
                         IsEnabled="{Binding !IsGlobalLoading}"
                         MinHeight="40" />
               </Grid>
 
-              <TextBlock Text="More EPG sources can slow down refresh depending on provider response time."
+              <TextBlock Text="{loc:Translate Settings.Epg.PerformanceWarning}"
                          Foreground="{DynamicResource WarningBrush}"
                          FontSize="12"
                          TextWrapping="Wrap" />
@@ -572,10 +572,10 @@
                           ColumnSpacing="8"
                           Margin="0,0,0,8">
                       <TextBox Text="{Binding Url, Mode=TwoWay}"
-                               PlaceholderText="EPG URL"
+                               PlaceholderText="{loc:Translate Settings.Epg.UrlPlaceholder}"
                                MinHeight="44" />
                       <Button Grid.Column="1"
-                              Content="Remove"
+                              Content="{loc:Translate Settings.Epg.RemoveSource.Tooltip}"
                               Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).RemoveCustomEpgCommand}"
                               CommandParameter="{Binding .}"
                               MinHeight="44" />
@@ -616,7 +616,7 @@
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
-          <TextBlock Text="About"
+          <TextBlock Text="{loc:Translate Mobile.Settings.About.Title}"
                      Foreground="{DynamicResource TextPrimaryBrush}"
                      FontWeight="SemiBold" />
 
@@ -671,14 +671,14 @@
                   CornerRadius="12"
                   Padding="12">
             <StackPanel Spacing="10">
-              <TextBlock Text="Updates"
+              <TextBlock Text="{loc:Translate GlobalSettings.Update.Title}"
                          Foreground="{DynamicResource TextPrimaryBrush}"
                          FontWeight="SemiBold" />
               <TextBlock Text="{Binding UpdateStatusText}"
                          Foreground="{DynamicResource TextMutedBrush}"
                          FontSize="12"
                          TextWrapping="Wrap" />
-              <TextBlock Text="Checking for updates..."
+              <TextBlock Text="{loc:Translate GlobalSettings.Update.Checking}"
                          Foreground="{DynamicResource AccentBrush}"
                          FontSize="12"
                          IsVisible="{Binding IsCheckingUpdates}" />
