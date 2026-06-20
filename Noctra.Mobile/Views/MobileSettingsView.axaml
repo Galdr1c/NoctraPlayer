@@ -14,7 +14,7 @@
     <ScrollViewer>
       <StackPanel Margin="20" Spacing="14">
       <StackPanel Spacing="4">
-        <TextBlock Text="Settings"
+        <TextBlock Text="{loc:Translate Settings.Title}"
                    FontSize="24"
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextPrimaryBrush}" />
@@ -56,14 +56,14 @@
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="10">
-          <TextBlock Text="Profile management"
+          <TextBlock Text="{loc:Translate Settings.Profile.Management}"
                      Foreground="{DynamicResource TextPrimaryBrush}"
                      FontWeight="SemiBold" />
-          <TextBlock Text="Return to the profile list to switch, add, or manage profiles."
+          <TextBlock Text="{loc:Translate Settings.Profile.ManagementDetail}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12"
                      TextWrapping="Wrap" />
-          <Button Content="Back to Profiles"
+          <Button Content="{loc:Translate Settings.Profile.BackToProfiles}"
                   Click="BackToProfiles_Click"
                   MinHeight="44" />
         </StackPanel>
@@ -73,7 +73,7 @@
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="10">
-          <TextBlock Text="Account"
+          <TextBlock Text="{loc:Translate Settings.Account.Title}"
                      Foreground="{DynamicResource TextPrimaryBrush}"
                      FontWeight="SemiBold" />
           <Grid ColumnDefinitions="Auto,*"
@@ -100,7 +100,7 @@
           <Grid ColumnDefinitions="Auto,*"
                 ColumnSpacing="10"
                 IsVisible="{Binding ShowProviderPassword}">
-            <TextBlock Text="Password"
+            <TextBlock Text="{loc:Translate Settings.Account.Password}"
                        Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
             <TextBlock Grid.Column="1"
@@ -110,7 +110,7 @@
           </Grid>
           <StackPanel Spacing="3"
                       IsVisible="{Binding ShowProviderExpiration}">
-            <TextBlock Text="Expiration"
+            <TextBlock Text="{loc:Translate Settings.Account.Expiry}"
                        Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
             <TextBlock Text="{Binding ExpirationDate, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Account.ExpiryFormat'}"
@@ -245,20 +245,20 @@
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
-          <TextBlock Text="Downloads"
+          <TextBlock Text="{loc:Translate Settings.Download.Title}"
                      Foreground="{DynamicResource TextPrimaryBrush}"
                      FontWeight="SemiBold" />
-          <CheckBox Content="Download on Wi-Fi only"
+          <CheckBox Content="{loc:Translate Settings.Download.WifiOnly}"
                     IsChecked="{Binding DownloadWifiOnly}" />
-          <TextBlock Text="Download quality"
+          <TextBlock Text="{loc:Translate Settings.Download.Quality}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedIndex="{Binding SelectedDownloadQuality}"
                     MinHeight="44">
-            <ComboBoxItem Content="Standard" />
-            <ComboBoxItem Content="High" />
+            <ComboBoxItem Content="{loc:Translate Settings.Download.Quality.Standard}" />
+            <ComboBoxItem Content="{loc:Translate Settings.Download.Quality.High}" />
           </ComboBox>
-          <TextBlock Text="Download location"
+          <TextBlock Text="{loc:Translate Settings.Download.Path}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <TextBox Text="{Binding DownloadPath}"
@@ -278,14 +278,14 @@
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
-          <TextBlock Text="Channels"
+          <TextBlock Text="{loc:Translate Settings.Channels.Title}"
                      Foreground="{DynamicResource TextPrimaryBrush}"
                      FontWeight="SemiBold" />
-          <Button Content="Refresh channels now"
+          <Button Content="{loc:Translate Settings.Channels.RefreshNow}"
                   Command="{Binding RefreshChannelListNowCommand}"
                   MinHeight="44" />
           <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="Total channels"
+            <TextBlock Text="{loc:Translate Settings.Channels.Count}"
                        Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
             <TextBlock Grid.Column="1"
@@ -294,7 +294,7 @@
                        FontWeight="SemiBold" />
           </Grid>
           <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="Last update"
+            <TextBlock Text="{loc:Translate Settings.Channels.LastUpdate}"
                        Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
             <TextBlock Grid.Column="1"
@@ -305,7 +305,7 @@
           <TextBlock Text="{Binding ChannelListLastError}"
                      Foreground="{DynamicResource ErrorBrush}"
                      TextWrapping="Wrap" />
-          <TextBlock Text="Refresh frequency"
+          <TextBlock Text="{loc:Translate Settings.Channels.Frequency}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedIndex="{Binding ChannelListRefreshFrequencyIndex, Mode=TwoWay}"
@@ -447,13 +447,13 @@
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
-          <TextBlock Text="EPG"
+          <TextBlock Text="{loc:Translate Settings.Epg.Title}"
                      Foreground="{DynamicResource TextPrimaryBrush}"
                      FontWeight="SemiBold" />
-          <CheckBox Content="Enable EPG"
+          <CheckBox Content="{loc:Translate Settings.Epg.Enabled}"
                     IsChecked="{Binding EpgEnabled}" />
           <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="EPG programs"
+            <TextBlock Text="{loc:Translate Settings.Epg.Count}"
                        Foreground="{DynamicResource TextMutedBrush}"
                        FontSize="12" />
             <TextBlock Grid.Column="1"
@@ -479,7 +479,7 @@
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        FontSize="12" />
           </Grid>
-          <Button Content="Refresh EPG now"
+          <Button Content="{loc:Translate Settings.Epg.RefreshNow}"
                   Command="{Binding RefreshEpgNowCommand}"
                   IsEnabled="{Binding !IsGlobalLoading}"
                   MinHeight="44" />
@@ -592,21 +592,21 @@
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="10">
-          <TextBlock Text="Privacy"
+          <TextBlock Text="{loc:Translate LegalConsent.Action.Privacy}"
                      Foreground="{DynamicResource TextPrimaryBrush}"
                      FontWeight="SemiBold" />
-          <TextBlock Text="Watch history retention"
+          <TextBlock Text="{loc:Translate Settings.Privacy.Retention}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedIndex="{Binding WatchHistoryRetentionIndex}"
                     MinHeight="44">
-            <ComboBoxItem Content="Forever" />
-            <ComboBoxItem Content="3 days" />
-            <ComboBoxItem Content="7 days" />
-            <ComboBoxItem Content="14 days" />
-            <ComboBoxItem Content="30 days" />
+            <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.Forever}" />
+            <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.3d}" />
+            <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.7d}" />
+            <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.14d}" />
+            <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.30d}" />
           </ComboBox>
-          <Button Content="Clear watch history"
+          <Button Content="{loc:Translate Settings.Privacy.ClearAllNow}"
                   Command="{Binding ClearHistoryCommand}"
                   MinHeight="44" />
         </StackPanel>
@@ -662,7 +662,7 @@
             </StackPanel>
           </Grid>
 
-          <Button Content="Upgrade to Premium"
+          <Button Content="{loc:Translate GlobalSettings.About.Upgrade}"
                   Command="{Binding ShowUpsellCommand}"
                   IsVisible="{Binding !IsPremium}"
                   MinHeight="44" />
@@ -682,18 +682,18 @@
                          Foreground="{DynamicResource AccentBrush}"
                          FontSize="12"
                          IsVisible="{Binding IsCheckingUpdates}" />
-              <Button Content="Check for updates"
+              <Button Content="{loc:Translate GlobalSettings.Update.Check}"
                       Command="{Binding CheckForUpdatesCommand}"
                       IsVisible="{Binding IsIdle}"
                       MinHeight="44" />
-              <Button Content="Update now"
+              <Button Content="{loc:Translate GlobalSettings.Update.Now}"
                       Command="{Binding StartUpdateCommand}"
                       IsVisible="{Binding IsUpdateAvailable}"
                       MinHeight="44" />
             </StackPanel>
           </Border>
 
-          <Button Content="Report bug"
+          <Button Content="{loc:Translate GlobalSettings.Support.Report}"
                   Command="{Binding ReportBugCommand}"
                   MinHeight="44" />
         </StackPanel>
@@ -702,11 +702,11 @@
       <Grid ColumnDefinitions="*,*"
             ColumnSpacing="10"
             Margin="0,0,0,24">
-        <Button Content="Reset"
+        <Button Content="{loc:Translate Settings.Action.ResetDefaults}"
                 Command="{Binding ResetToDefaultsCommand}"
                 MinHeight="44" />
         <Button Grid.Column="1"
-                Content="Save"
+                Content="{loc:Translate Settings.Action.SaveSettings}"
                 Command="{Binding SaveSettingsCommand}"
                 MinHeight="44" />
       </Grid>
@@ -722,7 +722,7 @@
               HorizontalAlignment="Center"
               VerticalAlignment="Center">
         <StackPanel Spacing="14">
-          <TextBlock Text="Loading"
+          <TextBlock Text="{loc:Translate Common.Loading}"
                      Foreground="{DynamicResource TextPrimaryBrush}"
                      FontSize="20"
                      FontWeight="SemiBold"
@@ -735,7 +735,7 @@
                      Foreground="{DynamicResource TextMutedBrush}"
                      TextWrapping="Wrap"
                      TextAlignment="Center" />
-          <Button Content="Cancel"
+          <Button Content="{loc:Translate Dialog.Cancel}"
                   Command="{Binding CancelRefreshOperationCommand}"
                   MinHeight="44" />
         </StackPanel>

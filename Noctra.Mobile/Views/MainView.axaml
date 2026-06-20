@@ -5,6 +5,7 @@
              xmlns:vm="using:Noctra.Mobile.ViewModels"
              xmlns:views="using:Noctra.Mobile.Views"
              xmlns:corevm="using:Noctra.ViewModels"
+             xmlns:loc="using:Noctra.Mobile.Localization"
              mc:Ignorable="d" d:DesignWidth="390" d:DesignHeight="844"
              x:Class="Noctra.Mobile.Views.MainView"
              x:DataType="vm:MainViewModel"
@@ -73,17 +74,17 @@
             Background="{DynamicResource Bg1Brush}"
             IsVisible="False">
       <StackPanel Spacing="8">
-        <Button Classes="nav" Tag="Home" Content="Home" Click="OnDestinationClick" />
-        <Button Classes="nav" Tag="Live" Content="Live" Click="OnDestinationClick" />
-        <Button Classes="nav" Tag="Movies" Content="Movies" Click="OnDestinationClick" />
-        <Button Classes="nav" Tag="Series" Content="Series" Click="OnDestinationClick" />
-        <Button Classes="nav" Tag="Search" Content="Search" Click="OnDestinationClick" />
-        <Button Classes="nav" Tag="Favorites" Content="Favorites" Click="OnDestinationClick" />
-        <Button Classes="nav" Tag="MyList" Content="My List" Click="OnDestinationClick" />
-        <Button Classes="nav" Tag="History" Content="History" Click="OnDestinationClick" />
-        <Button Classes="nav" Tag="Downloads" Content="Downloads" Click="OnDestinationClick" />
-        <Button Classes="nav" Tag="Settings" Content="Settings" Click="OnDestinationClick" />
-        <Button Classes="nav" Tag="More" Content="More" Click="OnDestinationClick" />
+        <Button Classes="nav" Tag="Home" Content="{loc:Translate Shell.Nav.Home}" Click="OnDestinationClick" />
+        <Button Classes="nav" Tag="Live" Content="{loc:Translate Shell.Nav.Live}" Click="OnDestinationClick" />
+        <Button Classes="nav" Tag="Movies" Content="{loc:Translate Shell.Nav.Movies}" Click="OnDestinationClick" />
+        <Button Classes="nav" Tag="Series" Content="{loc:Translate Shell.Nav.Series}" Click="OnDestinationClick" />
+        <Button Classes="nav" Tag="Search" Content="{loc:Translate Shell.Search.Tooltip}" Click="OnDestinationClick" />
+        <Button Classes="nav" Tag="Favorites" Content="{loc:Translate Shell.Nav.Favorites}" Click="OnDestinationClick" />
+        <Button Classes="nav" Tag="MyList" Content="{loc:Translate Shell.Nav.MyList}" Click="OnDestinationClick" />
+        <Button Classes="nav" Tag="History" Content="{loc:Translate Shell.Nav.History}" Click="OnDestinationClick" />
+        <Button Classes="nav" Tag="Downloads" Content="{loc:Translate Shell.Nav.Downloads}" Click="OnDestinationClick" />
+        <Button Classes="nav" Tag="Settings" Content="{loc:Translate Settings.Title}" Click="OnDestinationClick" />
+        <Button Classes="nav" Tag="More" Content="{loc:Translate Mobile.Nav.More}" Click="OnDestinationClick" />
       </StackPanel>
     </Border>
 
@@ -98,11 +99,11 @@
 
         <Border Classes="card">
           <StackPanel Spacing="8">
-            <TextBlock Text="Continue watching"
+            <TextBlock Text="{loc:Translate Home.ContinueWatching}"
                        FontSize="18"
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource TextPrimaryBrush}" />
-            <TextBlock Text="Your recent content will appear here after profile setup."
+            <TextBlock Text="{loc:Translate Home.EmptyState.Description}"
                        Foreground="{DynamicResource TextMutedBrush}"
                        TextWrapping="Wrap" />
           </StackPanel>
@@ -112,21 +113,21 @@
                                IsVisible="{Binding IsMoreSelected}" />
 
         <Button Classes="nav"
-                Content="Settings"
+                Content="{loc:Translate Settings.Title}"
                 IsVisible="{Binding IsMoreSelected}"
                 Click="OnSettingsClick" />
 
         <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
           <Border Classes="card">
             <StackPanel Spacing="6">
-              <TextBlock Text="Live" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
-              <TextBlock Text="Channels" Foreground="{DynamicResource AccentBrush}" />
+              <TextBlock Text="{loc:Translate Live.Title}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+              <TextBlock Text="{loc:Translate Settings.Channels.Title}" Foreground="{DynamicResource AccentBrush}" />
             </StackPanel>
           </Border>
           <Border Grid.Column="1" Classes="card">
             <StackPanel Spacing="6">
-              <TextBlock Text="Library" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
-              <TextBlock Text="Movies and series" Foreground="{DynamicResource AccentBrush}" />
+              <TextBlock Text="{loc:Translate Shell.Nav.Library}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+              <TextBlock Text="{loc:Translate Home.QuickAccess.Movies.Description}" Foreground="{DynamicResource AccentBrush}" />
             </StackPanel>
           </Border>
         </Grid>
@@ -196,13 +197,13 @@
             Padding="8,6,8,10"
             Background="{DynamicResource Bg1Brush}">
       <Grid ColumnDefinitions="*,*,*,*,*,*,*" ColumnSpacing="4">
-        <Button Grid.Column="0" Classes="nav" Tag="Home" Content="Home" Click="OnDestinationClick" />
-        <Button Grid.Column="1" Classes="nav" Tag="Live" Content="Live" Click="OnDestinationClick" />
-        <Button Grid.Column="2" Classes="nav" Tag="Movies" Content="Movies" Click="OnDestinationClick" />
-        <Button Grid.Column="3" Classes="nav" Tag="Series" Content="Series" Click="OnDestinationClick" />
-        <Button Grid.Column="4" Classes="nav" Tag="Search" Content="Search" Click="OnDestinationClick" />
-        <Button Grid.Column="5" Classes="nav" Tag="MyList" Content="List" Click="OnDestinationClick" />
-        <Button Grid.Column="6" Classes="nav" Tag="More" Content="More" Click="OnDestinationClick" />
+        <Button Grid.Column="0" Classes="nav" Tag="Home" Content="{loc:Translate Shell.Nav.Home}" Click="OnDestinationClick" />
+        <Button Grid.Column="1" Classes="nav" Tag="Live" Content="{loc:Translate Shell.Nav.Live}" Click="OnDestinationClick" />
+        <Button Grid.Column="2" Classes="nav" Tag="Movies" Content="{loc:Translate Shell.Nav.Movies}" Click="OnDestinationClick" />
+        <Button Grid.Column="3" Classes="nav" Tag="Series" Content="{loc:Translate Shell.Nav.Series}" Click="OnDestinationClick" />
+        <Button Grid.Column="4" Classes="nav" Tag="Search" Content="{loc:Translate Shell.Search.Tooltip}" Click="OnDestinationClick" />
+        <Button Grid.Column="5" Classes="nav" Tag="MyList" Content="{loc:Translate Shell.Nav.MyList}" Click="OnDestinationClick" />
+        <Button Grid.Column="6" Classes="nav" Tag="More" Content="{loc:Translate Mobile.Nav.More}" Click="OnDestinationClick" />
       </Grid>
     </Border>
 
