@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Models;
+using Noctra.Mobile.Localization;
 using Noctra.Mobile.Services;
 using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
@@ -194,7 +195,7 @@ public partial class MainView : UserControl
         {
             case Channel channel:
                 SelectedMediaTitle.Text = channel.Name;
-                SelectedMediaSubtitle.Text = "Starting Android playback.";
+                SelectedMediaSubtitle.Text = LocalizationSource.Instance["Mobile.Status.Playback.Starting"];
                 await PlaySelectedChannelAsync(channel);
                 break;
             case Series series:
@@ -202,7 +203,7 @@ public partial class MainView : UserControl
                 return;
             default:
                 SelectedMediaTitle.Text = media.GetType().Name;
-                SelectedMediaSubtitle.Text = "Media selection is ready.";
+                SelectedMediaSubtitle.Text = LocalizationSource.Instance["Mobile.Status.Media.Ready"];
                 break;
         }
 

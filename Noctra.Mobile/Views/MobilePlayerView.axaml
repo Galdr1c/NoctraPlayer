@@ -39,15 +39,15 @@
 
       <Grid ColumnDefinitions="*,*,*"
             ColumnSpacing="8">
-        <Button Content="{Binding IsLocked, StringFormat='Lock: {0}'}"
+        <Button Content="{Binding IsLocked, Converter={StaticResource StringFormatConverter}, ConverterParameter='Player.Mobile.LockFormat'}"
                 Command="{Binding ToggleLockCommand}"
                 MinHeight="40" />
         <Button Grid.Column="1"
-                Content="{Binding IsFullScreen, StringFormat='Fullscreen: {0}'}"
+                Content="{Binding IsFullScreen, Converter={StaticResource StringFormatConverter}, ConverterParameter='Player.Mobile.FullscreenFormat'}"
                 Command="{Binding ToggleFullScreenCommand}"
                 MinHeight="40" />
         <Button Grid.Column="2"
-                Content="PiP"
+                Content="{loc:Translate Player.Overlay.PiP.Tooltip}"
                 Command="{Binding EnterPiPCommand}"
                 MinHeight="40" />
       </Grid>
@@ -397,7 +397,7 @@
                 <DataTemplate x:DataType="models:Season">
                   <StackPanel Spacing="8"
                               Margin="0,0,0,12">
-                    <TextBlock Text="{Binding SeasonNumber, StringFormat='Season {0}'}"
+                    <TextBlock Text="{Binding SeasonNumber, Converter={StaticResource StringFormatConverter}, ConverterParameter='Series.Seasons.Format'}"
                                Foreground="{DynamicResource TextMutedBrush}"
                                FontSize="12"
                                FontWeight="SemiBold" />

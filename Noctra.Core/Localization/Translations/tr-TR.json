@@ -60,6 +60,8 @@
     "Mobile.Settings.Epg.Channels": "EPG Kanalları",
     "Mobile.Settings.Epg.LastUpdate": "Son EPG Güncellemesi",
     "Mobile.Settings.About.Title": "Hakkında",
+    "Mobile.Status.Playback.Starting": "Android oynatma başlatılıyor.",
+    "Mobile.Status.Media.Ready": "Medya seçimi hazır.",
     "Settings.Title": "Ayarlar",
     "Settings.Close.Tooltip": "Kapat",
     "Settings.Section.Appearance": "Görünüm",

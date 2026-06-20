@@ -1093,6 +1093,12 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("SelectedMediaHost", mainViewCode);
         Assert.Contains("SelectedMediaTitle", mainViewCode);
         Assert.Contains("SelectedMediaSubtitle", mainViewCode);
+        Assert.Contains("Noctra.Mobile.Localization", mainViewCode);
+        Assert.Contains("LocalizationSource.Instance", mainViewCode);
+        Assert.Contains("Mobile.Status.Playback.Starting", mainViewCode);
+        Assert.Contains("Mobile.Status.Media.Ready", mainViewCode);
+        Assert.DoesNotContain("Starting Android playback.", mainViewCode);
+        Assert.DoesNotContain("Media selection is ready.", mainViewCode);
     }
 
     [Fact]
@@ -1204,6 +1210,15 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("QualityResolutionText", playerViewSource);
         Assert.Contains("QualityFpsText", playerViewSource);
         Assert.Contains("QualityAudioText", playerViewSource);
+        Assert.Contains("StringFormatConverter", playerViewSource);
+        Assert.Contains("Player.Mobile.LockFormat", playerViewSource);
+        Assert.Contains("Player.Mobile.FullscreenFormat", playerViewSource);
+        Assert.Contains("Player.Overlay.PiP.Tooltip", playerViewSource);
+        Assert.Contains("Series.Seasons.Format", playerViewSource);
+        Assert.DoesNotContain("StringFormat='Lock: {0}'", playerViewSource);
+        Assert.DoesNotContain("StringFormat='Fullscreen: {0}'", playerViewSource);
+        Assert.DoesNotContain("Content=\"PiP\"", playerViewSource);
+        Assert.DoesNotContain("StringFormat='Season {0}'", playerViewSource);
     }
 
     [Fact]

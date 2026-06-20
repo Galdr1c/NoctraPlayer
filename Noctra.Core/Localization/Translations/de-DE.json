@@ -60,6 +60,8 @@
     "Mobile.Settings.Epg.Channels": "EPG-Kanäle",
     "Mobile.Settings.Epg.LastUpdate": "Letzte EPG-Aktualisierung",
     "Mobile.Settings.About.Title": "Über",
+    "Mobile.Status.Playback.Starting": "Android-Wiedergabe wird gestartet.",
+    "Mobile.Status.Media.Ready": "Medienauswahl ist bereit.",
     "Settings.Title": "Einstellungen",
     "Settings.Close.Tooltip": "Schließen",
     "Settings.Section.Appearance": "Erscheinungsbild",
