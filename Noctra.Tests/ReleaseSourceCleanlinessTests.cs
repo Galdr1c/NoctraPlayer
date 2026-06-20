@@ -535,6 +535,11 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MainView.axaml.cs"));
+        var mobileViewModelResolverSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Services",
+            "MobileViewModelResolver.cs"));
         var liveSource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Mobile",
@@ -595,6 +600,11 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobileDownloadsView.axaml"));
+        var registrationSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "DependencyInjection",
+            "AndroidServiceCollectionExtensions.cs"));
 
         Assert.Contains("CoreContentHost", mainViewSource);
         Assert.Contains("MobileLiveView", mainViewSource);
@@ -609,6 +619,15 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("CoreMainViewModel", mainViewCode);
         Assert.Contains("NavigateCommand", mainViewCode);
         Assert.Contains("CoreContentHost.DataContext", mainViewCode);
+        Assert.Contains("MobileViewModelResolver", mainViewCode);
+        Assert.Contains("GetCoreMainViewModel", mobileViewModelResolverSource);
+        Assert.Contains("GetProfilesViewModel", mobileViewModelResolverSource);
+        Assert.Contains("GetSettingsViewModel", mobileViewModelResolverSource);
+        Assert.Contains("GetPlayerViewModel", mobileViewModelResolverSource);
+        Assert.True(
+            CountOccurrences(mainViewCode, "GetRequiredService<") <= 2,
+            "MainView should only resolve the mobile resolver facades directly, not individual view models or platform services.");
+        Assert.Contains("AddSingleton<MobileViewModelResolver>", registrationSource);
 
         foreach (var contentSource in new[] { liveSource, moviesSource })
         {
@@ -1190,6 +1209,11 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MainView.axaml.cs"));
+        var mobilePlatformServiceResolverSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Services",
+            "MobilePlatformServiceResolver.cs"));
 
         Assert.Contains("ToggleLockCommand", playerViewSource);
         Assert.Contains("ToggleFullScreenCommand", playerViewSource);
@@ -1202,7 +1226,9 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("UpdatePlayerChromeState", mainViewCode);
         Assert.Contains("nameof(PlayerViewModel.IsFullScreen)", mainViewCode);
         Assert.Contains("PiPRequested", mainViewCode);
-        Assert.Contains("IPictureInPictureService", mainViewCode);
+        Assert.Contains("MobilePlatformServiceResolver", mainViewCode);
+        Assert.Contains("GetPictureInPictureService", mobilePlatformServiceResolverSource);
+        Assert.Contains("IPictureInPictureService", mobilePlatformServiceResolverSource);
     }
 
     [Fact]
@@ -1322,6 +1348,11 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MainView.axaml.cs"));
+        var mobilePlatformServiceResolverSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Services",
+            "MobilePlatformServiceResolver.cs"));
 
         Assert.Contains("interface IVideoSurfaceService", surfaceInterface);
         Assert.Contains("ShowAsync", surfaceInterface);
@@ -1340,7 +1371,9 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("AddSingleton<AndroidVideoSurfaceService>", registrationSource);
         Assert.Contains("AddSingleton<IVideoSurfaceService>", registrationSource);
 
-        Assert.Contains("IVideoSurfaceService", mainViewCode);
+        Assert.Contains("MobilePlatformServiceResolver", mainViewCode);
+        Assert.Contains("IVideoSurfaceService", mobilePlatformServiceResolverSource);
+        Assert.Contains("GetVideoSurfaceService", mobilePlatformServiceResolverSource);
         Assert.Contains("ShowAsync", mainViewCode);
         Assert.Contains("Hide", mainViewCode);
     }

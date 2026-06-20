@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Models;
+using Noctra.Mobile.Services;
 using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
 using CoreMainViewModel = Noctra.ViewModels.MainViewModel;
@@ -18,6 +19,8 @@ public partial class MainView : UserControl
     private const double TabletBreakpoint = 720;
     private CoreMainViewModel? _coreMainViewModel;
     private PlayerViewModel? _playerViewModel;
+    private MobileViewModelResolver? _viewModelResolver;
+    private MobilePlatformServiceResolver? _platformServiceResolver;
     private bool _isPlayerFullScreen;
 
     public MainView()
@@ -45,25 +48,25 @@ public partial class MainView : UserControl
             DataContext is MobileMainViewModel viewModel)
         {
             viewModel.SelectDestination(destination);
-            if (Application.Current is not App app ||
-                app.Services is null)
+            var resolver = GetViewModelResolver();
+            if (resolver is null)
             {
                 return;
             }
 
             if (destination == "More")
             {
-                MobileProfileList.DataContext = app.Services.GetRequiredService<ProfilesViewModel>();
+                MobileProfileList.DataContext = resolver.GetProfilesViewModel();
             }
 
             if (destination == "Settings")
             {
-                MobileSettingsContent.DataContext = app.Services.GetRequiredService<SettingsViewModel>();
+                MobileSettingsContent.DataContext = resolver.GetSettingsViewModel();
             }
 
             if (destination is "Live" or "Movies" or "Series" or "Search" or "Favorites" or "MyList" or "History" or "Downloads")
             {
-                _coreMainViewModel ??= app.Services.GetRequiredService<CoreMainViewModel>();
+                _coreMainViewModel ??= resolver.GetCoreMainViewModel();
                 _coreMainViewModel.OnMediaSelected -= CoreMainViewModel_OnMediaSelected;
                 _coreMainViewModel.OnMediaSelected += CoreMainViewModel_OnMediaSelected;
                 CoreContentHost.DataContext = _coreMainViewModel;
@@ -116,9 +119,10 @@ public partial class MainView : UserControl
         if (DataContext is MobileMainViewModel viewModel)
         {
             viewModel.SelectDestination("Settings");
-            if (Application.Current is App { Services: not null } app)
+            var resolver = GetViewModelResolver();
+            if (resolver is not null)
             {
-                MobileSettingsContent.DataContext = app.Services.GetRequiredService<SettingsViewModel>();
+                MobileSettingsContent.DataContext = resolver.GetSettingsViewModel();
             }
 
             UpdateContentVisibility("Settings");
@@ -132,12 +136,45 @@ public partial class MainView : UserControl
             viewModel.SelectDestination("More");
         }
 
-        if (Application.Current is App { Services: not null } app)
+        var resolver = GetViewModelResolver();
+        if (resolver is not null)
         {
-            MobileProfileList.DataContext = app.Services.GetRequiredService<ProfilesViewModel>();
+            MobileProfileList.DataContext = resolver.GetProfilesViewModel();
         }
 
         UpdateContentVisibility("More");
+    }
+
+    private MobileViewModelResolver? GetViewModelResolver()
+    {
+        if (_viewModelResolver is not null)
+        {
+            return _viewModelResolver;
+        }
+
+        if (Application.Current is not App { Services: not null } app)
+        {
+            return null;
+        }
+
+        _viewModelResolver = app.Services.GetRequiredService<MobileViewModelResolver>();
+        return _viewModelResolver;
+    }
+
+    private MobilePlatformServiceResolver? GetPlatformServiceResolver()
+    {
+        if (_platformServiceResolver is not null)
+        {
+            return _platformServiceResolver;
+        }
+
+        if (Application.Current is not App { Services: not null } app)
+        {
+            return null;
+        }
+
+        _platformServiceResolver = app.Services.GetRequiredService<MobilePlatformServiceResolver>();
+        return _platformServiceResolver;
     }
 
     private async void CoreMainViewModel_OnMediaSelected(object media)
@@ -164,13 +201,16 @@ public partial class MainView : UserControl
 
     private async Task PlaySelectedChannelAsync(Channel channel)
     {
-        if (Application.Current is not App app || app.Services is null)
+        var resolver = GetViewModelResolver();
+        if (resolver is null)
         {
             return;
         }
 
-        _playerViewModel ??= app.Services.GetRequiredService<PlayerViewModel>();
-        var videoSurfaceService = app.Services.GetService<IVideoSurfaceService>();
+        _playerViewModel ??= resolver.GetPlayerViewModel();
+
+        var platformResolver = GetPlatformServiceResolver();
+        var videoSurfaceService = platformResolver?.GetVideoSurfaceService();
         if (videoSurfaceService is not null)
         {
             await videoSurfaceService.ShowAsync();
@@ -191,7 +231,7 @@ public partial class MainView : UserControl
         _playerViewModel.PropertyChanged -= PlayerViewModel_PropertyChanged;
         _playerViewModel.PropertyChanged += PlayerViewModel_PropertyChanged;
 
-        var pictureInPictureService = app.Services.GetService<IPictureInPictureService>();
+        var pictureInPictureService = platformResolver?.GetPictureInPictureService();
         if (pictureInPictureService is not null)
         {
             pictureInPictureService.PictureInPictureModeChanged -= PictureInPictureService_ModeChanged;
@@ -235,10 +275,7 @@ public partial class MainView : UserControl
 
         PlayerHost.IsVisible = false;
         UpdatePlayerChromeState();
-        if (Application.Current is App app && app.Services is not null)
-        {
-            app.Services.GetService<IVideoSurfaceService>()?.Hide();
-        }
+        GetPlatformServiceResolver()?.GetVideoSurfaceService()?.Hide();
     }
 
     private void PlayerViewModel_NextLiveChannelRequested(object? sender, EventArgs e)
@@ -263,12 +300,7 @@ public partial class MainView : UserControl
 
     private async void PlayerViewModel_PiPRequested(object? sender, EventArgs e)
     {
-        if (Application.Current is not App app || app.Services is null)
-        {
-            return;
-        }
-
-        var pictureInPictureService = app.Services.GetService<IPictureInPictureService>();
+        var pictureInPictureService = GetPlatformServiceResolver()?.GetPictureInPictureService();
         if (pictureInPictureService is null)
         {
             return;

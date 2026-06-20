@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Noctra.Android.Services;
 using Noctra.Core.DependencyInjection;
 using Noctra.Core.Services;
+using Noctra.Mobile.Services;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
@@ -58,6 +59,8 @@ public static class AndroidServiceCollectionExtensions
         services.AddSingleton<CoreMainViewModel>();
         services.AddSingleton<PlayerViewModel>();
         services.AddTransient<SettingsViewModel>();
+        services.AddSingleton<MobileViewModelResolver>();
+        services.AddSingleton<MobilePlatformServiceResolver>();
         services.AddSingleton<MobileMainViewModel>();
         services.AddSingleton<ProfilesViewModel>();
         services.AddTransient<AddProfileViewModel>();
