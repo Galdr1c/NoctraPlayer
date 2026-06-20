@@ -254,7 +254,7 @@
                            Foreground="{DynamicResource TextPrimaryBrush}"
                            FontWeight="SemiBold" />
                 <TextBlock Grid.Column="1"
-                           Text="{Binding ActiveDownloadCount, StringFormat='{}{0} active'}"
+                           Text="{Binding ActiveDownloadCount, Converter={StaticResource StringFormatConverter}, ConverterParameter='Downloads.Stats.Active.Format'}"
                            Foreground="{DynamicResource TextMutedBrush}"
                            FontSize="12" />
                 <TextBlock Grid.Row="1"

@@ -677,6 +677,21 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("ShowSelectedSeriesEpisodesLoading", seriesDetailSource);
         Assert.Contains("ShowSelectedSeriesNoEpisodes", seriesDetailSource);
         Assert.Contains("HasSelectedSeriesPlayableEpisode", seriesDetailSource);
+        Assert.Contains("SelectedSeriesContinueText", seriesDetailSource);
+        Assert.Contains("WatchTrailerCommand", seriesDetailSource);
+        Assert.Contains("SelectedSeriesTrailerUrl", seriesDetailSource);
+        Assert.Contains("DownloadSelectedSeasonCommand", seriesDetailSource);
+        Assert.Contains("SelectedSeriesYears", seriesDetailSource);
+        Assert.Contains("SelectedSeriesGenres", seriesDetailSource);
+        Assert.Contains("SelectedSeriesAgeRating", seriesDetailSource);
+        Assert.Contains("SelectedSeriesNetworkLogoUrl", seriesDetailSource);
+        Assert.Contains("Series.WatchTrailer", seriesDetailSource);
+        Assert.Contains("Series.Detail.DownloadSeason", seriesDetailSource);
+        Assert.Contains("Context.MyList.Toggle", seriesDetailSource);
+        Assert.Contains("Context.Favorite.Toggle", seriesDetailSource);
+        Assert.DoesNotContain("Content=\"Back\"", seriesDetailSource);
+        Assert.DoesNotContain("Content=\"My List\"", seriesDetailSource);
+        Assert.DoesNotContain("Content=\"Favorite\"", seriesDetailSource);
 
         Assert.Contains("vm:MainViewModel", searchSource);
         Assert.Contains("SearchQuery", searchSource);
@@ -715,6 +730,8 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("ShowDownloadsEmptyState", downloadsSource);
         Assert.Contains("DownloadTabIndex", downloadsSource);
         Assert.Contains("ActiveDownloadCount", downloadsSource);
+        Assert.Contains("Downloads.Stats.Active.Format", downloadsSource);
+        Assert.DoesNotContain("StringFormat='{}{0} active'", downloadsSource);
         Assert.Contains("ActiveDownloadsTotalSpeedText", downloadsSource);
         Assert.Contains("ActiveDownloadingItems", downloadsSource);
         Assert.Contains("QueuedDownloadItems", downloadsSource);

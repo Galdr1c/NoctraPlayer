@@ -20,7 +20,7 @@
         <Grid ColumnDefinitions="Auto,*"
               ColumnSpacing="12">
           <Button Command="{Binding CloseSeriesDetailCommand}"
-                  Content="Back"
+                  Content="{loc:Translate Player.Overlay.Back}"
                   MinHeight="40"
                   Padding="14,0"
                   Background="{DynamicResource Surface0Brush}"
@@ -41,6 +41,30 @@
                        FontSize="12"
                        FontWeight="SemiBold"
                        IsVisible="{Binding IsDownloadedSeriesDetailMode}" />
+            <StackPanel Orientation="Horizontal"
+                        Spacing="6"
+                        IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
+              <TextBlock Text="{Binding SelectedSeriesYears}"
+                         Foreground="{DynamicResource TextMutedBrush}"
+                         FontSize="12"
+                         IsVisible="{Binding SelectedSeriesYears, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+              <TextBlock Text="{Binding SelectedSeriesGenres}"
+                         Foreground="{DynamicResource TextMutedBrush}"
+                         FontSize="12"
+                         TextTrimming="CharacterEllipsis"
+                         MaxWidth="120"
+                         IsVisible="{Binding SelectedSeriesGenres, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+              <Border BorderBrush="{DynamicResource TextMutedBrush}"
+                      BorderThickness="1"
+                      CornerRadius="4"
+                      Padding="4,0"
+                      IsVisible="{Binding SelectedSeriesAgeRating, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+                <TextBlock Text="{Binding SelectedSeriesAgeRating}"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           FontSize="10"
+                           FontWeight="Bold" />
+              </Border>
+            </StackPanel>
           </StackPanel>
         </Grid>
 
@@ -58,6 +82,14 @@
           <StackPanel Grid.Column="1"
                       Spacing="8"
                       VerticalAlignment="Top">
+            <Border Height="24"
+                    HorizontalAlignment="Left"
+                    IsVisible="{Binding SelectedSeriesNetworkLogoUrl, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+              <controls:RemoteImage Url="{Binding SelectedSeriesNetworkLogoUrl}"
+                                    Stretch="Uniform"
+                                    Height="24"
+                                    MaxWidth="92" />
+            </Border>
             <TextBlock Text="{Binding SelectedSeriesOverview}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        Opacity="0.78"
@@ -99,9 +131,28 @@
                   Foreground="{DynamicResource TextPrimaryBrush}"
                   BorderThickness="0"
                   CornerRadius="14" />
+          <Button Command="{Binding PlayEpisodeCommand}"
+                  CommandParameter="{Binding SelectedSeriesContinueEpisode}"
+                  Content="{Binding SelectedSeriesContinueText}"
+                  IsVisible="{Binding HasSelectedSeriesPlayableEpisode}"
+                  MinHeight="44"
+                  Padding="16,0"
+                  Background="{DynamicResource Surface0Brush}"
+                  Foreground="{DynamicResource AccentBrush}"
+                  BorderThickness="0"
+                  CornerRadius="14" />
+          <Button Command="{Binding WatchTrailerCommand}"
+                  Content="{loc:Translate Series.WatchTrailer}"
+                  IsVisible="{Binding SelectedSeriesTrailerUrl, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"
+                  MinHeight="44"
+                  Padding="16,0"
+                  Background="{DynamicResource Surface0Brush}"
+                  Foreground="{DynamicResource TextPrimaryBrush}"
+                  BorderThickness="0"
+                  CornerRadius="14" />
           <Button Command="{Binding AddToMyListCommand}"
                   CommandParameter="{Binding SelectedSeries}"
-                  Content="My List"
+                  Content="{loc:Translate Context.MyList.Toggle}"
                   MinHeight="44"
                   Padding="16,0"
                   Background="{DynamicResource Surface0Brush}"
@@ -110,7 +161,7 @@
                   CornerRadius="14" />
           <Button Command="{Binding ToggleFavoriteCommand}"
                   CommandParameter="{Binding SelectedSeries}"
-                  Content="Favorite"
+                  Content="{loc:Translate Context.Favorite.Toggle}"
                   MinHeight="44"
                   Padding="16,0"
                   Background="{DynamicResource Surface0Brush}"
@@ -118,6 +169,17 @@
                   BorderThickness="0"
                   CornerRadius="14" />
         </StackPanel>
+
+        <Button Command="{Binding DownloadSelectedSeasonCommand}"
+                Content="{loc:Translate Series.Detail.DownloadSeason}"
+                IsVisible="{Binding !IsDownloadedSeriesDetailMode}"
+                HorizontalAlignment="Left"
+                MinHeight="40"
+                Padding="14,0"
+                Background="{DynamicResource Surface0Brush}"
+                Foreground="{DynamicResource AccentBrush}"
+                BorderThickness="0"
+                CornerRadius="12" />
 
         <StackPanel Spacing="10"
                     Margin="0,36,0,0"
