@@ -1,0 +1,213 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Noctra.ViewModels"
+             xmlns:models="using:Noctra.Models"
+             xmlns:controls="using:Noctra.Mobile.Controls"
+             xmlns:behaviors="using:Noctra.Mobile.Behaviors"
+             xmlns:loc="using:Noctra.Mobile.Localization"
+             x:Class="Noctra.Mobile.Views.MobileSeriesDetailView"
+             x:DataType="vm:MainViewModel"
+             x:CompileBindings="False"
+             IsVisible="{Binding IsSeriesDetailVisible}"
+             mc:Ignorable="d"
+             d:DesignWidth="390"
+             d:DesignHeight="720">
+  <Border Background="{DynamicResource Bg0Brush}">
+    <ScrollViewer>
+      <StackPanel Margin="20" Spacing="16">
+        <Grid ColumnDefinitions="Auto,*"
+              ColumnSpacing="12">
+          <Button Command="{Binding CloseSeriesDetailCommand}"
+                  Content="Back"
+                  MinHeight="40"
+                  Padding="14,0"
+                  Background="{DynamicResource Surface0Brush}"
+                  Foreground="{DynamicResource TextPrimaryBrush}"
+                  BorderThickness="0"
+                  CornerRadius="12" />
+          <StackPanel Grid.Column="1"
+                      Spacing="2"
+                      VerticalAlignment="Center">
+            <TextBlock Text="{Binding SelectedSeries.Name}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontSize="22"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap"
+                       MaxLines="2" />
+            <TextBlock Text="{loc:Translate Series.Detail.DownloadedEpisodes}"
+                       Foreground="{DynamicResource AccentBrush}"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       IsVisible="{Binding IsDownloadedSeriesDetailMode}" />
+          </StackPanel>
+        </Grid>
+
+        <Grid ColumnDefinitions="118,*"
+              ColumnSpacing="14">
+          <Border Width="118"
+                  Height="174"
+                  CornerRadius="16"
+                  ClipToBounds="True"
+                  Background="{DynamicResource Surface0Brush}">
+            <controls:RemoteImage Url="{Binding SelectedSeriesPosterUrl}"
+                                  Stretch="UniformToFill" />
+          </Border>
+
+          <StackPanel Grid.Column="1"
+                      Spacing="8"
+                      VerticalAlignment="Top">
+            <TextBlock Text="{Binding SelectedSeriesOverview}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       Opacity="0.78"
+                       FontSize="13"
+                       LineHeight="18"
+                       TextWrapping="Wrap"
+                       MaxLines="7"
+                       IsVisible="{Binding SelectedSeriesOverview, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+            <TextBlock Text="{Binding SelectedSeriesCast, Converter={StaticResource StringFormatConverter}, ConverterParameter='Series.Detail.Cast'}"
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       FontSize="12"
+                       TextWrapping="Wrap"
+                       MaxLines="3"
+                       IsVisible="{Binding SelectedSeriesCast, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+          </StackPanel>
+        </Grid>
+
+        <StackPanel Orientation="Horizontal"
+                    Spacing="8"
+                    IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
+          <TextBlock Text="{Binding SelectedSeries.SeasonCountSafe, Converter={StaticResource StringFormatConverter}, ConverterParameter='Series.Seasons.Format'}"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     FontSize="12" />
+          <TextBlock Text="{Binding SelectedSeries.TotalEpisodesCount, Converter={StaticResource StringFormatConverter}, ConverterParameter='Series.Episodes.Format'}"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     FontSize="12" />
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal"
+                    Spacing="10"
+                    IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
+          <Button Command="{Binding PlayEpisodeCommand}"
+                  CommandParameter="{Binding SelectedSeriesContinueEpisode}"
+                  Content="{loc:Translate Series.Play}"
+                  IsVisible="{Binding HasSelectedSeriesPlayableEpisode}"
+                  MinHeight="44"
+                  Padding="18,0"
+                  Background="{DynamicResource AccentBrush}"
+                  Foreground="{DynamicResource TextPrimaryBrush}"
+                  BorderThickness="0"
+                  CornerRadius="14" />
+          <Button Command="{Binding AddToMyListCommand}"
+                  CommandParameter="{Binding SelectedSeries}"
+                  Content="My List"
+                  MinHeight="44"
+                  Padding="16,0"
+                  Background="{DynamicResource Surface0Brush}"
+                  Foreground="{DynamicResource TextPrimaryBrush}"
+                  BorderThickness="0"
+                  CornerRadius="14" />
+          <Button Command="{Binding ToggleFavoriteCommand}"
+                  CommandParameter="{Binding SelectedSeries}"
+                  Content="Favorite"
+                  MinHeight="44"
+                  Padding="16,0"
+                  Background="{DynamicResource Surface0Brush}"
+                  Foreground="{DynamicResource TextPrimaryBrush}"
+                  BorderThickness="0"
+                  CornerRadius="14" />
+        </StackPanel>
+
+        <StackPanel Spacing="10"
+                    Margin="0,36,0,0"
+                    HorizontalAlignment="Center"
+                    IsVisible="{Binding ShowSelectedSeriesEpisodesLoading}">
+          <controls:PremiumSpinner Width="56"
+                                   Height="56"
+                                   HorizontalAlignment="Center" />
+          <TextBlock Text="{loc:Translate Series.Episodes.Loading}"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     TextAlignment="Center" />
+        </StackPanel>
+
+        <StackPanel Spacing="8"
+                    Margin="0,36,0,0"
+                    HorizontalAlignment="Center"
+                    IsVisible="{Binding ShowSelectedSeriesNoEpisodes}">
+          <TextBlock Text="{loc:Translate Series.Episodes.Empty}"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
+                     FontSize="18"
+                     FontWeight="SemiBold"
+                     TextAlignment="Center" />
+          <TextBlock Text="{loc:Translate Series.Episodes.EmptyDetail}"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     TextWrapping="Wrap"
+                     TextAlignment="Center" />
+        </StackPanel>
+
+        <ListBox ItemsSource="{Binding SelectedSeries.Seasons}"
+                 SelectedItem="{Binding SelectedSeason}"
+                 Background="Transparent"
+                 BorderThickness="0"
+                 Padding="0"
+                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                 IsVisible="{Binding SelectedSeries.Seasons.Count, Converter={StaticResource CountToVisibilityConverter}}">
+          <ListBox.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal" />
+            </ItemsPanelTemplate>
+          </ListBox.ItemsPanel>
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="models:Season">
+              <TextBlock Text="{Binding SeasonNumber, Converter={StaticResource StringFormatConverter}, ConverterParameter='Series.Seasons.Format'}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontWeight="SemiBold"
+                         Margin="0,0,18,0" />
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+
+        <ItemsControl ItemsSource="{Binding SelectedSeason.Episodes}"
+                      behaviors:MobileSlideTransitionBehavior.TriggerValue="{Binding SelectedSeason}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="models:Episode">
+              <Button Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).PlayEpisodeCommand}"
+                      CommandParameter="{Binding}"
+                      Background="{DynamicResource Surface0Brush}"
+                      BorderThickness="0"
+                      CornerRadius="16"
+                      Padding="12"
+                      Margin="0,0,0,10"
+                      HorizontalContentAlignment="Stretch">
+                <Grid ColumnDefinitions="48,*"
+                      ColumnSpacing="12">
+                  <TextBlock Text="{Binding EpisodeNumber}"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             FontSize="20"
+                             FontWeight="Bold"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center" />
+                  <StackPanel Grid.Column="1"
+                              Spacing="4">
+                    <TextBlock Text="{Binding Name}"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"
+                               MaxLines="2" />
+                    <TextBlock Text="{Binding Plot}"
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               MaxLines="2"
+                               IsVisible="{Binding Plot, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+                  </StackPanel>
+                </Grid>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+  </Border>
+</UserControl>

@@ -565,6 +565,11 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobileSeriesView.axaml"));
+        var seriesDetailSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileSeriesDetailView.axaml"));
         var seriesCode = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Mobile",
@@ -600,6 +605,16 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobileDownloadsView.axaml"));
+        var mobileTabSlideBehaviorSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Behaviors",
+            "MobileTabSlideTransitionBehavior.cs"));
+        var mobileSlideBehaviorSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Behaviors",
+            "MobileSlideTransitionBehavior.cs"));
         var registrationSource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Android",
@@ -610,6 +625,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("MobileLiveView", mainViewSource);
         Assert.Contains("MobileMoviesView", mainViewSource);
         Assert.Contains("MobileSeriesView", mainViewSource);
+        Assert.Contains("MobileSeriesDetailView", mainViewSource);
         Assert.Contains("MobileSearchView", mainViewSource);
         Assert.Contains("MobileFavoritesView", mainViewSource);
         Assert.Contains("MobileMyListView", mainViewSource);
@@ -651,6 +667,16 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("IsContentLoading", seriesSource);
         Assert.Contains("ShowEmptyChannels", seriesSource);
         Assert.Contains("LoadMoreSeriesIfNeededAsync", seriesCode);
+        Assert.Contains("SelectedSeries", seriesDetailSource);
+        Assert.Contains("IsSeriesDetailVisible", seriesDetailSource);
+        Assert.Contains("CloseSeriesDetailCommand", seriesDetailSource);
+        Assert.Contains("PlayEpisodeCommand", seriesDetailSource);
+        Assert.Contains("SelectedSeason", seriesDetailSource);
+        Assert.Contains("SelectedSeason.Episodes", seriesDetailSource);
+        Assert.Contains("MobileSlideTransitionBehavior.TriggerValue", seriesDetailSource);
+        Assert.Contains("ShowSelectedSeriesEpisodesLoading", seriesDetailSource);
+        Assert.Contains("ShowSelectedSeriesNoEpisodes", seriesDetailSource);
+        Assert.Contains("HasSelectedSeriesPlayableEpisode", seriesDetailSource);
 
         Assert.Contains("vm:MainViewModel", searchSource);
         Assert.Contains("SearchQuery", searchSource);
@@ -696,6 +722,17 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("ClearQueueCommand", downloadsSource);
         Assert.Contains("TogglePauseDownloadCommand", downloadsSource);
         Assert.Contains("CancelDownloadCommand", downloadsSource);
+
+        Assert.Contains("xmlns:behaviors=\"using:Noctra.Mobile.Behaviors\"", downloadsSource);
+        Assert.Contains("behaviors:MobileTabSlideTransitionBehavior.IsEnabled=\"True\"", downloadsSource);
+        Assert.Contains("namespace Noctra.Mobile.Behaviors", mobileTabSlideBehaviorSource);
+        Assert.Contains("RegisterAttached<TabControl, bool>", mobileTabSlideBehaviorSource);
+        Assert.Contains("PART_SelectedContentHost", mobileTabSlideBehaviorSource);
+        Assert.Contains("SelectionChanged", mobileTabSlideBehaviorSource);
+        Assert.Contains("namespace Noctra.Mobile.Behaviors", mobileSlideBehaviorSource);
+        Assert.Contains("RegisterAttached<MobileSlideTransitionBehavior, Control, object?>", mobileSlideBehaviorSource);
+        Assert.Contains("TriggerValue", mobileSlideBehaviorSource);
+        Assert.DoesNotContain("Noctra.Avalonia.Behaviors", downloadsSource);
     }
 
     [Fact]
@@ -890,8 +927,26 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobileSeriesView.axaml"));
+        var continueWatchingCardSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Controls",
+            "MobileContinueWatchingCard.axaml"));
+        var vodCardSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Controls",
+            "MobileVodCard.axaml"));
+        var seriesCardSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Controls",
+            "MobileSeriesCard.axaml"));
 
-        foreach (var contentSource in new[] { liveSource, moviesSource, seriesSource })
+        Assert.Contains("MobileVodCard", moviesSource);
+        Assert.Contains("MobileSeriesCard", seriesSource);
+
+        foreach (var contentSource in new[] { liveSource, continueWatchingCardSource, vodCardSource, seriesCardSource })
         {
             Assert.Contains("SelectMediaCommand", contentSource);
             Assert.Contains("CommandParameter=\"{Binding}\"", contentSource);
@@ -934,7 +989,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("\"MyList\" => AppView.MyList", mainViewCode);
         Assert.Contains("\"History\" => AppView.History", mainViewCode);
         Assert.Contains("\"Downloads\" => AppView.Downloads", mainViewCode);
-        Assert.Contains("destination is \"Live\" or \"Movies\" or \"Series\" or \"Search\" or \"Favorites\" or \"MyList\" or \"History\" or \"Downloads\"", mainViewCode);
+        Assert.Contains("destination is \"Home\" or \"Live\" or \"Movies\" or \"Series\" or \"Search\" or \"Favorites\" or \"MyList\" or \"History\" or \"Downloads\"", mainViewCode);
     }
 
     [Fact]

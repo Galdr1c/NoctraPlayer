@@ -198,9 +198,8 @@ public partial class MainView : UserControl
                 await PlaySelectedChannelAsync(channel);
                 break;
             case Series series:
-                SelectedMediaTitle.Text = series.Name;
-                SelectedMediaSubtitle.Text = "Series detail selection is ready.";
-                break;
+                SelectedMediaHost.IsVisible = false;
+                return;
             default:
                 SelectedMediaTitle.Text = media.GetType().Name;
                 SelectedMediaSubtitle.Text = "Media selection is ready.";

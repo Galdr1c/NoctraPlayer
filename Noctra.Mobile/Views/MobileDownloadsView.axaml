@@ -7,6 +7,7 @@
              xmlns:converters="using:Noctra.Mobile.Converters"
              xmlns:avaloniaConverters="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:behaviors="using:Noctra.Mobile.Behaviors"
              x:Class="Noctra.Mobile.Views.MobileDownloadsView"
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False"
@@ -31,6 +32,7 @@
       </StackPanel>
 
       <TabControl SelectedIndex="{Binding DownloadTabIndex, Mode=TwoWay}"
+                  behaviors:MobileTabSlideTransitionBehavior.IsEnabled="True"
                   Background="Transparent"
                   Padding="0">
         <TabItem Header="{loc:Translate Downloads.Tabs.Library}">
