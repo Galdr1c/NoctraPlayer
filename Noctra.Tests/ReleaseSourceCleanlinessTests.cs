@@ -753,8 +753,11 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("ChannelListLastError", settingsSource);
         Assert.Contains("ChannelListRefreshFrequencyIndex", settingsSource);
         Assert.Contains("HiddenLiveGroups", settingsSource);
+        Assert.Contains("HiddenLiveGroups.Count", settingsSource);
         Assert.Contains("HiddenMovieGroups", settingsSource);
+        Assert.Contains("HiddenMovieGroups.Count", settingsSource);
         Assert.Contains("HiddenSeriesGroups", settingsSource);
+        Assert.Contains("HiddenSeriesGroups.Count", settingsSource);
         Assert.Contains("UnhideGroupCommand", settingsSource);
         Assert.Contains("EpgEnabled", settingsSource);
         Assert.Contains("RefreshEpgNowCommand", settingsSource);
