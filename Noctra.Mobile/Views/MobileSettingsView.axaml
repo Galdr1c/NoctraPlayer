@@ -122,6 +122,9 @@
                     MinHeight="44">
             <ComboBoxItem Content="English" Tag="en" />
             <ComboBoxItem Content="Turkish" Tag="tr" />
+            <ComboBoxItem Content="German" Tag="de" />
+            <ComboBoxItem Content="French" Tag="fr" />
+            <ComboBoxItem Content="Spanish" Tag="es" />
           </ComboBox>
         </StackPanel>
       </Border>

@@ -720,6 +720,15 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("ExpirationStatus", settingsSource);
         Assert.Contains("IsDarkTheme", settingsSource);
         Assert.Contains("AppLanguage", settingsSource);
+        Assert.True(
+            CountOccurrences(settingsSource, "Tag=\"de\"") >= 3,
+            "Mobile appearance language picker should include German in addition to subtitle and audio language pickers.");
+        Assert.True(
+            CountOccurrences(settingsSource, "Tag=\"fr\"") >= 3,
+            "Mobile appearance language picker should include French in addition to subtitle and audio language pickers.");
+        Assert.True(
+            CountOccurrences(settingsSource, "Tag=\"es\"") >= 3,
+            "Mobile appearance language picker should include Spanish in addition to subtitle and audio language pickers.");
         Assert.Contains("AutoPlayNext", settingsSource);
         Assert.Contains("UserAgent", settingsSource);
         Assert.Contains("SelectedDataUsage", settingsSource);
