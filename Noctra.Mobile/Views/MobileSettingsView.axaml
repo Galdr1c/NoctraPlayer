@@ -461,6 +461,15 @@
                        FontWeight="SemiBold" />
           </Grid>
           <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="EPG channels"
+                       Foreground="#AEB5C5"
+                       FontSize="12" />
+            <TextBlock Grid.Column="1"
+                       Text="{Binding TotalEpgChannels}"
+                       Foreground="#FFFFFF"
+                       FontWeight="SemiBold" />
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="Last EPG update"
                        Foreground="#AEB5C5"
                        FontSize="12" />
@@ -502,31 +511,31 @@
                      FontSize="12" />
           <ComboBox SelectedIndex="{Binding EpgTimeOffsetIndex, Mode=TwoWay}"
                     MinHeight="44">
-            <ComboBoxItem Content="-12" />
-            <ComboBoxItem Content="-11" />
-            <ComboBoxItem Content="-10" />
-            <ComboBoxItem Content="-9" />
-            <ComboBoxItem Content="-8" />
-            <ComboBoxItem Content="-7" />
-            <ComboBoxItem Content="-6" />
-            <ComboBoxItem Content="-5" />
-            <ComboBoxItem Content="-4" />
-            <ComboBoxItem Content="-3" />
-            <ComboBoxItem Content="-2" />
-            <ComboBoxItem Content="-1" />
-            <ComboBoxItem Content="0" />
-            <ComboBoxItem Content="+1" />
-            <ComboBoxItem Content="+2" />
-            <ComboBoxItem Content="+3" />
-            <ComboBoxItem Content="+4" />
-            <ComboBoxItem Content="+5" />
-            <ComboBoxItem Content="+6" />
-            <ComboBoxItem Content="+7" />
-            <ComboBoxItem Content="+8" />
-            <ComboBoxItem Content="+9" />
-            <ComboBoxItem Content="+10" />
-            <ComboBoxItem Content="+11" />
-            <ComboBoxItem Content="+12" />
+            <ComboBoxItem Content="{Binding Source=-12, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
+            <ComboBoxItem Content="{Binding Source=-11, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
+            <ComboBoxItem Content="{Binding Source=-10, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
+            <ComboBoxItem Content="{Binding Source=-9, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
+            <ComboBoxItem Content="{Binding Source=-8, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
+            <ComboBoxItem Content="{Binding Source=-7, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
+            <ComboBoxItem Content="{Binding Source=-6, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
+            <ComboBoxItem Content="{Binding Source=-5, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
+            <ComboBoxItem Content="{Binding Source=-4, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
+            <ComboBoxItem Content="{Binding Source=-3, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
+            <ComboBoxItem Content="{Binding Source=-2, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
+            <ComboBoxItem Content="{Binding Source=-1, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
+            <ComboBoxItem Content="Auto" />
+            <ComboBoxItem Content="{Binding Source=1, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
+            <ComboBoxItem Content="{Binding Source=2, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
+            <ComboBoxItem Content="{Binding Source=3, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
+            <ComboBoxItem Content="{Binding Source=4, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
+            <ComboBoxItem Content="{Binding Source=5, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
+            <ComboBoxItem Content="{Binding Source=6, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
+            <ComboBoxItem Content="{Binding Source=7, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
+            <ComboBoxItem Content="{Binding Source=8, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
+            <ComboBoxItem Content="{Binding Source=9, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
+            <ComboBoxItem Content="{Binding Source=10, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
+            <ComboBoxItem Content="{Binding Source=11, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
+            <ComboBoxItem Content="{Binding Source=12, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
           </ComboBox>
 
           <Border Background="#202638"
@@ -539,7 +548,7 @@
                   <TextBlock Text="Custom EPG sources"
                              Foreground="#FFFFFF"
                              FontWeight="SemiBold" />
-                  <TextBlock Text="{Binding CustomEpgUrls.Count}"
+                  <TextBlock Text="{Binding CustomEpgUrls.Count, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.SourcesCountFormat'}"
                              Foreground="#AEB5C5"
                              FontSize="12" />
                 </StackPanel>

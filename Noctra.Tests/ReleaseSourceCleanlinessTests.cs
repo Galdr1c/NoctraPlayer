@@ -796,10 +796,15 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("RefreshEpgNowCommand", settingsSource);
         Assert.Contains("EpgRefreshFrequencyIndex", settingsSource);
         Assert.Contains("EpgTimeOffsetIndex", settingsSource);
+        Assert.Contains("Settings.Epg.Timezone.Format.Negative", settingsSource);
+        Assert.Contains("Settings.Epg.Timezone.Format.Positive", settingsSource);
         Assert.Contains("EpgLastError", settingsSource);
         Assert.Contains("TotalEpgPrograms", settingsSource);
+        Assert.Contains("EPG channels", settingsSource);
+        Assert.Contains("TotalEpgChannels", settingsSource);
         Assert.Contains("LastEpgUpdate", settingsSource);
         Assert.Contains("CustomEpgUrls", settingsSource);
+        Assert.Contains("Settings.Epg.SourcesCountFormat", settingsSource);
         Assert.Contains("AddCustomEpgCommand", settingsSource);
         Assert.Contains("RemoveCustomEpgCommand", settingsSource);
         Assert.Contains("IsGlobalLoading", settingsSource);
