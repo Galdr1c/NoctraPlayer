@@ -755,6 +755,11 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("AutoPlayNext", settingsSource);
         Assert.Contains("UserAgent", settingsSource);
         Assert.Contains("SelectedDataUsage", settingsSource);
+        var dataUsageIndex = settingsSource.IndexOf("SelectedIndex=\"{Binding SelectedDataUsage}", StringComparison.Ordinal);
+        var bufferLabelIndex = settingsSource.IndexOf("Text=\"Buffer\"", dataUsageIndex, StringComparison.Ordinal);
+        Assert.True(dataUsageIndex >= 0 && bufferLabelIndex > dataUsageIndex);
+        var dataUsageBlock = settingsSource[dataUsageIndex..bufferLabelIndex];
+        Assert.Contains("<ComboBoxItem Content=\"Auto\" />", dataUsageBlock);
         Assert.Contains("IsBufferSmall", settingsSource);
         Assert.Contains("IsBufferNormal", settingsSource);
         Assert.Contains("IsBufferLarge", settingsSource);
@@ -798,6 +803,8 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("EpgTimeOffsetIndex", settingsSource);
         Assert.Contains("Settings.Epg.Timezone.Format.Negative", settingsSource);
         Assert.Contains("Settings.Epg.Timezone.Format.Positive", settingsSource);
+        Assert.Contains("xmlns:loc=\"using:Noctra.Mobile.Localization\"", settingsSource);
+        Assert.Contains("Settings.Epg.Timezone.Auto", settingsSource);
         Assert.Contains("EpgLastError", settingsSource);
         Assert.Contains("TotalEpgPrograms", settingsSource);
         Assert.Contains("EPG channels", settingsSource);

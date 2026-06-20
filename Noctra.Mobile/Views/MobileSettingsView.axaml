@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:vm="using:Noctra.ViewModels"
              x:Class="Noctra.Mobile.Views.MobileSettingsView"
              x:DataType="vm:SettingsViewModel"
@@ -523,7 +524,7 @@
             <ComboBoxItem Content="{Binding Source=-3, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
             <ComboBoxItem Content="{Binding Source=-2, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
             <ComboBoxItem Content="{Binding Source=-1, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
-            <ComboBoxItem Content="Auto" />
+            <ComboBoxItem Content="{loc:Translate Settings.Epg.Timezone.Auto}" />
             <ComboBoxItem Content="{Binding Source=1, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
             <ComboBoxItem Content="{Binding Source=2, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
             <ComboBoxItem Content="{Binding Source=3, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
