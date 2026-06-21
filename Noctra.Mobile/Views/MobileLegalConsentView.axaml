@@ -1,0 +1,101 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.Mobile.Views.MobileLegalConsentView"
+             mc:Ignorable="d"
+             d:DesignWidth="390"
+             d:DesignHeight="844">
+  <Grid Background="#E6000000">
+    <Border Background="{DynamicResource Bg0Brush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="18"
+            Margin="24,60,24,60"
+            ClipToBounds="True"
+            VerticalAlignment="Center"
+            MaxWidth="480">
+      <ScrollViewer>
+        <StackPanel Margin="20" Spacing="16">
+          <!-- Header -->
+          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+            <icons:MaterialIcon Grid.Column="0"
+                                Kind="ShieldCheckOutline"
+                                Width="28"
+                                Height="28"
+                                Foreground="{DynamicResource AccentLightBrush}"
+                                VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1"
+                       Text="{loc:Translate LegalConsent.Title}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontSize="20"
+                       FontWeight="Bold"
+                       VerticalAlignment="Center"
+                       TextWrapping="Wrap"/>
+          </Grid>
+
+          <TextBlock Text="{loc:Translate LegalConsent.Message}"
+                     Foreground="{DynamicResource TextSecondaryBrush}"
+                     FontSize="14"
+                     LineHeight="21"
+                     TextWrapping="Wrap"/>
+
+          <!-- Checkboxes -->
+          <Border Background="{DynamicResource Surface1Brush}"
+                  BorderBrush="{DynamicResource BorderBrush}"
+                  BorderThickness="1"
+                  CornerRadius="10"
+                  Padding="14">
+            <StackPanel Spacing="10">
+              <CheckBox x:Name="TermsAcceptedCheckBox"
+                        Content="{loc:Translate LegalConsent.Check.Terms}"
+                        IsCheckedChanged="RequiredCheckBox_Changed"/>
+              <CheckBox x:Name="NoContentCheckBox"
+                        Content="{loc:Translate LegalConsent.Check.NoContent}"
+                        IsCheckedChanged="RequiredCheckBox_Changed"/>
+              <CheckBox x:Name="LawfulSourcesCheckBox"
+                        Content="{loc:Translate LegalConsent.Check.LawfulSources}"
+                        IsCheckedChanged="RequiredCheckBox_Changed"/>
+              <CheckBox x:Name="PrivacyAcceptedCheckBox"
+                        Content="{loc:Translate LegalConsent.Check.Privacy}"
+                        IsCheckedChanged="RequiredCheckBox_Changed"/>
+              <CheckBox x:Name="DiagnosticDataCheckBox"
+                        Content="{loc:Translate LegalConsent.Check.Diagnostics}"/>
+            </StackPanel>
+          </Border>
+
+          <!-- Action buttons -->
+          <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <Button Grid.Column="1"
+                    Classes="Secondary"
+                    MinHeight="44"
+                    Click="Privacy_Click"
+                    Content="{loc:Translate LegalConsent.Action.Privacy}"/>
+            <Button Grid.Column="2"
+                    Classes="Secondary"
+                    MinHeight="44"
+                    Click="Terms_Click"
+                    Content="{loc:Translate LegalConsent.Action.Terms}"/>
+          </Grid>
+
+          <Button x:Name="ContinueButton"
+                  IsEnabled="False"
+                  MinHeight="48"
+                  CornerRadius="10"
+                  Background="{DynamicResource AccentBrush}"
+                  Foreground="White"
+                  FontWeight="SemiBold"
+                  FontSize="15"
+                  Click="Continue_Click">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+              <icons:MaterialIcon Kind="Check" Width="18" Height="18" Foreground="White"/>
+              <TextBlock Text="{loc:Translate LegalConsent.Action.Continue}" Foreground="White"/>
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+  </Grid>
+</UserControl>

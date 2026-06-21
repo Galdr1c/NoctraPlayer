@@ -692,6 +692,34 @@
           <Button Content="{loc:Translate Settings.Privacy.ClearAllNow}"
                   Command="{Binding ClearHistoryCommand}"
                   MinHeight="44" />
+
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,4,0,0">
+            <Button Command="{Binding ShowPrivacyPolicyCommand}"
+                    MinHeight="44"
+                    Background="{DynamicResource Surface1Brush}"
+                    BorderThickness="1"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    CornerRadius="10">
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
+                <icons:MaterialIcon Kind="ShieldCheckOutline" Width="16" Height="16"
+                                    Foreground="{DynamicResource AccentBrush}" />
+                <TextBlock Text="{loc:Translate LegalConsent.Action.Privacy}" FontWeight="SemiBold" />
+              </StackPanel>
+            </Button>
+            <Button Grid.Column="1"
+                    Command="{Binding ShowTermsCommand}"
+                    MinHeight="44"
+                    Background="{DynamicResource Surface1Brush}"
+                    BorderThickness="1"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    CornerRadius="10">
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
+                <icons:MaterialIcon Kind="FileDocumentOutline" Width="16" Height="16"
+                                    Foreground="{DynamicResource AccentBrush}" />
+                <TextBlock Text="{loc:Translate GlobalSettings.Terms.Title}" FontWeight="SemiBold" />
+              </StackPanel>
+            </Button>
+          </Grid>
         </StackPanel>
       </Border>
 
@@ -794,6 +822,60 @@
             </StackPanel>
           </Border>
 
+        </StackPanel>
+      </Border>
+
+      <!-- Promo Code Section -->
+      <Border Background="{DynamicResource Surface0Brush}"
+              CornerRadius="16"
+              Padding="14">
+        <StackPanel Spacing="12">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <icons:MaterialIcon Kind="GiftOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+            <TextBlock Text="{loc:Translate GlobalSettings.Promo.Title}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="SemiBold" />
+          </StackPanel>
+          <TextBlock Text="{loc:Translate GlobalSettings.Promo.Description}"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     FontSize="12"
+                     TextWrapping="Wrap" />
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <TextBox Text="{Binding PromoCodeInput, Mode=TwoWay}"
+                     PlaceholderText="{loc:Translate GlobalSettings.Promo.Placeholder}"
+                     MinHeight="44"
+                     LetterSpacing="1" />
+            <Button Grid.Column="1"
+                    Command="{Binding ApplyPromoCodeCommand}"
+                    MinHeight="44"
+                    MinWidth="80"
+                    Background="{DynamicResource AccentBrush}"
+                    Foreground="White"
+                    CornerRadius="10"
+                    Padding="16,10">
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
+                <icons:MaterialIcon Kind="AutoAwesome" Width="18" Height="18" Foreground="White"
+                                    IsVisible="{Binding !IsApplyingPromoCode}" />
+                <icons:MaterialIcon Kind="Refresh" Width="18" Height="18" Foreground="White"
+                                    IsVisible="{Binding IsApplyingPromoCode}" />
+                <TextBlock Text="{loc:Translate GlobalSettings.Promo.Apply}" Foreground="White" FontWeight="SemiBold" />
+              </StackPanel>
+            </Button>
+          </Grid>
+          <StackPanel Spacing="4">
+            <TextBlock Text="{Binding PromoCodeStatus}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontSize="13"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding PromoCodeStatus, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+            <TextBlock Text="{Binding PremiumStatusText}"
+                       Foreground="{DynamicResource SuccessBrush}"
+                       FontSize="13"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding PremiumStatusText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+          </StackPanel>
         </StackPanel>
       </Border>
 

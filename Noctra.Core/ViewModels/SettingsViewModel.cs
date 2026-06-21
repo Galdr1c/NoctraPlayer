@@ -259,6 +259,7 @@ public partial class SettingsViewModel : ObservableObject
         
         _mainViewModel.PropertyChanged += MainViewModel_PropertyChanged;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
+        _licenseService.SubscriptionChanged += OnLicenseSubscriptionChanged;
         
         ChannelListLastError = _mainViewModel.ChannelListLastError;
         
@@ -273,6 +274,75 @@ public partial class SettingsViewModel : ObservableObject
 
     public string CurrentVersion => _updateService.CurrentVersion;
     public bool IsPremium => _licenseService.IsPremium;
+
+    // ============ Promo Code ============
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ApplyPromoCodeCommand))]
+    private string _promoCodeInput = string.Empty;
+
+    [ObservableProperty]
+    private string _promoCodeStatus = string.Empty;
+
+    [ObservableProperty]
+    private bool _isPromoCodeStatusSuccess;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ApplyPromoCodeCommand))]
+    private bool _isApplyingPromoCode;
+
+    public string PremiumStatusText
+    {
+        get
+        {
+            if (!_licenseService.IsPremium)
+            {
+                return string.Empty;
+            }
+
+            var expiresAt = _licenseService.PromoPremiumExpiresAtUtc;
+            if (expiresAt.HasValue)
+            {
+                return string.Format(_localizationService.GetString("GlobalSettings.Promo.Status.PremiumFormat"), expiresAt.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm"));
+            }
+
+            return _localizationService.GetString("GlobalSettings.Promo.Status.Premium");
+        }
+    }
+
+    private bool CanApplyPromoCode => !IsApplyingPromoCode && !string.IsNullOrWhiteSpace(PromoCodeInput);
+
+    [RelayCommand(CanExecute = nameof(CanApplyPromoCode))]
+    private async Task ApplyPromoCodeAsync()
+    {
+        if (IsApplyingPromoCode)
+        {
+            return;
+        }
+
+        IsApplyingPromoCode = true;
+        try
+        {
+            var result = await _licenseService.ApplyPromoCodeAsync(PromoCodeInput);
+            PromoCodeStatus = result.Message;
+            IsPromoCodeStatusSuccess = result.Success;
+            if (result.Success)
+            {
+                PromoCodeInput = string.Empty;
+                OnPropertyChanged(nameof(IsPremium));
+                OnPropertyChanged(nameof(PremiumStatusText));
+            }
+        }
+        catch (Exception ex)
+        {
+            PromoCodeStatus = string.Format(_localizationService.GetString("GlobalSettings.Promo.Error.ApplyFailedFormat"), ex.Message);
+            IsPromoCodeStatusSuccess = false;
+        }
+        finally
+        {
+            IsApplyingPromoCode = false;
+        }
+    }
 
     [ObservableProperty]
     private string _updateStatusText = string.Empty;
@@ -353,9 +423,33 @@ public partial class SettingsViewModel : ObservableObject
         _diagnosticService.OpenBugReport();
     }
 
+    [RelayCommand]
+    private async Task ShowPrivacyPolicyAsync()
+    {
+        await _dialogService.ShowLegalDocumentAsync(
+            _localizationService.GetString("GlobalSettings.Privacy.Title"),
+            _localizationService.GetString("GlobalSettings.Privacy.Message.Current"));
+    }
+
+    [RelayCommand]
+    private async Task ShowTermsAsync()
+    {
+        await _dialogService.ShowLegalDocumentAsync(
+            _localizationService.GetString("GlobalSettings.Terms.Title"),
+            _localizationService.GetString("GlobalSettings.Terms.Message.Current"));
+    }
+
     private void OnSettingsService_Changed()
     {
         LoadSettings();
+    }
+
+    private void OnLicenseSubscriptionChanged()
+    {
+        OnPropertyChanged(nameof(IsPremium));
+        OnPropertyChanged(nameof(PremiumStatusText));
+        PromoCodeStatus = PremiumStatusText;
+        IsPromoCodeStatusSuccess = IsPremium;
     }
 
     private void MainViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)

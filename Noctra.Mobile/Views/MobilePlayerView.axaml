@@ -7,6 +7,7 @@
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:controls="using:Noctra.Mobile.Controls"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:views="using:Noctra.Mobile.Views"
              x:Class="Noctra.Mobile.Views.MobilePlayerView"
              x:Name="PlayerRoot"
              x:DataType="vm:PlayerViewModel"
@@ -23,6 +24,14 @@
   </UserControl.Styles>
 
   <Grid Background="Transparent" Tapped="OnPlayerBackgroundTapped">
+    <!-- Watermark overlay for free tier, positioned above the bottom sheet -->
+    <views:MobileWatermarkView x:Name="MobileWatermark"
+                                Grid.ColumnSpan="2"
+                                ZIndex="10"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Bottom"
+                                Margin="0,0,24,120"
+                                IsHitTestVisible="False" />
     <!-- Double Tap Zones -->
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="*" />

@@ -293,5 +293,11 @@
       </Grid>
     </Border>
 
+    <!-- Legal Consent Overlay -->
+    <views:MobileLegalConsentView x:Name="LegalConsentOverlay"
+                                  Grid.RowSpan="3"
+                                  Grid.ColumnSpan="2"
+                                  ZIndex="50000"
+                                  IsVisible="False" />
   </Grid>
 </UserControl>

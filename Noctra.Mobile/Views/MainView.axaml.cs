@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Platform;
 using Avalonia.Interactivity;
+
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Models;
 using Noctra.Mobile.Localization;
@@ -41,7 +42,7 @@ public partial class MainView : UserControl
         _bottomNavBasePadding = BottomNavigation.Padding;
     }
 
-    protected override void OnAttachedToVisualTree(VisualTreeAttachedEventArgs e)
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
 
@@ -56,9 +57,19 @@ public partial class MainView : UserControl
             insets.SafeAreaChanged += OnSafeAreaChanged;
             ApplySafeArea(insets.SafeAreaPadding);
         }
+
+        // Show legal consent on first launch
+        _ = ShowLegalConsentIfNeededAsync();
     }
 
-    protected override void OnDetachedFromVisualTree(VisualTreeAttachedEventArgs e)
+    private async Task ShowLegalConsentIfNeededAsync()
+    {
+        // Small delay to let the UI settle
+        await Task.Delay(500);
+        await LegalConsentOverlay.ShowConsentFlowAsync();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel?.InsetsManager is { } insets)
@@ -111,6 +122,12 @@ public partial class MainView : UserControl
     /// </summary>
     internal bool TryHandleBack()
     {
+        // 0) Yasal onay ekranı açıksa, geri tuşunu tüket (kullanıcı onay vermeden devam edemez)
+        if (LegalConsentOverlay.IsVisible)
+        {
+            return true;
+        }
+
         // 1) Oynatıcı tam ekrandaysa -> tam ekrandan çık
         if (PlayerHost.IsVisible && _playerViewModel is { IsFullScreen: true })
         {
@@ -395,6 +412,13 @@ public partial class MainView : UserControl
         MobilePlayerContent.DataContext = _playerViewModel;
         PlayerHost.IsVisible = true;
         UpdatePlayerChromeState();
+
+        // Wire watermark DataContext from Core MainViewModel
+        if (_coreMainViewModel?.WatermarkViewModel is { } watermarkVm)
+        {
+            MobilePlayerContent.MobileWatermark.DataContext = watermarkVm;
+        }
+
         await _playerViewModel.PlayChannelAsync(channel);
     }
 
