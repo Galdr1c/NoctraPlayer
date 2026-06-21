@@ -42,7 +42,9 @@
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="models:Series">
-            <controls:MobileSeriesCard Margin="0,0,10,10" />
+            <controls:MobileSeriesCard Margin="0,0,10,10"
+                                       MinWidth="150"
+                                       MaxWidth="180" />
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>

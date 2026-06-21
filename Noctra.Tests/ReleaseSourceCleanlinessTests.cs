@@ -243,6 +243,32 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobileShellAndPlayer_UsePhoneSafeControlLayouts()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mainViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml"));
+        var playerViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml"));
+
+        Assert.Contains("ColumnDefinitions=\"*,*,*,*,*,*\"", mainViewSource);
+        Assert.DoesNotContain("ColumnDefinitions=\"*,*,*,*,*,*,*\"", mainViewSource);
+        Assert.Contains("TextTrimming=\"CharacterEllipsis\"", mainViewSource);
+        Assert.Contains("<Setter Property=\"MinHeight\" Value=\"56\" />", mainViewSource);
+
+        Assert.DoesNotContain("ColumnDefinitions=\"*,*,*,*,*\"", playerViewSource);
+        Assert.Contains("<WrapPanel", playerViewSource);
+        Assert.Contains("Classes=\"compactPlayerAction\"", playerViewSource);
+        Assert.Contains("<Setter Property=\"MinWidth\" Value=\"96\" />", playerViewSource);
+    }
+
+    [Fact]
     public void MobileDetailScreens_UseMaterialIconsForPrimaryActions()
     {
         var repositoryRoot = FindRepositoryRoot();
@@ -392,6 +418,64 @@ public sealed class ReleaseSourceCleanlinessTests
             Assert.Contains(expectation.Icon, source);
             Assert.Contains("Opacity=\"0.32\"", source);
         }
+    }
+
+    [Fact]
+    public void MobileMediaCards_ExposeVisibleOverflowActions()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var cardPaths = new[]
+        {
+            Path.Combine(repositoryRoot, "Noctra.Mobile", "Controls", "MobileVodCard.axaml"),
+            Path.Combine(repositoryRoot, "Noctra.Mobile", "Controls", "MobileSeriesCard.axaml"),
+            Path.Combine(repositoryRoot, "Noctra.Mobile", "Controls", "MobileContinueWatchingCard.axaml")
+        };
+
+        foreach (var cardPath in cardPaths)
+        {
+            var source = File.ReadAllText(cardPath);
+
+            Assert.Contains("x:Key=\"CardActionsFlyout\"", source);
+            Assert.Contains("Flyout=\"{StaticResource CardActionsFlyout}\"", source);
+            Assert.Contains("Kind=\"DotsVertical\"", source);
+            Assert.Contains("Context.MyList.Toggle", source);
+            Assert.Contains("Context.Favorite.Toggle", source);
+        }
+    }
+
+    [Fact]
+    public void MobilePosterGrids_UseFlexibleCardSizing()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var moviesSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileMoviesView.axaml"));
+        var seriesSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileSeriesView.axaml"));
+        var vodCardSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Controls",
+            "MobileVodCard.axaml"));
+        var seriesCardSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Controls",
+            "MobileSeriesCard.axaml"));
+
+        Assert.DoesNotContain("Width=\"154\"", vodCardSource);
+        Assert.DoesNotContain("Width=\"154\"", seriesCardSource);
+        Assert.Contains("HorizontalAlignment=\"Stretch\"", vodCardSource);
+        Assert.Contains("HorizontalAlignment=\"Stretch\"", seriesCardSource);
+        Assert.Contains("MinWidth=\"150\"", moviesSource);
+        Assert.Contains("MaxWidth=\"180\"", moviesSource);
+        Assert.Contains("MinWidth=\"150\"", seriesSource);
+        Assert.Contains("MaxWidth=\"180\"", seriesSource);
     }
 
     [Fact]

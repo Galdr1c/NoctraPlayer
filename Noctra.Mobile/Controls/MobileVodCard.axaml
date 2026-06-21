@@ -7,7 +7,21 @@
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Controls.MobileVodCard"
              x:DataType="models:Channel"
-             Width="154" Height="230">
+             Height="230"
+             HorizontalAlignment="Stretch">
+  <UserControl.Resources>
+    <MenuFlyout x:Key="CardActionsFlyout">
+      <MenuItem Header="{loc:Translate Context.MyList.Toggle}"
+                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).AddToMyListCommand}"
+                CommandParameter="{Binding}"
+                IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
+      <MenuItem Header="{loc:Translate Context.Favorite.Toggle}"
+                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}"
+                CommandParameter="{Binding}"
+                IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
+    </MenuFlyout>
+  </UserControl.Resources>
+
   <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
           CommandParameter="{Binding}"
           Background="Transparent"
@@ -17,16 +31,7 @@
           HorizontalContentAlignment="Stretch"
           VerticalContentAlignment="Stretch">
     <Button.ContextFlyout>
-      <MenuFlyout>
-        <MenuItem Header="{loc:Translate Context.MyList.Toggle}"
-                  Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).AddToMyListCommand}"
-                  CommandParameter="{Binding}"
-                  IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
-        <MenuItem Header="{loc:Translate Context.Favorite.Toggle}"
-                  Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}"
-                  CommandParameter="{Binding}"
-                  IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
-      </MenuFlyout>
+      <StaticResource ResourceKey="CardActionsFlyout" />
     </Button.ContextFlyout>
     <Border CornerRadius="16" ClipToBounds="True" Background="{DynamicResource Surface0Brush}">
       <Grid>
@@ -40,6 +45,18 @@
             <controls:RemoteImage Url="{Binding CoverUrl}" Stretch="UniformToFill" />
           </Grid>
         </Border>
+        <Button HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Margin="6"
+                Width="36"
+                Height="36"
+                Padding="0"
+                Background="#99000000"
+                BorderThickness="0"
+                CornerRadius="18"
+                Flyout="{StaticResource CardActionsFlyout}">
+          <icons:MaterialIcon Kind="DotsVertical" Width="20" Height="20" Foreground="White" />
+        </Button>
         <Border VerticalAlignment="Bottom" Background="#CC000000" Padding="10,8">
           <StackPanel Spacing="4">
             <TextBlock Text="{Binding Name}"

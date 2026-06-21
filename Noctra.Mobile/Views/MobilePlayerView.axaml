@@ -13,6 +13,14 @@
              mc:Ignorable="d"
              d:DesignWidth="390"
              d:DesignHeight="260">
+  <UserControl.Styles>
+    <Style Selector="Button.compactPlayerAction">
+      <Setter Property="MinHeight" Value="44" />
+      <Setter Property="MinWidth" Value="96" />
+      <Setter Property="Padding" Value="10,0" />
+    </Style>
+  </UserControl.Styles>
+
   <Border Background="{DynamicResource Bg0Brush}"
           Padding="16"
           CornerRadius="18"
@@ -141,52 +149,54 @@
         </Button>
       </Grid>
 
-      <Grid ColumnDefinitions="*,*,*,*,*"
-            ColumnSpacing="8">
-        <Button Command="{Binding SkipBackwardCommand}"
+      <WrapPanel Orientation="Horizontal"
+                 ItemSpacing="8"
+                 LineSpacing="8">
+        <Button Classes="compactPlayerAction"
+                Command="{Binding SkipBackwardCommand}"
                 CommandParameter="10"
                 IsVisible="{Binding !IsLiveContent}"
-                MinHeight="40">
+                MinHeight="44">
           <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
             <icons:MaterialIcon Kind="Rewind10" Width="18" Height="18" />
             <TextBlock Text="-10s" />
           </StackPanel>
         </Button>
-        <Button Grid.Column="1"
+        <Button Classes="compactPlayerAction"
                 Command="{Binding SkipForwardCommand}"
                 CommandParameter="10"
                 IsVisible="{Binding !IsLiveContent}"
-                MinHeight="40">
+                MinHeight="44">
           <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
             <icons:MaterialIcon Kind="FastForward10" Width="18" Height="18" />
             <TextBlock Text="+10s" />
           </StackPanel>
         </Button>
-        <Button Grid.Column="2"
+        <Button Classes="compactPlayerAction"
                 Command="{Binding ToggleLiveFavoriteCommand}"
-                MinHeight="40">
+                MinHeight="44">
           <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
             <icons:MaterialIcon Kind="HeartOutline" Width="18" Height="18" />
             <TextBlock Text="{loc:Translate Player.Mobile.Favorite}" />
           </StackPanel>
         </Button>
-        <Button Grid.Column="3"
+        <Button Classes="compactPlayerAction"
                 Command="{Binding CycleVideoFillModeCommand}"
-                MinHeight="40">
+                MinHeight="44">
           <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
             <icons:MaterialIcon Kind="AspectRatio" Width="18" Height="18" />
             <TextBlock Text="{Binding VideoFillMode}" />
           </StackPanel>
         </Button>
-        <Button Grid.Column="4"
+        <Button Classes="compactPlayerAction"
                 Command="{Binding ShowSleepTimerMenuCommand}"
-                MinHeight="40">
+                MinHeight="44">
           <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
             <icons:MaterialIcon Kind="TimerOutline" Width="18" Height="18" />
             <TextBlock Text="{Binding SleepTimerLabel}" />
           </StackPanel>
         </Button>
-      </Grid>
+      </WrapPanel>
 
       <Grid ColumnDefinitions="*,*"
             ColumnSpacing="8"
