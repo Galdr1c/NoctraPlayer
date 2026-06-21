@@ -7,7 +7,8 @@
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Controls.MobileContinueWatchingCard"
              x:DataType="models:Channel"
-             Width="170" Height="120">
+             Height="120"
+             HorizontalAlignment="Stretch">
   <UserControl.Resources>
     <MenuFlyout x:Key="CardActionsFlyout">
       <MenuItem Header="{loc:Translate Context.MyList.Toggle}"

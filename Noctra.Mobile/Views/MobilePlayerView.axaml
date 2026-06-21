@@ -648,54 +648,97 @@
         </StackPanel>
       </Border>
 
-      <Grid ColumnDefinitions="*,*,*"
-            ColumnSpacing="8">
+      <StackPanel Spacing="6">
+        <!-- Row 1: Resolution + FPS -->
+        <Grid ColumnDefinitions="*,*"
+              ColumnSpacing="8">
+          <Border Background="{DynamicResource OverlayBackgroundBrush}"
+                  CornerRadius="10"
+                  Padding="10,8">
+            <StackPanel Spacing="2">
+              <TextBlock Text="{loc:Translate Player.Quality.Resolution}"
+                         Foreground="{DynamicResource TextDisabledBrush}"
+                         FontSize="10"
+                         FontWeight="Bold" />
+              <TextBlock Text="{Binding QualityResolutionText}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="12"
+                         FontWeight="SemiBold" />
+            </StackPanel>
+          </Border>
+          <Border Grid.Column="1"
+                  Background="{DynamicResource OverlayBackgroundBrush}"
+                  CornerRadius="10"
+                  Padding="10,8">
+            <StackPanel Spacing="2">
+              <TextBlock Text="{loc:Translate Player.Quality.Fps}"
+                         Foreground="{DynamicResource TextDisabledBrush}"
+                         FontSize="10"
+                         FontWeight="Bold" />
+              <TextBlock Text="{Binding QualityFpsText}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="12"
+                         FontWeight="SemiBold" />
+            </StackPanel>
+          </Border>
+        </Grid>
+
+        <!-- Row 2: Codec + Bitrate -->
+        <Grid ColumnDefinitions="*,*"
+              ColumnSpacing="8">
+          <Border Background="{DynamicResource OverlayBackgroundBrush}"
+                  CornerRadius="10"
+                  Padding="10,8">
+            <StackPanel Spacing="2">
+              <TextBlock Text="{loc:Translate Player.Quality.Codec}"
+                         Foreground="{DynamicResource TextDisabledBrush}"
+                         FontSize="10"
+                         FontWeight="Bold" />
+              <TextBlock Text="{Binding QualityVideoCodecText}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="12"
+                         FontWeight="SemiBold"
+                         TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+          </Border>
+          <Border Grid.Column="1"
+                  Background="{DynamicResource OverlayBackgroundBrush}"
+                  CornerRadius="10"
+                  Padding="10,8">
+            <StackPanel Spacing="2">
+              <TextBlock Text="{loc:Translate Player.Quality.Bitrate}"
+                         Foreground="{DynamicResource TextDisabledBrush}"
+                         FontSize="10"
+                         FontWeight="Bold" />
+              <TextBlock Text="{Binding QualityVideoBitrateText}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="12"
+                         FontWeight="SemiBold"
+                         TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+          </Border>
+        </Grid>
+
+        <!-- Row 3: Audio (full width) -->
         <Border Background="{DynamicResource OverlayBackgroundBrush}"
                 CornerRadius="10"
                 Padding="10,8">
-          <StackPanel Spacing="2">
-            <TextBlock Text="{loc:Translate Player.Quality.Resolution}"
-                       Foreground="{DynamicResource TextDisabledBrush}"
-                       FontSize="10"
-                       FontWeight="Bold" />
-            <TextBlock Text="{Binding QualityResolutionText}"
-                       Foreground="{DynamicResource TextPrimaryBrush}"
-                       FontSize="12"
-                       FontWeight="SemiBold" />
-          </StackPanel>
-        </Border>
-        <Border Grid.Column="1"
-                Background="{DynamicResource OverlayBackgroundBrush}"
-                CornerRadius="10"
-                Padding="10,8">
-          <StackPanel Spacing="2">
-            <TextBlock Text="{loc:Translate Player.Quality.Fps}"
-                       Foreground="{DynamicResource TextDisabledBrush}"
-                       FontSize="10"
-                       FontWeight="Bold" />
-            <TextBlock Text="{Binding QualityFpsText}"
-                       Foreground="{DynamicResource TextPrimaryBrush}"
-                       FontSize="12"
-                       FontWeight="SemiBold" />
-          </StackPanel>
-        </Border>
-        <Border Grid.Column="2"
-                Background="{DynamicResource OverlayBackgroundBrush}"
-                CornerRadius="10"
-                Padding="10,8">
-          <StackPanel Spacing="2">
+          <Grid ColumnDefinitions="Auto,*"
+                ColumnSpacing="8">
             <TextBlock Text="{loc:Translate Player.Quality.Audio}"
                        Foreground="{DynamicResource TextDisabledBrush}"
                        FontSize="10"
-                       FontWeight="Bold" />
-            <TextBlock Text="{Binding QualityAudioText}"
+                       FontWeight="Bold"
+                       VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1"
+                       Text="{Binding QualityAudioText}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        FontSize="12"
                        FontWeight="SemiBold"
                        TextTrimming="CharacterEllipsis" />
-          </StackPanel>
+          </Grid>
         </Border>
-      </Grid>
+      </StackPanel>
     </StackPanel>
   </Border>
 </UserControl>
