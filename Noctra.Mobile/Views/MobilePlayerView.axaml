@@ -937,44 +937,53 @@
     </StackPanel>
   </Border>
 
-    <!-- EPG MODU: player compact üstte, EPG timeline tüm alanı dolduruyor -->
-    <Grid RowDefinitions="Auto,*"
+    <!-- EPG MODU: video üstte küçülür (şeffaf slot), EPG listesi altında açılır -->
+    <Grid x:Name="EpgModeRoot" Grid.ColumnSpan="2"
+          RowDefinitions="Auto,*"
           IsVisible="{Binding IsEpgPanelOpen}">
-      <!-- Üst compact player bar -->
-      <Border Background="{DynamicResource Bg0Brush}"
-              Padding="16,10"
-              BoxShadow="0 4 20 0 #88000000">
-        <Grid ColumnDefinitions="*,Auto">
-          <StackPanel VerticalAlignment="Center" Spacing="2">
-            <TextBlock Text="{Binding CurrentChannel.Name}"
-                       FontSize="16" FontWeight="SemiBold"
-                       Foreground="{DynamicResource TextPrimaryBrush}" />
-            <TextBlock Text="{Binding ConnectionStatus}"
-                       FontSize="11"
-                       Foreground="{DynamicResource TextMutedBrush}" />
-          </StackPanel>
-          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-            <Button Command="{Binding PlayPauseCommand}"
-                    MinHeight="44" MinWidth="36"
-                    Background="Transparent" BorderThickness="0" CornerRadius="18"
-                    ToolTip.Tip="{loc:Translate Player.Overlay.PlayPause.Tooltip}">
-              <Grid>
-                <icons:MaterialIcon Kind="Pause" Width="20" Height="20"
-                                    Foreground="{DynamicResource TextPrimaryBrush}"
-                                    IsVisible="{Binding IsPlaying}" />
-                <icons:MaterialIcon Kind="Play" Width="20" Height="20"
-                                    Foreground="{DynamicResource TextPrimaryBrush}"
-                                    IsVisible="{Binding !IsPlaying}" />
-              </Grid>
-            </Button>
-            <Button Command="{Binding ToggleEpgPanelCommand}"
-                    MinHeight="44" MinWidth="36"
-                    Background="Transparent" BorderThickness="0" CornerRadius="18">
-              <icons:MaterialIcon Kind="Close" Width="18" Height="18"
-                                  Foreground="{DynamicResource TextPrimaryBrush}" />
-            </Button>
-          </StackPanel>
-        </Grid>
+      <!-- Üst: küçük şeffaf video alanı (native video surface buraya küçültülür) -->
+      <Border x:Name="VideoSlot" Grid.Row="0"
+              Background="Transparent"
+              ClipToBounds="True">
+        <!-- Videonun alt kenarına ince yarı saydam kontrol şeridi -->
+        <Border VerticalAlignment="Bottom"
+                Background="#A6000000"
+                Padding="12,6">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel VerticalAlignment="Center" Spacing="1">
+              <TextBlock Text="{Binding CurrentChannel.Name}"
+                         FontSize="13" FontWeight="SemiBold"
+                         Foreground="White"
+                         TextTrimming="CharacterEllipsis" MaxLines="1" />
+              <TextBlock Text="{Binding ConnectionStatus}"
+                         FontSize="10"
+                         Foreground="#CCFFFFFF"
+                         TextTrimming="CharacterEllipsis" MaxLines="1" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+              <Button Command="{Binding PlayPauseCommand}"
+                      MinHeight="44" MinWidth="44"
+                      Background="Transparent" BorderThickness="0" CornerRadius="22">
+                <Grid>
+                  <icons:MaterialIcon Kind="Pause" Width="20" Height="20"
+                                      Foreground="White" IsVisible="{Binding IsPlaying}" />
+                  <icons:MaterialIcon Kind="Play" Width="20" Height="20"
+                                      Foreground="White" IsVisible="{Binding !IsPlaying}" />
+                </Grid>
+              </Button>
+              <Button Command="{Binding ToggleFullScreenCommand}"
+                      MinHeight="44" MinWidth="44"
+                      Background="Transparent" BorderThickness="0" CornerRadius="22">
+                <icons:MaterialIcon Kind="Fullscreen" Width="20" Height="20" Foreground="White" />
+              </Button>
+              <Button Command="{Binding ToggleEpgPanelCommand}"
+                      MinHeight="44" MinWidth="44"
+                      Background="Transparent" BorderThickness="0" CornerRadius="22">
+                <icons:MaterialIcon Kind="Close" Width="18" Height="18" Foreground="White" />
+              </Button>
+            </StackPanel>
+          </Grid>
+        </Border>
       </Border>
 
       <!-- EPG Timeline paneli (tüm kalan alanı kaplar) -->

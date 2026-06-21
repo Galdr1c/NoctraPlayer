@@ -13,6 +13,13 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
     private SurfaceView? _surfaceView;
     private TaskCompletionSource<Surface>? _surfaceReady;
 
+    // EPG split görünümü için video yüzeyi konum/boyutu (piksel).
+    // _boundsW/_boundsH <= 0 ise tam ekran (MatchParent).
+    private int _boundsX;
+    private int _boundsY;
+    private int _boundsW = -1;
+    private int _boundsH = -1;
+
     public AndroidVideoSurfaceService(AndroidActivityProvider activityProvider)
     {
         _activityProvider = activityProvider;
@@ -65,7 +72,56 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
             _surfaceView?.Dispose();
             _surfaceView = null;
             _surfaceReady = null;
+
+            // Sonraki gösterimde tam ekran başlasın.
+            _boundsW = -1;
+            _boundsH = -1;
         });
+    }
+
+    public void SetBounds(int x, int y, int width, int height)
+    {
+        _boundsX = x;
+        _boundsY = y;
+        _boundsW = width;
+        _boundsH = height;
+
+        var activity = _activityProvider.CurrentActivity;
+        if (activity is null)
+        {
+            return;
+        }
+
+        activity.RunOnUiThread(ApplyBounds);
+    }
+
+    private void ApplyBounds()
+    {
+        if (_surfaceView is null)
+        {
+            return;
+        }
+
+        WidgetFrameLayout.LayoutParams layoutParams;
+        if (_boundsW <= 0 || _boundsH <= 0)
+        {
+            // Tam ekran
+            layoutParams = new WidgetFrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MatchParent,
+                ViewGroup.LayoutParams.MatchParent);
+        }
+        else
+        {
+            // Üst bölgeye küçültülmüş video (EPG split)
+            layoutParams = new WidgetFrameLayout.LayoutParams(_boundsW, _boundsH)
+            {
+                LeftMargin = _boundsX,
+                TopMargin = _boundsY,
+            };
+        }
+
+        _surfaceView.LayoutParameters = layoutParams;
+        _surfaceView.RequestLayout();
     }
 
     internal async Task<Surface?> WaitForSurfaceAsync()
@@ -127,5 +183,8 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
             new WidgetFrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MatchParent,
                 ViewGroup.LayoutParams.MatchParent));
+
+        // Daha önce EPG split için küçültülmüş bir konum ayarlandıysa onu yeniden uygula.
+        ApplyBounds();
     }
 }

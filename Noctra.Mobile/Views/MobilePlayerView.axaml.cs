@@ -31,10 +31,136 @@ public partial class MobilePlayerView : UserControl
     private double _swipeStartBrightness;
 
     private IPlayerWindowService? _playerWindowService;
+    private IVideoSurfaceService? _videoSurfaceService;
+    private PlayerViewModel? _boundVm;
+    private Rect _lastSurfaceRect;
 
     public MobilePlayerView()
     {
         InitializeComponent();
+        LayoutUpdated += OnLayoutUpdated;
+    }
+
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        base.OnDataContextChanged(e);
+
+        if (_boundVm is not null)
+        {
+            _boundVm.PropertyChanged -= OnPlayerPropertyChanged;
+        }
+
+        _boundVm = DataContext as PlayerViewModel;
+
+        if (_boundVm is not null)
+        {
+            _boundVm.PropertyChanged += OnPlayerPropertyChanged;
+        }
+    }
+
+    private void OnPlayerPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(PlayerViewModel.IsEpgPanelOpen))
+        {
+            return;
+        }
+
+        if (_boundVm?.IsEpgPanelOpen == true)
+        {
+            UpdateEpgVideoLayout();
+        }
+        else
+        {
+            // EPG kapandı -> video tekrar tam ekran.
+            _lastSurfaceRect = default;
+            GetVideoSurfaceService()?.SetBounds(0, 0, 0, 0);
+        }
+    }
+
+    private void OnLayoutUpdated(object? sender, EventArgs e)
+    {
+        // EPG açıkken (rotasyon/boyut değişiminde) video slotunu native yüzeyle senkron tut.
+        if (_boundVm?.IsEpgPanelOpen == true)
+        {
+            UpdateEpgVideoLayout();
+        }
+    }
+
+    /// <summary>
+    /// EPG split görünümünde üstteki şeffaf VideoSlot'un ekran (piksel) dikdörtgenini
+    /// hesaplar ve native video yüzeyini oraya küçültür. Böylece masaüstündeki
+    /// "video üstüne yarı saydam panel" yerine mobilde "video üstte küçülür, EPG altta" olur.
+    /// </summary>
+    private void UpdateEpgVideoLayout()
+    {
+        if (VideoSlot is null)
+        {
+            return;
+        }
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel is null)
+        {
+            return;
+        }
+
+        var totalWidth = Bounds.Width;
+        var totalHeight = Bounds.Height;
+        if (totalWidth <= 0 || totalHeight <= 0)
+        {
+            return;
+        }
+
+        // Video yüksekliği: 16:9, ancak ekranın yarısını geçmesin.
+        var desiredHeight = Math.Min(totalWidth * 9.0 / 16.0, totalHeight * 0.5);
+        if (Math.Abs(VideoSlot.Height - desiredHeight) > 0.5)
+        {
+            VideoSlot.Height = desiredHeight;
+            return; // yükseklik değişti; yeni layout pass UpdateEpgVideoLayout'u tekrar tetikler
+        }
+
+        // VideoSlot'un pencereye göre konumunu al, piksel ölçeğine çevir.
+        var topLeft = VideoSlot.TranslatePoint(new Point(0, 0), topLevel);
+        if (topLeft is null)
+        {
+            return;
+        }
+
+        var scaling = topLevel.RenderScaling;
+        var px = (int)Math.Round(topLeft.Value.X * scaling);
+        var py = (int)Math.Round(topLeft.Value.Y * scaling);
+        var pw = (int)Math.Round(VideoSlot.Bounds.Width * scaling);
+        var ph = (int)Math.Round(VideoSlot.Bounds.Height * scaling);
+        if (pw <= 0 || ph <= 0)
+        {
+            return;
+        }
+
+        var rect = new Rect(px, py, pw, ph);
+        if (rect == _lastSurfaceRect)
+        {
+            return;
+        }
+
+        _lastSurfaceRect = rect;
+        GetVideoSurfaceService()?.SetBounds(px, py, pw, ph);
+    }
+
+    private IVideoSurfaceService? GetVideoSurfaceService()
+    {
+        if (_videoSurfaceService is not null)
+        {
+            return _videoSurfaceService;
+        }
+
+        if (Application.Current is App { Services: not null } app)
+        {
+            _videoSurfaceService = app.Services
+                .GetService<MobilePlatformServiceResolver>()?
+                .GetVideoSurfaceService();
+        }
+
+        return _videoSurfaceService;
     }
 
     /// <summary>
