@@ -7,6 +7,7 @@
              xmlns:converters="using:Noctra.Mobile.Converters"
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:controls="using:Noctra.Mobile.Controls"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.MobileHistoryView"
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False"
@@ -52,12 +53,10 @@
                           ClipToBounds="True"
                           Background="{DynamicResource Surface1Brush}">
                     <Grid>
-                      <TextBlock Text="TV"
-                                 Foreground="{DynamicResource AccentBrush}"
-                                 FontWeight="Bold"
-                                 FontSize="12"
-                                 HorizontalAlignment="Center"
-                                 VerticalAlignment="Center" />
+                      <icons:MaterialIcon Kind="Television"
+                                          Foreground="{DynamicResource AccentBrush}"
+                                          Width="20"
+                                          Height="20" />
                       <controls:RemoteImage Url="{Binding CoverUrl}" Stretch="Uniform" />
                     </Grid>
                   </Border>
@@ -107,12 +106,10 @@
                           ClipToBounds="True"
                           Background="{DynamicResource Surface1Brush}">
                     <Grid>
-                      <TextBlock Text="EP"
-                                 Foreground="{DynamicResource AccentBrush}"
-                                 FontWeight="Bold"
-                                 FontSize="12"
-                                 HorizontalAlignment="Center"
-                                 VerticalAlignment="Center" />
+                      <icons:MaterialIcon Kind="Collections"
+                                          Foreground="{DynamicResource AccentBrush}"
+                                          Width="20"
+                                          Height="20" />
                       <controls:RemoteImage Url="{Binding CoverUrl}" Stretch="Uniform" />
                     </Grid>
                   </Border>
@@ -162,12 +159,10 @@
                           ClipToBounds="True"
                           Background="{DynamicResource Surface1Brush}">
                     <Grid>
-                      <TextBlock Text="VOD"
-                                 Foreground="{DynamicResource AccentBrush}"
-                                 FontWeight="Bold"
-                                 FontSize="12"
-                                 HorizontalAlignment="Center"
-                                 VerticalAlignment="Center" />
+                      <icons:MaterialIcon Kind="Movie"
+                                          Foreground="{DynamicResource AccentBrush}"
+                                          Width="20"
+                                          Height="20" />
                       <controls:RemoteImage Url="{Binding CoverUrl}" Stretch="Uniform" />
                     </Grid>
                   </Border>

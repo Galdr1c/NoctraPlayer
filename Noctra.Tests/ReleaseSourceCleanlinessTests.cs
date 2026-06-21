@@ -270,6 +270,46 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobileCollectionScreens_UseMaterialIconsForMediaFallbacks()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var collectionViewPaths = new[]
+        {
+            Path.Combine(repositoryRoot, "Noctra.Mobile", "Views", "MobileFavoritesView.axaml"),
+            Path.Combine(repositoryRoot, "Noctra.Mobile", "Views", "MobileMyListView.axaml"),
+            Path.Combine(repositoryRoot, "Noctra.Mobile", "Views", "MobileHistoryView.axaml")
+        };
+
+        foreach (var viewPath in collectionViewPaths)
+        {
+            var source = File.ReadAllText(viewPath);
+
+            Assert.Contains("xmlns:icons=\"clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia\"", source);
+            Assert.Contains("Kind=\"Television\"", source);
+            Assert.Contains("Kind=\"Collections\"", source);
+            Assert.Contains("Kind=\"Movie\"", source);
+            Assert.DoesNotContain("Text=\"TV\"", source);
+            Assert.DoesNotContain("Text=\"EP\"", source);
+            Assert.DoesNotContain("Text=\"VOD\"", source);
+        }
+    }
+
+    [Fact]
+    public void MobileLiveView_UsesMaterialIconForChannelFallback()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var source = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileLiveView.axaml"));
+
+        Assert.Contains("xmlns:icons=\"clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia\"", source);
+        Assert.Contains("Kind=\"Television\"", source);
+        Assert.DoesNotContain("Text=\"TV\"", source);
+    }
+
+    [Fact]
     public void AndroidEntryPoint_UsesAvalonia12ActivityLifetime()
     {
         var repositoryRoot = FindRepositoryRoot();
