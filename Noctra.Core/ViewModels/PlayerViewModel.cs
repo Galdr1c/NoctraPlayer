@@ -102,6 +102,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPiPControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(AreMobileControlsVisible))]
     private bool _isVisible = true;
 
     [ObservableProperty]
@@ -132,8 +133,17 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     public bool IsPiPControlsVisible => IsPiPMode && IsPiPControlsForceVisible;
 
+    /// <summary>
+    /// Mobil oynatıcıda alt kontrol katmanının (bottom sheet) görünür olup olmadığı.
+    /// Kontroller görünürken ve EPG paneli kapalıyken true olur.
+    /// Tek dokunuşla aç/kapat (ToggleControls) ve otomatik gizleme bu değeri sürer.
+    /// </summary>
+    public bool AreMobileControlsVisible => IsVisible && !IsEpgPanelOpen;
+
     // ── EPG Timeline Panel ──────────────────────────────────────────────────
-    [ObservableProperty] private bool _isEpgPanelOpen;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AreMobileControlsVisible))]
+    private bool _isEpgPanelOpen;
     [ObservableProperty] private bool _isEpgLoading;
     [ObservableProperty] private int _epgFocusRowIndex = -1;
     [ObservableProperty] private bool _isEpgUpdateRequired;
@@ -874,6 +884,34 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     [RelayCommand]
     private void ShowOverlay() => OverlayManager.ShowOverlay();
+
+    /// <summary>
+    /// Mobil: video yüzeyine tek dokunuşta kontrol katmanını aç/kapat.
+    /// Görünürse anında gizler; gizliyse gösterir ve otomatik gizleme sayacını kurar.
+    /// Kilitliyken kontroller açılmaz, yalnızca kilit ipucu kısa süre belirir.
+    /// </summary>
+    [RelayCommand]
+    private void ToggleControls()
+    {
+        if (IsLocked)
+        {
+            // Kilitliyken yalnızca kilit göstergesini kısa süre göster, kontrolleri açma.
+            OverlayManager.RestartAutoHideTimer();
+            return;
+        }
+
+        if (IsVisible)
+        {
+            // Görünür -> anında gizle (immersion).
+            _autoHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            IsVisible = false;
+        }
+        else
+        {
+            // Gizli -> göster ve otomatik gizleme sayacını yeniden başlat.
+            OverlayManager.RestartAutoHideTimer();
+        }
+    }
 
     [RelayCommand]
     private void ToggleLock() => OverlayManager.ToggleLock();

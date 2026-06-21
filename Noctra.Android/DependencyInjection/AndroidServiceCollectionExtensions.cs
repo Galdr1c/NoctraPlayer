@@ -47,6 +47,10 @@ public static class AndroidServiceCollectionExtensions
         services.AddSingleton<AndroidPictureInPictureService>();
         services.AddSingleton<IPictureInPictureService>(serviceProvider =>
             serviceProvider.GetRequiredService<AndroidPictureInPictureService>());
+        services.AddSingleton<AndroidPlayerWindowService>();
+        services.AddSingleton<IPlayerWindowService>(serviceProvider =>
+            serviceProvider.GetRequiredService<AndroidPlayerWindowService>());
+        services.AddSingleton<MobileBackNavigationService>();
         services.AddSingleton<IVideoPlayerService, AndroidVideoPlayerService>();
         services.AddSingleton<ILicenseService>(serviceProvider =>
             new LicenseService(

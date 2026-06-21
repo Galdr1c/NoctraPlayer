@@ -8,6 +8,7 @@ using Avalonia.Android;
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Android.DependencyInjection;
 using Noctra.Android.Services;
+using Noctra.Mobile.Services;
 
 namespace Noctra.Android;
 
@@ -45,6 +46,22 @@ public class MainActivity : AvaloniaMainActivity
         }
 
         base.OnActivityResult(requestCode, resultCode, data);
+    }
+
+    /// <summary>
+    /// Donanım/jest geri tuşu. Önce MainView'e (oynatıcı/EPG/alt sayfa) devredilir;
+    /// olay uygulama içinde tüketilmezse varsayılan davranış (uygulamadan çıkış) uygulanır.
+    /// </summary>
+    public override void OnBackPressed()
+    {
+        if (Avalonia.Application.Current is Noctra.Mobile.App app &&
+            app.Services?.GetService<MobileBackNavigationService>() is { } backService &&
+            backService.HandleBack())
+        {
+            return;
+        }
+
+        base.OnBackPressed();
     }
 
     public override void OnPictureInPictureModeChanged(

@@ -18,4 +18,10 @@ public sealed class MobilePlatformServiceResolver
 
     public IPictureInPictureService? GetPictureInPictureService()
         => _services.GetService<IPictureInPictureService>();
+
+    public IPlayerWindowService? GetPlayerWindowService()
+        => _services.GetService<IPlayerWindowService>();
+
+    public MobileBackNavigationService? GetBackNavigationService()
+        => _services.GetService<MobileBackNavigationService>();
 }

@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Platform;
 using Avalonia.Interactivity;
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Models;
@@ -22,13 +23,130 @@ public partial class MainView : UserControl
     private PlayerViewModel? _playerViewModel;
     private MobileViewModelResolver? _viewModelResolver;
     private MobilePlatformServiceResolver? _platformServiceResolver;
+    private IPlayerWindowService? _playerWindowService;
+    private MobileBackNavigationService? _backNavigationService;
     private bool _isPlayerFullScreen;
+    private string _currentDestination = "Home";
+    private readonly Thickness _headerBasePadding;
+    private readonly Thickness _bottomNavBasePadding;
 
     public MainView()
     {
         InitializeComponent();
         MobileSettingsContent.BackToProfilesRequested += (_, _) => ShowProfileSelection();
         SizeChanged += OnSizeChanged;
+
+        // Safe-area hesaplaması için temel (tasarım) padding değerlerini sakla.
+        _headerBasePadding = HeaderBar.Padding;
+        _bottomNavBasePadding = BottomNavigation.Padding;
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachedEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+
+        // Android donanım/jest geri tuşunu bu view'e bağla.
+        RegisterBackHandler();
+
+        // Çentik / sistem çubukları (safe-area) padding'lerini uygula ve değişimleri dinle.
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel?.InsetsManager is { } insets)
+        {
+            insets.SafeAreaChanged -= OnSafeAreaChanged;
+            insets.SafeAreaChanged += OnSafeAreaChanged;
+            ApplySafeArea(insets.SafeAreaPadding);
+        }
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachedEventArgs e)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel?.InsetsManager is { } insets)
+        {
+            insets.SafeAreaChanged -= OnSafeAreaChanged;
+        }
+
+        if (_backNavigationService is not null)
+        {
+            _backNavigationService.BackRequested = null;
+        }
+
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    private void RegisterBackHandler()
+    {
+        _backNavigationService ??= GetPlatformServiceResolver()?.GetBackNavigationService();
+        if (_backNavigationService is not null)
+        {
+            _backNavigationService.BackRequested = TryHandleBack;
+        }
+    }
+
+    private void OnSafeAreaChanged(object? sender, SafeAreaChangedArgs e)
+        => ApplySafeArea(e.SafeAreaPadding);
+
+    /// <summary>
+    /// Çentik / gesture bar ile çakışmayı önlemek için header üst + yanlar,
+    /// alt navigasyon alt + yanlar safe-area kadar genişletilir.
+    /// </summary>
+    private void ApplySafeArea(Thickness safe)
+    {
+        HeaderBar.Padding = new Thickness(
+            _headerBasePadding.Left + safe.Left,
+            _headerBasePadding.Top + safe.Top,
+            _headerBasePadding.Right + safe.Right,
+            _headerBasePadding.Bottom);
+
+        BottomNavigation.Padding = new Thickness(
+            _bottomNavBasePadding.Left + safe.Left,
+            _bottomNavBasePadding.Top,
+            _bottomNavBasePadding.Right + safe.Right,
+            _bottomNavBasePadding.Bottom + safe.Bottom);
+    }
+
+    /// <summary>
+    /// Geri tuşu önceliği: tam ekran → EPG paneli → oynatıcıyı kapat → alt sayfadan ana sayfaya.
+    /// Hiçbiri uygulanmıyorsa false döner (uygulamadan çıkış).
+    /// </summary>
+    internal bool TryHandleBack()
+    {
+        // 1) Oynatıcı tam ekrandaysa -> tam ekrandan çık
+        if (PlayerHost.IsVisible && _playerViewModel is { IsFullScreen: true })
+        {
+            _playerViewModel.IsFullScreen = false;
+            return true;
+        }
+
+        // 2) Oynatıcıda EPG paneli açıksa -> paneli kapat
+        if (PlayerHost.IsVisible && _playerViewModel is { IsEpgPanelOpen: true })
+        {
+            _playerViewModel.ToggleEpgPanelCommand.Execute(null);
+            return true;
+        }
+
+        // 3) Oynatıcı görünürse -> oynatıcıyı kapat
+        if (PlayerHost.IsVisible)
+        {
+            _playerViewModel?.ClosePlayerCommand.Execute(null);
+            return true;
+        }
+
+        // 4) Alt sayfadaysak -> Ana sayfaya dön
+        if (!string.Equals(_currentDestination, "Home", StringComparison.Ordinal))
+        {
+            NavigateToDestination("Home");
+            return true;
+        }
+
+        // 5) Ana sayfadayız -> varsayılan davranış
+        return false;
+    }
+
+    private IPlayerWindowService? GetPlayerWindowService()
+    {
+        _playerWindowService ??= GetPlatformServiceResolver()?.GetPlayerWindowService();
+        return _playerWindowService;
     }
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
@@ -53,6 +171,7 @@ public partial class MainView : UserControl
 
     private void UpdateContentVisibility(string destination)
     {
+        _currentDestination = destination;
         var showCoreContent = destination is "Home" or "Live" or "Movies" or "Series" or "Search" or "Favorites" or "MyList" or "History" or "Downloads" or "Settings";
         ShellContent.IsVisible = !showCoreContent;
         CoreContentHost.IsVisible = showCoreContent;
@@ -303,6 +422,11 @@ public partial class MainView : UserControl
         PlayerHost.IsVisible = false;
         UpdatePlayerChromeState();
         GetPlatformServiceResolver()?.GetVideoSurfaceService()?.Hide();
+
+        // Oynatıcı kapanınca: ekranı uyanık tutmayı bırak ve tam ekran/immersive modundan çık.
+        var windowService = GetPlayerWindowService();
+        windowService?.SetKeepScreenOn(false);
+        windowService?.SetFullScreenMode(false);
     }
 
     private void PlayerViewModel_NextLiveChannelRequested(object? sender, EventArgs e)
@@ -355,6 +479,13 @@ public partial class MainView : UserControl
         if (e.PropertyName == nameof(PlayerViewModel.IsFullScreen))
         {
             UpdatePlayerChromeState();
+            // Tam ekranda yatay yön + immersive sistem çubukları.
+            GetPlayerWindowService()?.SetFullScreenMode(_playerViewModel?.IsFullScreen == true);
+        }
+        else if (e.PropertyName == nameof(PlayerViewModel.IsPlaying))
+        {
+            // Oynatma sürerken ekranı uyanık tut.
+            GetPlayerWindowService()?.SetKeepScreenOn(_playerViewModel?.IsPlaying == true);
         }
     }
 

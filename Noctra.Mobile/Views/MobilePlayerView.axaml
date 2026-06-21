@@ -28,8 +28,18 @@
       <ColumnDefinition Width="*" />
       <ColumnDefinition Width="*" />
     </Grid.ColumnDefinitions>
-    <Border Grid.Column="0" Background="Transparent" DoubleTapped="OnLeftDoubleTapped" />
-    <Border Grid.Column="1" Background="Transparent" DoubleTapped="OnRightDoubleTapped" />
+    <!-- Sol bölge: çift dokunma = 10sn geri, dikey kaydırma = parlaklık, yatay = sarma -->
+    <Border x:Name="LeftZone" Grid.Column="0" Background="Transparent"
+            DoubleTapped="OnLeftDoubleTapped"
+            PointerPressed="OnZonePointerPressed"
+            PointerMoved="OnZonePointerMoved"
+            PointerReleased="OnZonePointerReleased" />
+    <!-- Sağ bölge: çift dokunma = 10sn ileri, dikey kaydırma = ses, yatay = sarma -->
+    <Border x:Name="RightZone" Grid.Column="1" Background="Transparent"
+            DoubleTapped="OnRightDoubleTapped"
+            PointerPressed="OnZonePointerPressed"
+            PointerMoved="OnZonePointerMoved"
+            PointerReleased="OnZonePointerReleased" />
 
     <!-- Normal mod: bottom sheet (EPG kapalıyken) -->
     <Border Grid.ColumnSpan="2"
@@ -38,7 +48,7 @@
             CornerRadius="18"
             VerticalAlignment="Bottom"
             Margin="14"
-            IsVisible="{Binding !IsEpgPanelOpen}">
+            IsVisible="{Binding AreMobileControlsVisible}">
       <StackPanel Spacing="12">
       <Grid ColumnDefinitions="*,Auto">
         <StackPanel Spacing="4">
@@ -53,7 +63,7 @@
         </StackPanel>
         <Button Grid.Column="1"
                 Command="{Binding CloseCommand}"
-                MinHeight="42"
+                MinHeight="44"
                 MinWidth="72"
                 Margin="12,0,0,0">
           <StackPanel Orientation="Horizontal" Spacing="6">
@@ -105,7 +115,7 @@
       <Grid ColumnDefinitions="*,*,*"
             ColumnSpacing="8">
         <Button Command="{Binding ToggleLockCommand}"
-                MinHeight="40">
+                MinHeight="44">
           <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
             <icons:MaterialIcon Kind="LockOutline" Width="18" Height="18" />
             <TextBlock Text="{Binding IsLocked, Converter={StaticResource StringFormatConverter}, ConverterParameter='Player.Mobile.LockFormat'}" />
@@ -113,7 +123,7 @@
         </Button>
         <Button Grid.Column="1"
                 Command="{Binding ToggleFullScreenCommand}"
-                MinHeight="40">
+                MinHeight="44">
           <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
             <icons:MaterialIcon Kind="Fullscreen" Width="18" Height="18" />
             <TextBlock Text="{Binding IsFullScreen, Converter={StaticResource StringFormatConverter}, ConverterParameter='Player.Mobile.FullscreenFormat'}" />
@@ -121,7 +131,7 @@
         </Button>
         <Button Grid.Column="2"
                 Command="{Binding EnterPiPCommand}"
-                MinHeight="40">
+                MinHeight="44">
           <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
             <icons:MaterialIcon Kind="PictureInPictureBottomRight" Width="18" Height="18" />
             <TextBlock Text="{loc:Translate Player.Overlay.PiP.Tooltip}" />
@@ -264,11 +274,11 @@
             IsVisible="{Binding IsLiveContent}">
         <Button Content="{loc:Translate Player.Mobile.Previous}"
                 Command="{Binding PlayPreviousLiveChannelCommand}"
-                MinHeight="40" />
+                MinHeight="44" />
         <Button Grid.Column="1"
                 Content="{loc:Translate Player.Mobile.Next}"
                 Command="{Binding PlayNextLiveChannelCommand}"
-                MinHeight="40" />
+                MinHeight="44" />
       </Grid>
 
       <Grid ColumnDefinitions="*,*"
@@ -276,11 +286,11 @@
             IsVisible="{Binding IsSeriesContent}">
         <Button Content="{loc:Translate Player.Overlay.Episodes.Tooltip}"
                 Command="{Binding OpenEpisodesCommand}"
-                MinHeight="40" />
+                MinHeight="44" />
         <Button Grid.Column="1"
                 Content="{loc:Translate Player.Overlay.NextEpisode}"
                 Command="{Binding PlayNextEpisodeCommand}"
-                MinHeight="40" />
+                MinHeight="44" />
       </Grid>
 
       <TextBlock Text="{Binding SleepTimerCountdown}"
@@ -304,34 +314,34 @@
             <Button Content="{loc:Translate Player.Mobile.Sleep.Off}"
                     Command="{Binding SetSleepTimerCommand}"
                     CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Off}"
-                    MinHeight="40" />
+                    MinHeight="44" />
             <Button Grid.Column="1"
                     Content="{loc:Translate Player.Mobile.Sleep.15min}"
                     Command="{Binding SetSleepTimerCommand}"
                     CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes15}"
-                    MinHeight="40" />
+                    MinHeight="44" />
             <Button Grid.Row="1"
                     Content="{loc:Translate Player.Mobile.Sleep.30min}"
                     Command="{Binding SetSleepTimerCommand}"
                     CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes30}"
-                    MinHeight="40" />
+                    MinHeight="44" />
             <Button Grid.Row="1"
                     Grid.Column="1"
                     Content="{loc:Translate Player.Mobile.Sleep.60min}"
                     Command="{Binding SetSleepTimerCommand}"
                     CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes60}"
-                    MinHeight="40" />
+                    MinHeight="44" />
             <Button Grid.Row="2"
                     Content="{loc:Translate Player.Mobile.Sleep.End}"
                     Command="{Binding SetSleepTimerCommand}"
                     CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.EndOfEpisode}"
-                    MinHeight="40" />
+                    MinHeight="44" />
             <Button Grid.Row="2"
                     Grid.Column="1"
                     Content="{loc:Translate Player.Mobile.Sleep.Cancel}"
                     Command="{Binding CancelSleepTimerCommand}"
                     IsVisible="{Binding IsSleepTimerActive}"
-                    MinHeight="40" />
+                    MinHeight="44" />
           </Grid>
         </StackPanel>
       </Border>
@@ -342,16 +352,16 @@
                 Command="{Binding DownloadCurrentContentCommand}"
                 IsVisible="{Binding CanShowDownloadButton}"
                 IsEnabled="{Binding CanDownloadCurrentContent}"
-                MinHeight="40" />
+                MinHeight="44" />
         <Button Grid.Column="1"
                 Content="{loc:Translate Player.Overlay.Info.Tooltip}"
                 Command="{Binding OpenInfoPanelCommand}"
                 IsVisible="{Binding CanShowInfoButton}"
-                MinHeight="40" />
+                MinHeight="44" />
         <Button Grid.Column="2"
                 Content="{loc:Translate Player.Settings.Audio}"
                 Command="{Binding OpenAudioSettingsCommand}"
-                MinHeight="40" />
+                MinHeight="44" />
       </Grid>
 
       <TextBlock Text="{Binding DownloadStatusMessage}"
@@ -372,7 +382,7 @@
             <Button Grid.Column="1"
                     Content="{loc:Translate Common.Close}"
                     Command="{Binding ClosePanelsCommand}"
-                    MinHeight="36"
+                    MinHeight="44"
                     Margin="10,0,0,0" />
           </Grid>
 
@@ -387,17 +397,17 @@
               <Button Content="{loc:Translate Player.Settings.SubtitleSize.Small}"
                       Command="{Binding SetSubtitleSizeCommand}"
                       CommandParameter="28"
-                      MinHeight="40" />
+                      MinHeight="44" />
               <Button Grid.Column="1"
                       Content="{loc:Translate Player.Settings.SubtitleSize.Normal}"
                       Command="{Binding SetSubtitleSizeCommand}"
                       CommandParameter="40"
-                      MinHeight="40" />
+                      MinHeight="44" />
               <Button Grid.Column="2"
                       Content="{loc:Translate Player.Settings.SubtitleSize.Large}"
                       Command="{Binding SetSubtitleSizeCommand}"
                       CommandParameter="60"
-                      MinHeight="40" />
+                      MinHeight="44" />
             </Grid>
           </StackPanel>
 
@@ -412,17 +422,17 @@
               <Button Content="{loc:Translate Player.Settings.SubtitleBackground.Off}"
                       Command="{Binding SetSubtitleBackgroundCommand}"
                       CommandParameter="0"
-                      MinHeight="40" />
+                      MinHeight="44" />
               <Button Grid.Column="1"
                       Content="{loc:Translate Player.Settings.SubtitleBackground.Semi}"
                       Command="{Binding SetSubtitleBackgroundCommand}"
                       CommandParameter="128"
-                      MinHeight="40" />
+                      MinHeight="44" />
               <Button Grid.Column="2"
                       Content="{loc:Translate Player.Settings.SubtitleBackground.Black}"
                       Command="{Binding SetSubtitleBackgroundCommand}"
                       CommandParameter="255"
-                      MinHeight="40" />
+                      MinHeight="44" />
             </Grid>
           </StackPanel>
 
@@ -437,12 +447,12 @@
               <Button Content="{loc:Translate Player.Settings.SubtitlePosition.Bottom}"
                       Command="{Binding SetSubtitlePositionCommand}"
                       CommandParameter="40"
-                      MinHeight="40" />
+                      MinHeight="44" />
               <Button Grid.Column="1"
                       Content="{loc:Translate Player.Settings.SubtitlePosition.Top}"
                       Command="{Binding SetSubtitlePositionCommand}"
                       CommandParameter="900"
-                      MinHeight="40" />
+                      MinHeight="44" />
             </Grid>
           </StackPanel>
 
@@ -461,7 +471,7 @@
                       <Button Content="{Binding Name}"
                               Command="{Binding #PlayerRoot.DataContext.SetAudioTrackCommand}"
                               CommandParameter="{Binding Id}"
-                              MinHeight="40"
+                              MinHeight="44"
                               Margin="0,0,0,8"
                               HorizontalContentAlignment="Stretch" />
                     </DataTemplate>
@@ -480,7 +490,7 @@
                       <Button Content="{Binding Name}"
                               Command="{Binding #PlayerRoot.DataContext.SetSubtitleTrackCommand}"
                               CommandParameter="{Binding Id}"
-                              MinHeight="40"
+                              MinHeight="44"
                               Margin="0,0,0,8"
                               HorizontalContentAlignment="Stretch" />
                     </DataTemplate>
@@ -506,7 +516,7 @@
             <Button Grid.Column="1"
                     Content="{loc:Translate Common.Close}"
                     Command="{Binding ClosePanelsCommand}"
-                    MinHeight="36"
+                    MinHeight="44"
                     Margin="10,0,0,0" />
           </Grid>
           <ScrollViewer MaxHeight="240"
@@ -567,7 +577,7 @@
             <Button Grid.Column="1"
                     Content="{loc:Translate Common.Close}"
                     Command="{Binding OpenInfoPanelCommand}"
-                    MinHeight="36"
+                    MinHeight="44"
                     Margin="10,0,0,0" />
           </Grid>
           <TextBlock Text="{Binding OverlaySecondaryText}"
@@ -584,7 +594,7 @@
 
       <Button Content="{loc:Translate Player.Mobile.Quality}"
               Command="{Binding OpenQualitySettingsCommand}"
-              MinHeight="40" />
+              MinHeight="44" />
 
       <Border Background="{DynamicResource OverlayBackgroundBrush}"
               CornerRadius="14"
@@ -599,7 +609,7 @@
             <Button Grid.Column="1"
                     Content="{loc:Translate Common.Close}"
                     Command="{Binding OpenQualitySettingsCommand}"
-                    MinHeight="36"
+                    MinHeight="44"
                     Margin="10,0,0,0" />
           </Grid>
 
@@ -945,7 +955,7 @@
           </StackPanel>
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
             <Button Command="{Binding PlayPauseCommand}"
-                    MinHeight="36" MinWidth="36"
+                    MinHeight="44" MinWidth="36"
                     Background="Transparent" BorderThickness="0" CornerRadius="18"
                     ToolTip.Tip="{loc:Translate Player.Overlay.PlayPause.Tooltip}">
               <Grid>
@@ -958,7 +968,7 @@
               </Grid>
             </Button>
             <Button Command="{Binding ToggleEpgPanelCommand}"
-                    MinHeight="36" MinWidth="36"
+                    MinHeight="44" MinWidth="36"
                     Background="Transparent" BorderThickness="0" CornerRadius="18">
               <icons:MaterialIcon Kind="Close" Width="18" Height="18"
                                   Foreground="{DynamicResource TextPrimaryBrush}" />
@@ -999,7 +1009,7 @@
                 </StackPanel>
               </Border>
               <Button Grid.Column="2" Command="{Binding ToggleEpgPanelCommand}"
-                      MinHeight="36" MinWidth="36"
+                      MinHeight="44" MinWidth="36"
                       Background="Transparent" BorderThickness="0" CornerRadius="18">
                 <icons:MaterialIcon Kind="Close" Width="16" Height="16"
                                     Foreground="{DynamicResource TextPrimaryBrush}" />
