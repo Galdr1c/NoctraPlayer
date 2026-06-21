@@ -24,6 +24,42 @@ Uygulama promosyon kodlarını uzak bir JSON adresinden okuyabilir. URL üç şe
 2. Kullanıcının `%LOCALAPPDATA%/Noctra/settings.json` dosyasındaki `promoCodeConfigUrl` alanı.
 3. `LicenseService.cs` içindeki `DefaultRemotePromoCodesUrl` sabiti.
 
+### Mobile Konfigürasyonu
+
+Mobile platformlarda (Android/iOS) environment variable kullanımı pratik olmadığından, promo code URL'si compile-time sabit olarak tanımlanır:
+
+**Dosya:** `Noctra.Mobile/Services/MobileAppConfig.cs`
+
+```csharp
+public static class MobileAppConfig
+{
+    public const string PromoCodesUrl = "https://api.kynora.studio/noctra/promo-codes.json";
+}
+```
+
+Mobil uygulama başlangıcında `App.axaml.cs` bu URL'yi settings'e otomatik olarak enjekte eder:
+
+```csharp
+if (string.IsNullOrWhiteSpace(settingsService.Settings.PromoCodeConfigUrl))
+{
+    settingsService.Settings.PromoCodeConfigUrl = MobileAppConfig.PromoCodesUrl;
+}
+```
+
+**Geliştirme Testi İçin:**
+
+Test ortamında local veya development URL kullanabilirsiniz:
+
+1. Local dosya: `file:///storage/emulated/0/Download/test-promo-codes.json`
+2. Development server: `http://192.168.1.100:8000/test-promo-codes.json`
+3. Test repository: `https://raw.githubusercontent.com/kynora/noctra-test/main/promo-codes.json`
+
+Test için proje root'unda `test-promo-codes.json` örnek dosyası bulunur.
+
+**Production Build:**
+
+Production build öncesi `MobileAppConfig.PromoCodesUrl` sabitini production URL'ine güncelleyin.
+
 Örnek JSON:
 
 ```json

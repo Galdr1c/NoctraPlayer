@@ -28,6 +28,15 @@ public partial class App : Application
             LocalizationSource.Instance.Initialize(localization);
         }
 
+        // Inject mobile-specific promo code URL into settings
+        if (Services?.GetService(typeof(ISettingsService)) is ISettingsService settingsService)
+        {
+            if (string.IsNullOrWhiteSpace(settingsService.Settings.PromoCodeConfigUrl))
+            {
+                settingsService.Settings.PromoCodeConfigUrl = Mobile.Services.MobileAppConfig.PromoCodesUrl;
+            }
+        }
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.MainWindow = new MainWindow

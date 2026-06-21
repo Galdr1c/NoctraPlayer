@@ -257,7 +257,7 @@ public sealed class ReleaseSourceCleanlinessTests
             "Views",
             "MobilePlayerView.axaml"));
 
-        Assert.Contains("ColumnDefinitions=\"*,*,*,*,*,*\"", mainViewSource);
+        Assert.Contains("ColumnDefinitions=\"*,*,*,*,*\"", mainViewSource);
         Assert.DoesNotContain("ColumnDefinitions=\"*,*,*,*,*,*,*\"", mainViewSource);
         Assert.Contains("TextTrimming=\"CharacterEllipsis\"", mainViewSource);
         Assert.Contains("<Setter Property=\"MinHeight\" Value=\"56\" />", mainViewSource);
