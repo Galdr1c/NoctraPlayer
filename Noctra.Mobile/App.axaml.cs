@@ -5,6 +5,7 @@ using Avalonia.Markup.Xaml;
 using Noctra.Mobile.Localization;
 using Noctra.Mobile.ViewModels;
 using Noctra.Mobile.Views;
+using Noctra.Services;
 using Noctra.Services.Interfaces;
 
 namespace Noctra.Mobile;

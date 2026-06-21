@@ -31,6 +31,8 @@ public partial class SettingsViewModel : ObservableObject
     private readonly ILocalizationService _localizationService;
     private readonly ISecurityService _securityService;
     private readonly IAppPathService _appPaths;
+    private readonly ICacheService _cacheService;
+    private readonly IProfileService _profileService;
     private CancellationTokenSource? _epgRefreshWatchCts;
     private int _isRefreshOperationRunning;
     private string? _activeRefreshScope;
@@ -240,7 +242,9 @@ public partial class SettingsViewModel : ObservableObject
         IUpdateService updateService,
         ILocalizationService localizationService,
         ISecurityService securityService,
-        IAppPathService? appPaths = null)
+        IAppPathService? appPaths = null,
+        ICacheService? cacheService = null,
+        IProfileService? profileService = null)
     {
         _settingsService = settingsService;
         _epgService = epgService;
@@ -256,6 +260,8 @@ public partial class SettingsViewModel : ObservableObject
         _localizationService = localizationService;
         _securityService = securityService;
         _appPaths = appPaths ?? new DesktopAppPathService();
+        _cacheService = cacheService ?? new CacheService(_appPaths);
+        _profileService = profileService;
         
         _mainViewModel.PropertyChanged += MainViewModel_PropertyChanged;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
@@ -268,12 +274,16 @@ public partial class SettingsViewModel : ObservableObject
         _ = ScanChannelListStatsCoreAsync(updateStatusMessage: false);
         _ = ScanEpgStatsCoreAsync(updateStatusMessage: false);
         _ = _mainViewModel.RefreshCurrentProfileExpirationAsync();
-
-        _ = _mainViewModel.RefreshCurrentProfileExpirationAsync();
+        _ = UpdateCacheSizeAsync();
     }
 
     public string CurrentVersion => _updateService.CurrentVersion;
     public bool IsPremium => _licenseService.IsPremium;
+
+    // ============ Cache ============
+
+    [ObservableProperty]
+    private string _cacheSizeString = "0 B";
 
     // ============ Promo Code ============
 
@@ -1356,6 +1366,48 @@ public partial class SettingsViewModel : ObservableObject
                 await _watchHistoryService.DeleteProfileHistoryAsync(profileId.Value);
                 StatusMessage = _localizationService.GetString("Settings.Privacy.Clear.Success");
                 _mainViewModel.ResetWatchHistoryUI();
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = string.Format(_localizationService.GetString("Common.ErrorFormat"), ex.Message);
+            }
+        }
+    }
+
+    private async Task UpdateCacheSizeAsync()
+    {
+        CacheSizeString = await _cacheService.GetCacheSizeStringAsync();
+    }
+
+    [RelayCommand]
+    private async Task ClearCacheAsync()
+    {
+        var confirmed = await _dialogService.ShowConfirmationAsync(
+            _localizationService.GetString("GlobalSettings.Cache.Clear.ConfirmTitle"),
+            _localizationService.GetString("GlobalSettings.Cache.Clear.ConfirmMessage"));
+
+        if (confirmed)
+        {
+            try
+            {
+                await _settingsService.SaveAsync();
+                await _cacheService.ClearCacheAsync();
+
+                if (_profileService != null)
+                {
+                    var profiles = await _profileService.GetProfilesAsync();
+                    var activeIds = new HashSet<int>(profiles.Select(p => p.Id));
+                    activeIds.Add(0);
+                    activeIds.Add(_settingsService.Settings.ProfileId);
+                    await _settingsService.CleanOrphanedSettingsAsync(activeIds);
+                }
+
+                await _epgService.ClearEpgAsync();
+                await _epgService.VacuumAsync();
+
+                await UpdateCacheSizeAsync();
+
+                StatusMessage = _localizationService.GetString("GlobalSettings.Cache.Clear.SuccessMessage");
             }
             catch (Exception ex)
             {
