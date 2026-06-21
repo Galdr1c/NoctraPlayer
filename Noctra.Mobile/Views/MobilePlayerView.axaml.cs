@@ -42,4 +42,29 @@ public partial class MobilePlayerView : UserControl
             e.Handled = true;
         }
     }
+
+    private void OnLeftDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (DataContext is PlayerViewModel playerVm && playerVm.SkipBackwardCommand.CanExecute("10"))
+        {
+            playerVm.SkipBackwardCommand.Execute("10");
+        }
+        e.Handled = true;
+    }
+
+    private void OnRightDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (DataContext is PlayerViewModel playerVm && playerVm.SkipForwardCommand.CanExecute("10"))
+        {
+            playerVm.SkipForwardCommand.Execute("10");
+        }
+        e.Handled = true;
+    }
+
+    private void OnPlayerBackgroundTapped(object? sender, TappedEventArgs e)
+    {
+        // Find the bottom sheet and toggle its opacity or visibility for immersion
+        // For now, we just handle the click to prevent passing it down if needed, 
+        // or trigger a toggle overlay command if it existed.
+    }
 }

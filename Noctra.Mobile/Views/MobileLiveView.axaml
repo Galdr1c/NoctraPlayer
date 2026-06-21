@@ -28,6 +28,8 @@
                    Foreground="{DynamicResource TextPrimaryBrush}" />
         <ComboBox Grid.Column="1"
                   Width="150"
+                  MinHeight="48"
+                  CornerRadius="12"
                   ItemsSource="{Binding SortOptions}"
                   SelectedValue="{Binding SelectedSortOrder}"
                   SelectedValueBinding="{Binding Key}"
@@ -37,6 +39,8 @@
       <ComboBox ItemsSource="{Binding Groups}"
                 SelectedItem="{Binding SelectedGroup}"
                 PlaceholderText="{loc:Translate Common.All}"
+                MinHeight="48"
+                CornerRadius="12"
                 IsVisible="{Binding ShowGroupFilter}" />
 
       <ItemsControl ItemsSource="{Binding FilteredChannels}"
@@ -98,7 +102,9 @@
                   <Button Grid.Column="2"
                           Background="Transparent"
                           BorderThickness="0"
-                          Padding="6"
+                          Padding="14"
+                          MinHeight="48"
+                          MinWidth="48"
                           VerticalAlignment="Center"
                           Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}"
                           CommandParameter="{Binding}"
