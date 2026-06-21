@@ -5,6 +5,7 @@
              xmlns:models="using:Noctra.Models"
              xmlns:vm="using:Noctra.ViewModels"
              xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.MobilePlayerView"
              x:Name="PlayerRoot"
              x:DataType="vm:PlayerViewModel"
@@ -30,26 +31,42 @@
                      TextWrapping="Wrap" />
         </StackPanel>
         <Button Grid.Column="1"
-                Content="{loc:Translate Common.Close}"
                 Command="{Binding CloseCommand}"
                 MinHeight="42"
                 MinWidth="72"
-                Margin="12,0,0,0" />
+                Margin="12,0,0,0">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <icons:MaterialIcon Kind="Close" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Common.Close}" />
+          </StackPanel>
+        </Button>
       </Grid>
 
       <Grid ColumnDefinitions="*,*,*"
             ColumnSpacing="8">
-        <Button Content="{Binding IsLocked, Converter={StaticResource StringFormatConverter}, ConverterParameter='Player.Mobile.LockFormat'}"
-                Command="{Binding ToggleLockCommand}"
-                MinHeight="40" />
+        <Button Command="{Binding ToggleLockCommand}"
+                MinHeight="40">
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="LockOutline" Width="18" Height="18" />
+            <TextBlock Text="{Binding IsLocked, Converter={StaticResource StringFormatConverter}, ConverterParameter='Player.Mobile.LockFormat'}" />
+          </StackPanel>
+        </Button>
         <Button Grid.Column="1"
-                Content="{Binding IsFullScreen, Converter={StaticResource StringFormatConverter}, ConverterParameter='Player.Mobile.FullscreenFormat'}"
                 Command="{Binding ToggleFullScreenCommand}"
-                MinHeight="40" />
+                MinHeight="40">
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="Fullscreen" Width="18" Height="18" />
+            <TextBlock Text="{Binding IsFullScreen, Converter={StaticResource StringFormatConverter}, ConverterParameter='Player.Mobile.FullscreenFormat'}" />
+          </StackPanel>
+        </Button>
         <Button Grid.Column="2"
-                Content="{loc:Translate Player.Overlay.PiP.Tooltip}"
                 Command="{Binding EnterPiPCommand}"
-                MinHeight="40" />
+                MinHeight="40">
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="PictureInPictureBottomRight" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Player.Overlay.PiP.Tooltip}" />
+          </StackPanel>
+        </Button>
       </Grid>
 
       <TextBlock Text="{Binding ErrorMessage}"
@@ -94,49 +111,81 @@
       <Grid ColumnDefinitions="Auto,Auto,*,Auto"
             ColumnSpacing="8"
             VerticalAlignment="Center">
-        <Button Content="{loc:Translate Player.Overlay.PlayPause.Tooltip}"
-                Command="{Binding PlayPauseCommand}"
-                MinHeight="44" />
+        <Button Command="{Binding PlayPauseCommand}"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <icons:MaterialIcon Kind="Play" Width="20" Height="20" />
+            <TextBlock Text="{loc:Translate Player.Overlay.PlayPause.Tooltip}" />
+          </StackPanel>
+        </Button>
         <Button Grid.Column="1"
-                Content="{loc:Translate Player.Mobile.Stop}"
                 Command="{Binding StopCommand}"
-                MinHeight="44" />
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <icons:MaterialIcon Kind="Stop" Width="20" Height="20" />
+            <TextBlock Text="{loc:Translate Player.Mobile.Stop}" />
+          </StackPanel>
+        </Button>
         <Slider Grid.Column="2"
                 Minimum="0"
                 Maximum="100"
                 Value="{Binding Volume, Mode=TwoWay}"
                 VerticalAlignment="Center" />
         <Button Grid.Column="3"
-                Content="{loc:Translate Player.Mobile.Mute}"
                 Command="{Binding ToggleMuteCommand}"
-                MinHeight="44" />
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <icons:MaterialIcon Kind="VolumeOff" Width="20" Height="20" />
+            <TextBlock Text="{loc:Translate Player.Mobile.Mute}" />
+          </StackPanel>
+        </Button>
       </Grid>
 
       <Grid ColumnDefinitions="*,*,*,*,*"
             ColumnSpacing="8">
-        <Button Content="-10s"
-                Command="{Binding SkipBackwardCommand}"
+        <Button Command="{Binding SkipBackwardCommand}"
                 CommandParameter="10"
                 IsVisible="{Binding !IsLiveContent}"
-                MinHeight="40" />
+                MinHeight="40">
+          <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="Rewind10" Width="18" Height="18" />
+            <TextBlock Text="-10s" />
+          </StackPanel>
+        </Button>
         <Button Grid.Column="1"
-                Content="+10s"
                 Command="{Binding SkipForwardCommand}"
                 CommandParameter="10"
                 IsVisible="{Binding !IsLiveContent}"
-                MinHeight="40" />
+                MinHeight="40">
+          <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="FastForward10" Width="18" Height="18" />
+            <TextBlock Text="+10s" />
+          </StackPanel>
+        </Button>
         <Button Grid.Column="2"
-                Content="{loc:Translate Player.Mobile.Favorite}"
                 Command="{Binding ToggleLiveFavoriteCommand}"
-                MinHeight="40" />
+                MinHeight="40">
+          <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="HeartOutline" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Player.Mobile.Favorite}" />
+          </StackPanel>
+        </Button>
         <Button Grid.Column="3"
-                Content="{Binding VideoFillMode}"
                 Command="{Binding CycleVideoFillModeCommand}"
-                MinHeight="40" />
+                MinHeight="40">
+          <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="AspectRatio" Width="18" Height="18" />
+            <TextBlock Text="{Binding VideoFillMode}" />
+          </StackPanel>
+        </Button>
         <Button Grid.Column="4"
-                Content="{Binding SleepTimerLabel}"
                 Command="{Binding ShowSleepTimerMenuCommand}"
-                MinHeight="40" />
+                MinHeight="40">
+          <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="TimerOutline" Width="18" Height="18" />
+            <TextBlock Text="{Binding SleepTimerLabel}" />
+          </StackPanel>
+        </Button>
       </Grid>
 
       <Grid ColumnDefinitions="*,*"

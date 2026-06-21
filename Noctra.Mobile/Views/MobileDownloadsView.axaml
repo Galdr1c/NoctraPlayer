@@ -8,6 +8,7 @@
              xmlns:avaloniaConverters="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:behaviors="using:Noctra.Mobile.Behaviors"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.MobileDownloadsView"
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False"
@@ -49,12 +50,10 @@
                         Height="36"
                         CornerRadius="18"
                         Background="{DynamicResource Surface1Brush}">
-                  <TextBlock Text="HDD"
-                             Foreground="{DynamicResource AccentBrush}"
-                             FontWeight="Bold"
-                             FontSize="10"
-                             HorizontalAlignment="Center"
-                             VerticalAlignment="Center" />
+                  <icons:MaterialIcon Kind="Harddisk"
+                                      Foreground="{DynamicResource AccentBrush}"
+                                      Width="20"
+                                      Height="20" />
                 </Border>
                 <StackPanel Grid.Column="1"
                             Margin="12,0"
@@ -70,20 +69,23 @@
                 </StackPanel>
                 <Button Grid.Column="2"
                         Command="{Binding OpenDownloadsFolderCommand}"
-                        Content="{loc:Translate Downloads.Action.OpenFolder}"
                         MinHeight="34"
                         Padding="12,0"
                         Background="{DynamicResource Surface1Brush}"
                         Foreground="{DynamicResource TextPrimaryBrush}"
                         BorderThickness="0"
                         CornerRadius="8"
-                        FontSize="12" />
+                        FontSize="12">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <icons:MaterialIcon Kind="FolderOpenOutline" Width="16" Height="16" />
+                    <TextBlock Text="{loc:Translate Downloads.Action.OpenFolder}" />
+                  </StackPanel>
+                </Button>
               </Grid>
             </Border>
 
             <!-- Delete All -->
             <Button Command="{Binding DeleteAllDownloadsCommand}"
-                    Content="{loc:Translate Downloads.Action.DeleteAll}"
                     HorizontalAlignment="Right"
                     MinHeight="34"
                     Padding="14,0"
@@ -92,7 +94,12 @@
                     BorderThickness="1"
                     BorderBrush="{DynamicResource ErrorBrush}"
                     CornerRadius="8"
-                    FontSize="12" />
+                    FontSize="12">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <icons:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16" />
+                <TextBlock Text="{loc:Translate Downloads.Action.DeleteAll}" />
+              </StackPanel>
+            </Button>
 
             <!-- Sort -->
             <ComboBox SelectedIndex="{Binding SelectedDownloadSortOrder}"
@@ -140,7 +147,6 @@
                         <Button Grid.Column="1"
                                 Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).DeleteDownloadedMediaCommand}"
                                 CommandParameter="{Binding}"
-                                Content="{loc:Translate Downloads.Action.Delete}"
                                 MinHeight="34"
                                 Padding="12,0"
                                 Background="Transparent"
@@ -148,7 +154,12 @@
                                 BorderThickness="1"
                                 BorderBrush="{DynamicResource ErrorBrush}"
                                 CornerRadius="8"
-                                FontSize="12" />
+                                FontSize="12">
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <icons:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16" />
+                            <TextBlock Text="{loc:Translate Downloads.Action.Delete}" />
+                          </StackPanel>
+                        </Button>
                       </Grid>
                     </Border>
                   </DataTemplate>

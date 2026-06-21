@@ -7,6 +7,7 @@
              xmlns:controls="using:Noctra.Mobile.Controls"
              xmlns:behaviors="using:Noctra.Mobile.Behaviors"
              xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.MobileSeriesDetailView"
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False"
@@ -20,13 +21,17 @@
         <Grid ColumnDefinitions="Auto,*"
               ColumnSpacing="12">
           <Button Command="{Binding CloseSeriesDetailCommand}"
-                  Content="{loc:Translate Player.Overlay.Back}"
                   MinHeight="40"
                   Padding="14,0"
                   Background="{DynamicResource Surface0Brush}"
                   Foreground="{DynamicResource TextPrimaryBrush}"
                   BorderThickness="0"
-                  CornerRadius="12" />
+                  CornerRadius="12">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <icons:MaterialIcon Kind="ArrowLeft" Width="18" Height="18" />
+              <TextBlock Text="{loc:Translate Player.Overlay.Back}" />
+            </StackPanel>
+          </Button>
           <StackPanel Grid.Column="1"
                       Spacing="2"
                       VerticalAlignment="Center">
@@ -123,55 +128,74 @@
                     IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
           <Button Command="{Binding PlayEpisodeCommand}"
                   CommandParameter="{Binding SelectedSeriesContinueEpisode}"
-                  Content="{loc:Translate Series.Play}"
                   IsVisible="{Binding HasSelectedSeriesPlayableEpisode}"
                   MinHeight="44"
                   Padding="18,0"
                   Background="{DynamicResource AccentBrush}"
                   Foreground="{DynamicResource TextPrimaryBrush}"
                   BorderThickness="0"
-                  CornerRadius="14" />
+                  CornerRadius="14">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <icons:MaterialIcon Kind="Play" Width="18" Height="18" />
+              <TextBlock Text="{loc:Translate Series.Play}" />
+            </StackPanel>
+          </Button>
           <Button Command="{Binding PlayEpisodeCommand}"
                   CommandParameter="{Binding SelectedSeriesContinueEpisode}"
-                  Content="{Binding SelectedSeriesContinueText}"
                   IsVisible="{Binding HasSelectedSeriesPlayableEpisode}"
                   MinHeight="44"
                   Padding="16,0"
                   Background="{DynamicResource Surface0Brush}"
                   Foreground="{DynamicResource AccentBrush}"
                   BorderThickness="0"
-                  CornerRadius="14" />
+                  CornerRadius="14">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <icons:MaterialIcon Kind="PlayCircleOutline" Width="18" Height="18" />
+              <TextBlock Text="{Binding SelectedSeriesContinueText}" />
+            </StackPanel>
+          </Button>
           <Button Command="{Binding WatchTrailerCommand}"
-                  Content="{loc:Translate Series.WatchTrailer}"
                   IsVisible="{Binding SelectedSeriesTrailerUrl, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"
                   MinHeight="44"
                   Padding="16,0"
                   Background="{DynamicResource Surface0Brush}"
                   Foreground="{DynamicResource TextPrimaryBrush}"
                   BorderThickness="0"
-                  CornerRadius="14" />
+                  CornerRadius="14">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <icons:MaterialIcon Kind="Youtube" Width="18" Height="18" />
+              <TextBlock Text="{loc:Translate Series.WatchTrailer}" />
+            </StackPanel>
+          </Button>
           <Button Command="{Binding AddToMyListCommand}"
                   CommandParameter="{Binding SelectedSeries}"
-                  Content="{loc:Translate Context.MyList.Toggle}"
                   MinHeight="44"
                   Padding="16,0"
                   Background="{DynamicResource Surface0Brush}"
                   Foreground="{DynamicResource TextPrimaryBrush}"
                   BorderThickness="0"
-                  CornerRadius="14" />
+                  CornerRadius="14">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <icons:MaterialIcon Kind="BookmarkOutline" Width="18" Height="18" />
+              <TextBlock Text="{loc:Translate Context.MyList.Toggle}" />
+            </StackPanel>
+          </Button>
           <Button Command="{Binding ToggleFavoriteCommand}"
                   CommandParameter="{Binding SelectedSeries}"
-                  Content="{loc:Translate Context.Favorite.Toggle}"
                   MinHeight="44"
                   Padding="16,0"
                   Background="{DynamicResource Surface0Brush}"
                   Foreground="{DynamicResource TextPrimaryBrush}"
                   BorderThickness="0"
-                  CornerRadius="14" />
+                  CornerRadius="14">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+              <icons:MaterialIcon Kind="HeartOutline" Width="18" Height="18" />
+              <TextBlock Text="{loc:Translate Context.Favorite.Toggle}" />
+            </StackPanel>
+          </Button>
         </StackPanel>
 
         <Button Command="{Binding DownloadSelectedSeasonCommand}"
-                Content="{loc:Translate Series.Detail.DownloadSeason}"
                 IsVisible="{Binding !IsDownloadedSeriesDetailMode}"
                 HorizontalAlignment="Left"
                 MinHeight="40"
@@ -179,7 +203,12 @@
                 Background="{DynamicResource Surface0Brush}"
                 Foreground="{DynamicResource AccentBrush}"
                 BorderThickness="0"
-                CornerRadius="12" />
+                CornerRadius="12">
+          <StackPanel Orientation="Horizontal" Spacing="7">
+            <icons:MaterialIcon Kind="DownloadOutline" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Series.Detail.DownloadSeason}" />
+          </StackPanel>
+        </Button>
 
         <StackPanel Spacing="10"
                     Margin="0,36,0,0"

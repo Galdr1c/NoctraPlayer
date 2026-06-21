@@ -202,6 +202,74 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobileApp_LoadsMaterialIconStyles()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var appSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "App.axaml"));
+
+        Assert.Contains("xmlns:materialIcons=\"clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia\"", appSource);
+        Assert.Contains("<materialIcons:MaterialIconStyles />", appSource);
+    }
+
+    [Fact]
+    public void MobileShellAndPlayer_UseMaterialIconsForPrimaryControls()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mainViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml"));
+        var playerViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml"));
+
+        Assert.Contains("xmlns:icons=\"clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia\"", mainViewSource);
+        Assert.Contains("Kind=\"HomeVariantOutline\"", mainViewSource);
+        Assert.Contains("Kind=\"Television\"", mainViewSource);
+        Assert.Contains("Kind=\"Magnify\"", mainViewSource);
+        Assert.Contains("Kind=\"DotsHorizontal\"", mainViewSource);
+
+        Assert.Contains("xmlns:icons=\"clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia\"", playerViewSource);
+        Assert.Contains("Kind=\"Play\"", playerViewSource);
+        Assert.Contains("Kind=\"Stop\"", playerViewSource);
+        Assert.Contains("Kind=\"VolumeOff\"", playerViewSource);
+        Assert.Contains("Kind=\"PictureInPictureBottomRight\"", playerViewSource);
+    }
+
+    [Fact]
+    public void MobileDetailScreens_UseMaterialIconsForPrimaryActions()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var downloadsSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileDownloadsView.axaml"));
+        var seriesDetailSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileSeriesDetailView.axaml"));
+
+        Assert.Contains("xmlns:icons=\"clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia\"", downloadsSource);
+        Assert.Contains("Kind=\"Harddisk\"", downloadsSource);
+        Assert.Contains("Kind=\"FolderOpenOutline\"", downloadsSource);
+        Assert.Contains("Kind=\"TrashCanOutline\"", downloadsSource);
+
+        Assert.Contains("xmlns:icons=\"clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia\"", seriesDetailSource);
+        Assert.Contains("Kind=\"ArrowLeft\"", seriesDetailSource);
+        Assert.Contains("Kind=\"Play\"", seriesDetailSource);
+        Assert.Contains("Kind=\"Youtube\"", seriesDetailSource);
+        Assert.Contains("Kind=\"DownloadOutline\"", seriesDetailSource);
+    }
+
+    [Fact]
     public void AndroidEntryPoint_UsesAvalonia12ActivityLifetime()
     {
         var repositoryRoot = FindRepositoryRoot();
