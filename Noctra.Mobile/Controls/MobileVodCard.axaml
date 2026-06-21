@@ -4,6 +4,7 @@
              xmlns:vm="using:Noctra.ViewModels"
              xmlns:controls="using:Noctra.Mobile.Controls"
              xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Controls.MobileVodCard"
              x:DataType="models:Channel"
              Width="154" Height="230">
@@ -30,7 +31,14 @@
     <Border CornerRadius="16" ClipToBounds="True" Background="{DynamicResource Surface0Brush}">
       <Grid>
         <Border Background="{DynamicResource Surface1Brush}">
-          <controls:RemoteImage Url="{Binding CoverUrl}" Stretch="UniformToFill" />
+          <Grid>
+            <icons:MaterialIcon Kind="Movie"
+                                Foreground="{DynamicResource AccentBrush}"
+                                Width="48"
+                                Height="48"
+                                Opacity="0.32" />
+            <controls:RemoteImage Url="{Binding CoverUrl}" Stretch="UniformToFill" />
+          </Grid>
         </Border>
         <Border VerticalAlignment="Bottom" Background="#CC000000" Padding="10,8">
           <StackPanel Spacing="4">

@@ -270,6 +270,58 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobileDownloadsView_ReusesDesktopMaterialIcons()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var source = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileDownloadsView.axaml"));
+
+        Assert.Contains("Kind=\"Harddisk\"", source);
+        Assert.Contains("Kind=\"AlertCircleOutline\"", source);
+        Assert.Contains("Kind=\"DownloadOffOutline\"", source);
+        Assert.Contains("Kind=\"Speedometer\"", source);
+        Assert.Contains("Kind=\"PlayCircleOutline\"", source);
+        Assert.Contains("Kind=\"ChevronRight\"", source);
+        Assert.Contains("Kind=\"Close\"", source);
+        Assert.Contains("Kind=\"Play\"", source);
+        Assert.Contains("Kind=\"Pause\"", source);
+        Assert.Contains("Downloads.Storage.Warning", source);
+        Assert.Contains("ShowStorageWarning", source);
+    }
+
+    [Fact]
+    public void MobileSettingsView_ReusesDesktopMaterialIcons()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var source = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileSettingsView.axaml"));
+
+        Assert.Contains("xmlns:icons=\"clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia\"", source);
+        Assert.Contains("Kind=\"AccountBoxOutline\"", source);
+        Assert.Contains("Kind=\"PlayBoxOutline\"", source);
+        Assert.Contains("Kind=\"FormatListBulletedSquare\"", source);
+        Assert.Contains("Kind=\"EyeOutline\"", source);
+        Assert.Contains("Kind=\"CalendarClock\"", source);
+        Assert.Contains("Kind=\"Lock\"", source);
+        Assert.Contains("Kind=\"Plus\"", source);
+        Assert.Contains("Kind=\"AlertCircleOutline\"", source);
+        Assert.Contains("Kind=\"DeleteOutline\"", source);
+        Assert.Contains("Kind=\"Refresh\"", source);
+        Assert.Contains("Kind=\"ShieldAccountOutline\"", source);
+        Assert.Contains("Kind=\"BrushVariant\"", source);
+        Assert.Contains("Kind=\"Crown\"", source);
+        Assert.Contains("Kind=\"Update\"", source);
+        Assert.Contains("Kind=\"RocketLaunch\"", source);
+        Assert.Contains("Kind=\"BugOutline\"", source);
+    }
+
+    [Fact]
     public void MobileCollectionScreens_UseMaterialIconsForMediaFallbacks()
     {
         var repositoryRoot = FindRepositoryRoot();
@@ -307,6 +359,39 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("xmlns:icons=\"clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia\"", source);
         Assert.Contains("Kind=\"Television\"", source);
         Assert.DoesNotContain("Text=\"TV\"", source);
+    }
+
+    [Fact]
+    public void MobileMediaCards_UseMaterialIconsForPosterFallbacks()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var cardExpectations = new[]
+        {
+            new
+            {
+                Path = Path.Combine(repositoryRoot, "Noctra.Mobile", "Controls", "MobileVodCard.axaml"),
+                Icon = "Kind=\"Movie\""
+            },
+            new
+            {
+                Path = Path.Combine(repositoryRoot, "Noctra.Mobile", "Controls", "MobileSeriesCard.axaml"),
+                Icon = "Kind=\"TelevisionPlay\""
+            },
+            new
+            {
+                Path = Path.Combine(repositoryRoot, "Noctra.Mobile", "Controls", "MobileContinueWatchingCard.axaml"),
+                Icon = "Kind=\"MoviePlay\""
+            }
+        };
+
+        foreach (var expectation in cardExpectations)
+        {
+            var source = File.ReadAllText(expectation.Path);
+
+            Assert.Contains("xmlns:icons=\"clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia\"", source);
+            Assert.Contains(expectation.Icon, source);
+            Assert.Contains("Opacity=\"0.32\"", source);
+        }
     }
 
     [Fact]

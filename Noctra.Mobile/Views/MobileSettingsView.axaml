@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:vm="using:Noctra.ViewModels"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.MobileSettingsView"
              x:DataType="vm:SettingsViewModel"
              x:CompileBindings="False"
@@ -56,9 +57,12 @@
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="10">
-          <TextBlock Text="{loc:Translate Settings.Profile.Management}"
-                     Foreground="{DynamicResource TextPrimaryBrush}"
-                     FontWeight="SemiBold" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <icons:MaterialIcon Kind="AccountBoxOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+            <TextBlock Text="{loc:Translate Settings.Profile.Management}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="SemiBold" />
+          </StackPanel>
           <TextBlock Text="{loc:Translate Settings.Profile.ManagementDetail}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12"
@@ -73,9 +77,12 @@
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="10">
-          <TextBlock Text="{loc:Translate Settings.Account.Title}"
-                     Foreground="{DynamicResource TextPrimaryBrush}"
-                     FontWeight="SemiBold" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <icons:MaterialIcon Kind="AccountBoxOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+            <TextBlock Text="{loc:Translate Settings.Account.Title}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="SemiBold" />
+          </StackPanel>
           <Grid ColumnDefinitions="Auto,*"
                 ColumnSpacing="10">
             <TextBlock Text="{Binding ProviderUrlLabel}"
@@ -127,9 +134,12 @@
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
-          <TextBlock Text="{loc:Translate GlobalSettings.Appearance.Title}"
-                     Foreground="{DynamicResource TextPrimaryBrush}"
-                     FontWeight="SemiBold" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <icons:MaterialIcon Kind="BrushVariant" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+            <TextBlock Text="{loc:Translate GlobalSettings.Appearance.Title}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="SemiBold" />
+          </StackPanel>
           <CheckBox Content="{loc:Translate Settings.Theme.Dark}"
                     IsChecked="{Binding IsDarkTheme}" />
           <TextBlock Text="{loc:Translate Settings.Language.Title}"
@@ -151,9 +161,12 @@
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
-          <TextBlock Text="{loc:Translate Settings.Playback.Network}"
-                     Foreground="{DynamicResource TextPrimaryBrush}"
-                     FontWeight="SemiBold" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <icons:MaterialIcon Kind="PlayBoxOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+            <TextBlock Text="{loc:Translate Settings.Playback.Network}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="SemiBold" />
+          </StackPanel>
           <TextBlock Text="{loc:Translate Settings.Playback.UserAgent}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
@@ -278,9 +291,12 @@
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
-          <TextBlock Text="{loc:Translate Settings.Channels.Title}"
-                     Foreground="{DynamicResource TextPrimaryBrush}"
-                     FontWeight="SemiBold" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <icons:MaterialIcon Kind="FormatListBulletedSquare" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+            <TextBlock Text="{loc:Translate Settings.Channels.Title}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="SemiBold" />
+          </StackPanel>
           <Button Content="{loc:Translate Settings.Channels.RefreshNow}"
                   Command="{Binding RefreshChannelListNowCommand}"
                   MinHeight="44" />
@@ -311,8 +327,12 @@
           <ComboBox SelectedIndex="{Binding ChannelListRefreshFrequencyIndex, Mode=TwoWay}"
                     MinHeight="44">
             <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.Off}" />
-            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.1h}"
-                          IsEnabled="{Binding IsPremium}" />
+            <ComboBoxItem IsEnabled="{Binding IsPremium}">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.1h}" />
+                <icons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" />
+              </Grid>
+            </ComboBoxItem>
             <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.3h}"
                           IsEnabled="{Binding IsPremium}" />
             <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.12h}"
@@ -351,10 +371,14 @@
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center" />
                     <Button Grid.Column="1"
-                            Content="{loc:Translate Settings.Channels.Hidden.Show}"
                             Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
                             CommandParameter="{Binding}"
-                            MinHeight="34" />
+                            MinHeight="34">
+                      <StackPanel Orientation="Horizontal" Spacing="5">
+                        <icons:MaterialIcon Kind="EyeOutline" Width="14" Height="14" />
+                        <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" />
+                      </StackPanel>
+                    </Button>
                   </Grid>
                 </Border>
               </DataTemplate>
@@ -389,10 +413,14 @@
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center" />
                     <Button Grid.Column="1"
-                            Content="{loc:Translate Settings.Channels.Hidden.Show}"
                             Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
                             CommandParameter="{Binding}"
-                            MinHeight="34" />
+                            MinHeight="34">
+                      <StackPanel Orientation="Horizontal" Spacing="5">
+                        <icons:MaterialIcon Kind="EyeOutline" Width="14" Height="14" />
+                        <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" />
+                      </StackPanel>
+                    </Button>
                   </Grid>
                 </Border>
               </DataTemplate>
@@ -427,10 +455,14 @@
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center" />
                     <Button Grid.Column="1"
-                            Content="{loc:Translate Settings.Channels.Hidden.Show}"
                             Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
                             CommandParameter="{Binding}"
-                            MinHeight="34" />
+                            MinHeight="34">
+                      <StackPanel Orientation="Horizontal" Spacing="5">
+                        <icons:MaterialIcon Kind="EyeOutline" Width="14" Height="14" />
+                        <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" />
+                      </StackPanel>
+                    </Button>
                   </Grid>
                 </Border>
               </DataTemplate>
@@ -447,9 +479,12 @@
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
-          <TextBlock Text="{loc:Translate Settings.Epg.Title}"
-                     Foreground="{DynamicResource TextPrimaryBrush}"
-                     FontWeight="SemiBold" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <icons:MaterialIcon Kind="CalendarClock" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+            <TextBlock Text="{loc:Translate Settings.Epg.Title}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="SemiBold" />
+          </StackPanel>
           <CheckBox Content="{loc:Translate Settings.Epg.Enabled}"
                     IsChecked="{Binding EpgEnabled}" />
           <Grid ColumnDefinitions="*,Auto">
@@ -479,10 +514,14 @@
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        FontSize="12" />
           </Grid>
-          <Button Content="{loc:Translate Settings.Epg.RefreshNow}"
-                  Command="{Binding RefreshEpgNowCommand}"
+          <Button Command="{Binding RefreshEpgNowCommand}"
                   IsEnabled="{Binding !IsGlobalLoading}"
-                  MinHeight="44" />
+                  MinHeight="44">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <icons:MaterialIcon Kind="Refresh" Width="18" Height="18" />
+              <TextBlock Text="{loc:Translate Settings.Epg.RefreshNow}" />
+            </StackPanel>
+          </Button>
           <TextBlock Text="{Binding EpgLastError}"
                      Foreground="{DynamicResource ErrorBrush}"
                      TextWrapping="Wrap" />
@@ -492,8 +531,12 @@
           <ComboBox SelectedIndex="{Binding EpgRefreshFrequencyIndex, Mode=TwoWay}"
                     MinHeight="44">
             <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.Off}" />
-            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.1h}"
-                          IsEnabled="{Binding IsPremium}" />
+            <ComboBoxItem IsEnabled="{Binding IsPremium}">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.1h}" />
+                <icons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" />
+              </Grid>
+            </ComboBoxItem>
             <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.3h}"
                           IsEnabled="{Binding IsPremium}" />
             <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.12h}"
@@ -554,16 +597,28 @@
                              FontSize="12" />
                 </StackPanel>
                 <Button Grid.Column="1"
-                        Content="{loc:Translate Settings.Epg.AddNew}"
                         Command="{Binding AddCustomEpgCommand}"
                         IsEnabled="{Binding !IsGlobalLoading}"
-                        MinHeight="40" />
+                        MinHeight="40">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <icons:MaterialIcon Kind="Plus" Width="18" Height="18" />
+                    <TextBlock Text="{loc:Translate Settings.Epg.AddNew}" />
+                  </StackPanel>
+                </Button>
               </Grid>
 
-              <TextBlock Text="{loc:Translate Settings.Epg.PerformanceWarning}"
-                         Foreground="{DynamicResource WarningBrush}"
-                         FontSize="12"
-                         TextWrapping="Wrap" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <icons:MaterialIcon Kind="AlertCircleOutline"
+                                    Width="16"
+                                    Height="16"
+                                    Foreground="{DynamicResource WarningBrush}"
+                                    VerticalAlignment="Top"
+                                    Margin="0,2,0,0" />
+                <TextBlock Text="{loc:Translate Settings.Epg.PerformanceWarning}"
+                           Foreground="{DynamicResource WarningBrush}"
+                           FontSize="12"
+                           TextWrapping="Wrap" />
+              </StackPanel>
 
               <ItemsControl ItemsSource="{Binding CustomEpgUrls}">
                 <ItemsControl.ItemTemplate>
@@ -575,10 +630,14 @@
                                PlaceholderText="{loc:Translate Settings.Epg.UrlPlaceholder}"
                                MinHeight="44" />
                       <Button Grid.Column="1"
-                              Content="{loc:Translate Settings.Epg.RemoveSource.Tooltip}"
                               Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).RemoveCustomEpgCommand}"
                               CommandParameter="{Binding .}"
-                              MinHeight="44" />
+                              MinHeight="44">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                          <icons:MaterialIcon Kind="DeleteOutline" Width="18" Height="18" Foreground="{DynamicResource ErrorBrush}" />
+                          <TextBlock Text="{loc:Translate Settings.Epg.RemoveSource.Tooltip}" />
+                        </StackPanel>
+                      </Button>
                     </Grid>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
@@ -592,9 +651,12 @@
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="10">
-          <TextBlock Text="{loc:Translate LegalConsent.Action.Privacy}"
-                     Foreground="{DynamicResource TextPrimaryBrush}"
-                     FontWeight="SemiBold" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <icons:MaterialIcon Kind="ShieldAccountOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+            <TextBlock Text="{loc:Translate LegalConsent.Action.Privacy}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="SemiBold" />
+          </StackPanel>
           <TextBlock Text="{loc:Translate Settings.Privacy.Retention}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
@@ -616,9 +678,12 @@
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
-          <TextBlock Text="{loc:Translate Mobile.Settings.About.Title}"
-                     Foreground="{DynamicResource TextPrimaryBrush}"
-                     FontWeight="SemiBold" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <icons:MaterialIcon Kind="Crown" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+            <TextBlock Text="{loc:Translate Mobile.Settings.About.Title}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="SemiBold" />
+          </StackPanel>
 
           <Grid ColumnDefinitions="Auto,*"
                 ColumnSpacing="12">
@@ -662,18 +727,25 @@
             </StackPanel>
           </Grid>
 
-          <Button Content="{loc:Translate GlobalSettings.About.Upgrade}"
-                  Command="{Binding ShowUpsellCommand}"
+          <Button Command="{Binding ShowUpsellCommand}"
                   IsVisible="{Binding !IsPremium}"
-                  MinHeight="44" />
+                  MinHeight="44">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <icons:MaterialIcon Kind="Crown" Width="18" Height="18" />
+              <TextBlock Text="{loc:Translate GlobalSettings.About.Upgrade}" />
+            </StackPanel>
+          </Button>
 
           <Border Background="{DynamicResource Surface1Brush}"
                   CornerRadius="12"
                   Padding="12">
             <StackPanel Spacing="10">
-              <TextBlock Text="{loc:Translate GlobalSettings.Update.Title}"
-                         Foreground="{DynamicResource TextPrimaryBrush}"
-                         FontWeight="SemiBold" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <icons:MaterialIcon Kind="Update" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+                <TextBlock Text="{loc:Translate GlobalSettings.Update.Title}"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           FontWeight="SemiBold" />
+              </StackPanel>
               <TextBlock Text="{Binding UpdateStatusText}"
                          Foreground="{DynamicResource TextMutedBrush}"
                          FontSize="12"
@@ -682,20 +754,32 @@
                          Foreground="{DynamicResource AccentBrush}"
                          FontSize="12"
                          IsVisible="{Binding IsCheckingUpdates}" />
-              <Button Content="{loc:Translate GlobalSettings.Update.Check}"
-                      Command="{Binding CheckForUpdatesCommand}"
+              <Button Command="{Binding CheckForUpdatesCommand}"
                       IsVisible="{Binding IsIdle}"
-                      MinHeight="44" />
-              <Button Content="{loc:Translate GlobalSettings.Update.Now}"
-                      Command="{Binding StartUpdateCommand}"
+                      MinHeight="44">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <icons:MaterialIcon Kind="Refresh" Width="18" Height="18" />
+                  <TextBlock Text="{loc:Translate GlobalSettings.Update.Check}" />
+                </StackPanel>
+              </Button>
+              <Button Command="{Binding StartUpdateCommand}"
                       IsVisible="{Binding IsUpdateAvailable}"
-                      MinHeight="44" />
+                      MinHeight="44">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <icons:MaterialIcon Kind="RocketLaunch" Width="18" Height="18" />
+                  <TextBlock Text="{loc:Translate GlobalSettings.Update.Now}" />
+                </StackPanel>
+              </Button>
             </StackPanel>
           </Border>
 
-          <Button Content="{loc:Translate GlobalSettings.Support.Report}"
-                  Command="{Binding ReportBugCommand}"
-                  MinHeight="44" />
+          <Button Command="{Binding ReportBugCommand}"
+                  MinHeight="44">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <icons:MaterialIcon Kind="BugOutline" Width="18" Height="18" Foreground="{DynamicResource ErrorBrush}" />
+              <TextBlock Text="{loc:Translate GlobalSettings.Support.Report}" />
+            </StackPanel>
+          </Button>
         </StackPanel>
       </Border>
 
