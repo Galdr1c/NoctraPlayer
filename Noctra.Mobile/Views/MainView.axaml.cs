@@ -269,10 +269,26 @@ public partial class MainView : UserControl
             _playerViewModel.SetCurrentEpisode(null, null);
         }
 
+        // EPG timeline'dan kanal seçimi event'i
+        MobilePlayerContent.ChannelSelected -= MobilePlayerContent_ChannelSelected;
+        MobilePlayerContent.ChannelSelected += MobilePlayerContent_ChannelSelected;
+
         MobilePlayerContent.DataContext = _playerViewModel;
         PlayerHost.IsVisible = true;
         UpdatePlayerChromeState();
         await _playerViewModel.PlayChannelAsync(channel);
+    }
+
+    /// <summary>
+    /// EPG timeline'dan kanal seçildiğinde çağrılır.
+    /// </summary>
+    private async void MobilePlayerContent_ChannelSelected(Channel channel)
+    {
+        if (_coreMainViewModel is null || _playerViewModel is null)
+            return;
+
+        // Mevcut player'ı kapat, yeni kanalı oynat
+        await PlaySelectedChannelAsync(channel);
     }
 
     private void PlayerViewModel_CloseRequested(object? sender, EventArgs e)

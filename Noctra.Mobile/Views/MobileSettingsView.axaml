@@ -58,7 +58,7 @@
               Padding="14">
         <StackPanel Spacing="10">
           <StackPanel Orientation="Horizontal" Spacing="8">
-            <icons:MaterialIcon Kind="AccountBoxOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+            <icons:MaterialIcon Kind="AccountSwitchOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
             <TextBlock Text="{loc:Translate Settings.Profile.Management}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        FontWeight="SemiBold" />
@@ -140,8 +140,23 @@
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        FontWeight="SemiBold" />
           </StackPanel>
-          <CheckBox Content="{loc:Translate Settings.Theme.Dark}"
-                    IsChecked="{Binding IsDarkTheme}" />
+
+          <!-- Theme Toggle -->
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel>
+              <TextBlock Text="{loc:Translate Settings.Theme.Dark}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontWeight="Medium" />
+              <TextBlock Text="{loc:Translate GlobalSettings.Theme.Description}"
+                         Foreground="{DynamicResource TextMutedBrush}"
+                         FontSize="12"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+            <ToggleSwitch Grid.Column="1"
+                          IsChecked="{Binding IsDarkTheme}"
+                          VerticalAlignment="Center" />
+          </Grid>
+
           <TextBlock Text="{loc:Translate Settings.Language.Title}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
@@ -212,9 +227,12 @@
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
-          <TextBlock Text="{loc:Translate Settings.Playback.AudioSubtitle}"
-                     Foreground="{DynamicResource TextPrimaryBrush}"
-                     FontWeight="SemiBold" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <icons:MaterialIcon Kind="ClosedCaptionOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+            <TextBlock Text="{loc:Translate Settings.Playback.AudioSubtitle}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="SemiBold" />
+          </StackPanel>
           <CheckBox Content="{loc:Translate Settings.Playback.SubtitlesAuto}"
                     IsChecked="{Binding SubtitleEnabled}" />
           <TextBlock Text="{loc:Translate Settings.Playback.PreferredSubtitle}"
@@ -258,9 +276,12 @@
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
-          <TextBlock Text="{loc:Translate Settings.Download.Title}"
-                     Foreground="{DynamicResource TextPrimaryBrush}"
-                     FontWeight="SemiBold" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <icons:MaterialIcon Kind="DownloadBoxOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+            <TextBlock Text="{loc:Translate Settings.Download.Title}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="SemiBold" />
+          </StackPanel>
           <CheckBox Content="{loc:Translate Settings.Download.WifiOnly}"
                     IsChecked="{Binding DownloadWifiOnly}" />
           <TextBlock Text="{loc:Translate Settings.Download.Quality}"
@@ -773,14 +794,40 @@
             </StackPanel>
           </Border>
 
-          <Button Command="{Binding ReportBugCommand}"
-                  MinHeight="44">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <icons:MaterialIcon Kind="BugOutline" Width="18" Height="18" Foreground="{DynamicResource ErrorBrush}" />
-              <TextBlock Text="{loc:Translate GlobalSettings.Support.Report}" />
+        </StackPanel>
+      </Border>
+
+      <!-- Bug Report Section -->
+      <Border Background="#1AE50914"
+              BorderBrush="#E50914"
+              BorderThickness="1"
+              CornerRadius="16"
+              Padding="14">
+        <Grid ColumnDefinitions="*,Auto"
+              ColumnSpacing="12">
+          <StackPanel VerticalAlignment="Center" Spacing="4">
+            <TextBlock Text="{loc:Translate GlobalSettings.Support.Question}"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBlock Text="{loc:Translate GlobalSettings.Support.Description}"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+          <Button Grid.Column="1"
+                  Command="{Binding ReportBugCommand}"
+                  Background="#E50914"
+                  Foreground="White"
+                  CornerRadius="10"
+                  Padding="16,10"
+                  MinHeight="44"
+                  VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <icons:MaterialIcon Kind="BugOutline" Width="16" Height="16" />
+              <TextBlock Text="{loc:Translate GlobalSettings.Support.Report}" FontWeight="SemiBold" />
             </StackPanel>
           </Button>
-        </StackPanel>
+        </Grid>
       </Border>
 
       <Grid ColumnDefinitions="*,*"

@@ -36,6 +36,8 @@
         <converters:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibilityConverter" />
         <converters:MediaSupportsFavoriteConverter x:Key="MediaSupportsFavoriteConverter" />
         <converters:MediaSupportsMyListConverter x:Key="MediaSupportsMyListConverter" />
+        <converters:DoubleToLeftMarginConverter x:Key="DoubleToLeftMarginConverter" />
+        <converters:BoolToOpacityConverter x:Key="BoolToOpacityConverter" />
       </ResourceDictionary>
     </Application.Resources>
 

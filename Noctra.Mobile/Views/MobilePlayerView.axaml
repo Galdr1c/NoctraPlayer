@@ -5,6 +5,7 @@
              xmlns:models="using:Noctra.Models"
              xmlns:vm="using:Noctra.ViewModels"
              xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:controls="using:Noctra.Mobile.Controls"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.MobilePlayerView"
              x:Name="PlayerRoot"
@@ -21,12 +22,15 @@
     </Style>
   </UserControl.Styles>
 
-  <Border Background="{DynamicResource Bg0Brush}"
-          Padding="16"
-          CornerRadius="18"
-          VerticalAlignment="Bottom"
-          Margin="14">
-    <StackPanel Spacing="12">
+  <Grid>
+    <!-- Normal mod: bottom sheet (EPG kapalıyken) -->
+    <Border Background="{DynamicResource Bg0Brush}"
+            Padding="16"
+            CornerRadius="18"
+            VerticalAlignment="Bottom"
+            Margin="14"
+            IsVisible="{Binding !IsEpgPanelOpen}">
+      <StackPanel Spacing="12">
       <Grid ColumnDefinitions="*,Auto">
         <StackPanel Spacing="4">
           <TextBlock Text="{Binding CurrentChannel.Name}"
@@ -49,6 +53,45 @@
           </StackPanel>
         </Button>
       </Grid>
+
+      <!-- LIVE Badge + Current Program (sadece canlı yayında) -->
+      <StackPanel Orientation="Horizontal"
+                  Spacing="12"
+                  IsVisible="{Binding IsLiveContent}">
+        <Border Background="{DynamicResource ErrorBrush}"
+                CornerRadius="6"
+                Padding="12,6"
+                VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Ellipse Width="8" Height="8" Fill="White" VerticalAlignment="Center">
+              <Ellipse.Styles>
+                <Style Selector="Ellipse">
+                  <Style.Animations>
+                    <Animation Duration="0:0:1" IterationCount="INFINITE" PlaybackDirection="Alternate">
+                      <KeyFrame Cue="0%"><Setter Property="Opacity" Value="1"/></KeyFrame>
+                      <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.3"/></KeyFrame>
+                    </Animation>
+                  </Style.Animations>
+                </Style>
+              </Ellipse.Styles>
+            </Ellipse>
+            <TextBlock Text="{loc:Translate Player.Overlay.Live}"
+                       FontSize="12" FontWeight="Black" Foreground="White"
+                       VerticalAlignment="Center" LetterSpacing="1" />
+          </StackPanel>
+        </Border>
+        <StackPanel VerticalAlignment="Center" Spacing="1">
+          <TextBlock Text="{Binding CurrentProgram.Title}"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
+                     FontSize="15" FontWeight="Bold"
+                     TextTrimming="CharacterEllipsis" MaxLines="1"
+                     IsVisible="{Binding CurrentProgram.Title, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+          <TextBlock Text="{Binding CurrentProgram.TimeRange}"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     FontSize="12" FontWeight="Medium"
+                     IsVisible="{Binding HasCurrentProgramInfo}" />
+        </StackPanel>
+      </StackPanel>
 
       <Grid ColumnDefinitions="*,*,*"
             ColumnSpacing="8">
@@ -194,6 +237,15 @@
           <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
             <icons:MaterialIcon Kind="TimerOutline" Width="18" Height="18" />
             <TextBlock Text="{Binding SleepTimerLabel}" />
+          </StackPanel>
+        </Button>
+        <Button Classes="compactPlayerAction"
+                Command="{Binding ToggleEpgPanelCommand}"
+                IsVisible="{Binding IsLiveContent}"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="CalendarClock" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Player.Epg.GuideTooltip}" />
           </StackPanel>
         </Button>
       </WrapPanel>
@@ -739,6 +791,302 @@
           </Grid>
         </Border>
       </StackPanel>
+
+      <!-- Next Episode Prompt → bölüm bitince öneri kartı -->
+      <Border Background="{DynamicResource Surface0Brush}"
+              CornerRadius="16"
+              Padding="16"
+              IsVisible="{Binding IsNextEpisodePromptVisible}">
+        <StackPanel Spacing="10">
+          <TextBlock Text="{loc:Translate Player.Overlay.NextEpisode}"
+                     FontSize="12"
+                     Foreground="{DynamicResource TextMutedBrush}" />
+          <TextBlock Text="{Binding NextEpisode.Name}"
+                     FontSize="15"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
+                     TextTrimming="CharacterEllipsis"
+                     MaxLines="1" />
+          <Button Command="{Binding PlayNextEpisodeCommand}"
+                  MinHeight="44"
+                  CornerRadius="10"
+                  Background="{DynamicResource AccentBrush}"
+                  Foreground="{DynamicResource TextPrimaryBrush}"
+                  FontSize="14"
+                  FontWeight="Bold"
+                  BorderThickness="0"
+                  HorizontalAlignment="Stretch">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+              <icons:MaterialIcon Kind="Play" Width="16" Height="16" Foreground="{DynamicResource TextPrimaryBrush}" />
+              <TextBlock Text="{loc:Translate Player.NextEpisode.WatchNow}" FontSize="14" FontWeight="Bold" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </Border>
+
+      <!-- Resume Dialog (inline card — mobile pattern) -->
+      <Border Background="{DynamicResource Surface0Brush}"
+              CornerRadius="16"
+              Padding="20"
+              IsVisible="{Binding IsResumeDialogVisible}">
+        <StackPanel Spacing="16">
+          <StackPanel Spacing="8" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="PlayCircleOutline"
+                                Width="40" Height="40"
+                                Foreground="{DynamicResource AccentBrush}"
+                                HorizontalAlignment="Center" />
+            <TextBlock Text="{loc:Translate Player.Resume.Title}"
+                       FontSize="18" FontWeight="Bold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       HorizontalAlignment="Center" />
+          </StackPanel>
+          <Border Background="{DynamicResource Surface1Brush}" CornerRadius="10" Padding="14,10">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+              <icons:MaterialIcon Kind="ClockOutline" Width="16" Height="16"
+                                  Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" />
+              <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <TextBlock Text="{loc:Translate Player.Resume.LastPosition}"
+                           Foreground="{DynamicResource TextMutedBrush}" FontSize="13" />
+                <TextBlock Text="{Binding ResumePositionText}"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           FontSize="13" FontWeight="SemiBold" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+          <StackPanel Spacing="10">
+            <Button Command="{Binding ResumeFromPositionCommand}"
+                    IsVisible="{Binding IsPremiumResume}"
+                    MinHeight="48" BorderThickness="0" CornerRadius="12"
+                    HorizontalAlignment="Stretch">
+              <Button.Background>
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                  <GradientStop Color="#8B5CF6" Offset="0" />
+                  <GradientStop Color="#A855F7" Offset="1" />
+                </LinearGradientBrush>
+              </Button.Background>
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                <icons:MaterialIcon Kind="Play" Width="18" Height="18" Foreground="White" />
+                <TextBlock Text="{loc:Translate Player.Resume.Continue}" Foreground="White"
+                           FontSize="14" FontWeight="SemiBold" />
+              </StackPanel>
+            </Button>
+            <Button IsVisible="{Binding !IsPremiumResume}" IsEnabled="False"
+                    MinHeight="48" CornerRadius="12" BorderThickness="1"
+                    Background="{DynamicResource Surface1Brush}"
+                    HorizontalAlignment="Stretch">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal"
+                            HorizontalAlignment="Center" Spacing="8">
+                  <icons:MaterialIcon Kind="Play" Width="18" Height="18"
+                                      Foreground="{DynamicResource TextMutedBrush}" />
+                  <TextBlock Text="{loc:Translate Player.Resume.Continue}"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             FontSize="14" FontWeight="SemiBold" />
+                </StackPanel>
+                <icons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18"
+                                    Foreground="{DynamicResource TextMutedBrush}"
+                                    VerticalAlignment="Center" Margin="0,0,16,0" />
+              </Grid>
+            </Button>
+            <Button Command="{Binding StartFromBeginningCommand}"
+                    MinHeight="48" CornerRadius="12"
+                    Background="{DynamicResource Surface0Brush}"
+                    Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14"
+                    BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                    HorizontalAlignment="Stretch">
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                <icons:MaterialIcon Kind="SkipBackward" Width="18" Height="18" />
+                <TextBlock Text="{loc:Translate Player.Resume.StartOver}" FontWeight="SemiBold" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+          <Border IsVisible="{Binding !IsPremiumResume}"
+                  Background="Transparent" Padding="4" HorizontalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <icons:MaterialIcon Kind="Crown" Width="14" Height="14"
+                                  Foreground="{DynamicResource AccentLightBrush}" />
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="{loc:Translate Common.Premium}" FontSize="12"
+                           Foreground="{DynamicResource AccentLightBrush}" />
+                <TextBlock Text="{loc:Translate Player.Resume.UpgradeNote}" FontSize="12"
+                           Foreground="{DynamicResource TextMutedBrush}" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Border>
     </StackPanel>
   </Border>
+
+    <!-- EPG MODU: player compact üstte, EPG timeline tüm alanı dolduruyor -->
+    <Grid RowDefinitions="Auto,*"
+          IsVisible="{Binding IsEpgPanelOpen}">
+      <!-- Üst compact player bar -->
+      <Border Background="{DynamicResource Bg0Brush}"
+              Padding="16,10"
+              BoxShadow="0 4 20 0 #88000000">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel VerticalAlignment="Center" Spacing="2">
+            <TextBlock Text="{Binding CurrentChannel.Name}"
+                       FontSize="16" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimaryBrush}" />
+            <TextBlock Text="{Binding ConnectionStatus}"
+                       FontSize="11"
+                       Foreground="{DynamicResource TextMutedBrush}" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Button Command="{Binding PlayPauseCommand}"
+                    MinHeight="36" MinWidth="36"
+                    Background="Transparent" BorderThickness="0" CornerRadius="18"
+                    ToolTip.Tip="{loc:Translate Player.Overlay.PlayPause.Tooltip}">
+              <Grid>
+                <icons:MaterialIcon Kind="Pause" Width="20" Height="20"
+                                    Foreground="{DynamicResource TextPrimaryBrush}"
+                                    IsVisible="{Binding IsPlaying}" />
+                <icons:MaterialIcon Kind="Play" Width="20" Height="20"
+                                    Foreground="{DynamicResource TextPrimaryBrush}"
+                                    IsVisible="{Binding !IsPlaying}" />
+              </Grid>
+            </Button>
+            <Button Command="{Binding ToggleEpgPanelCommand}"
+                    MinHeight="36" MinWidth="36"
+                    Background="Transparent" BorderThickness="0" CornerRadius="18">
+              <icons:MaterialIcon Kind="Close" Width="18" Height="18"
+                                  Foreground="{DynamicResource TextPrimaryBrush}" />
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- EPG Timeline paneli (tüm kalan alanı kaplar) -->
+      <Grid Grid.Row="1" Background="#EE0D0D0D">
+        <Grid RowDefinitions="Auto,*">
+          <!-- EPG Header -->
+          <Border Padding="14,10" Background="#1A7B2FBE">
+            <Grid ColumnDefinitions="*,Auto,Auto">
+              <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <icons:MaterialIcon Kind="CalendarClock" Width="18" Height="18"
+                                    Foreground="{DynamicResource AccentBrush}" />
+                <TextBlock Text="{loc:Translate Player.Epg.GuideTitle}"
+                           FontSize="11" FontWeight="Black"
+                           Foreground="{DynamicResource AccentBrush}" LetterSpacing="2"
+                           VerticalAlignment="Center" />
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
+                            IsVisible="{Binding IsEpgLoading}">
+                  <ProgressBar IsIndeterminate="True" Width="50" Height="3"
+                               Foreground="{DynamicResource AccentBrush}" Background="#1AFFFFFF" />
+                  <TextBlock Text="{loc:Translate Common.Loading}" FontSize="10"
+                             Foreground="{DynamicResource TextMutedBrush}" />
+                </StackPanel>
+              </StackPanel>
+              <Border Grid.Column="1" Background="#33F59E0B" BorderBrush="#66F59E0B"
+                      BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,0,8,0"
+                      VerticalAlignment="Center" IsVisible="{Binding IsEpgUpdateRequired}">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                  <icons:MaterialIcon Kind="AlertCircle" Width="12" Height="12"
+                                      Foreground="#FBBF24" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding EpgStatusMessage}" FontSize="10" FontWeight="SemiBold"
+                             Foreground="#FDE68A" TextTrimming="CharacterEllipsis" MaxWidth="120" />
+                </StackPanel>
+              </Border>
+              <Button Grid.Column="2" Command="{Binding ToggleEpgPanelCommand}"
+                      MinHeight="36" MinWidth="36"
+                      Background="Transparent" BorderThickness="0" CornerRadius="18">
+                <icons:MaterialIcon Kind="Close" Width="16" Height="16"
+                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+              </Button>
+            </Grid>
+          </Border>
+
+          <!-- Timeline: kanal listesi + program blokları (tüm alanı doldurur) -->
+          <ScrollViewer Grid.Row="1"
+                        HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Auto"
+                        Background="{DynamicResource Bg0Brush}">
+            <ItemsControl ItemsSource="{Binding EpgRows}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Height="52" BorderBrush="#0DFFFFFF"
+                          BorderThickness="0,0,0,1"
+                          PointerReleased="EpgRow_PointerReleased">
+                    <Grid>
+                      <!-- Current channel accent highlight overlay -->
+                      <Border Background="#147B2FBE" IsVisible="{Binding IsCurrentChannel}" IsHitTestVisible="False" />
+                      <Border Background="{DynamicResource Bg0Brush}" IsVisible="{Binding !IsCurrentChannel}" IsHitTestVisible="False" />
+
+                      <Grid ColumnDefinitions="90,*">
+                        <!-- Kanal adı + logo (sol sütun) -->
+                        <Border Grid.Column="0" Background="#0D0D0D" BorderBrush="#1AFFFFFF"
+                                BorderThickness="0,0,1,0" Padding="6,0">
+                          <Grid ColumnDefinitions="28,*" ColumnSpacing="6" VerticalAlignment="Center">
+                            <!-- Channel logo -->
+                            <Border Width="28" Height="28" CornerRadius="6" ClipToBounds="True"
+                                    Background="{DynamicResource Surface1Brush}">
+                              <Grid>
+                                <icons:MaterialIcon Kind="Television" Width="14" Height="14"
+                                                    Foreground="{DynamicResource AccentBrush}" />
+                                <controls:RemoteImage Url="{Binding Channel.LogoUrl}" Stretch="Uniform" />
+                              </Grid>
+                            </Border>
+                            <!-- Channel name + group -->
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                              <TextBlock Text="{Binding Channel.Name}" FontSize="10" FontWeight="SemiBold"
+                                         Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" MaxLines="1" />
+                              <TextBlock Text="{Binding Channel.GroupTitle}" FontSize="7"
+                                         Foreground="{DynamicResource TextMutedBrush}" TextTrimming="CharacterEllipsis" MaxLines="1"
+                                         IsVisible="{Binding Channel.GroupTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+                            </StackPanel>
+                          </Grid>
+                        </Border>
+
+                        <!-- Program blokları + NOW çizgisi -->
+                        <Grid Grid.Column="1" HorizontalAlignment="Left" Width="{Binding CanvasWidth}">
+                          <TextBlock Text="{loc:Translate Player.Epg.NoInfo}" FontSize="10"
+                                     Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"
+                                     Margin="8,0,0,0"
+                                     IsVisible="{Binding HasEpgData, Converter={StaticResource InverseBoolConverter}}" />
+                          <ItemsControl ItemsSource="{Binding Blocks}" IsVisible="{Binding HasEpgData}">
+                            <ItemsControl.ItemsPanel>
+                              <ItemsPanelTemplate>
+                                <Grid />
+                              </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate>
+                                <Border Width="{Binding PixelWidth}"
+                                        Margin="{Binding PixelLeft, Converter={StaticResource DoubleToLeftMarginConverter}}"
+                                        HorizontalAlignment="Left" VerticalAlignment="Center"
+                                        Height="38" CornerRadius="4" ClipToBounds="True" Padding="6,0"
+                                        Background="#267B2FBE" BorderBrush="#40FFFFFF" BorderThickness="0,0,0,0"
+                                        Opacity="{Binding IsPast, Converter={StaticResource BoolToOpacityConverter}}">
+                                  <Grid IsVisible="{Binding HasReadableText}">
+                                    <TextBlock Text="{Binding Program.Title}" FontSize="10" FontWeight="SemiBold"
+                                               Foreground="White" TextTrimming="CharacterEllipsis" MaxLines="1" VerticalAlignment="Center" />
+                                  </Grid>
+                                </Border>
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                          <Border Width="1.5" HorizontalAlignment="Left" VerticalAlignment="Stretch"
+                                  Background="#CC7B2FBE"
+                                  Margin="{Binding NowLineLeft, Converter={StaticResource DoubleToLeftMarginConverter}}"
+                                  IsHitTestVisible="False" ZIndex="10" />
+                        </Grid>
+                      </Grid>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Grid>
+      </Grid>
+    </Grid>
+  </Grid>
+
 </UserControl>
