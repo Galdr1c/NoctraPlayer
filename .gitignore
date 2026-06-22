@@ -15,6 +15,7 @@ secrets.json
 *.key
 *.crt
 *.cer
+Noctra.Mobile/Services/MobileAppConfig.cs
 
 # Vercel / Upstash / TMDB proxy local state
 .vercel/

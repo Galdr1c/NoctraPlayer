@@ -217,6 +217,16 @@
                 BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
                 Foreground="{DynamicResource TextPrimaryBrush}" />
+        <Button Classes="action"
+                Command="{Binding DeleteProfileCommand}"
+                CommandParameter="{Binding EditingProfile}"
+                Content="{loc:Translate Profiles.Add.DeleteProfile}"
+                Background="Transparent"
+                BorderBrush="{DynamicResource ErrorBrush}"
+                BorderThickness="1"
+                Foreground="{DynamicResource ErrorBrush}"
+                IsVisible="{Binding EditingProfile, Converter={x:Static ObjectConverters.IsNotNull}}"
+                Margin="0,16,0,0" />
       </StackPanel>
     </ScrollViewer>
 

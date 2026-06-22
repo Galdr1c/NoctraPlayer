@@ -70,6 +70,7 @@ public static class AndroidServiceCollectionExtensions
         services.AddTransient<AddProfileViewModel>();
         services.AddTransient<AvatarPickerViewModel>();
         services.AddTransient<ProfileLoadingViewModel>();
+        services.AddSingleton<IReviewPromptService, AndroidReviewPromptService>();
 
         return services;
     }

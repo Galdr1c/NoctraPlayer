@@ -60,6 +60,9 @@ public partial class MainView : UserControl
 
         // Show legal consent on first launch
         _ = ShowLegalConsentIfNeededAsync();
+
+        // Try showing review prompt after a delay (same logic as desktop)
+        _ = TryShowReviewPromptAsync();
     }
 
     private async Task ShowLegalConsentIfNeededAsync()
@@ -67,6 +70,57 @@ public partial class MainView : UserControl
         // Small delay to let the UI settle
         await Task.Delay(500);
         await LegalConsentOverlay.ShowConsentFlowAsync();
+    }
+
+    private async Task TryShowReviewPromptAsync()
+    {
+        try
+        {
+            if (Application.Current is not App { Services: not null } app)
+            {
+                return;
+            }
+
+            var reviewService = app.Services.GetService<IReviewPromptService>();
+            if (reviewService is not null)
+            {
+                // Surface state check — mirrors desktop's IsReviewPromptAllowedSurface.
+                // Checked here (before the 3-min delay) so we skip early if not ready.
+                if (!IsReviewSurfaceReady())
+                    return;
+
+                await reviewService.TryShowMainWindowPromptAsync();
+            }
+        }
+        catch
+        {
+            // Non-critical: ignore review prompt errors silently.
+        }
+    }
+
+    /// <summary>
+    /// Checks if the current UI surface is suitable for showing a review prompt.
+    /// Mirrors desktop's IsReviewPromptAllowedSurface logic.
+    /// </summary>
+    private bool IsReviewSurfaceReady()
+    {
+        // Legal consent overlay is showing
+        if (LegalConsentOverlay.IsVisible)
+            return false;
+
+        // Player is visible (playing, fullscreen, PiP, etc.)
+        if (PlayerHost.IsVisible)
+            return false;
+
+        // Core content is not loaded yet
+        if (!CoreContentHost.IsVisible)
+            return false;
+
+        // Main content area should be visible (not in a sub-page like profile list)
+        if (!HeaderBar.IsVisible)
+            return false;
+
+        return true;
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
