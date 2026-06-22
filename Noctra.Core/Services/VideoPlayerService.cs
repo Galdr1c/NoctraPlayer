@@ -3,6 +3,7 @@ using Noctra.Core.Services;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
 using System.IO;
+using System.Net;
 
 namespace Noctra.Services;
 
@@ -587,26 +588,30 @@ public class VideoPlayerService : IVideoPlayerService
             {
                 if (_libVLC == null) return;
 
+                var playbackSource = BuildPlaybackSource(url);
                 Media media;
 
                 // Gelen URL'nin bir internet yayını mı yoksa yerel dosya mı olduğunu anla
-                bool isNetworkStream = url.StartsWith("http", StringComparison.OrdinalIgnoreCase) ||
-                                    url.StartsWith("rtmp", StringComparison.OrdinalIgnoreCase) ||
-                                    url.StartsWith("rtsp", StringComparison.OrdinalIgnoreCase);
+                bool isNetworkStream = playbackSource.Url.StartsWith("http", StringComparison.OrdinalIgnoreCase) ||
+                                    playbackSource.Url.StartsWith("rtmp", StringComparison.OrdinalIgnoreCase) ||
+                                    playbackSource.Url.StartsWith("rtsp", StringComparison.OrdinalIgnoreCase);
 
                 if (isNetworkStream)
                 {
                     // 🌐 İNTERNET YAYINI (IPTV / VOD) - Akıllı profiller
-                    media = new Media(_libVLC, url, FromType.FromLocation);
+                    media = new Media(_libVLC, playbackSource.Url, FromType.FromLocation);
 
-                    var currentUa = string.IsNullOrWhiteSpace(_lastUserAgent) ? "VLC/3.0.4" : _lastUserAgent;
+                    var currentUa = playbackSource.Headers.TryGetValue("User-Agent", out var inlineUserAgent) && !string.IsNullOrWhiteSpace(inlineUserAgent)
+                        ? inlineUserAgent
+                        : string.IsNullOrWhiteSpace(_lastUserAgent) ? "VLC/3.0.4" : _lastUserAgent;
                     media.AddOption($":http-user-agent={currentUa}");
+                    ApplyInlineHttpOptions(media, playbackSource.Headers);
                     media.AddOption(":http-reconnect=true");
 
                     var netCaching = GetNetworkCaching();
                     var liveCaching = GetLiveCaching();
 
-                    var streamProfile = DetectStreamProfile(url);
+                    var streamProfile = DetectStreamProfile(playbackSource.Url);
                     switch (streamProfile)
                     {
                         case StreamProfile.LiveTs:
@@ -667,8 +672,8 @@ public class VideoPlayerService : IVideoPlayerService
                 else
                 {
                     // 💾 YEREL DOSYA (İndirilen İçerik)
-                    string localPath = url;
-                    if (Uri.TryCreate(url, UriKind.Absolute, out var fileUri) && fileUri.IsFile)
+                    string localPath = playbackSource.Url;
+                    if (Uri.TryCreate(playbackSource.Url, UriKind.Absolute, out var fileUri) && fileUri.IsFile)
                     {
                         localPath = fileUri.LocalPath;
                     }
@@ -848,6 +853,111 @@ public class VideoPlayerService : IVideoPlayerService
             }
         }
     }
+    private PlaybackSource BuildPlaybackSource(string url)
+    {
+        var (cleanUrl, inlineHeaders) = SplitInlineHeaders(url);
+        return new PlaybackSource(cleanUrl, inlineHeaders);
+    }
+
+    private static (string CleanUrl, Dictionary<string, string> Headers) SplitInlineHeaders(string url)
+    {
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var pipeIndex = url.IndexOf('|');
+        if (pipeIndex < 0)
+        {
+            return (url, headers);
+        }
+
+        var cleanUrl = url[..pipeIndex].Trim();
+        var rawOptions = url[(pipeIndex + 1)..].Trim();
+        if (rawOptions.Length == 0)
+        {
+            return (cleanUrl, headers);
+        }
+
+        foreach (var part in rawOptions.Split('&', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var equalsIndex = part.IndexOf('=');
+            if (equalsIndex <= 0 || equalsIndex >= part.Length - 1)
+            {
+                continue;
+            }
+
+            var key = NormalizeHeaderName(WebUtility.UrlDecode(part[..equalsIndex]).Trim());
+            var value = WebUtility.UrlDecode(part[(equalsIndex + 1)..]).Trim();
+            if (key.Length > 0 && value.Length > 0)
+            {
+                headers[key] = value;
+            }
+        }
+
+        return (cleanUrl, headers);
+    }
+
+    private static string NormalizeHeaderName(string rawName)
+    {
+        var normalized = rawName.Trim();
+        return normalized.ToLowerInvariant() switch
+        {
+            "ua" => "User-Agent",
+            "useragent" => "User-Agent",
+            "user-agent" => "User-Agent",
+            "http-user-agent" => "User-Agent",
+            "referer" => "Referer",
+            "referrer" => "Referer",
+            "http-referrer" => "Referer",
+            "http-referer" => "Referer",
+            "origin" => "Origin",
+            "cookie" => "Cookie",
+            "authorization" => "Authorization",
+            "x-user-agent" => "X-User-Agent",
+            _ => normalized
+        };
+    }
+
+    private static void ApplyInlineHttpOptions(Media media, IReadOnlyDictionary<string, string> headers)
+    {
+        foreach (var header in headers)
+        {
+            if (string.IsNullOrWhiteSpace(header.Value))
+            {
+                continue;
+            }
+
+            switch (NormalizeHeaderName(header.Key))
+            {
+                case "User-Agent":
+                    // Handled explicitly before this method so it can override the global User-Agent cleanly.
+                    break;
+                case "Referer":
+                    media.AddOption($":http-referrer={header.Value}");
+                    break;
+                case "Cookie":
+                    media.AddOption($":http-cookie={header.Value}");
+                    media.AddOption(":http-forward-cookies");
+                    break;
+                case "Origin":
+                    media.AddOption($":http-origin={header.Value}");
+                    break;
+                default:
+                    System.Diagnostics.Debug.WriteLine($"[VideoPlayerService] Inline HTTP header '{header.Key}' is not directly supported by LibVLC options.");
+                    break;
+            }
+        }
+    }
+
+    private sealed class PlaybackSource
+    {
+        public PlaybackSource(string url, Dictionary<string, string> headers)
+        {
+            Url = url;
+            Headers = headers;
+        }
+
+        public string Url { get; }
+        public Dictionary<string, string> Headers { get; }
+    }
+
     public void Pause()
     {
         if (_mediaPlayer != null)

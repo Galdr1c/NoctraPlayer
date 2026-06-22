@@ -1,19 +1,28 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Android.Content;
 using Android.Media;
+using Android.OS;
 using Noctra.Models;
+using Noctra.Services;
 using Noctra.Services.Interfaces;
 
 namespace Noctra.Android.Services;
 
 public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerService
 {
+    private const string DefaultUserAgent = "Noctra.Mobile/1.0";
+
     private readonly AndroidVideoSurfaceService _videoSurfaceService;
+    private readonly Context _applicationContext;
+    private readonly ISettingsService _settingsService;
+    private readonly INetworkService _networkService;
     private readonly object _trackSync = new();
     private readonly List<(int Id, string? Name)> _audioTracks = new();
     private readonly List<(int Id, string? Name)> _subtitleTracks = new();
@@ -28,6 +37,11 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     private int _selectedAudioTrack = -1;
     private int _selectedSubtitleTrack = -1;
     private int _subtitleSequence;
+    private string _lastUserAgent = string.Empty;
+    private BufferSize _lastVideoBufferSize = BufferSize.Normal;
+    private bool _lastHardwareAcceleration = true;
+    private DataUsageLevel _lastDataUsage = DataUsageLevel.Auto;
+    private CancellationTokenSource? _reinitializeCts;
 
     public string? CurrentUrl => _currentUrl;
     public bool IsPlaying => _mediaPlayer?.IsPlaying == true;
@@ -70,9 +84,19 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     public event EventHandler<string?>? SubtitleTextChanged;
     public event EventHandler<StreamQualityInfo>? QualityDetected;
 
-    public AndroidVideoPlayerService(AndroidVideoSurfaceService videoSurfaceService)
+    public AndroidVideoPlayerService(
+        AndroidVideoSurfaceService videoSurfaceService,
+        Context applicationContext,
+        ISettingsService settingsService,
+        INetworkService networkService)
     {
         _videoSurfaceService = videoSurfaceService;
+        _applicationContext = applicationContext.ApplicationContext ?? applicationContext;
+        _settingsService = settingsService;
+        _networkService = networkService;
+
+        ApplySettingsSnapshot(_settingsService.Settings, updateAudioState: false);
+        _settingsService.SettingsChanged += OnSettingsChanged;
     }
 
     public int Volume
@@ -145,6 +169,9 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var player = new global::Android.Media.MediaPlayer();
+        var playbackSource = BuildPlaybackSource(url);
+        ConfigureAndroidMediaPlayer(player);
+        EnsureNetworkCanPlay(playbackSource);
         _mediaPlayer = player;
 
         player.Prepared += (_, _) =>
@@ -204,7 +231,15 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 player.SetSurface(surface);
             }
 
-            player.SetDataSource(url);
+            if (playbackSource.IsNetworkStream)
+            {
+                player.SetDataSource(_applicationContext, global::Android.Net.Uri.Parse(playbackSource.Url), playbackSource.Headers);
+            }
+            else
+            {
+                player.SetDataSource(playbackSource.Url);
+            }
+
             player.PrepareAsync();
             await completion.Task.ConfigureAwait(false);
         }
@@ -223,10 +258,26 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         return Task.CompletedTask;
     }
 
-    public Task ReinitializeAsync()
+    public async Task ReinitializeAsync()
     {
-        Stop();
-        return Task.CompletedTask;
+        ThrowIfDisposed();
+
+        var url = _currentUrl;
+        if (string.IsNullOrWhiteSpace(url) || !_hasLoadedMedia)
+        {
+            Stop();
+            return;
+        }
+
+        var currentPositionSeconds = CurrentTimeMilliseconds / 1000d;
+        var wasPlaying = IsPlaying;
+
+        await PlayAsync(url, currentPositionSeconds).ConfigureAwait(false);
+
+        if (!wasPlaying)
+        {
+            Pause();
+        }
     }
 
     public void Pause()
@@ -366,11 +417,321 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     {
         if (!_isDisposed)
         {
+            _settingsService.SettingsChanged -= OnSettingsChanged;
+            _reinitializeCts?.Cancel();
+            _reinitializeCts?.Dispose();
             Stop();
             _isDisposed = true;
         }
 
         base.Dispose(disposing);
+    }
+
+    private void ApplySettingsSnapshot(AppSettings settings, bool updateAudioState)
+    {
+        var normalizedVolume = Math.Clamp(settings.DefaultVolume, 0, 100);
+        var volumeChanged = _volume != normalizedVolume || _isMuted != settings.IsMuted;
+
+        _volume = normalizedVolume;
+        _isMuted = settings.IsMuted;
+        _lastUserAgent = settings.UserAgent ?? string.Empty;
+        _lastVideoBufferSize = settings.VideoBufferSize;
+        _lastHardwareAcceleration = settings.HardwareAcceleration;
+        _lastDataUsage = settings.DataUsage;
+
+        if (updateAudioState && volumeChanged)
+        {
+            ApplyVolume();
+            VolumeChanged?.Invoke(this, _volume);
+        }
+    }
+
+    private void OnSettingsChanged()
+    {
+        var settings = _settingsService.Settings;
+        var previousUserAgent = _lastUserAgent;
+        var previousBufferSize = _lastVideoBufferSize;
+        var previousDataUsage = _lastDataUsage;
+        var previousHardwareAcceleration = _lastHardwareAcceleration;
+
+        ApplySettingsSnapshot(settings, updateAudioState: true);
+
+        var requiresDataSourceReopen =
+            !string.Equals(previousUserAgent, _lastUserAgent, StringComparison.Ordinal) ||
+            previousBufferSize != _lastVideoBufferSize ||
+            previousDataUsage != _lastDataUsage;
+
+        // Android MediaPlayer uses the platform decoder/surface path and does not expose a VLC-style
+        // per-source hardware acceleration toggle. Keep the value tracked so a future Media3/ExoPlayer
+        // service can honor it without changing the settings contract.
+        if (previousHardwareAcceleration != _lastHardwareAcceleration)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                "[AndroidVideoPlayerService] HardwareAcceleration changed; Android MediaPlayer has no per-player toggle.");
+        }
+
+        if (requiresDataSourceReopen && _hasLoadedMedia && !string.IsNullOrWhiteSpace(_currentUrl))
+        {
+            ScheduleReinitialize();
+        }
+    }
+
+    private void ScheduleReinitialize()
+    {
+        var oldCts = _reinitializeCts;
+        var cts = new CancellationTokenSource();
+        _reinitializeCts = cts;
+
+        try
+        {
+            oldCts?.Cancel();
+            oldCts?.Dispose();
+        }
+        catch
+        {
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(500, cts.Token).ConfigureAwait(false);
+                if (!cts.Token.IsCancellationRequested)
+                {
+                    await ReinitializeAsync().ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] Reinitialize after settings change failed: {ex.Message}");
+                ErrorOccurred?.Invoke(this, ex.Message);
+            }
+        }, cts.Token);
+    }
+
+    private void ConfigureAndroidMediaPlayer(global::Android.Media.MediaPlayer player)
+    {
+        try
+        {
+            using var builder = new AudioAttributes.Builder();
+            builder.SetUsage(AudioUsageKind.Media);
+            builder.SetContentType(AudioContentType.Movie);
+
+            using var attributes = builder.Build();
+            if (attributes is not null)
+            {
+                player.SetAudioAttributes(attributes);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] SetAudioAttributes failed: {ex.Message}");
+        }
+
+        try
+        {
+            player.SetWakeMode(_applicationContext, WakeLockFlags.Partial);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] SetWakeMode failed: {ex.Message}");
+        }
+
+        try
+        {
+            player.SetScreenOnWhilePlaying(true);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] SetScreenOnWhilePlaying failed: {ex.Message}");
+        }
+    }
+
+    private void EnsureNetworkCanPlay(PlaybackSource playbackSource)
+    {
+        if (!playbackSource.IsNetworkStream)
+        {
+            return;
+        }
+
+        if (string.Equals(_networkService.CurrentNetworkStatus, "Offline", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Ağ bağlantısı yok. Yayın başlatılamadı.");
+        }
+    }
+
+    private PlaybackSource BuildPlaybackSource(string url)
+    {
+        var (cleanUrl, inlineHeaders) = SplitInlineHeaders(url);
+        var isNetworkStream = IsNetworkStreamUrl(cleanUrl);
+
+        if (!isNetworkStream)
+        {
+            return new PlaybackSource(cleanUrl, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase), false);
+        }
+
+        var headers = BuildNetworkHeaders(cleanUrl);
+        foreach (var header in inlineHeaders)
+        {
+            var normalizedName = NormalizeHeaderName(header.Key);
+            if (!string.IsNullOrWhiteSpace(normalizedName) && !string.IsNullOrWhiteSpace(header.Value))
+            {
+                headers[normalizedName] = header.Value.Trim();
+            }
+        }
+
+        return new PlaybackSource(cleanUrl, headers, true);
+    }
+
+    private Dictionary<string, string> BuildNetworkHeaders(string url)
+    {
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["User-Agent"] = ResolveUserAgent(),
+            ["Accept"] = GetAcceptHeader(url),
+            ["Connection"] = "keep-alive"
+        };
+
+        if (ShouldRequestReducedData())
+        {
+            headers["Save-Data"] = "on";
+        }
+
+        return headers;
+    }
+
+    private string ResolveUserAgent()
+    {
+        return string.IsNullOrWhiteSpace(_lastUserAgent)
+            ? DefaultUserAgent
+            : _lastUserAgent.Trim();
+    }
+
+    private bool ShouldRequestReducedData()
+    {
+        if (_lastDataUsage == DataUsageLevel.Low || _lastDataUsage == DataUsageLevel.Medium)
+        {
+            return true;
+        }
+
+        return _lastDataUsage == DataUsageLevel.Auto &&
+               string.Equals(_networkService.CurrentNetworkStatus, "Cellular", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string GetAcceptHeader(string url)
+    {
+        var profile = DetectStreamProfile(url);
+        return profile switch
+        {
+            AndroidStreamProfile.LiveM3u8 => "application/vnd.apple.mpegurl,application/x-mpegURL,*/*",
+            AndroidStreamProfile.LiveTs => "video/MP2T,video/*,*/*",
+            AndroidStreamProfile.VodMp4 => "video/mp4,video/*,*/*",
+            AndroidStreamProfile.VodMkv => "video/x-matroska,video/*,*/*",
+            _ => "*/*"
+        };
+    }
+
+    private static (string CleanUrl, Dictionary<string, string> Headers) SplitInlineHeaders(string url)
+    {
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var pipeIndex = url.IndexOf('|');
+        if (pipeIndex < 0)
+        {
+            return (url, headers);
+        }
+
+        var cleanUrl = url[..pipeIndex].Trim();
+        var rawOptions = url[(pipeIndex + 1)..].Trim();
+        if (rawOptions.Length == 0)
+        {
+            return (cleanUrl, headers);
+        }
+
+        foreach (var part in rawOptions.Split('&', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var equalsIndex = part.IndexOf('=');
+            if (equalsIndex <= 0 || equalsIndex >= part.Length - 1)
+            {
+                continue;
+            }
+
+            var key = WebUtility.UrlDecode(part[..equalsIndex]).Trim();
+            var value = WebUtility.UrlDecode(part[(equalsIndex + 1)..]).Trim();
+            if (key.Length > 0 && value.Length > 0)
+            {
+                headers[key] = value;
+            }
+        }
+
+        return (cleanUrl, headers);
+    }
+
+    private static string NormalizeHeaderName(string rawName)
+    {
+        var normalized = rawName.Trim();
+        return normalized.ToLowerInvariant() switch
+        {
+            "ua" => "User-Agent",
+            "useragent" => "User-Agent",
+            "user-agent" => "User-Agent",
+            "http-user-agent" => "User-Agent",
+            "referer" => "Referer",
+            "referrer" => "Referer",
+            "http-referrer" => "Referer",
+            "http-referer" => "Referer",
+            "origin" => "Origin",
+            "cookie" => "Cookie",
+            "authorization" => "Authorization",
+            "x-user-agent" => "X-User-Agent",
+            _ => normalized
+        };
+    }
+
+    private static bool IsNetworkStreamUrl(string url)
+    {
+        return url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+               url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+               url.StartsWith("rtmp://", StringComparison.OrdinalIgnoreCase) ||
+               url.StartsWith("rtsp://", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static AndroidStreamProfile DetectStreamProfile(string url)
+    {
+        var lowerUrl = url.ToLowerInvariant();
+        var path = lowerUrl;
+        var queryIndex = path.IndexOf('?');
+        if (queryIndex >= 0)
+        {
+            path = path[..queryIndex];
+        }
+
+        if (path.EndsWith(".m3u8") || path.EndsWith("/m3u8") || lowerUrl.Contains("format=m3u8") || lowerUrl.Contains("extension=m3u8"))
+        {
+            return AndroidStreamProfile.LiveM3u8;
+        }
+
+        if (path.EndsWith(".ts") || path.EndsWith("/ts") || lowerUrl.Contains("extension=ts"))
+        {
+            return AndroidStreamProfile.LiveTs;
+        }
+
+        if (path.EndsWith(".mp4") || path.Contains("/movie/"))
+        {
+            return AndroidStreamProfile.VodMp4;
+        }
+
+        if (path.EndsWith(".mkv"))
+        {
+            return AndroidStreamProfile.VodMkv;
+        }
+
+        return AndroidStreamProfile.Unknown;
     }
 
     private void ApplyVolume()
@@ -664,7 +1025,15 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         try
         {
             extractor = new MediaExtractor();
-            extractor.SetDataSource(url);
+            var playbackSource = BuildPlaybackSource(url);
+            if (playbackSource.IsNetworkStream)
+            {
+                extractor.SetDataSource(playbackSource.Url, playbackSource.Headers);
+            }
+            else
+            {
+                extractor.SetDataSource(playbackSource.Url);
+            }
 
             for (int i = 0; i < extractor.TrackCount; i++)
             {
@@ -762,6 +1131,29 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             // Fallback: MIME type'ın kendisini döndür
             _ => mime.Contains('/') ? mime.Split('/')[^1].ToUpperInvariant() : mime.ToUpperInvariant()
         };
+    }
+
+    private sealed class PlaybackSource
+    {
+        public PlaybackSource(string url, IDictionary<string, string> headers, bool isNetworkStream)
+        {
+            Url = url;
+            Headers = headers;
+            IsNetworkStream = isNetworkStream;
+        }
+
+        public string Url { get; }
+        public IDictionary<string, string> Headers { get; }
+        public bool IsNetworkStream { get; }
+    }
+
+    private enum AndroidStreamProfile
+    {
+        Unknown,
+        LiveTs,
+        LiveM3u8,
+        VodMp4,
+        VodMkv
     }
 
     private void ThrowIfDisposed()

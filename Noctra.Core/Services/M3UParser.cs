@@ -152,6 +152,7 @@ public partial class M3UParser : IM3UParser
         }
 
         Channel? currentChannel = null;
+        var pendingPlaybackHeaders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         _lastPartialChannels = channels;
         string? line = hasHeader ? await reader.ReadLineAsync() : firstLine;
         
@@ -164,6 +165,12 @@ public partial class M3UParser : IM3UParser
                 if (line.StartsWith("#EXTINF", StringComparison.OrdinalIgnoreCase))
                 {
                     currentChannel = ParseExtInf(line);
+                    pendingPlaybackHeaders.Clear();
+                }
+                else if (currentChannel != null && TryCollectPlaybackHeader(line, pendingPlaybackHeaders))
+                {
+                    // Header line belongs to the current #EXTINF item. It will be encoded into the StreamUrl
+                    // as Kodi-style inline options so mobile and desktop player services can apply it later.
                 }
                 else if (line.StartsWith("#EXTGRP", StringComparison.OrdinalIgnoreCase))
                 {
@@ -174,11 +181,12 @@ public partial class M3UParser : IM3UParser
                 }
                 else if (!line.StartsWith("#") && currentChannel != null)
                 {
-                    currentChannel.StreamUrl = line;
+                    currentChannel.StreamUrl = AppendPlaybackHeaders(line, pendingPlaybackHeaders);
                     currentChannel.Type = DetectChannelType(line, currentChannel.Name, currentChannel.GroupTitle);
                     ProcessGroupTitleAndNameFallback(currentChannel);
                     channels.Add(currentChannel);
                     currentChannel = null;
+                    pendingPlaybackHeaders.Clear();
                 }
             }
 
@@ -238,6 +246,129 @@ public partial class M3UParser : IM3UParser
         }
 
         return channel;
+    }
+
+    private static bool TryCollectPlaybackHeader(string line, Dictionary<string, string> headers)
+    {
+        if (TryCollectExtVlcOptHeader(line, headers))
+        {
+            return true;
+        }
+
+        if (TryCollectKodiPropertyHeader(line, headers))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryCollectExtVlcOptHeader(string line, Dictionary<string, string> headers)
+    {
+        const string prefix = "#EXTVLCOPT:";
+        if (!line.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var option = line[prefix.Length..].Trim();
+        var equalsIndex = option.IndexOf('=');
+        if (equalsIndex <= 0 || equalsIndex >= option.Length - 1)
+        {
+            return true;
+        }
+
+        var optionName = option[..equalsIndex].Trim();
+        var value = option[(equalsIndex + 1)..].Trim().Trim('"');
+        AddNormalizedPlaybackHeader(headers, optionName, value);
+        return true;
+    }
+
+    private static bool TryCollectKodiPropertyHeader(string line, Dictionary<string, string> headers)
+    {
+        const string prefix = "#KODIPROP:";
+        if (!line.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var property = line[prefix.Length..].Trim();
+        var equalsIndex = property.IndexOf('=');
+        if (equalsIndex <= 0 || equalsIndex >= property.Length - 1)
+        {
+            return true;
+        }
+
+        var propertyName = property[..equalsIndex].Trim();
+        var value = property[(equalsIndex + 1)..].Trim().Trim('"');
+
+        if (propertyName.Equals("inputstream.adaptive.stream_headers", StringComparison.OrdinalIgnoreCase) ||
+            propertyName.Equals("inputstream.ffmpegdirect.stream_headers", StringComparison.OrdinalIgnoreCase))
+        {
+            foreach (var part in value.Split('&', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var partEqualsIndex = part.IndexOf('=');
+                if (partEqualsIndex <= 0 || partEqualsIndex >= part.Length - 1)
+                {
+                    continue;
+                }
+
+                var headerName = WebUtility.UrlDecode(part[..partEqualsIndex]).Trim();
+                var headerValue = WebUtility.UrlDecode(part[(partEqualsIndex + 1)..]).Trim();
+                AddNormalizedPlaybackHeader(headers, headerName, headerValue);
+            }
+        }
+
+        return true;
+    }
+
+    private static void AddNormalizedPlaybackHeader(Dictionary<string, string> headers, string rawName, string value)
+    {
+        if (string.IsNullOrWhiteSpace(rawName) || string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        var headerName = rawName.Trim().ToLowerInvariant() switch
+        {
+            "ua" => "User-Agent",
+            "useragent" => "User-Agent",
+            "user-agent" => "User-Agent",
+            "http-user-agent" => "User-Agent",
+            "referer" => "Referer",
+            "referrer" => "Referer",
+            "http-referrer" => "Referer",
+            "http-referer" => "Referer",
+            "origin" => "Origin",
+            "http-origin" => "Origin",
+            "cookie" => "Cookie",
+            "http-cookie" => "Cookie",
+            "authorization" => "Authorization",
+            "x-user-agent" => "X-User-Agent",
+            _ => rawName.Trim()
+        };
+
+        headers[headerName] = value.Trim();
+    }
+
+    private static string AppendPlaybackHeaders(string streamUrl, Dictionary<string, string> headers)
+    {
+        if (headers.Count == 0)
+        {
+            return streamUrl;
+        }
+
+        var encodedHeaders = string.Join("&", headers.Select(header =>
+            $"{WebUtility.UrlEncode(header.Key)}={WebUtility.UrlEncode(header.Value)}"));
+
+        if (string.IsNullOrWhiteSpace(encodedHeaders))
+        {
+            return streamUrl;
+        }
+
+        return streamUrl.Contains('|', StringComparison.Ordinal)
+            ? $"{streamUrl}&{encodedHeaders}"
+            : $"{streamUrl}|{encodedHeaders}";
     }
 
     /// <summary>
