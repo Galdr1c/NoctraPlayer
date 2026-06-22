@@ -37,6 +37,45 @@
       <ColumnDefinition Width="*" />
       <ColumnDefinition Width="*" />
     </Grid.ColumnDefinitions>
+
+    <!-- Mobile subtitle overlay. Text/style bindings update instantly without restarting the native player. -->
+    <Border Grid.ColumnSpan="2"
+            ZIndex="9"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Bottom"
+            Margin="18,0,18,96"
+            Padding="10,6"
+            CornerRadius="8"
+            Background="{Binding SubtitleBackgroundOpacity, Converter={StaticResource SubtitleBackgroundBrushConverter}}"
+            IsHitTestVisible="False"
+            IsVisible="{Binding IsMobileSubtitleBottomVisible}">
+      <TextBlock Text="{Binding CurrentSubtitleText}"
+                 Foreground="White"
+                 FontSize="{Binding SubtitleFontSize}"
+                 FontWeight="SemiBold"
+                 TextAlignment="Center"
+                 TextWrapping="Wrap"
+                 MaxLines="3" />
+    </Border>
+
+    <Border Grid.ColumnSpan="2"
+            ZIndex="9"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Top"
+            Margin="18,72,18,0"
+            Padding="10,6"
+            CornerRadius="8"
+            Background="{Binding SubtitleBackgroundOpacity, Converter={StaticResource SubtitleBackgroundBrushConverter}}"
+            IsHitTestVisible="False"
+            IsVisible="{Binding IsMobileSubtitleTopVisible}">
+      <TextBlock Text="{Binding CurrentSubtitleText}"
+                 Foreground="White"
+                 FontSize="{Binding SubtitleFontSize}"
+                 FontWeight="SemiBold"
+                 TextAlignment="Center"
+                 TextWrapping="Wrap"
+                 MaxLines="3" />
+    </Border>
     <!-- Sol bölge: çift dokunma = 10sn geri, dikey kaydırma = parlaklık, yatay = sarma -->
     <Border x:Name="LeftZone" Grid.Column="0" Background="Transparent"
             DoubleTapped="OnLeftDoubleTapped"
@@ -1008,6 +1047,14 @@
                            FontSize="11" FontWeight="Black"
                            Foreground="{DynamicResource AccentBrush}" LetterSpacing="2"
                            VerticalAlignment="Center" />
+                <Border Background="#267B2FBE"
+                        CornerRadius="5"
+                        Padding="7,3"
+                        VerticalAlignment="Center">
+                  <TextBlock x:Name="EpgTimeWindowLabel"
+                             FontSize="10" FontWeight="SemiBold"
+                             Foreground="#B3FFFFFF" />
+                </Border>
                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
                             IsVisible="{Binding IsEpgLoading}">
                   <ProgressBar IsIndeterminate="True" Width="50" Height="3"
@@ -1035,92 +1082,159 @@
             </Grid>
           </Border>
 
-          <!-- Timeline: kanal listesi + program blokları (tüm alanı doldurur) -->
-          <ScrollViewer Grid.Row="1"
-                        HorizontalScrollBarVisibility="Auto"
-                        VerticalScrollBarVisibility="Auto"
-                        Background="{DynamicResource Bg0Brush}">
-            <ItemsControl ItemsSource="{Binding EpgRows}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                  <StackPanel />
-                </ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                  <Border Height="52" BorderBrush="#0DFFFFFF"
-                          BorderThickness="0,0,0,1"
-                          PointerReleased="EpgRow_PointerReleased">
-                    <Grid>
-                      <!-- Current channel accent highlight overlay -->
-                      <Border Background="#147B2FBE" IsVisible="{Binding IsCurrentChannel}" IsHitTestVisible="False" />
-                      <Border Background="{DynamicResource Bg0Brush}" IsVisible="{Binding !IsCurrentChannel}" IsHitTestVisible="False" />
+          <!-- Timeline: frozen kanal kolonu + saat başlığı + senkron scroll -->
+          <Grid Grid.Row="1" ColumnDefinitions="112,*" ClipToBounds="True"
+                Background="{DynamicResource Bg0Brush}">
+            <!-- Sol: sabit kanal başlığı ve kanal listesi -->
+            <Grid RowDefinitions="36,*" Background="#0D0D0D" ZIndex="20" ClipToBounds="True">
+              <Border Grid.Row="0" Background="#131313"
+                      BorderBrush="#1AFFFFFF" BorderThickness="0,0,1,1">
+                <TextBlock Text="{loc:Translate Player.Epg.ChannelHeader}"
+                           FontSize="9" FontWeight="Black" LetterSpacing="1.2"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
 
-                      <Grid ColumnDefinitions="90,*">
-                        <!-- Kanal adı + logo (sol sütun) -->
-                        <Border Grid.Column="0" Background="#0D0D0D" BorderBrush="#1AFFFFFF"
-                                BorderThickness="0,0,1,0" Padding="6,0">
-                          <Grid ColumnDefinitions="28,*" ColumnSpacing="6" VerticalAlignment="Center">
-                            <!-- Channel logo -->
-                            <Border Width="28" Height="28" CornerRadius="6" ClipToBounds="True"
-                                    Background="{DynamicResource Surface1Brush}">
-                              <Grid>
-                                <icons:MaterialIcon Kind="Television" Width="14" Height="14"
-                                                    Foreground="{DynamicResource AccentBrush}" />
-                                <controls:RemoteImage Url="{Binding Channel.LogoUrl}" Stretch="Uniform" />
-                              </Grid>
-                            </Border>
-                            <!-- Channel name + group -->
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
-                              <TextBlock Text="{Binding Channel.Name}" FontSize="10" FontWeight="SemiBold"
-                                         Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" MaxLines="1" />
-                              <TextBlock Text="{Binding Channel.GroupTitle}" FontSize="7"
-                                         Foreground="{DynamicResource TextMutedBrush}" TextTrimming="CharacterEllipsis" MaxLines="1"
-                                         IsVisible="{Binding Channel.GroupTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
-                            </StackPanel>
-                          </Grid>
-                        </Border>
+              <ScrollViewer Grid.Row="1"
+                            x:Name="EpgNamesScroll"
+                            HorizontalScrollBarVisibility="Disabled"
+                            VerticalScrollBarVisibility="Hidden"
+                            IsHitTestVisible="False">
+                <ItemsControl ItemsSource="{Binding EpgRows}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:EpgPanelRow">
+                      <Border Height="60"
+                              BorderBrush="#0DFFFFFF"
+                              BorderThickness="0,0,1,1"
+                              Background="{Binding IsCurrentChannel, Converter={StaticResource BoolToSelectionBrushConverter}}">
+                        <Grid ColumnDefinitions="34,*" ColumnSpacing="6" Margin="6,0">
+                          <Border Width="30" Height="30" CornerRadius="6" ClipToBounds="True"
+                                  Background="{DynamicResource Surface1Brush}"
+                                  VerticalAlignment="Center">
+                            <Grid>
+                              <icons:MaterialIcon Kind="Television" Width="13" Height="13"
+                                                  Foreground="{DynamicResource AccentBrush}"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+                              <controls:RemoteImage Url="{Binding Channel.LogoUrl}" Stretch="Uniform" />
+                            </Grid>
+                          </Border>
+                          <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                            <TextBlock Text="{Binding Channel.Name}" FontSize="10" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       TextTrimming="CharacterEllipsis" MaxLines="2" />
+                            <TextBlock Text="{Binding Channel.GroupTitle}" FontSize="7"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       TextTrimming="CharacterEllipsis" MaxLines="1"
+                                       IsVisible="{Binding Channel.GroupTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+                          </StackPanel>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </Grid>
 
-                        <!-- Program blokları + NOW çizgisi -->
-                        <Grid Grid.Column="1" HorizontalAlignment="Left" Width="{Binding CanvasWidth}">
+            <!-- Sağ: saat başlığı ve program timeline -->
+            <Grid Grid.Column="1" RowDefinitions="36,*" ClipToBounds="True">
+              <Border Grid.Row="0" Background="#131313"
+                      BorderBrush="#1AFFFFFF" BorderThickness="0,0,0,1">
+                <ScrollViewer x:Name="EpgTimeHeaderScroll"
+                              HorizontalScrollBarVisibility="Hidden"
+                              VerticalScrollBarVisibility="Disabled"
+                              IsHitTestVisible="False">
+                  <Canvas x:Name="EpgTimeHeaderCanvas"
+                          Width="{Binding EpgCanvasPixelWidth}"
+                          Height="36" />
+                </ScrollViewer>
+              </Border>
+
+              <ScrollViewer Grid.Row="1"
+                            x:Name="EpgTimelineScroll"
+                            HorizontalScrollBarVisibility="Auto"
+                            VerticalScrollBarVisibility="Auto"
+                            ScrollChanged="EpgTimelineScroll_ScrollChanged"
+                            Background="{DynamicResource Bg0Brush}">
+                <Grid Width="{Binding EpgCanvasPixelWidth}">
+                  <ItemsControl ItemsSource="{Binding EpgRows}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:EpgPanelRow">
+                        <Grid Height="60" ClipToBounds="True">
+                          <Border Background="{Binding IsCurrentChannel, Converter={StaticResource BoolToSelectionBrushConverter}}"
+                                  BorderBrush="#0DFFFFFF"
+                                  BorderThickness="0,0,0,1" />
+
                           <TextBlock Text="{loc:Translate Player.Epg.NoInfo}" FontSize="10"
                                      Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"
-                                     Margin="8,0,0,0"
+                                     Margin="10,0,0,0"
                                      IsVisible="{Binding HasEpgData, Converter={StaticResource InverseBoolConverter}}" />
-                          <ItemsControl ItemsSource="{Binding Blocks}" IsVisible="{Binding HasEpgData}">
+
+                          <ItemsControl ItemsSource="{Binding Blocks}"
+                                        IsVisible="{Binding HasEpgData}"
+                                        ClipToBounds="True">
                             <ItemsControl.ItemsPanel>
                               <ItemsPanelTemplate>
                                 <Grid />
                               </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
-                              <DataTemplate>
+                              <DataTemplate x:DataType="vm:EpgProgramBlock">
                                 <Border Width="{Binding PixelWidth}"
                                         Margin="{Binding PixelLeft, Converter={StaticResource DoubleToLeftMarginConverter}}"
                                         HorizontalAlignment="Left" VerticalAlignment="Center"
-                                        Height="38" CornerRadius="4" ClipToBounds="True" Padding="6,0"
-                                        Background="#267B2FBE" BorderBrush="#40FFFFFF" BorderThickness="0,0,0,0"
-                                        Opacity="{Binding IsPast, Converter={StaticResource BoolToOpacityConverter}}">
-                                  <Grid IsVisible="{Binding HasReadableText}">
-                                    <TextBlock Text="{Binding Program.Title}" FontSize="10" FontWeight="SemiBold"
-                                               Foreground="White" TextTrimming="CharacterEllipsis" MaxLines="1" VerticalAlignment="Center" />
+                                        Height="{Binding VisualHeight}" CornerRadius="5" ClipToBounds="True"
+                                        Padding="0"
+                                        PointerReleased="EpgRow_PointerReleased"
+                                        ToolTip.Tip="{Binding Program.Title}"
+                                        Opacity="{Binding IsPast, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter=0.45}">
+                                  <Border.Background>
+                                    <SolidColorBrush Color="{Binding IsCurrentProgram, Converter={StaticResource BoolToEpgBlockColorConverter}}" />
+                                  </Border.Background>
+                                  <Border.BorderBrush>
+                                    <SolidColorBrush Color="{Binding IsCurrentProgram, Converter={StaticResource BoolToEpgBorderColorConverter}}" />
+                                  </Border.BorderBrush>
+                                  <Border.BorderThickness>1</Border.BorderThickness>
+                                  <Grid ClipToBounds="True">
+                                    <Border HorizontalAlignment="Left"
+                                            VerticalAlignment="Stretch"
+                                            Width="{Binding ProgressPixelWidth}"
+                                            Background="#38FFFFFF"
+                                            IsVisible="{Binding IsCurrentProgram}"
+                                            IsHitTestVisible="False" />
+                                    <StackPanel Margin="7,0" VerticalAlignment="Center" Spacing="1"
+                                                IsVisible="{Binding HasReadableText}">
+                                      <TextBlock Text="{Binding Program.Title}" FontSize="10" FontWeight="SemiBold"
+                                                 Foreground="White" TextTrimming="CharacterEllipsis"
+                                                 MaxLines="1" />
+                                      <TextBlock Text="{Binding Program.TimeRange}" FontSize="7"
+                                                 Foreground="#B3FFFFFF" TextTrimming="CharacterEllipsis"
+                                                 MaxLines="1" />
+                                    </StackPanel>
                                   </Grid>
                                 </Border>
                               </DataTemplate>
                             </ItemsControl.ItemTemplate>
                           </ItemsControl>
+
                           <Border Width="1.5" HorizontalAlignment="Left" VerticalAlignment="Stretch"
                                   Background="#CC7B2FBE"
                                   Margin="{Binding NowLineLeft, Converter={StaticResource DoubleToLeftMarginConverter}}"
                                   IsHitTestVisible="False" ZIndex="10" />
+
+                          <Border PointerReleased="EpgRow_PointerReleased"
+                                  Background="Transparent"
+                                  HorizontalAlignment="Stretch"
+                                  VerticalAlignment="Stretch"
+                                  ZIndex="20"
+                                  IsVisible="{Binding IsCurrentChannel, Converter={StaticResource InverseBoolConverter}}" />
                         </Grid>
-                      </Grid>
-                    </Grid>
-                  </Border>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </ScrollViewer>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </Grid>
+              </ScrollViewer>
+            </Grid>
+          </Grid>
         </Grid>
       </Grid>
     </Grid>

@@ -2,8 +2,12 @@ using System;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Data;
 using Avalonia.Input;
+using Avalonia.Media;
+using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
+using Noctra.Mobile.Localization;
 using Noctra.Mobile.Services;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
@@ -60,20 +64,27 @@ public partial class MobilePlayerView : UserControl
 
     private void OnPlayerPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(PlayerViewModel.IsEpgPanelOpen))
+        if (e.PropertyName == nameof(PlayerViewModel.IsEpgPanelOpen))
         {
+            if (_boundVm?.IsEpgPanelOpen == true)
+            {
+                InitializeEpgTimelineHeader();
+                UpdateEpgVideoLayout();
+            }
+            else
+            {
+                // EPG kapandı -> video tekrar tam ekran.
+                _lastSurfaceRect = default;
+                GetVideoSurfaceService()?.SetBounds(0, 0, 0, 0);
+            }
+
             return;
         }
 
-        if (_boundVm?.IsEpgPanelOpen == true)
+        if (e.PropertyName == nameof(PlayerViewModel.EpgFocusRowIndex)
+            && _boundVm?.IsEpgPanelOpen == true)
         {
-            UpdateEpgVideoLayout();
-        }
-        else
-        {
-            // EPG kapandı -> video tekrar tam ekran.
-            _lastSurfaceRect = default;
-            GetVideoSurfaceService()?.SetBounds(0, 0, 0, 0);
+            QueueFocusCurrentEpgRow();
         }
     }
 
@@ -161,6 +172,170 @@ public partial class MobilePlayerView : UserControl
         }
 
         return _videoSurfaceService;
+    }
+
+    /// <summary>
+    /// Desktop EPG'deki saat başlığı / zaman penceresi mantığını mobile timeline'a uygular.
+    /// </summary>
+    private void InitializeEpgTimelineHeader()
+    {
+        var now = DateTime.Now;
+        BuildEpgTimeHeader(now);
+
+        var windowLabel = this.FindControl<TextBlock>("EpgTimeWindowLabel");
+        if (windowLabel is not null)
+        {
+            var start = now.AddHours(-PlayerViewModel.EpgPastHours).ToString("HH:mm");
+            var end = now.AddHours(PlayerViewModel.EpgFutureHours).ToString("HH:mm");
+            windowLabel.Text = $"{start} – {end}";
+        }
+
+        QueueFocusCurrentEpgRow();
+    }
+
+    private void BuildEpgTimeHeader(DateTime now)
+    {
+        var canvas = this.FindControl<Canvas>("EpgTimeHeaderCanvas");
+        if (canvas is null)
+        {
+            return;
+        }
+
+        canvas.Children.Clear();
+
+        var lineBrush = new SolidColorBrush(Color.Parse("#33FFFFFF"));
+        var halfLineBrush = new SolidColorBrush(Color.Parse("#1AFFFFFF"));
+        var nowBrush = new SolidColorBrush(Color.Parse("#CC7B2FBE"));
+        var accentBrush = new SolidColorBrush(Color.Parse("#7B2FBE"));
+        var totalMinutes = (PlayerViewModel.EpgPastHours + PlayerViewModel.EpgFutureHours) * 60;
+
+        for (var minute = 30; minute < totalMinutes; minute += 30)
+        {
+            var line = new Border
+            {
+                Width = 1,
+                Height = 36,
+                Background = minute % 60 == 0 ? lineBrush : halfLineBrush
+            };
+            Canvas.SetLeft(line, minute * PlayerViewModel.EpgPxPerMinute);
+            canvas.Children.Add(line);
+        }
+
+        for (var hour = -(int)PlayerViewModel.EpgPastHours; hour <= (int)PlayerViewModel.EpgFutureHours; hour++)
+        {
+            if (hour == 0)
+            {
+                continue;
+            }
+
+            var label = new TextBlock
+            {
+                Text = now.AddHours(hour).ToString("HH:mm"),
+                FontSize = 10,
+                FontWeight = FontWeight.Bold,
+                Foreground = new SolidColorBrush(Color.Parse("#80FFFFFF"))
+            };
+            Canvas.SetLeft(label, (hour + PlayerViewModel.EpgPastHours) * 60 * PlayerViewModel.EpgPxPerMinute + 4);
+            Canvas.SetTop(label, 14);
+            canvas.Children.Add(label);
+        }
+
+        var nowLine = new Border
+        {
+            Width = 1.5,
+            Height = 36,
+            Background = nowBrush,
+            ZIndex = 10
+        };
+        Canvas.SetLeft(nowLine, PlayerViewModel.EpgNowPixelPos);
+        canvas.Children.Add(nowLine);
+
+        var nowLabel = new TextBlock
+        {
+            FontSize = 7,
+            FontWeight = FontWeight.Bold,
+            Foreground = Brushes.White,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+        };
+        nowLabel.Bind(TextBlock.TextProperty, new Binding("[Player.Epg.Now]")
+        {
+            Source = LocalizationSource.Instance
+        });
+
+        var nowBadge = new Border
+        {
+            Width = 26,
+            Height = 17,
+            CornerRadius = new CornerRadius(4),
+            Background = accentBrush,
+            ZIndex = 11,
+            Child = nowLabel
+        };
+        Canvas.SetLeft(nowBadge, PlayerViewModel.EpgNowPixelPos - 13);
+        Canvas.SetTop(nowBadge, 5);
+        canvas.Children.Add(nowBadge);
+    }
+
+    private void QueueFocusCurrentEpgRow()
+    {
+        Dispatcher.UIThread.Post(FocusCurrentEpgRow, DispatcherPriority.Loaded);
+        Dispatcher.UIThread.Post(FocusCurrentEpgRow, DispatcherPriority.Background);
+    }
+
+    private void FocusCurrentEpgRow()
+    {
+        var timelineScroll = this.FindControl<ScrollViewer>("EpgTimelineScroll");
+        if (timelineScroll is null)
+        {
+            return;
+        }
+
+        var targetX = Math.Max(0, PlayerViewModel.EpgNowPixelPos - timelineScroll.Viewport.Width / 2);
+        var targetY = timelineScroll.Offset.Y;
+
+        if (_boundVm?.EpgFocusRowIndex >= 0)
+        {
+            const double rowHeight = 60;
+            targetY = Math.Max(0, _boundVm.EpgFocusRowIndex * rowHeight - timelineScroll.Viewport.Height / 2 + rowHeight / 2);
+        }
+
+        timelineScroll.Offset = new Vector(targetX, targetY);
+
+        var timeHeader = this.FindControl<ScrollViewer>("EpgTimeHeaderScroll");
+        if (timeHeader is not null)
+        {
+            timeHeader.Offset = new Vector(targetX, 0);
+        }
+
+        var namesScroll = this.FindControl<ScrollViewer>("EpgNamesScroll");
+        if (namesScroll is not null)
+        {
+            namesScroll.Offset = new Vector(0, targetY);
+        }
+    }
+
+    /// <summary>
+    /// Timeline scroll değişince üst saat başlığını ve soldaki frozen kanal listesini senkron tutar.
+    /// </summary>
+    private void EpgTimelineScroll_ScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        if (sender is not ScrollViewer timelineScroll)
+        {
+            return;
+        }
+
+        var timeHeader = this.FindControl<ScrollViewer>("EpgTimeHeaderScroll");
+        if (timeHeader is not null)
+        {
+            timeHeader.Offset = new Vector(timelineScroll.Offset.X, 0);
+        }
+
+        var namesScroll = this.FindControl<ScrollViewer>("EpgNamesScroll");
+        if (namesScroll is not null)
+        {
+            namesScroll.Offset = new Vector(0, timelineScroll.Offset.Y);
+        }
     }
 
     /// <summary>

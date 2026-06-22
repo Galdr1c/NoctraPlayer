@@ -38,6 +38,10 @@
         <converters:MediaSupportsMyListConverter x:Key="MediaSupportsMyListConverter" />
         <converters:DoubleToLeftMarginConverter x:Key="DoubleToLeftMarginConverter" />
         <converters:BoolToOpacityConverter x:Key="BoolToOpacityConverter" />
+        <converters:BoolToEpgBlockColorConverter x:Key="BoolToEpgBlockColorConverter" />
+        <converters:BoolToEpgBorderColorConverter x:Key="BoolToEpgBorderColorConverter" />
+        <converters:BoolToSelectionBrushConverter x:Key="BoolToSelectionBrushConverter" />
+        <converters:SubtitleBackgroundBrushConverter x:Key="SubtitleBackgroundBrushConverter" />
       </ResourceDictionary>
     </Application.Resources>
 
