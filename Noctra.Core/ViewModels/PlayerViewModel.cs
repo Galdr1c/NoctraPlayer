@@ -113,6 +113,13 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSeriesPlotVisible))]
+    [NotifyPropertyChangedFor(nameof(IsVodPlotVisible))]
+    [NotifyPropertyChangedFor(nameof(IsInfoSeriesHeaderVisible))]
+    [NotifyPropertyChangedFor(nameof(IsInfoEpisodeVisible))]
+    [NotifyPropertyChangedFor(nameof(InfoDirectorText))]
+    [NotifyPropertyChangedFor(nameof(InfoCastText))]
+    [NotifyPropertyChangedFor(nameof(IsInfoDirectorVisible))]
+    [NotifyPropertyChangedFor(nameof(IsInfoCastVisible))]
     private bool _isSeriesContent;
 
     public bool IsPremium => _licenseService.IsPremium;
@@ -234,6 +241,12 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsVodPlotVisible))]
+    [NotifyPropertyChangedFor(nameof(InfoVodMetaText))]
+    [NotifyPropertyChangedFor(nameof(InfoDirectorText))]
+    [NotifyPropertyChangedFor(nameof(InfoCastText))]
+    [NotifyPropertyChangedFor(nameof(IsInfoDirectorVisible))]
+    [NotifyPropertyChangedFor(nameof(IsInfoCastVisible))]
+    [NotifyPropertyChangedFor(nameof(IsInfoSeriesHeaderVisible))]
     private Channel? _currentChannel;
 
     [ObservableProperty]
@@ -262,6 +275,68 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     public bool IsLiveInfoVisible => IsLiveContent && CurrentProgram != null && !string.IsNullOrWhiteSpace(CurrentProgram.Title);
     public bool IsSeriesPlotVisible => IsSeriesContent && !IsLiveContent && CurrentEpisode != null && !string.IsNullOrWhiteSpace(CurrentEpisode.Plot);
     public bool IsVodPlotVisible => !IsLiveContent && !IsSeriesContent && CurrentChannel != null && !string.IsNullOrWhiteSpace(CurrentChannel.Plot);
+
+    // Mobile info panel uses these richer desktop-parity metadata fields.
+    public string? CurrentEpisodeDisplayTitle => FirstNonEmpty(CurrentEpisode?.TmdbEpisodeName, CurrentEpisode?.Name);
+    public string? CurrentEpisodeMetaText => FirstNonEmpty(CurrentEpisode?.EpisodeMetaText, CurrentEpisode?.AirDateText);
+    public bool IsInfoEpisodeVisible =>
+        IsSeriesContent &&
+        !IsLiveContent &&
+        CurrentEpisode != null &&
+        (!string.IsNullOrWhiteSpace(CurrentEpisodeDisplayTitle) ||
+         !string.IsNullOrWhiteSpace(CurrentEpisodeMetaText) ||
+         !string.IsNullOrWhiteSpace(CurrentEpisode.Plot));
+    public string? SeriesInfoTitle => _currentSeriesContext?.Name;
+    public string? SeriesInfoPlot => _currentSeriesContext?.Plot;
+    public bool IsInfoSeriesHeaderVisible =>
+        IsSeriesContent &&
+        !string.IsNullOrWhiteSpace(SeriesInfoTitle) &&
+        !string.Equals(SeriesInfoTitle, CurrentChannel?.Name, StringComparison.OrdinalIgnoreCase);
+
+    public string? InfoDirectorText => IsLiveContent
+        ? null
+        : FirstNonEmpty(IsSeriesContent ? _currentSeriesContext?.Director : null, CurrentChannel?.Director);
+
+    public string? InfoCastText => IsLiveContent
+        ? null
+        : FirstNonEmpty(IsSeriesContent ? _currentSeriesContext?.Cast : null, CurrentChannel?.Cast);
+
+    public bool IsInfoDirectorVisible => !string.IsNullOrWhiteSpace(InfoDirectorText);
+    public bool IsInfoCastVisible => !string.IsNullOrWhiteSpace(InfoCastText);
+
+    public string? InfoVodMetaText
+    {
+        get
+        {
+            if (CurrentChannel == null || IsLiveContent || IsSeriesContent)
+            {
+                return null;
+            }
+
+            var parts = new List<string>();
+            if (CurrentChannel.ReleaseYear.HasValue)
+            {
+                parts.Add(CurrentChannel.ReleaseYear.Value.ToString());
+            }
+
+            if (CurrentChannel.Rating.HasValue && CurrentChannel.Rating.Value > 0)
+            {
+                parts.Add($"★ {CurrentChannel.Rating.Value:0.0}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(CurrentChannel.ContentRating))
+            {
+                parts.Add(CurrentChannel.ContentRating!);
+            }
+
+            if (CurrentChannel.Duration.HasValue && CurrentChannel.Duration.Value.TotalMinutes > 0)
+            {
+                parts.Add($"{(int)CurrentChannel.Duration.Value.TotalMinutes} dk");
+            }
+
+            return parts.Count > 0 ? string.Join("  •  ", parts) : null;
+        }
+    }
 
     [ObservableProperty]
     private bool _isPlaying;
@@ -472,6 +547,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSeriesPlotVisible))]
+    [NotifyPropertyChangedFor(nameof(CurrentEpisodeDisplayTitle))]
+    [NotifyPropertyChangedFor(nameof(CurrentEpisodeMetaText))]
+    [NotifyPropertyChangedFor(nameof(IsInfoEpisodeVisible))]
     private Episode? _currentEpisode;
 
     // ── Playback Internal States ─────────────────────────────────────────────
@@ -676,6 +754,34 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     }
 
     // ── Internal Helpers ─────────────────────────────────────────────────────
+    private static string? FirstNonEmpty(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+        }
+
+        return null;
+    }
+
+    internal void RaiseInfoPanelMetadataChanged()
+    {
+        OnPropertyChanged(nameof(CurrentEpisodeDisplayTitle));
+        OnPropertyChanged(nameof(CurrentEpisodeMetaText));
+        OnPropertyChanged(nameof(IsInfoEpisodeVisible));
+        OnPropertyChanged(nameof(SeriesInfoTitle));
+        OnPropertyChanged(nameof(SeriesInfoPlot));
+        OnPropertyChanged(nameof(IsInfoSeriesHeaderVisible));
+        OnPropertyChanged(nameof(InfoDirectorText));
+        OnPropertyChanged(nameof(InfoCastText));
+        OnPropertyChanged(nameof(IsInfoDirectorVisible));
+        OnPropertyChanged(nameof(IsInfoCastVisible));
+        OnPropertyChanged(nameof(InfoVodMetaText));
+    }
+
     internal void UpdateOverlaySecondaryText()
     {
         if (IsLiveContent)
@@ -1469,6 +1575,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(HasCurrentProgramInfo));
         OnPropertyChanged(nameof(CanShowDownloadButton));
         OnPropertyChanged(nameof(CanDownloadCurrentContent));
+        RaiseInfoPanelMetadataChanged();
         DownloadCurrentContentCommand.NotifyCanExecuteChanged();
     }
 
@@ -1495,11 +1602,13 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsBufferShieldVisible));
         OnPropertyChanged(nameof(CanShowDownloadButton));
         OnPropertyChanged(nameof(CanDownloadCurrentContent));
+        RaiseInfoPanelMetadataChanged();
         DownloadCurrentContentCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnIsSeriesContentChanged(bool value)
     {
+        RaiseInfoPanelMetadataChanged();
         SettingsAdapter.OnLanguageChanged();
     }
 

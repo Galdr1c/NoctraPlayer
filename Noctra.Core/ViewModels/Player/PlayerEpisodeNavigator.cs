@@ -36,6 +36,7 @@ public class PlayerEpisodeNavigator
             _vm._currentSeriesContext = null;
             _vm.EpisodeSeasons = new List<Season>();
             _vm.EpisodesPanelTitle = string.Empty;
+            _vm.RaiseInfoPanelMetadataChanged();
             _vm.PlayEpisodeFromOverlayCommand.NotifyCanExecuteChanged();
             _vm.PlayNextEpisodeCommand.NotifyCanExecuteChanged();
             _vm.RaisePropertyChanged(nameof(PlayerViewModel.CanDownloadCurrentContent));
@@ -46,6 +47,7 @@ public class PlayerEpisodeNavigator
         _vm._currentSeriesContext = series
             ?? episode.Season?.Series
             ?? _vm._currentSeriesContext;
+        _vm.RaiseInfoPanelMetadataChanged();
         RefreshEpisodeBrowserContext(_vm._currentSeriesContext);
 
         if (episode?.Duration is TimeSpan knownDuration && knownDuration.TotalSeconds > 0)
