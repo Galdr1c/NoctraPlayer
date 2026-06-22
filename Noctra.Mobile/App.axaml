@@ -42,6 +42,10 @@
         <converters:BoolToEpgBorderColorConverter x:Key="BoolToEpgBorderColorConverter" />
         <converters:BoolToSelectionBrushConverter x:Key="BoolToSelectionBrushConverter" />
         <converters:SubtitleBackgroundBrushConverter x:Key="SubtitleBackgroundBrushConverter" />
+        <converters:EpisodeIdentityConverter x:Key="EpisodeIdentityConverter" />
+        <converters:EqualityToBoolMultiConverter x:Key="EqualityToBoolMultiConverter" />
+        <converters:EqualityToBrushMultiConverter x:Key="EqualityToBrushMultiConverter" />
+        <converters:PercentToWidthConverter x:Key="PercentToWidthConverter" />
       </ResourceDictionary>
     </Application.Resources>
 
