@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Android.Media;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
 
@@ -251,7 +252,16 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     public void PlayLoadedMedia() => Resume();
     public void SetAudioTrack(int trackId) { }
     public void SetSubtitleTrack(int trackId) { }
-    public void SetVideoLayout(string? aspectRatio, string? cropGeometry) { }
+
+    public void SetVideoLayout(string? aspectRatio, string? cropGeometry)
+    {
+        // Video boyutunu surface servise aktar ki transform matrisi doğru hesaplansın.
+        if (StreamQuality is { Width: > 0, Height: > 0 })
+        {
+            _videoSurfaceService.SetVideoSize(StreamQuality.Width, StreamQuality.Height);
+        }
+        _videoSurfaceService.SetVideoLayout(aspectRatio, cropGeometry);
+    }
 
     protected override void Dispose(bool disposing)
     {
@@ -305,12 +315,161 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             return;
         }
 
-        StreamQuality = new StreamQualityInfo
+        var quality = new StreamQualityInfo
         {
             Width = width,
             Height = height
         };
-        QualityDetected?.Invoke(this, StreamQuality);
+
+        StreamQuality = quality;
+
+        // MediaExtractor API'si (özellikle network stream'lerde) UI thread'i bloke edebilir.
+        // Bu yüzden arka planda çalıştırıyoruz — QualityDetected event'i UI'ı bilgilendirir.
+        var url = _currentUrl;
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                var extracted = new StreamQualityInfo { Width = width, Height = height };
+                ExtractTrackMetadata(extracted, url);
+
+                // Codec/bitrate/fps bilgilerini mevcut quality nesnesine aktar.
+                if (!string.IsNullOrEmpty(extracted.VideoCodec))
+                    quality.VideoCodec = extracted.VideoCodec;
+                if (extracted.VideoBitrate > 0)
+                    quality.VideoBitrate = extracted.VideoBitrate;
+                if (extracted.Fps > 0)
+                    quality.Fps = extracted.Fps;
+                if (!string.IsNullOrEmpty(extracted.AudioCodec))
+                    quality.AudioCodec = extracted.AudioCodec;
+                if (extracted.AudioBitrate > 0)
+                    quality.AudioBitrate = extracted.AudioBitrate;
+                if (extracted.AudioChannels > 0)
+                    quality.AudioChannels = extracted.AudioChannels;
+
+                QualityDetected?.Invoke(this, quality);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] Background quality extraction failed: {ex.Message}");
+            }
+        });
+
+        // Video boyutunu surface servise aktar ki mevcut transform doğru uygulansın.
+        _videoSurfaceService.SetVideoSize(width, height);
+
+        QualityDetected?.Invoke(this, quality);
+    }
+
+    /// <summary>
+    /// MediaExtractor kullanarak stream'in video ve ses track metadata'sını çıkarır.
+    /// Codec (MIME → insan-okunabilir), bitrate, FPS ve kanal bilgilerini doldurur.
+    /// Bu metodun arka plan thread'inde çağrılması önerilir.
+    /// </summary>
+    private void ExtractTrackMetadata(StreamQualityInfo quality, string? url)
+    {
+        if (string.IsNullOrEmpty(url))
+        {
+            return;
+        }
+
+        MediaExtractor? extractor = null;
+        try
+        {
+            extractor = new MediaExtractor();
+            extractor.SetDataSource(url);
+
+            for (int i = 0; i < extractor.TrackCount; i++)
+            {
+                var format = extractor.GetTrackFormat(i);
+                var mime = format.GetString(MediaFormat.KeyMime) ?? string.Empty;
+
+                if (mime.StartsWith("video/", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Video codec
+                    quality.VideoCodec = MimeToCodecName(mime);
+
+                    // Video bitrate (bps → kbps)
+                    if (format.ContainsKey(MediaFormat.KeyBitRate))
+                    {
+                        quality.VideoBitrate = format.GetInteger(MediaFormat.KeyBitRate) / 1000;
+                    }
+
+                    // FPS
+                    if (format.ContainsKey(MediaFormat.KeyFrameRate))
+                    {
+                        quality.Fps = format.GetInteger(MediaFormat.KeyFrameRate);
+                    }
+
+                    // Width/Height fallback (MediaExtractor daha doğru olabilir)
+                    if (format.ContainsKey(MediaFormat.KeyWidth) && quality.Width <= 0)
+                    {
+                        quality.Width = format.GetInteger(MediaFormat.KeyWidth);
+                    }
+                    if (format.ContainsKey(MediaFormat.KeyHeight) && quality.Height <= 0)
+                    {
+                        quality.Height = format.GetInteger(MediaFormat.KeyHeight);
+                    }
+                }
+                else if (mime.StartsWith("audio/", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Audio codec
+                    quality.AudioCodec = MimeToCodecName(mime);
+
+                    // Audio bitrate (bps → kbps)
+                    if (format.ContainsKey(MediaFormat.KeyBitRate))
+                    {
+                        quality.AudioBitrate = format.GetInteger(MediaFormat.KeyBitRate) / 1000;
+                    }
+
+                    // Kanal sayısı
+                    if (format.ContainsKey(MediaFormat.KeyChannelCount))
+                    {
+                        quality.AudioChannels = format.GetInteger(MediaFormat.KeyChannelCount);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] ExtractTrackMetadata failed: {ex.Message}");
+        }
+        finally
+        {
+            extractor?.Release();
+            extractor?.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// MIME type'ı insan-okunabilir codec adına dönüştürür.
+    /// Örnek: "video/avc" → "H.264", "audio/mp4a-latm" → "AAC"
+    /// </summary>
+    private static string MimeToCodecName(string mime)
+    {
+        return mime.ToLowerInvariant() switch
+        {
+            // Video codecs
+            "video/avc" => "H.264",
+            "video/hevc" or "video/h265" => "H.265",
+            "video/mp4v-es" or "video/mpeg4" => "MPEG-4",
+            "video/3gpp" => "H.263",
+            "video/vp8" => "VP8",
+            "video/vp9" => "VP9",
+            "video/av01" => "AV1",
+            "video/mpeg2" => "MPEG-2",
+            // Audio codecs
+            "audio/mp4a-latm" or "audio/mpeg" => "AAC",
+            "audio/opus" => "Opus",
+            "audio/vorbis" => "Vorbis",
+            "audio/flac" => "FLAC",
+            "audio/ac3" => "AC3",
+            "audio/eac3" => "E-AC3",
+            "audio/mp3" => "MP3",
+            "audio/aac" => "AAC",
+            // Fallback: MIME type'ın kendisini döndür
+            _ => mime.Contains('/') ? mime.Split('/')[^1].ToUpperInvariant() : mime.ToUpperInvariant()
+        };
     }
 
     private void ThrowIfDisposed()

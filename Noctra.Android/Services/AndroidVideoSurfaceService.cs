@@ -1,16 +1,19 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Android.App;
+using Android.Graphics;
 using Android.Views;
 using WidgetFrameLayout = Android.Widget.FrameLayout;
 using Noctra.Services.Interfaces;
 
 namespace Noctra.Android.Services;
 
-public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurfaceService, ISurfaceHolderCallback
+public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurfaceService, TextureView.ISurfaceTextureListener
 {
     private readonly AndroidActivityProvider _activityProvider;
-    private SurfaceView? _surfaceView;
+    private readonly object _surfaceLock = new();
+    private TextureView? _textureView;
     private TaskCompletionSource<Surface>? _surfaceReady;
 
     // EPG split görünümü için video yüzeyi konum/boyutu (piksel).
@@ -19,6 +22,12 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
     private int _boundsY;
     private int _boundsW = -1;
     private int _boundsH = -1;
+
+    // Video layout state (aspect ratio / crop geometry)
+    private string? _aspectRatio;
+    private string? _cropGeometry;
+    private int _videoWidth;
+    private int _videoHeight;
 
     public AndroidVideoSurfaceService(AndroidActivityProvider activityProvider)
     {
@@ -38,7 +47,7 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
         {
             try
             {
-                EnsureSurfaceView(activity);
+                EnsureTextureView(activity);
                 completion.TrySetResult();
             }
             catch (Exception ex)
@@ -60,18 +69,19 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
 
         activity.RunOnUiThread(() =>
         {
-            if (_surfaceView?.Parent is ViewGroup parent)
+            if (_textureView?.Parent is ViewGroup parent)
             {
-                parent.RemoveView(_surfaceView);
+                parent.RemoveView(_textureView);
             }
 
-            if (_surfaceView?.Holder is { } holder)
+            _textureView?.SetSurfaceTextureListener(null);
+            _textureView?.Dispose();
+            _textureView = null;
+
+            lock (_surfaceLock)
             {
-                holder.RemoveCallback(this);
+                _surfaceReady = null;
             }
-            _surfaceView?.Dispose();
-            _surfaceView = null;
-            _surfaceReady = null;
 
             // Sonraki gösterimde tam ekran başlasın.
             _boundsW = -1;
@@ -95,9 +105,41 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
         activity.RunOnUiThread(ApplyBounds);
     }
 
+    public void SetVideoLayout(string? aspectRatio, string? cropGeometry)
+    {
+        _aspectRatio = aspectRatio;
+        _cropGeometry = cropGeometry;
+
+        var activity = _activityProvider.CurrentActivity;
+        if (activity is null)
+        {
+            return;
+        }
+
+        activity.RunOnUiThread(ApplyVideoTransform);
+    }
+
+    /// <summary>
+    /// Sets the native video dimensions (from stream metadata) so the transform
+    /// matrix can be calculated before the first frame arrives on the TextureView.
+    /// </summary>
+    public void SetVideoSize(int width, int height)
+    {
+        _videoWidth = width;
+        _videoHeight = height;
+
+        var activity = _activityProvider.CurrentActivity;
+        if (activity is null)
+        {
+            return;
+        }
+
+        activity.RunOnUiThread(ApplyVideoTransform);
+    }
+
     private void ApplyBounds()
     {
-        if (_surfaceView is null)
+        if (_textureView is null)
         {
             return;
         }
@@ -120,47 +162,211 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
             };
         }
 
-        _surfaceView.LayoutParameters = layoutParams;
-        _surfaceView.RequestLayout();
+        _textureView.LayoutParameters = layoutParams;
+        _textureView.RequestLayout();
+    }
+
+    /// <summary>
+    /// Computes and applies a Matrix transform on the TextureView to achieve the
+    /// desired aspect ratio / crop behaviour.
+    /// </summary>
+    private void ApplyVideoTransform()
+    {
+        if (_textureView is null)
+        {
+            return;
+        }
+
+        var viewW = _textureView.Width;
+        var viewH = _textureView.Height;
+        if (viewW <= 0 || viewH <= 0 || _videoWidth <= 0 || _videoHeight <= 0)
+        {
+            return;
+        }
+
+        var matrix = CalculateTransformMatrix(
+            viewW, viewH,
+            _videoWidth, _videoHeight,
+            _aspectRatio, _cropGeometry);
+
+        _textureView.SetTransform(matrix);
+    }
+
+    /// <summary>
+    /// Builds a Matrix that maps the video's natural rectangle into the view's
+    /// rectangle, honouring the requested aspect-ratio and crop-geometry strings.
+    /// <para>
+    /// <b>aspectRatio</b> – forces the display aspect ratio (e.g. "16:9").
+    /// Null means "use the video's own aspect ratio".<br/>
+    /// <b>cropGeometry</b> – when set (e.g. "16:9"), the video is centre-cropped
+    /// so the visible area matches this ratio. Null means no cropping (fit or
+    /// stretch depending on <paramref name="aspectRatio"/>).
+    /// </para>
+    /// </summary>
+    internal static Matrix CalculateTransformMatrix(
+        int viewW, int viewH,
+        int videoW, int videoH,
+        string? aspectRatio,
+        string? cropGeometry)
+    {
+        var matrix = new Matrix();
+
+        if (videoW <= 0 || videoH <= 0 || viewW <= 0 || viewH <= 0)
+        {
+            return matrix;
+        }
+
+        // 1. Determine the effective video display aspect ratio.
+        float darW, darH;
+        if (aspectRatio is { Length: > 0 } && TryParseAspect(aspectRatio, out var aw, out var ah))
+        {
+            darW = aw;
+            darH = ah;
+        }
+        else
+        {
+            darW = videoW;
+            darH = videoH;
+        }
+
+        var videoAr = darW / darH;
+        var viewAr = (float)viewW / viewH;
+
+        // 2. Crop geometry specified → centre-cover to that ratio.
+        if (cropGeometry is { Length: > 0 } && TryParseAspect(cropGeometry, out var cw, out var ch))
+        {
+            var cropAr = cw / ch;
+
+            // Centre-cover: scale uniformly so the video *covers* the view, then
+            // the view is sized to the crop AR by the caller (EPG split etc.).
+            float scale;
+            if (cropAr > viewAr)
+            {
+                // Crop area is wider than view → scale on width
+                scale = (float)viewH * cropAr / viewW;
+            }
+            else
+            {
+                // Crop area is taller than view → scale on height
+                scale = (float)viewW / (cropAr * viewH);
+            }
+
+            matrix.PostScale(scale, scale, viewW / 2f, viewH / 2f);
+            return matrix;
+        }
+
+        // 3. No crop → fit the video inside the view while preserving the
+        //    effective aspect ratio (letterbox / pillarbox as needed).
+        if (Math.Abs(videoAr - viewAr) < 0.001f)
+        {
+            // Aspect ratios match → identity (video fills view perfectly).
+            return matrix;
+        }
+
+        if (videoAr > viewAr)
+        {
+            // Video is wider than the view → fit to width, pillarbox top/bottom.
+            // The identity matrix already maps texture X to view X correctly
+            // (both are full-width). We only need to correct the Y axis so the
+            // video isn't stretched vertically.
+            var sy = viewAr / videoAr;
+            matrix.PostScale(1f, sy, viewW / 2f, viewH / 2f);
+        }
+        else
+        {
+            // Video is taller than the view → fit to height, letterbox sides.
+            var sx = videoAr / viewAr;
+            matrix.PostScale(sx, 1f, viewW / 2f, viewH / 2f);
+        }
+
+        return matrix;
+    }
+
+    private static bool TryParseAspect(string aspect, out float w, out float h)
+    {
+        w = h = 0;
+        if (string.IsNullOrWhiteSpace(aspect))
+        {
+            return false;
+        }
+
+        var parts = aspect.Split(':');
+        if (parts.Length == 2 &&
+            float.TryParse(parts[0].Trim(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out w) &&
+            float.TryParse(parts[1].Trim(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out h) &&
+            w > 0 && h > 0)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     internal async Task<Surface?> WaitForSurfaceAsync()
     {
         await ShowAsync().ConfigureAwait(false);
 
-        if (_surfaceView?.Holder?.Surface?.IsValid == true)
+        lock (_surfaceLock)
         {
-            return _surfaceView.Holder.Surface;
+            if (_textureView?.IsAttachedToWindow == true &&
+                _textureView?.SurfaceTexture is { } st &&
+                st.IsReleased == false)
+            {
+                return new Surface(st);
+            }
+
+            _surfaceReady ??= new TaskCompletionSource<Surface>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
-        _surfaceReady ??= new TaskCompletionSource<Surface>(TaskCreationOptions.RunContinuationsAsynchronously);
-        return await _surfaceReady.Task.ConfigureAwait(false);
+        var tcs = _surfaceReady!;
+        return await tcs.Task.ConfigureAwait(false);
     }
 
-    public void SurfaceCreated(ISurfaceHolder holder)
+    // ── TextureView.ISurfaceTextureListener ──────────────────────────────────
+
+    public void OnSurfaceTextureAvailable(SurfaceTexture surface, int width, int height)
     {
-        if (holder.Surface?.IsValid == true)
+        TaskCompletionSource<Surface>? tcs;
+        lock (_surfaceLock)
         {
-            _surfaceReady?.TrySetResult(holder.Surface);
+            _surfaceReady ??= new TaskCompletionSource<Surface>(TaskCreationOptions.RunContinuationsAsynchronously);
+            tcs = _surfaceReady;
         }
+
+        var surfaceObj = new Surface(surface);
+        tcs.TrySetResult(surfaceObj);
+
+        // İlk boyut bilgisi geldiğinde transform'u uygula.
+        _ = _activityProvider.CurrentActivity?.RunOnUiThread(ApplyVideoTransform);
     }
 
-    public void SurfaceChanged(ISurfaceHolder holder, global::Android.Graphics.Format format, int width, int height)
+    public void OnSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height)
     {
-        if (holder.Surface?.IsValid == true)
+        // Boyut değiştiğinde transform'u yeniden hesapla.
+        _ = _activityProvider.CurrentActivity?.RunOnUiThread(ApplyVideoTransform);
+    }
+
+    public bool OnSurfaceTextureDestroyed(SurfaceTexture surface)
+    {
+        lock (_surfaceLock)
         {
-            _surfaceReady?.TrySetResult(holder.Surface);
+            _surfaceReady = new TaskCompletionSource<Surface>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
+
+        return true; // Uygulamanın SurfaceTexture'ı serbest bırakmasına izin ver.
     }
 
-    public void SurfaceDestroyed(ISurfaceHolder holder)
+    public void OnSurfaceTextureUpdated(SurfaceTexture surface)
     {
-        _surfaceReady = new TaskCompletionSource<Surface>(TaskCreationOptions.RunContinuationsAsynchronously);
+        // İlk kare geldiğinde view boyutlarıyla transform'u uygula.
+        _ = _activityProvider.CurrentActivity?.RunOnUiThread(ApplyVideoTransform);
     }
 
-    private void EnsureSurfaceView(Activity activity)
+    private void EnsureTextureView(Activity activity)
     {
-        if (_surfaceView is not null)
+        if (_textureView is not null)
         {
             return;
         }
@@ -171,15 +377,16 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
             throw new InvalidOperationException("Android content root is unavailable.");
         }
 
-        _surfaceReady = new TaskCompletionSource<Surface>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _surfaceView = new SurfaceView(activity);
-        _surfaceView.SetZOrderMediaOverlay(false);
-        if (_surfaceView.Holder is { } holder)
+        lock (_surfaceLock)
         {
-            holder.AddCallback(this);
+            _surfaceReady = new TaskCompletionSource<Surface>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
+
+        _textureView = new TextureView(activity);
+        _textureView.SetSurfaceTextureListener(this);
+
         content.AddView(
-            _surfaceView,
+            _textureView,
             new WidgetFrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MatchParent,
                 ViewGroup.LayoutParams.MatchParent));
