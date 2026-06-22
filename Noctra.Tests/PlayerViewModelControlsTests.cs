@@ -46,6 +46,7 @@ namespace Noctra.Tests
         public event EventHandler<StreamQualityInfo>? QualityDetected;
         public event EventHandler<int>? VolumeChanged;
         public event EventHandler<float>? BufferingChanged;
+        public event EventHandler<string?>? SubtitleTextChanged;
 
         public Task PlayAsync(string url, double startTimeSeconds = 0)
         {

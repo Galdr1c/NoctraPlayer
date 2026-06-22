@@ -32,6 +32,7 @@ public interface IVideoPlayerService : IDisposable
     event EventHandler? PlaybackEnded;
     event EventHandler<float>? BufferingChanged;
     event EventHandler<string>? ErrorOccurred;
+    event EventHandler<string?>? SubtitleTextChanged;
 
     void SeekToTime(long milliseconds);
     void PlayLoadedMedia();

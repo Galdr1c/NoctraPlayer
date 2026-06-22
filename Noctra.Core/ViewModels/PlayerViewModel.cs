@@ -289,7 +289,23 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private int _subtitleBackgroundOpacity = 0;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMobileSubtitlePositionTop))]
+    [NotifyPropertyChangedFor(nameof(IsMobileSubtitlePositionBottom))]
+    [NotifyPropertyChangedFor(nameof(IsMobileSubtitleTopVisible))]
+    [NotifyPropertyChangedFor(nameof(IsMobileSubtitleBottomVisible))]
     private int _subtitleMargin = 40;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMobileSubtitleVisible))]
+    [NotifyPropertyChangedFor(nameof(IsMobileSubtitleTopVisible))]
+    [NotifyPropertyChangedFor(nameof(IsMobileSubtitleBottomVisible))]
+    private string _currentSubtitleText = string.Empty;
+
+    public bool IsMobileSubtitleVisible => !string.IsNullOrWhiteSpace(CurrentSubtitleText);
+    public bool IsMobileSubtitlePositionTop => SubtitleMargin >= 900;
+    public bool IsMobileSubtitlePositionBottom => !IsMobileSubtitlePositionTop;
+    public bool IsMobileSubtitleTopVisible => IsMobileSubtitleVisible && IsMobileSubtitlePositionTop;
+    public bool IsMobileSubtitleBottomVisible => IsMobileSubtitleVisible && IsMobileSubtitlePositionBottom;
 
     private CancellationTokenSource? _subtitleSaveCts;
 
@@ -645,6 +661,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _videoPlayerService.ErrorOccurred += OnVideoPlayerServiceErrorOccurred;
         _videoPlayerService.PositionChanged += OnVideoPlayerServicePositionChanged;
         _videoPlayerService.VolumeChanged += OnVideoPlayerServiceVolumeChanged;
+        _videoPlayerService.SubtitleTextChanged += OnVideoPlayerServiceSubtitleTextChanged;
 
         _licenseService.SubscriptionChanged += OnLicenseServiceSubscriptionChanged;
     }
@@ -716,6 +733,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _isIntentionallyPaused = false;
         _livePauseRequiresHardRestart = false;
         PlayerLoadingWarningMessage = string.Empty;
+        CurrentSubtitleText = string.Empty;
 
         if (stopCurrentPlayback)
         {
@@ -1717,6 +1735,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private void OnVideoPlayerServiceVolumeChanged(object? s, int vol)
         => PlaybackController.OnVideoPlayerServiceVolumeChanged(s, vol);
 
+    private void OnVideoPlayerServiceSubtitleTextChanged(object? s, string? text)
+        => _dispatcherService.BeginInvoke(() => CurrentSubtitleText = text ?? string.Empty);
+
     private void OnNetworkStatusChanged(object? sender, string status)
         => StallDetector.OnNetworkStatusChanged(sender, status);
 
@@ -1775,6 +1796,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             _videoPlayerService.ErrorOccurred -= OnVideoPlayerServiceErrorOccurred;
             _videoPlayerService.PositionChanged -= OnVideoPlayerServicePositionChanged;
             _videoPlayerService.VolumeChanged -= OnVideoPlayerServiceVolumeChanged;
+            _videoPlayerService.SubtitleTextChanged -= OnVideoPlayerServiceSubtitleTextChanged;
         }
 
         if (_licenseService != null)

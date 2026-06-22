@@ -55,6 +55,8 @@ public class VideoPlayerService : IVideoPlayerService
     public event EventHandler<string>? ErrorOccurred;
     public event EventHandler<StreamQualityInfo>? QualityDetected;
     public event EventHandler<int>? VolumeChanged;
+    // Desktop LibVLC renders subtitles natively; this event is mainly used by mobile where subtitles are drawn in Avalonia overlay.
+    public event EventHandler<string?>? SubtitleTextChanged;
 
     public string? CurrentUrl { get; private set; }
     public StreamQualityInfo? StreamQuality { get; private set; }
