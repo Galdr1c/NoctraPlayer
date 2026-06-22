@@ -36,6 +36,7 @@ public partial class SettingsViewModel : ObservableObject
     private CancellationTokenSource? _epgRefreshWatchCts;
     private int _isRefreshOperationRunning;
     private string? _activeRefreshScope;
+    private bool _isLoadingSettings;
 
     // ============ Oynatma Ayarları ============
     [ObservableProperty]
@@ -166,8 +167,11 @@ public partial class SettingsViewModel : ObservableObject
 
     partial void OnIsDarkThemeChanged(bool value)
     {
-        // Tema değiştiği an kaydet (user request)
-        if (_settingsService != null && _settingsService.Settings.IsDarkTheme != value)
+        // Apply immediately on desktop and mobile. On Android this updates
+        // Avalonia's ThemeVariant layer without recreating the Activity.
+        _themeService.SetTheme(value);
+
+        if (!_isLoadingSettings && _settingsService.Settings.IsDarkTheme != value)
         {
             _settingsService.Settings.IsDarkTheme = value;
             _ = _settingsService.SaveAsync();
@@ -647,9 +651,12 @@ public partial class SettingsViewModel : ObservableObject
 
     private void LoadSettings()
     {
-        var s = _settingsService.Settings;
+        _isLoadingSettings = true;
+        try
+        {
+            var s = _settingsService.Settings;
         
-        // Playback
+            // Playback
         UserAgent = s.UserAgent ?? string.Empty;
         AutoPlayNext = s.AutoPlayNext;
         
@@ -725,10 +732,15 @@ public partial class SettingsViewModel : ObservableObject
         }
         CustomEpgUrls = new ObservableCollection<EpgUrlItem>(urls.Select(u => new EpgUrlItem { Url = u }));
 
-        // Hidden Groups
-        HiddenLiveGroups = new ObservableCollection<string>(s.HiddenLiveGroups);
-        HiddenMovieGroups = new ObservableCollection<string>(s.HiddenMovieGroups);
-        HiddenSeriesGroups = new ObservableCollection<string>(s.HiddenSeriesGroups);
+            // Hidden Groups
+            HiddenLiveGroups = new ObservableCollection<string>(s.HiddenLiveGroups);
+            HiddenMovieGroups = new ObservableCollection<string>(s.HiddenMovieGroups);
+            HiddenSeriesGroups = new ObservableCollection<string>(s.HiddenSeriesGroups);
+        }
+        finally
+        {
+            _isLoadingSettings = false;
+        }
     }
 
     [RelayCommand]
@@ -784,6 +796,7 @@ public partial class SettingsViewModel : ObservableObject
             return;
         }
 
+        _themeService.SetTheme(snapshot.IsDarkTheme);
         StatusMessage = _localizationService.GetString("Settings.Status.Saved");
     }
 

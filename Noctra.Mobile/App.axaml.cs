@@ -29,9 +29,16 @@ public partial class App : Application
             LocalizationSource.Instance.Initialize(localization);
         }
 
-        // Inject mobile-specific promo code URL into settings
+        // Apply the saved theme before creating the first mobile view so
+        // DynamicResource bindings resolve against the correct theme dictionary.
         if (Services?.GetService(typeof(ISettingsService)) is ISettingsService settingsService)
         {
+            if (Services.GetService(typeof(IThemeService)) is IThemeService themeService)
+            {
+                themeService.SetTheme(settingsService.Settings.IsDarkTheme);
+            }
+
+            // Inject mobile-specific promo code URL into settings
             if (string.IsNullOrWhiteSpace(settingsService.Settings.PromoCodeConfigUrl))
             {
                 settingsService.Settings.PromoCodeConfigUrl = Mobile.Services.MobileAppConfig.PromoCodesUrl;
