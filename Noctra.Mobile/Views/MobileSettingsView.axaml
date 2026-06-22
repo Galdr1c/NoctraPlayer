@@ -188,8 +188,14 @@
           <TextBox Text="{Binding UserAgent, Mode=TwoWay}"
                    PlaceholderText="VLC/3.0.x LibVLC/3.0.x"
                    MinHeight="44" />
-          <CheckBox Content="{loc:Translate Settings.Playback.AutoPlayNext}"
-                    IsChecked="{Binding AutoPlayNext}" />
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{loc:Translate Settings.Playback.AutoPlayNext}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       VerticalAlignment="Center" />
+            <ToggleSwitch Grid.Column="1"
+                          IsChecked="{Binding AutoPlayNext}"
+                          VerticalAlignment="Center" />
+          </Grid>
           <TextBlock Text="{loc:Translate Settings.Playback.Quality}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
@@ -216,10 +222,22 @@
                          IsChecked="{Binding IsBufferLarge}"
                          IsEnabled="{Binding IsPremium}" />
           </StackPanel>
-          <CheckBox Content="{loc:Translate Settings.Privacy.SaveHistory}"
-                    IsChecked="{Binding SaveWatchHistory}" />
-          <CheckBox Content="{loc:Translate Settings.Privacy.ClearOnExit}"
-                    IsChecked="{Binding ClearHistoryOnExit}" />
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{loc:Translate Settings.Privacy.SaveHistory}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       VerticalAlignment="Center" />
+            <ToggleSwitch Grid.Column="1"
+                          IsChecked="{Binding SaveWatchHistory}"
+                          VerticalAlignment="Center" />
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{loc:Translate Settings.Privacy.ClearOnExit}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       VerticalAlignment="Center" />
+            <ToggleSwitch Grid.Column="1"
+                          IsChecked="{Binding ClearHistoryOnExit}"
+                          VerticalAlignment="Center" />
+          </Grid>
         </StackPanel>
       </Border>
 
@@ -233,8 +251,14 @@
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        FontWeight="SemiBold" />
           </StackPanel>
-          <CheckBox Content="{loc:Translate Settings.Playback.SubtitlesAuto}"
-                    IsChecked="{Binding SubtitleEnabled}" />
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{loc:Translate Settings.Playback.SubtitlesAuto}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       VerticalAlignment="Center" />
+            <ToggleSwitch Grid.Column="1"
+                          IsChecked="{Binding SubtitleEnabled}"
+                          VerticalAlignment="Center" />
+          </Grid>
           <TextBlock Text="{loc:Translate Settings.Playback.PreferredSubtitle}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
@@ -282,8 +306,14 @@
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        FontWeight="SemiBold" />
           </StackPanel>
-          <CheckBox Content="{loc:Translate Settings.Download.WifiOnly}"
-                    IsChecked="{Binding DownloadWifiOnly}" />
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{loc:Translate Settings.Download.WifiOnly}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       VerticalAlignment="Center" />
+            <ToggleSwitch Grid.Column="1"
+                          IsChecked="{Binding DownloadWifiOnly}"
+                          VerticalAlignment="Center" />
+          </Grid>
           <TextBlock Text="{loc:Translate Settings.Download.Quality}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
@@ -303,8 +333,14 @@
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12"
                      TextWrapping="Wrap" />
-          <CheckBox Content="{loc:Translate Settings.Notifications.Download}"
-                    IsChecked="{Binding ShowDownloadNotification}" />
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{loc:Translate Settings.Notifications.Download}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       VerticalAlignment="Center" />
+            <ToggleSwitch Grid.Column="1"
+                          IsChecked="{Binding ShowDownloadNotification}"
+                          VerticalAlignment="Center" />
+          </Grid>
         </StackPanel>
       </Border>
 
@@ -506,8 +542,14 @@
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        FontWeight="SemiBold" />
           </StackPanel>
-          <CheckBox Content="{loc:Translate Settings.Epg.Enabled}"
-                    IsChecked="{Binding EpgEnabled}" />
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{loc:Translate Settings.Epg.Enabled}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       VerticalAlignment="Center" />
+            <ToggleSwitch Grid.Column="1"
+                          IsChecked="{Binding EpgEnabled}"
+                          VerticalAlignment="Center" />
+          </Grid>
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="{loc:Translate Settings.Epg.Count}"
                        Foreground="{DynamicResource TextMutedBrush}"

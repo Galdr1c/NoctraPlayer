@@ -15,7 +15,25 @@
              mc:Ignorable="d"
              d:DesignWidth="390"
              d:DesignHeight="720">
-  <Border Background="{DynamicResource Bg0Brush}">
+  <Border Background="{DynamicResource BackgroundGradientBrush}">
+    <Grid>
+      <!-- Backdrop Blur (Netflix Style) -->
+      <Grid IsHitTestVisible="False" Opacity="0.25" IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
+        <controls:RemoteImage Stretch="UniformToFill" Url="{Binding SelectedSeriesPosterUrl}">
+          <controls:RemoteImage.Effect>
+            <BlurEffect Radius="60"/>
+          </controls:RemoteImage.Effect>
+        </controls:RemoteImage>
+        <Border>
+          <Border.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+              <GradientStop Color="Transparent" Offset="0.0"/>
+              <GradientStop Color="{DynamicResource Bg0Color}" Offset="1.0"/>
+            </LinearGradientBrush>
+          </Border.Background>
+        </Border>
+      </Grid>
+
     <ScrollViewer>
       <StackPanel Margin="20" Spacing="16">
         <Grid ColumnDefinitions="Auto,*"
@@ -176,7 +194,12 @@
                   BorderThickness="0"
                   CornerRadius="14">
             <StackPanel Orientation="Horizontal" Spacing="7">
-              <icons:MaterialIcon Kind="BookmarkOutline" Width="18" Height="18" />
+              <Panel>
+                <icons:MaterialIcon Kind="Bookmark" Width="18" Height="18" Foreground="{DynamicResource AccentBrush}"
+                                    IsVisible="{Binding SelectedSeries.IsInMyList}" />
+                <icons:MaterialIcon Kind="BookmarkOutline" Width="18" Height="18"
+                                    IsVisible="{Binding !SelectedSeries.IsInMyList}" />
+              </Panel>
               <TextBlock Text="{loc:Translate Context.MyList.Toggle}" />
             </StackPanel>
           </Button>
@@ -189,7 +212,12 @@
                   BorderThickness="0"
                   CornerRadius="14">
             <StackPanel Orientation="Horizontal" Spacing="7">
-              <icons:MaterialIcon Kind="HeartOutline" Width="18" Height="18" />
+              <Panel>
+                <icons:MaterialIcon Kind="Heart" Width="18" Height="18" Foreground="#E50914"
+                                    IsVisible="{Binding SelectedSeries.IsFavorite}" />
+                <icons:MaterialIcon Kind="HeartOutline" Width="18" Height="18"
+                                    IsVisible="{Binding !SelectedSeries.IsFavorite}" />
+              </Panel>
               <TextBlock Text="{loc:Translate Context.Favorite.Toggle}" />
             </StackPanel>
           </Button>
@@ -261,6 +289,16 @@
 
         <ItemsControl ItemsSource="{Binding SelectedSeason.Episodes}"
                       behaviors:MobileSlideTransitionBehavior.TriggerValue="{Binding SelectedSeason}">
+          <ItemsControl.Styles>
+            <Style Selector="Button:pointerover Border#EpBgLayer">
+              <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+              <Setter Property="Opacity" Value="0.9" />
+            </Style>
+            <Style Selector="Button:pressed Border#EpBgLayer">
+              <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+              <Setter Property="Opacity" Value="1.0" />
+            </Style>
+          </ItemsControl.Styles>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="models:Episode">
               <Button Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).PlayEpisodeCommand}"
@@ -271,6 +309,8 @@
                       Padding="12"
                       Margin="0,0,0,10"
                       HorizontalContentAlignment="Stretch">
+                <Panel>
+                  <Border x:Name="EpBgLayer" Background="Transparent" CornerRadius="16" />
                 <Grid ColumnDefinitions="72,*"
                       ColumnSpacing="12">
                   <!-- Thumbnail with Episode Number Overlay -->
@@ -332,6 +372,11 @@
                                  FontWeight="SemiBold"
                                  TextWrapping="Wrap"
                                  MaxLines="2" />
+                      <TextBlock Text="{Binding EpisodeMetaText}"
+                                 Foreground="{DynamicResource TextMutedBrush}"
+                                 FontSize="11"
+                                 VerticalAlignment="Center"
+                                 IsVisible="{Binding EpisodeMetaText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
                       <!-- Watched Checkmark -->
                       <icons:MaterialIcon Kind="CheckCircle"
                                           Width="16"
@@ -339,20 +384,43 @@
                                           Foreground="{DynamicResource AccentBrush}"
                                           VerticalAlignment="Center"
                                           IsVisible="{Binding IsCompleted}" />
+                      <!-- Download Episode -->
+                      <Button Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DownloadEpisodeCommand}"
+                              CommandParameter="{Binding}"
+                              Background="Transparent"
+                              BorderThickness="0"
+                              Padding="0"
+                              MinWidth="28"
+                              MinHeight="28"
+                              ToolTip.Tip="{loc:Translate Series.Episode.Download}"
+                              IsVisible="{Binding StreamUrl, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+                        <icons:MaterialIcon Kind="DownloadOutline"
+                                            Width="16"
+                                            Height="16"
+                                            Foreground="{DynamicResource TextMutedBrush}" />
+                      </Button>
                     </StackPanel>
+                    <TextBlock Text="{Binding TmdbEpisodeName}"
+                               Foreground="{DynamicResource AccentBrush}"
+                               FontSize="12"
+                               FontStyle="Italic"
+                               Opacity="0.85"
+                               TextWrapping="Wrap"
+                               IsVisible="{Binding TmdbEpisodeName, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
                     <TextBlock Text="{Binding Plot}"
                                Foreground="{DynamicResource TextMutedBrush}"
                                FontSize="12"
                                TextWrapping="Wrap"
                                MaxLines="2"
                                IsVisible="{Binding Plot, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
-                  </StackPanel>
-                </Grid>
+                  </StackPanel>                  </Grid>
+                </Panel>
               </Button>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
       </StackPanel>
     </ScrollViewer>
+    </Grid>
   </Border>
 </UserControl>
