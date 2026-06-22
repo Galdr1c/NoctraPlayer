@@ -89,6 +89,188 @@
             PointerMoved="OnZonePointerMoved"
             PointerReleased="OnZonePointerReleased" />
 
+    <!-- Buffering / loading shield: desktop overlay parity for mobile. -->
+    <Border Grid.ColumnSpan="2"
+            ZIndex="20"
+            Background="#B3000000"
+            IsHitTestVisible="False"
+            IsVisible="{Binding IsBufferShieldVisible}">
+      <StackPanel HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  Spacing="14"
+                  MaxWidth="320">
+        <Grid Width="64" Height="64" HorizontalAlignment="Center">
+          <Arc Width="58" Height="58"
+               Stroke="{DynamicResource AccentBrush}"
+               StrokeThickness="4"
+               StartAngle="0"
+               SweepAngle="95"
+               VerticalAlignment="Center"
+               HorizontalAlignment="Center">
+            <Arc.RenderTransform>
+              <RotateTransform />
+            </Arc.RenderTransform>
+            <Arc.Styles>
+              <Style Selector="Arc">
+                <Style.Animations>
+                  <Animation Duration="0:0:1" IterationCount="Infinite">
+                    <KeyFrame KeyTime="0:0:0"><Setter Property="RotateTransform.Angle" Value="0" /></KeyFrame>
+                    <KeyFrame KeyTime="0:0:1"><Setter Property="RotateTransform.Angle" Value="360" /></KeyFrame>
+                  </Animation>
+                </Style.Animations>
+              </Style>
+            </Arc.Styles>
+          </Arc>
+          <icons:MaterialIcon Kind="ShieldCheckOutline"
+                              Width="28" Height="28"
+                              Foreground="White"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center" />
+        </Grid>
+        <TextBlock Text="{loc:Translate Common.Loading}"
+                   Foreground="White"
+                   FontSize="15"
+                   FontWeight="Bold"
+                   TextAlignment="Center" />
+        <TextBlock Text="{Binding PlayerLoadingWarningMessage}"
+                   Foreground="{DynamicResource WarningBrush}"
+                   FontSize="13"
+                   TextWrapping="Wrap"
+                   TextAlignment="Center"
+                   MaxWidth="300"
+                   IsVisible="{Binding PlayerLoadingWarningMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+      </StackPanel>
+    </Border>
+
+    <!-- Generic overlay message from PlayerOverlayManager. -->
+    <Border Grid.ColumnSpan="2"
+            ZIndex="42"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            MaxWidth="320"
+            Padding="18,12"
+            CornerRadius="16"
+            Background="#E6000000"
+            IsHitTestVisible="False"
+            IsVisible="{Binding IsOverlayMessageVisible}">
+      <StackPanel Orientation="Horizontal" Spacing="10">
+        <icons:MaterialIcon Kind="AlertCircleOutline"
+                            Width="22" Height="22"
+                            Foreground="{DynamicResource AccentBrush}"
+                            VerticalAlignment="Center" />
+        <TextBlock Text="{Binding OverlayMessage}"
+                   Foreground="White"
+                   FontSize="14"
+                   FontWeight="SemiBold"
+                   TextWrapping="Wrap"
+                   VerticalAlignment="Center" />
+      </StackPanel>
+    </Border>
+
+    <!-- Volume feedback toast. -->
+    <Border Grid.ColumnSpan="2"
+            ZIndex="60"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            Margin="0,54,0,0"
+            Padding="18,11"
+            CornerRadius="18"
+            Background="#E6000000"
+            IsHitTestVisible="False"
+            IsVisible="{Binding #PlayerRoot.IsVolumeToastVisible}">
+      <StackPanel Orientation="Horizontal" Spacing="10">
+        <icons:MaterialIcon Kind="VolumeOff"
+                            Width="22" Height="22"
+                            Foreground="White"
+                            IsVisible="{Binding IsMuted}" />
+        <icons:MaterialIcon Kind="VolumeHigh"
+                            Width="22" Height="22"
+                            Foreground="White"
+                            IsVisible="{Binding IsMuted, Converter={StaticResource InverseBoolConverter}}" />
+        <TextBlock Text="{loc:Translate Player.Muted}"
+                   Foreground="White"
+                   FontSize="16"
+                   FontWeight="Bold"
+                   VerticalAlignment="Center"
+                   IsVisible="{Binding IsMuted}" />
+        <TextBlock Text="{Binding Volume, StringFormat='{}{0}%'}"
+                   Foreground="White"
+                   FontSize="16"
+                   FontWeight="Bold"
+                   VerticalAlignment="Center"
+                   IsVisible="{Binding IsMuted, Converter={StaticResource InverseBoolConverter}}" />
+      </StackPanel>
+    </Border>
+
+    <!-- Seek / double-tap feedback toast. -->
+    <Border Grid.ColumnSpan="2"
+            ZIndex="61"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Padding="22,14"
+            CornerRadius="20"
+            Background="#E6000000"
+            IsHitTestVisible="False"
+            IsVisible="{Binding #PlayerRoot.IsSeekToastVisible}">
+      <StackPanel Orientation="Horizontal" Spacing="10">
+        <icons:MaterialIcon Kind="FastForward10"
+                            Width="26" Height="26"
+                            Foreground="{DynamicResource AccentBrush}"
+                            VerticalAlignment="Center" />
+        <TextBlock Text="{Binding #PlayerRoot.SeekToastText}"
+                   Foreground="White"
+                   FontSize="20"
+                   FontWeight="Black"
+                   VerticalAlignment="Center" />
+      </StackPanel>
+    </Border>
+
+    <!-- Download feedback toast. -->
+    <Border Grid.ColumnSpan="2"
+            ZIndex="62"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Bottom"
+            Margin="18,0,18,148"
+            Padding="18,12"
+            CornerRadius="18"
+            Background="#E6000000"
+            IsHitTestVisible="False"
+            IsVisible="{Binding #PlayerRoot.IsDownloadToastVisible}">
+      <StackPanel Orientation="Horizontal" Spacing="10">
+        <icons:MaterialIcon Kind="DownloadOutline"
+                            Width="22" Height="22"
+                            Foreground="{DynamicResource AccentBrush}"
+                            VerticalAlignment="Center" />
+        <TextBlock Text="{Binding DownloadStatusMessage}"
+                   Foreground="White"
+                   FontSize="14"
+                   FontWeight="SemiBold"
+                   TextWrapping="Wrap"
+                   MaxWidth="280"
+                   VerticalAlignment="Center" />
+      </StackPanel>
+    </Border>
+
+    <!-- Gesture feedback for brightness and non-seekable live streams. -->
+    <Border Grid.ColumnSpan="2"
+            ZIndex="63"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Margin="18"
+            Padding="18,12"
+            CornerRadius="18"
+            Background="#E6000000"
+            IsHitTestVisible="False"
+            IsVisible="{Binding #PlayerRoot.IsGestureToastVisible}">
+      <TextBlock Text="{Binding #PlayerRoot.GestureToastText}"
+                 Foreground="White"
+                 FontSize="15"
+                 FontWeight="Bold"
+                 TextAlignment="Center"
+                 TextWrapping="Wrap"
+                 MaxWidth="300" />
+    </Border>
+
     <!-- Normal mod: bottom sheet (EPG kapalıyken) -->
     <Border Grid.ColumnSpan="2"
             Background="{DynamicResource Bg0Brush}"

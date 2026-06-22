@@ -17,6 +17,60 @@ namespace Noctra.Mobile.Views;
 
 public partial class MobilePlayerView : UserControl
 {
+    public static readonly StyledProperty<bool> IsVolumeToastVisibleProperty =
+        AvaloniaProperty.Register<MobilePlayerView, bool>(nameof(IsVolumeToastVisible));
+
+    public static readonly StyledProperty<bool> IsSeekToastVisibleProperty =
+        AvaloniaProperty.Register<MobilePlayerView, bool>(nameof(IsSeekToastVisible));
+
+    public static readonly StyledProperty<bool> IsDownloadToastVisibleProperty =
+        AvaloniaProperty.Register<MobilePlayerView, bool>(nameof(IsDownloadToastVisible));
+
+    public static readonly StyledProperty<bool> IsGestureToastVisibleProperty =
+        AvaloniaProperty.Register<MobilePlayerView, bool>(nameof(IsGestureToastVisible));
+
+    public static readonly StyledProperty<string> SeekToastTextProperty =
+        AvaloniaProperty.Register<MobilePlayerView, string>(nameof(SeekToastText), "+10s");
+
+    public static readonly StyledProperty<string> GestureToastTextProperty =
+        AvaloniaProperty.Register<MobilePlayerView, string>(nameof(GestureToastText), string.Empty);
+
+    public bool IsVolumeToastVisible
+    {
+        get => GetValue(IsVolumeToastVisibleProperty);
+        set => SetValue(IsVolumeToastVisibleProperty, value);
+    }
+
+    public bool IsSeekToastVisible
+    {
+        get => GetValue(IsSeekToastVisibleProperty);
+        set => SetValue(IsSeekToastVisibleProperty, value);
+    }
+
+    public bool IsDownloadToastVisible
+    {
+        get => GetValue(IsDownloadToastVisibleProperty);
+        set => SetValue(IsDownloadToastVisibleProperty, value);
+    }
+
+    public bool IsGestureToastVisible
+    {
+        get => GetValue(IsGestureToastVisibleProperty);
+        set => SetValue(IsGestureToastVisibleProperty, value);
+    }
+
+    public string SeekToastText
+    {
+        get => GetValue(SeekToastTextProperty);
+        set => SetValue(SeekToastTextProperty, value);
+    }
+
+    public string GestureToastText
+    {
+        get => GetValue(GestureToastTextProperty);
+        set => SetValue(GestureToastTextProperty, value);
+    }
+
     /// <summary>
     /// EPG timeline'dan kanal seçildiğinde tetiklenir.
     /// MainView bu event'e abone olup kanalı oynatır.
@@ -34,6 +88,14 @@ public partial class MobilePlayerView : UserControl
     private int _swipeStartVolume;
     private double _swipeStartBrightness;
 
+    private readonly DispatcherTimer _volumeToastTimer;
+    private readonly DispatcherTimer _seekToastTimer;
+    private readonly DispatcherTimer _downloadToastTimer;
+    private readonly DispatcherTimer _gestureToastTimer;
+    private bool _isInitialVolumeEvent = true;
+    private DateTime _lastVolumeToastShownUtc = DateTime.MinValue;
+    private static readonly TimeSpan VolumeToastThrottleInterval = TimeSpan.FromMilliseconds(350);
+
     private IPlayerWindowService? _playerWindowService;
     private IVideoSurfaceService? _videoSurfaceService;
     private PlayerViewModel? _boundVm;
@@ -42,6 +104,12 @@ public partial class MobilePlayerView : UserControl
     public MobilePlayerView()
     {
         InitializeComponent();
+
+        _volumeToastTimer = CreateToastTimer(() => IsVolumeToastVisible = false, TimeSpan.FromMilliseconds(900));
+        _seekToastTimer = CreateToastTimer(() => IsSeekToastVisible = false, TimeSpan.FromMilliseconds(850));
+        _downloadToastTimer = CreateToastTimer(() => IsDownloadToastVisible = false, TimeSpan.FromMilliseconds(2200));
+        _gestureToastTimer = CreateToastTimer(() => IsGestureToastVisible = false, TimeSpan.FromMilliseconds(1200));
+
         LayoutUpdated += OnLayoutUpdated;
     }
 
@@ -52,18 +120,36 @@ public partial class MobilePlayerView : UserControl
         if (_boundVm is not null)
         {
             _boundVm.PropertyChanged -= OnPlayerPropertyChanged;
+            _boundVm.SkipOverlayRequested -= OnSkipOverlayRequested;
         }
 
         _boundVm = DataContext as PlayerViewModel;
+        _isInitialVolumeEvent = true;
 
         if (_boundVm is not null)
         {
             _boundVm.PropertyChanged += OnPlayerPropertyChanged;
+            _boundVm.SkipOverlayRequested += OnSkipOverlayRequested;
         }
     }
 
     private void OnPlayerPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        if (e.PropertyName is nameof(PlayerViewModel.Volume) or nameof(PlayerViewModel.IsMuted))
+        {
+            ShowVolumeToast();
+        }
+        else if (e.PropertyName == nameof(PlayerViewModel.DownloadStatusMessage)
+                 && !string.IsNullOrWhiteSpace(_boundVm?.DownloadStatusMessage))
+        {
+            ShowDownloadToast();
+        }
+        else if (e.PropertyName == nameof(PlayerViewModel.IsDownloadInProgress)
+                 && _boundVm?.IsDownloadInProgress == true)
+        {
+            ShowDownloadToast();
+        }
+
         if (e.PropertyName == nameof(PlayerViewModel.IsEpgPanelOpen))
         {
             if (_boundVm?.IsEpgPanelOpen == true)
@@ -172,6 +258,84 @@ public partial class MobilePlayerView : UserControl
         }
 
         return _videoSurfaceService;
+    }
+
+    private static DispatcherTimer CreateToastTimer(Action elapsed, TimeSpan interval)
+    {
+        var timer = new DispatcherTimer { Interval = interval };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            elapsed();
+        };
+        return timer;
+    }
+
+    private void ShowVolumeToast()
+    {
+        if (_isInitialVolumeEvent)
+        {
+            _isInitialVolumeEvent = false;
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        if (now - _lastVolumeToastShownUtc < VolumeToastThrottleInterval)
+        {
+            return;
+        }
+
+        _lastVolumeToastShownUtc = now;
+        IsVolumeToastVisible = true;
+        _volumeToastTimer.Stop();
+        _volumeToastTimer.Start();
+    }
+
+    private void ShowSeekToast(double seconds)
+    {
+        SeekToastText = FormatSeekToast(seconds);
+        IsSeekToastVisible = true;
+        _seekToastTimer.Stop();
+        _seekToastTimer.Start();
+    }
+
+    private void ShowDownloadToast()
+    {
+        IsDownloadToastVisible = true;
+        _downloadToastTimer.Stop();
+        _downloadToastTimer.Start();
+    }
+
+    private void ShowGestureToast(string text)
+    {
+        GestureToastText = text;
+        IsGestureToastVisible = true;
+        _gestureToastTimer.Stop();
+        _gestureToastTimer.Start();
+    }
+
+    private void OnSkipOverlayRequested(object? sender, PlayerViewModel.SkipOverlayEventArgs e)
+        => Dispatcher.UIThread.Post(() => ShowSeekToast(e.Seconds));
+
+    private static string FormatSeekToast(double seconds)
+    {
+        var sign = seconds >= 0 ? "+" : "-";
+        var totalSeconds = (int)Math.Round(Math.Abs(seconds));
+        if (totalSeconds < 60)
+        {
+            return $"{sign}{totalSeconds}s";
+        }
+
+        var ts = TimeSpan.FromSeconds(totalSeconds);
+        return $"{sign}{(int)ts.TotalMinutes}:{ts.Seconds:00}";
+    }
+
+    private static string TranslateOrDefault(string key, string fallback)
+    {
+        var value = LocalizationSource.Instance[key];
+        return string.IsNullOrWhiteSpace(value) || string.Equals(value, key, StringComparison.Ordinal)
+            ? fallback
+            : value;
     }
 
     /// <summary>
@@ -364,20 +528,47 @@ public partial class MobilePlayerView : UserControl
 
     private void OnLeftDoubleTapped(object? sender, TappedEventArgs e)
     {
-        if (DataContext is PlayerViewModel playerVm && playerVm.SkipBackwardCommand.CanExecute("10"))
-        {
-            playerVm.SkipBackwardCommand.Execute("10");
-        }
+        HandleDoubleTapSeek(forward: false);
         e.Handled = true;
     }
 
     private void OnRightDoubleTapped(object? sender, TappedEventArgs e)
     {
-        if (DataContext is PlayerViewModel playerVm && playerVm.SkipForwardCommand.CanExecute("10"))
-        {
-            playerVm.SkipForwardCommand.Execute("10");
-        }
+        HandleDoubleTapSeek(forward: true);
         e.Handled = true;
+    }
+
+    private void HandleDoubleTapSeek(bool forward)
+    {
+        if (DataContext is not PlayerViewModel playerVm)
+        {
+            return;
+        }
+
+        if (playerVm.IsLocked)
+        {
+            ShowGestureToast(TranslateOrDefault("Player.Mobile.Toast.Locked", "Kontroller kilitli"));
+            return;
+        }
+
+        if (playerVm.IsLiveContent)
+        {
+            ShowGestureToast(TranslateOrDefault("Player.Mobile.Toast.LiveSeekUnavailable", "Canlı yayında ileri/geri sarma kullanılamaz"));
+            return;
+        }
+
+        const string tenSeconds = "10";
+        if (forward)
+        {
+            if (playerVm.SkipForwardCommand.CanExecute(tenSeconds))
+            {
+                playerVm.SkipForwardCommand.Execute(tenSeconds);
+            }
+        }
+        else if (playerVm.SkipBackwardCommand.CanExecute(tenSeconds))
+        {
+            playerVm.SkipBackwardCommand.Execute(tenSeconds);
+        }
     }
 
     /// <summary>
@@ -398,9 +589,12 @@ public partial class MobilePlayerView : UserControl
         if (DataContext is not PlayerViewModel vm)
             return;
 
-        // Kilitliyken jestler devre dışı.
+        // Kilitliyken jestler devre dışı; kullanıcıya sessiz kalma.
         if (vm.IsLocked)
+        {
+            ShowGestureToast(TranslateOrDefault("Player.Mobile.Toast.Locked", "Kontroller kilitli"));
             return;
+        }
 
         _isSwiping = true;
         _swipeDirectionDecided = false;
@@ -438,6 +632,7 @@ public partial class MobilePlayerView : UserControl
         {
             var brightness = Math.Clamp(_swipeStartBrightness + fraction, 0.0, 1.0);
             GetPlayerWindowService()?.SetBrightness(brightness);
+            ShowGestureToast(string.Format(CultureInfo.InvariantCulture, "☀ {0:0}%", brightness * 100));
         }
         else
         {
@@ -459,23 +654,31 @@ public partial class MobilePlayerView : UserControl
         var pos = e.GetCurrentPoint(this).Position;
         var dx = pos.X - _swipeStart.X;
 
-        // Yatay kaydırma -> ileri/geri sarma (live içerikte komut zaten no-op).
+        // Yatay kaydırma -> ileri/geri sarma. Canlı yayında seek yok; sessiz no-op yerine açık feedback ver.
         if (_swipeDirectionDecided && !_swipeIsVertical && Math.Abs(dx) >= SwipeThreshold)
         {
-            var seconds = (int)Math.Clamp(Math.Abs(dx) / 6.0, 5, 90);
-            var param = seconds.ToString(CultureInfo.InvariantCulture);
-
-            if (dx > 0)
+            if (vm.IsLiveContent)
             {
-                if (vm.SkipForwardCommand.CanExecute(param))
-                    vm.SkipForwardCommand.Execute(param);
+                ShowGestureToast(TranslateOrDefault("Player.Mobile.Toast.LiveSeekUnavailable", "Canlı yayında ileri/geri sarma kullanılamaz"));
+                e.Handled = true;
             }
-            else if (vm.SkipBackwardCommand.CanExecute(param))
+            else
             {
-                vm.SkipBackwardCommand.Execute(param);
-            }
+                var seconds = (int)Math.Clamp(Math.Abs(dx) / 6.0, 5, 90);
+                var param = seconds.ToString(CultureInfo.InvariantCulture);
 
-            e.Handled = true;
+                if (dx > 0)
+                {
+                    if (vm.SkipForwardCommand.CanExecute(param))
+                        vm.SkipForwardCommand.Execute(param);
+                }
+                else if (vm.SkipBackwardCommand.CanExecute(param))
+                {
+                    vm.SkipBackwardCommand.Execute(param);
+                }
+
+                e.Handled = true;
+            }
         }
 
         _isSwiping = false;
