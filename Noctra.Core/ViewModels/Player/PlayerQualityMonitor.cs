@@ -75,13 +75,13 @@ public class PlayerQualityMonitor
 
         var audioTracks = _vm.VideoPlayerService.AudioTracks
             .Where(t => t.Id >= 0 && !IsDisabledTrackLabel(t.Name))
-            .Select(t => new PlayerViewModel.TrackOption(t.Id, NormalizeTrackName(t.Name, string.Format(audioFallbackFormat, t.Id))))
+            .Select(t => BuildTrackOption(t.Id, t.Name, string.Format(audioFallbackFormat, t.Id)))
             .ToList();
 
         var subtitleTracks = _vm.VideoPlayerService.SubtitleTracks
             .Select(t => IsDisabledTrackLabel(t.Name)
                 ? new PlayerViewModel.TrackOption(t.Id, offText)
-                : new PlayerViewModel.TrackOption(t.Id, NormalizeTrackName(t.Name, string.Format(subtitleFallbackFormat, t.Id))))
+                : BuildTrackOption(t.Id, t.Name, string.Format(subtitleFallbackFormat, t.Id)))
             .ToList();
 
         if (!subtitleTracks.Any(t => string.Equals(t.Name, offText, StringComparison.OrdinalIgnoreCase)))
@@ -98,54 +98,80 @@ public class PlayerQualityMonitor
             foreach (var t in subtitleTracks) _vm.SubtitleTracks.Add(t);
         });
 
-        if (!_vm.IsLiveContent)
-        {
-            if (!_vm._isPreferenceApplied)
-            {
-                ApplyDefaultTracks(_vm.VideoPlayerService.AudioTracks, _vm.VideoPlayerService.SubtitleTracks);
-            }
-            else
-            {
-                if (_vm.SelectedAudioTrack >= 0 && audioTracks.Any(t => t.Id == _vm.SelectedAudioTrack))
-                {
-                    _vm.VideoPlayerService.SetAudioTrack(_vm.SelectedAudioTrack);
-                }
+        _vm.DispatcherService.Invoke(() => _vm.RaiseTrackSelectionPropertiesChanged());
 
-                if (_vm.SelectedSubtitleTrack >= -1 && subtitleTracks.Any(t => t.Id == _vm.SelectedSubtitleTrack))
-                {
-                    _vm.VideoPlayerService.SetSubtitleTrack(_vm.SelectedSubtitleTrack);
-                }
+        if (!_vm._isPreferenceApplied)
+        {
+            var remembered = _vm.TryApplyRememberedTrackSelection(audioTracks, subtitleTracks);
+            ApplyDefaultTracks(
+                _vm.VideoPlayerService.AudioTracks,
+                _vm.VideoPlayerService.SubtitleTracks,
+                skipAudio: remembered.AudioApplied,
+                skipSubtitle: remembered.SubtitleApplied);
+        }
+        else
+        {
+            if (_vm.SelectedAudioTrack >= 0 && audioTracks.Any(t => t.Id == _vm.SelectedAudioTrack))
+            {
+                _vm.VideoPlayerService.SetAudioTrack(_vm.SelectedAudioTrack);
+            }
+
+            if (_vm.SelectedSubtitleTrack >= -1 && subtitleTracks.Any(t => t.Id == _vm.SelectedSubtitleTrack))
+            {
+                _vm.VideoPlayerService.SetSubtitleTrack(_vm.SelectedSubtitleTrack);
             }
         }
     }
 
-    public void ApplyDefaultTracks(IReadOnlyList<(int Id, string? Name)> audioTracks, IReadOnlyList<(int Id, string? Name)> subtitleTracks)
+    public void ApplyDefaultTracks(
+        IReadOnlyList<(int Id, string? Name)> audioTracks,
+        IReadOnlyList<(int Id, string? Name)> subtitleTracks,
+        bool skipAudio = false,
+        bool skipSubtitle = false)
     {
         var settings = _vm.SettingsService.Settings;
-        
-        var targetAudioId = FindBestTrackMatch(audioTracks, settings.PreferredAudioLanguage);
-        if (targetAudioId >= 0)
-        {
-            _vm.VideoPlayerService.SetAudioTrack(targetAudioId);
-            _vm.SelectedAudioTrack = targetAudioId;
-        }
 
-        if (settings.SubtitleEnabled)
+        if (!skipAudio)
         {
-            var targetSubtitleId = FindBestTrackMatch(subtitleTracks, settings.SubtitleLanguage);
-            if (targetSubtitleId >= 0)
+            var targetAudioId = FindBestTrackMatch(audioTracks, settings.PreferredAudioLanguage);
+            if (targetAudioId >= 0)
             {
-                _vm.VideoPlayerService.SetSubtitleTrack(targetSubtitleId);
-                _vm.SelectedSubtitleTrack = targetSubtitleId;
+                _vm.VideoPlayerService.SetAudioTrack(targetAudioId);
+                _vm.SelectedAudioTrack = targetAudioId;
+            }
+            else if (_vm.SelectedAudioTrack < 0 && audioTracks.Any(t => t.Id >= 0))
+            {
+                // Android/LibVLC usually starts with the first audio track. Reflect that in the UI
+                // when there is no preferred-language match instead of leaving selection blank.
+                _vm.SelectedAudioTrack = audioTracks.First(t => t.Id >= 0).Id;
             }
         }
-        else
+
+        if (!skipSubtitle)
         {
-            _vm.VideoPlayerService.SetSubtitleTrack(-1);
-            _vm.SelectedSubtitleTrack = -1;
+            if (settings.SubtitleEnabled)
+            {
+                var targetSubtitleId = FindBestTrackMatch(subtitleTracks, settings.SubtitleLanguage);
+                if (targetSubtitleId >= 0)
+                {
+                    _vm.VideoPlayerService.SetSubtitleTrack(targetSubtitleId);
+                    _vm.SelectedSubtitleTrack = targetSubtitleId;
+                }
+                else
+                {
+                    _vm.VideoPlayerService.SetSubtitleTrack(-1);
+                    _vm.SelectedSubtitleTrack = -1;
+                }
+            }
+            else
+            {
+                _vm.VideoPlayerService.SetSubtitleTrack(-1);
+                _vm.SelectedSubtitleTrack = -1;
+            }
         }
 
         _vm._isPreferenceApplied = true;
+        _vm.DispatcherService.Invoke(() => _vm.RaiseTrackSelectionPropertiesChanged());
     }
 
     public static int FindBestTrackMatch(IReadOnlyList<(int Id, string? Name)> tracks, string langCode)
@@ -240,6 +266,21 @@ public class PlayerQualityMonitor
 
         _vm.Duration = latestDuration;
         _vm.DurationText = TimeSpan.FromSeconds(latestDuration).ToString(@"hh\:mm\:ss");
+    }
+
+    private static PlayerViewModel.TrackOption BuildTrackOption(int id, string? rawName, string fallback)
+    {
+        var languageCode = PlayerViewModel.ExtractTrackLanguageCode(rawName);
+        var name = NormalizeTrackName(rawName, fallback);
+
+        if (!string.IsNullOrWhiteSpace(languageCode) &&
+            !name.Contains($"({languageCode})", StringComparison.OrdinalIgnoreCase) &&
+            !Regex.IsMatch(name, $@"\b{Regex.Escape(languageCode!)}\b", RegexOptions.IgnoreCase))
+        {
+            name = $"{name} ({languageCode!.ToUpperInvariant()})";
+        }
+
+        return new PlayerViewModel.TrackOption(id, name, languageCode);
     }
 
     public static bool IsDisabledTrackLabel(string? name)

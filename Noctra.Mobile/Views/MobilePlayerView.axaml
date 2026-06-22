@@ -698,12 +698,48 @@
                 <ItemsControl ItemsSource="{Binding AudioTracks}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                      <Button Content="{Binding Name}"
-                              Command="{Binding #PlayerRoot.DataContext.SetAudioTrackCommand}"
+                      <Button Command="{Binding #PlayerRoot.DataContext.SetAudioTrackCommand}"
                               CommandParameter="{Binding Id}"
-                              MinHeight="44"
+                              MinHeight="46"
                               Margin="0,0,0,8"
-                              HorizontalContentAlignment="Stretch" />
+                              Padding="12,8"
+                              BorderThickness="1"
+                              HorizontalContentAlignment="Stretch">
+                        <Button.Background>
+                          <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="AccentHoverBrush">
+                            <Binding Path="Id" />
+                            <Binding Path="#PlayerRoot.DataContext.SelectedAudioTrack" />
+                          </MultiBinding>
+                        </Button.Background>
+                        <Button.BorderBrush>
+                          <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="AccentBrush">
+                            <Binding Path="Id" />
+                            <Binding Path="#PlayerRoot.DataContext.SelectedAudioTrack" />
+                          </MultiBinding>
+                        </Button.BorderBrush>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                          <StackPanel Spacing="2">
+                            <TextBlock Text="{Binding Name}"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                          <icons:MaterialIcon Grid.Column="1"
+                                              Kind="CheckCircle"
+                                              Width="18"
+                                              Height="18"
+                                              Foreground="{DynamicResource AccentLightBrush}"
+                                              VerticalAlignment="Center">
+                            <icons:MaterialIcon.IsVisible>
+                              <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                                <Binding Path="Id" />
+                                <Binding Path="#PlayerRoot.DataContext.SelectedAudioTrack" />
+                              </MultiBinding>
+                            </icons:MaterialIcon.IsVisible>
+                          </icons:MaterialIcon>
+                        </Grid>
+                      </Button>
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -717,12 +753,47 @@
                 <ItemsControl ItemsSource="{Binding SubtitleTracks}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                      <Button Content="{Binding Name}"
-                              Command="{Binding #PlayerRoot.DataContext.SetSubtitleTrackCommand}"
+                      <Button Command="{Binding #PlayerRoot.DataContext.SetSubtitleTrackCommand}"
                               CommandParameter="{Binding Id}"
-                              MinHeight="44"
+                              MinHeight="46"
                               Margin="0,0,0,8"
-                              HorizontalContentAlignment="Stretch" />
+                              Padding="12,8"
+                              BorderThickness="1"
+                              HorizontalContentAlignment="Stretch">
+                        <Button.Background>
+                          <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="AccentHoverBrush">
+                            <Binding Path="Id" />
+                            <Binding Path="#PlayerRoot.DataContext.SelectedSubtitleTrack" />
+                          </MultiBinding>
+                        </Button.Background>
+                        <Button.BorderBrush>
+                          <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="AccentBrush">
+                            <Binding Path="Id" />
+                            <Binding Path="#PlayerRoot.DataContext.SelectedSubtitleTrack" />
+                          </MultiBinding>
+                        </Button.BorderBrush>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                          <TextBlock Text="{Binding Name}"
+                                     Foreground="{DynamicResource TextPrimaryBrush}"
+                                     FontSize="13"
+                                     FontWeight="SemiBold"
+                                     TextTrimming="CharacterEllipsis"
+                                     VerticalAlignment="Center" />
+                          <icons:MaterialIcon Grid.Column="1"
+                                              Kind="CheckCircle"
+                                              Width="18"
+                                              Height="18"
+                                              Foreground="{DynamicResource AccentLightBrush}"
+                                              VerticalAlignment="Center">
+                            <icons:MaterialIcon.IsVisible>
+                              <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                                <Binding Path="Id" />
+                                <Binding Path="#PlayerRoot.DataContext.SelectedSubtitleTrack" />
+                              </MultiBinding>
+                            </icons:MaterialIcon.IsVisible>
+                          </icons:MaterialIcon>
+                        </Grid>
+                      </Button>
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>

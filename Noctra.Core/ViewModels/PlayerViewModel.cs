@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,7 +22,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 {
     private const double OverlayAutoHideDelayMs = 5000;
     
-    public sealed record TrackOption(int Id, string Name);
+    public sealed record TrackOption(int Id, string Name, string? LanguageCode = null);
     public sealed class SkipOverlayEventArgs : EventArgs
     {
         public SkipOverlayEventArgs(double seconds)
@@ -99,6 +100,18 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     // ── State Fields ────────────────────────────────────────────────────────
     internal int _playRequestVersion;
     internal bool _isPreferenceApplied;
+
+    private readonly Dictionary<string, TrackSelectionSnapshot> _trackSelectionsByContent = new(StringComparer.Ordinal);
+
+    internal sealed class TrackSelectionSnapshot
+    {
+        public int? AudioTrackId { get; set; }
+        public string? AudioTrackName { get; set; }
+        public string? AudioLanguageCode { get; set; }
+        public int? SubtitleTrackId { get; set; }
+        public string? SubtitleTrackName { get; set; }
+        public string? SubtitleLanguageCode { get; set; }
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPiPControlsVisible))]
@@ -466,10 +479,16 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private ObservableCollection<TrackOption> _subtitleTracks = new();
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedAudioTrackName))]
     private int _selectedAudioTrack = -1;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedSubtitleTrackName))]
     private int _selectedSubtitleTrack = -1;
+
+    public string SelectedAudioTrackName => AudioTracks.FirstOrDefault(t => t.Id == SelectedAudioTrack)?.Name ?? string.Empty;
+
+    public string SelectedSubtitleTrackName => SubtitleTracks.FirstOrDefault(t => t.Id == SelectedSubtitleTrack)?.Name ?? string.Empty;
 
     [ObservableProperty]
     private bool _isQualitySettingsOpen;
@@ -1124,6 +1143,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         LogDebug($"UI Action: SetAudioTrack clicked (Id={id})");
         _videoPlayerService.SetAudioTrack(id);
         SelectedAudioTrack = id;
+        RememberManualTrackSelection(isAudio: true, id);
         RestartAutoHideTimer();
     }
 
@@ -1133,7 +1153,249 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         LogDebug($"UI Action: SetSubtitleTrack clicked (Id={id})");
         _videoPlayerService.SetSubtitleTrack(id);
         SelectedSubtitleTrack = id;
+        RememberManualTrackSelection(isAudio: false, id);
         RestartAutoHideTimer();
+    }
+
+    internal void RaiseTrackSelectionPropertiesChanged()
+    {
+        OnPropertyChanged(nameof(SelectedAudioTrackName));
+        OnPropertyChanged(nameof(SelectedSubtitleTrackName));
+    }
+
+    internal (bool AudioApplied, bool SubtitleApplied) TryApplyRememberedTrackSelection(
+        IReadOnlyList<TrackOption> audioTracks,
+        IReadOnlyList<TrackOption> subtitleTracks)
+    {
+        var key = BuildTrackPreferenceKey();
+        if (string.IsNullOrWhiteSpace(key) || !_trackSelectionsByContent.TryGetValue(key, out var snapshot))
+        {
+            return (false, false);
+        }
+
+        var audioApplied = false;
+        if (snapshot.AudioTrackId.HasValue)
+        {
+            var audio = FindRememberedTrack(audioTracks, snapshot.AudioTrackId.Value, snapshot.AudioTrackName, snapshot.AudioLanguageCode);
+            if (audio != null)
+            {
+                _videoPlayerService.SetAudioTrack(audio.Id);
+                SelectedAudioTrack = audio.Id;
+                audioApplied = true;
+            }
+        }
+
+        var subtitleApplied = false;
+        if (snapshot.SubtitleTrackId.HasValue)
+        {
+            if (snapshot.SubtitleTrackId.Value < 0)
+            {
+                _videoPlayerService.SetSubtitleTrack(-1);
+                SelectedSubtitleTrack = -1;
+                subtitleApplied = true;
+            }
+            else
+            {
+                var subtitle = FindRememberedTrack(subtitleTracks, snapshot.SubtitleTrackId.Value, snapshot.SubtitleTrackName, snapshot.SubtitleLanguageCode);
+                if (subtitle != null)
+                {
+                    _videoPlayerService.SetSubtitleTrack(subtitle.Id);
+                    SelectedSubtitleTrack = subtitle.Id;
+                    subtitleApplied = true;
+                }
+            }
+        }
+
+        return (audioApplied, subtitleApplied);
+    }
+
+    private void RememberManualTrackSelection(bool isAudio, int id)
+    {
+        var key = BuildTrackPreferenceKey();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return;
+        }
+
+        if (!_trackSelectionsByContent.TryGetValue(key, out var snapshot))
+        {
+            snapshot = new TrackSelectionSnapshot();
+            _trackSelectionsByContent[key] = snapshot;
+        }
+
+        var option = isAudio
+            ? AudioTracks.FirstOrDefault(t => t.Id == id)
+            : SubtitleTracks.FirstOrDefault(t => t.Id == id);
+
+        if (isAudio)
+        {
+            snapshot.AudioTrackId = id;
+            snapshot.AudioTrackName = option?.Name;
+            snapshot.AudioLanguageCode = option?.LanguageCode ?? ExtractTrackLanguageCode(option?.Name);
+        }
+        else
+        {
+            snapshot.SubtitleTrackId = id;
+            snapshot.SubtitleTrackName = option?.Name;
+            snapshot.SubtitleLanguageCode = id >= 0 ? option?.LanguageCode ?? ExtractTrackLanguageCode(option?.Name) : null;
+        }
+
+        RaiseTrackSelectionPropertiesChanged();
+        _ = PersistTrackLanguagePreferenceAsync(isAudio, id, option);
+    }
+
+    private async Task PersistTrackLanguagePreferenceAsync(bool isAudio, int id, TrackOption? option)
+    {
+        try
+        {
+            var settings = _settingsService.Settings;
+            var languageCode = option?.LanguageCode ?? ExtractTrackLanguageCode(option?.Name);
+
+            if (isAudio)
+            {
+                if (!string.IsNullOrWhiteSpace(languageCode))
+                {
+                    settings.PreferredAudioLanguage = languageCode!;
+                    await _settingsService.SaveAsync();
+                }
+                return;
+            }
+
+            settings.SubtitleEnabled = id >= 0;
+            if (id >= 0 && !string.IsNullOrWhiteSpace(languageCode))
+            {
+                settings.SubtitleLanguage = languageCode!;
+            }
+
+            await _settingsService.SaveAsync();
+        }
+        catch (Exception ex)
+        {
+            LogDebug($"PersistTrackLanguagePreferenceAsync failed: {ex.Message}");
+        }
+    }
+
+    private string? BuildTrackPreferenceKey()
+    {
+        var channel = CurrentChannel;
+        if (channel == null)
+        {
+            return null;
+        }
+
+        if (channel.Type == ChannelType.Series && !string.IsNullOrWhiteSpace(CurrentEpisodeIdentity))
+        {
+            return $"series:{channel.PlaylistId}:{channel.Id}:{CurrentEpisodeIdentity}";
+        }
+
+        if (channel.Id > 0)
+        {
+            return $"{channel.Type}:{channel.PlaylistId}:{channel.Id}";
+        }
+
+        return !string.IsNullOrWhiteSpace(channel.StreamUrl)
+            ? $"{channel.Type}:url:{channel.StreamUrl.Trim()}"
+            : null;
+    }
+
+    private static TrackOption? FindRememberedTrack(
+        IReadOnlyList<TrackOption> tracks,
+        int rememberedId,
+        string? rememberedName,
+        string? rememberedLanguageCode)
+    {
+        var exactId = tracks.FirstOrDefault(t => t.Id == rememberedId);
+        if (exactId != null && TrackLabelsEquivalent(exactId.Name, rememberedName))
+        {
+            return exactId;
+        }
+
+        if (!string.IsNullOrWhiteSpace(rememberedName))
+        {
+            var exactName = tracks.FirstOrDefault(t => TrackLabelsEquivalent(t.Name, rememberedName));
+            if (exactName != null)
+            {
+                return exactName;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(rememberedLanguageCode))
+        {
+            return tracks.FirstOrDefault(t =>
+                string.Equals(t.LanguageCode, rememberedLanguageCode, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(ExtractTrackLanguageCode(t.Name), rememberedLanguageCode, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return exactId;
+    }
+
+    private static bool TrackLabelsEquivalent(string? left, string? right)
+    {
+        if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right))
+        {
+            return false;
+        }
+
+        return string.Equals(left.Trim(), right.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    internal static string? ExtractTrackLanguageCode(string? trackName)
+    {
+        if (string.IsNullOrWhiteSpace(trackName))
+        {
+            return null;
+        }
+
+        var normalized = trackName.Trim();
+        var match = Regex.Match(normalized, @"(?:\(|\[|\b)(tr|en|de|fr|es|it|pt|ru|ar|nl)(?:\)|\]|\b)", RegexOptions.IgnoreCase);
+        if (match.Success)
+        {
+            return match.Groups[1].Value.ToLowerInvariant();
+        }
+
+        var lower = normalized.ToLowerInvariant();
+        var languageNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["turkish"] = "tr",
+            ["türkçe"] = "tr",
+            ["turkce"] = "tr",
+            ["english"] = "en",
+            ["ingilizce"] = "en",
+            ["deutsch"] = "de",
+            ["german"] = "de",
+            ["almanca"] = "de",
+            ["french"] = "fr",
+            ["français"] = "fr",
+            ["fransızca"] = "fr",
+            ["spanish"] = "es",
+            ["español"] = "es",
+            ["ispanyolca"] = "es",
+            ["italian"] = "it",
+            ["italiano"] = "it",
+            ["italyanca"] = "it",
+            ["portuguese"] = "pt",
+            ["português"] = "pt",
+            ["portekizce"] = "pt",
+            ["russian"] = "ru",
+            ["русский"] = "ru",
+            ["rusça"] = "ru",
+            ["arabic"] = "ar",
+            ["العربية"] = "ar",
+            ["arapça"] = "ar",
+            ["dutch"] = "nl",
+            ["nederlands"] = "nl",
+            ["flemenkçe"] = "nl"
+        };
+
+        foreach (var pair in languageNames)
+        {
+            if (lower.Contains(pair.Key, StringComparison.OrdinalIgnoreCase))
+            {
+                return pair.Value;
+            }
+        }
+
+        return null;
     }
 
     [RelayCommand]
