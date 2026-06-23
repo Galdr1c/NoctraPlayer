@@ -4,6 +4,7 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Noctra.Models;
 
 namespace Noctra.Mobile.Converters;
@@ -78,7 +79,7 @@ public sealed class EqualityToBrushMultiConverter : IMultiValueConverter
         }
 
         if (parameter is string resourceKey &&
-            Application.Current?.TryGetResource(resourceKey, out var resource) == true &&
+            Application.Current?.TryGetResource(resourceKey, ThemeVariant.Default, out var resource) == true &&
             resource is IBrush brush)
         {
             return brush;
