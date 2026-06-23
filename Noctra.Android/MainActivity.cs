@@ -18,6 +18,7 @@ namespace Noctra.Android;
     Icon = "@drawable/icon",
     MainLauncher = true,
     SupportsPictureInPicture = true,
+    ResizeableActivity = true,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.SmallestScreenSize | ConfigChanges.UiMode)]
 public class MainActivity : AvaloniaMainActivity
 {
@@ -62,6 +63,19 @@ public class MainActivity : AvaloniaMainActivity
         }
 
         base.OnBackPressed();
+    }
+
+
+    protected override void OnUserLeaveHint()
+    {
+        base.OnUserLeaveHint();
+
+        if (Avalonia.Application.Current is Noctra.Mobile.App app)
+        {
+            _ = app.Services?
+                .GetService<AndroidPictureInPictureService>()?
+                .TryEnterAutoPictureInPictureAsync();
+        }
     }
 
     public override void OnPictureInPictureModeChanged(

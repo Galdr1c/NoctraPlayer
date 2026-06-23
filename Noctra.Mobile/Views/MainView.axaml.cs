@@ -489,6 +489,7 @@ public partial class MainView : UserControl
         }
 
         await _playerViewModel.PlayChannelAsync(channel);
+        UpdatePictureInPictureState();
     }
 
     /// <summary>
@@ -520,6 +521,7 @@ public partial class MainView : UserControl
         var windowService = GetPlayerWindowService();
         windowService?.SetKeepScreenOn(false);
         windowService?.SetFullScreenMode(false);
+        UpdatePictureInPictureState();
     }
 
     private void PlayerViewModel_NextLiveChannelRequested(object? sender, EventArgs e)
@@ -550,6 +552,7 @@ public partial class MainView : UserControl
             return;
         }
 
+        UpdatePictureInPictureState();
         var entered = await pictureInPictureService.EnterPictureInPictureAsync();
         if (_playerViewModel is not null)
         {
@@ -565,6 +568,9 @@ public partial class MainView : UserControl
         {
             _playerViewModel.IsPiPMode = e.IsInPictureInPictureMode;
         }
+
+        UpdatePlayerChromeState();
+        UpdatePictureInPictureState();
     }
 
     private void PlayerViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -579,7 +585,54 @@ public partial class MainView : UserControl
         {
             // Oynatma sürerken ekranı uyanık tut.
             GetPlayerWindowService()?.SetKeepScreenOn(_playerViewModel?.IsPlaying == true);
+            UpdatePictureInPictureState();
         }
+        else if (e.PropertyName == nameof(PlayerViewModel.CurrentChannel) ||
+                 e.PropertyName == nameof(PlayerViewModel.CurrentProgram) ||
+                 e.PropertyName == nameof(PlayerViewModel.OverlaySecondaryText) ||
+                 e.PropertyName == nameof(PlayerViewModel.IsLiveContent) ||
+                 e.PropertyName == nameof(PlayerViewModel.IsSeriesContent))
+        {
+            UpdatePictureInPictureState();
+        }
+    }
+
+    private void UpdatePictureInPictureState()
+    {
+        var pictureInPictureService = GetPlatformServiceResolver()?.GetPictureInPictureService();
+        var vm = _playerViewModel;
+        if (pictureInPictureService is null || vm is null)
+        {
+            return;
+        }
+
+        var channelName = vm.CurrentChannel?.Name ?? vm.ChannelName ?? string.Empty;
+        var subtitle = vm.IsLiveContent
+            ? FirstNonEmpty(vm.CurrentProgram?.Title, vm.ConnectionStatus, vm.OverlaySecondaryText)
+            : FirstNonEmpty(vm.CurrentEpisodeDisplayTitle, vm.OverlaySecondaryText, vm.ConnectionStatus);
+
+        pictureInPictureService.UpdatePictureInPictureState(new PictureInPicturePlaybackState
+        {
+            CanEnterPictureInPicture = PlayerHost.IsVisible && vm.CurrentChannel is not null,
+            IsPlaying = vm.IsPlaying,
+            IsLiveContent = vm.IsLiveContent,
+            IsSeriesContent = vm.IsSeriesContent,
+            Title = channelName,
+            Subtitle = subtitle
+        });
+    }
+
+    private static string FirstNonEmpty(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+        }
+
+        return string.Empty;
     }
 
     private void UpdatePlayerChromeState()

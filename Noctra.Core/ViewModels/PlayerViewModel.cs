@@ -145,6 +145,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPiPControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(AreMobileControlsVisible))]
     private bool _isPiPMode;
 
     [ObservableProperty]
@@ -158,7 +159,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     /// Kontroller görünürken ve EPG paneli kapalıyken true olur.
     /// Tek dokunuşla aç/kapat (ToggleControls) ve otomatik gizleme bu değeri sürer.
     /// </summary>
-    public bool AreMobileControlsVisible => IsVisible && !IsEpgPanelOpen;
+    public bool AreMobileControlsVisible => IsVisible && !IsEpgPanelOpen && !IsPiPMode;
 
     // ── EPG Timeline Panel ──────────────────────────────────────────────────
     [ObservableProperty]
@@ -199,10 +200,16 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     partial void OnIsPiPModeChanged(bool value)
     {
+        if (value)
+        {
+            OverlayManager.ClosePanels();
+        }
+
         IsPiPControlsForceVisible = value;
         IsVisible = true;
         RestartAutoHideTimer();
         OnPropertyChanged(nameof(IsPiPControlsVisible));
+        OnPropertyChanged(nameof(AreMobileControlsVisible));
     }
 
     [ObservableProperty]
