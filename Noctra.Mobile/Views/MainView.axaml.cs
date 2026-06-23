@@ -517,10 +517,12 @@ public partial class MainView : UserControl
         UpdatePlayerChromeState();
         GetPlatformServiceResolver()?.GetVideoSurfaceService()?.Hide();
 
-        // Oynatıcı kapanınca: ekranı uyanık tutmayı bırak ve tam ekran/immersive modundan çık.
+        // Oynatıcı kapanınca: ekranı uyanık tutmayı bırak, tam ekran/immersive modundan çık
+        // ve parlaklığı sistem varsayılanına sıfırla (-1).
         var windowService = GetPlayerWindowService();
         windowService?.SetKeepScreenOn(false);
         windowService?.SetFullScreenMode(false);
+        windowService?.SetBrightness(-1);
         UpdatePictureInPictureState();
     }
 
@@ -613,7 +615,7 @@ public partial class MainView : UserControl
 
         pictureInPictureService.UpdatePictureInPictureState(new PictureInPicturePlaybackState
         {
-            CanEnterPictureInPicture = PlayerHost.IsVisible && vm.CurrentChannel is not null,
+            CanEnterPictureInPicture = PlayerHost.IsVisible && vm.CurrentChannel is not null && vm.IsPlaying,
             IsPlaying = vm.IsPlaying,
             IsLiveContent = vm.IsLiveContent,
             IsSeriesContent = vm.IsSeriesContent,

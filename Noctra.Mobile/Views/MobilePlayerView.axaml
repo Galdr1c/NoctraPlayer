@@ -213,7 +213,7 @@
             IsHitTestVisible="False"
             IsVisible="{Binding #PlayerRoot.IsSeekToastVisible}">
       <StackPanel Orientation="Horizontal" Spacing="10">
-        <icons:MaterialIcon Kind="FastForward10"
+        <icons:MaterialIcon Kind="{Binding #PlayerRoot.SeekToastIcon}"
                             Width="26" Height="26"
                             Foreground="{DynamicResource AccentBrush}"
                             VerticalAlignment="Center" />
@@ -270,6 +270,26 @@
                  TextWrapping="Wrap"
                  MaxWidth="300" />
     </Border>
+
+    <!-- Persistent lock badge: kontroller kapalıyken bile kilidin aktif olduğunu gösterir.
+         Dokunulduğunda kilidi doğrudan kaldırır (ToggleControls kilitliyken açılmadığı için). -->
+    <Button Grid.ColumnSpan="2"
+            ZIndex="70"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            Margin="0,48,0,0"
+            Padding="14,8"
+            CornerRadius="20"
+            Background="#E6000000"
+            BorderThickness="0"
+            IsVisible="{Binding IsLocked}"
+            Command="{Binding ToggleLockCommand}">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <icons:MaterialIcon Kind="Lock" Width="18" Height="18" Foreground="White" />
+        <TextBlock Text="{loc:Translate Player.Mobile.Locked}"
+                   Foreground="White" FontSize="13" FontWeight="SemiBold" />
+      </StackPanel>
+    </Button>
 
     <!-- Normal mod: bottom sheet (EPG kapalıyken) -->
     <Border Grid.ColumnSpan="2"
@@ -462,6 +482,16 @@
           <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
             <icons:MaterialIcon Kind="FastForward10" Width="18" Height="18" />
             <TextBlock Text="+10s" />
+          </StackPanel>
+        </Button>
+        <Button Classes="compactPlayerAction"
+                Command="{Binding ToggleSubtitleTrackCommand}"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+            <icons:MaterialIcon Width="18" Height="18"
+                                Kind="{Binding SelectedSubtitleTrack,
+                                        Converter={StaticResource SubtitleIconConverter}}" />
+            <TextBlock Text="{loc:Translate Player.Mobile.CC}" />
           </StackPanel>
         </Button>
         <Button Classes="compactPlayerAction"

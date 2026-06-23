@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Noctra.Android.DependencyInjection;
 using Noctra.Android.Services;
 using Noctra.Mobile.Services;
+using Noctra.Services.Interfaces;
 
 namespace Noctra.Android;
 
@@ -65,6 +66,32 @@ public class MainActivity : AvaloniaMainActivity
         base.OnBackPressed();
     }
 
+    protected override void OnStop()
+    {
+        // PiP modunda oynatma Android tarafından yönetilir; burada dokunmuyoruz.
+        // PiP değilken ve oynatıcı aktifken: arka plana geçerken duraklat.
+        if (!IsInPictureInPictureMode &&
+            Avalonia.Application.Current is Noctra.Mobile.App app &&
+            app.Services?.GetService<IVideoPlayerService>() is { IsPlaying: true })
+        {
+            app.Services.GetService<IVideoPlayerService>()?.Pause();
+        }
+
+        base.OnStop();
+    }
+
+    protected override void OnStart()
+    {
+        base.OnStart();
+
+        // PiP'ten çıkınca veya arka plandan dönünce: kullanıcı manuel duraklatmadıysa devam ettir.
+        if (!IsInPictureInPictureMode &&
+            Avalonia.Application.Current is Noctra.Mobile.App app &&
+            app.Services?.GetService<IVideoPlayerService>() is { State: Noctra.Models.PlaybackState.Paused, HasLoadedMedia: true })
+        {
+            app.Services.GetService<IVideoPlayerService>()?.Resume();
+        }
+    }
 
     protected override void OnUserLeaveHint()
     {

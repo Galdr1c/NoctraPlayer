@@ -23,6 +23,8 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     private readonly Context _applicationContext;
     private readonly ISettingsService _settingsService;
     private readonly INetworkService _networkService;
+    private readonly AudioManager _audioManager;
+    private readonly AudioFocusListener _audioFocusListener;
     private readonly object _trackSync = new();
     private readonly List<(int Id, string? Name)> _audioTracks = new();
     private readonly List<(int Id, string? Name)> _subtitleTracks = new();
@@ -42,6 +44,12 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     private bool _lastHardwareAcceleration = true;
     private DataUsageLevel _lastDataUsage = DataUsageLevel.Auto;
     private CancellationTokenSource? _reinitializeCts;
+
+    // Audio focus: Android'de başka bir uygulama ses çıkardığında (telefon, alarm, müzik)
+    // oynatmayı duraklatmak / sesi kısmak için sistem seviyesinde koordinasyon.
+    private enum AudioFocusState { None, Granted, TransientLoss, TransientLossCanDuck, Lost }
+    private AudioFocusState _audioFocusState = AudioFocusState.None;
+    private bool _pausedByAudioFocus;
 
     public string? CurrentUrl => _currentUrl;
     public bool IsPlaying => _mediaPlayer?.IsPlaying == true;
@@ -94,6 +102,10 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         _applicationContext = applicationContext.ApplicationContext ?? applicationContext;
         _settingsService = settingsService;
         _networkService = networkService;
+
+        _audioManager = (AudioManager)_applicationContext.GetSystemService(Context.AudioService)!;
+        _audioFocusListener = new AudioFocusListener();
+        _audioFocusListener.FocusChanged += OnAudioFocusChanged;
 
         ApplySettingsSnapshot(_settingsService.Settings, updateAudioState: false);
         _settingsService.SettingsChanged += OnSettingsChanged;
@@ -191,6 +203,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 player.Start();
                 ApplyPlaybackRate();
                 _state = PlaybackState.Playing;
+                RequestAudioFocus();
                 PlayingChanged?.Invoke(this, true);
                 BufferingChanged?.Invoke(this, 100);
                 completion.TrySetResult();
@@ -297,12 +310,18 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             _mediaPlayer.Start();
             ApplyPlaybackRate();
             _state = PlaybackState.Playing;
+            // Kullanıcı manuel olarak devam ettirince, başka uygulama ses çıkarmıyorsa
+            // tekrar audio focus talep et (transient loss sırasında duraklatılmış olabilir).
+            RequestAudioFocus();
+            _pausedByAudioFocus = false;
             PlayingChanged?.Invoke(this, true);
         }
     }
 
     public void Stop()
     {
+        AbandonAudioFocus();
+
         if (_mediaPlayer is null)
         {
             _state = PlaybackState.Stopped;
@@ -418,6 +437,8 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         if (!_isDisposed)
         {
             _settingsService.SettingsChanged -= OnSettingsChanged;
+            _audioFocusListener.FocusChanged -= OnAudioFocusChanged;
+            AbandonAudioFocus();
             _reinitializeCts?.Cancel();
             _reinitializeCts?.Dispose();
             Stop();
@@ -1161,6 +1182,111 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         if (_isDisposed)
         {
             throw new ObjectDisposedException(nameof(AndroidVideoPlayerService));
+        }
+    }
+
+    // ── Audio Focus ───────────────────────────────────────────────────────────
+
+    private void RequestAudioFocus()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        var result = _audioManager.RequestAudioFocus(_audioFocusListener, Stream.Music, AudioFocus.Gain);
+        _audioFocusState = result == AudioFocusRequest.Granted
+            ? AudioFocusState.Granted
+            : AudioFocusState.None;
+    }
+
+    private void AbandonAudioFocus()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        _audioFocusState = AudioFocusState.None;
+        _pausedByAudioFocus = false;
+        try
+        {
+            _audioManager.AbandonAudioFocus(_audioFocusListener);
+        }
+        catch
+        {
+            // Best-effort; cleanup path.
+        }
+    }
+
+    private void OnAudioFocusChanged(AudioFocus focusChange)
+    {
+        switch (focusChange)
+        {
+            case AudioFocus.Gain:
+                // Başka uygulamanın sesi bitti → eski duruma dön.
+                if (_pausedByAudioFocus && _mediaPlayer is not null && _hasLoadedMedia)
+                {
+                    _mediaPlayer.Start();
+                    ApplyPlaybackRate();
+                    _state = PlaybackState.Playing;
+                    PlayingChanged?.Invoke(this, true);
+                }
+                _pausedByAudioFocus = false;
+
+                // Duck (ses kısma) bırakılmışsa orijinal ses seviyesini geri yükle.
+                if (_audioFocusState == AudioFocusState.TransientLossCanDuck)
+                {
+                    ApplyVolume();
+                }
+
+                _audioFocusState = AudioFocusState.Granted;
+                break;
+
+            case AudioFocus.LossTransient:
+                // Kısa süreli kayıp (telefon zili, bildirim) → duraklat, geri geldiğinde devam et.
+                _audioFocusState = AudioFocusState.TransientLoss;
+                if (_mediaPlayer?.IsPlaying == true)
+                {
+                    _mediaPlayer.Pause();
+                    _state = PlaybackState.Paused;
+                    _pausedByAudioFocus = true;
+                    PlayingChanged?.Invoke(this, false);
+                }
+                break;
+
+            case AudioFocus.LossTransientCanDuck:
+                // Geçici duck (navigasyon sesi, kısa bildirim) → sesi kıs.
+                _audioFocusState = AudioFocusState.TransientLossCanDuck;
+                try
+                {
+                    _mediaPlayer?.SetVolume(0.2f, 0.2f);
+                }
+                catch
+                {
+                    // MediaPlayer hazır değilse sessizce yoksay.
+                }
+                break;
+
+            case AudioFocus.Loss:
+                // Kalıcı kayıp (başka medya uygulaması oynatmaya başladı) → oynatmayı bırak.
+                _audioFocusState = AudioFocusState.Lost;
+                Pause();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Android AudioManager'ın audio focus değişikliklerini bildirdiği callback sarmalayıcısı.
+    /// .NET event olarak kullanılıyor ki servis Dispose edildiğinde abonelik temizlenebilsin.
+    /// </summary>
+    private sealed class AudioFocusListener : Java.Lang.Object, AudioManager.IOnAudioFocusChangeListener
+    {
+        public event Action<AudioFocus>? FocusChanged;
+
+        public void OnAudioFocusChange(AudioFocus focusChange)
+        {
+            FocusChanged?.Invoke(focusChange);
         }
     }
 }

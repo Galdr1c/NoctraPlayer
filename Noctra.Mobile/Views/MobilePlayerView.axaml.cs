@@ -11,6 +11,7 @@ using Noctra.Mobile.Localization;
 using Noctra.Mobile.Services;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
+using Material.Icons;
 using Noctra.ViewModels;
 
 namespace Noctra.Mobile.Views;
@@ -34,6 +35,9 @@ public partial class MobilePlayerView : UserControl
 
     public static readonly StyledProperty<string> GestureToastTextProperty =
         AvaloniaProperty.Register<MobilePlayerView, string>(nameof(GestureToastText), string.Empty);
+
+    public static readonly StyledProperty<MaterialIconKind> SeekToastIconProperty =
+        AvaloniaProperty.Register<MobilePlayerView, MaterialIconKind>(nameof(SeekToastIcon), MaterialIconKind.FastForward10);
 
     public bool IsVolumeToastVisible
     {
@@ -71,6 +75,12 @@ public partial class MobilePlayerView : UserControl
         set => SetValue(GestureToastTextProperty, value);
     }
 
+    public MaterialIconKind SeekToastIcon
+    {
+        get => GetValue(SeekToastIconProperty);
+        set => SetValue(SeekToastIconProperty, value);
+    }
+
     /// <summary>
     /// EPG timeline'dan kanal seçildiğinde tetiklenir.
     /// MainView bu event'e abone olup kanalı oynatır.
@@ -92,9 +102,11 @@ public partial class MobilePlayerView : UserControl
     private readonly DispatcherTimer _seekToastTimer;
     private readonly DispatcherTimer _downloadToastTimer;
     private readonly DispatcherTimer _gestureToastTimer;
+    private readonly DispatcherTimer _singleTapTimer;
     private bool _isInitialVolumeEvent = true;
     private DateTime _lastVolumeToastShownUtc = DateTime.MinValue;
     private static readonly TimeSpan VolumeToastThrottleInterval = TimeSpan.FromMilliseconds(350);
+    private static readonly TimeSpan SingleTapDelay = TimeSpan.FromMilliseconds(300);
 
     private IPlayerWindowService? _playerWindowService;
     private IVideoSurfaceService? _videoSurfaceService;
@@ -109,6 +121,12 @@ public partial class MobilePlayerView : UserControl
         _seekToastTimer = CreateToastTimer(() => IsSeekToastVisible = false, TimeSpan.FromMilliseconds(850));
         _downloadToastTimer = CreateToastTimer(() => IsDownloadToastVisible = false, TimeSpan.FromMilliseconds(2200));
         _gestureToastTimer = CreateToastTimer(() => IsGestureToastVisible = false, TimeSpan.FromMilliseconds(1200));
+        _singleTapTimer = new DispatcherTimer { Interval = SingleTapDelay };
+        _singleTapTimer.Tick += (_, _) =>
+        {
+            _singleTapTimer.Stop();
+            ExecuteSingleTapToggle();
+        };
 
         LayoutUpdated += OnLayoutUpdated;
     }
@@ -315,7 +333,11 @@ public partial class MobilePlayerView : UserControl
     }
 
     private void OnSkipOverlayRequested(object? sender, PlayerViewModel.SkipOverlayEventArgs e)
-        => Dispatcher.UIThread.Post(() => ShowSeekToast(e.Seconds));
+        => Dispatcher.UIThread.Post(() =>
+        {
+            SeekToastIcon = e.Seconds >= 0 ? MaterialIconKind.FastForward10 : MaterialIconKind.Rewind10;
+            ShowSeekToast(e.Seconds);
+        });
 
     private static string FormatSeekToast(double seconds)
     {
@@ -528,12 +550,14 @@ public partial class MobilePlayerView : UserControl
 
     private void OnLeftDoubleTapped(object? sender, TappedEventArgs e)
     {
+        _singleTapTimer.Stop(); // Çift dokunma: bekleyen tek dokunma toggle'ını iptal et.
         HandleDoubleTapSeek(forward: false);
         e.Handled = true;
     }
 
     private void OnRightDoubleTapped(object? sender, TappedEventArgs e)
     {
+        _singleTapTimer.Stop(); // Çift dokunma: bekleyen tek dokunma toggle'ını iptal et.
         HandleDoubleTapSeek(forward: true);
         e.Handled = true;
     }
@@ -557,6 +581,9 @@ public partial class MobilePlayerView : UserControl
             return;
         }
 
+        // Toast ikonunu yönüne göre ayarla ki geri sarmada ileri oku göstermesin.
+        SeekToastIcon = forward ? MaterialIconKind.FastForward10 : MaterialIconKind.Rewind10;
+
         const string tenSeconds = "10";
         if (forward)
         {
@@ -573,8 +600,22 @@ public partial class MobilePlayerView : UserControl
 
     /// <summary>
     /// Video yüzeyine tek dokunuş: kontrol katmanını (bottom sheet) aç/kapat.
+    /// Çift dokunma ile sarma jestiyle çakışmaması için kısa bir gecikmeyle dispatch
+    /// edilir; süre dolmadan bir çift dokunma gelirse toggle iptal edilir.
     /// </summary>
     private void OnPlayerBackgroundTapped(object? sender, TappedEventArgs e)
+    {
+        // Sürükleme (swipe) sırasında tetiklenen sahte tap'leri yoksay.
+        if (_isSwiping)
+        {
+            return;
+        }
+
+        _singleTapTimer.Stop();
+        _singleTapTimer.Start();
+    }
+
+    private void ExecuteSingleTapToggle()
     {
         if (DataContext is PlayerViewModel playerVm)
         {

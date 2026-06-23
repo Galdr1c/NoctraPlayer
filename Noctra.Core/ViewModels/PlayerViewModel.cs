@@ -1164,6 +1164,39 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         RestartAutoHideTimer();
     }
 
+    /// <summary>
+    /// Altyazı hızlı aç/kapat: track seçiliyse kapat (-1), kapalıysa son seçili track'i geri yükle.
+    /// </summary>
+    [RelayCommand]
+    private void ToggleSubtitleTrack()
+    {
+        if (SelectedSubtitleTrack >= 0)
+        {
+            SetSubtitleTrack(-1);
+        }
+        else
+        {
+            // En son kullanılan altyazı track'ini geri yükle; yoksa ilk可用 track'i seç.
+            var key = BuildTrackPreferenceKey();
+            var trackId = -1;
+            if (!string.IsNullOrWhiteSpace(key) &&
+                _trackSelectionsByContent.TryGetValue(key, out var snapshot) &&
+                snapshot.SubtitleTrackId.HasValue)
+            {
+                trackId = snapshot.SubtitleTrackId.Value;
+            }
+            else
+            {
+                trackId = SubtitleTracks.FirstOrDefault(t => t.Id >= 0).Id;
+            }
+
+            if (trackId >= 0)
+            {
+                SetSubtitleTrack(trackId);
+            }
+        }
+    }
+
     internal void RaiseTrackSelectionPropertiesChanged()
     {
         OnPropertyChanged(nameof(SelectedAudioTrackName));

@@ -46,6 +46,7 @@
         <converters:EqualityToBoolMultiConverter x:Key="EqualityToBoolMultiConverter" />
         <converters:EqualityToBrushMultiConverter x:Key="EqualityToBrushMultiConverter" />
         <converters:PercentToWidthConverter x:Key="PercentToWidthConverter" />
+        <converters:SubtitleIconConverter x:Key="SubtitleIconConverter" />
       </ResourceDictionary>
     </Application.Resources>
 
