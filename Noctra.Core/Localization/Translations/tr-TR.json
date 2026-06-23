@@ -832,7 +832,7 @@
     "Download.Status.Starting": "İndirme başlatılıyor...",
     "Download.Status.Error": "İndirme hatası",
     "Main.Status.CategoryProgressFormat": "{0} / {1} kategori",
-    "Main.Status.CategoryLoadedFormat": "{0} / {1} kategori \u2022 {2}",
+    "Main.Status.CategoryLoadedFormat": "{0} / {1} kategori • {2}",
     "Main.Error.UnsupportedProfileFormat": "Desteklenmeyen profil tipi: {0}",
     "Player.Status.ReconnectingFormat": "Yeniden bağlanılıyor... ({0}/{1})",
     "Player.Status.Reconnecting": "Tekrar bağlanılıyor...",
@@ -855,8 +855,7 @@
     "GlobalSettings.Promo.Error.AlreadyRedeemed": "Bu promosyon kodu daha önce bu cihazda kullanılmış.",
     "GlobalSettings.Promo.Error.ConfigMissing": "Promosyon kodu yapılandırması bulunamadı. Lütfen uygulama yöneticisinin promosyon kodu URL'sini yapılandırdığından emin olun.",
     "GlobalSettings.Promo.Error.ConfigLoadFailed": "Promosyon kodu yapılandırması yüklenemedi. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.",
-    "GlobalSettings.Promo.Error.ApplyFailedFormat": "Promosyon kodu uygulanamadı: {0}"
-,
+    "GlobalSettings.Promo.Error.ApplyFailedFormat": "Promosyon kodu uygulanamadı: {0}",
     "Home.ContinueWatching.CountFormat": "{0} öğe",
     "Home.QuickAccess.Title": "Hızlı Erişim",
     "Home.QuickAccess.Live.Description": "Canlı kanallara göz at",
@@ -882,5 +881,17 @@
     "Player.Mobile.SubtitleBackground": "Altyazı Arka Planı",
     "Player.Mobile.SubtitlePosition": "Altyazı Konumu",
     "Player.Mobile.Speed": "Hız",
-    "Player.Mobile.Quality": "Kalite"
+    "Player.Mobile.Quality": "Kalite",
+    "Downloads.Action.Cancel": "İptal",
+    "Downloads.Action.Delete": "Sil",
+    "Downloads.Action.Pause": "Duraklat",
+    "Downloads.Stats.Speed.Label": "Hız",
+    "GlobalSettings.Cache.Clear.Button": "Temizle",
+    "GlobalSettings.Cache.Description": "Geçici dosyaları, görselleri ve EPG önbelleğini temizle",
+    "GlobalSettings.Cache.Size": "Önbellek boyutu",
+    "Player.Mobile.Toast.LiveSeekUnavailable": "Canlı yayında ileri/geri sarma kullanılamaz",
+    "Player.Mobile.Toast.Locked": "Kontroller kilitli",
+    "Search.Button": "Ara",
+    "Search.Placeholder": "Kanal, film veya dizi ara",
+    "Mobile.More.Shortcuts": "Hızlı erişim"
 }

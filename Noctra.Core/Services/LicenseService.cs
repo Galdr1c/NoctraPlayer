@@ -57,6 +57,7 @@ public class LicenseService : ObservableObject, ILicenseService
     private readonly ISecurityService _securityService;
     private readonly HttpClient _httpClient;
     private readonly ILocalizationService? _localizationService;
+    private readonly IPlatformActionService? _platformActionService;
     private bool _manualPremiumOverride;
 
 #if DEBUG
@@ -111,13 +112,15 @@ public class LicenseService : ObservableObject, ILicenseService
         ISettingsService settingsService,
         HttpClient httpClient,
         ILocalizationService? localizationService = null,
-        ISecurityService? securityService = null)
+        ISecurityService? securityService = null,
+        IPlatformActionService? platformActionService = null)
     {
         _appEditionService = appEditionService;
         _settingsService = settingsService;
         _securityService = securityService ?? new SecurityService();
         _httpClient = httpClient;
         _localizationService = localizationService;
+        _platformActionService = platformActionService;
         _settingsService.SettingsChanged += OnSettingsChanged;
         SyncSubscriptionFromSettings(notify: false);
     }
@@ -574,6 +577,16 @@ public class LicenseService : ObservableObject, ILicenseService
 
         foreach (var candidate in candidateUris.Where(static value => !string.IsNullOrWhiteSpace(value)))
         {
+            if (_platformActionService is not null)
+            {
+                if (await _platformActionService.OpenUrlAsync(candidate).ConfigureAwait(false))
+                {
+                    return true;
+                }
+
+                continue;
+            }
+
             try
             {
                 Process.Start(new ProcessStartInfo
@@ -581,7 +594,7 @@ public class LicenseService : ObservableObject, ILicenseService
                     FileName = candidate,
                     UseShellExecute = true
                 });
-                return await Task.FromResult(true);
+                return await Task.FromResult(true).ConfigureAwait(false);
             }
             catch
             {

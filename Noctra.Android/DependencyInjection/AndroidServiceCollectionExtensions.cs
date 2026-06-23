@@ -61,7 +61,8 @@ public static class AndroidServiceCollectionExtensions
                 serviceProvider.GetRequiredService<ISettingsService>(),
                 serviceProvider.GetRequiredService<HttpClient>(),
                 serviceProvider.GetRequiredService<ILocalizationService>(),
-                serviceProvider.GetRequiredService<ISecurityService>())); 
+                serviceProvider.GetRequiredService<ISecurityService>(),
+                serviceProvider.GetRequiredService<IPlatformActionService>())); 
         services.AddTransient<WatermarkViewModel>();
         services.AddSingleton<CoreMainViewModel>();
         services.AddSingleton<PlayerViewModel>();

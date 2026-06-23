@@ -175,10 +175,49 @@
         <views:ProfileListView x:Name="MobileProfileList"
                                IsVisible="{Binding IsMoreSelected}" />
 
-        <Button Classes="nav"
-                Content="{loc:Translate Settings.Title}"
-                IsVisible="{Binding IsMoreSelected}"
-                Click="OnSettingsClick" />
+        <StackPanel IsVisible="{Binding IsMoreSelected}" Spacing="10">
+          <TextBlock Text="{loc:Translate Mobile.More.Shortcuts}"
+                     FontSize="16"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextPrimaryBrush}" />
+
+          <Button Classes="nav" Tag="Series" Click="OnDestinationClick" MinHeight="48">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <icons:MaterialIcon Kind="TelevisionPlay" Width="20" Height="20" />
+              <TextBlock Text="{loc:Translate Shell.Nav.Series}" />
+            </StackPanel>
+          </Button>
+          <Button Classes="nav" Tag="Favorites" Click="OnDestinationClick" MinHeight="48">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <icons:MaterialIcon Kind="HeartOutline" Width="20" Height="20" />
+              <TextBlock Text="{loc:Translate Shell.Nav.Favorites}" />
+            </StackPanel>
+          </Button>
+          <Button Classes="nav" Tag="MyList" Click="OnDestinationClick" MinHeight="48">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <icons:MaterialIcon Kind="BookmarkOutline" Width="20" Height="20" />
+              <TextBlock Text="{loc:Translate Shell.Nav.MyList}" />
+            </StackPanel>
+          </Button>
+          <Button Classes="nav" Tag="History" Click="OnDestinationClick" MinHeight="48">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <icons:MaterialIcon Kind="History" Width="20" Height="20" />
+              <TextBlock Text="{loc:Translate Shell.Nav.History}" />
+            </StackPanel>
+          </Button>
+          <Button Classes="nav" Tag="Downloads" Click="OnDestinationClick" MinHeight="48">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <icons:MaterialIcon Kind="DownloadOutline" Width="20" Height="20" />
+              <TextBlock Text="{loc:Translate Shell.Nav.Downloads}" />
+            </StackPanel>
+          </Button>
+          <Button Classes="nav" Click="OnSettingsClick" MinHeight="48">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <icons:MaterialIcon Kind="CogOutline" Width="20" Height="20" />
+              <TextBlock Text="{loc:Translate Settings.Title}" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
 
         <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
           <Border Classes="card">

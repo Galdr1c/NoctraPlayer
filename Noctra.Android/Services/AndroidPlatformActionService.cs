@@ -33,7 +33,7 @@ public sealed class AndroidPlatformActionService : IPlatformActionService
         }
 
         if (!System.Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri) ||
-            (uri.Scheme != System.Uri.UriSchemeHttp && uri.Scheme != System.Uri.UriSchemeHttps && uri.Scheme != System.Uri.UriSchemeMailto))
+            !IsSupportedUriScheme(uri.Scheme))
         {
             return Task.FromResult(false);
         }
@@ -42,6 +42,13 @@ public sealed class AndroidPlatformActionService : IPlatformActionService
         intent.AddCategory(Intent.CategoryBrowsable);
         return Task.FromResult(TryStartActivity(intent));
     }
+
+
+    private static bool IsSupportedUriScheme(string scheme) =>
+        string.Equals(scheme, System.Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(scheme, System.Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(scheme, System.Uri.UriSchemeMailto, StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(scheme, "market", StringComparison.OrdinalIgnoreCase);
 
     public Task<bool> OpenDirectoryAsync(string? directoryPath, CancellationToken cancellationToken = default)
     {

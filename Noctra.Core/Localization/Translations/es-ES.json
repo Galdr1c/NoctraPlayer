@@ -832,7 +832,7 @@
     "Download.Status.Starting": "Iniciando descarga...",
     "Download.Status.Error": "Error de descarga",
     "Main.Status.CategoryProgressFormat": "{0} / {1} categorías",
-    "Main.Status.CategoryLoadedFormat": "{0} / {1} categorías \u2022 {2}",
+    "Main.Status.CategoryLoadedFormat": "{0} / {1} categorías • {2}",
     "Main.Error.UnsupportedProfileFormat": "Tipo de perfil no compatible: {0}",
     "Player.Status.ReconnectingFormat": "Reconectando... ({0}/{1})",
     "Player.Status.Reconnecting": "Reconectando...",
@@ -855,8 +855,7 @@
     "GlobalSettings.Promo.Error.AlreadyRedeemed": "Este código promocional ya se ha usado en este dispositivo.",
     "GlobalSettings.Promo.Error.ConfigMissing": "No se encontró la configuración de códigos promocionales. Asegúrate de que el administrador de la app haya configurado la URL de códigos promocionales.",
     "GlobalSettings.Promo.Error.ConfigLoadFailed": "No se pudo cargar la configuración de códigos promocionales. Comprueba tu conexión a internet e inténtalo de nuevo.",
-    "GlobalSettings.Promo.Error.ApplyFailedFormat": "No se pudo aplicar el código promocional: {0}"
-,
+    "GlobalSettings.Promo.Error.ApplyFailedFormat": "No se pudo aplicar el código promocional: {0}",
     "Home.ContinueWatching.CountFormat": "{0} elementos",
     "Home.QuickAccess.Title": "Acceso rápido",
     "Home.QuickAccess.Live.Description": "Explorar canales en vivo",
@@ -882,5 +881,17 @@
     "Player.Mobile.SubtitleBackground": "Fondo de subtítulos",
     "Player.Mobile.SubtitlePosition": "Posición de subtítulos",
     "Player.Mobile.Speed": "Velocidad",
-    "Player.Mobile.Quality": "Calidad"
+    "Player.Mobile.Quality": "Calidad",
+    "Downloads.Action.Cancel": "Cancelar",
+    "Downloads.Action.Delete": "Eliminar",
+    "Downloads.Action.Pause": "Pausar",
+    "Downloads.Stats.Speed.Label": "Velocidad",
+    "GlobalSettings.Cache.Clear.Button": "Borrar",
+    "GlobalSettings.Cache.Description": "Borra archivos temporales, imágenes y caché de EPG",
+    "GlobalSettings.Cache.Size": "Tamaño de caché",
+    "Player.Mobile.Toast.LiveSeekUnavailable": "No se puede avanzar o retroceder en TV en directo",
+    "Player.Mobile.Toast.Locked": "Controles bloqueados",
+    "Search.Button": "Buscar",
+    "Search.Placeholder": "Buscar canales, películas o series",
+    "Mobile.More.Shortcuts": "Acceso rápido"
 }

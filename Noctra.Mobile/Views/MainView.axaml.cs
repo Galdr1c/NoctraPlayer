@@ -189,10 +189,12 @@ public partial class MainView : UserControl
             return true;
         }
 
-        // 2) Oynatıcıda EPG paneli açıksa -> paneli kapat
-        if (PlayerHost.IsVisible && _playerViewModel is { IsEpgPanelOpen: true })
+        // 2) Oynatıcıda bir alt panel açıksa -> önce paneli kapat.
+        // Mobil UX'te Android geri hareketi doğrudan player'ı kapatmamalı;
+        // ses/altyazı, kalite, bilgi, bölüm, zamanlayıcı veya EPG paneli önce kapanır.
+        if (PlayerHost.IsVisible && IsAnyPlayerPanelOpen())
         {
-            _playerViewModel.ToggleEpgPanelCommand.Execute(null);
+            _playerViewModel?.ClosePanelsCommand.Execute(null);
             return true;
         }
 
@@ -212,6 +214,19 @@ public partial class MainView : UserControl
 
         // 5) Ana sayfadayız -> varsayılan davranış
         return false;
+    }
+
+
+    private bool IsAnyPlayerPanelOpen()
+    {
+        var vm = _playerViewModel;
+        return vm is not null &&
+            (vm.IsEpgPanelOpen ||
+             vm.IsAudioSettingsOpen ||
+             vm.IsQualitySettingsOpen ||
+             vm.IsInfoPanelOpen ||
+             vm.IsEpisodesPanelOpen ||
+             vm.IsSleepTimerPanelOpen);
     }
 
     private IPlayerWindowService? GetPlayerWindowService()
