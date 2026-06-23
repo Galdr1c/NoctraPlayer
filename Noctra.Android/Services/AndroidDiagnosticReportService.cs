@@ -3,7 +3,6 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using Android.Content;
-using Android.Net;
 using Noctra.Services.Interfaces;
 
 namespace Noctra.Android.Services;
@@ -52,7 +51,7 @@ public sealed class AndroidDiagnosticReportService : IDiagnosticReportService
         try
         {
             var mailIntent = new Intent(Intent.ActionSendto);
-            mailIntent.SetData(Uri.Parse("mailto:"));
+            mailIntent.SetData(global::Android.Net.Uri.Parse("mailto:"));
             mailIntent.PutExtra(Intent.ExtraEmail, new[] { TargetEmail });
             mailIntent.PutExtra(Intent.ExtraSubject, subject);
             mailIntent.PutExtra(Intent.ExtraText, body);

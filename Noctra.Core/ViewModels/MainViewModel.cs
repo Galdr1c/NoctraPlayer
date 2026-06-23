@@ -70,6 +70,7 @@ public partial class MainViewModel : ObservableObject
     private readonly ILicenseService _licenseService;
     private readonly IUpdateService _updateService;
     private readonly IAppPathService _appPaths;
+    private readonly IPlatformActionService _platformActions;
     private readonly DateTime _downloadCenterSessionStartUtc = DateTime.UtcNow;
     private readonly ConcurrentDictionary<string, byte> _pendingVisualEnrichmentKeys = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<int, byte> _pendingSeriesMetadataEnrichmentIds = new();
@@ -322,7 +323,8 @@ public partial class MainViewModel : ObservableObject
         IUpdateService updateService,
         ILocalizationService localizationService,
         ILogger<MainViewModel>? logger = null,
-        IAppPathService? appPaths = null)
+        IAppPathService? appPaths = null,
+        IPlatformActionService? platformActions = null)
     {
         _localizationService = localizationService;
         _settingsService = settingsService;
@@ -347,6 +349,7 @@ public partial class MainViewModel : ObservableObject
         _licenseService = licenseService;
         _updateService = updateService;
         _appPaths = appPaths ?? new DesktopAppPathService();
+        _platformActions = platformActions ?? new DesktopPlatformActionService();
         RebuildSortOptions();
         StatusMessage = _localizationService.GetString("Common.Ready");
         _downloadLandingStoredBytes = 0;
@@ -6003,22 +6006,16 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void OpenDownloadsFolder()
+    private async Task OpenDownloadsFolderAsync()
     {
         try
         {
             var root = ResolveGlobalDownloadRoot();
-            if (!Directory.Exists(root))
+            var opened = await _platformActions.OpenDirectoryAsync(root);
+            if (!opened)
             {
-                Directory.CreateDirectory(root);
+                _logger?.LogWarning("Platform action service could not open downloads folder: {DownloadsRoot}", root);
             }
-            
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = root,
-                UseShellExecute = true,
-                Verb = "open"
-            });
         }
         catch (Exception ex)
         {
@@ -7436,22 +7433,24 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void WatchTrailer()
+    private async Task WatchTrailerAsync()
     {
-        if (!string.IsNullOrWhiteSpace(SelectedSeriesTrailerUrl))
+        if (string.IsNullOrWhiteSpace(SelectedSeriesTrailerUrl))
         {
-            try
+            return;
+        }
+
+        try
+        {
+            var opened = await _platformActions.OpenUrlAsync(SelectedSeriesTrailerUrl);
+            if (!opened)
             {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = SelectedSeriesTrailerUrl,
-                    UseShellExecute = true
-                });
+                _logger?.LogWarning("Platform action service could not open trailer URL: {TrailerUrl}", SelectedSeriesTrailerUrl);
             }
-            catch (Exception ex)
-            {
-                _logger?.LogWarning(ex, "Failed to open trailer URL");
-            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to open trailer URL");
         }
     }
 

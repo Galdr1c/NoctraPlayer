@@ -69,6 +69,7 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetRequiredService<IAppPathService>()));
         services.AddSingleton<LanguageDetectionService>();
         services.AddSingleton<ILocalizationService, LocalizationService>();
+        services.AddSingleton<IPlatformActionService, DesktopPlatformActionService>();
         services.AddSingleton<EpgSourceResolver>();
         services.AddSingleton<ITmdbSyncService, TmdbSyncService>();
         services.AddSingleton<IProfileService, ProfileService>();

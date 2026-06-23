@@ -20,6 +20,12 @@
 			<action android:name="android.intent.action.VIEW" />
 			<data android:scheme="market" />
 		</intent>
+		<intent>
+			<action android:name="android.intent.action.VIEW_DOWNLOADS" />
+		</intent>
+		<intent>
+			<action android:name="android.intent.action.OPEN_DOCUMENT_TREE" />
+		</intent>
 	</queries>
 	<application android:label="Noctra" android:icon="@drawable/Icon" />
 </manifest>

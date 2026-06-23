@@ -41,6 +41,7 @@ public static class AndroidServiceCollectionExtensions
         services.AddSingleton<IAppEditionService, AppEditionService>();
         services.AddNoctraCoreServices();
         services.AddSingleton<IUpdateService, AndroidUpdateService>();
+        services.AddSingleton<IPlatformActionService, AndroidPlatformActionService>();
         services.AddSingleton<IThemeService, AndroidThemeService>();
         services.AddSingleton<IDiagnosticReportService, AndroidDiagnosticReportService>();
         services.AddSingleton<AndroidVideoSurfaceService>();

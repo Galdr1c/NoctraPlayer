@@ -5,7 +5,6 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Android.Content;
-using Android.Net;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
 
@@ -90,7 +89,7 @@ public sealed class AndroidUpdateService : IUpdateService
             var activity = _activityProvider.CurrentActivity;
             var startContext = (Context?)activity ?? _context;
 
-            var intent = new Intent(Intent.ActionView, Uri.Parse(uri));
+            var intent = new Intent(Intent.ActionView, global::Android.Net.Uri.Parse(uri));
             if (activity is null)
             {
                 intent.AddFlags(ActivityFlags.NewTask);
