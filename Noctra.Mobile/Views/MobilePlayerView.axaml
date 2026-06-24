@@ -503,6 +503,15 @@
           </StackPanel>
         </Button>
         <Button Classes="compactPlayerAction"
+                Command="{Binding GoToLiveCommand}"
+                IsVisible="{Binding IsLiveContent}"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="Broadcast" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Player.Mobile.GoToLive}" />
+          </StackPanel>
+        </Button>
+        <Button Classes="compactPlayerAction"
                 Command="{Binding CycleVideoFillModeCommand}"
                 MinHeight="44">
           <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">

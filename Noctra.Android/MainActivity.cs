@@ -23,6 +23,10 @@ namespace Noctra.Android;
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.SmallestScreenSize | ConfigChanges.UiMode)]
 public class MainActivity : AvaloniaMainActivity
 {
+    // OnStop'ta bizim duraklattığımız oynatmayı OnStart'ta devam ettirmek için işaret.
+    // Kullanıcının manuel duraklatmasını geri almamak adına yalnızca bu flag set ise resume edilir.
+    private bool _pausedByLifecycle;
+
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         var applicationContext = ApplicationContext
@@ -74,6 +78,7 @@ public class MainActivity : AvaloniaMainActivity
             Avalonia.Application.Current is Noctra.Mobile.App app &&
             app.Services?.GetService<IVideoPlayerService>() is { IsPlaying: true })
         {
+            _pausedByLifecycle = true;
             app.Services.GetService<IVideoPlayerService>()?.Pause();
         }
 
@@ -84,13 +89,17 @@ public class MainActivity : AvaloniaMainActivity
     {
         base.OnStart();
 
-        // PiP'ten çıkınca veya arka plandan dönünce: kullanıcı manuel duraklatmadıysa devam ettir.
-        if (!IsInPictureInPictureMode &&
+        // Yalnızca bizim OnStop'ta duraklattığımız oynatmayı devam ettir.
+        // Kullanıcının manuel duraklatmasını geri almamak için _pausedByLifecycle kontrolü.
+        if (_pausedByLifecycle &&
+            !IsInPictureInPictureMode &&
             Avalonia.Application.Current is Noctra.Mobile.App app &&
             app.Services?.GetService<IVideoPlayerService>() is { State: Noctra.Models.PlaybackState.Paused, HasLoadedMedia: true })
         {
             app.Services.GetService<IVideoPlayerService>()?.Resume();
         }
+
+        _pausedByLifecycle = false;
     }
 
     protected override void OnUserLeaveHint()

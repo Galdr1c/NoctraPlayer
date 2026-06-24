@@ -98,6 +98,10 @@ public partial class MobilePlayerView : UserControl
     private int _swipeStartVolume;
     private double _swipeStartBrightness;
 
+    // Yatay sarma önizlemesi: sürükleme sırasında hedef pozisyonu canlı göster.
+    private double _horizontalSeekDeltaSeconds;
+    private bool _isHorizontalSeekPreviewActive;
+
     private readonly DispatcherTimer _volumeToastTimer;
     private readonly DispatcherTimer _seekToastTimer;
     private readonly DispatcherTimer _downloadToastTimer;
@@ -664,7 +668,18 @@ public partial class MobilePlayerView : UserControl
         }
 
         if (!_swipeIsVertical)
-            return; // yatay sarma release anında uygulanır
+        {
+            // Yatay sarma önizlemesi: sürükleme sırasında hedef delta'yı canlı göster.
+            // Asıl seek parmak kalkınca uygulanır (tek sıçrama), ama kullanıcı ışıklı feedback alır.
+            if (!vm.IsLiveContent)
+            {
+                ShowHorizontalSeekPreview(vm, dx);
+            }
+            return;
+        }
+
+        // Dikey jest başladıysa bekleyen yatay seek önizlemesini temizle.
+        HideHorizontalSeekPreview();
 
         var height = Bounds.Height > 1 ? Bounds.Height : 1;
         var fraction = -dy / height; // yukarı kaydırma = artış
@@ -710,11 +725,13 @@ public partial class MobilePlayerView : UserControl
 
                 if (dx > 0)
                 {
+                    SeekToastIcon = MaterialIconKind.FastForward10;
                     if (vm.SkipForwardCommand.CanExecute(param))
                         vm.SkipForwardCommand.Execute(param);
                 }
                 else if (vm.SkipBackwardCommand.CanExecute(param))
                 {
+                    SeekToastIcon = MaterialIconKind.Rewind10;
                     vm.SkipBackwardCommand.Execute(param);
                 }
 
@@ -722,8 +739,46 @@ public partial class MobilePlayerView : UserControl
             }
         }
 
+        // Sürükleme bitti — önizleme toast'unu temizle.
+        _isHorizontalSeekPreviewActive = false;
+        _horizontalSeekDeltaSeconds = 0;
         _isSwiping = false;
         _swipeDirectionDecided = false;
+    }
+
+    /// <summary>
+    /// Yatay sürükleme sırasında hedef sarma miktarını canlı toast olarak gösterir.
+    /// Bu yalnızca görsel önizlemedir; asıl seek parmak kalkınca uygulanır.
+    /// </summary>
+    private void ShowHorizontalSeekPreview(PlayerViewModel vm, double dx)
+    {
+        if (Math.Abs(dx) < SwipeThreshold)
+        {
+            return;
+        }
+
+        var seconds = (int)Math.Clamp(Math.Abs(dx) / 6.0, 5, 90);
+        _horizontalSeekDeltaSeconds = dx > 0 ? seconds : -seconds;
+        _isHorizontalSeekPreviewActive = true;
+
+        SeekToastIcon = dx > 0 ? MaterialIconKind.FastForward10 : MaterialIconKind.Rewind10;
+        SeekToastText = FormatSeekToast(_horizontalSeekDeltaSeconds);
+
+        IsSeekToastVisible = true;
+        // Önizleme sürdüğü sürece gizleme sayacı çalışmasın.
+        _seekToastTimer.Stop();
+    }
+
+    private void HideHorizontalSeekPreview()
+    {
+        if (!_isHorizontalSeekPreviewActive)
+        {
+            return;
+        }
+
+        _isHorizontalSeekPreviewActive = false;
+        _horizontalSeekDeltaSeconds = 0;
+        IsSeekToastVisible = false;
     }
 
     private IPlayerWindowService? GetPlayerWindowService()

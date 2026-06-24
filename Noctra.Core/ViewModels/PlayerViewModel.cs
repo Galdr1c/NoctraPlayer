@@ -1165,6 +1165,28 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
+    /// Canlı yayında kullanıcının şimdiki zamana (live edge) atlaması.
+    /// Stream gecikince pozisyon duration'a yaklaşır; bu komut doğrudan live edge'e götürür.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanGoToLive))]
+    private async Task GoToLiveAsync()
+    {
+        if (!IsLiveContent || Duration <= 0)
+        {
+            return;
+        }
+
+        LogDebug("UI Action: GoToLive clicked");
+        // Live edge: duration'dan birkaç saniye geri (tam uca gitmek buffer'ı sıfırlayıp takılabilir).
+        var liveEdge = Math.Max(0, Duration - 3);
+        await _videoPlayerService.HardSeekAsync(liveEdge);
+        Position = liveEdge;
+        RestartAutoHideTimer();
+    }
+
+    private bool CanGoToLive() => IsLiveContent && Duration > 0;
+
+    /// <summary>
     /// Altyazı hızlı aç/kapat: track seçiliyse kapat (-1), kapalıysa son seçili track'i geri yükle.
     /// </summary>
     [RelayCommand]
@@ -1187,7 +1209,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             }
             else
             {
-                trackId = SubtitleTracks.FirstOrDefault(t => t.Id >= 0).Id;
+                var firstAvailable = SubtitleTracks.FirstOrDefault(t => t.Id >= 0);
+                trackId = firstAvailable?.Id ?? -1;
             }
 
             if (trackId >= 0)
@@ -1879,6 +1902,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(CanDownloadCurrentContent));
         RaiseInfoPanelMetadataChanged();
         DownloadCurrentContentCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnDurationChanged(double value)
+    {
+        GoToLiveCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnCurrentProgramChanged(EpgProgram? value)
