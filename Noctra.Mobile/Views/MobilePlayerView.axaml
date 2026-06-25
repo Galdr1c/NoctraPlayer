@@ -1743,8 +1743,8 @@
                 </StackPanel>
               </Border>
               <Button Grid.Column="2" Command="{Binding ToggleEpgPanelCommand}"
-                      MinHeight="44" MinWidth="36"
-                      Background="Transparent" BorderThickness="0" CornerRadius="18">
+                      MinHeight="44" MinWidth="44"
+                      Background="Transparent" BorderThickness="0" CornerRadius="22">
                 <icons:MaterialIcon Kind="Close" Width="16" Height="16"
                                     Foreground="{DynamicResource TextPrimaryBrush}" />
               </Button>

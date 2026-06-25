@@ -2166,6 +2166,68 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobileUxPolish_UsesAccessibleCardActionsAndReadableProgress()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mobileVodCardSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Controls",
+            "MobileVodCard.axaml"));
+        var mobileSeriesCardSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Controls",
+            "MobileSeriesCard.axaml"));
+        var mobileContinueWatchingCardSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Controls",
+            "MobileContinueWatchingCard.axaml"));
+        var seriesDetailSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileSeriesDetailView.axaml"));
+        var settingsSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileSettingsView.axaml"));
+        var liveSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileLiveView.axaml"));
+        var searchSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileSearchView.axaml"));
+
+        Assert.DoesNotContain("Width=\"36\"", mobileVodCardSource);
+        Assert.DoesNotContain("Height=\"36\"", mobileVodCardSource);
+        Assert.DoesNotContain("Width=\"36\"", mobileSeriesCardSource);
+        Assert.DoesNotContain("Height=\"36\"", mobileSeriesCardSource);
+        Assert.DoesNotContain("Width=\"36\"", mobileContinueWatchingCardSource);
+        Assert.DoesNotContain("Height=\"36\"", mobileContinueWatchingCardSource);
+        Assert.Contains("MinWidth=\"44\"", mobileVodCardSource);
+        Assert.Contains("MinHeight=\"44\"", mobileSeriesCardSource);
+        Assert.Contains("MinWidth=\"44\"", mobileContinueWatchingCardSource);
+
+        Assert.DoesNotContain("MinHeight=\"34\"", settingsSource);
+        Assert.DoesNotContain("MinWidth=\"28\"", seriesDetailSource);
+        Assert.DoesNotContain("MinHeight=\"28\"", seriesDetailSource);
+        Assert.Contains("Text=\"{loc:Translate Player.Overlay.Watched}\"", seriesDetailSource);
+        Assert.Contains("Height=\"6\"", seriesDetailSource);
+
+        Assert.Contains("Height=\"5\"", liveSource);
+        Assert.DoesNotContain("MinHeight=\"40\"", searchSource);
+        Assert.Contains("ToggleFavoriteCommand", searchSource);
+        Assert.Contains("AddToMyListCommand", searchSource);
+    }
+
+    [Fact]
     public void MainProfileLoading_SupportsLocalAndRemoteM3uSources()
     {
         var repositoryRoot = FindRepositoryRoot();

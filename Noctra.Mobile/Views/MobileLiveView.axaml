@@ -166,11 +166,11 @@
                              Value="{Binding EpgProgress}"
                              Minimum="0"
                              Maximum="100"
-                             Height="3"
+                             Height="5"
                              Background="{DynamicResource Surface1Brush}"
                              Foreground="{DynamicResource AccentBrush}"
                              BorderThickness="0"
-                             CornerRadius="1.5"
+                             CornerRadius="2.5"
                              IsVisible="{Binding CurrentProgramTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
               </Grid>
             </Border>

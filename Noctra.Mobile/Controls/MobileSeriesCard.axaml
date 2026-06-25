@@ -48,12 +48,12 @@
         <Button HorizontalAlignment="Right"
                 VerticalAlignment="Top"
                 Margin="6"
-                Width="36"
-                Height="36"
+                MinWidth="44"
+                MinHeight="44"
                 Padding="0"
                 Background="#99000000"
                 BorderThickness="0"
-                CornerRadius="18"
+                CornerRadius="22"
                 Flyout="{StaticResource CardActionsFlyout}">
           <icons:MaterialIcon Kind="DotsVertical" Width="20" Height="20" Foreground="White" />
         </Button>

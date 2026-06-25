@@ -37,6 +37,8 @@ providers.json
 
 # Local-only assets and MSIX packaging (never push)
 Noctra.Avalonia/Assets/
+Noctra.Mobile/Assets/
+Noctra.Packaging/Assets/
 Noctra.Packaging/
 
 # User-specific files

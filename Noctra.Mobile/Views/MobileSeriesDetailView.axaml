@@ -350,13 +350,14 @@
 
                       <!-- Progress Bar at Bottom -->
                       <ProgressBar VerticalAlignment="Bottom"
-                                   Height="3"
+                                   Height="6"
                                    Minimum="0"
                                    Maximum="100"
                                    Value="{Binding WatchedPercentage}"
                                    Foreground="{DynamicResource AccentBrush}"
                                    Background="Transparent"
                                    BorderThickness="0"
+                                   CornerRadius="0,0,8,8"
                                    IsVisible="{Binding WatchedPercentage, Converter={StaticResource CountToVisibilityConverter}}" />
                     </Grid>
                   </Border>
@@ -377,26 +378,36 @@
                                  FontSize="11"
                                  VerticalAlignment="Center"
                                  IsVisible="{Binding EpisodeMetaText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
-                      <!-- Watched Checkmark -->
-                      <icons:MaterialIcon Kind="CheckCircle"
-                                          Width="16"
-                                          Height="16"
-                                          Foreground="{DynamicResource AccentBrush}"
-                                          VerticalAlignment="Center"
-                                          IsVisible="{Binding IsCompleted}" />
+                      <Border Background="{DynamicResource AccentHoverBrush}"
+                              CornerRadius="10"
+                              Padding="6,2"
+                              VerticalAlignment="Center"
+                              IsVisible="{Binding IsCompleted}">
+                        <StackPanel Orientation="Horizontal" Spacing="3">
+                          <icons:MaterialIcon Kind="CheckCircle"
+                                              Width="13"
+                                              Height="13"
+                                              Foreground="{DynamicResource AccentBrush}"
+                                              VerticalAlignment="Center" />
+                          <TextBlock Text="{loc:Translate Player.Overlay.Watched}"
+                                     Foreground="{DynamicResource AccentBrush}"
+                                     FontSize="9"
+                                     FontWeight="Bold" />
+                        </StackPanel>
+                      </Border>
                       <!-- Download Episode -->
                       <Button Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DownloadEpisodeCommand}"
                               CommandParameter="{Binding}"
                               Background="Transparent"
                               BorderThickness="0"
                               Padding="0"
-                              MinWidth="28"
-                              MinHeight="28"
+                              MinWidth="44"
+                              MinHeight="44"
                               ToolTip.Tip="{loc:Translate Series.Episode.Download}"
                               IsVisible="{Binding StreamUrl, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
                         <icons:MaterialIcon Kind="DownloadOutline"
-                                            Width="16"
-                                            Height="16"
+                                            Width="18"
+                                            Height="18"
                                             Foreground="{DynamicResource TextMutedBrush}" />
                       </Button>
                     </StackPanel>

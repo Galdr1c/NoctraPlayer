@@ -430,7 +430,7 @@
                     <Button Grid.Column="1"
                             Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
                             CommandParameter="{Binding}"
-                            MinHeight="34">
+                            MinHeight="44">
                       <StackPanel Orientation="Horizontal" Spacing="5">
                         <icons:MaterialIcon Kind="EyeOutline" Width="14" Height="14" />
                         <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" />
@@ -472,7 +472,7 @@
                     <Button Grid.Column="1"
                             Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
                             CommandParameter="{Binding}"
-                            MinHeight="34">
+                            MinHeight="44">
                       <StackPanel Orientation="Horizontal" Spacing="5">
                         <icons:MaterialIcon Kind="EyeOutline" Width="14" Height="14" />
                         <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" />
@@ -514,7 +514,7 @@
                     <Button Grid.Column="1"
                             Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
                             CommandParameter="{Binding}"
-                            MinHeight="34">
+                            MinHeight="44">
                       <StackPanel Orientation="Horizontal" Spacing="5">
                         <icons:MaterialIcon Kind="EyeOutline" Width="14" Height="14" />
                         <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" />
