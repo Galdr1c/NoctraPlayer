@@ -893,6 +893,7 @@
   "GlobalSettings.Cache.Size": "Tamaño de caché",
   "Player.Mobile.Toast.LiveSeekUnavailable": "No se puede avanzar o retroceder en TV en directo",
   "Player.Mobile.Toast.Locked": "Controles bloqueados",
+  "Player.Mobile.Toast.GestureHints": "Izquierda: brillo. Derecha: volumen. Doble toque: avanzar o retroceder.",
   "Player.Mobile.Locked": "Bloqueado",
   "Shell.Mobile.BackToExit": "Pulsa atrás de nuevo para salir",
   "Search.Button": "Buscar",

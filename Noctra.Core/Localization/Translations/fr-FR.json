@@ -893,6 +893,7 @@
   "GlobalSettings.Cache.Size": "Taille du cache",
   "Player.Mobile.Toast.LiveSeekUnavailable": "L’avance/retour n’est pas disponible sur le direct",
   "Player.Mobile.Toast.Locked": "Commandes verrouillées",
+  "Player.Mobile.Toast.GestureHints": "Gauche : luminosité. Droite : volume. Double appui : avance/retour.",
   "Player.Mobile.Locked": "Verrouillé",
   "Shell.Mobile.BackToExit": "Appuyez à nouveau sur retour pour quitter",
   "Search.Button": "Rechercher",

@@ -894,6 +894,7 @@
   "GlobalSettings.Cache.Size": "Cache size",
   "Player.Mobile.Toast.LiveSeekUnavailable": "Seeking is not available during live TV",
   "Player.Mobile.Toast.Locked": "Controls locked",
+  "Player.Mobile.Toast.GestureHints": "Left side: brightness. Right side: volume. Double tap: seek.",
   "Player.Mobile.Locked": "Locked",
   "Shell.Mobile.BackToExit": "Press back again to exit",
   "Search.Button": "Search",

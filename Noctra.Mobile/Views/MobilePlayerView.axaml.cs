@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Noctra.Mobile.Localization;
 using Noctra.Mobile.Services;
 using Noctra.Models;
+using Noctra.Services;
 using Noctra.Services.Interfaces;
 using Material.Icons;
 using Noctra.ViewModels;
@@ -114,8 +115,10 @@ public partial class MobilePlayerView : UserControl
 
     private IPlayerWindowService? _playerWindowService;
     private IVideoSurfaceService? _videoSurfaceService;
+    private ISettingsService? _settingsService;
     private PlayerViewModel? _boundVm;
     private Rect _lastSurfaceRect;
+    private bool _gestureHintCheckStarted;
 
     public MobilePlayerView()
     {
@@ -152,6 +155,7 @@ public partial class MobilePlayerView : UserControl
         {
             _boundVm.PropertyChanged += OnPlayerPropertyChanged;
             _boundVm.SkipOverlayRequested += OnSkipOverlayRequested;
+            TryShowGestureHintsOnceAsync();
         }
     }
 
@@ -334,6 +338,31 @@ public partial class MobilePlayerView : UserControl
         IsGestureToastVisible = true;
         _gestureToastTimer.Stop();
         _gestureToastTimer.Start();
+    }
+
+    private void TryShowGestureHintsOnceAsync()
+    {
+        if (_gestureHintCheckStarted)
+        {
+            return;
+        }
+
+        var settingsService = GetSettingsService();
+        if (settingsService is null || settingsService.Settings.HasSeenMobilePlayerGestureHints)
+        {
+            return;
+        }
+
+        _gestureHintCheckStarted = true;
+        settingsService.Settings.HasSeenMobilePlayerGestureHints = true;
+        _ = settingsService.SaveAsync();
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            ShowGestureToast(TranslateOrDefault(
+                "Player.Mobile.Toast.GestureHints",
+                "Left side: brightness. Right side: volume. Double tap: seek."));
+        }, DispatcherPriority.Background);
     }
 
     private void OnSkipOverlayRequested(object? sender, PlayerViewModel.SkipOverlayEventArgs e)
@@ -794,5 +823,18 @@ public partial class MobilePlayerView : UserControl
         }
 
         return _playerWindowService;
+    }
+
+    private ISettingsService? GetSettingsService()
+    {
+        if (_settingsService is not null)
+            return _settingsService;
+
+        if (Application.Current is App { Services: not null } app)
+        {
+            _settingsService = app.Services.GetService<ISettingsService>();
+        }
+
+        return _settingsService;
     }
 }

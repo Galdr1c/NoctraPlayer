@@ -1752,6 +1752,29 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void AndroidFullscreen_AllowsPortraitAndUserRotation()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var playerWindowInterface = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Core",
+            "Services",
+            "Interfaces",
+            "IPlayerWindowService.cs"));
+        var androidPlayerWindowService = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "Services",
+            "AndroidPlayerWindowService.cs"));
+
+        Assert.Contains("Tam ekran video moduna girer/çıkar.", playerWindowInterface);
+        Assert.Contains("kullanıcı yön tercihi", playerWindowInterface);
+        Assert.Contains("ScreenOrientation.FullUser", androidPlayerWindowService);
+        Assert.Contains("ScreenOrientation.Unspecified", androidPlayerWindowService);
+        Assert.DoesNotContain("ScreenOrientation.SensorLandscape", androidPlayerWindowService);
+    }
+
+    [Fact]
     public void MobileShellBackNavigation_UsesDoubleBackToExitToast()
     {
         var repositoryRoot = FindRepositoryRoot();
@@ -1783,6 +1806,47 @@ public sealed class ReleaseSourceCleanlinessTests
                 "Translations",
                 $"{culture}.json"));
             Assert.Contains("\"Shell.Mobile.BackToExit\"", translations);
+        }
+    }
+
+    [Fact]
+    public void MobilePlayerGestureHints_ShowOnceAndPersistDismissal()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var appSettingsSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Core",
+            "Models",
+            "AppSettings.cs"));
+        var playerViewCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml.cs"));
+        var playerViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml"));
+
+        Assert.Contains("HasSeenMobilePlayerGestureHints", appSettingsSource);
+        Assert.Contains("TryShowGestureHintsOnceAsync", playerViewCode);
+        Assert.Contains("ISettingsService", playerViewCode);
+        Assert.Contains("Player.Mobile.Toast.GestureHints", playerViewCode);
+        Assert.Contains("HasSeenMobilePlayerGestureHints = true", playerViewCode);
+        Assert.Contains("SaveAsync", playerViewCode);
+        Assert.Contains("IsGestureToastVisible", playerViewSource);
+        Assert.Contains("GestureToastText", playerViewSource);
+
+        foreach (var culture in new[] { "en-US", "tr-TR", "de-DE", "es-ES", "fr-FR" })
+        {
+            var translations = File.ReadAllText(Path.Combine(
+                repositoryRoot,
+                "Noctra.Core",
+                "Localization",
+                "Translations",
+                $"{culture}.json"));
+            Assert.Contains("\"Player.Mobile.Toast.GestureHints\"", translations);
         }
     }
 

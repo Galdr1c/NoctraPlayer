@@ -5,6 +5,7 @@ namespace Noctra.Services.Interfaces;
 /// Masaüstünde no-op olabilir; mobil (Android) tarafında ekranı uyanık tutma,
 /// tam ekran (yatay yön + immersive) ve ekran parlaklığı kontrolünü sağlar.
 /// </summary>
+/// Android tam ekranda kullanıcı yön tercihi korunur; portre ve yatay kullanıma izin verilir.
 public interface IPlayerWindowService
 {
     /// <summary>

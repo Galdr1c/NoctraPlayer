@@ -105,6 +105,11 @@ public class AppSettings
     public string PreferredAudioLanguage { get; set; } = "en";
 
     /// <summary>
+    /// Mobil oynatıcı jest ipuçları bir kez gösterildi mi?
+    /// </summary>
+    public bool HasSeenMobilePlayerGestureHints { get; set; } = false;
+
+    /// <summary>
     /// Son kullanilan profili acilista otomatik sec
     /// </summary>
     public bool AutoSelectLastProfile { get; set; } = true;

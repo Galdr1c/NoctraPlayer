@@ -893,6 +893,7 @@
   "GlobalSettings.Cache.Size": "Cache-Größe",
   "Player.Mobile.Toast.LiveSeekUnavailable": "Vor-/Zurückspulen ist bei Live-TV nicht verfügbar",
   "Player.Mobile.Toast.Locked": "Steuerung gesperrt",
+  "Player.Mobile.Toast.GestureHints": "Links: Helligkeit. Rechts: Lautstärke. Doppeltippen: spulen.",
   "Player.Mobile.Locked": "Gesperrt",
   "Shell.Mobile.BackToExit": "Zum Beenden erneut Zurück drücken",
   "Search.Button": "Suchen",

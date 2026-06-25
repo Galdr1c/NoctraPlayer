@@ -893,6 +893,7 @@
   "GlobalSettings.Cache.Size": "Önbellek boyutu",
   "Player.Mobile.Toast.LiveSeekUnavailable": "Canlı yayında ileri/geri sarma kullanılamaz",
   "Player.Mobile.Toast.Locked": "Kontroller kilitli",
+  "Player.Mobile.Toast.GestureHints": "Sol taraf: parlaklık. Sağ taraf: ses. Çift dokun: ileri/geri sar.",
   "Player.Mobile.Locked": "Kilitli",
   "Shell.Mobile.BackToExit": "Çıkmak için tekrar geri basın",
   "Search.Button": "Ara",

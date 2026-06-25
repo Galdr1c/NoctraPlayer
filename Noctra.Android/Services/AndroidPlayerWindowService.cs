@@ -12,6 +12,7 @@ namespace Noctra.Android.Services;
 /// ekranı uyanık tutma, tam ekran (yatay yön + immersive sistem çubukları) ve parlaklık.
 /// Tüm pencere işlemleri UI thread üzerinde yürütülür.
 /// </summary>
+/// Tam ekranda kullanıcı yönü korunur; portre ve yatay kullanım desteklenir.
 public sealed class AndroidPlayerWindowService : IPlayerWindowService
 {
     private readonly AndroidActivityProvider _activityProvider;
@@ -51,7 +52,7 @@ public sealed class AndroidPlayerWindowService : IPlayerWindowService
         {
             // 1) Ekran yönü
             activity.RequestedOrientation = fullScreen
-                ? ScreenOrientation.SensorLandscape
+                ? ScreenOrientation.FullUser
                 : ScreenOrientation.Unspecified;
 
             // 2) Immersive sistem çubukları
