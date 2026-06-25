@@ -895,6 +895,7 @@
   "Player.Mobile.Toast.LiveSeekUnavailable": "Seeking is not available during live TV",
   "Player.Mobile.Toast.Locked": "Controls locked",
   "Player.Mobile.Locked": "Locked",
+  "Shell.Mobile.BackToExit": "Press back again to exit",
   "Search.Button": "Search",
   "Search.Placeholder": "Search channels, movies or series",
   "Mobile.More.Shortcuts": "Quick access",

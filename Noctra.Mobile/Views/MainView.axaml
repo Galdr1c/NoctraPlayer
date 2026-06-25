@@ -332,6 +332,33 @@
       </Grid>
     </Border>
 
+    <Border x:Name="BackExitToast"
+            Grid.RowSpan="3"
+            Grid.ColumnSpan="2"
+            ZIndex="49000"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Bottom"
+            Margin="20,0,20,96"
+            Padding="18,12"
+            CornerRadius="18"
+            Background="#E6000000"
+            IsHitTestVisible="False"
+            IsVisible="False">
+      <StackPanel Orientation="Horizontal" Spacing="10">
+        <icons:MaterialIcon Kind="ExitToApp"
+                            Width="20"
+                            Height="20"
+                            Foreground="{DynamicResource AccentBrush}"
+                            VerticalAlignment="Center" />
+        <TextBlock Text="{loc:Translate Shell.Mobile.BackToExit}"
+                   Foreground="White"
+                   FontSize="14"
+                   FontWeight="SemiBold"
+                   TextWrapping="Wrap"
+                   VerticalAlignment="Center" />
+      </StackPanel>
+    </Border>
+
     <!-- Legal Consent Overlay -->
     <views:MobileLegalConsentView x:Name="LegalConsentOverlay"
                                   Grid.RowSpan="3"

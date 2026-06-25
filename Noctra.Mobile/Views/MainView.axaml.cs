@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Platform;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Models;
@@ -20,6 +21,7 @@ namespace Noctra.Mobile.Views;
 public partial class MainView : UserControl
 {
     private const double TabletBreakpoint = 720;
+    private static readonly TimeSpan BackExitPromptWindow = TimeSpan.FromSeconds(2);
     private CoreMainViewModel? _coreMainViewModel;
     private PlayerViewModel? _playerViewModel;
     private MobileViewModelResolver? _viewModelResolver;
@@ -28,6 +30,8 @@ public partial class MainView : UserControl
     private MobileBackNavigationService? _backNavigationService;
     private bool _isPlayerFullScreen;
     private string _currentDestination = "Home";
+    private DateTime _lastBackExitPromptUtc = DateTime.MinValue;
+    private readonly DispatcherTimer _backExitToastTimer;
     private readonly Thickness _headerBasePadding;
     private readonly Thickness _bottomNavBasePadding;
 
@@ -36,6 +40,12 @@ public partial class MainView : UserControl
         InitializeComponent();
         MobileSettingsContent.BackToProfilesRequested += (_, _) => ShowProfileSelection();
         SizeChanged += OnSizeChanged;
+        _backExitToastTimer = new DispatcherTimer { Interval = BackExitPromptWindow };
+        _backExitToastTimer.Tick += (_, _) =>
+        {
+            _backExitToastTimer.Stop();
+            BackExitToast.IsVisible = false;
+        };
 
         // Safe-area hesaplaması için temel (tasarım) padding değerlerini sakla.
         _headerBasePadding = HeaderBar.Padding;
@@ -136,6 +146,8 @@ public partial class MainView : UserControl
             _backNavigationService.BackRequested = null;
         }
 
+        _backExitToastTimer.Stop();
+
         base.OnDetachedFromVisualTree(e);
     }
 
@@ -212,10 +224,33 @@ public partial class MainView : UserControl
             return true;
         }
 
+        // 5) Ana sayfadayiz -> ilk geri basista uyar, kisa sure icindeki ikinci basista Android'e birak.
+        var now = DateTime.UtcNow;
+        if (now - _lastBackExitPromptUtc <= BackExitPromptWindow)
+        {
+            BackExitToast.IsVisible = false;
+            _backExitToastTimer.Stop();
+            _lastBackExitPromptUtc = DateTime.MinValue;
+            return false;
+        }
+
+        _lastBackExitPromptUtc = now;
+        ShowBackExitToast();
+        if (BackExitToast.IsVisible)
+        {
+            return true;
+        }
+
         // 5) Ana sayfadayız -> varsayılan davranış
         return false;
     }
 
+    private void ShowBackExitToast()
+    {
+        BackExitToast.IsVisible = true;
+        _backExitToastTimer.Stop();
+        _backExitToastTimer.Start();
+    }
 
     private bool IsAnyPlayerPanelOpen()
     {

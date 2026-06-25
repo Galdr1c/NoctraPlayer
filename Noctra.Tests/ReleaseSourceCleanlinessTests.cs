@@ -1752,6 +1752,41 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobileShellBackNavigation_UsesDoubleBackToExitToast()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mainViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml"));
+        var mainViewCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml.cs"));
+
+        Assert.Contains("BackExitToast", mainViewSource);
+        Assert.Contains("Shell.Mobile.BackToExit", mainViewSource);
+        Assert.Contains("_lastBackExitPromptUtc", mainViewCode);
+        Assert.Contains("BackExitPromptWindow", mainViewCode);
+        Assert.Contains("ShowBackExitToast", mainViewCode);
+        Assert.Contains("now - _lastBackExitPromptUtc <= BackExitPromptWindow", mainViewCode);
+        Assert.Contains("_backExitToastTimer", mainViewCode);
+
+        foreach (var culture in new[] { "en-US", "tr-TR", "de-DE", "es-ES", "fr-FR" })
+        {
+            var translations = File.ReadAllText(Path.Combine(
+                repositoryRoot,
+                "Noctra.Core",
+                "Localization",
+                "Translations",
+                $"{culture}.json"));
+            Assert.Contains("\"Shell.Mobile.BackToExit\"", translations);
+        }
+    }
+
+    [Fact]
     public void AndroidPictureInPicture_ReusesPlayerPiPEventBridge()
     {
         var repositoryRoot = FindRepositoryRoot();
