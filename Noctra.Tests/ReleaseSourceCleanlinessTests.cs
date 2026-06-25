@@ -2049,6 +2049,30 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobilePlayerMaterialIcons_MatchDesktopActionSemantics()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mobilePlayerSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml"));
+        var mobileAppSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "App.axaml"));
+
+        Assert.DoesNotContain("Kind=\"PlayPause\"", mobilePlayerSource);
+        Assert.Contains("Kind=\"Pause\"", mobilePlayerSource);
+        Assert.Contains("Kind=\"Play\"", mobilePlayerSource);
+        Assert.Contains("Kind=\"FullscreenExit\"", mobilePlayerSource);
+        Assert.Contains("IsVisible=\"{Binding IsFullScreen, Converter={StaticResource InverseBoolConverter}}\"", mobilePlayerSource);
+        Assert.Contains("Kind=\"VolumeHigh\"", mobilePlayerSource);
+        Assert.Contains("FillModeToIconConverter", mobileAppSource);
+        Assert.Contains("Converter={StaticResource FillModeToIconConverter}", mobilePlayerSource);
+    }
+
+    [Fact]
     public void MainProfileLoading_SupportsLocalAndRemoteM3uSources()
     {
         var repositoryRoot = FindRepositoryRoot();

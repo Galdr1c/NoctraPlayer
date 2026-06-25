@@ -47,6 +47,7 @@
         <converters:EqualityToBrushMultiConverter x:Key="EqualityToBrushMultiConverter" />
         <converters:PercentToWidthConverter x:Key="PercentToWidthConverter" />
         <converters:SubtitleIconConverter x:Key="SubtitleIconConverter" />
+        <converters:FillModeToIconConverter x:Key="FillModeToIconConverter" />
       </ResourceDictionary>
     </Application.Resources>
 
