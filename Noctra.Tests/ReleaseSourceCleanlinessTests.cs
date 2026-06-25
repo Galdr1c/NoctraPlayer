@@ -2032,6 +2032,23 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobilePlayerVolumeToast_DoesNotDropFirstRealVolumeChange()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mobilePlayerCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml.cs"));
+
+        Assert.DoesNotContain("_isInitialVolumeEvent", mobilePlayerCode);
+        Assert.Contains("_lastObservedVolume", mobilePlayerCode);
+        Assert.Contains("_lastObservedIsMuted", mobilePlayerCode);
+        Assert.Contains("ShowVolumeToastIfVolumeStateChanged", mobilePlayerCode);
+        Assert.Contains("volumeChanged || muteChanged", mobilePlayerCode);
+    }
+
+    [Fact]
     public void MainProfileLoading_SupportsLocalAndRemoteM3uSources()
     {
         var repositoryRoot = FindRepositoryRoot();

@@ -118,7 +118,8 @@ public partial class MobilePlayerView : UserControl
     private readonly DispatcherTimer _downloadToastTimer;
     private readonly DispatcherTimer _gestureToastTimer;
     private readonly DispatcherTimer _singleTapTimer;
-    private bool _isInitialVolumeEvent = true;
+    private int? _lastObservedVolume;
+    private bool? _lastObservedIsMuted;
     private DateTime _lastVolumeToastShownUtc = DateTime.MinValue;
     private static readonly TimeSpan VolumeToastThrottleInterval = TimeSpan.FromMilliseconds(350);
     private static readonly TimeSpan SingleTapDelay = TimeSpan.FromMilliseconds(300);
@@ -159,7 +160,8 @@ public partial class MobilePlayerView : UserControl
         }
 
         _boundVm = DataContext as PlayerViewModel;
-        _isInitialVolumeEvent = true;
+        _lastObservedVolume = _boundVm?.Volume;
+        _lastObservedIsMuted = _boundVm?.IsMuted;
 
         if (_boundVm is not null)
         {
@@ -173,7 +175,7 @@ public partial class MobilePlayerView : UserControl
     {
         if (e.PropertyName is nameof(PlayerViewModel.Volume) or nameof(PlayerViewModel.IsMuted))
         {
-            ShowVolumeToast();
+            ShowVolumeToastIfVolumeStateChanged();
         }
         else if (e.PropertyName == nameof(PlayerViewModel.DownloadStatusMessage)
                  && !string.IsNullOrWhiteSpace(_boundVm?.DownloadStatusMessage))
@@ -309,12 +311,6 @@ public partial class MobilePlayerView : UserControl
 
     private void ShowVolumeToast()
     {
-        if (_isInitialVolumeEvent)
-        {
-            _isInitialVolumeEvent = false;
-            return;
-        }
-
         var now = DateTime.UtcNow;
         if (now - _lastVolumeToastShownUtc < VolumeToastThrottleInterval)
         {
@@ -325,6 +321,24 @@ public partial class MobilePlayerView : UserControl
         IsVolumeToastVisible = true;
         _volumeToastTimer.Stop();
         _volumeToastTimer.Start();
+    }
+
+    private void ShowVolumeToastIfVolumeStateChanged()
+    {
+        if (_boundVm is null)
+        {
+            return;
+        }
+
+        var volumeChanged = _lastObservedVolume != _boundVm.Volume;
+        var muteChanged = _lastObservedIsMuted != _boundVm.IsMuted;
+        _lastObservedVolume = _boundVm.Volume;
+        _lastObservedIsMuted = _boundVm.IsMuted;
+
+        if (volumeChanged || muteChanged)
+        {
+            ShowVolumeToast();
+        }
     }
 
     private void ShowSeekToast(double seconds)
