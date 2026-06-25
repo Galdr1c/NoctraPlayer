@@ -300,6 +300,7 @@ public class PlayerEpisodeNavigator
         if (sourceSeasons == null || sourceSeasons.Count == 0)
         {
             _vm.EpisodeSeasons = new List<Season>();
+            _vm.SelectedEpisodeSeason = null;
             return;
         }
 
@@ -314,6 +315,8 @@ public class PlayerEpisodeNavigator
         }
 
         _vm.EpisodeSeasons = newSeasons;
+        var selectedSeason = newSeasons.FirstOrDefault(s => s.IsExpanded) ?? newSeasons.FirstOrDefault();
+        _vm.SelectedEpisodeSeason = selectedSeason;
     }
 
     public Episode? FindNextEpisodeInBrowser(Episode episode)

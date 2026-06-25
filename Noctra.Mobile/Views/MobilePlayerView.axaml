@@ -899,219 +899,240 @@
                          TextWrapping="Wrap" />
             </StackPanel>
             <Button Grid.Column="1"
-                    Content="{loc:Translate Common.Close}"
                     Command="{Binding ClosePanelsCommand}"
                     MinHeight="44"
-                    Margin="10,0,0,0" />
+                    MinWidth="44"
+                    Padding="10"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    CornerRadius="22"
+                    Margin="10,0,0,0">
+              <icons:MaterialIcon Kind="Close" Width="20" Height="20" />
+            </Button>
           </Grid>
+
+          <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding EpisodeSeasons}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" Spacing="8" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Season">
+                  <Button Command="{Binding #PlayerRoot.DataContext.SelectEpisodeSeasonCommand}"
+                          CommandParameter="{Binding}"
+                          MinHeight="44"
+                          Padding="14,8"
+                          BorderThickness="1"
+                          CornerRadius="22">
+                    <Button.Background>
+                      <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="AccentHoverBrush">
+                        <Binding Path="SeasonNumber" />
+                        <Binding Path="#PlayerRoot.DataContext.SelectedEpisodeSeason.SeasonNumber" />
+                      </MultiBinding>
+                    </Button.Background>
+                    <Button.BorderBrush>
+                      <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="AccentBrush">
+                        <Binding Path="SeasonNumber" />
+                        <Binding Path="#PlayerRoot.DataContext.SelectedEpisodeSeason.SeasonNumber" />
+                      </MultiBinding>
+                    </Button.BorderBrush>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock Text="{loc:Translate Player.Episodes.Season}"
+                                 Foreground="{DynamicResource TextPrimaryBrush}"
+                                 FontSize="12"
+                                 FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding SeasonNumber}"
+                                 Foreground="{DynamicResource TextPrimaryBrush}"
+                                 FontSize="12"
+                                 FontWeight="Bold" />
+                      <Border Background="{DynamicResource Surface1Brush}"
+                              CornerRadius="9"
+                              Padding="6,1">
+                        <TextBlock Text="{Binding Episodes.Count}"
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   FontSize="10"
+                                   FontWeight="Bold" />
+                      </Border>
+                    </StackPanel>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
 
           <ScrollViewer MaxHeight="330"
                         HorizontalScrollBarVisibility="Disabled"
                         VerticalScrollBarVisibility="Auto">
-            <ItemsControl ItemsSource="{Binding EpisodeSeasons}">
+            <ItemsControl ItemsSource="{Binding SelectedEpisodeSeasonEpisodes}">
               <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="models:Season">
-                  <StackPanel Spacing="8"
-                              Margin="0,0,0,14">
-                    <Grid ColumnDefinitions="Auto,*,Auto"
-                          Margin="2,0,2,0">
-                      <TextBlock Text="{loc:Translate Player.Episodes.Season}"
-                                 Foreground="{DynamicResource TextMutedBrush}"
-                                 FontSize="12"
-                                 FontWeight="SemiBold"
-                                 VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="1"
-                                 Text="{Binding SeasonNumber}"
-                                 Foreground="{DynamicResource TextMutedBrush}"
-                                 FontSize="12"
-                                 FontWeight="SemiBold"
-                                 Margin="4,0,0,0"
-                                 VerticalAlignment="Center" />
-                      <Border Grid.Column="2"
-                              Background="{DynamicResource Surface1Brush}"
-                              CornerRadius="10"
-                              Padding="8,3"
-                              VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal"
-                                    Spacing="4">
-                          <TextBlock Text="{Binding Episodes.Count}"
-                                     Foreground="{DynamicResource TextMutedBrush}"
-                                     FontSize="10"
-                                     FontWeight="Bold" />
-                          <TextBlock Text="{loc:Translate Player.Episodes.CountLabel}"
-                                     Foreground="{DynamicResource TextMutedBrush}"
-                                     FontSize="10"
-                                     FontWeight="Bold" />
-                        </StackPanel>
+                <DataTemplate x:DataType="models:Episode">
+                  <Button Command="{Binding #PlayerRoot.DataContext.PlayEpisodeFromOverlayCommand}"
+                          CommandParameter="{Binding}"
+                          MinHeight="92"
+                          Margin="0,0,0,10"
+                          Padding="0"
+                          Background="Transparent"
+                          BorderThickness="0"
+                          HorizontalContentAlignment="Stretch">
+                    <Panel>
+                      <Border Background="{DynamicResource Surface1Brush}"
+                              CornerRadius="14"
+                              BorderThickness="1.5"
+                              ClipToBounds="True">
+                        <Border.BorderBrush>
+                          <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="AccentBrush">
+                            <Binding Path="." Converter="{StaticResource EpisodeIdentityConverter}" />
+                            <Binding Path="#PlayerRoot.DataContext.CurrentEpisodeIdentity" />
+                          </MultiBinding>
+                        </Border.BorderBrush>
                       </Border>
-                    </Grid>
 
-                    <ItemsControl ItemsSource="{Binding Episodes}">
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="models:Episode">
-                          <Button Command="{Binding #PlayerRoot.DataContext.PlayEpisodeFromOverlayCommand}"
-                                  CommandParameter="{Binding}"
-                                  MinHeight="88"
-                                  Margin="0,0,0,10"
-                                  Padding="0"
-                                  Background="Transparent"
-                                  BorderThickness="0"
-                                  HorizontalContentAlignment="Stretch">
-                            <Panel>
-                              <!-- Card background + current episode accent border. -->
-                              <Border Background="{DynamicResource Surface1Brush}"
-                                      CornerRadius="14"
-                                      BorderThickness="1.5"
-                                      ClipToBounds="True">
-                                <Border.BorderBrush>
-                                  <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="AccentBrush">
-                                    <Binding Path="." Converter="{StaticResource EpisodeIdentityConverter}" />
-                                    <Binding Path="#PlayerRoot.DataContext.CurrentEpisodeIdentity" />
-                                  </MultiBinding>
-                                </Border.BorderBrush>
-                              </Border>
+                      <Border CornerRadius="14"
+                              Background="{DynamicResource AccentBrush}"
+                              Opacity="0.08"
+                              IsHitTestVisible="False">
+                        <Border.IsVisible>
+                          <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                            <Binding Path="." Converter="{StaticResource EpisodeIdentityConverter}" />
+                            <Binding Path="#PlayerRoot.DataContext.CurrentEpisodeIdentity" />
+                          </MultiBinding>
+                        </Border.IsVisible>
+                      </Border>
 
-                              <!-- Subtle current episode tint. -->
-                              <Border CornerRadius="14"
+                      <Grid ColumnDefinitions="92,*"
+                            ColumnSpacing="10"
+                            Margin="8">
+                        <Border Width="92"
+                                Height="64"
+                                CornerRadius="10"
+                                ClipToBounds="True"
+                                Background="{DynamicResource Surface0Brush}"
+                                VerticalAlignment="Top">
+                          <Grid>
+                            <controls:RemoteImage Url="{Binding CoverUrl}"
+                                                  Stretch="UniformToFill" />
+
+                            <Border Background="#99000000">
+                              <Border.IsVisible>
+                                <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                                  <Binding Path="." Converter="{StaticResource EpisodeIdentityConverter}" />
+                                  <Binding Path="#PlayerRoot.DataContext.CurrentEpisodeIdentity" />
+                                </MultiBinding>
+                              </Border.IsVisible>
+                              <icons:MaterialIcon Kind="PlayCircle"
+                                                  Width="28"
+                                                  Height="28"
+                                                  Foreground="White"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Opacity="0.95" />
+                            </Border>
+
+                            <Border VerticalAlignment="Bottom"
+                                    HorizontalAlignment="Left"
+                                    Background="#AA000000"
+                                    CornerRadius="0,8,0,0"
+                                    Padding="6,3,8,3">
+                              <TextBlock Text="{Binding EpisodeNumber}"
+                                         Foreground="White"
+                                         FontSize="11"
+                                         FontWeight="Bold" />
+                            </Border>
+
+                            <Border VerticalAlignment="Bottom"
+                                    Height="6"
+                                    CornerRadius="0,0,10,10"
+                                    Background="#66000000"
+                                    IsVisible="{Binding WatchedPercentage, Converter={StaticResource CountToVisibilityConverter}}">
+                              <Border HorizontalAlignment="Left"
+                                      CornerRadius="0,0,0,10"
                                       Background="{DynamicResource AccentBrush}"
-                                      Opacity="0.08"
-                                      IsHitTestVisible="False">
-                                <Border.IsVisible>
-                                  <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
-                                    <Binding Path="." Converter="{StaticResource EpisodeIdentityConverter}" />
-                                    <Binding Path="#PlayerRoot.DataContext.CurrentEpisodeIdentity" />
-                                  </MultiBinding>
-                                </Border.IsVisible>
-                              </Border>
+                                      Width="{Binding WatchedPercentage, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=92}" />
+                            </Border>
+                          </Grid>
+                        </Border>
 
-                              <Grid ColumnDefinitions="92,*"
-                                    ColumnSpacing="10"
-                                    Margin="8">
-                                <!-- Episode thumbnail / still image. -->
-                                <Border Width="92"
-                                        Height="62"
-                                        CornerRadius="10"
-                                        ClipToBounds="True"
-                                        Background="{DynamicResource Surface0Brush}"
-                                        VerticalAlignment="Top">
-                                  <Grid>
-                                    <controls:RemoteImage Url="{Binding CoverUrl}"
-                                                          Stretch="UniformToFill" />
+                        <StackPanel Grid.Column="1"
+                                    Spacing="4"
+                                    VerticalAlignment="Center">
+                          <TextBlock Text="{Binding TmdbEpisodeName}"
+                                     Foreground="{DynamicResource AccentBrush}"
+                                     FontSize="12"
+                                     FontStyle="Italic"
+                                     Opacity="0.9"
+                                     TextTrimming="CharacterEllipsis"
+                                     MaxLines="1"
+                                     IsVisible="{Binding TmdbEpisodeName, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
 
-                                    <!-- Active episode dark overlay + play icon. -->
-                                    <Border Background="#99000000">
-                                      <Border.IsVisible>
-                                        <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
-                                          <Binding Path="." Converter="{StaticResource EpisodeIdentityConverter}" />
-                                          <Binding Path="#PlayerRoot.DataContext.CurrentEpisodeIdentity" />
-                                        </MultiBinding>
-                                      </Border.IsVisible>
-                                      <icons:MaterialIcon Kind="PlayCircle"
-                                                          Width="28"
-                                                          Height="28"
-                                                          Foreground="White"
-                                                          HorizontalAlignment="Center"
-                                                          VerticalAlignment="Center"
-                                                          Opacity="0.95" />
-                                    </Border>
+                          <DockPanel LastChildFill="True">
+                            <Border DockPanel.Dock="Right"
+                                    Background="{DynamicResource AccentHoverBrush}"
+                                    CornerRadius="10"
+                                    Padding="6,2"
+                                    Margin="8,0,0,0"
+                                    IsVisible="{Binding IsCompleted}">
+                              <StackPanel Orientation="Horizontal" Spacing="3">
+                                <icons:MaterialIcon Kind="CheckCircle"
+                                                    Width="13"
+                                                    Height="13"
+                                                    Foreground="{DynamicResource AccentBrush}" />
+                                <TextBlock Text="{loc:Translate Player.Overlay.Watched}"
+                                           Foreground="{DynamicResource AccentBrush}"
+                                           FontSize="9"
+                                           FontWeight="Bold" />
+                              </StackPanel>
+                            </Border>
+                            <TextBlock Text="{Binding Name}"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       FontSize="13"
+                                       FontWeight="Bold"
+                                       TextWrapping="Wrap"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="2"
+                                       LineHeight="17" />
+                          </DockPanel>
 
-                                    <!-- Episode number badge. -->
-                                    <Border VerticalAlignment="Bottom"
-                                            HorizontalAlignment="Left"
-                                            Background="#AA000000"
-                                            CornerRadius="0,8,0,0"
-                                            Padding="6,3,8,3">
-                                      <TextBlock Text="{Binding EpisodeNumber}"
-                                                 Foreground="White"
-                                                 FontSize="11"
-                                                 FontWeight="Bold" />
-                                    </Border>
+                          <TextBlock Text="{Binding EpisodeMetaText}"
+                                     Foreground="{DynamicResource TextMutedBrush}"
+                                     FontSize="11"
+                                     TextTrimming="CharacterEllipsis"
+                                     IsVisible="{Binding EpisodeMetaText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
 
-                                    <!-- Watched progress bar. -->
-                                    <Border VerticalAlignment="Bottom"
-                                            Height="4"
-                                            Background="#66000000"
-                                            IsVisible="{Binding WatchedPercentage, Converter={StaticResource CountToVisibilityConverter}}">
-                                      <Border HorizontalAlignment="Left"
-                                              Background="{DynamicResource AccentBrush}"
-                                              Width="{Binding WatchedPercentage, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=92}" />
-                                    </Border>
-                                  </Grid>
-                                </Border>
+                          <StackPanel Orientation="Horizontal"
+                                      Spacing="6"
+                                      Margin="0,1,0,0">
+                            <StackPanel.IsVisible>
+                              <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                                <Binding Path="." Converter="{StaticResource EpisodeIdentityConverter}" />
+                                <Binding Path="#PlayerRoot.DataContext.CurrentEpisodeIdentity" />
+                              </MultiBinding>
+                            </StackPanel.IsVisible>
+                            <Ellipse Width="6"
+                                     Height="6"
+                                     Fill="{DynamicResource AccentBrush}"
+                                     VerticalAlignment="Center" />
+                            <TextBlock Text="{loc:Translate Player.Info.NowPlaying}"
+                                       Foreground="{DynamicResource AccentBrush}"
+                                       FontSize="10"
+                                       FontWeight="Black"
+                                       LetterSpacing="0.5"
+                                       VerticalAlignment="Center" />
+                          </StackPanel>
 
-                                <StackPanel Grid.Column="1"
-                                            Spacing="3"
-                                            VerticalAlignment="Center">
-                                  <!-- TMDB episode title. -->
-                                  <TextBlock Text="{Binding TmdbEpisodeName}"
-                                             Foreground="{DynamicResource AccentBrush}"
-                                             FontSize="12"
-                                             FontStyle="Italic"
-                                             Opacity="0.9"
-                                             TextTrimming="CharacterEllipsis"
-                                             MaxLines="1"
-                                             IsVisible="{Binding TmdbEpisodeName, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
-
-                                  <DockPanel LastChildFill="True">
-                                    <icons:MaterialIcon DockPanel.Dock="Right"
-                                                        Kind="CheckCircle"
-                                                        Width="17"
-                                                        Height="17"
-                                                        Foreground="{DynamicResource AccentBrush}"
-                                                        Margin="8,1,0,0"
-                                                        IsVisible="{Binding IsCompleted}" />
-                                    <TextBlock Text="{Binding Name}"
-                                               Foreground="{DynamicResource TextPrimaryBrush}"
-                                               FontSize="13"
-                                               FontWeight="Bold"
-                                               TextWrapping="Wrap"
-                                               TextTrimming="CharacterEllipsis"
-                                               MaxLines="2"
-                                               LineHeight="17" />
-                                  </DockPanel>
-
-                                  <TextBlock Text="{Binding EpisodeMetaText}"
-                                             Foreground="{DynamicResource TextMutedBrush}"
-                                             FontSize="11"
-                                             TextTrimming="CharacterEllipsis"
-                                             IsVisible="{Binding EpisodeMetaText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
-
-                                  <StackPanel Orientation="Horizontal"
-                                              Spacing="6"
-                                              Margin="0,1,0,0">
-                                    <StackPanel.IsVisible>
-                                      <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
-                                        <Binding Path="." Converter="{StaticResource EpisodeIdentityConverter}" />
-                                        <Binding Path="#PlayerRoot.DataContext.CurrentEpisodeIdentity" />
-                                      </MultiBinding>
-                                    </StackPanel.IsVisible>
-                                    <Ellipse Width="6"
-                                             Height="6"
-                                             Fill="{DynamicResource AccentBrush}"
-                                             VerticalAlignment="Center" />
-                                    <TextBlock Text="{loc:Translate Player.Info.NowPlaying}"
-                                               Foreground="{DynamicResource AccentBrush}"
-                                               FontSize="10"
-                                               FontWeight="Black"
-                                               LetterSpacing="0.5"
-                                               VerticalAlignment="Center" />
-                                  </StackPanel>
-
-                                  <TextBlock Text="{Binding Plot}"
-                                             Foreground="{DynamicResource TextMutedBrush}"
-                                             FontSize="11"
-                                             TextWrapping="Wrap"
-                                             TextTrimming="CharacterEllipsis"
-                                             MaxLines="2"
-                                             IsVisible="{Binding Plot, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
-                                </StackPanel>
-                              </Grid>
-                            </Panel>
-                          </Button>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                  </StackPanel>
+                          <TextBlock Text="{Binding Plot}"
+                                     Foreground="{DynamicResource TextMutedBrush}"
+                                     FontSize="11"
+                                     TextWrapping="Wrap"
+                                     TextTrimming="CharacterEllipsis"
+                                     MaxLines="2"
+                                     IsVisible="{Binding Plot, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+                        </StackPanel>
+                      </Grid>
+                    </Panel>
+                  </Button>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>

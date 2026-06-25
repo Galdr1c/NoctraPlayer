@@ -2128,6 +2128,44 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobileEpisodesOverlay_UsesSeasonTabsAndClearEpisodeStates()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mobilePlayerSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml"));
+        var playerViewModelSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Core",
+            "ViewModels",
+            "PlayerViewModel.cs"));
+        var episodeNavigatorSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Core",
+            "ViewModels",
+            "Player",
+            "PlayerEpisodeNavigator.cs"));
+
+        Assert.Contains("SelectedEpisodeSeason", playerViewModelSource);
+        Assert.Contains("SelectedEpisodeSeasonEpisodes", playerViewModelSource);
+        Assert.Contains("SelectEpisodeSeason", playerViewModelSource);
+        Assert.Contains("SelectedEpisodeSeason = selectedSeason", episodeNavigatorSource);
+
+        Assert.Contains("HorizontalScrollBarVisibility=\"Auto\"", mobilePlayerSource);
+        Assert.Contains("ItemsSource=\"{Binding EpisodeSeasons}\"", mobilePlayerSource);
+        Assert.Contains("Command=\"{Binding #PlayerRoot.DataContext.SelectEpisodeSeasonCommand}\"", mobilePlayerSource);
+        Assert.Contains("ItemsSource=\"{Binding SelectedEpisodeSeasonEpisodes}\"", mobilePlayerSource);
+        Assert.DoesNotContain("<ItemsControl ItemsSource=\"{Binding Episodes}\">", mobilePlayerSource);
+
+        Assert.Contains("Kind=\"Close\"", mobilePlayerSource);
+        Assert.Contains("Text=\"{loc:Translate Player.Info.NowPlaying}\"", mobilePlayerSource);
+        Assert.Contains("Text=\"{loc:Translate Player.Overlay.Watched}\"", mobilePlayerSource);
+        Assert.Contains("Height=\"6\"", mobilePlayerSource);
+    }
+
+    [Fact]
     public void MainProfileLoading_SupportsLocalAndRemoteM3uSources()
     {
         var repositoryRoot = FindRepositoryRoot();

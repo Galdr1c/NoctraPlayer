@@ -539,6 +539,15 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private List<Season> _episodeSeasons = new();
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedEpisodeSeasonEpisodes))]
+    private Season? _selectedEpisodeSeason;
+
+    public IReadOnlyList<Episode> SelectedEpisodeSeasonEpisodes =>
+        SelectedEpisodeSeason?.Episodes?
+            .OrderBy(e => e.EpisodeNumber)
+            .ToList() ?? [];
+
+    [ObservableProperty]
     private string _episodesPanelTitle = string.Empty;
 
     [ObservableProperty]
@@ -1098,6 +1107,18 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private void PlayEpisodeFromOverlay(Episode? episode) => EpisodeNavigator.PlayEpisodeFromOverlay(episode);
 
     private bool CanPlayEpisodeFromOverlay(Episode? episode) => EpisodeNavigator.CanPlayEpisodeFromOverlay(episode);
+
+    [RelayCommand]
+    private void SelectEpisodeSeason(Season? season)
+    {
+        if (season is null || ReferenceEquals(SelectedEpisodeSeason, season))
+        {
+            return;
+        }
+
+        SelectedEpisodeSeason = season;
+        RestartAutoHideTimer();
+    }
 
     [RelayCommand]
     private void SetSubtitleSize(string size) => SettingsAdapter.SetSubtitleSize(size);
