@@ -6,7 +6,7 @@
         xmlns:views="using:Noctra.Mobile.Views"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="Noctra.Mobile.Views.MainWindow"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/Noctra.ico"
         Title="Noctra.Mobile">
         <views:MainView />
 </Window>

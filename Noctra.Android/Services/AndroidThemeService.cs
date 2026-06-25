@@ -17,7 +17,7 @@ public sealed class AndroidThemeService : IThemeService
     {
         IsDarkTheme = isDark;
 
-        var app = Application.Current;
+        var app = Avalonia.Application.Current;
         if (app is null)
         {
             return;

@@ -215,6 +215,49 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobileViews_UseStringMaterialIconKinds()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mobileViewSources = Directory
+            .EnumerateFiles(Path.Combine(repositoryRoot, "Noctra.Mobile"), "*.axaml", SearchOption.AllDirectories)
+            .Select(File.ReadAllText);
+
+        foreach (var source in mobileViewSources)
+        {
+            Assert.DoesNotContain("x:Static materialIcons:MaterialIconKind", source);
+            Assert.DoesNotContain("xmlns:materialIcons=\"clr-namespace:Material.Icons;assembly=Material.Icons\"", source);
+        }
+    }
+
+    [Fact]
+    public void MobileViews_UseConverterParametersForLocalizedStringFormats()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mobileViewSources = Directory
+            .EnumerateFiles(Path.Combine(repositoryRoot, "Noctra.Mobile"), "*.axaml", SearchOption.AllDirectories)
+            .Select(File.ReadAllText);
+
+        foreach (var source in mobileViewSources)
+        {
+            Assert.DoesNotContain("StringFormat={loc:Translate", source);
+        }
+    }
+
+    [Fact]
+    public void MobileViews_UseMobileAssemblyAssetUris()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mobileViewSources = Directory
+            .EnumerateFiles(Path.Combine(repositoryRoot, "Noctra.Mobile"), "*.axaml", SearchOption.AllDirectories)
+            .Select(File.ReadAllText);
+
+        foreach (var source in mobileViewSources)
+        {
+            Assert.DoesNotContain("avares://Noctra/Assets/", source);
+        }
+    }
+
+    [Fact]
     public void MobileShellAndPlayer_UseMaterialIconsForPrimaryControls()
     {
         var repositoryRoot = FindRepositoryRoot();
@@ -486,6 +529,10 @@ public sealed class ReleaseSourceCleanlinessTests
             repositoryRoot,
             "Noctra.Android",
             "MainActivity.cs"));
+        var androidApplicationSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "Application.cs"));
         var appSource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Mobile",
@@ -493,8 +540,24 @@ public sealed class ReleaseSourceCleanlinessTests
 
         Assert.Contains("MainActivity : AvaloniaMainActivity", activitySource);
         Assert.DoesNotContain("AvaloniaMainActivity<App>", activitySource);
+        Assert.Contains("[Application]", androidApplicationSource);
+        Assert.Contains("AvaloniaAndroidApplication<App>", androidApplicationSource);
+        Assert.Contains("CustomizeAppBuilder", androidApplicationSource);
         Assert.Contains("IActivityApplicationLifetime", appSource);
         Assert.Contains("MainViewFactory", appSource);
+    }
+
+    [Fact]
+    public void AndroidDebugPackage_StoresEmbeddedAssembliesUncompressed()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var projectSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "Noctra.Android.csproj"));
+
+        Assert.Contains("<AndroidEnableAssemblyCompression Condition=\"'$(Configuration)' == 'Debug'\">false</AndroidEnableAssemblyCompression>", projectSource);
+        Assert.Contains("<AndroidStoreUncompressedFileExtensions Condition=\"'$(Configuration)' == 'Debug'\">.so;$(AndroidStoreUncompressedFileExtensions)</AndroidStoreUncompressedFileExtensions>", projectSource);
     }
 
     [Fact]

@@ -778,12 +778,12 @@
 
           <Grid ColumnDefinitions="Auto,*"
                 ColumnSpacing="12">
-            <Image Source="avares://Noctra/Assets/Square150x150Logo.png"
+            <Image Source="avares://Noctra.Mobile/Assets/Square150x150Logo.png"
                    Width="48"
                    Height="48"
                    Stretch="Uniform"
                    IsVisible="{Binding IsPremium}" />
-            <Image Source="avares://Noctra/Assets/Square150x150Logo.Gray.png"
+            <Image Source="avares://Noctra.Mobile/Assets/Square150x150Logo.Gray.png"
                    Width="48"
                    Height="48"
                    Stretch="Uniform"

@@ -11,6 +11,8 @@
     <RuntimeIdentifier Condition="'$(Configuration)' == 'Release'">android-arm64</RuntimeIdentifier>
     <AndroidPackageFormat Condition="'$(Configuration)' == 'Debug'">apk</AndroidPackageFormat>
     <AndroidPackageFormat Condition="'$(Configuration)' == 'Release'">aab</AndroidPackageFormat>
+    <AndroidEnableAssemblyCompression Condition="'$(Configuration)' == 'Debug'">false</AndroidEnableAssemblyCompression>
+    <AndroidStoreUncompressedFileExtensions Condition="'$(Configuration)' == 'Debug'">.so;$(AndroidStoreUncompressedFileExtensions)</AndroidStoreUncompressedFileExtensions>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
   </PropertyGroup>
 

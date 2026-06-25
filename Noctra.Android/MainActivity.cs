@@ -4,6 +4,7 @@ using Android.Content;
 using Android.Content.PM;
 using Android.Content.Res;
 using Android.OS;
+using Android.Util;
 using Avalonia.Android;
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Android.DependencyInjection;
@@ -34,7 +35,15 @@ public class MainActivity : AvaloniaMainActivity
         Noctra.Mobile.App.ServiceProviderFactory ??=
             () => applicationContext.CreateNoctraAndroidServiceProvider();
 
-        base.OnCreate(savedInstanceState);
+        try
+        {
+            base.OnCreate(savedInstanceState);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Noctra", ex.ToString());
+            throw;
+        }
 
         if (Avalonia.Application.Current is Noctra.Mobile.App app)
         {

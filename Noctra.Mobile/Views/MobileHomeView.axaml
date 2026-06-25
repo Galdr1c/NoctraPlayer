@@ -8,7 +8,6 @@
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:controls="using:Noctra.Mobile.Controls"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-             xmlns:materialIcons="clr-namespace:Material.Icons;assembly=Material.Icons"
              x:Class="Noctra.Mobile.Views.MobileHomeView"
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False"
@@ -36,7 +35,7 @@
                      Foreground="{DynamicResource TextPrimaryBrush}"
                      VerticalAlignment="Center" />
           <TextBlock Grid.Column="1"
-                     Text="{Binding ContinueWatching.Count, StringFormat={loc:Translate Home.ContinueWatching.CountFormat}}"
+                     Text="{Binding ContinueWatching.Count, Converter={StaticResource StringFormatConverter}, ConverterParameter='Home.ContinueWatching.CountFormat'}"
                      FontSize="12"
                      Foreground="{DynamicResource TextMutedBrush}"
                      VerticalAlignment="Center" />
@@ -78,7 +77,7 @@
                       Height="40"
                       CornerRadius="12"
                       Background="{DynamicResource Surface1Brush}">
-                <icons:MaterialIcon Kind="{x:Static materialIcons:MaterialIconKind.Tv}"
+                <icons:MaterialIcon Kind="Tv"
                            Foreground="{DynamicResource AccentBrush}"
                            Width="22"
                            Height="22" />
@@ -108,7 +107,7 @@
                       Height="40"
                       CornerRadius="12"
                       Background="{DynamicResource Surface1Brush}">
-                <icons:MaterialIcon Kind="{x:Static materialIcons:MaterialIconKind.Movie}"
+                <icons:MaterialIcon Kind="Movie"
                            Foreground="{DynamicResource AccentBrush}"
                            Width="22"
                            Height="22" />
@@ -139,7 +138,7 @@
                       Height="40"
                       CornerRadius="12"
                       Background="{DynamicResource Surface1Brush}">
-                <icons:MaterialIcon Kind="{x:Static materialIcons:MaterialIconKind.Collections}"
+                <icons:MaterialIcon Kind="Collections"
                            Foreground="{DynamicResource AccentBrush}"
                            Width="22"
                            Height="22" />
@@ -169,7 +168,7 @@
                       Height="40"
                       CornerRadius="12"
                       Background="{DynamicResource Surface1Brush}">
-                <icons:MaterialIcon Kind="{x:Static materialIcons:MaterialIconKind.Magnify}"
+                <icons:MaterialIcon Kind="Magnify"
                            Foreground="{DynamicResource AccentBrush}"
                            Width="22"
                            Height="22" />
@@ -198,7 +197,7 @@
                 CornerRadius="40"
                 Background="{DynamicResource Surface0Brush}"
                 HorizontalAlignment="Center">
-          <icons:MaterialIcon Kind="{x:Static materialIcons:MaterialIconKind.Home}"
+          <icons:MaterialIcon Kind="Home"
                      Foreground="{DynamicResource AccentBrush}"
                      Width="40"
                      Height="40" />

@@ -9,6 +9,8 @@
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
     <AvaloniaResource Include="..\Noctra.Avalonia\Assets\Avatars\**" Link="Assets\Avatars\%(RecursiveDir)%(Filename)%(Extension)" />
+    <AvaloniaResource Include="..\Noctra.Avalonia\Assets\Square150x150Logo.png" Link="Assets\Square150x150Logo.png" />
+    <AvaloniaResource Include="..\Noctra.Avalonia\Assets\Square150x150Logo.Gray.png" Link="Assets\Square150x150Logo.Gray.png" />
   </ItemGroup>
 
   <ItemGroup>
