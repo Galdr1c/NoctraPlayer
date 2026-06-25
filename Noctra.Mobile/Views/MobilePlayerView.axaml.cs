@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
@@ -98,6 +99,15 @@ public partial class MobilePlayerView : UserControl
     private Point _swipeStart;
     private int _swipeStartVolume;
     private double _swipeStartBrightness;
+
+    private readonly Dictionary<long, Point> _activePointers = new();
+    private bool _isPinchZooming;
+    private double _pinchStartDistance;
+    private double _pinchStartZoom = 1.0;
+    private Point _pinchStartCenter;
+    private double _currentZoom = 1.0;
+    private double _currentPanX;
+    private double _currentPanY;
 
     // Yatay sarma önizlemesi: sürükleme sırasında hedef pozisyonu canlı göster.
     private double _horizontalSeekDeltaSeconds;
@@ -670,10 +680,19 @@ public partial class MobilePlayerView : UserControl
             return;
         }
 
+        var point = e.GetCurrentPoint(this);
+        _activePointers[point.Pointer.Id] = point.Position;
+        if (_activePointers.Count >= 2)
+        {
+            BeginPinchZoom();
+            e.Handled = true;
+            return;
+        }
+
         _isSwiping = true;
         _swipeDirectionDecided = false;
         _swipeIsVertical = false;
-        _swipeStart = e.GetCurrentPoint(this).Position;
+        _swipeStart = point.Position;
         _swipeIsLeftZone = ReferenceEquals(sender, LeftZone);
         _swipeStartVolume = vm.Volume;
         _swipeStartBrightness = GetPlayerWindowService()?.GetBrightness() ?? 0.5;
@@ -681,10 +700,23 @@ public partial class MobilePlayerView : UserControl
 
     private void OnZonePointerMoved(object? sender, PointerEventArgs e)
     {
+        var point = e.GetCurrentPoint(this);
+        if (_activePointers.ContainsKey(point.Pointer.Id))
+        {
+            _activePointers[point.Pointer.Id] = point.Position;
+        }
+
+        if (_isPinchZooming && _activePointers.Count >= 2)
+        {
+            HandlePinchZoom();
+            e.Handled = true;
+            return;
+        }
+
         if (!_isSwiping || DataContext is not PlayerViewModel vm)
             return;
 
-        var pos = e.GetCurrentPoint(this).Position;
+        var pos = point.Position;
         var dx = pos.X - _swipeStart.X;
         var dy = pos.Y - _swipeStart.Y;
 
@@ -730,13 +762,29 @@ public partial class MobilePlayerView : UserControl
 
     private void OnZonePointerReleased(object? sender, PointerReleasedEventArgs e)
     {
+        var point = e.GetCurrentPoint(this);
+        _activePointers.Remove(point.Pointer.Id);
+
+        if (_isPinchZooming)
+        {
+            if (_activePointers.Count < 2)
+            {
+                _isPinchZooming = false;
+                _isSwiping = false;
+                _swipeDirectionDecided = false;
+            }
+
+            e.Handled = true;
+            return;
+        }
+
         if (!_isSwiping || DataContext is not PlayerViewModel vm)
         {
             _isSwiping = false;
             return;
         }
 
-        var pos = e.GetCurrentPoint(this).Position;
+        var pos = point.Position;
         var dx = pos.X - _swipeStart.X;
 
         // Yatay kaydırma -> ileri/geri sarma. Canlı yayında seek yok; sessiz no-op yerine açık feedback ver.
@@ -774,6 +822,75 @@ public partial class MobilePlayerView : UserControl
         _isSwiping = false;
         _swipeDirectionDecided = false;
     }
+
+    private void BeginPinchZoom()
+    {
+        var (first, second) = GetFirstTwoPointers();
+        _isPinchZooming = true;
+        _isSwiping = false;
+        _swipeDirectionDecided = false;
+        HideHorizontalSeekPreview();
+
+        _pinchStartDistance = Distance(first, second);
+        _pinchStartCenter = Midpoint(first, second);
+        _pinchStartZoom = _currentZoom;
+    }
+
+    private void HandlePinchZoom()
+    {
+        var (first, second) = GetFirstTwoPointers();
+        var distance = Distance(first, second);
+        if (_pinchStartDistance <= 1 || distance <= 1)
+        {
+            return;
+        }
+
+        var center = Midpoint(first, second);
+        _currentZoom = Math.Clamp(_pinchStartZoom * (distance / _pinchStartDistance), 1.0, 3.0);
+
+        if (_currentZoom <= 1.001)
+        {
+            ResetInteractionTransform();
+            return;
+        }
+
+        _currentPanX += center.X - _pinchStartCenter.X;
+        _currentPanY += center.Y - _pinchStartCenter.Y;
+        _pinchStartCenter = center;
+
+        GetVideoSurfaceService()?.SetInteractionTransform(
+            (float)_currentZoom,
+            (float)_currentPanX,
+            (float)_currentPanY);
+    }
+
+    private void ResetInteractionTransform()
+    {
+        _currentZoom = 1.0;
+        _currentPanX = 0.0;
+        _currentPanY = 0.0;
+        GetVideoSurfaceService()?.ResetInteractionTransform();
+    }
+
+    private (Point First, Point Second) GetFirstTwoPointers()
+    {
+        using var enumerator = _activePointers.Values.GetEnumerator();
+        enumerator.MoveNext();
+        var first = enumerator.Current;
+        enumerator.MoveNext();
+        var second = enumerator.Current;
+        return (first, second);
+    }
+
+    private static double Distance(Point first, Point second)
+    {
+        var dx = first.X - second.X;
+        var dy = first.Y - second.Y;
+        return Math.Sqrt(dx * dx + dy * dy);
+    }
+
+    private static Point Midpoint(Point first, Point second)
+        => new((first.X + second.X) / 2.0, (first.Y + second.Y) / 2.0);
 
     /// <summary>
     /// Yatay sürükleme sırasında hedef sarma miktarını canlı toast olarak gösterir.

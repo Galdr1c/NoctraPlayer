@@ -28,6 +28,9 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
     private string? _cropGeometry;
     private int _videoWidth;
     private int _videoHeight;
+    private float _userZoom = 1f;
+    private float _userPanX;
+    private float _userPanY;
 
     public AndroidVideoSurfaceService(AndroidActivityProvider activityProvider)
     {
@@ -89,6 +92,7 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
             // Sonraki gösterimde tam ekran başlasın.
             _boundsW = -1;
             _boundsH = -1;
+            ResetInteractionTransformState();
         });
     }
 
@@ -112,6 +116,35 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
     {
         _aspectRatio = aspectRatio;
         _cropGeometry = cropGeometry;
+        ResetInteractionTransformState();
+
+        var activity = _activityProvider.CurrentActivity;
+        if (activity is null)
+        {
+            return;
+        }
+
+        activity.RunOnUiThread(ApplyVideoTransform);
+    }
+
+    public void SetInteractionTransform(float zoom, float panX, float panY)
+    {
+        _userZoom = Math.Clamp(zoom, 1f, 3f);
+        _userPanX = panX;
+        _userPanY = panY;
+
+        var activity = _activityProvider.CurrentActivity;
+        if (activity is null)
+        {
+            return;
+        }
+
+        activity.RunOnUiThread(ApplyVideoTransform);
+    }
+
+    public void ResetInteractionTransform()
+    {
+        ResetInteractionTransformState();
 
         var activity = _activityProvider.CurrentActivity;
         if (activity is null)
@@ -192,7 +225,31 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
             _videoWidth, _videoHeight,
             _aspectRatio, _cropGeometry);
 
+        ApplyInteractionTransform(matrix, viewW, viewH);
         _textureView.SetTransform(matrix);
+    }
+
+    private void ApplyInteractionTransform(Matrix matrix, int viewW, int viewH)
+    {
+        if (_userZoom <= 1.001f)
+        {
+            return;
+        }
+
+        var maxPanX = viewW * (_userZoom - 1f) / 2f;
+        var maxPanY = viewH * (_userZoom - 1f) / 2f;
+        _userPanX = Math.Clamp(_userPanX, -maxPanX, maxPanX);
+        _userPanY = Math.Clamp(_userPanY, -maxPanY, maxPanY);
+
+        matrix.PostScale(_userZoom, _userZoom, viewW / 2f, viewH / 2f);
+        matrix.PostTranslate(_userPanX, _userPanY);
+    }
+
+    private void ResetInteractionTransformState()
+    {
+        _userZoom = 1f;
+        _userPanX = 0f;
+        _userPanY = 0f;
     }
 
     /// <summary>

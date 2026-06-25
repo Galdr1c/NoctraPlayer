@@ -1998,6 +1998,40 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobilePlayerPinchZoom_UsesNativeTextureViewTransform()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var surfaceInterface = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Core",
+            "Services",
+            "Interfaces",
+            "IVideoSurfaceService.cs"));
+        var mobilePlayerCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml.cs"));
+        var androidSurfaceService = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "Services",
+            "AndroidVideoSurfaceService.cs"));
+
+        Assert.Contains("SetInteractionTransform", surfaceInterface);
+        Assert.Contains("_activePointers", mobilePlayerCode);
+        Assert.Contains("HandlePinchZoom", mobilePlayerCode);
+        Assert.Contains("SetInteractionTransform", mobilePlayerCode);
+        Assert.Contains("ResetInteractionTransform", mobilePlayerCode);
+        Assert.Contains("_userZoom", androidSurfaceService);
+        Assert.Contains("_userPanX", androidSurfaceService);
+        Assert.Contains("ApplyInteractionTransform", androidSurfaceService);
+        Assert.Contains("matrix.PostScale(_userZoom", androidSurfaceService);
+        Assert.Contains("matrix.PostTranslate(_userPanX", androidSurfaceService);
+        Assert.Contains("SetTransform(matrix)", androidSurfaceService);
+    }
+
+    [Fact]
     public void MainProfileLoading_SupportsLocalAndRemoteM3uSources()
     {
         var repositoryRoot = FindRepositoryRoot();
