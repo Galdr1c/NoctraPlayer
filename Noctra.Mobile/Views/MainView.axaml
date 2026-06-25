@@ -313,8 +313,8 @@
         </Button>
         <Button Grid.Column="2" Classes="nav" Tag="Movies" Click="OnDestinationClick">
           <StackPanel Spacing="2" HorizontalAlignment="Center">
-            <icons:MaterialIcon Kind="PlayBoxMultipleOutline" Width="24" Height="24" HorizontalAlignment="Center" />
-            <TextBlock Text="{loc:Translate Shell.Nav.Library}" FontSize="11" TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
+            <icons:MaterialIcon Kind="Filmstrip" Width="24" Height="24" HorizontalAlignment="Center" />
+            <TextBlock Text="{loc:Translate Shell.Nav.Movies}" FontSize="11" TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
           </StackPanel>
         </Button>
         <Button Grid.Column="3" Classes="nav" Tag="Search" Click="OnDestinationClick">

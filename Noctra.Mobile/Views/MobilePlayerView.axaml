@@ -400,7 +400,8 @@
 
       <Grid ColumnDefinitions="Auto,*,Auto"
             ColumnSpacing="10"
-            VerticalAlignment="Center">
+            VerticalAlignment="Center"
+            IsVisible="{Binding !IsLiveContent}">
         <TextBlock Text="{Binding PositionText}"
                    Foreground="{DynamicResource OverlayTextBrush}"
                    FontSize="12"
@@ -519,7 +520,7 @@
         </Button>
         <Button Classes="compactPlayerAction"
                 Command="{Binding GoToLiveCommand}"
-                IsVisible="{Binding IsLiveContent}"
+                IsVisible="{Binding CanShowGoToLiveButton}"
                 MinHeight="44">
           <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
             <icons:MaterialIcon Kind="Broadcast" Width="18" Height="18" />
@@ -570,13 +571,21 @@
       <Grid ColumnDefinitions="*,*"
             ColumnSpacing="8"
             IsVisible="{Binding IsSeriesContent}">
-        <Button Content="{loc:Translate Player.Overlay.Episodes.Tooltip}"
-                Command="{Binding OpenEpisodesCommand}"
-                MinHeight="44" />
+        <Button Command="{Binding OpenEpisodesCommand}"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="Animation" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Player.Overlay.Episodes.Tooltip}" />
+          </StackPanel>
+        </Button>
         <Button Grid.Column="1"
-                Content="{loc:Translate Player.Overlay.NextEpisode}"
                 Command="{Binding PlayNextEpisodeCommand}"
-                MinHeight="44" />
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="StepForward" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Player.Overlay.NextEpisode}" />
+          </StackPanel>
+        </Button>
       </Grid>
 
       <TextBlock Text="{Binding SleepTimerCountdown}"
@@ -634,20 +643,32 @@
 
       <Grid ColumnDefinitions="*,*,*"
             ColumnSpacing="8">
-        <Button Content="{loc:Translate Player.Overlay.Download.Tooltip}"
-                Command="{Binding DownloadCurrentContentCommand}"
+        <Button Command="{Binding DownloadCurrentContentCommand}"
                 IsVisible="{Binding CanShowDownloadButton}"
                 IsEnabled="{Binding CanDownloadCurrentContent}"
-                MinHeight="44" />
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="Download" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Player.Overlay.Download.Tooltip}" />
+          </StackPanel>
+        </Button>
         <Button Grid.Column="1"
-                Content="{loc:Translate Player.Overlay.Info.Tooltip}"
                 Command="{Binding OpenInfoPanelCommand}"
                 IsVisible="{Binding CanShowInfoButton}"
-                MinHeight="44" />
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="InformationBoxOutline" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Player.Overlay.Info.Tooltip}" />
+          </StackPanel>
+        </Button>
         <Button Grid.Column="2"
-                Content="{loc:Translate Player.Settings.Audio}"
                 Command="{Binding OpenAudioSettingsCommand}"
-                MinHeight="44" />
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="Subtitles" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Player.Settings.Audio}" />
+          </StackPanel>
+        </Button>
       </Grid>
 
       <TextBlock Text="{Binding DownloadStatusMessage}"

@@ -2073,6 +2073,61 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobileUxPolish_UsesMobileFriendlyActionStatesAndTouchTargets()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mainViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml"));
+        var mobilePlayerSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml"));
+        var downloadsSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileDownloadsView.axaml"));
+        var settingsSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileSettingsView.axaml"));
+        var playerViewModelSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Core",
+            "ViewModels",
+            "PlayerViewModel.cs"));
+
+        Assert.DoesNotContain("Tag=\"Movies\" Click=\"OnDestinationClick\">\r\n          <StackPanel Spacing=\"2\" HorizontalAlignment=\"Center\">\r\n            <icons:MaterialIcon Kind=\"PlayBoxMultipleOutline\"", mainViewSource);
+        Assert.DoesNotContain("Text=\"{loc:Translate Shell.Nav.Library}\" FontSize=\"11\"", mainViewSource);
+        Assert.Contains("Text=\"{loc:Translate Shell.Nav.Movies}\" FontSize=\"11\"", mainViewSource);
+
+        Assert.Contains("IsVisible=\"{Binding !IsLiveContent}\"", mobilePlayerSource);
+        Assert.Contains("IsVisible=\"{Binding CanShowGoToLiveButton}\"", mobilePlayerSource);
+        Assert.Contains("public bool CanShowGoToLiveButton", playerViewModelSource);
+
+        Assert.Contains("Kind=\"Animation\"", mobilePlayerSource);
+        Assert.Contains("Kind=\"StepForward\"", mobilePlayerSource);
+        Assert.Contains("Kind=\"Download\"", mobilePlayerSource);
+        Assert.Contains("Kind=\"InformationBoxOutline\"", mobilePlayerSource);
+        Assert.Contains("Kind=\"Subtitles\"", mobilePlayerSource);
+
+        Assert.DoesNotContain("MinHeight=\"34\"", downloadsSource);
+        Assert.DoesNotContain("MinHeight=\"40\"", downloadsSource);
+
+        Assert.Contains("Content=\"{loc:Translate Language.Turkish}\"", settingsSource);
+        Assert.Contains("Content=\"{loc:Translate Language.English}\"", settingsSource);
+        Assert.Contains("Content=\"{loc:Translate Language.French}\"", settingsSource);
+        Assert.DoesNotContain("Content=\"Turkish\"", settingsSource);
+        Assert.DoesNotContain("Content=\"Francais\"", settingsSource);
+        Assert.DoesNotContain("Content=\"Espanol\"", settingsSource);
+    }
+
+    [Fact]
     public void MainProfileLoading_SupportsLocalAndRemoteM3uSources()
     {
         var repositoryRoot = FindRepositoryRoot();

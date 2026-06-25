@@ -561,6 +561,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     public bool CanShowDownloadButton => CurrentChannel != null && !IsLiveContent && !IsDownloadedPlayback;
     public bool CanShowInfoButton => !IsDownloadedPlayback;
+    public bool CanShowGoToLiveButton => IsLiveContent && Duration > 0;
 
     public bool CanDownloadCurrentContent =>
         CanShowDownloadButton &&
@@ -1906,6 +1907,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     partial void OnDurationChanged(double value)
     {
+        OnPropertyChanged(nameof(CanShowGoToLiveButton));
         GoToLiveCommand.NotifyCanExecuteChanged();
     }
 
@@ -1932,8 +1934,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsBufferShieldVisible));
         OnPropertyChanged(nameof(CanShowDownloadButton));
         OnPropertyChanged(nameof(CanDownloadCurrentContent));
+        OnPropertyChanged(nameof(CanShowGoToLiveButton));
         RaiseInfoPanelMetadataChanged();
         DownloadCurrentContentCommand.NotifyCanExecuteChanged();
+        GoToLiveCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnIsSeriesContentChanged(bool value)

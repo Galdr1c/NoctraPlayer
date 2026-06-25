@@ -163,11 +163,11 @@
           <ComboBox SelectedValue="{Binding AppLanguage, Mode=TwoWay}"
                     SelectedValueBinding="{Binding Tag}"
                     MinHeight="44">
-            <ComboBoxItem Content="English" Tag="en" />
-            <ComboBoxItem Content="Turkish" Tag="tr" />
-            <ComboBoxItem Content="German" Tag="de" />
-            <ComboBoxItem Content="French" Tag="fr" />
-            <ComboBoxItem Content="Spanish" Tag="es" />
+            <ComboBoxItem Content="{loc:Translate Language.English}" Tag="en" />
+            <ComboBoxItem Content="{loc:Translate Language.Turkish}" Tag="tr" />
+            <ComboBoxItem Content="{loc:Translate Language.German}" Tag="de" />
+            <ComboBoxItem Content="{loc:Translate Language.French}" Tag="fr" />
+            <ComboBoxItem Content="{loc:Translate Language.Spanish}" Tag="es" />
           </ComboBox>
         </StackPanel>
       </Border>
@@ -265,16 +265,16 @@
           <ComboBox SelectedValue="{Binding SubtitleLanguage, Mode=TwoWay}"
                     SelectedValueBinding="{Binding Tag}"
                     MinHeight="44">
-            <ComboBoxItem Content="Turkish" Tag="tr" />
-            <ComboBoxItem Content="English" Tag="en" />
-            <ComboBoxItem Content="Deutsch" Tag="de" />
-            <ComboBoxItem Content="Francais" Tag="fr" />
-            <ComboBoxItem Content="Espanol" Tag="es" />
-            <ComboBoxItem Content="Italiano" Tag="it" />
-            <ComboBoxItem Content="Portugues" Tag="pt" />
-            <ComboBoxItem Content="Russian" Tag="ru" />
-            <ComboBoxItem Content="Arabic" Tag="ar" />
-            <ComboBoxItem Content="Dutch" Tag="nl" />
+            <ComboBoxItem Content="{loc:Translate Language.Turkish}" Tag="tr" />
+            <ComboBoxItem Content="{loc:Translate Language.English}" Tag="en" />
+            <ComboBoxItem Content="{loc:Translate Language.German}" Tag="de" />
+            <ComboBoxItem Content="{loc:Translate Language.French}" Tag="fr" />
+            <ComboBoxItem Content="{loc:Translate Language.Spanish}" Tag="es" />
+            <ComboBoxItem Content="{loc:Translate Language.Italian}" Tag="it" />
+            <ComboBoxItem Content="{loc:Translate Language.Portuguese}" Tag="pt" />
+            <ComboBoxItem Content="{loc:Translate Language.Russian}" Tag="ru" />
+            <ComboBoxItem Content="{loc:Translate Language.Arabic}" Tag="ar" />
+            <ComboBoxItem Content="{loc:Translate Language.Dutch}" Tag="nl" />
           </ComboBox>
           <TextBlock Text="{loc:Translate Settings.Playback.PreferredAudio}"
                      Foreground="{DynamicResource TextMutedBrush}"
@@ -282,16 +282,16 @@
           <ComboBox SelectedValue="{Binding PreferredAudioLanguage, Mode=TwoWay}"
                     SelectedValueBinding="{Binding Tag}"
                     MinHeight="44">
-            <ComboBoxItem Content="Turkish" Tag="tr" />
-            <ComboBoxItem Content="English" Tag="en" />
-            <ComboBoxItem Content="Deutsch" Tag="de" />
-            <ComboBoxItem Content="Francais" Tag="fr" />
-            <ComboBoxItem Content="Espanol" Tag="es" />
-            <ComboBoxItem Content="Italiano" Tag="it" />
-            <ComboBoxItem Content="Portugues" Tag="pt" />
-            <ComboBoxItem Content="Russian" Tag="ru" />
-            <ComboBoxItem Content="Arabic" Tag="ar" />
-            <ComboBoxItem Content="Dutch" Tag="nl" />
+            <ComboBoxItem Content="{loc:Translate Language.Turkish}" Tag="tr" />
+            <ComboBoxItem Content="{loc:Translate Language.English}" Tag="en" />
+            <ComboBoxItem Content="{loc:Translate Language.German}" Tag="de" />
+            <ComboBoxItem Content="{loc:Translate Language.French}" Tag="fr" />
+            <ComboBoxItem Content="{loc:Translate Language.Spanish}" Tag="es" />
+            <ComboBoxItem Content="{loc:Translate Language.Italian}" Tag="it" />
+            <ComboBoxItem Content="{loc:Translate Language.Portuguese}" Tag="pt" />
+            <ComboBoxItem Content="{loc:Translate Language.Russian}" Tag="ru" />
+            <ComboBoxItem Content="{loc:Translate Language.Arabic}" Tag="ar" />
+            <ComboBoxItem Content="{loc:Translate Language.Dutch}" Tag="nl" />
           </ComboBox>
         </StackPanel>
       </Border>
