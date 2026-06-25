@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Android.App;
 using Noctra.Core.Services;
+using Noctra.Services;
 using Noctra.Services.Interfaces;
 
 namespace Noctra.Android.Services;
@@ -159,11 +160,11 @@ public sealed class AndroidReviewPromptService : IReviewPromptService
     /// Launches the Google Play In-App Review flow using the native ReviewManager API.
     /// The Play Store handles all UI (rating stars, review text, etc.).
     /// </summary>
-    private async Task<bool> LaunchInAppReviewAsync(Activity activity, CancellationToken cancellationToken)
+    private async Task<bool> LaunchInAppReviewAsync(global::Android.App.Activity activity, CancellationToken cancellationToken)
     {
         try
         {
-            var manager = Com.Google.Android.Play.Core.Review.ReviewManagerFactory.Create(activity);
+            var manager = global::Google.Android.Play.Core.Review.ReviewManagerFactory.Create(activity);
             var request = manager.RequestReviewFlow();
 
             var deadline = DateTime.UtcNow.Add(ReviewFlowTimeout);
@@ -181,7 +182,12 @@ public sealed class AndroidReviewPromptService : IReviewPromptService
                 return false;
             }
 
-            var reviewInfo = request.Result;
+            if (request.Result is not global::Google.Android.Play.Core.Review.ReviewInfo reviewInfo)
+            {
+                Debug.WriteLine("[ReviewPrompt] Review request returned an unexpected result type");
+                return false;
+            }
+
             var flow = manager.LaunchReviewFlow(activity, reviewInfo);
 
             deadline = DateTime.UtcNow.Add(ReviewFlowTimeout);
@@ -212,7 +218,7 @@ public sealed class AndroidReviewPromptService : IReviewPromptService
     /// <summary>
     /// Fallback: opens the Play Store listing page directly via Intent.
     /// </summary>
-    private bool TryOpenPlayStoreListing(Activity activity)
+    private bool TryOpenPlayStoreListing(global::Android.App.Activity activity)
     {
         try
         {
@@ -222,11 +228,11 @@ public sealed class AndroidReviewPromptService : IReviewPromptService
                 return false;
             }
 
-            var intent = new Android.Content.Intent(
-                Android.Content.Intent.ActionView,
-                Android.Net.Uri.Parse($"market://details?id={packageName}"));
+            var intent = new global::Android.Content.Intent(
+                global::Android.Content.Intent.ActionView,
+                global::Android.Net.Uri.Parse($"market://details?id={packageName}"));
             intent.SetPackage("com.android.vending");
-            intent.AddFlags(Android.Content.ActivityFlags.NewTask);
+            intent.AddFlags(global::Android.Content.ActivityFlags.NewTask);
             activity.StartActivity(intent);
             return true;
         }

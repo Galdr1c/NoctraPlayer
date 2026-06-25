@@ -1525,7 +1525,8 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("Player.Mobile.LockFormat", playerViewSource);
         Assert.Contains("Player.Mobile.FullscreenFormat", playerViewSource);
         Assert.Contains("Player.Overlay.PiP.Tooltip", playerViewSource);
-        Assert.Contains("Series.Seasons.Format", playerViewSource);
+        Assert.Contains("Player.Episodes.Season", playerViewSource);
+        Assert.Contains("SeasonNumber", playerViewSource);
         Assert.DoesNotContain("StringFormat='Lock: {0}'", playerViewSource);
         Assert.DoesNotContain("StringFormat='Fullscreen: {0}'", playerViewSource);
         Assert.DoesNotContain("Content=\"PiP\"", playerViewSource);
@@ -1644,7 +1645,9 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("OpenInfoPanelCommand", playerViewSource);
         Assert.Contains("CanShowInfoButton", playerViewSource);
         Assert.Contains("IsInfoPanelOpen", playerViewSource);
-        Assert.Contains("OverlaySecondaryText", playerViewSource);
+        Assert.Contains("CurrentProgram.Title", playerViewSource);
+        Assert.Contains("CurrentEpisodeDisplayTitle", playerViewSource);
+        Assert.Contains("CurrentEpisodeMetaText", playerViewSource);
         Assert.Contains("CurrentChannel.Plot", playerViewSource);
     }
 
@@ -1828,7 +1831,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("VideoHeight", androidVideoService);
         Assert.Contains("new StreamQualityInfo", androidVideoService);
         Assert.Contains("StreamQuality =", androidVideoService);
-        Assert.Contains("QualityDetected?.Invoke(this, StreamQuality)", androidVideoService);
+        Assert.Contains("QualityDetected?.Invoke(this, quality)", androidVideoService);
 
         var preparedIndex = androidVideoService.IndexOf("player.Prepared += (_, _) =>", StringComparison.Ordinal);
         var qualityIndex = androidVideoService.IndexOf("UpdateStreamQualityFromPreparedPlayer", preparedIndex, StringComparison.Ordinal);
@@ -1836,7 +1839,7 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
-    public void AndroidPlaybackSurface_BindsMediaPlayerToNativeSurfaceView()
+    public void AndroidPlaybackSurface_BindsMediaPlayerToNativeTextureView()
     {
         var repositoryRoot = FindRepositoryRoot();
         var surfaceInterface = File.ReadAllText(Path.Combine(
@@ -1875,11 +1878,11 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("ShowAsync", surfaceInterface);
         Assert.Contains("Hide", surfaceInterface);
 
-        Assert.Contains("SurfaceView", surfaceService);
-        Assert.Contains("ISurfaceHolderCallback", surfaceService);
+        Assert.Contains("TextureView", surfaceService);
+        Assert.Contains("ISurfaceTextureListener", surfaceService);
         Assert.Contains("AndroidActivityProvider", surfaceService);
         Assert.Contains("WaitForSurfaceAsync", surfaceService);
-        Assert.Contains("SetZOrderMediaOverlay", surfaceService);
+        Assert.Contains("SurfaceTextureListener", surfaceService);
 
         Assert.Contains("AndroidVideoSurfaceService", videoService);
         Assert.Contains("WaitForSurfaceAsync", videoService);

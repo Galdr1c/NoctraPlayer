@@ -522,7 +522,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                     await ReinitializeAsync().ConfigureAwait(false);
                 }
             }
-            catch (OperationCanceledException)
+            catch (System.OperationCanceledException)
             {
             }
             catch (ObjectDisposedException)
@@ -923,7 +923,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             return string.Empty;
         }
 
-        var text = Encoding.UTF8.GetString(data).Trim('\0', '\r', '\n', ' ');
+        var text = System.Text.Encoding.UTF8.GetString(data).Trim('\0', '\r', '\n', ' ');
         if (string.IsNullOrWhiteSpace(text))
         {
             return string.Empty;

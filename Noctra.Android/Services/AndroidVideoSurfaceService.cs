@@ -74,7 +74,10 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
                 parent.RemoveView(_textureView);
             }
 
-            _textureView?.SetSurfaceTextureListener(null);
+            if (_textureView is not null)
+            {
+                _textureView.SurfaceTextureListener = null;
+            }
             _textureView?.Dispose();
             _textureView = null;
 
@@ -339,13 +342,13 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
         tcs.TrySetResult(surfaceObj);
 
         // İlk boyut bilgisi geldiğinde transform'u uygula.
-        _ = _activityProvider.CurrentActivity?.RunOnUiThread(ApplyVideoTransform);
+        _activityProvider.CurrentActivity?.RunOnUiThread(ApplyVideoTransform);
     }
 
     public void OnSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height)
     {
         // Boyut değiştiğinde transform'u yeniden hesapla.
-        _ = _activityProvider.CurrentActivity?.RunOnUiThread(ApplyVideoTransform);
+        _activityProvider.CurrentActivity?.RunOnUiThread(ApplyVideoTransform);
     }
 
     public bool OnSurfaceTextureDestroyed(SurfaceTexture surface)
@@ -361,7 +364,7 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
     public void OnSurfaceTextureUpdated(SurfaceTexture surface)
     {
         // İlk kare geldiğinde view boyutlarıyla transform'u uygula.
-        _ = _activityProvider.CurrentActivity?.RunOnUiThread(ApplyVideoTransform);
+        _activityProvider.CurrentActivity?.RunOnUiThread(ApplyVideoTransform);
     }
 
     private void EnsureTextureView(Activity activity)
@@ -383,7 +386,7 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
         }
 
         _textureView = new TextureView(activity);
-        _textureView.SetSurfaceTextureListener(this);
+        _textureView.SurfaceTextureListener = this;
 
         content.AddView(
             _textureView,

@@ -3,7 +3,9 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using Android.Content;
+using Noctra.Services;
 using Noctra.Services.Interfaces;
+using AndroidBuild = global::Android.OS.Build;
 
 namespace Noctra.Android.Services;
 
@@ -138,8 +140,8 @@ public sealed class AndroidDiagnosticReportService : IDiagnosticReportService
             sb.AppendLine($"Status: {(_licenseService.IsPremium ? "Premium" : "Free")}");
             sb.AppendLine($"App Version: {_updateService.CurrentVersion}");
             sb.AppendLine($"Package: {_context.PackageName}");
-            sb.AppendLine($"OS: Android {global::Android.OS.Build.VERSION.Release} API {global::Android.OS.Build.VERSION.SdkInt} ({RuntimeInformation.OSArchitecture})");
-            sb.AppendLine($"Device: {global::Android.OS.Build.Manufacturer} {global::Android.OS.Build.Model}");
+            sb.AppendLine($"OS: Android {AndroidBuild.VERSION.Release} API {AndroidBuild.VERSION.SdkInt} ({RuntimeInformation.OSArchitecture})");
+            sb.AppendLine($"Device: {AndroidBuild.Manufacturer} {AndroidBuild.Model}");
         }
         catch (Exception ex)
         {
