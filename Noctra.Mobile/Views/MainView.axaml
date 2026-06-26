@@ -4,7 +4,6 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Noctra.Mobile.ViewModels"
              xmlns:views="using:Noctra.Mobile.Views"
-             xmlns:controls="using:Noctra.Mobile.Controls"
              xmlns:corevm="using:Noctra.ViewModels"
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
@@ -95,7 +94,8 @@
             Grid.Row="0"
             Grid.ColumnSpan="2"
             Padding="20,18,20,14"
-            Background="{DynamicResource Bg1Brush}">
+            Background="{DynamicResource Bg1Brush}"
+            IsVisible="False">
       <Grid ColumnDefinitions="*,Auto">
         <StackPanel Spacing="2">
           <TextBlock Text="NOCTRA"
@@ -201,6 +201,7 @@
 
     <Grid Grid.Row="1" Grid.Column="1">
       <StackPanel x:Name="ShellContent"
+                  IsVisible="False"
                   Margin="20"
                   Spacing="16">
         <TextBlock Text="{Binding PageDescription}"
@@ -345,7 +346,8 @@
             Grid.Row="2"
             Grid.ColumnSpan="2"
             Padding="8,6,8,10"
-            Background="{DynamicResource Bg1Brush}">
+            Background="{DynamicResource Bg1Brush}"
+            IsVisible="False">
       <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="4">
         <Button Grid.Column="0" Classes="nav" Tag="Home" Click="OnDestinationClick">
           <StackPanel Spacing="2" HorizontalAlignment="Center">
@@ -413,90 +415,6 @@
                                   Grid.ColumnSpan="2"
                                   ZIndex="50000"
                                   IsVisible="False" />
-
-    <!-- Splash Overlay -->
-    <!--
-      Displays a simple splash screen when the mobile application launches.  This overlay
-      is initially visible and sits on top of all other content.  It shows the
-      application name centred on a dark background.  The overlay is hidden
-      programmatically once the application has warmed up (see MainView.axaml.cs),
-      revealing the normal content underneath.  A higher ZIndex than the legal
-      consent overlay ensures the splash appears above all other UI.
-    -->
-    <Border x:Name="SplashOverlay"
-            Grid.RowSpan="3"
-            Grid.ColumnSpan="2"
-            ZIndex="60000"
-            Background="{DynamicResource Bg0Brush}"
-            IsVisible="True">
-      <Border CornerRadius="24"
-              Margin="32"
-              Padding="40"
-              MaxWidth="380"
-              HorizontalAlignment="Center"
-              VerticalAlignment="Center"
-              Background="{DynamicResource BackgroundGradientBrush}"
-              BorderBrush="{DynamicResource BorderBrush}"
-              BorderThickness="1">
-        <Border.BoxShadow>
-          <BoxShadows>0 10 40 10 #80000000</BoxShadows>
-        </Border.BoxShadow>
-
-        <StackPanel Spacing="20"
-                    HorizontalAlignment="Center">
-          <controls:PremiumSpinner Width="100"
-                                   Height="100">
-            <Image Source="avares://Noctra.Mobile/Assets/Square150x150Logo.png"
-                   Width="50"
-                   Height="50"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   RenderTransformOrigin="50%,50%">
-              <Image.RenderTransform>
-                <ScaleTransform ScaleX="1" ScaleY="1" />
-              </Image.RenderTransform>
-              <Image.Styles>
-                <Style Selector="Image">
-                  <Style.Animations>
-                    <Animation Duration="0:0:1.5"
-                               IterationCount="Infinite"
-                               Easing="CubicEaseInOut">
-                      <KeyFrame Cue="0%">
-                        <Setter Property="Opacity" Value="0.5" />
-                        <Setter Property="ScaleTransform.ScaleX" Value="0.9" />
-                        <Setter Property="ScaleTransform.ScaleY" Value="0.9" />
-                      </KeyFrame>
-                      <KeyFrame Cue="50%">
-                        <Setter Property="Opacity" Value="1.0" />
-                        <Setter Property="ScaleTransform.ScaleX" Value="1.0" />
-                        <Setter Property="ScaleTransform.ScaleY" Value="1.0" />
-                      </KeyFrame>
-                      <KeyFrame Cue="100%">
-                        <Setter Property="Opacity" Value="0.5" />
-                        <Setter Property="ScaleTransform.ScaleX" Value="0.9" />
-                        <Setter Property="ScaleTransform.ScaleY" Value="0.9" />
-                      </KeyFrame>
-                    </Animation>
-                  </Style.Animations>
-                </Style>
-              </Image.Styles>
-            </Image>
-          </controls:PremiumSpinner>
-          <StackPanel Spacing="8">
-            <TextBlock Text="Noctra IPTV"
-                       FontSize="22"
-                       FontWeight="Bold"
-                       Foreground="{DynamicResource TextPrimaryBrush}"
-                       HorizontalAlignment="Center" />
-            <TextBlock Text="{loc:Translate Splash.Initializing}"
-                       FontSize="14"
-                       Foreground="{DynamicResource TextSecondaryBrush}"
-                       Opacity="0.8"
-                       HorizontalAlignment="Center" />
-          </StackPanel>
-        </StackPanel>
-      </Border>
-    </Border>
 
     <!-- Profiles Overlay -->
     <!--

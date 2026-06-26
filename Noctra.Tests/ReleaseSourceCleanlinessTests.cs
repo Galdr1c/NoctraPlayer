@@ -1311,19 +1311,120 @@ public sealed class ReleaseSourceCleanlinessTests
             "Views",
             "MainView.axaml.cs"));
 
+        Assert.Contains("x:Name=\"LegalConsentOverlay\"", mainViewSource);
         Assert.Contains("ProfilesOverlay", mainViewSource);
         Assert.Contains("Profiles.Title", mainViewSource);
         Assert.Contains("Profiles.SelectProfile", mainViewSource);
-        Assert.Contains("PremiumSpinner", mainViewSource);
-        Assert.Contains("Square150x150Logo.png", mainViewSource);
-        Assert.Contains("Splash.Initializing", mainViewSource);
-        Assert.Contains("BackgroundGradientBrush", mainViewSource);
+        Assert.DoesNotContain("x:Name=\"SplashOverlay\"", mainViewSource);
+        Assert.DoesNotContain("Splash.Initializing", mainViewSource);
         Assert.DoesNotContain("Text=\"Loading...\"", mainViewSource);
         Assert.Contains("RunStartupFlowAsync", mainViewCode);
+        Assert.DoesNotContain("Task.Delay(1500)", mainViewCode);
+        Assert.DoesNotContain("SplashOverlay", mainViewCode);
         Assert.Contains("await ShowLegalConsentIfNeededAsync()", mainViewCode);
         Assert.Contains("ShowProfileSelection()", mainViewCode);
         Assert.DoesNotContain("_ = ShowLegalConsentIfNeededAsync()", mainViewCode);
         Assert.DoesNotContain("_ = DismissSplashAndShowProfilesAsync()", mainViewCode);
+    }
+
+    [Fact]
+    public void MobileStartup_HidesHomeShellUntilAProfileLoads()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mainViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml"));
+        var mainViewCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml.cs"));
+
+        Assert.Contains("x:Name=\"HeaderBar\"", mainViewSource);
+        Assert.Contains("x:Name=\"ShellContent\"", mainViewSource);
+        Assert.Contains("x:Name=\"BottomNavigation\"", mainViewSource);
+        Assert.Contains("x:Name=\"CoreContentHost\"", mainViewSource);
+        Assert.Matches("x:Name=\"HeaderBar\"[\\s\\S]*?IsVisible=\"False\"", mainViewSource);
+        Assert.Matches("x:Name=\"ShellContent\"[\\s\\S]*?IsVisible=\"False\"", mainViewSource);
+        Assert.Matches("x:Name=\"BottomNavigation\"[\\s\\S]*?IsVisible=\"False\"", mainViewSource);
+        Assert.Contains("CoreContentHost.IsVisible = true", mainViewCode);
+        Assert.Contains("NavigateToDestination(\"Home\")", mainViewCode);
+    }
+
+    [Fact]
+    public void MobileNavigation_ClosesSeriesDetailWhenLeavingCoreContentForSettings()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mainViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml"));
+        var mainViewCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml.cs"));
+
+        Assert.Contains("<views:MobileSeriesDetailView x:Name=\"MobileSeriesDetailContent\"", mainViewSource);
+        Assert.DoesNotContain("MobileSeriesDetailContent\"\r\n                                      IsVisible=\"False\"", mainViewSource);
+        Assert.Contains("CloseSeriesDetailIfOpen()", mainViewCode);
+        Assert.Contains("if (destination is \"Settings\" or \"More\")", mainViewCode);
+        Assert.Contains("_coreMainViewModel ??= GetViewModelResolver()?.GetCoreMainViewModel()", mainViewCode);
+        Assert.Contains("_coreMainViewModel?.CloseSeriesDetailCommand.Execute(null)", mainViewCode);
+        Assert.Contains("OnSettingsClick", mainViewCode);
+        Assert.Contains("CloseSeriesDetailIfOpen();", mainViewCode[
+            mainViewCode.IndexOf("private void OnSettingsClick", StringComparison.Ordinal)..]);
+    }
+
+    [Fact]
+    public void AndroidNativeSplash_UsesStaticNoctraSplashBeforeAvaloniaStartup()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var stylesSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "Resources",
+            "values",
+            "styles.xml"));
+        var splashSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "Resources",
+            "drawable",
+            "splash_screen.xml"));
+        var colorsSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "Resources",
+            "values",
+            "colors.xml"));
+        var activitySource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "MainActivity.cs"));
+
+        Assert.Contains("<item name=\"android:windowBackground\">@drawable/splash_screen</item>", stylesSource);
+        Assert.Contains("Theme = \"@style/MyTheme.NoActionBar\"", activitySource);
+        Assert.Contains("android:color=\"@color/splash_background\"", splashSource);
+        Assert.Contains("android:drawable=\"@mipmap/ic_launcher\"", splashSource);
+        Assert.Contains("android:width=\"220dp\"", splashSource);
+        Assert.Contains("android:height=\"220dp\"", splashSource);
+        Assert.Contains("<color name=\"splash_background\">#0B0616</color>", colorsSource);
+    }
+
+    [Fact]
+    public void AndroidProject_ExcludesPlayStoreMarketingImagesFromCompiledResources()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var projectSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "Noctra.Android.csproj"));
+
+        Assert.Contains(@"<AndroidResource Remove=""Resources\PlayStore_Assets\**\*"" />", projectSource);
     }
 
     [Fact]

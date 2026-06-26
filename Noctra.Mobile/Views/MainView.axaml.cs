@@ -80,13 +80,6 @@ public partial class MainView : UserControl
     {
         try
         {
-            await Task.Delay(1500);
-
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                SplashOverlay.IsVisible = false;
-            });
-
             await ShowLegalConsentIfNeededAsync();
 
             await Dispatcher.UIThread.InvokeAsync(ShowProfileSelection);
@@ -94,18 +87,12 @@ public partial class MainView : UserControl
         }
         catch
         {
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                SplashOverlay.IsVisible = false;
-                ShowProfileSelection();
-            });
+            await Dispatcher.UIThread.InvokeAsync(ShowProfileSelection);
         }
     }
 
     private async Task ShowLegalConsentIfNeededAsync()
     {
-        // Small delay to let the UI settle
-        await Task.Delay(500);
         await LegalConsentOverlay.ShowConsentFlowAsync();
     }
 
@@ -351,6 +338,7 @@ public partial class MainView : UserControl
         if (DataContext is MobileMainViewModel viewModel)
         {
             viewModel.SelectDestination("Settings");
+            CloseSeriesDetailIfOpen();
             var resolver = GetViewModelResolver();
             if (resolver is not null)
             {
@@ -525,6 +513,11 @@ public partial class MainView : UserControl
             return;
         }
 
+        if (destination is "Settings" or "More")
+        {
+            CloseSeriesDetailIfOpen();
+        }
+
         if (destination == "More")
         {
             MobileProfileList.DataContext = resolver.GetProfilesViewModel();
@@ -567,6 +560,12 @@ public partial class MainView : UserControl
         }
 
         UpdateContentVisibility(destination);
+    }
+
+    private void CloseSeriesDetailIfOpen()
+    {
+        _coreMainViewModel ??= GetViewModelResolver()?.GetCoreMainViewModel();
+        _coreMainViewModel?.CloseSeriesDetailCommand.Execute(null);
     }
 
     private async void CoreMainViewModel_OnMediaSelected(object media)
