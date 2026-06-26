@@ -826,6 +826,26 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobileAvatarPicker_UsesDesktopAvatarColorContract()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var avatarSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "AvatarPickerView.axaml"));
+        var appSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "App.axaml"));
+
+        Assert.Contains("ProfileColorConverter", avatarSource);
+        Assert.Contains("Background=\"{Binding Converter={StaticResource ProfileColorConverter}}\"", avatarSource);
+        Assert.Contains("ProfileColorConverter", appSource);
+        Assert.DoesNotContain("Background=\"{DynamicResource Surface1Brush}\"", avatarSource);
+    }
+
+    [Fact]
     public void MobileProfileList_UsesDesktopProfileCardVisualContract()
     {
         var repositoryRoot = FindRepositoryRoot();
@@ -994,6 +1014,32 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.DoesNotContain("SetNegativeButton(\"Cancel\"", dialogServiceSource);
         Assert.DoesNotContain("ShowAlertAsync(\"Noctra Premium\"", dialogServiceSource);
         Assert.DoesNotContain("This feature requires Noctra Premium.", dialogServiceSource);
+    }
+
+    [Fact]
+    public void MobileSearch_UsesDesktopSearchInteractionAndHeaderContract()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var searchSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileSearchView.axaml"));
+        var searchCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileSearchView.axaml.cs"));
+
+        Assert.Contains("x:Name=\"SearchInput\"", searchSource);
+        Assert.Contains("KeyDown=\"SearchInput_KeyDown\"", searchSource);
+        Assert.Contains("FontSize=\"20\"", searchSource);
+        Assert.Contains("FontSize=\"16\"", searchSource);
+        Assert.Contains("LetterSpacing=\"1\"", searchSource);
+        Assert.Contains("Kind=\"Magnify\"", searchSource);
+        Assert.Contains("SearchInput_KeyDown", searchCode);
+        Assert.Contains("Key.Enter", searchCode);
+        Assert.Contains("CommitSearchCommand.Execute(null)", searchCode);
     }
 
     [Fact]

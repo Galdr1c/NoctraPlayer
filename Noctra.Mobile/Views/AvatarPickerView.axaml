@@ -74,7 +74,7 @@
                         BorderBrush="Transparent"
                         BorderThickness="2"
                         CornerRadius="10"
-                        Background="{DynamicResource Surface1Brush}"
+                        Background="{Binding Converter={StaticResource ProfileColorConverter}}"
                         ClipToBounds="True">
                   <Image Source="{Binding Converter={StaticResource AvatarPathConverter}}"
                          Stretch="UniformToFill"

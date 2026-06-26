@@ -32,9 +32,11 @@
       <!-- Search Input -->
       <Grid ColumnDefinitions="*,Auto"
             ColumnSpacing="10">
-        <TextBox Text="{Binding SearchQuery, Mode=TwoWay}"
+        <TextBox x:Name="SearchInput"
+                 Text="{Binding SearchQuery, Mode=TwoWay}"
                  PlaceholderText="{loc:Translate Search.Placeholder}"
-                 MinHeight="44" />
+                 MinHeight="44"
+                 KeyDown="SearchInput_KeyDown" />
         <Button Grid.Column="1"
                 Content="{loc:Translate Search.Button}"
                 Command="{Binding CommitSearchCommand}"
@@ -69,9 +71,9 @@
       <StackPanel Spacing="8"
                   IsVisible="{Binding SearchLiveChannels.Count, Converter={StaticResource CountToVisibility}}">
         <TextBlock Text="{loc:Translate History.LiveTv}"
-                   Foreground="{DynamicResource TextMutedBrush}"
-                   FontSize="12"
-                   FontWeight="Bold"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   FontSize="20"
+                   FontWeight="SemiBold"
                    LetterSpacing="1" />
         <ItemsControl ItemsSource="{Binding SearchLiveChannels}">
           <ItemsControl.ItemTemplate>
@@ -144,9 +146,9 @@
       <StackPanel Spacing="8"
                   IsVisible="{Binding SearchSeriesChannels.Count, Converter={StaticResource CountToVisibility}}">
         <TextBlock Text="{loc:Translate History.Series}"
-                   Foreground="{DynamicResource TextMutedBrush}"
-                   FontSize="12"
-                   FontWeight="Bold"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   FontSize="20"
+                   FontWeight="SemiBold"
                    LetterSpacing="1" />
         <ItemsControl ItemsSource="{Binding SearchSeriesChannels}">
           <ItemsControl.ItemTemplate>
@@ -241,9 +243,9 @@
       <StackPanel Spacing="8"
                   IsVisible="{Binding SearchVodChannels.Count, Converter={StaticResource CountToVisibility}}">
         <TextBlock Text="{loc:Translate History.Movies}"
-                   Foreground="{DynamicResource TextMutedBrush}"
-                   FontSize="12"
-                   FontWeight="Bold"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   FontSize="20"
+                   FontWeight="SemiBold"
                    LetterSpacing="1" />
         <ItemsControl ItemsSource="{Binding SearchVodChannels}">
           <ItemsControl.ItemTemplate>
@@ -347,8 +349,9 @@
                     IsVisible="{Binding SearchSimilarLiveChannels.Count, Converter={StaticResource CountToVisibility}}">
           <TextBlock Text="{loc:Translate History.LiveTv}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12"
-                     FontWeight="Bold" />
+                     FontSize="16"
+                     FontWeight="SemiBold"
+                     LetterSpacing="1" />
           <ItemsControl ItemsSource="{Binding SearchSimilarLiveChannels}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:Channel">
@@ -381,8 +384,9 @@
                     IsVisible="{Binding SearchSimilarSeriesChannels.Count, Converter={StaticResource CountToVisibility}}">
           <TextBlock Text="{loc:Translate History.Series}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12"
-                     FontWeight="Bold" />
+                     FontSize="16"
+                     FontWeight="SemiBold"
+                     LetterSpacing="1" />
           <ItemsControl ItemsSource="{Binding SearchSimilarSeriesChannels}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:Series">
@@ -415,8 +419,9 @@
                     IsVisible="{Binding SearchSimilarVodChannels.Count, Converter={StaticResource CountToVisibility}}">
           <TextBlock Text="{loc:Translate History.Movies}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12"
-                     FontWeight="Bold" />
+                     FontSize="16"
+                     FontWeight="SemiBold"
+                     LetterSpacing="1" />
           <ItemsControl ItemsSource="{Binding SearchSimilarVodChannels}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:Channel">
@@ -450,6 +455,12 @@
                   Margin="0,60,0,0"
                   HorizontalAlignment="Center"
                   IsVisible="{Binding ShowSearchEmptyState}">
+        <icons:MaterialIcon Kind="Magnify"
+                            Width="64"
+                            Height="64"
+                            Foreground="{DynamicResource TextMutedBrush}"
+                            Opacity="0.5"
+                            HorizontalAlignment="Center" />
         <TextBlock Text="{loc:Translate Search.Empty.Title}"
                    Foreground="{DynamicResource TextPrimaryBrush}"
                    FontSize="18"

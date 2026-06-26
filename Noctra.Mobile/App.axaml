@@ -52,6 +52,7 @@
         <converters:UrgencyToColorConverter x:Key="UrgencyToColorConverter" />
         <converters:TimeSpanToCountdownConverter x:Key="TimeSpanToCountdownConverter" />
         <converters:PinDotConverter x:Key="PinDotConverter" />
+        <converters:ProfileColorConverter x:Key="ProfileColorConverter" />
       </ResourceDictionary>
     </Application.Resources>
 
