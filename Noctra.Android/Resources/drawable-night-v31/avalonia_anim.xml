@@ -36,7 +36,7 @@
         android:propertyName="fillColor"
         android:duration="1000"
         android:valueFrom="#00ffffff"
-        android:valueTo="#161c2d"
+        android:valueTo="#1A0A5E"
         android:valueType="colorType"
         android:interpolator="@android:interpolator/fast_out_slow_in"/>
     </aapt:attr>
@@ -47,7 +47,7 @@
         android:propertyName="fillColor"
         android:duration="1000"
         android:valueFrom="#00ffffff"
-        android:valueTo="#f9f9fb"
+        android:valueTo="#FFFFFF"
         android:valueType="colorType"
         android:interpolator="@android:interpolator/fast_out_slow_in"/>
     </aapt:attr>
@@ -58,7 +58,7 @@
         android:propertyName="fillColor"
         android:duration="1000"
         android:valueFrom="#00ffffff"
-        android:valueTo="#f9f9fb"
+        android:valueTo="#FFFFFF"
         android:valueType="colorType"
         android:interpolator="@android:interpolator/fast_out_slow_in"/>
     </aapt:attr>

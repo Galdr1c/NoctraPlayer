@@ -27,5 +27,8 @@
 			<action android:name="android.intent.action.OPEN_DOCUMENT_TREE" />
 		</intent>
 	</queries>
-	<application android:label="Noctra" android:icon="@drawable/Icon" />
+	<application
+		android:label="Noctra"
+		android:icon="@mipmap/ic_launcher"
+		android:roundIcon="@mipmap/ic_launcher_round" />
 </manifest>
