@@ -21,6 +21,14 @@
                 Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}"
                 CommandParameter="{Binding}"
                 IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
+      <MenuItem Header="{loc:Translate History.Remove}"
+                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RemoveFromHistoryCommand}"
+                CommandParameter="{Binding}"
+                IsVisible="{Binding #SeriesCardControl.ShowHistoryMenu}">
+        <MenuItem.Icon>
+          <icons:MaterialIcon Kind="DeleteOutline" />
+        </MenuItem.Icon>
+      </MenuItem>
     </MenuFlyout>
   </UserControl.Resources>
 

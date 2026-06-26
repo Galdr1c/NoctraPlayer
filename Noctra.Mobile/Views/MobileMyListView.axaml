@@ -93,45 +93,16 @@
                    FontWeight="SemiBold"
                    LetterSpacing="1" />
         <ItemsControl ItemsSource="{Binding MyListSeriesItems}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="models:Series">
-              <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
-                      CommandParameter="{Binding}"
-                      Background="{DynamicResource Surface0Brush}"
-                      BorderThickness="0"
-                      CornerRadius="16"
-                      Padding="14"
-                      Margin="0,0,0,16"
-                      HorizontalContentAlignment="Stretch">
-                <Grid ColumnDefinitions="52,*"
-                      ColumnSpacing="12">
-                  <Border Width="42"
-                          Height="42"
-                          CornerRadius="10"
-                          ClipToBounds="True"
-                          Background="{DynamicResource Surface1Brush}">
-                    <Grid>
-                      <icons:MaterialIcon Kind="Collections"
-                                          Foreground="{DynamicResource AccentBrush}"
-                                          Width="20"
-                                          Height="20" />
-                      <controls:RemoteImage Url="{Binding CoverUrl}" Stretch="Uniform" />
-                    </Grid>
-                  </Border>
-                  <StackPanel Grid.Column="1"
-                              Spacing="3"
-                              VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Name}"
-                               Foreground="{DynamicResource TextPrimaryBrush}"
-                               FontWeight="SemiBold"
-                               TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="{Binding GroupTitle}"
-                               Foreground="{DynamicResource TextMutedBrush}"
-                               FontSize="12"
-                               TextTrimming="CharacterEllipsis" />
-                  </StackPanel>
-                </Grid>
-              </Button>
+              <controls:MobileSeriesCard Margin="0,0,16,16"
+                                         Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterWidth}"
+                                         Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterHeight}" />
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
@@ -147,45 +118,16 @@
                    FontWeight="SemiBold"
                    LetterSpacing="1" />
         <ItemsControl ItemsSource="{Binding MyListVodChannels}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="models:Channel">
-              <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
-                      CommandParameter="{Binding}"
-                      Background="{DynamicResource Surface0Brush}"
-                      BorderThickness="0"
-                      CornerRadius="16"
-                      Padding="14"
-                      Margin="0,0,0,16"
-                      HorizontalContentAlignment="Stretch">
-                <Grid ColumnDefinitions="52,*"
-                      ColumnSpacing="12">
-                  <Border Width="42"
-                          Height="42"
-                          CornerRadius="10"
-                          ClipToBounds="True"
-                          Background="{DynamicResource Surface1Brush}">
-                    <Grid>
-                      <icons:MaterialIcon Kind="Movie"
-                                          Foreground="{DynamicResource AccentBrush}"
-                                          Width="20"
-                                          Height="20" />
-                      <controls:RemoteImage Url="{Binding CoverUrl}" Stretch="Uniform" />
-                    </Grid>
-                  </Border>
-                  <StackPanel Grid.Column="1"
-                              Spacing="3"
-                              VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Name}"
-                               Foreground="{DynamicResource TextPrimaryBrush}"
-                               FontWeight="SemiBold"
-                               TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="{Binding GroupTitle}"
-                               Foreground="{DynamicResource TextMutedBrush}"
-                               FontSize="12"
-                               TextTrimming="CharacterEllipsis" />
-                  </StackPanel>
-                </Grid>
-              </Button>
+              <controls:MobileVodCard Margin="0,0,16,16"
+                                      Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterWidth}"
+                                      Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterHeight}" />
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>

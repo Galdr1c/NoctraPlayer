@@ -487,6 +487,85 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobileHistoryCards_ExposeRemoveFromHistoryAction()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mobileVodCardSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Controls",
+            "MobileVodCard.axaml"));
+        var mobileVodCardCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Controls",
+            "MobileVodCard.axaml.cs"));
+        var mobileSeriesCardSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Controls",
+            "MobileSeriesCard.axaml"));
+        var mobileSeriesCardCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Controls",
+            "MobileSeriesCard.axaml.cs"));
+        var mobileHistorySource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileHistoryView.axaml"));
+
+        Assert.Contains("ShowHistoryMenuProperty", mobileVodCardCode);
+        Assert.Contains("History.Remove", mobileVodCardSource);
+        Assert.Contains("RemoveFromHistoryCommand", mobileVodCardSource);
+        Assert.Contains("Kind=\"DeleteOutline\"", mobileVodCardSource);
+        Assert.Contains("IsVisible=\"{Binding #VodCardControl.ShowHistoryMenu}\"", mobileVodCardSource);
+
+        Assert.Contains("ShowHistoryMenuProperty", mobileSeriesCardCode);
+        Assert.Contains("History.Remove", mobileSeriesCardSource);
+        Assert.Contains("RemoveFromHistoryCommand", mobileSeriesCardSource);
+        Assert.Contains("Kind=\"DeleteOutline\"", mobileSeriesCardSource);
+        Assert.Contains("IsVisible=\"{Binding #SeriesCardControl.ShowHistoryMenu}\"", mobileSeriesCardSource);
+
+        Assert.Contains("<controls:MobileSeriesCard", mobileHistorySource);
+        Assert.Contains("<controls:MobileVodCard", mobileHistorySource);
+        Assert.Contains("ShowHistoryMenu=\"True\"", mobileHistorySource);
+        Assert.DoesNotContain("ItemsSource=\"{Binding HistorySeriesItems}\">\r\n          <ItemsControl.ItemTemplate>\r\n            <DataTemplate x:DataType=\"models:Series\">\r\n              <Button", mobileHistorySource);
+        Assert.DoesNotContain("ItemsSource=\"{Binding HistoryVodChannels}\">\r\n          <ItemsControl.ItemTemplate>\r\n            <DataTemplate x:DataType=\"models:Channel\">\r\n              <Button", mobileHistorySource);
+    }
+
+    [Fact]
+    public void MobilePersonalLibraryViews_ReusePosterCardsForVodAndSeries()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var favoritesSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileFavoritesView.axaml"));
+        var myListSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileMyListView.axaml"));
+
+        Assert.Contains("<controls:MobileSeriesCard", favoritesSource);
+        Assert.Contains("<controls:MobileVodCard", favoritesSource);
+        Assert.Contains("ItemsSource=\"{Binding FavoriteSeriesItems}\"", favoritesSource);
+        Assert.Contains("ItemsSource=\"{Binding FavoriteVodChannels}\"", favoritesSource);
+        Assert.DoesNotContain("ItemsSource=\"{Binding FavoriteSeriesItems}\">\r\n          <ItemsControl.ItemTemplate>\r\n            <DataTemplate x:DataType=\"models:Series\">\r\n              <Button", favoritesSource);
+        Assert.DoesNotContain("ItemsSource=\"{Binding FavoriteVodChannels}\">\r\n          <ItemsControl.ItemTemplate>\r\n            <DataTemplate x:DataType=\"models:Channel\">\r\n              <Button", favoritesSource);
+
+        Assert.Contains("<controls:MobileSeriesCard", myListSource);
+        Assert.Contains("<controls:MobileVodCard", myListSource);
+        Assert.Contains("ItemsSource=\"{Binding MyListSeriesItems}\"", myListSource);
+        Assert.Contains("ItemsSource=\"{Binding MyListVodChannels}\"", myListSource);
+        Assert.DoesNotContain("ItemsSource=\"{Binding MyListSeriesItems}\">\r\n          <ItemsControl.ItemTemplate>\r\n            <DataTemplate x:DataType=\"models:Series\">\r\n              <Button", myListSource);
+        Assert.DoesNotContain("ItemsSource=\"{Binding MyListVodChannels}\">\r\n          <ItemsControl.ItemTemplate>\r\n            <DataTemplate x:DataType=\"models:Channel\">\r\n              <Button", myListSource);
+    }
+
+    [Fact]
     public void MobilePosterGrids_UseFlexibleCardSizing()
     {
         var repositoryRoot = FindRepositoryRoot();
