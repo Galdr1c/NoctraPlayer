@@ -394,6 +394,21 @@ public sealed class ReleaseSourceCleanlinessTests
     public void MobileCollectionScreens_UseMaterialIconsForMediaFallbacks()
     {
         var repositoryRoot = FindRepositoryRoot();
+        var liveCardSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Controls",
+            "MobileLiveTvCard.axaml"));
+        var seriesCardSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Controls",
+            "MobileSeriesCard.axaml"));
+        var vodCardSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Controls",
+            "MobileVodCard.axaml"));
         var collectionViewPaths = new[]
         {
             Path.Combine(repositoryRoot, "Noctra.Mobile", "Views", "MobileFavoritesView.axaml"),
@@ -406,13 +421,17 @@ public sealed class ReleaseSourceCleanlinessTests
             var source = File.ReadAllText(viewPath);
 
             Assert.Contains("xmlns:icons=\"clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia\"", source);
-            Assert.Contains("Kind=\"Television\"", source);
-            Assert.Contains("Kind=\"Collections\"", source);
-            Assert.Contains("Kind=\"Movie\"", source);
+            Assert.Contains("<controls:MobileLiveTvCard", source);
+            Assert.Contains("<controls:MobileSeriesCard", source);
+            Assert.Contains("<controls:MobileVodCard", source);
             Assert.DoesNotContain("Text=\"TV\"", source);
             Assert.DoesNotContain("Text=\"EP\"", source);
             Assert.DoesNotContain("Text=\"VOD\"", source);
         }
+
+        Assert.Contains("Kind=\"Television\"", liveCardSource);
+        Assert.Contains("Kind=\"TelevisionPlay\"", seriesCardSource);
+        Assert.Contains("Kind=\"Movie\"", vodCardSource);
     }
 
     [Fact]
@@ -563,6 +582,82 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("ItemsSource=\"{Binding MyListVodChannels}\"", myListSource);
         Assert.DoesNotContain("ItemsSource=\"{Binding MyListSeriesItems}\">\r\n          <ItemsControl.ItemTemplate>\r\n            <DataTemplate x:DataType=\"models:Series\">\r\n              <Button", myListSource);
         Assert.DoesNotContain("ItemsSource=\"{Binding MyListVodChannels}\">\r\n          <ItemsControl.ItemTemplate>\r\n            <DataTemplate x:DataType=\"models:Channel\">\r\n              <Button", myListSource);
+    }
+
+    [Fact]
+    public void MobileLiveTvViews_ReuseSharedLiveTvCard()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var cardPath = Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Controls",
+            "MobileLiveTvCard.axaml");
+        var liveSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileLiveView.axaml"));
+        var historySource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileHistoryView.axaml"));
+        var favoritesSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileFavoritesView.axaml"));
+        var myListSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileMyListView.axaml"));
+
+        Assert.True(File.Exists(cardPath));
+
+        var cardSource = File.ReadAllText(cardPath);
+        Assert.Contains("x:Class=\"Noctra.Mobile.Controls.MobileLiveTvCard\"", cardSource);
+        Assert.Contains("SelectMediaCommand", cardSource);
+        Assert.Contains("ToggleFavoriteCommand", cardSource);
+        Assert.Contains("CurrentProgramTitle", cardSource);
+        Assert.Contains("EpgProgress", cardSource);
+        Assert.Contains("Kind=\"HeartOutline\"", cardSource);
+
+        Assert.Contains("<controls:MobileLiveTvCard", liveSource);
+        Assert.Contains("<controls:MobileLiveTvCard", historySource);
+        Assert.Contains("<controls:MobileLiveTvCard", favoritesSource);
+        Assert.Contains("<controls:MobileLiveTvCard", myListSource);
+
+        Assert.DoesNotContain("ItemsSource=\"{Binding HistoryLiveChannels}\">\r\n          <ItemsControl.ItemTemplate>\r\n            <DataTemplate x:DataType=\"models:Channel\">\r\n              <Button", historySource);
+        Assert.DoesNotContain("ItemsSource=\"{Binding FavoriteLiveChannels}\">\r\n          <ItemsControl.ItemTemplate>\r\n            <DataTemplate x:DataType=\"models:Channel\">\r\n              <Button", favoritesSource);
+        Assert.DoesNotContain("ItemsSource=\"{Binding MyListLiveChannels}\">\r\n          <ItemsControl.ItemTemplate>\r\n            <DataTemplate x:DataType=\"models:Channel\">\r\n              <Button", myListSource);
+    }
+
+    [Fact]
+    public void MobileSearchView_ReusesSharedMediaCards()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var searchSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileSearchView.axaml"));
+
+        Assert.Contains("<controls:MobileLiveTvCard", searchSource);
+        Assert.Contains("<controls:MobileSeriesCard", searchSource);
+        Assert.Contains("<controls:MobileVodCard", searchSource);
+        Assert.Contains("ItemsSource=\"{Binding SearchLiveChannels}\"", searchSource);
+        Assert.Contains("ItemsSource=\"{Binding SearchSeriesChannels}\"", searchSource);
+        Assert.Contains("ItemsSource=\"{Binding SearchVodChannels}\"", searchSource);
+        Assert.Contains("ItemsSource=\"{Binding SearchSimilarLiveChannels}\"", searchSource);
+        Assert.Contains("ItemsSource=\"{Binding SearchSimilarSeriesChannels}\"", searchSource);
+        Assert.Contains("ItemsSource=\"{Binding SearchSimilarVodChannels}\"", searchSource);
+        Assert.Contains("ResponsiveCardMetricConverter", searchSource);
+
+        Assert.DoesNotContain("ItemsSource=\"{Binding SearchLiveChannels}\">\r\n          <ItemsControl.ItemTemplate>\r\n            <DataTemplate x:DataType=\"models:Channel\">\r\n              <Button", searchSource);
+        Assert.DoesNotContain("ItemsSource=\"{Binding SearchSeriesChannels}\">\r\n          <ItemsControl.ItemTemplate>\r\n            <DataTemplate x:DataType=\"models:Series\">\r\n              <Button", searchSource);
+        Assert.DoesNotContain("ItemsSource=\"{Binding SearchVodChannels}\">\r\n          <ItemsControl.ItemTemplate>\r\n            <DataTemplate x:DataType=\"models:Channel\">\r\n              <Button", searchSource);
     }
 
     [Fact]
@@ -1901,11 +1996,17 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Controls",
             "MobileSeriesCard.axaml"));
+        var liveCardSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Controls",
+            "MobileLiveTvCard.axaml"));
 
+        Assert.Contains("MobileLiveTvCard", liveSource);
         Assert.Contains("MobileVodCard", moviesSource);
         Assert.Contains("MobileSeriesCard", seriesSource);
 
-        foreach (var contentSource in new[] { liveSource, continueWatchingCardSource, vodCardSource, seriesCardSource })
+        foreach (var contentSource in new[] { liveCardSource, continueWatchingCardSource, vodCardSource, seriesCardSource })
         {
             Assert.Contains("SelectMediaCommand", contentSource);
             Assert.Contains("CommandParameter=\"{Binding}\"", contentSource);
@@ -2711,6 +2812,11 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobileLiveView.axaml"));
+        var mobileLiveTvCardSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Controls",
+            "MobileLiveTvCard.axaml"));
         var searchSource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Mobile",
@@ -2733,10 +2839,17 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("Text=\"{loc:Translate Player.Overlay.Watched}\"", seriesDetailSource);
         Assert.Contains("Height=\"6\"", seriesDetailSource);
 
-        Assert.Contains("Height=\"5\"", liveSource);
+        Assert.Contains("<controls:MobileLiveTvCard", liveSource);
+        Assert.Contains("Height=\"5\"", mobileLiveTvCardSource);
         Assert.DoesNotContain("MinHeight=\"40\"", searchSource);
-        Assert.Contains("ToggleFavoriteCommand", searchSource);
-        Assert.Contains("AddToMyListCommand", searchSource);
+        Assert.Contains("<controls:MobileLiveTvCard", searchSource);
+        Assert.Contains("<controls:MobileSeriesCard", searchSource);
+        Assert.Contains("<controls:MobileVodCard", searchSource);
+        Assert.Contains("ToggleFavoriteCommand", mobileLiveTvCardSource);
+        Assert.Contains("ToggleFavoriteCommand", mobileSeriesCardSource);
+        Assert.Contains("AddToMyListCommand", mobileSeriesCardSource);
+        Assert.Contains("ToggleFavoriteCommand", mobileVodCardSource);
+        Assert.Contains("AddToMyListCommand", mobileVodCardSource);
     }
 
     [Fact]

@@ -1,0 +1,132 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="using:Noctra.Models"
+             xmlns:vm="using:Noctra.ViewModels"
+             xmlns:controls="using:Noctra.Mobile.Controls"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.Mobile.Controls.MobileLiveTvCard"
+             x:DataType="models:Channel"
+             MinHeight="96"
+             HorizontalAlignment="Stretch"
+             ClipToBounds="False">
+  <UserControl.Styles>
+    <Style Selector="Button.CardContainer:pointerover Border.CardSurface">
+      <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
+    </Style>
+    <Style Selector="Button.FavoriteBtn">
+      <Setter Property="Opacity" Value="0.72" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.16" />
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="CubicEaseOut" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.FavoriteBtn:pointerover">
+      <Setter Property="Opacity" Value="1" />
+      <Setter Property="RenderTransform" Value="scale(1.08)" />
+    </Style>
+    <Style Selector="Button.FavoriteBtn.active">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+  </UserControl.Styles>
+
+  <Button Classes="CardContainer"
+          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
+          CommandParameter="{Binding}"
+          Background="Transparent"
+          BorderThickness="0"
+          Padding="0"
+          HorizontalContentAlignment="Stretch"
+          VerticalContentAlignment="Stretch">
+    <Border Classes="CardSurface"
+            Background="{DynamicResource Surface0Brush}"
+            CornerRadius="16"
+            Padding="14"
+            Margin="0,0,0,16">
+      <Grid RowDefinitions="Auto,Auto,Auto"
+            RowSpacing="4">
+        <Grid Grid.Row="0"
+              ColumnDefinitions="56,*,Auto"
+              ColumnSpacing="10">
+          <Border Width="44"
+                  Height="44"
+                  CornerRadius="12"
+                  ClipToBounds="True"
+                  Background="{DynamicResource Surface1Brush}"
+                  IsHitTestVisible="False">
+            <Grid>
+              <icons:MaterialIcon Kind="Television"
+                                  Foreground="{DynamicResource AccentBrush}"
+                                  Width="20"
+                                  Height="20" />
+              <controls:RemoteImage Url="{Binding CoverUrl}"
+                                    Stretch="Uniform"
+                                    RenderOptions.BitmapInterpolationMode="MediumQuality" />
+            </Grid>
+          </Border>
+
+          <StackPanel Grid.Column="1"
+                      Spacing="3"
+                      VerticalAlignment="Center"
+                      IsHitTestVisible="False">
+            <TextBlock Text="{Binding Name}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="SemiBold"
+                       TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding GroupTitle}"
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       FontSize="12"
+                       TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+
+          <Button Grid.Column="2"
+                  Classes="FavoriteBtn"
+                  Classes.active="{Binding IsFavorite}"
+                  Background="Transparent"
+                  BorderThickness="0"
+                  Padding="14"
+                  MinHeight="48"
+                  MinWidth="48"
+                  VerticalAlignment="Center"
+                  Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}"
+                  CommandParameter="{Binding}">
+            <Grid>
+              <icons:MaterialIcon Kind="Heart"
+                                  Width="20"
+                                  Height="20"
+                                  Foreground="#E50914"
+                                  IsVisible="{Binding IsFavorite}" />
+              <icons:MaterialIcon Kind="HeartOutline"
+                                  Width="20"
+                                  Height="20"
+                                  Foreground="{DynamicResource TextMutedBrush}"
+                                  IsVisible="{Binding !IsFavorite}" />
+            </Grid>
+          </Button>
+        </Grid>
+
+        <TextBlock Grid.Row="1"
+                   Text="{Binding CurrentProgramTitle}"
+                   Foreground="{DynamicResource TextMutedBrush}"
+                   FontSize="12"
+                   FontWeight="Medium"
+                   TextTrimming="CharacterEllipsis"
+                   Opacity="0.85"
+                   Margin="0,2,0,0"
+                   IsVisible="{Binding CurrentProgramTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+
+        <ProgressBar Grid.Row="2"
+                     Value="{Binding EpgProgress}"
+                     Minimum="0"
+                     Maximum="100"
+                     Height="5"
+                     Background="{DynamicResource Surface1Brush}"
+                     Foreground="{DynamicResource AccentBrush}"
+                     BorderThickness="0"
+                     CornerRadius="2.5"
+                     IsVisible="{Binding CurrentProgramTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+      </Grid>
+    </Border>
+  </Button>
+</UserControl>
