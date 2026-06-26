@@ -223,6 +223,16 @@ public partial class MainView : UserControl
         }
 
         // 1) Oynatıcı tam ekrandaysa -> tam ekrandan çık
+        if (ProfilesOverlay.IsVisible)
+        {
+            if (_activeProfilesViewModel is { IsManageMode: true })
+            {
+                _activeProfilesViewModel.ToggleManageModeCommand.Execute(null);
+            }
+
+            return true;
+        }
+
         if (PlayerHost.IsVisible && _playerViewModel is { IsFullScreen: true })
         {
             _playerViewModel.IsFullScreen = false;

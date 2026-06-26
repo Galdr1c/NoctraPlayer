@@ -729,6 +729,35 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobileProfileSetup_UsesDesktopProfileSetupVisualContract()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var viewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "ProfileSetupView.axaml"));
+
+        Assert.Contains("xmlns:icons=\"clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia\"", viewSource);
+        Assert.Contains("Classes=\"AvatarBtn\"", viewSource);
+        Assert.Contains("Classes=\"EditIcon\"", viewSource);
+        Assert.Contains("Kind=\"PencilOutline\"", viewSource);
+        Assert.Contains("Text=\"PREMIUM\"", viewSource);
+        Assert.Contains("IsVisible=\"{Binding !IsPinAvailable}\"", viewSource);
+        Assert.Contains("Kind=\"ShieldCheckOutline\"", viewSource);
+        Assert.Contains("Profiles.Add.PinActive", viewSource);
+        Assert.Contains("Profiles.Add.PinChangeInfo", viewSource);
+        Assert.Contains("Profiles.Add.NewPin", viewSource);
+        Assert.Contains("Profiles.Add.ConfirmNewPin", viewSource);
+        Assert.Contains("Profiles.Add.PinWarning", viewSource);
+        Assert.Contains("PasswordChar=\"&#x2022;\"", viewSource);
+        Assert.Contains("LetterSpacing=\"8\"", viewSource);
+        Assert.Contains("PlaceholderText=\"&#x2022;&#x2022;&#x2022;&#x2022;\"", viewSource);
+        Assert.Contains("Profiles.Account.M3uLink", viewSource);
+        Assert.Contains("Kind=\"TrashCanOutline\"", viewSource);
+    }
+
+    [Fact]
     public void MobileProfiles_ReusesDesktopProfilesAndAvatarContracts()
     {
         var repositoryRoot = FindRepositoryRoot();
@@ -903,6 +932,34 @@ public sealed class ReleaseSourceCleanlinessTests
 
         Assert.Contains("AddTransient<ProfileLoadingViewModel>", registrationSource);
         Assert.Contains("CoreMainViewModel", registrationSource);
+    }
+
+    [Fact]
+    public void MobilePinEntry_UsesDesktopPinVisualContract()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var pinEntrySource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "PinEntryView.axaml"));
+        var appSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "App.axaml"));
+
+        Assert.Contains("xmlns:icons=\"clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia\"", pinEntrySource);
+        Assert.Contains("BrushTransition Property=\"Background\"", pinEntrySource);
+        Assert.Contains("Background=\"{DynamicResource IconGradientBrush}\"", pinEntrySource);
+        Assert.Contains("<BoxShadows>0 20 60 0 #90000000</BoxShadows>", pinEntrySource);
+        Assert.Contains("PinDotConverter", pinEntrySource);
+        Assert.Contains("ConverterParameter=1", pinEntrySource);
+        Assert.Contains("ConverterParameter=4", pinEntrySource);
+        Assert.Contains("Kind=\"BackspaceOutline\"", pinEntrySource);
+        Assert.DoesNotContain("StringFormat='{}{0}/4'", pinEntrySource);
+        Assert.DoesNotContain("Content=\"âŒ«\"", pinEntrySource);
+
+        Assert.Contains("PinDotConverter", appSource);
     }
 
     [Fact]
@@ -1280,6 +1337,22 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("OverlayProfileList_ProfileLoaded", mainViewCode);
         Assert.DoesNotContain("_activeProfilesViewModel.RequestClose += ProfilesViewModel_RequestClose", mainViewCode);
         Assert.DoesNotContain("private void ProfilesViewModel_RequestClose()", mainViewCode);
+    }
+
+    [Fact]
+    public void MobileBackNavigation_ConsumesBackWhenProfilesOverlayIsVisible()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mainViewCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml.cs"));
+
+        Assert.Contains("if (ProfilesOverlay.IsVisible)", mainViewCode);
+        Assert.Contains("_activeProfilesViewModel is { IsManageMode: true }", mainViewCode);
+        Assert.Contains("_activeProfilesViewModel.ToggleManageModeCommand.Execute(null)", mainViewCode);
+        Assert.Contains("return true;", mainViewCode);
     }
 
     [Fact]

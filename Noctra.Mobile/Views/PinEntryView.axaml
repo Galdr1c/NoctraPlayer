@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Noctra.ViewModels"
              xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.PinEntryView"
              x:DataType="vm:PinEntryViewModel"
              x:CompileBindings="False"
@@ -21,6 +22,41 @@
       <Setter Property="FontSize" Value="24" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="Margin" Value="5" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border x:Name="PinKeyBg"
+                  Width="{TemplateBinding Width}"
+                  Height="{TemplateBinding Height}"
+                  Background="{TemplateBinding Background}"
+                  CornerRadius="{TemplateBinding CornerRadius}">
+            <ContentPresenter Content="{TemplateBinding Content}"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.15" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.pin-key:pointerover /template/ Border#PinKeyBg">
+      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+    </Style>
+    <Style Selector="Button.pin-key:pressed /template/ Border#PinKeyBg">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="Button.pin-forgot">
+      <Setter Property="Width" Value="72" />
+      <Setter Property="Height" Value="72" />
+      <Setter Property="CornerRadius" Value="36" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+      <Setter Property="FontSize" Value="9" />
+      <Setter Property="Margin" Value="5" />
     </Style>
   </UserControl.Styles>
 
@@ -32,13 +68,16 @@
           MaxWidth="420"
           HorizontalAlignment="Center"
           VerticalAlignment="Center">
+    <Border.BoxShadow>
+      <BoxShadows>0 20 60 0 #90000000</BoxShadows>
+    </Border.BoxShadow>
     <StackPanel Spacing="18"
                 HorizontalAlignment="Center">
       <Border Width="96"
               Height="96"
               CornerRadius="20"
               ClipToBounds="True"
-              Background="{DynamicResource AccentBrush}">
+              Background="{DynamicResource IconGradientBrush}">
         <Image Source="{Binding ProfileAvatar, Converter={StaticResource AvatarPathConverter}}"
                Stretch="UniformToFill" />
       </Border>
@@ -54,11 +93,22 @@
                  TextAlignment="Center"
                  TextWrapping="Wrap" />
 
-      <TextBlock Text="{Binding PinLength, StringFormat='{}{0}/4'}"
-                 Foreground="{DynamicResource TextPrimaryBrush}"
-                 FontSize="18"
-                 FontWeight="SemiBold"
-                 HorizontalAlignment="Center" />
+      <StackPanel Orientation="Horizontal"
+                  HorizontalAlignment="Center"
+                  Spacing="12">
+        <Ellipse Width="12"
+                 Height="12"
+                 Fill="{Binding PinLength, Converter={StaticResource PinDotConverter}, ConverterParameter=1}" />
+        <Ellipse Width="12"
+                 Height="12"
+                 Fill="{Binding PinLength, Converter={StaticResource PinDotConverter}, ConverterParameter=2}" />
+        <Ellipse Width="12"
+                 Height="12"
+                 Fill="{Binding PinLength, Converter={StaticResource PinDotConverter}, ConverterParameter=3}" />
+        <Ellipse Width="12"
+                 Height="12"
+                 Fill="{Binding PinLength, Converter={StaticResource PinDotConverter}, ConverterParameter=4}" />
+      </StackPanel>
 
       <TextBlock Text="{Binding ErrorMessage}"
                  Foreground="{DynamicResource ErrorBrush}"
@@ -94,12 +144,16 @@
         <Button Classes="pin-key" Content="7" Command="{Binding PressDigitCommand}" CommandParameter="7" />
         <Button Classes="pin-key" Content="8" Command="{Binding PressDigitCommand}" CommandParameter="8" />
         <Button Classes="pin-key" Content="9" Command="{Binding PressDigitCommand}" CommandParameter="9" />
-        <Button Classes="pin-key"
-                FontSize="9"
+        <Button Classes="pin-forgot"
                 Content="{loc:Translate PinEntry.ForgotPin}"
                 Command="{Binding ForgotPinCommand}" />
         <Button Classes="pin-key" Content="0" Command="{Binding PressDigitCommand}" CommandParameter="0" />
-        <Button Classes="pin-key" Content="⌫" Command="{Binding BackspaceCommand}" />
+        <Button Classes="pin-key" Command="{Binding BackspaceCommand}">
+          <icons:MaterialIcon Kind="BackspaceOutline"
+                              Width="24"
+                              Height="24"
+                              Foreground="{DynamicResource TextPrimaryBrush}" />
+        </Button>
       </UniformGrid>
 
       <Button Content="{loc:Translate Dialog.Cancel}"

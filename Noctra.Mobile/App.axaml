@@ -51,6 +51,7 @@
         <converters:ResponsiveCardMetricConverter x:Key="ResponsiveCardMetricConverter" />
         <converters:UrgencyToColorConverter x:Key="UrgencyToColorConverter" />
         <converters:TimeSpanToCountdownConverter x:Key="TimeSpanToCountdownConverter" />
+        <converters:PinDotConverter x:Key="PinDotConverter" />
       </ResourceDictionary>
     </Application.Resources>
 

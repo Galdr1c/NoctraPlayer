@@ -5,6 +5,7 @@
              xmlns:vm="using:Noctra.ViewModels"
              xmlns:views="using:Noctra.Mobile.Views"
              xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.ProfileSetupView"
              x:DataType="vm:AddProfileViewModel"
              x:CompileBindings="False"
@@ -31,6 +32,26 @@
       <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
       <Setter Property="FontSize" Value="13" />
       <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.AvatarBtn">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="16" />
+    </Style>
+    <Style Selector="Border.EditIcon">
+      <Setter Property="Opacity" Value="0.85" />
+      <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.AvatarBtn:pointerover Border.EditIcon">
+      <Setter Property="Opacity" Value="1" />
+      <Setter Property="RenderTransform" Value="scale(1.08)" />
     </Style>
   </UserControl.Styles>
 
@@ -71,19 +92,39 @@
         <Border Classes="section">
           <StackPanel Spacing="10">
             <Button Command="{Binding OpenAvatarPickerCommand}"
+                    Classes="AvatarBtn"
                     Background="{DynamicResource Surface1Brush}"
                     BorderThickness="0"
                     CornerRadius="16"
                     Padding="14">
               <StackPanel Spacing="6">
-                <Border Width="96"
-                        Height="96"
-                        CornerRadius="18"
-                        Background="{DynamicResource AccentBrush}"
-                        HorizontalAlignment="Center">
-                  <Image Source="{Binding SelectedAvatar, Converter={StaticResource AvatarPathConverter}}"
-                         Stretch="UniformToFill" />
-                </Border>
+                <Grid Width="104"
+                      Height="104"
+                      HorizontalAlignment="Center">
+                  <Border Width="96"
+                          Height="96"
+                          CornerRadius="18"
+                          ClipToBounds="True"
+                          Background="{DynamicResource IconGradientBrush}"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center">
+                    <Image Source="{Binding SelectedAvatar, Converter={StaticResource AvatarPathConverter}}"
+                           Stretch="UniformToFill" />
+                  </Border>
+                  <Border Classes="EditIcon"
+                          Width="34"
+                          Height="34"
+                          CornerRadius="17"
+                          HorizontalAlignment="Right"
+                          VerticalAlignment="Bottom">
+                    <icons:MaterialIcon Kind="PencilOutline"
+                                        Width="18"
+                                        Height="18"
+                                        Foreground="{DynamicResource TextPrimaryBrush}"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center" />
+                  </Border>
+                </Grid>
                 <TextBlock Text="{loc:Translate AvatarPicker.Title}"
                            HorizontalAlignment="Center"
                            Foreground="{DynamicResource TextPrimaryBrush}" />
@@ -122,8 +163,14 @@
                            IsChecked="{Binding IsStalker}" />
             </Grid>
 
-            <TextBlock Classes="label"
-                       Text="{loc:Translate Profiles.Account.ServerUrl}" />
+            <Panel>
+              <TextBlock Classes="label"
+                         Text="{loc:Translate Profiles.Account.M3uLink}"
+                         IsVisible="{Binding IsM3U}" />
+              <TextBlock Classes="label"
+                         Text="{loc:Translate Profiles.Account.ServerUrl}"
+                         IsVisible="{Binding !IsM3U}" />
+            </Panel>
             <TextBox Text="{Binding Url}"
                      PlaceholderText="{loc:Translate Profiles.Account.ServerUrlPlaceholder}" />
 
@@ -176,25 +223,79 @@
                            FontSize="16"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource TextPrimaryBrush}" />
-                <TextBlock Text="{loc:Translate Profiles.Add.PinLockDescription}"
-                           FontSize="12"
-                           Foreground="{DynamicResource TextMutedBrush}" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock Text="{loc:Translate Profiles.Add.PinLockDescription}"
+                             FontSize="12"
+                             Foreground="{DynamicResource TextMutedBrush}" />
+                  <Border Background="#FFD700"
+                          CornerRadius="4"
+                          Padding="6,2"
+                          IsVisible="{Binding !IsPinAvailable}">
+                    <TextBlock Text="PREMIUM"
+                               FontSize="10"
+                               FontWeight="Bold"
+                               Foreground="#1A1A2E" />
+                  </Border>
+                </StackPanel>
               </StackPanel>
               <ToggleSwitch Grid.Column="1"
                             IsChecked="{Binding HasPin}"
                             IsEnabled="{Binding IsPinAvailable}" />
             </Grid>
             <StackPanel IsVisible="{Binding HasPin}" Spacing="10">
-              <TextBlock Classes="label" Text="{loc:Translate Profiles.Add.Pin}" />
+              <StackPanel IsVisible="{Binding HasExistingPin}" Spacing="8">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <icons:MaterialIcon Kind="ShieldCheckOutline"
+                                      Width="18"
+                                      Height="18"
+                                      Foreground="{DynamicResource SuccessBrush}"
+                                      VerticalAlignment="Center" />
+                  <TextBlock Text="{loc:Translate Profiles.Add.PinActive}"
+                             Foreground="{DynamicResource SuccessBrush}"
+                             FontSize="13"
+                             FontWeight="SemiBold"
+                             VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock Text="{loc:Translate Profiles.Add.PinChangeInfo}"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           FontSize="11"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+              <Panel>
+                <TextBlock Classes="label"
+                           Text="{loc:Translate Profiles.Add.NewPin}"
+                           IsVisible="{Binding HasExistingPin}" />
+                <TextBlock Classes="label"
+                           Text="{loc:Translate Profiles.Add.Pin}"
+                           IsVisible="{Binding !HasExistingPin}" />
+              </Panel>
               <TextBox Text="{Binding PinCode}"
                        MaxLength="4"
-                       PasswordChar="*" />
-              <TextBlock Classes="label" Text="{loc:Translate Profiles.Add.ConfirmPin}" />
+                       PasswordChar="&#x2022;"
+                       PlaceholderText="&#x2022;&#x2022;&#x2022;&#x2022;"
+                       LetterSpacing="8"
+                       HorizontalContentAlignment="Center" />
+              <Panel>
+                <TextBlock Classes="label"
+                           Text="{loc:Translate Profiles.Add.ConfirmNewPin}"
+                           IsVisible="{Binding HasExistingPin}" />
+                <TextBlock Classes="label"
+                           Text="{loc:Translate Profiles.Add.ConfirmPin}"
+                           IsVisible="{Binding !HasExistingPin}" />
+              </Panel>
               <TextBox Text="{Binding PinConfirm}"
                        MaxLength="4"
-                       PasswordChar="*" />
+                       PasswordChar="&#x2022;"
+                       PlaceholderText="&#x2022;&#x2022;&#x2022;&#x2022;"
+                       LetterSpacing="8"
+                       HorizontalContentAlignment="Center" />
               <TextBlock Text="{Binding PinError}"
                          Foreground="{DynamicResource ErrorBrush}"
+                         IsVisible="{Binding PinError, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"
+                         TextWrapping="Wrap" />
+              <TextBlock Text="{loc:Translate Profiles.Add.PinWarning}"
+                         Foreground="{DynamicResource TextMutedBrush}"
+                         FontSize="11"
                          TextWrapping="Wrap" />
             </StackPanel>
           </StackPanel>
@@ -220,13 +321,22 @@
         <Button Classes="action"
                 Command="{Binding DeleteProfileCommand}"
                 CommandParameter="{Binding EditingProfile}"
-                Content="{loc:Translate Profiles.Add.DeleteProfile}"
                 Background="Transparent"
                 BorderBrush="{DynamicResource ErrorBrush}"
                 BorderThickness="1"
                 Foreground="{DynamicResource ErrorBrush}"
                 IsVisible="{Binding EditingProfile, Converter={x:Static ObjectConverters.IsNotNull}}"
-                Margin="0,16,0,0" />
+                Margin="0,16,0,0">
+          <StackPanel Orientation="Horizontal"
+                      HorizontalAlignment="Center"
+                      Spacing="8">
+            <icons:MaterialIcon Kind="TrashCanOutline"
+                                Width="18"
+                                Height="18"
+                                Foreground="{DynamicResource ErrorBrush}" />
+            <TextBlock Text="{loc:Translate Profiles.Add.DeleteProfile}" />
+          </StackPanel>
+        </Button>
       </StackPanel>
     </ScrollViewer>
 
