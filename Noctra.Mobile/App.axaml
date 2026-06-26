@@ -53,6 +53,8 @@
         <converters:TimeSpanToCountdownConverter x:Key="TimeSpanToCountdownConverter" />
         <converters:PinDotConverter x:Key="PinDotConverter" />
         <converters:ProfileColorConverter x:Key="ProfileColorConverter" />
+        <converters:DownloadStatusToBrushConverter x:Key="DownloadStatusToBrushConverter" />
+        <converters:BoolToMaterialIconKindConverter x:Key="BoolToMaterialIconKindConverter" />
       </ResourceDictionary>
     </Application.Resources>
 

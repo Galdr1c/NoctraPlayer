@@ -391,7 +391,8 @@
                       <ProgressBar Minimum="0"
                                    Maximum="100"
                                    Height="6"
-                                   Value="{Binding ProgressPercent}" />
+                                   Value="{Binding ProgressPercent}"
+                                   Foreground="{Binding Status, Converter={StaticResource DownloadStatusToBrushConverter}}" />
 
                       <Grid ColumnDefinitions="*,Auto"
                             ColumnSpacing="10">
@@ -414,10 +415,11 @@
                                   Foreground="{DynamicResource TextPrimaryBrush}"
                                   BorderThickness="0"
                                   CornerRadius="8"
-                                  FontSize="12">
+                                   FontSize="12">
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                              <icons:MaterialIcon Kind="Play" Width="16" Height="16" IsVisible="{Binding IsPaused}" />
-                              <icons:MaterialIcon Kind="Pause" Width="16" Height="16" IsVisible="{Binding !IsPaused}" />
+                              <icons:MaterialIcon Kind="{Binding IsPaused, Converter={StaticResource BoolToMaterialIconKindConverter}, ConverterParameter='Play|Pause'}"
+                                                  Width="16"
+                                                  Height="16" />
                               <TextBlock Text="{loc:Translate Downloads.Action.Pause}" />
                             </StackPanel>
                           </Button>

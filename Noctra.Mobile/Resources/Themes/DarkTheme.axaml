@@ -98,6 +98,14 @@
   <SolidColorBrush x:Key="PremiumBadgeTextBrush" Color="#000000" />
   <SolidColorBrush x:Key="OverlayDarkBrush" Color="#CC090B10" />
   <SolidColorBrush x:Key="OverlayDimBrush" Color="#AA000000" />
+  <SolidColorBrush x:Key="ThemePreviewDarkBg" Color="#141414" />
+  <SolidColorBrush x:Key="ThemePreviewDarkInnerBg" Color="#1A1A1A" />
+  <SolidColorBrush x:Key="ThemePreviewDarkText" Color="#404040" />
+  <SolidColorBrush x:Key="ThemePreviewLightBg" Color="#F5F5F5" />
+  <SolidColorBrush x:Key="ThemePreviewLightInnerBg" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="ThemePreviewLightText" Color="#CCCCCC" />
+  <SolidColorBrush x:Key="ThemePreviewDarkLabelBrush" Color="White" />
+  <SolidColorBrush x:Key="ThemePreviewLightLabelBrush" Color="#666666" />
 
   <BoxShadows x:Key="DefaultShadow">0 2 10 0 #30000000</BoxShadows>
   <BoxShadows x:Key="CardShadow">0 4 20 0 #40000000</BoxShadows>

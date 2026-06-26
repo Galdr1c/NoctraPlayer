@@ -194,10 +194,10 @@
             <TextBlock Classes="label"
                        Text="{loc:Translate Profiles.Account.Password}"
                        IsVisible="{Binding IsXtream}" />
-            <TextBox Text="{Binding Password}"
-                     PasswordChar="*"
-                     PlaceholderText="{loc:Translate Profiles.Account.PasswordPlaceholder}"
-                     IsVisible="{Binding IsXtream}" />
+             <TextBox Text="{Binding Password}"
+                      PasswordChar="&#x2022;"
+                      PlaceholderText="{loc:Translate Profiles.Account.PasswordPlaceholder}"
+                      IsVisible="{Binding IsXtream}" />
 
             <TextBlock Text="{Binding UrlError}"
                        Foreground="{DynamicResource ErrorBrush}"

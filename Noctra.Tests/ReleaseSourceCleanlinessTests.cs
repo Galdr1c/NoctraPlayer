@@ -355,8 +355,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("Kind=\"PlayCircleOutline\"", source);
         Assert.Contains("Kind=\"ChevronRight\"", source);
         Assert.Contains("Kind=\"Close\"", source);
-        Assert.Contains("Kind=\"Play\"", source);
-        Assert.Contains("Kind=\"Pause\"", source);
+        Assert.Contains("ConverterParameter='Play|Pause'", source);
         Assert.Contains("Downloads.Storage.Warning", source);
         Assert.Contains("ShowStorageWarning", source);
     }
@@ -927,6 +926,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("PasswordChar=\"&#x2022;\"", viewSource);
         Assert.Contains("LetterSpacing=\"8\"", viewSource);
         Assert.Contains("PlaceholderText=\"&#x2022;&#x2022;&#x2022;&#x2022;\"", viewSource);
+        Assert.DoesNotContain("PasswordChar=\"*\"", viewSource);
         Assert.Contains("Profiles.Account.M3uLink", viewSource);
         Assert.Contains("Kind=\"TrashCanOutline\"", viewSource);
     }
@@ -1305,6 +1305,10 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobileDownloadsView.axaml"));
+        var appSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "App.axaml"));
         var mobileTabSlideBehaviorSource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Mobile",
@@ -1462,6 +1466,10 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("ClearQueueCommand", downloadsSource);
         Assert.Contains("TogglePauseDownloadCommand", downloadsSource);
         Assert.Contains("CancelDownloadCommand", downloadsSource);
+        Assert.Contains("DownloadStatusToBrushConverter", appSource);
+        Assert.Contains("BoolToMaterialIconKindConverter", appSource);
+        Assert.Contains("Foreground=\"{Binding Status, Converter={StaticResource DownloadStatusToBrushConverter}}\"", downloadsSource);
+        Assert.Contains("Kind=\"{Binding IsPaused, Converter={StaticResource BoolToMaterialIconKindConverter}, ConverterParameter='Play|Pause'}\"", downloadsSource);
 
         Assert.Contains("xmlns:behaviors=\"using:Noctra.Mobile.Behaviors\"", downloadsSource);
         Assert.Contains("behaviors:MobileTabSlideTransitionBehavior.IsEnabled=\"True\"", downloadsSource);
@@ -1731,6 +1739,18 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobileSettingsView.axaml.cs"));
+        var darkThemeSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Resources",
+            "Themes",
+            "DarkTheme.axaml"));
+        var lightThemeSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Resources",
+            "Themes",
+            "LightTheme.axaml"));
         var registrationSource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Android",
@@ -1767,7 +1787,21 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("ExpirationStatus", settingsSource);
         Assert.Contains("IsDarkTheme", settingsSource);
         Assert.Contains("GlobalSettings.Appearance.Title", settingsSource);
+        Assert.Contains("DarkThemeButton", settingsSource);
+        Assert.Contains("LightThemeButton", settingsSource);
+        Assert.Contains("DarkTheme_PointerPressed", settingsSource);
+        Assert.Contains("LightTheme_PointerPressed", settingsSource);
+        Assert.Contains("DarkCheckmark", settingsSource);
+        Assert.Contains("LightCheckmark", settingsSource);
+        Assert.Contains("ThemePreviewDarkBg", settingsSource);
+        Assert.Contains("ThemePreviewLightBg", settingsSource);
+        Assert.Contains("DarkTheme_PointerPressed", settingsCode);
+        Assert.Contains("LightTheme_PointerPressed", settingsCode);
+        Assert.Contains("UpdateThemeSelection", settingsCode);
+        Assert.Contains("ThemePreviewDarkBg", darkThemeSource);
+        Assert.Contains("ThemePreviewLightBg", lightThemeSource);
         Assert.Contains("Settings.Theme.Dark", settingsSource);
+        Assert.Contains("Settings.Theme.Light", settingsSource);
         Assert.Contains("Settings.Language.Title", settingsSource);
         Assert.Contains("AppLanguage", settingsSource);
         Assert.True(
