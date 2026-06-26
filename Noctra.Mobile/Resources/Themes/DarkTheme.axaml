@@ -63,6 +63,11 @@
     <GradientStop Color="#6D28D9" Offset="1.0" />
   </LinearGradientBrush>
 
+  <LinearGradientBrush x:Key="IconGradientBrush" StartPoint="0,0" EndPoint="1,1">
+    <GradientStop Color="#2A2640" Offset="0.0" />
+    <GradientStop Color="#1E1636" Offset="1.0" />
+  </LinearGradientBrush>
+
   <LinearGradientBrush x:Key="BackgroundGradientBrush" StartPoint="0%,0%" EndPoint="100%,100%">
     <GradientStop Color="#141414" Offset="0.0" />
     <GradientStop Color="#1A1A1A" Offset="0.4" />
@@ -96,6 +101,7 @@
 
   <BoxShadows x:Key="DefaultShadow">0 2 10 0 #30000000</BoxShadows>
   <BoxShadows x:Key="CardShadow">0 4 20 0 #40000000</BoxShadows>
+  <BoxShadows x:Key="FocusGlow">0 0 8 0 #308B5CF6</BoxShadows>
 
   <x:Double x:Key="FontSizeH1">32</x:Double>
   <x:Double x:Key="FontSizeH2">24</x:Double>

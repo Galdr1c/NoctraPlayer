@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Noctra.ViewModels"
+             xmlns:controls="using:Noctra.Mobile.Controls"
              x:Class="Noctra.Mobile.Views.ProfileLoadingView"
              x:DataType="vm:ProfileLoadingViewModel"
              x:CompileBindings="False"
@@ -17,51 +18,118 @@
           MaxWidth="420"
           HorizontalAlignment="Center"
           VerticalAlignment="Center">
-    <StackPanel Spacing="20"
-                HorizontalAlignment="Center">
-      <ProgressBar IsIndeterminate="{Binding IsIndeterminate}"
-                   Width="260"
-                   Height="8"
-                   Foreground="{DynamicResource AccentBrush}" />
-      <TextBlock Text="Noctra"
-                 FontSize="32"
-                 FontWeight="Bold"
-                 Foreground="{DynamicResource TextPrimaryBrush}"
-                 HorizontalAlignment="Center" />
-      <TextBlock Text="{Binding StatusMessage}"
-                 Foreground="{DynamicResource TextMutedBrush}"
-                 TextAlignment="Center"
-                 TextWrapping="Wrap"
-                 MaxWidth="300"
-                 Tag="{Binding IsError}" />
-      <Border BorderThickness="1"
-              CornerRadius="10"
-              Padding="12,8"
-              IsVisible="{Binding LoadingWarningMessage}">
-        <Border.Background>
-          <SolidColorBrush Color="{DynamicResource WarningColor}" Opacity="0.1" />
-        </Border.Background>
-        <Border.BorderBrush>
-          <SolidColorBrush Color="{DynamicResource WarningColor}" Opacity="0.5" />
-        </Border.BorderBrush>
-        <TextBlock Text="{Binding LoadingWarningMessage}"
-                   Foreground="{DynamicResource WarningBrush}"
+    <Grid RowDefinitions="*,Auto,Auto">
+      <Panel Grid.Row="0"
+             MinHeight="130"
+             HorizontalAlignment="Center"
+             VerticalAlignment="Center">
+        <controls:PremiumSpinner Width="100"
+                                 Height="100">
+          <Image Source="avares://Noctra.Mobile/Assets/Square150x150Logo.png"
+                 Width="50"
+                 Height="50"
+                 HorizontalAlignment="Center"
+                 VerticalAlignment="Center"
+                 RenderTransformOrigin="50%,50%">
+            <Image.RenderTransform>
+              <ScaleTransform ScaleX="1" ScaleY="1" />
+            </Image.RenderTransform>
+            <Image.Styles>
+              <Style Selector="Image">
+                <Style.Animations>
+                  <Animation Duration="0:0:1.5"
+                             IterationCount="Infinite"
+                             Easing="CubicEaseInOut">
+                    <KeyFrame Cue="0%">
+                      <Setter Property="Opacity" Value="0.5" />
+                      <Setter Property="ScaleTransform.ScaleX" Value="0.9" />
+                      <Setter Property="ScaleTransform.ScaleY" Value="0.9" />
+                    </KeyFrame>
+                    <KeyFrame Cue="50%">
+                      <Setter Property="Opacity" Value="1.0" />
+                      <Setter Property="ScaleTransform.ScaleX" Value="1.0" />
+                      <Setter Property="ScaleTransform.ScaleY" Value="1.0" />
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                      <Setter Property="Opacity" Value="0.5" />
+                      <Setter Property="ScaleTransform.ScaleX" Value="0.9" />
+                      <Setter Property="ScaleTransform.ScaleY" Value="0.9" />
+                    </KeyFrame>
+                  </Animation>
+                </Style.Animations>
+              </Style>
+            </Image.Styles>
+          </Image>
+        </controls:PremiumSpinner>
+      </Panel>
+
+      <StackPanel Grid.Row="1"
+                  Margin="0,0,0,28"
+                  Spacing="8"
+                  HorizontalAlignment="Center">
+        <TextBlock Text="Noctra"
+                   FontSize="22"
+                   FontWeight="Bold"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   HorizontalAlignment="Center" />
+        <TextBlock Text="{Binding StatusMessage}"
+                   FontSize="14"
                    TextAlignment="Center"
-                   TextWrapping="Wrap" />
+                   TextWrapping="Wrap"
+                   MaxWidth="330"
+                   Tag="{Binding IsError}">
+          <TextBlock.Styles>
+            <Style Selector="TextBlock">
+              <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+              <Setter Property="Opacity" Value="0.8" />
+            </Style>
+            <Style Selector="TextBlock[Tag=True]">
+              <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+              <Setter Property="Opacity" Value="1" />
+              <Setter Property="FontWeight" Value="SemiBold" />
+            </Style>
+          </TextBlock.Styles>
+        </TextBlock>
+        <Border Background="#1AFFA500"
+                BorderBrush="#80FFA500"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="12,8"
+                Margin="0,6,0,0"
+                IsVisible="{Binding LoadingWarningMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+          <TextBlock Text="{Binding LoadingWarningMessage}"
+                     Foreground="{DynamicResource WarningBrush}"
+                     FontSize="13"
+                     TextAlignment="Center"
+                     TextWrapping="Wrap"
+                     MaxWidth="320" />
+        </Border>
+      </StackPanel>
+
+      <Border Grid.Row="2"
+              Background="{DynamicResource Bg1Brush}"
+              CornerRadius="0,0,24,24"
+              Padding="15"
+              Margin="-34,0,-34,-34">
+        <StackPanel Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Spacing="12">
+          <Border Width="36"
+                  Height="36"
+                  CornerRadius="8"
+                  ClipToBounds="True"
+                  BorderBrush="{DynamicResource BorderBrush}"
+                  BorderThickness="1">
+            <Image Source="{Binding Avatar, Converter={StaticResource AvatarPathConverter}}"
+                   Stretch="UniformToFill" />
+          </Border>
+          <TextBlock Text="{Binding ProfileName}"
+                     VerticalAlignment="Center"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
+                     FontSize="15"
+                     FontWeight="Medium" />
+        </StackPanel>
       </Border>
-      <Border Width="72"
-              Height="72"
-              CornerRadius="18"
-              ClipToBounds="True"
-              Background="{DynamicResource AccentBrush}">
-        <Image Source="{Binding Avatar, Converter={StaticResource AvatarPathConverter}}"
-               Stretch="UniformToFill" />
-      </Border>
-      <TextBlock Text="{Binding ProfileName}"
-                 Foreground="{DynamicResource TextPrimaryBrush}"
-                 FontSize="18"
-                 FontWeight="SemiBold"
-                 HorizontalAlignment="Center" />
-    </StackPanel>
+    </Grid>
   </Border>
 </UserControl>

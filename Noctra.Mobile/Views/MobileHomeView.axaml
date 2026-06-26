@@ -208,10 +208,42 @@
                 CornerRadius="40"
                 Background="{DynamicResource Surface0Brush}"
                 HorizontalAlignment="Center">
-          <icons:MaterialIcon Kind="Home"
-                     Foreground="{DynamicResource AccentBrush}"
-                     Width="40"
-                     Height="40" />
+          <Image Source="avares://Noctra.Mobile/Assets/Square150x150Logo.Gray.png"
+                 Width="52"
+                 Height="52"
+                 Opacity="0.72"
+                 RenderTransformOrigin="50%,50%"
+                 HorizontalAlignment="Center"
+                 VerticalAlignment="Center">
+            <Image.RenderTransform>
+              <ScaleTransform ScaleX="1" ScaleY="1" />
+            </Image.RenderTransform>
+            <Image.Styles>
+              <Style Selector="Image">
+                <Style.Animations>
+                  <Animation Duration="0:0:2"
+                             IterationCount="Infinite"
+                             Easing="CubicEaseInOut">
+                    <KeyFrame Cue="0%">
+                      <Setter Property="Opacity" Value="0.48" />
+                      <Setter Property="ScaleTransform.ScaleX" Value="0.94" />
+                      <Setter Property="ScaleTransform.ScaleY" Value="0.94" />
+                    </KeyFrame>
+                    <KeyFrame Cue="50%">
+                      <Setter Property="Opacity" Value="0.82" />
+                      <Setter Property="ScaleTransform.ScaleX" Value="1.0" />
+                      <Setter Property="ScaleTransform.ScaleY" Value="1.0" />
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                      <Setter Property="Opacity" Value="0.48" />
+                      <Setter Property="ScaleTransform.ScaleX" Value="0.94" />
+                      <Setter Property="ScaleTransform.ScaleY" Value="0.94" />
+                    </KeyFrame>
+                  </Animation>
+                </Style.Animations>
+              </Style>
+            </Image.Styles>
+          </Image>
         </Border>
         <TextBlock Text="{loc:Translate Home.Welcome}"
                    FontSize="22"

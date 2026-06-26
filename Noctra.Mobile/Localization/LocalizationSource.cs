@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Noctra.Services;
 using Noctra.Services.Interfaces;
 
 namespace Noctra.Mobile.Localization;
@@ -6,6 +7,7 @@ namespace Noctra.Mobile.Localization;
 public sealed class LocalizationSource : INotifyPropertyChanged
 {
     private const string IndexerName = "Item";
+    private readonly ILocalizationService _fallbackLocalizationService = new LocalizationService();
     private ILocalizationService? _localizationService;
 
     public static LocalizationSource Instance { get; } = new();
@@ -16,7 +18,7 @@ public sealed class LocalizationSource : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public string this[string key] => _localizationService?.GetString(key) ?? key;
+    public string this[string key] => (_localizationService ?? _fallbackLocalizationService).GetString(key);
 
     public void Initialize(ILocalizationService localizationService)
     {

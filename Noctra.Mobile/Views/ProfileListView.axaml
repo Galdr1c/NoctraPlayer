@@ -6,6 +6,7 @@
              xmlns:vm="using:Noctra.ViewModels"
              xmlns:views="using:Noctra.Mobile.Views"
              xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.ProfileListView"
              x:Name="ProfileListRoot"
              x:DataType="vm:ProfilesViewModel"
@@ -13,6 +14,53 @@
              mc:Ignorable="d"
              d:DesignWidth="390"
              d:DesignHeight="420">
+  <UserControl.Styles>
+    <Style Selector="Button.ProfileCardStyle">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="16" />
+      <Setter Property="ClipToBounds" Value="False" />
+      <Setter Property="RenderTransform" Value="scale(1)" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="QuadraticEaseOut" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.ProfileCardStyle:pointerover">
+      <Setter Property="RenderTransform" Value="scale(1.04)" />
+    </Style>
+    <Style Selector="Button.ProfileCardStyle:focus /template/ ContentPresenter">
+      <Setter Property="BoxShadow" Value="{DynamicResource FocusGlow}" />
+    </Style>
+    <Style Selector="Button.AddProfileButtonStyle">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="16" />
+      <Setter Property="RenderTransform" Value="scale(1)" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="QuadraticEaseOut" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.AddProfileButtonStyle:pointerover">
+      <Setter Property="RenderTransform" Value="scale(1.04)" />
+    </Style>
+    <Style Selector="Button.AddProfileButtonStyle:pointerover Rectangle#AddBorder">
+      <Setter Property="Stroke" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+    <Style Selector="Button.AddProfileButtonStyle:pointerover Ellipse#PlusCircle">
+      <Setter Property="Stroke" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="Button.AddProfileButtonStyle:pointerover icons|MaterialIcon#PlusIcon">
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+  </UserControl.Styles>
+
   <Grid RowDefinitions="*,Auto">
     <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12" IsVisible="False">
       <TextBlock Text="{loc:Translate Profiles.Title}"
@@ -40,21 +88,104 @@
         <ItemsControl.DataTemplates>
           <DataTemplate DataType="models:Profile">
             <Button Click="SelectProfile_Click"
+                    Classes="ProfileCardStyle"
                     Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=profileWidth}"
-                    Margin="10"
-                    Padding="0"
-                    Background="Transparent"
-                    BorderThickness="0"
-                    CornerRadius="16">
-              <StackPanel Spacing="12">
-                <Border Width="120"
-                        Height="120"
-                        CornerRadius="14"
-                        Background="{DynamicResource PrimaryGradientBrush}"
-                        HorizontalAlignment="Center">
-                  <Image Source="{Binding Avatar, Converter={StaticResource AvatarPathConverter}}"
-                         Stretch="UniformToFill" />
-                </Border>
+                    Margin="10">
+              <StackPanel Spacing="12"
+                          ClipToBounds="False">
+                <Grid Width="140"
+                      Height="140"
+                      HorizontalAlignment="Center"
+                      ClipToBounds="False">
+                  <Border Width="134"
+                          Height="134"
+                          CornerRadius="21"
+                          BorderThickness="3.5"
+                          IsVisible="{Binding IsChild}"
+                          IsHitTestVisible="False"
+                          BoxShadow="0 0 16 0 #708B5CF6">
+                    <Border.BorderBrush>
+                      <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                        <GradientStop Color="#FFB7A6F6" Offset="0" />
+                        <GradientStop Color="#FF8B5CF6" Offset="0.5" />
+                        <GradientStop Color="#FF7C3AED" Offset="1" />
+                      </LinearGradientBrush>
+                    </Border.BorderBrush>
+                  </Border>
+
+                  <Border Width="120"
+                          Height="120"
+                          CornerRadius="14"
+                          ClipToBounds="True"
+                          Background="{DynamicResource IconGradientBrush}"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center">
+                    <Grid>
+                      <Image Source="{Binding Avatar, Converter={StaticResource AvatarPathConverter}}"
+                             Stretch="UniformToFill" />
+
+                      <Border Background="#CC000000"
+                              Opacity="0.7"
+                              CornerRadius="14"
+                              IsVisible="{Binding #ProfileListRoot.DataContext.IsManageMode}">
+                        <Border Width="48"
+                                Height="48"
+                                CornerRadius="24"
+                                Background="Transparent"
+                                BorderBrush="White"
+                                BorderThickness="2"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                          <icons:MaterialIcon Kind="PencilOutline"
+                                              Width="20"
+                                              Height="20"
+                                              Foreground="White"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                      </Border>
+
+                      <Border CornerRadius="14"
+                              Background="#CC000000"
+                              IsVisible="{Binding IsPendingDeletion}">
+                        <StackPanel VerticalAlignment="Center"
+                                    HorizontalAlignment="Center"
+                                    Spacing="6">
+                          <icons:MaterialIcon Kind="TimerSandFull"
+                                              Width="28"
+                                              Height="28"
+                                              Foreground="{Binding DeletionUrgency, Converter={StaticResource UrgencyToColorConverter}}"
+                                              HorizontalAlignment="Center" />
+                          <TextBlock Text="{Binding TimeUntilDeletion, Converter={StaticResource TimeSpanToCountdownConverter}}"
+                                     FontSize="11"
+                                     FontWeight="SemiBold"
+                                     Foreground="{Binding DeletionUrgency, Converter={StaticResource UrgencyToColorConverter}}"
+                                     TextAlignment="Center"
+                                     HorizontalAlignment="Center" />
+                        </StackPanel>
+                      </Border>
+
+                      <icons:MaterialIcon Kind="Lock"
+                                          Width="14"
+                                          Height="14"
+                                          Foreground="#99FFFFFF"
+                                          HorizontalAlignment="Right"
+                                          VerticalAlignment="Top"
+                                          Margin="0,8,8,0"
+                                          IsVisible="{Binding PinHash, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+                    </Grid>
+                  </Border>
+
+                  <Border Width="120"
+                          Height="120"
+                          CornerRadius="14"
+                          BorderThickness="3"
+                          BorderBrush="Transparent"
+                          Background="Transparent"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          IsHitTestVisible="False" />
+                </Grid>
                 <TextBlock Text="{Binding Name}"
                            Foreground="{DynamicResource TextMutedBrush}"
                            FontSize="15"
@@ -67,25 +198,37 @@
 
           <DataTemplate DataType="vm:AddProfilePlaceholder">
             <Button Command="{Binding #ProfileListRoot.DataContext.AddProfileCommand}"
+                    Classes="AddProfileButtonStyle"
                     Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=profileWidth}"
-                    Margin="10"
-                    Padding="0"
-                    Background="{DynamicResource Surface0Brush}"
-                    BorderBrush="{DynamicResource BorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="16">
-              <StackPanel Spacing="8">
-                <Border Width="120"
-                        Height="120"
-                        CornerRadius="14"
-                        BorderBrush="{DynamicResource TextMutedBrush}"
-                        BorderThickness="2">
-                  <TextBlock Text="+"
-                             HorizontalAlignment="Center"
-                             VerticalAlignment="Center"
-                             FontSize="52"
-                             Foreground="{DynamicResource TextPrimaryBrush}" />
-                </Border>
+                    Margin="10">
+              <StackPanel Spacing="12">
+                <Grid Width="120"
+                      Height="120"
+                      HorizontalAlignment="Center">
+                  <Rectangle x:Name="AddBorder"
+                             RadiusX="14"
+                             RadiusY="14"
+                             Stroke="{DynamicResource BorderBrush}"
+                             StrokeThickness="2"
+                             StrokeDashArray="4,2"
+                             Fill="Transparent" />
+                  <Grid HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                    <Ellipse x:Name="PlusCircle"
+                             Width="60"
+                             Height="60"
+                             Stroke="{DynamicResource TextMutedBrush}"
+                             StrokeThickness="2"
+                             Fill="Transparent" />
+                    <icons:MaterialIcon x:Name="PlusIcon"
+                                        Kind="Plus"
+                                        Width="32"
+                                        Height="32"
+                                        Foreground="{DynamicResource TextMutedBrush}"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center" />
+                  </Grid>
+                </Grid>
                 <TextBlock Text="{loc:Translate Profiles.AddProfile}"
                            Foreground="{DynamicResource TextMutedBrush}"
                            FontSize="15"
@@ -114,7 +257,7 @@
 
     <Border x:Name="PinEntryHost"
             Grid.RowSpan="2"
-            Background="{DynamicResource Bg0Brush}" Opacity="0.87"
+            Background="{DynamicResource Bg0Brush}"
             Padding="18"
             IsVisible="False">
       <views:PinEntryView x:Name="PinEntryContent" />
@@ -122,7 +265,7 @@
 
     <Border x:Name="ProfileLoadingHost"
             Grid.RowSpan="2"
-            Background="{DynamicResource Bg0Brush}" Opacity="0.87"
+            Background="{DynamicResource Bg0Brush}"
             Padding="18"
             IsVisible="False">
       <views:ProfileLoadingView x:Name="ProfileLoadingContent" />

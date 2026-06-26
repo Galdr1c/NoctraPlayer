@@ -797,6 +797,42 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobileProfileList_UsesDesktopProfileCardVisualContract()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var profileListSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "ProfileListView.axaml"));
+        var appSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "App.axaml"));
+
+        Assert.Contains("IsVisible=\"{Binding IsChild}\"", profileListSource);
+        Assert.Contains("BoxShadow=\"0 0 16 0 #708B5CF6\"", profileListSource);
+        Assert.Contains("Background=\"{DynamicResource IconGradientBrush}\"", profileListSource);
+        Assert.Contains("IsVisible=\"{Binding #ProfileListRoot.DataContext.IsManageMode}\"", profileListSource);
+        Assert.Contains("Kind=\"PencilOutline\"", profileListSource);
+        Assert.Contains("IsVisible=\"{Binding IsPendingDeletion}\"", profileListSource);
+        Assert.Contains("Kind=\"TimerSandFull\"", profileListSource);
+        Assert.Contains("UrgencyToColorConverter", profileListSource);
+        Assert.Contains("TimeSpanToCountdownConverter", profileListSource);
+        Assert.Contains("Kind=\"Lock\"", profileListSource);
+        Assert.Contains("PinHash, Converter={StaticResource StringNotEmptyToVisibilityConverter}", profileListSource);
+        Assert.Contains("StrokeDashArray=\"4,2\"", profileListSource);
+        Assert.Contains("Kind=\"Plus\"", profileListSource);
+        Assert.Contains("Button.ProfileCardStyle:pointerover", profileListSource);
+        Assert.Contains("Button.ProfileCardStyle:focus", profileListSource);
+        Assert.Contains("FocusGlow", profileListSource);
+        Assert.DoesNotContain("Text=\"+\"", profileListSource);
+
+        Assert.Contains("UrgencyToColorConverter", appSource);
+        Assert.Contains("TimeSpanToCountdownConverter", appSource);
+    }
+
+    [Fact]
     public void MobileProfileSelection_ReusesDesktopPinAndLoadingContracts()
     {
         var repositoryRoot = FindRepositoryRoot();
@@ -858,6 +894,12 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("LoadingWarningMessage", profileLoadingSource);
         Assert.Contains("IsError", profileLoadingSource);
         Assert.Contains("AvatarPathConverter", profileLoadingSource);
+        Assert.Contains("PremiumSpinner", profileLoadingSource);
+        Assert.Contains("Square150x150Logo.png", profileLoadingSource);
+        Assert.Contains("StringNotEmptyToVisibilityConverter", profileLoadingSource);
+        Assert.Contains("Background=\"{DynamicResource Bg1Brush}\"", profileLoadingSource);
+        Assert.Contains("Style Selector=\"TextBlock[Tag=True]\"", profileLoadingSource);
+        Assert.DoesNotContain("<ProgressBar", profileLoadingSource);
 
         Assert.Contains("AddTransient<ProfileLoadingViewModel>", registrationSource);
         Assert.Contains("CoreMainViewModel", registrationSource);
@@ -1169,11 +1211,31 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("ProfilesOverlay", mainViewSource);
         Assert.Contains("Profiles.Title", mainViewSource);
         Assert.Contains("Profiles.SelectProfile", mainViewSource);
+        Assert.Contains("PremiumSpinner", mainViewSource);
+        Assert.Contains("Square150x150Logo.png", mainViewSource);
+        Assert.Contains("Splash.Initializing", mainViewSource);
+        Assert.Contains("BackgroundGradientBrush", mainViewSource);
+        Assert.DoesNotContain("Text=\"Loading...\"", mainViewSource);
         Assert.Contains("RunStartupFlowAsync", mainViewCode);
         Assert.Contains("await ShowLegalConsentIfNeededAsync()", mainViewCode);
         Assert.Contains("ShowProfileSelection()", mainViewCode);
         Assert.DoesNotContain("_ = ShowLegalConsentIfNeededAsync()", mainViewCode);
         Assert.DoesNotContain("_ = DismissSplashAndShowProfilesAsync()", mainViewCode);
+    }
+
+    [Fact]
+    public void MobileLocalizationSource_UsesCoreFallbackBeforeDependencyInjectionInitializes()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var localizationSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Localization",
+            "LocalizationSource.cs"));
+
+        Assert.Contains("using Noctra.Services;", localizationSource);
+        Assert.Contains("private readonly ILocalizationService _fallbackLocalizationService = new LocalizationService();", localizationSource);
+        Assert.Contains("_localizationService ?? _fallbackLocalizationService", localizationSource);
     }
 
     [Fact]
@@ -1218,6 +1280,23 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("OverlayProfileList_ProfileLoaded", mainViewCode);
         Assert.DoesNotContain("_activeProfilesViewModel.RequestClose += ProfilesViewModel_RequestClose", mainViewCode);
         Assert.DoesNotContain("private void ProfilesViewModel_RequestClose()", mainViewCode);
+    }
+
+    [Fact]
+    public void MobileHome_UsesPulsingLogoForEmptyState()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var homeSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileHomeView.axaml"));
+
+        Assert.Contains("Square150x150Logo.Gray.png", homeSource);
+        Assert.Contains("ScaleTransform.ScaleX", homeSource);
+        Assert.Contains("ScaleTransform.ScaleY", homeSource);
+        Assert.Contains("IterationCount=\"Infinite\"", homeSource);
+        Assert.DoesNotContain("Kind=\"Home\"", homeSource);
     }
 
     [Fact]

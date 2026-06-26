@@ -49,6 +49,8 @@
         <converters:SubtitleIconConverter x:Key="SubtitleIconConverter" />
         <converters:FillModeToIconConverter x:Key="FillModeToIconConverter" />
         <converters:ResponsiveCardMetricConverter x:Key="ResponsiveCardMetricConverter" />
+        <converters:UrgencyToColorConverter x:Key="UrgencyToColorConverter" />
+        <converters:TimeSpanToCountdownConverter x:Key="TimeSpanToCountdownConverter" />
       </ResourceDictionary>
     </Application.Resources>
 
