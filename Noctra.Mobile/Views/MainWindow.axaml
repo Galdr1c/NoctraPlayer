@@ -4,9 +4,12 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="using:Noctra.Mobile.Views"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        mc:Ignorable="d"
+        d:DesignWidth="390"
+        d:DesignHeight="844"
         x:Class="Noctra.Mobile.Views.MainWindow"
         Icon="/Assets/Noctra.ico"
-        Title="Noctra.Mobile">
-        <views:MainView />
+        Title="Noctra"
+        Background="{DynamicResource Bg0Brush}">
+  <views:MainView />
 </Window>

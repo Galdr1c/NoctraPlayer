@@ -35,6 +35,9 @@ public partial class MainView : UserControl
     private readonly Thickness _headerBasePadding;
     private readonly Thickness _bottomNavBasePadding;
 
+    // Holds the currently active profiles view model when showing the profiles overlay.
+    private ProfilesViewModel? _activeProfilesViewModel;
+
     public MainView()
     {
         InitializeComponent();
@@ -58,6 +61,8 @@ public partial class MainView : UserControl
 
         // Android donanım/jest geri tuşunu bu view'e bağla.
         RegisterBackHandler();
+        OverlayProfileList.ProfileLoaded -= OverlayProfileList_ProfileLoaded;
+        OverlayProfileList.ProfileLoaded += OverlayProfileList_ProfileLoaded;
 
         // Çentik / sistem çubukları (safe-area) padding'lerini uygula ve değişimleri dinle.
         var topLevel = TopLevel.GetTopLevel(this);
@@ -68,11 +73,33 @@ public partial class MainView : UserControl
             ApplySafeArea(insets.SafeAreaPadding);
         }
 
-        // Show legal consent on first launch
-        _ = ShowLegalConsentIfNeededAsync();
+        _ = RunStartupFlowAsync();
+    }
 
-        // Try showing review prompt after a delay (same logic as desktop)
-        _ = TryShowReviewPromptAsync();
+    private async Task RunStartupFlowAsync()
+    {
+        try
+        {
+            await Task.Delay(1500);
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                SplashOverlay.IsVisible = false;
+            });
+
+            await ShowLegalConsentIfNeededAsync();
+
+            await Dispatcher.UIThread.InvokeAsync(ShowProfileSelection);
+            _ = TryShowReviewPromptAsync();
+        }
+        catch
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                SplashOverlay.IsVisible = false;
+                ShowProfileSelection();
+            });
+        }
     }
 
     private async Task ShowLegalConsentIfNeededAsync()
@@ -146,6 +173,7 @@ public partial class MainView : UserControl
             _backNavigationService.BackRequested = null;
         }
 
+        OverlayProfileList.ProfileLoaded -= OverlayProfileList_ProfileLoaded;
         _backExitToastTimer.Stop();
 
         base.OnDetachedFromVisualTree(e);
@@ -325,18 +353,120 @@ public partial class MainView : UserControl
 
     private void ShowProfileSelection()
     {
-        if (DataContext is MobileMainViewModel viewModel)
-        {
-            viewModel.SelectDestination("More");
-        }
-
+        // Obtain the profiles view model from the service provider.  Unhook any
+        // previous subscriptions so multiple invocations do not accumulate
+        // handlers.
         var resolver = GetViewModelResolver();
-        if (resolver is not null)
+        if (resolver is null)
         {
-            MobileProfileList.DataContext = resolver.GetProfilesViewModel();
+            return;
         }
 
-        UpdateContentVisibility("More");
+        if (resolver != null)
+        {
+            // Dispose old hooks if a previous profiles view model was shown
+            if (_activeProfilesViewModel != null)
+            {
+                _activeProfilesViewModel.PropertyChanged -= ProfilesViewModel_PropertyChanged;
+            }
+
+            _activeProfilesViewModel = resolver.GetProfilesViewModel();
+
+            // Subscribe to PropertyChanged to update the manage/done button label.
+            _activeProfilesViewModel.PropertyChanged += ProfilesViewModel_PropertyChanged;
+
+            // Bind the overlay list's DataContext to the view model so it
+            // populates the profiles.  Do not bind the normal MobileProfileList
+            // when using the overlay.
+            ProfilesOverlay.DataContext = _activeProfilesViewModel;
+            OverlayProfileList.DataContext = _activeProfilesViewModel;
+            _activeProfilesViewModel.RefreshProfiles();
+
+            // Update the manage/done button label to reflect the initial state
+            UpdateProfilesManageButton();
+        }
+
+        // Show the full-screen profiles overlay and hide normal navigation
+        ProfilesOverlay.IsVisible = true;
+        HeaderBar.IsVisible = false;
+        NavigationRail.IsVisible = false;
+        BottomNavigation.IsVisible = false;
+        // Also hide the core/shell content to focus on profiles.  Note that
+        // CoreContentHost may not have been shown yet, but hiding it is safe.
+        ShellContent.IsVisible = false;
+        CoreContentHost.IsVisible = false;
+    }
+
+    private void OverlayProfileList_ProfileLoaded(object? sender, EventArgs e)
+    {
+        // Hide overlay
+        ProfilesOverlay.IsVisible = false;
+        ProfilesOverlay.DataContext = null;
+
+        // Restore nav/header
+        HeaderBar.IsVisible = true;
+
+        // Show appropriate navigation rails based on device size and player state
+        UpdateNavigationMode(Bounds.Width);
+
+        // Show core content (home) and hide shell content
+        ShellContent.IsVisible = false;
+        CoreContentHost.IsVisible = true;
+
+        // Navigate to the home screen by selecting the Home destination
+        NavigateToDestination("Home");
+
+        // Unhook events to avoid memory leaks
+        if (_activeProfilesViewModel != null)
+        {
+            _activeProfilesViewModel.PropertyChanged -= ProfilesViewModel_PropertyChanged;
+            _activeProfilesViewModel = null;
+        }
+        OverlayProfileList.DataContext = null;
+    }
+
+    /// <summary>
+    /// Updates the Manage/Done button text based on the current manage mode state
+    /// of the active profiles view model.  This method is called initially and
+    /// whenever the IsManageMode property changes.
+    /// </summary>
+    private void UpdateProfilesManageButton()
+    {
+        if (_activeProfilesViewModel == null)
+            return;
+
+        // Determine the correct label: show "Done" when managing, otherwise "Manage"
+        var isManageMode = _activeProfilesViewModel.IsManageMode;
+        string key = isManageMode ? "Profiles.ManageMode.Done" : "Profiles.ManageMode.Manage";
+        // Retrieve localized text via the localization service.  We access
+        // LocalizationSource.Instance directly to avoid passing localization
+        // service through many layers.
+        string text = LocalizationSource.Instance[key];
+
+        // Update the content and style state of the button on the UI thread.  The
+        // Tag property toggles the active state style defined in XAML (see
+        // ManageModeButtonStyle).  When IsManageMode is true, Tag is set
+        // to true to invert colours; otherwise false.
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (ProfilesManageButton != null)
+            {
+                ProfilesManageButton.Content = text;
+                ProfilesManageButton.Tag = isManageMode;
+            }
+        });
+    }
+
+    /// <summary>
+    /// Handles property changes on the profiles view model.  Specifically listens
+    /// for IsManageMode changes to update the button label.
+    /// </summary>
+    private void ProfilesViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ProfilesViewModel.IsManageMode))
+        {
+            UpdateProfilesManageButton();
+        }
     }
 
     private MobileViewModelResolver? GetViewModelResolver()

@@ -13,11 +13,14 @@
              d:DesignHeight="720">
   <Grid Background="{DynamicResource Bg0Brush}">
     <ScrollViewer>
-      <StackPanel Margin="20" Spacing="14">
+      <!-- Increase margins and spacing for a more desktop‑like feel -->
+      <StackPanel Margin="24" Spacing="20">
       <StackPanel Spacing="4">
+        <!-- Page title styled like desktop: bold with slight letter spacing and bottom margin -->
         <TextBlock Text="{loc:Translate Settings.Title}"
                    FontSize="24"
-                   FontWeight="SemiBold"
+                   FontWeight="Bold"
+                   LetterSpacing="1"
                    Foreground="{DynamicResource TextPrimaryBrush}" />
         <TextBlock Text="{Binding StatusMessage}"
                    Foreground="{DynamicResource TextMutedBrush}"

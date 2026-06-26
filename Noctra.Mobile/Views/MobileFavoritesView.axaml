@@ -19,20 +19,25 @@
   </UserControl.Resources>
 
   <ScrollViewer>
-    <StackPanel Margin="20" Spacing="16">
+    <!-- Increase margins and spacing to mirror desktop layout -->
+    <StackPanel Margin="24" Spacing="20">
+      <!-- Title styled like desktop: bold with subtle letter spacing -->
       <TextBlock Text="{loc:Translate Favorites.Title}"
                  FontSize="24"
-                 FontWeight="SemiBold"
-                 Foreground="{DynamicResource TextPrimaryBrush}" />
+                 FontWeight="Bold"
+                 LetterSpacing="1"
+                 Foreground="{DynamicResource TextPrimaryBrush}"
+                 Margin="0,0,0,24" />
 
       <!-- Live TV -->
-      <StackPanel Spacing="8"
+      <StackPanel Spacing="12"
                   IsVisible="{Binding FavoriteLiveChannels.Count, Converter={StaticResource CountToVisibility}}">
+        <!-- Section header styled like desktop: larger font and primary colour -->
         <TextBlock Text="{loc:Translate History.LiveTv}"
-                   Foreground="{DynamicResource TextMutedBrush}"
-                   FontSize="12"
-                   FontWeight="Bold"
-                   LetterSpacing="1" />
+                   FontSize="20"
+                   FontWeight="SemiBold"
+                   LetterSpacing="1"
+                   Foreground="{DynamicResource TextPrimaryBrush}" />
         <ItemsControl ItemsSource="{Binding FavoriteLiveChannels}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="models:Channel">
@@ -42,7 +47,7 @@
                       BorderThickness="0"
                       CornerRadius="16"
                       Padding="14"
-                      Margin="0,0,0,10"
+                      Margin="0,0,0,16"
                       HorizontalContentAlignment="Stretch">
                 <Grid ColumnDefinitions="52,*"
                       ColumnSpacing="12">
@@ -79,13 +84,14 @@
       </StackPanel>
 
       <!-- Series -->
-      <StackPanel Spacing="8"
+      <StackPanel Spacing="12"
                   IsVisible="{Binding FavoriteSeriesItems.Count, Converter={StaticResource CountToVisibility}}">
+        <!-- Section header styled like desktop: larger font and primary colour -->
         <TextBlock Text="{loc:Translate History.Series}"
-                   Foreground="{DynamicResource TextMutedBrush}"
-                   FontSize="12"
-                   FontWeight="Bold"
-                   LetterSpacing="1" />
+                   FontSize="20"
+                   FontWeight="SemiBold"
+                   LetterSpacing="1"
+                   Foreground="{DynamicResource TextPrimaryBrush}" />
         <ItemsControl ItemsSource="{Binding FavoriteSeriesItems}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="models:Series">
@@ -95,7 +101,7 @@
                       BorderThickness="0"
                       CornerRadius="16"
                       Padding="14"
-                      Margin="0,0,0,10"
+                      Margin="0,0,0,16"
                       HorizontalContentAlignment="Stretch">
                 <Grid ColumnDefinitions="52,*"
                       ColumnSpacing="12">
@@ -132,13 +138,14 @@
       </StackPanel>
 
       <!-- Movies -->
-      <StackPanel Spacing="8"
+      <StackPanel Spacing="12"
                   IsVisible="{Binding FavoriteVodChannels.Count, Converter={StaticResource CountToVisibility}}">
+        <!-- Section header styled like desktop: larger font and primary colour -->
         <TextBlock Text="{loc:Translate History.Movies}"
-                   Foreground="{DynamicResource TextMutedBrush}"
-                   FontSize="12"
-                   FontWeight="Bold"
-                   LetterSpacing="1" />
+                   FontSize="20"
+                   FontWeight="SemiBold"
+                   LetterSpacing="1"
+                   Foreground="{DynamicResource TextPrimaryBrush}" />
         <ItemsControl ItemsSource="{Binding FavoriteVodChannels}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="models:Channel">
@@ -148,7 +155,7 @@
                       BorderThickness="0"
                       CornerRadius="16"
                       Padding="14"
-                      Margin="0,0,0,10"
+                      Margin="0,0,0,16"
                       HorizontalContentAlignment="Stretch">
                 <Grid ColumnDefinitions="52,*"
                       ColumnSpacing="12">
@@ -189,14 +196,25 @@
                   Margin="0,60,0,0"
                   HorizontalAlignment="Center"
                   IsVisible="{Binding ShowFavoritesEmptyState}">
+        <!-- Icon matching desktop: heart outline -->
+        <icons:MaterialIcon Kind="HeartOutline"
+                            Width="64"
+                            Height="64"
+                            Foreground="{DynamicResource TextMutedBrush}"
+                            Opacity="0.5"
+                            HorizontalAlignment="Center" />
+        <!-- Empty title styled like desktop: bold and letter‑spaced -->
         <TextBlock Text="{loc:Translate Favorites.Empty.Title}"
                    Foreground="{DynamicResource TextPrimaryBrush}"
-                   FontSize="18"
-                   FontWeight="SemiBold" />
+                   FontSize="20"
+                   FontWeight="Bold"
+                   LetterSpacing="1"
+                   TextAlignment="Center"
+                   Margin="0,16,0,4" />
         <TextBlock Text="{loc:Translate Favorites.Empty.Description}"
                    Foreground="{DynamicResource TextMutedBrush}"
-                   TextAlignment="Center"
-                   TextWrapping="Wrap" />
+                   FontSize="14"
+                   TextAlignment="Center" />
       </StackPanel>
     </StackPanel>
   </ScrollViewer>

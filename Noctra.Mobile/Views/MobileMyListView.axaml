@@ -19,19 +19,24 @@
   </UserControl.Resources>
 
   <ScrollViewer>
-    <StackPanel Margin="20" Spacing="16">
+    <!-- Use larger margin and spacing to better mirror the desktop layout -->
+    <StackPanel Margin="24" Spacing="20">
+      <!-- Page title styled like desktop: bold with slight letter spacing and bottom margin -->
       <TextBlock Text="{loc:Translate MyList.Title}"
                  FontSize="24"
-                 FontWeight="SemiBold"
-                 Foreground="{DynamicResource TextPrimaryBrush}" />
+                 FontWeight="Bold"
+                 LetterSpacing="1"
+                 Foreground="{DynamicResource TextPrimaryBrush}"
+                 Margin="0,0,0,24" />
 
       <!-- Live TV -->
-      <StackPanel Spacing="8"
+      <StackPanel Spacing="12"
                   IsVisible="{Binding MyListLiveChannels.Count, Converter={StaticResource CountToVisibility}}">
+        <!-- Section header styled like desktop: larger font, semi-bold weight and primary colour -->
         <TextBlock Text="{loc:Translate History.LiveTv}"
-                   Foreground="{DynamicResource TextMutedBrush}"
-                   FontSize="12"
-                   FontWeight="Bold"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   FontSize="20"
+                   FontWeight="SemiBold"
                    LetterSpacing="1" />
         <ItemsControl ItemsSource="{Binding MyListLiveChannels}">
           <ItemsControl.ItemTemplate>
@@ -42,7 +47,7 @@
                       BorderThickness="0"
                       CornerRadius="16"
                       Padding="14"
-                      Margin="0,0,0,10"
+                      Margin="0,0,0,16"
                       HorizontalContentAlignment="Stretch">
                 <Grid ColumnDefinitions="52,*"
                       ColumnSpacing="12">
@@ -79,12 +84,13 @@
       </StackPanel>
 
       <!-- Series -->
-      <StackPanel Spacing="8"
+      <StackPanel Spacing="12"
                   IsVisible="{Binding MyListSeriesItems.Count, Converter={StaticResource CountToVisibility}}">
+        <!-- Section header styled like desktop: larger font, semi-bold weight and primary colour -->
         <TextBlock Text="{loc:Translate History.Series}"
-                   Foreground="{DynamicResource TextMutedBrush}"
-                   FontSize="12"
-                   FontWeight="Bold"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   FontSize="20"
+                   FontWeight="SemiBold"
                    LetterSpacing="1" />
         <ItemsControl ItemsSource="{Binding MyListSeriesItems}">
           <ItemsControl.ItemTemplate>
@@ -95,7 +101,7 @@
                       BorderThickness="0"
                       CornerRadius="16"
                       Padding="14"
-                      Margin="0,0,0,10"
+                      Margin="0,0,0,16"
                       HorizontalContentAlignment="Stretch">
                 <Grid ColumnDefinitions="52,*"
                       ColumnSpacing="12">
@@ -132,12 +138,13 @@
       </StackPanel>
 
       <!-- Movies -->
-      <StackPanel Spacing="8"
+      <StackPanel Spacing="12"
                   IsVisible="{Binding MyListVodChannels.Count, Converter={StaticResource CountToVisibility}}">
+        <!-- Section header styled like desktop: larger font, semi-bold weight and primary colour -->
         <TextBlock Text="{loc:Translate History.Movies}"
-                   Foreground="{DynamicResource TextMutedBrush}"
-                   FontSize="12"
-                   FontWeight="Bold"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   FontSize="20"
+                   FontWeight="SemiBold"
                    LetterSpacing="1" />
         <ItemsControl ItemsSource="{Binding MyListVodChannels}">
           <ItemsControl.ItemTemplate>
@@ -148,7 +155,7 @@
                       BorderThickness="0"
                       CornerRadius="16"
                       Padding="14"
-                      Margin="0,0,0,10"
+                      Margin="0,0,0,16"
                       HorizontalContentAlignment="Stretch">
                 <Grid ColumnDefinitions="52,*"
                       ColumnSpacing="12">
@@ -189,14 +196,25 @@
                   Margin="0,60,0,0"
                   HorizontalAlignment="Center"
                   IsVisible="{Binding ShowMyListEmptyState}">
+        <!-- Icon matching desktop: bookmark outline -->
+        <icons:MaterialIcon Kind="BookmarkOutline"
+                            Width="64"
+                            Height="64"
+                            Foreground="{DynamicResource TextMutedBrush}"
+                            Opacity="0.5"
+                            HorizontalAlignment="Center" />
+        <!-- Empty title styled like desktop: bold and letter‑spaced -->
         <TextBlock Text="{loc:Translate MyList.Empty.Title}"
                    Foreground="{DynamicResource TextPrimaryBrush}"
-                   FontSize="18"
-                   FontWeight="SemiBold" />
+                   FontSize="20"
+                   FontWeight="Bold"
+                   LetterSpacing="1"
+                   TextAlignment="Center"
+                   Margin="0,16,0,4" />
         <TextBlock Text="{loc:Translate MyList.Empty.Description}"
                    Foreground="{DynamicResource TextMutedBrush}"
-                   TextAlignment="Center"
-                   TextWrapping="Wrap" />
+                   FontSize="14"
+                   TextAlignment="Center" />
       </StackPanel>
     </StackPanel>
   </ScrollViewer>

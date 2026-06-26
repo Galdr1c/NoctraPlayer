@@ -20,10 +20,13 @@
   </UserControl.Resources>
 
   <ScrollViewer>
-    <StackPanel Margin="20" Spacing="14">
+    <!-- Increase margins and spacing to better emulate desktop layout -->
+    <StackPanel Margin="24" Spacing="20">
+      <!-- Desktop-inspired search results header -->
       <TextBlock Text="{loc:Translate Search.Results}"
                  FontSize="24"
-                 FontWeight="SemiBold"
+                 FontWeight="Bold"
+                 LetterSpacing="1"
                  Foreground="{DynamicResource TextPrimaryBrush}" />
 
       <!-- Search Input -->

@@ -24,6 +24,8 @@ public partial class ProfileListView : UserControl
     private PinEntryViewModel? _activePinEntryViewModel;
     private readonly Dictionary<int, DateTime> _profileLockouts = new();
 
+    public event EventHandler? ProfileLoaded;
+
     public ProfileListView()
     {
         InitializeComponent();
@@ -278,6 +280,7 @@ public partial class ProfileListView : UserControl
         var localizationService = app.Services.GetRequiredService<ILocalizationService>();
         var loadingViewModel = app.Services.GetRequiredService<ProfileLoadingViewModel>();
         var mainViewModel = app.Services.GetRequiredService<CoreMainViewModel>();
+        var loadedSuccessfully = false;
 
         try
         {
@@ -314,6 +317,7 @@ public partial class ProfileListView : UserControl
             try
             {
                 await Task.WhenAll(Task.Delay(800), mainViewModel.LoadProfileAsync(reloadedProfile));
+                loadedSuccessfully = true;
             }
             finally
             {
@@ -330,6 +334,11 @@ public partial class ProfileListView : UserControl
         {
             ProfileLoadingHost.IsVisible = false;
             ProfileLoadingContent.DataContext = null;
+        }
+
+        if (loadedSuccessfully)
+        {
+            ProfileLoaded?.Invoke(this, EventArgs.Empty);
         }
     }
 }

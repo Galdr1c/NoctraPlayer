@@ -20,11 +20,14 @@
   </UserControl.Resources>
 
   <ScrollViewer>
-    <StackPanel Margin="20" Spacing="14">
+    <!-- Increase margins and spacing to mirror desktop layout -->
+    <StackPanel Margin="24" Spacing="20">
       <StackPanel Spacing="4">
+        <!-- Page title styled like desktop: bold with slight letter spacing and bottom margin -->
         <TextBlock Text="{loc:Translate Downloads.Title}"
                    FontSize="24"
-                   FontWeight="SemiBold"
+                   FontWeight="Bold"
+                   LetterSpacing="1"
                    Foreground="{DynamicResource TextPrimaryBrush}" />
         <TextBlock Text="{Binding TotalDownloadsInfoText}"
                    Foreground="{DynamicResource TextMutedBrush}"
@@ -128,12 +131,13 @@
             </ComboBox>
 
             <!-- Series Section -->
-            <StackPanel Spacing="8"
+            <StackPanel Spacing="12"
                         IsVisible="{Binding DownloadedSeriesItems.Count, Converter={StaticResource CountToVisibility}}">
+              <!-- Section header styled like desktop: larger font, semi‑bold weight and primary colour -->
               <TextBlock Text="{loc:Translate History.Series}"
-                         Foreground="{DynamicResource TextMutedBrush}"
-                         FontSize="12"
-                         FontWeight="Bold"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="20"
+                         FontWeight="SemiBold"
                          LetterSpacing="1" />
               <ItemsControl ItemsSource="{Binding DownloadedSeriesItems}">
                 <ItemsControl.ItemTemplate>
@@ -141,7 +145,7 @@
                     <Border Background="{DynamicResource Surface0Brush}"
                             CornerRadius="16"
                             Padding="14"
-                            Margin="0,0,0,10">
+                      Margin="0,0,0,16">
                       <Grid ColumnDefinitions="*,Auto,Auto"
                             ColumnSpacing="10">
                         <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
@@ -193,12 +197,13 @@
             </StackPanel>
 
             <!-- Movies Section -->
-            <StackPanel Spacing="8"
+            <StackPanel Spacing="12"
                         IsVisible="{Binding DownloadedVodChannels.Count, Converter={StaticResource CountToVisibility}}">
+              <!-- Section header styled like desktop: larger font, semi‑bold weight and primary colour -->
               <TextBlock Text="{loc:Translate History.Movies}"
-                         Foreground="{DynamicResource TextMutedBrush}"
-                         FontSize="12"
-                         FontWeight="Bold"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="20"
+                         FontWeight="SemiBold"
                          LetterSpacing="1" />
               <ItemsControl ItemsSource="{Binding DownloadedVodChannels}">
                 <ItemsControl.ItemTemplate>
@@ -206,7 +211,7 @@
                     <Border Background="{DynamicResource Surface0Brush}"
                             CornerRadius="16"
                             Padding="14"
-                            Margin="0,0,0,10">
+                            Margin="0,0,0,16">
                       <Grid ColumnDefinitions="*,Auto,Auto"
                             ColumnSpacing="10">
                         <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
@@ -268,14 +273,18 @@
                                   Foreground="{DynamicResource TextMutedBrush}"
                                   Opacity="0.5"
                                   HorizontalAlignment="Center" />
+              <!-- Empty title styled like desktop: bold and letter‑spaced -->
               <TextBlock Text="{loc:Translate Downloads.Empty.Title}"
                          Foreground="{DynamicResource TextPrimaryBrush}"
-                         FontSize="18"
-                         FontWeight="SemiBold" />
+                         FontSize="20"
+                         FontWeight="Bold"
+                         LetterSpacing="1"
+                         TextAlignment="Center"
+                         Margin="0,16,0,4" />
               <TextBlock Text="{loc:Translate Downloads.Empty.Description}"
                          Foreground="{DynamicResource TextMutedBrush}"
-                         TextAlignment="Center"
-                         TextWrapping="Wrap" />
+                         FontSize="14"
+                         TextAlignment="Center" />
             </StackPanel>
           </StackPanel>
         </TabItem>
@@ -331,10 +340,12 @@
             <!-- Ongoing Section -->
             <Grid ColumnDefinitions="*,Auto"
                   ColumnSpacing="10">
+              <!-- Ongoing section header styled like desktop: larger font and bold weight -->
               <TextBlock Text="{loc:Translate Downloads.Ongoing.Title}"
                          Foreground="{DynamicResource TextPrimaryBrush}"
-                         FontSize="18"
-                         FontWeight="SemiBold" />
+                         FontSize="20"
+                         FontWeight="Bold"
+                         LetterSpacing="1" />
               <Button Grid.Column="1"
                       Command="{Binding StopAllDownloadsCommand}"
                       MinHeight="44"
@@ -357,7 +368,7 @@
                   <Border Background="{DynamicResource Surface0Brush}"
                           CornerRadius="16"
                           Padding="14"
-                          Margin="0,0,0,10">
+                          Margin="0,0,0,16">
                     <StackPanel Spacing="8">
                       <Grid ColumnDefinitions="*,Auto"
                             ColumnSpacing="10">

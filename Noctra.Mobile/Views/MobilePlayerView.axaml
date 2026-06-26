@@ -173,8 +173,8 @@
             HorizontalAlignment="Center"
             VerticalAlignment="Top"
             Margin="0,54,0,0"
-            Padding="18,11"
-            CornerRadius="18"
+            Padding="20,12"
+            CornerRadius="20"
             Background="#E6000000"
             IsHitTestVisible="False"
             IsVisible="{Binding #PlayerRoot.IsVolumeToastVisible}">
@@ -291,35 +291,40 @@
       </StackPanel>
     </Button>
 
-    <!-- Normal mod: bottom sheet (EPG kapalıyken) -->
+    <!-- Normal mode controls: desktop video overlay adapted to a mobile bottom sheet. -->
     <Border Grid.ColumnSpan="2"
-            Background="{DynamicResource Bg0Brush}"
-            Padding="16"
-            CornerRadius="18"
+            Background="#E60A0A0A"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1"
+            Padding="18"
+            CornerRadius="24"
             VerticalAlignment="Bottom"
             Margin="14"
             IsVisible="{Binding AreMobileControlsVisible}">
-      <StackPanel Spacing="12">
+      <StackPanel Spacing="14">
       <Grid ColumnDefinitions="*,Auto">
         <StackPanel Spacing="4">
           <TextBlock Text="{Binding CurrentChannel.Name}"
                      Foreground="{DynamicResource TextPrimaryBrush}"
-                     FontSize="18"
-                     FontWeight="SemiBold"
+                     FontSize="22"
+                     FontWeight="Black"
+                     LetterSpacing="-0.5"
                      TextWrapping="Wrap" />
           <TextBlock Text="{Binding ConnectionStatus}"
                      Foreground="{DynamicResource TextMutedBrush}"
+                     FontSize="13"
                      TextWrapping="Wrap" />
         </StackPanel>
         <Button Grid.Column="1"
                 Command="{Binding CloseCommand}"
-                MinHeight="44"
-                MinWidth="72"
+                Width="48"
+                Height="48"
+                Padding="0"
+                CornerRadius="24"
+                Background="{DynamicResource Surface1Brush}"
+                BorderThickness="0"
                 Margin="12,0,0,0">
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <icons:MaterialIcon Kind="Close" Width="18" Height="18" />
-            <TextBlock Text="{loc:Translate Common.Close}" />
-          </StackPanel>
+          <icons:MaterialIcon Kind="Close" Width="24" Height="24" />
         </Button>
       </Grid>
 
@@ -438,15 +443,15 @@
             ColumnSpacing="8"
             VerticalAlignment="Center">
         <Button Command="{Binding PlayPauseCommand}"
-                MinHeight="56"
-                MinWidth="64"
-                CornerRadius="28"
+                MinHeight="64"
+                MinWidth="72"
+                CornerRadius="32"
                 Background="{DynamicResource AccentBrush}"
                 Foreground="{DynamicResource TextPrimaryBrush}">
-          <Grid Width="32" Height="32">
-            <icons:MaterialIcon Kind="Pause" Width="32" Height="32"
+          <Grid Width="36" Height="36">
+            <icons:MaterialIcon Kind="Pause" Width="36" Height="36"
                                 IsVisible="{Binding IsPlaying}" />
-            <icons:MaterialIcon Kind="Play" Width="32" Height="32"
+            <icons:MaterialIcon Kind="Play" Width="36" Height="36"
                                 IsVisible="{Binding IsPlaying, Converter={StaticResource InverseBoolConverter}}" />
           </Grid>
         </Button>

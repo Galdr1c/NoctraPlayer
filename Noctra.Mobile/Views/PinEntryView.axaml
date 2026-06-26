@@ -13,28 +13,30 @@
              Focusable="True">
   <UserControl.Styles>
     <Style Selector="Button.pin-key">
-      <Setter Property="Width" Value="64" />
-      <Setter Property="Height" Value="64" />
-      <Setter Property="CornerRadius" Value="32" />
+      <Setter Property="Width" Value="72" />
+      <Setter Property="Height" Value="72" />
+      <Setter Property="CornerRadius" Value="36" />
       <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-      <Setter Property="FontSize" Value="22" />
+      <Setter Property="FontSize" Value="24" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="Margin" Value="5" />
     </Style>
   </UserControl.Styles>
 
-  <Border Background="{DynamicResource Surface0Brush}"
-          CornerRadius="20"
-          Padding="26"
-          MaxWidth="360"
+  <Border Background="{DynamicResource BackgroundGradientBrush}"
+          BorderBrush="{DynamicResource BorderBrush}"
+          BorderThickness="1"
+          CornerRadius="24"
+          Padding="32"
+          MaxWidth="420"
           HorizontalAlignment="Center"
           VerticalAlignment="Center">
-    <StackPanel Spacing="14"
+    <StackPanel Spacing="18"
                 HorizontalAlignment="Center">
-      <Border Width="72"
-              Height="72"
-              CornerRadius="18"
+      <Border Width="96"
+              Height="96"
+              CornerRadius="20"
               ClipToBounds="True"
               Background="{DynamicResource AccentBrush}">
         <Image Source="{Binding ProfileAvatar, Converter={StaticResource AvatarPathConverter}}"
@@ -42,12 +44,12 @@
       </Border>
 
       <TextBlock Text="{Binding ProfileName}"
-                 FontSize="20"
-                 FontWeight="SemiBold"
+                 FontSize="26"
+                 FontWeight="Bold"
                  Foreground="{DynamicResource TextPrimaryBrush}"
                  HorizontalAlignment="Center" />
       <TextBlock Text="{Binding Purpose}"
-                 FontSize="13"
+                 FontSize="14"
                  Foreground="{DynamicResource TextMutedBrush}"
                  TextAlignment="Center"
                  TextWrapping="Wrap" />

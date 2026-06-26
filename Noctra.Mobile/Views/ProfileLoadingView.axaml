@@ -9,20 +9,22 @@
              mc:Ignorable="d"
              d:DesignWidth="390"
              d:DesignHeight="420">
-  <Border Background="{DynamicResource Surface0Brush}"
-          CornerRadius="20"
-          Padding="24"
-          MaxWidth="360"
+  <Border Background="{DynamicResource BackgroundGradientBrush}"
+          BorderBrush="{DynamicResource BorderBrush}"
+          BorderThickness="1"
+          CornerRadius="24"
+          Padding="34"
+          MaxWidth="420"
           HorizontalAlignment="Center"
           VerticalAlignment="Center">
-    <StackPanel Spacing="16"
+    <StackPanel Spacing="20"
                 HorizontalAlignment="Center">
       <ProgressBar IsIndeterminate="{Binding IsIndeterminate}"
-                   Width="220"
+                   Width="260"
                    Height="8"
                    Foreground="{DynamicResource AccentBrush}" />
       <TextBlock Text="Noctra"
-                 FontSize="24"
+                 FontSize="32"
                  FontWeight="Bold"
                  Foreground="{DynamicResource TextPrimaryBrush}"
                  HorizontalAlignment="Center" />
@@ -47,9 +49,9 @@
                    TextAlignment="Center"
                    TextWrapping="Wrap" />
       </Border>
-      <Border Width="52"
-              Height="52"
-              CornerRadius="13"
+      <Border Width="72"
+              Height="72"
+              CornerRadius="18"
               ClipToBounds="True"
               Background="{DynamicResource AccentBrush}">
         <Image Source="{Binding Avatar, Converter={StaticResource AvatarPathConverter}}"
@@ -57,6 +59,7 @@
       </Border>
       <TextBlock Text="{Binding ProfileName}"
                  Foreground="{DynamicResource TextPrimaryBrush}"
+                 FontSize="18"
                  FontWeight="SemiBold"
                  HorizontalAlignment="Center" />
     </StackPanel>

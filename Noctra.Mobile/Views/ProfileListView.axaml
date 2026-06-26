@@ -13,8 +13,8 @@
              mc:Ignorable="d"
              d:DesignWidth="390"
              d:DesignHeight="420">
-  <Grid RowDefinitions="Auto,*,Auto">
-    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+  <Grid RowDefinitions="*,Auto">
+    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12" IsVisible="False">
       <TextBlock Text="{loc:Translate Profiles.Title}"
                  FontSize="20"
                  FontWeight="SemiBold"
@@ -30,7 +30,7 @@
               CornerRadius="10" />
     </Grid>
 
-    <ScrollViewer Grid.Row="1">
+    <ScrollViewer Grid.Row="0">
       <ItemsControl ItemsSource="{Binding DisplayItems}">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate>
@@ -40,23 +40,25 @@
         <ItemsControl.DataTemplates>
           <DataTemplate DataType="models:Profile">
             <Button Click="SelectProfile_Click"
-                    Width="138"
-                    Margin="6"
-                    Padding="10"
-                    Background="{DynamicResource Surface0Brush}"
+                    Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=profileWidth}"
+                    Margin="10"
+                    Padding="0"
+                    Background="Transparent"
                     BorderThickness="0"
                     CornerRadius="16">
-              <StackPanel Spacing="8">
-                <Border Width="64"
-                        Height="64"
+              <StackPanel Spacing="12">
+                <Border Width="120"
+                        Height="120"
                         CornerRadius="14"
-                        Background="{DynamicResource AccentBrush}"
+                        Background="{DynamicResource PrimaryGradientBrush}"
                         HorizontalAlignment="Center">
                   <Image Source="{Binding Avatar, Converter={StaticResource AvatarPathConverter}}"
                          Stretch="UniformToFill" />
                 </Border>
                 <TextBlock Text="{Binding Name}"
-                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           FontSize="15"
+                           FontWeight="Medium"
                            TextAlignment="Center"
                            TextTrimming="CharacterEllipsis" />
               </StackPanel>
@@ -65,27 +67,29 @@
 
           <DataTemplate DataType="vm:AddProfilePlaceholder">
             <Button Command="{Binding #ProfileListRoot.DataContext.AddProfileCommand}"
-                    Width="138"
-                    Margin="6"
-                    Padding="10"
+                    Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=profileWidth}"
+                    Margin="10"
+                    Padding="0"
                     Background="{DynamicResource Surface0Brush}"
                     BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1"
                     CornerRadius="16">
               <StackPanel Spacing="8">
-                <Border Width="64"
-                        Height="64"
-                        CornerRadius="32"
+                <Border Width="120"
+                        Height="120"
+                        CornerRadius="14"
                         BorderBrush="{DynamicResource TextMutedBrush}"
                         BorderThickness="2">
                   <TextBlock Text="+"
                              HorizontalAlignment="Center"
                              VerticalAlignment="Center"
-                             FontSize="32"
+                             FontSize="52"
                              Foreground="{DynamicResource TextPrimaryBrush}" />
                 </Border>
                 <TextBlock Text="{loc:Translate Profiles.AddProfile}"
-                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           FontSize="15"
+                           FontWeight="Medium"
                            TextAlignment="Center" />
               </StackPanel>
             </Button>
@@ -94,7 +98,7 @@
       </ItemsControl>
     </ScrollViewer>
 
-    <TextBlock Grid.Row="2"
+    <TextBlock Grid.Row="1"
                Text="{loc:Translate Profiles.Add.Description}"
                Foreground="{DynamicResource TextMutedBrush}"
                FontSize="12"
@@ -102,14 +106,14 @@
                Margin="0,12,0,0" />
 
     <Border x:Name="ProfileSetupHost"
-            Grid.RowSpan="3"
+            Grid.RowSpan="2"
             Background="{DynamicResource Bg0Brush}"
             IsVisible="False">
       <ContentControl x:Name="ProfileSetupContent" />
     </Border>
 
     <Border x:Name="PinEntryHost"
-            Grid.RowSpan="3"
+            Grid.RowSpan="2"
             Background="{DynamicResource Bg0Brush}" Opacity="0.87"
             Padding="18"
             IsVisible="False">
@@ -117,7 +121,7 @@
     </Border>
 
     <Border x:Name="ProfileLoadingHost"
-            Grid.RowSpan="3"
+            Grid.RowSpan="2"
             Background="{DynamicResource Bg0Brush}" Opacity="0.87"
             Padding="18"
             IsVisible="False">

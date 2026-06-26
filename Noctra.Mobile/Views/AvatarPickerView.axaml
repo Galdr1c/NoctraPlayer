@@ -4,52 +4,105 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Noctra.ViewModels"
              xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.AvatarPickerView"
              x:Name="AvatarPickerRoot"
              x:DataType="vm:AvatarPickerViewModel"
              x:CompileBindings="False"
              mc:Ignorable="d"
              d:DesignWidth="390"
-             d:DesignHeight="500">
-  <Border Background="{DynamicResource Surface0Brush}"
-          CornerRadius="18"
-          Padding="18">
-    <Grid RowDefinitions="Auto,*,Auto">
-      <TextBlock Text="{loc:Translate AvatarPicker.SelectProfilePicture}"
-                 FontSize="20"
-                 FontWeight="SemiBold"
-                 Foreground="{DynamicResource TextPrimaryBrush}" />
+             d:DesignHeight="560">
+  <UserControl.Styles>
+    <Style Selector="Button.AvatarItemBtn">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Margin" Value="8" />
+      <Setter Property="RenderTransform" Value="scale(1)" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="CubicEaseOut" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.AvatarItemBtn:pointerover">
+      <Setter Property="RenderTransform" Value="scale(1.04)" />
+    </Style>
+    <Style Selector="Button.AvatarItemBtn:pointerover Border.AvatarBorder">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+  </UserControl.Styles>
 
-      <ScrollViewer Grid.Row="1" Margin="0,16">
+  <Border Background="{DynamicResource BackgroundGradientBrush}"
+          BorderBrush="{DynamicResource BorderBrush}"
+          BorderThickness="1"
+          CornerRadius="{DynamicResource RadiusLarge}"
+          Padding="24"
+          ClipToBounds="True">
+    <Grid RowDefinitions="Auto,*,Auto" RowSpacing="20">
+      <!-- Header: matches desktop avatar picker typography, adapted for mobile -->
+      <StackPanel Spacing="6">
+        <TextBlock Text="{loc:Translate AvatarPicker.SelectProfilePicture}"
+                   FontSize="24"
+                   FontWeight="Bold"
+                   LetterSpacing="1"
+                   Foreground="{DynamicResource TextPrimaryBrush}" />
+        <TextBlock Text="{loc:Translate AvatarPicker.Hint}"
+                   FontSize="13"
+                   Foreground="{DynamicResource TextMutedBrush}"
+                   TextWrapping="Wrap" />
+      </StackPanel>
+
+      <!-- Avatar Grid -->
+      <ScrollViewer Grid.Row="1"
+                    VerticalScrollBarVisibility="Auto"
+                    HorizontalScrollBarVisibility="Disabled">
         <ItemsControl ItemsSource="{Binding Avatars}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
-              <WrapPanel />
+              <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center" />
             </ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <Button Command="{Binding #AvatarPickerRoot.DataContext.SelectAvatarCommand}"
+              <Button Classes="AvatarItemBtn"
+                      Command="{Binding #AvatarPickerRoot.DataContext.SelectAvatarCommand}"
                       CommandParameter="{Binding}"
-                      Width="72"
-                      Height="72"
-                      Margin="6"
-                      Padding="0"
-                      Background="{DynamicResource Surface1Brush}"
-                      BorderThickness="0"
-                      CornerRadius="14">
-                <Image Source="{Binding Converter={StaticResource AvatarPathConverter}}"
-                       Stretch="UniformToFill" />
+                      Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=profileWidth}"
+                      Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=profileWidth}">
+                <Border Classes="AvatarBorder"
+                        BorderBrush="Transparent"
+                        BorderThickness="2"
+                        CornerRadius="10"
+                        Background="{DynamicResource Surface1Brush}"
+                        ClipToBounds="True">
+                  <Image Source="{Binding Converter={StaticResource AvatarPathConverter}}"
+                         Stretch="UniformToFill"
+                         RenderOptions.BitmapInterpolationMode="HighQuality" />
+                </Border>
               </Button>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
       </ScrollViewer>
 
-      <TextBlock Grid.Row="2"
-                 Text="{loc:Translate AvatarPicker.Hint}"
-                 Foreground="{DynamicResource TextMutedBrush}"
-                 TextWrapping="Wrap" />
+      <Border Grid.Row="2"
+              Background="{DynamicResource Surface0Brush}"
+              BorderBrush="{DynamicResource BorderBrush}"
+              BorderThickness="1"
+              CornerRadius="{DynamicResource RadiusMedium}"
+              Padding="12">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <icons:MaterialIcon Kind="InformationOutline"
+                              Width="18"
+                              Height="18"
+                              Foreground="{DynamicResource AccentBrush}" />
+          <TextBlock Text="{loc:Translate AvatarPicker.Hint}"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     FontSize="12"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
     </Grid>
   </Border>
 </UserControl>

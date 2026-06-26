@@ -7,7 +7,8 @@
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Controls.MobileContinueWatchingCard"
              x:DataType="models:Channel"
-             Height="120"
+             MinHeight="120"
+             ClipToBounds="False"
              HorizontalAlignment="Stretch">
   <UserControl.Resources>
     <MenuFlyout x:Key="CardActionsFlyout">
@@ -22,30 +23,68 @@
     </MenuFlyout>
   </UserControl.Resources>
 
-  <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
+  <UserControl.Styles>
+    <Style Selector="Button.CardContainer:pointerover">
+      <Setter Property="ZIndex" Value="10" />
+      <Setter Property="RenderTransform" Value="scale(1.02)" />
+    </Style>
+    <Style Selector="Button.CardContainer:pointerover Border.HoverOverlay">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="Border.HoverOverlay">
+      <Setter Property="Opacity" Value="0" />
+    </Style>
+    <Style Selector="Button.CardContainer:pointerover icons|MaterialIcon.PlayIcon">
+      <Setter Property="Opacity" Value="1" />
+      <Setter Property="RenderTransform" Value="scale(1)" />
+    </Style>
+  </UserControl.Styles>
+
+  <Button Classes="CardContainer"
+          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
           CommandParameter="{Binding}"
           Background="Transparent"
           BorderThickness="0"
           Padding="0"
           HorizontalContentAlignment="Stretch"
           VerticalContentAlignment="Stretch">
+    <Button.Transitions>
+      <Transitions>
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="CubicEaseOut" />
+      </Transitions>
+    </Button.Transitions>
     <Button.ContextFlyout>
       <StaticResource ResourceKey="CardActionsFlyout" />
     </Button.ContextFlyout>
-    <Border CornerRadius="14"
+
+    <Border CornerRadius="{DynamicResource RadiusSmall}"
+            ClipToBounds="True"
             Background="{DynamicResource Surface0Brush}"
-            ClipToBounds="True">
+            BoxShadow="{DynamicResource CardShadow}">
       <Grid>
-        <Border Background="{DynamicResource Surface1Brush}">
+        <Border Background="{DynamicResource SurfaceLightBrush}">
           <Grid>
             <icons:MaterialIcon Kind="MoviePlay"
-                                Foreground="{DynamicResource AccentBrush}"
-                                Width="42"
-                                Height="42"
+                                Foreground="{DynamicResource TextMutedBrush}"
+                                Width="34"
+                                Height="34"
                                 Opacity="0.32" />
-            <controls:RemoteImage Url="{Binding CoverUrl}" Stretch="UniformToFill" />
+            <controls:RemoteImage Url="{Binding CoverUrl}"
+                                        Stretch="UniformToFill"
+                                        RenderOptions.BitmapInterpolationMode="MediumQuality" />
           </Grid>
         </Border>
+
+        <Border Classes="HoverOverlay" Background="#80000000" IsHitTestVisible="False">
+          <icons:MaterialIcon Kind="PlayCircle"
+                              Classes="PlayIcon"
+                              Width="40"
+                              Height="40"
+                              Foreground="White"
+                              Opacity="0"
+                              RenderTransform="scale(0.8)" />
+        </Border>
+
         <Button HorizontalAlignment="Right"
                 VerticalAlignment="Top"
                 Margin="6"
@@ -58,36 +97,37 @@
                 Flyout="{StaticResource CardActionsFlyout}">
           <icons:MaterialIcon Kind="DotsVertical" Width="20" Height="20" Foreground="White" />
         </Button>
-        <StackPanel VerticalAlignment="Bottom"
-                    Spacing="0">
-          <Border Padding="12,14,12,8">
+
+        <StackPanel VerticalAlignment="Bottom" Spacing="0">
+          <Border Padding="10,20,10,10">
             <Border.Background>
               <LinearGradientBrush StartPoint="0%,100%" EndPoint="0%,0%">
                 <GradientStop Offset="0" Color="#CC000000" />
                 <GradientStop Offset="1" Color="#00000000" />
               </LinearGradientBrush>
             </Border.Background>
-            <StackPanel Spacing="2">
+            <StackPanel Spacing="1">
               <TextBlock Text="{Binding Name}"
-                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         Foreground="White"
                          FontSize="13"
-                         FontWeight="SemiBold"
+                         FontWeight="Bold"
                          TextTrimming="CharacterEllipsis"
                          MaxLines="1" />
               <TextBlock Text="{Binding GroupTitle}"
-                         Foreground="{DynamicResource TextSecondaryBrush}" Opacity="0.65"
-                         FontSize="11"
+                         Foreground="#A6FFFFFF"
+                         FontSize="10"
                          TextTrimming="CharacterEllipsis"
-                         MaxLines="1" />
+                         MaxLines="1"
+                         Opacity="0.8" />
             </StackPanel>
           </Border>
-          <ProgressBar Height="5"
+          <ProgressBar Height="4"
                        CornerRadius="0"
                        Minimum="0"
                        Maximum="100"
                        Value="{Binding WatchedPercentage}"
                        Foreground="{DynamicResource AccentBrush}"
-                       Background="{DynamicResource Surface1Brush}"
+                       Background="#4D000000"
                        BorderThickness="0" />
         </StackPanel>
       </Grid>

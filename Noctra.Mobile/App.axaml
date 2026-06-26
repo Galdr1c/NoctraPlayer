@@ -48,6 +48,7 @@
         <converters:PercentToWidthConverter x:Key="PercentToWidthConverter" />
         <converters:SubtitleIconConverter x:Key="SubtitleIconConverter" />
         <converters:FillModeToIconConverter x:Key="FillModeToIconConverter" />
+        <converters:ResponsiveCardMetricConverter x:Key="ResponsiveCardMetricConverter" />
       </ResourceDictionary>
     </Application.Resources>
 

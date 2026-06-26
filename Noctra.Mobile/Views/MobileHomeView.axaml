@@ -23,34 +23,42 @@
                 ScrollChanged="HomeScrollViewer_ScrollChanged"
                 VerticalScrollBarVisibility="Auto"
                 HorizontalScrollBarVisibility="Disabled">
-    <StackPanel Margin="20" Spacing="24">
+    <!-- Use slightly larger margins to mirror the desktop layout -->
+    <StackPanel Margin="24" Spacing="28">
 
       <!-- Continue Watching Section -->
-      <StackPanel Spacing="12"
+      <StackPanel Spacing="14"
                   IsVisible="{Binding ContinueWatching.Count, Converter={StaticResource CountToVisibility}}">
         <Grid ColumnDefinitions="*,Auto">
+          <!-- Match the desktop header style: slightly larger font and bold weight -->
           <TextBlock Text="{loc:Translate Home.ContinueWatching}"
-                     FontSize="18"
-                     FontWeight="SemiBold"
+                     FontSize="22"
+                     FontWeight="Bold"
                      Foreground="{DynamicResource TextPrimaryBrush}"
+                     LetterSpacing="1"
                      VerticalAlignment="Center" />
           <TextBlock Grid.Column="1"
                      Text="{Binding ContinueWatching.Count, Converter={StaticResource StringFormatConverter}, ConverterParameter='Home.ContinueWatching.CountFormat'}"
-                     FontSize="12"
+                     FontSize="14"
                      Foreground="{DynamicResource TextMutedBrush}"
                      VerticalAlignment="Center" />
         </Grid>
+        <!-- Use WrapPanel to align cards similarly to the desktop view, while preserving
+             horizontal scroll on smaller screens via ScrollViewer if needed. -->
         <ScrollViewer HorizontalScrollBarVisibility="Auto"
                       VerticalScrollBarVisibility="Disabled">
           <ItemsControl ItemsSource="{Binding ContinueWatching}">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
-                <StackPanel Orientation="Horizontal" Spacing="12" />
+                <WrapPanel Orientation="Horizontal" />
               </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:Channel">
-                <controls:MobileContinueWatchingCard />
+                <!-- Increase card margin to match desktop spacing -->
+                <controls:MobileContinueWatchingCard Margin="0,0,16,16"
+                                                   Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=continueWidth}"
+                                                   Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=continueHeight}" />
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
@@ -58,10 +66,12 @@
       </StackPanel>
 
       <!-- Quick Access Section -->
-      <StackPanel Spacing="12">
+      <StackPanel Spacing="18">
+        <!-- Match desktop section headings: larger font, bold weight and letter spacing -->
         <TextBlock Text="{loc:Translate Home.QuickAccess.Title}"
-                   FontSize="18"
-                   FontWeight="SemiBold"
+                   FontSize="22"
+                   FontWeight="Bold"
+                   LetterSpacing="1"
                    Foreground="{DynamicResource TextPrimaryBrush}" />
         <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
           <Button Background="{DynamicResource Surface0Brush}"
@@ -83,8 +93,9 @@
                            Height="22" />
               </Border>
               <StackPanel Spacing="2">
+                <!-- Increase font size and weight to better match desktop headings -->
                 <TextBlock Text="{loc:Translate Shell.Nav.Live}"
-                           FontSize="15"
+                           FontSize="16"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource TextPrimaryBrush}" />
                 <TextBlock Text="{loc:Translate Home.QuickAccess.Live.Description}"
@@ -114,7 +125,7 @@
               </Border>
               <StackPanel Spacing="2">
                 <TextBlock Text="{loc:Translate Shell.Nav.Movies}"
-                           FontSize="15"
+                           FontSize="16"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource TextPrimaryBrush}" />
                 <TextBlock Text="{loc:Translate Home.QuickAccess.Movies.Description}"
@@ -145,7 +156,7 @@
               </Border>
               <StackPanel Spacing="2">
                 <TextBlock Text="{loc:Translate Shell.Nav.Series}"
-                           FontSize="15"
+                           FontSize="16"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource TextPrimaryBrush}" />
                 <TextBlock Text="{loc:Translate Home.QuickAccess.Series.Description}"
@@ -175,7 +186,7 @@
               </Border>
               <StackPanel Spacing="2">
                 <TextBlock Text="{loc:Translate Shell.Search.Tooltip}"
-                           FontSize="15"
+                           FontSize="16"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource TextPrimaryBrush}" />
                 <TextBlock Text="{loc:Translate Home.QuickAccess.Search.Description}"

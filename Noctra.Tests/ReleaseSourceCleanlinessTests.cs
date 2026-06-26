@@ -515,10 +515,12 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.DoesNotContain("Width=\"154\"", seriesCardSource);
         Assert.Contains("HorizontalAlignment=\"Stretch\"", vodCardSource);
         Assert.Contains("HorizontalAlignment=\"Stretch\"", seriesCardSource);
-        Assert.Contains("MinWidth=\"150\"", moviesSource);
-        Assert.Contains("MaxWidth=\"180\"", moviesSource);
-        Assert.Contains("MinWidth=\"150\"", seriesSource);
-        Assert.Contains("MaxWidth=\"180\"", seriesSource);
+        Assert.Contains("ResponsiveCardMetricConverter", moviesSource);
+        Assert.Contains("ConverterParameter=posterWidth", moviesSource);
+        Assert.Contains("ConverterParameter=posterHeight", moviesSource);
+        Assert.Contains("ResponsiveCardMetricConverter", seriesSource);
+        Assert.Contains("ConverterParameter=posterWidth", seriesSource);
+        Assert.Contains("ConverterParameter=posterHeight", seriesSource);
     }
 
     [Fact]
@@ -1150,6 +1152,75 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobileStartup_UsesProfilesAsInitialGate()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mainViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml"));
+        var mainViewCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml.cs"));
+
+        Assert.Contains("ProfilesOverlay", mainViewSource);
+        Assert.Contains("Profiles.Title", mainViewSource);
+        Assert.Contains("Profiles.SelectProfile", mainViewSource);
+        Assert.Contains("RunStartupFlowAsync", mainViewCode);
+        Assert.Contains("await ShowLegalConsentIfNeededAsync()", mainViewCode);
+        Assert.Contains("ShowProfileSelection()", mainViewCode);
+        Assert.DoesNotContain("_ = ShowLegalConsentIfNeededAsync()", mainViewCode);
+        Assert.DoesNotContain("_ = DismissSplashAndShowProfilesAsync()", mainViewCode);
+    }
+
+    [Fact]
+    public void MobileProfilesOverlay_BindsManageCommandToProfilesViewModel()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mainViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml"));
+        var mainViewCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml.cs"));
+
+        Assert.Contains("x:Name=\"ProfilesOverlay\"", mainViewSource);
+        Assert.Contains("Command=\"{Binding ToggleManageModeCommand}\"", mainViewSource);
+        Assert.DoesNotContain("DataContext.ToggleManageModeCommand", mainViewSource);
+        Assert.Contains("ProfilesOverlay.DataContext = _activeProfilesViewModel", mainViewCode);
+        Assert.Contains("OverlayProfileList.ProfileLoaded += OverlayProfileList_ProfileLoaded", mainViewCode);
+    }
+
+    [Fact]
+    public void MobileProfilesOverlay_ClosesOnlyAfterProfileLoadCompletes()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mainViewCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml.cs"));
+        var profileListCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "ProfileListView.axaml.cs"));
+
+        Assert.Contains("public event EventHandler? ProfileLoaded", profileListCode);
+        Assert.Contains("ProfileLoaded?.Invoke(this, EventArgs.Empty)", profileListCode);
+        Assert.Contains("OverlayProfileList_ProfileLoaded", mainViewCode);
+        Assert.DoesNotContain("_activeProfilesViewModel.RequestClose += ProfilesViewModel_RequestClose", mainViewCode);
+        Assert.DoesNotContain("private void ProfilesViewModel_RequestClose()", mainViewCode);
+    }
+
+    [Fact]
     public void MobileSettings_ReusesDesktopSettingsViewModelContract()
     {
         var repositoryRoot = FindRepositoryRoot();
@@ -1406,7 +1477,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("MobileSettingsContent.DataContext", mainViewCode);
         Assert.Contains("MobileSettingsContent.BackToProfilesRequested", mainViewCode);
         Assert.Contains("ShowProfileSelection", mainViewCode);
-        Assert.Contains("SelectDestination(\"More\")", mainViewCode);
+        Assert.DoesNotContain("SelectDestination(\"More\")", mainViewCode);
         Assert.Contains("SettingsViewModel", mainViewCode);
         Assert.Contains("destination == \"Settings\"", mainViewCode);
         Assert.Contains("SelectDestination(\"Settings\")", mainViewCode);

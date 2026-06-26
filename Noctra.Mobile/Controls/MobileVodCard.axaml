@@ -6,8 +6,10 @@
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Controls.MobileVodCard"
+             x:Name="VodCardControl"
              x:DataType="models:Channel"
-             Height="230"
+             MinHeight="220"
+             ClipToBounds="False"
              HorizontalAlignment="Stretch">
   <UserControl.Resources>
     <MenuFlyout x:Key="CardActionsFlyout">
@@ -22,29 +24,56 @@
     </MenuFlyout>
   </UserControl.Resources>
 
-  <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
+  <UserControl.Styles>
+    <Style Selector="Button.CardContainer:pointerover">
+      <Setter Property="ZIndex" Value="10" />
+      <Setter Property="RenderTransform" Value="scale(1.03)" />
+    </Style>
+    <Style Selector="Button.CardContainer:pointerover Border.HoverOverlay">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="Border.HoverOverlay">
+      <Setter Property="Opacity" Value="0" />
+    </Style>
+  </UserControl.Styles>
+
+  <Button Classes="CardContainer"
+          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
           CommandParameter="{Binding}"
           Background="Transparent"
           BorderThickness="0"
-          CornerRadius="16"
           Padding="0"
           HorizontalContentAlignment="Stretch"
           VerticalContentAlignment="Stretch">
+    <Button.Transitions>
+      <Transitions>
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="CubicEaseOut" />
+      </Transitions>
+    </Button.Transitions>
     <Button.ContextFlyout>
       <StaticResource ResourceKey="CardActionsFlyout" />
     </Button.ContextFlyout>
-    <Border CornerRadius="16" ClipToBounds="True" Background="{DynamicResource Surface0Brush}">
+
+    <Border CornerRadius="{DynamicResource RadiusSmall}"
+            ClipToBounds="True"
+            Background="{DynamicResource Surface0Brush}"
+            BoxShadow="{DynamicResource CardShadow}">
       <Grid>
-        <Border Background="{DynamicResource Surface1Brush}">
+        <Border Background="{DynamicResource SurfaceLightBrush}">
           <Grid>
             <icons:MaterialIcon Kind="Movie"
-                                Foreground="{DynamicResource AccentBrush}"
+                                Foreground="{DynamicResource TextMutedBrush}"
                                 Width="48"
                                 Height="48"
                                 Opacity="0.32" />
-            <controls:RemoteImage Url="{Binding CoverUrl}" Stretch="UniformToFill" />
+            <controls:RemoteImage Url="{Binding CoverUrl}"
+                                        Stretch="UniformToFill"
+                                        RenderOptions.BitmapInterpolationMode="MediumQuality" />
           </Grid>
         </Border>
+
+        <Border Classes="HoverOverlay" Background="#4D000000" IsHitTestVisible="False" />
+
         <Button HorizontalAlignment="Right"
                 VerticalAlignment="Top"
                 Margin="6"
@@ -57,21 +86,41 @@
                 Flyout="{StaticResource CardActionsFlyout}">
           <icons:MaterialIcon Kind="DotsVertical" Width="20" Height="20" Foreground="White" />
         </Button>
-        <Border VerticalAlignment="Bottom" Background="#CC000000" Padding="10,8">
-          <StackPanel Spacing="4">
-            <TextBlock Text="{Binding Name}"
-                       Foreground="White"
-                       FontSize="13"
-                       FontWeight="SemiBold"
-                       TextWrapping="Wrap"
-                       MaxLines="2"
-                       TextTrimming="CharacterEllipsis" />
-            <TextBlock Text="{Binding GroupTitle}"
-                       Foreground="#A6FFFFFF"
-                       FontSize="11"
-                       TextTrimming="CharacterEllipsis" />
-          </StackPanel>
-        </Border>
+
+        <StackPanel VerticalAlignment="Bottom">
+          <Border Background="#CC000000" Padding="10,8">
+            <StackPanel Spacing="2">
+              <TextBlock Text="{Binding Name}"
+                         Foreground="White"
+                         FontSize="12"
+                         FontWeight="Bold"
+                         TextTrimming="CharacterEllipsis"
+                         MaxLines="1" />
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="{Binding ReleaseYear}"
+                           Foreground="#A6FFFFFF"
+                           FontSize="10" />
+                <Ellipse Width="3"
+                         Height="3"
+                         Fill="#66FFFFFF"
+                         VerticalAlignment="Center" />
+                <TextBlock Text="{Binding GroupTitle}"
+                           Foreground="#A6FFFFFF"
+                           FontSize="10"
+                           TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
+          <ProgressBar Height="5"
+                       CornerRadius="0"
+                       Minimum="0"
+                       Maximum="100"
+                       Value="{Binding WatchedPercentage}"
+                       Foreground="{DynamicResource AccentBrush}"
+                       Background="#4D000000"
+                       BorderThickness="0" />
+        </StackPanel>
       </Grid>
     </Border>
   </Button>

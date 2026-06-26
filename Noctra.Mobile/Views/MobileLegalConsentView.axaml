@@ -9,28 +9,28 @@
              d:DesignWidth="390"
              d:DesignHeight="844">
   <Grid Background="#E6000000">
-    <Border Background="{DynamicResource Bg0Brush}"
+    <Border Background="{DynamicResource BackgroundGradientBrush}"
             BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1"
-            CornerRadius="18"
+            CornerRadius="24"
             Margin="24,60,24,60"
             ClipToBounds="True"
             VerticalAlignment="Center"
             MaxWidth="480">
       <ScrollViewer>
-        <StackPanel Margin="20" Spacing="16">
+        <StackPanel Margin="24" Spacing="20">
           <!-- Header -->
           <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
             <icons:MaterialIcon Grid.Column="0"
                                 Kind="ShieldCheckOutline"
-                                Width="28"
-                                Height="28"
+                                Width="34"
+                                Height="34"
                                 Foreground="{DynamicResource AccentLightBrush}"
                                 VerticalAlignment="Center"/>
             <TextBlock Grid.Column="1"
                        Text="{loc:Translate LegalConsent.Title}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
-                       FontSize="20"
+                       FontSize="26"
                        FontWeight="Bold"
                        VerticalAlignment="Center"
                        TextWrapping="Wrap"/>
@@ -46,8 +46,8 @@
           <Border Background="{DynamicResource Surface1Brush}"
                   BorderBrush="{DynamicResource BorderBrush}"
                   BorderThickness="1"
-                  CornerRadius="10"
-                  Padding="14">
+                  CornerRadius="14"
+                  Padding="18">
             <StackPanel Spacing="10">
               <CheckBox x:Name="TermsAcceptedCheckBox"
                         Content="{loc:Translate LegalConsent.Check.Terms}"
@@ -82,8 +82,8 @@
 
           <Button x:Name="ContinueButton"
                   IsEnabled="False"
-                  MinHeight="48"
-                  CornerRadius="10"
+                  MinHeight="52"
+                  CornerRadius="14"
                   Background="{DynamicResource AccentBrush}"
                   Foreground="White"
                   FontWeight="SemiBold"

@@ -11,7 +11,7 @@
              mc:Ignorable="d"
              d:DesignWidth="390"
              d:DesignHeight="844"
-             Background="{DynamicResource Bg0Brush}">
+             Background="{DynamicResource BackgroundGradientBrush}">
   <UserControl.Styles>
     <Style Selector="TextBox">
       <Setter Property="MinHeight" Value="48" />
@@ -25,7 +25,7 @@
     <Style Selector="Border.section">
       <Setter Property="Background" Value="{DynamicResource Surface0Brush}" />
       <Setter Property="CornerRadius" Value="16" />
-      <Setter Property="Padding" Value="16" />
+      <Setter Property="Padding" Value="20" />
     </Style>
     <Style Selector="TextBlock.label">
       <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
@@ -35,7 +35,7 @@
   </UserControl.Styles>
 
   <Grid RowDefinitions="Auto,*">
-    <Border Padding="16,14" Background="{DynamicResource Bg1Brush}">
+    <Border Padding="24,20" Background="Transparent">
       <Grid ColumnDefinitions="Auto,*,Auto">
         <Button Classes="action"
                 Command="{Binding CancelCommand}"
@@ -46,11 +46,11 @@
                     HorizontalAlignment="Center"
                     Spacing="2">
           <TextBlock Text="{loc:Translate Profiles.Add.Title}"
-                     FontSize="20"
-                     FontWeight="SemiBold"
+                     FontSize="28"
+                     FontWeight="Bold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
           <TextBlock Text="{loc:Translate Profiles.Add.Description}"
-                     FontSize="11"
+                     FontSize="13"
                      Foreground="{DynamicResource TextMutedBrush}" />
         </StackPanel>
         <Button Grid.Column="2"
@@ -65,9 +65,9 @@
 
     <ScrollViewer Grid.Row="1">
       <StackPanel MaxWidth="560"
-                  Margin="16,18,16,32"
+                  Margin="24,22,24,36"
                   HorizontalAlignment="Center"
-                  Spacing="16">
+                  Spacing="20">
         <Border Classes="section">
           <StackPanel Spacing="10">
             <Button Command="{Binding OpenAvatarPickerCommand}"
@@ -76,8 +76,8 @@
                     CornerRadius="16"
                     Padding="14">
               <StackPanel Spacing="6">
-                <Border Width="72"
-                        Height="72"
+                <Border Width="96"
+                        Height="96"
                         CornerRadius="18"
                         Background="{DynamicResource AccentBrush}"
                         HorizontalAlignment="Center">

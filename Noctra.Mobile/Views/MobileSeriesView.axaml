@@ -20,11 +20,14 @@
 
   <ScrollViewer x:Name="SeriesScrollViewer"
                 ScrollChanged="SeriesScrollViewer_ScrollChanged">
-    <StackPanel Margin="20" Spacing="14">
+    <!-- Increase margins and spacing to better emulate the desktop layout -->
+    <StackPanel Margin="24" Spacing="20">
       <Grid ColumnDefinitions="*,Auto">
+        <!-- Desktop-inspired title styling: bold with subtle letter spacing -->
         <TextBlock Text="{loc:Translate Series.Title}"
                    FontSize="24"
-                   FontWeight="SemiBold"
+                   FontWeight="Bold"
+                   LetterSpacing="1"
                    Foreground="{DynamicResource TextPrimaryBrush}" />
         <ComboBox Grid.Column="1"
                   Width="150"
@@ -76,31 +79,50 @@
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="models:Series">
-            <controls:MobileSeriesCard Margin="0,0,10,10"
-                                       MinWidth="150"
-                                       MaxWidth="180" />
+            <!-- Increase spacing between cards to match desktop -->
+            <controls:MobileSeriesCard Margin="0,0,16,16"
+                                       Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterWidth}"
+                                       Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterHeight}" />
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
 
-      <StackPanel Spacing="10"
-                  Margin="0,60,0,0"
+      <!-- Loading state: mirror desktop with two lines of status text -->
+      <StackPanel Spacing="16"
+                  Margin="0,80,0,0"
                   HorizontalAlignment="Center"
                   IsVisible="{Binding IsContentLoading}">
         <controls:PremiumSpinner Width="56" Height="56" HorizontalAlignment="Center" />
         <TextBlock Text="{loc:Translate Series.Loading}"
-                   Foreground="{DynamicResource TextMutedBrush}" />
+                   FontSize="15"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextMutedBrush}"
+                   TextAlignment="Center" />
+        <TextBlock Text="{loc:Translate Live.LoadingDetail}"
+                   FontSize="12"
+                   Foreground="{DynamicResource TextMutedBrush}"
+                   Opacity="0.6"
+                   TextAlignment="Center" />
       </StackPanel>
 
-      <StackPanel Spacing="8"
-                  Margin="0,60,0,0"
+      <StackPanel Spacing="12"
+                  Margin="0,96,0,0"
                   HorizontalAlignment="Center"
                   IsVisible="{Binding ShowEmptyChannels}">
+        <!-- Add a series-related icon similar to desktop empty state -->
+        <icons:MaterialIcon Kind="Television"
+                            Width="64"
+                            Height="64"
+                            Foreground="{DynamicResource TextMutedBrush}"
+                            Opacity="0.5" />
         <TextBlock Text="{loc:Translate Series.Empty.Title}"
+                   FontSize="20"
+                   FontWeight="SemiBold"
+                   LetterSpacing="1"
                    Foreground="{DynamicResource TextPrimaryBrush}"
-                   FontSize="18"
-                   FontWeight="SemiBold" />
+                   TextAlignment="Center" />
         <TextBlock Text="{loc:Translate Series.Empty.Description}"
+                   FontSize="14"
                    Foreground="{DynamicResource TextMutedBrush}"
                    TextAlignment="Center"
                    TextWrapping="Wrap" />
