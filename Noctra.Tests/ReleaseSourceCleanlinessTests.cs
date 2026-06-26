@@ -1207,6 +1207,8 @@ public sealed class ReleaseSourceCleanlinessTests
 
         Assert.Contains("x:Name=\"SearchInput\"", searchSource);
         Assert.Contains("KeyDown=\"SearchInput_KeyDown\"", searchSource);
+        Assert.Contains("x:Name=\"SearchScrollViewer\"", searchSource);
+        Assert.Contains("ScrollChanged=\"SearchScrollViewer_ScrollChanged\"", searchSource);
         Assert.Contains("FontSize=\"20\"", searchSource);
         Assert.Contains("FontSize=\"16\"", searchSource);
         Assert.Contains("LetterSpacing=\"1\"", searchSource);
@@ -1214,6 +1216,9 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("SearchInput_KeyDown", searchCode);
         Assert.Contains("Key.Enter", searchCode);
         Assert.Contains("CommitSearchCommand.Execute(null)", searchCode);
+        Assert.Contains("SearchScrollViewer_ScrollChanged", searchCode);
+        Assert.Contains("LoadMoreChannelsIfNeededAsync", searchCode);
+        Assert.Contains("LoadMoreSeriesIfNeededAsync", searchCode);
     }
 
     [Fact]

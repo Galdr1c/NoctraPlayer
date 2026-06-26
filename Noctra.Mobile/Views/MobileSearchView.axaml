@@ -20,7 +20,8 @@
     <converters:ResponsiveCardMetricConverter x:Key="ResponsiveCardMetricConverter" />
   </UserControl.Resources>
 
-  <ScrollViewer>
+  <ScrollViewer x:Name="SearchScrollViewer"
+                ScrollChanged="SearchScrollViewer_ScrollChanged">
     <!-- Increase margins and spacing to better emulate desktop layout -->
     <StackPanel Margin="24" Spacing="20">
       <!-- Desktop-inspired search results header -->
