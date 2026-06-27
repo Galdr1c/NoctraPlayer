@@ -42,7 +42,7 @@
         <ItemsControl ItemsSource="{Binding HistoryLiveChannels}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="models:Channel">
-              <controls:MobileLiveTvCard />
+              <controls:MobileLiveTvCard ShowHistoryMenu="True" />
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>

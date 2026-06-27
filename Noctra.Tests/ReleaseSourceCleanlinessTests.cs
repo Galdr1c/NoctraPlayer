@@ -1704,6 +1704,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("ScaleTransform.ScaleY", homeSource);
         Assert.Contains("IterationCount=\"Infinite\"", homeSource);
         Assert.DoesNotContain("Kind=\"Home\"", homeSource);
+        Assert.DoesNotContain("HorizontalScrollBarVisibility=\"Auto\"", homeSource);
     }
 
     [Fact]
@@ -2044,6 +2045,12 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("MobileLiveTvCard", liveSource);
         Assert.Contains("MobileVodCard", moviesSource);
         Assert.Contains("MobileSeriesCard", seriesSource);
+        Assert.Contains("ClearGroupSelection_Click", liveSource);
+        Assert.Contains("ClearGroupSelection_Click", moviesSource);
+        Assert.Contains("ClearGroupSelection_Click", seriesSource);
+        Assert.Contains("Content=\"{loc:Translate Common.All}\"", liveSource);
+        Assert.Contains("Content=\"{loc:Translate Common.All}\"", moviesSource);
+        Assert.Contains("Content=\"{loc:Translate Common.All}\"", seriesSource);
 
         foreach (var contentSource in new[] { liveCardSource, continueWatchingCardSource, vodCardSource, seriesCardSource })
         {
@@ -2856,6 +2863,21 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Controls",
             "MobileLiveTvCard.axaml"));
+        var mobileLiveTvCardCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Controls",
+            "MobileLiveTvCard.axaml.cs"));
+        var historySource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileHistoryView.axaml"));
+        var myListSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileMyListView.axaml"));
         var searchSource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Mobile",
@@ -2885,6 +2907,12 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("<controls:MobileSeriesCard", searchSource);
         Assert.Contains("<controls:MobileVodCard", searchSource);
         Assert.Contains("ToggleFavoriteCommand", mobileLiveTvCardSource);
+        Assert.Contains("ShowHistoryMenuProperty", mobileLiveTvCardCode);
+        Assert.Contains("ShowMyListMenuProperty", mobileLiveTvCardCode);
+        Assert.Contains("RemoveFromHistoryCommand", mobileLiveTvCardSource);
+        Assert.Contains("RemoveFromMyListCommand", mobileLiveTvCardSource);
+        Assert.Contains("ShowHistoryMenu=\"True\"", historySource);
+        Assert.Contains("ShowMyListMenu=\"True\"", myListSource);
         Assert.Contains("ToggleFavoriteCommand", mobileSeriesCardSource);
         Assert.Contains("AddToMyListCommand", mobileSeriesCardSource);
         Assert.Contains("ToggleFavoriteCommand", mobileVodCardSource);

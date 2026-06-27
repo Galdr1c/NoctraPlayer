@@ -43,26 +43,21 @@
                      Foreground="{DynamicResource TextMutedBrush}"
                      VerticalAlignment="Center" />
         </Grid>
-        <!-- Use WrapPanel to align cards similarly to the desktop view, while preserving
-             horizontal scroll on smaller screens via ScrollViewer if needed. -->
-        <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Disabled">
-          <ItemsControl ItemsSource="{Binding ContinueWatching}">
-            <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate>
-                <WrapPanel Orientation="Horizontal" />
-              </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="models:Channel">
-                <!-- Increase card margin to match desktop spacing -->
-                <controls:MobileContinueWatchingCard Margin="0,0,16,16"
+        <ItemsControl ItemsSource="{Binding ContinueWatching}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel Orientation="Horizontal" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="models:Channel">
+              <!-- Increase card margin to match desktop spacing -->
+              <controls:MobileContinueWatchingCard Margin="0,0,16,16"
                                                    Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=continueWidth}"
                                                    Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=continueHeight}" />
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </ScrollViewer>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
       </StackPanel>
 
       <!-- Quick Access Section -->

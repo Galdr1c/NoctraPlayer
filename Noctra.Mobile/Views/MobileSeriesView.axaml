@@ -37,7 +37,7 @@
                   DisplayMemberBinding="{Binding Value}"
                   IsVisible="{Binding ShowContentFilters}" />
       </Grid>
-      <Grid ColumnDefinitions="*,Auto"
+      <Grid ColumnDefinitions="*,Auto,Auto"
             ColumnSpacing="8"
             IsVisible="{Binding ShowGroupFilter}">
         <ComboBox Grid.Column="0"
@@ -47,6 +47,16 @@
                   MinHeight="48"
                   CornerRadius="12" />
         <Button Grid.Column="1"
+                Content="{loc:Translate Common.All}"
+                MinWidth="64"
+                MinHeight="48"
+                Padding="12"
+                CornerRadius="12"
+                Background="{DynamicResource Surface0Brush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                Click="ClearGroupSelection_Click"
+                IsVisible="{Binding SelectedGroup, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+        <Button Grid.Column="2"
                 MinWidth="48"
                 MinHeight="48"
                 Padding="12"

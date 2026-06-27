@@ -41,7 +41,7 @@
         <ItemsControl ItemsSource="{Binding MyListLiveChannels}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="models:Channel">
-              <controls:MobileLiveTvCard />
+              <controls:MobileLiveTvCard ShowMyListMenu="True" />
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>

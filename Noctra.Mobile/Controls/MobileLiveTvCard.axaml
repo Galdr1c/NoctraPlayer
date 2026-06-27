@@ -3,12 +3,42 @@
              xmlns:models="using:Noctra.Models"
              xmlns:vm="using:Noctra.ViewModels"
              xmlns:controls="using:Noctra.Mobile.Controls"
+             xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Controls.MobileLiveTvCard"
+             x:Name="LiveTvCardControl"
              x:DataType="models:Channel"
              MinHeight="96"
              HorizontalAlignment="Stretch"
              ClipToBounds="False">
+  <UserControl.Resources>
+    <MenuFlyout x:Key="LiveCardActionsFlyout">
+      <MenuItem Header="{loc:Translate Context.Favorite.Toggle}"
+                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}"
+                CommandParameter="{Binding}">
+        <MenuItem.Icon>
+          <icons:MaterialIcon Kind="HeartOutline" />
+        </MenuItem.Icon>
+      </MenuItem>
+      <MenuItem Header="{loc:Translate MyList.Remove}"
+                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RemoveFromMyListCommand}"
+                CommandParameter="{Binding}"
+                IsVisible="{Binding #LiveTvCardControl.ShowMyListMenu}">
+        <MenuItem.Icon>
+          <icons:MaterialIcon Kind="BookmarkRemoveOutline" />
+        </MenuItem.Icon>
+      </MenuItem>
+      <MenuItem Header="{loc:Translate History.Remove}"
+                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RemoveFromHistoryCommand}"
+                CommandParameter="{Binding}"
+                IsVisible="{Binding #LiveTvCardControl.ShowHistoryMenu}">
+        <MenuItem.Icon>
+          <icons:MaterialIcon Kind="DeleteOutline" />
+        </MenuItem.Icon>
+      </MenuItem>
+    </MenuFlyout>
+  </UserControl.Resources>
+
   <UserControl.Styles>
     <Style Selector="Button.CardContainer:pointerover Border.CardSurface">
       <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
@@ -39,6 +69,10 @@
           Padding="0"
           HorizontalContentAlignment="Stretch"
           VerticalContentAlignment="Stretch">
+    <Button.ContextFlyout>
+      <StaticResource ResourceKey="LiveCardActionsFlyout" />
+    </Button.ContextFlyout>
+
     <Border Classes="CardSurface"
             Background="{DynamicResource Surface0Brush}"
             CornerRadius="16"
