@@ -29,13 +29,6 @@ public partial class ProfileListView : UserControl
     public ProfileListView()
     {
         InitializeComponent();
-        AttachedToVisualTree += async (_, _) =>
-        {
-            if (DataContext is ProfilesViewModel viewModel)
-            {
-                await viewModel.RefreshProfilesAsync();
-            }
-        };
     }
 
     protected override void OnDataContextChanged(EventArgs e)
@@ -65,6 +58,10 @@ public partial class ProfileListView : UserControl
             _viewModel.OnProfileAddRequested += ViewModel_OnProfileAddRequested;
             _viewModel.OnProfileEditRequested += ViewModel_OnProfileEditRequested;
             _viewModel.OnProfileSelected += ViewModel_OnProfileSelected;
+
+            // Refresh profiles when DataContext is set — this replaces the broken
+            // AttachedToVisualTree handler which fired before DataContext was assigned.
+            _ = _viewModel.RefreshProfilesAsync();
         }
     }
 

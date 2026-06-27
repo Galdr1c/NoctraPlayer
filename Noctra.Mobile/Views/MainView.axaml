@@ -438,21 +438,22 @@
             Grid.ColumnSpan="2"
             Background="{DynamicResource Bg0Brush}"
             ZIndex="55000"
-            IsVisible="False">
+            IsVisible="False"
+            x:DataType="corevm:ProfilesViewModel">
       <Grid RowDefinitions="Auto,*">
         <!-- Header with title and manage/done button -->
         <Grid Margin="20" ColumnDefinitions="*,Auto">
           <StackPanel>
             <!-- Main title "Profiles" -->
             <TextBlock Text="{loc:Translate Profiles.Title}"
-                       FontSize="32"
+                       FontSize="40"
                        FontWeight="Bold"
                        Foreground="{DynamicResource TextPrimaryBrush}" />
             <!-- Subtitle prompting user to select a profile -->
             <TextBlock Text="{loc:Translate Profiles.SelectProfile}"
-                       FontSize="14"
+                       FontSize="15"
                        Foreground="{DynamicResource TextMutedBrush}"
-                       Margin="0,4,0,0" />
+                       Margin="0,6,0,0" />
           </StackPanel>
           <!-- Manage/Done button bound to the ProfilesViewModel ToggleManageModeCommand.
                Styling is applied via the ManageModeButtonStyle class defined in
@@ -460,7 +461,6 @@
                code-behind to switch between manage and done states. -->
           <Button Grid.Column="1"
                   x:Name="ProfilesManageButton"
-                  x:DataType="corevm:ProfilesViewModel"
                   Margin="0"
                   Classes="ManageModeButtonStyle"
                   Command="{Binding ToggleManageModeCommand}"
@@ -470,7 +470,7 @@
         <views:ProfileListView x:Name="OverlayProfileList"
                                Grid.Row="1"
                                Margin="20,10"
-                               HorizontalAlignment="Center"
+                               HorizontalAlignment="Stretch"
                                VerticalAlignment="Top" />
       </Grid>
     </Border>

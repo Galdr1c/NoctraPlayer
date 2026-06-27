@@ -83,6 +83,8 @@ public partial class ProfilesViewModel : ObservableObject
             
             Profiles = new ObservableCollection<Profile>();
             IsManageMode = false;
+            UpdateShowAddButton();
+            UpdateDisplayItems();
         }
 
         StartCountdownRefreshIfNeeded();
