@@ -79,13 +79,54 @@
     </Grid>
 
     <ScrollViewer Grid.Row="0">
-      <ItemsControl ItemsSource="{Binding DisplayItems}">
-        <ItemsControl.ItemsPanel>
-          <ItemsPanelTemplate>
-            <WrapPanel />
-          </ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.DataTemplates>
+      <StackPanel>
+        <Button x:Name="FallbackAddProfileButton"
+                Command="{Binding AddProfileCommand}"
+                Classes="AddProfileButtonStyle"
+                Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=profileWidth}"
+                Margin="10"
+                HorizontalAlignment="Center"
+                IsVisible="{Binding DisplayItems.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=invert}">
+          <StackPanel Spacing="12">
+            <Grid Width="120"
+                  Height="120"
+                  HorizontalAlignment="Center">
+              <Rectangle RadiusX="14"
+                         RadiusY="14"
+                         Stroke="{DynamicResource BorderBrush}"
+                         StrokeThickness="2"
+                         StrokeDashArray="4,2"
+                         Fill="Transparent" />
+              <Grid HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <Ellipse Width="60"
+                         Height="60"
+                         Stroke="{DynamicResource TextMutedBrush}"
+                         StrokeThickness="2"
+                         Fill="Transparent" />
+                <icons:MaterialIcon Kind="Plus"
+                                    Width="32"
+                                    Height="32"
+                                    Foreground="{DynamicResource TextMutedBrush}"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center" />
+              </Grid>
+            </Grid>
+            <TextBlock Text="{loc:Translate Profiles.AddProfile}"
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       FontSize="15"
+                       FontWeight="Medium"
+                       TextAlignment="Center" />
+          </StackPanel>
+        </Button>
+
+        <ItemsControl ItemsSource="{Binding DisplayItems}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.DataTemplates>
           <DataTemplate DataType="models:Profile">
             <Button Click="SelectProfile_Click"
                     Classes="ProfileCardStyle"
@@ -237,8 +278,9 @@
               </StackPanel>
             </Button>
           </DataTemplate>
-        </ItemsControl.DataTemplates>
-      </ItemsControl>
+          </ItemsControl.DataTemplates>
+        </ItemsControl>
+      </StackPanel>
     </ScrollViewer>
 
     <TextBlock Grid.Row="1"

@@ -1,11 +1,13 @@
 using System;
 using System.ComponentModel;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Models;
@@ -22,6 +24,7 @@ public partial class MainView : UserControl
 {
     private const double TabletBreakpoint = 720;
     private static readonly TimeSpan BackExitPromptWindow = TimeSpan.FromSeconds(2);
+    private const int MaxProfileSelectionRetries = 20;
     private CoreMainViewModel? _coreMainViewModel;
     private PlayerViewModel? _playerViewModel;
     private MobileViewModelResolver? _viewModelResolver;
@@ -34,6 +37,8 @@ public partial class MainView : UserControl
     private readonly DispatcherTimer _backExitToastTimer;
     private readonly Thickness _headerBasePadding;
     private readonly Thickness _bottomNavBasePadding;
+    private int _profileSelectionRetryCount;
+    private bool _startupFlowStarted;
 
     // Holds the currently active profiles view model when showing the profiles overlay.
     private ProfilesViewModel? _activeProfilesViewModel;
@@ -43,6 +48,7 @@ public partial class MainView : UserControl
         InitializeComponent();
         MobileSettingsContent.BackToProfilesRequested += (_, _) => ShowProfileSelection();
         SizeChanged += OnSizeChanged;
+        Loaded += OnLoaded;
         _backExitToastTimer = new DispatcherTimer { Interval = BackExitPromptWindow };
         _backExitToastTimer.Tick += (_, _) =>
         {
@@ -73,7 +79,23 @@ public partial class MainView : UserControl
             ApplySafeArea(insets.SafeAreaPadding);
         }
 
-        _ = RunStartupFlowAsync();
+        StartStartupFlow();
+    }
+
+    private void OnLoaded(object? sender, RoutedEventArgs e)
+        => StartStartupFlow();
+
+    private void StartStartupFlow()
+    {
+        if (_startupFlowStarted)
+        {
+            return;
+        }
+
+        _startupFlowStarted = true;
+        Dispatcher.UIThread.Post(
+            () => _ = RunStartupFlowAsync(),
+            DispatcherPriority.Loaded);
     }
 
     private async Task RunStartupFlowAsync()
@@ -303,9 +325,16 @@ public partial class MainView : UserControl
     private void UpdateNavigationMode(double width)
     {
         var useNavigationRail = width >= TabletBreakpoint;
-        NavigationRail.IsVisible = useNavigationRail && !_isPlayerFullScreen;
-        BottomNavigation.IsVisible = !useNavigationRail && !_isPlayerFullScreen;
+        var canShowNavigation = CanShowNavigationChrome();
+        NavigationRail.IsVisible = useNavigationRail && canShowNavigation;
+        BottomNavigation.IsVisible = !useNavigationRail && canShowNavigation;
     }
+
+    private bool CanShowNavigationChrome()
+        => !_isPlayerFullScreen &&
+           HeaderBar.IsVisible &&
+           !ProfilesOverlay.IsVisible &&
+           !LegalConsentOverlay.IsVisible;
 
     private void OnDestinationClick(object? sender, RoutedEventArgs e)
     {
@@ -331,6 +360,30 @@ public partial class MainView : UserControl
         MobileHistoryContent.IsVisible = destination == "History";
         MobileDownloadsContent.IsVisible = destination == "Downloads";
         MobileSettingsContent.IsVisible = destination == "Settings";
+        UpdateNavigationSelection(destination);
+    }
+
+    private void UpdateNavigationSelection(string destination)
+    {
+        var bottomNavVisibleDestinations = new[] { "Home", "Live", "Movies", "Search" };
+        var activateMoreInBottomNav = !bottomNavVisibleDestinations.Contains(destination, StringComparer.Ordinal);
+
+        foreach (var root in new Control[] { NavigationRail, BottomNavigation, ShellContent })
+        {
+            foreach (var button in root.GetVisualDescendants().OfType<Button>())
+            {
+                if (button.Tag is not string tag)
+                {
+                    continue;
+                }
+
+                var isBottomMore = ReferenceEquals(root, BottomNavigation) &&
+                    string.Equals(tag, "More", StringComparison.Ordinal) &&
+                    activateMoreInBottomNav;
+                var isExactDestination = string.Equals(tag, destination, StringComparison.Ordinal);
+                button.Classes.Set("active", isExactDestination || isBottomMore);
+            }
+        }
     }
 
     private void OnSettingsClick(object? sender, RoutedEventArgs e)
@@ -351,14 +404,29 @@ public partial class MainView : UserControl
 
     private void ShowProfileSelection()
     {
+        ProfilesOverlay.IsVisible = true;
+        HeaderBar.IsVisible = false;
+        NavigationRail.IsVisible = false;
+        BottomNavigation.IsVisible = false;
+        ShellContent.IsVisible = false;
+        CoreContentHost.IsVisible = false;
+
         // Obtain the profiles view model from the service provider.  Unhook any
         // previous subscriptions so multiple invocations do not accumulate
         // handlers.
         var resolver = GetViewModelResolver();
         if (resolver is null)
         {
+            if (_profileSelectionRetryCount < MaxProfileSelectionRetries)
+            {
+                _profileSelectionRetryCount++;
+                Dispatcher.UIThread.Post(ShowProfileSelection, DispatcherPriority.Background);
+            }
+
             return;
         }
+
+        _profileSelectionRetryCount = 0;
 
         if (resolver != null)
         {
@@ -384,15 +452,7 @@ public partial class MainView : UserControl
             UpdateProfilesManageButton();
         }
 
-        // Show the full-screen profiles overlay and hide normal navigation
-        ProfilesOverlay.IsVisible = true;
-        HeaderBar.IsVisible = false;
-        NavigationRail.IsVisible = false;
-        BottomNavigation.IsVisible = false;
-        // Also hide the core/shell content to focus on profiles.  Note that
-        // CoreContentHost may not have been shown yet, but hiding it is safe.
-        ShellContent.IsVisible = false;
-        CoreContentHost.IsVisible = false;
+        // Normal navigation remains hidden while the full-screen profiles overlay is active.
     }
 
     private void OverlayProfileList_ProfileLoaded(object? sender, EventArgs e)

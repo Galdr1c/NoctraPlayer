@@ -1,0 +1,38 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <ControlTheme x:Key="ModernComboBox" TargetType="ComboBox">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1.5" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="MaxDropDownHeight" Value="420" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
+    <Style Selector="^:pointerover">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+    </Style>
+    <Style Selector="^:focus">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderThickness" Value="2" />
+    </Style>
+  </ControlTheme>
+
+  <ControlTheme x:Key="FilterButtonStyle" TargetType="Button">
+    <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1.5" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
+    <Style Selector="^:pointerover">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+    </Style>
+  </ControlTheme>
+</ResourceDictionary>

@@ -125,6 +125,7 @@
                        Minimum="0"
                        Maximum="100"
                        Value="{Binding WatchedPercentage}"
+                       IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}"
                        Foreground="{DynamicResource AccentBrush}"
                        Background="#4D000000"
                        BorderThickness="0" />

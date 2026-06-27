@@ -27,6 +27,7 @@
         </ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary.MergedDictionaries>
           <ResourceInclude Source="avares://Noctra.Mobile/Resources/Colors.axaml" />
+          <ResourceInclude Source="avares://Noctra.Mobile/Resources/Styles.axaml" />
         </ResourceDictionary.MergedDictionaries>
         <converters:AvatarPathConverter x:Key="AvatarPathConverter" />
         <converters:DoubleToFloatConverter x:Key="DoubleToFloatConverter" />
@@ -55,6 +56,14 @@
         <converters:ProfileColorConverter x:Key="ProfileColorConverter" />
         <converters:DownloadStatusToBrushConverter x:Key="DownloadStatusToBrushConverter" />
         <converters:BoolToMaterialIconKindConverter x:Key="BoolToMaterialIconKindConverter" />
+        <converters:BytesToHumanConverter x:Key="BytesToHumanConverter" />
+        <converters:DoubleToStarGridLengthConverter x:Key="DoubleToStarGridLengthConverter" />
+        <converters:WidthToColumnsConverter x:Key="WidthToColumnsConverter" />
+        <converters:WatchedProgressVisibilityConverter x:Key="WatchedProgressVisibilityConverter" />
+        <converters:ConnectionHealthToVisibilityConverter x:Key="ConnectionHealthToVisibilityConverter" />
+        <converters:ConnectionHealthToIconConverter x:Key="ConnectionHealthToIconConverter" />
+        <converters:ConnectionHealthToBrushConverter x:Key="ConnectionHealthToBrushConverter" />
+        <converters:BooleanToSuccessWarningBrushConverter x:Key="BooleanToSuccessWarningBrushConverter" />
       </ResourceDictionary>
     </Application.Resources>
 

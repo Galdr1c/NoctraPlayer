@@ -30,6 +30,7 @@
                    LetterSpacing="1"
                    Foreground="{DynamicResource TextPrimaryBrush}" />
         <ComboBox Grid.Column="1"
+                  Theme="{StaticResource ModernComboBox}"
                   Width="150"
                   MinHeight="48"
                   CornerRadius="12"
@@ -43,6 +44,7 @@
             ColumnSpacing="8"
             IsVisible="{Binding ShowGroupFilter}">
         <ComboBox Grid.Column="0"
+                  Theme="{StaticResource ModernComboBox}"
                   ItemsSource="{Binding Groups}"
                   SelectedItem="{Binding SelectedGroup}"
                   PlaceholderText="{loc:Translate Common.All}"
@@ -84,9 +86,15 @@
 
       <ItemsControl ItemsSource="{Binding FilteredChannels}"
                     IsVisible="{Binding !IsContentLoading}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <WrapPanel />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="models:Channel">
-            <controls:MobileLiveTvCard />
+            <controls:MobileLiveTvCard Margin="0,0,16,0"
+                                       Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=liveWidth}" />
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>

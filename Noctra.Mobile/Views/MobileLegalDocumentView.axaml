@@ -1,0 +1,79 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:loc="using:Noctra.Mobile.Localization"
+             x:Class="Noctra.Mobile.Views.MobileLegalDocumentView"
+             mc:Ignorable="d"
+             d:DesignWidth="390"
+             d:DesignHeight="844">
+  <Grid Background="#F0000000">
+    <Border Background="{DynamicResource BackgroundGradientBrush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="24"
+            Margin="24,44,24,44"
+            ClipToBounds="True"
+            MaxWidth="520">
+      <Grid RowDefinitions="Auto,*,Auto"
+            Margin="22">
+        <Grid ColumnDefinitions="Auto,*,Auto"
+              ColumnSpacing="12"
+              Margin="0,0,0,16">
+          <icons:MaterialIcon Kind="FileDocumentOutline"
+                              Width="28"
+                              Height="28"
+                              Foreground="{DynamicResource AccentLightBrush}"
+                              VerticalAlignment="Center" />
+          <TextBlock x:Name="TitleTextBlock"
+                     Grid.Column="1"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
+                     FontSize="22"
+                     FontWeight="Bold"
+                     TextWrapping="Wrap"
+                     VerticalAlignment="Center" />
+          <Button Grid.Column="2"
+                  Width="44"
+                  Height="44"
+                  Padding="0"
+                  Background="Transparent"
+                  BorderThickness="0"
+                  Click="Close_Click">
+            <icons:MaterialIcon Kind="Close"
+                                Width="20"
+                                Height="20"
+                                Foreground="{DynamicResource TextMutedBrush}" />
+          </Button>
+        </Grid>
+
+        <Border Grid.Row="1"
+                Background="{DynamicResource Surface1Brush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="12"
+                Padding="16">
+          <ScrollViewer VerticalScrollBarVisibility="Auto"
+                        HorizontalScrollBarVisibility="Disabled">
+            <TextBlock x:Name="BodyTextBlock"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       FontSize="14"
+                       LineHeight="21"
+                       TextWrapping="Wrap" />
+          </ScrollViewer>
+        </Border>
+
+        <Button Grid.Row="2"
+                Content="{loc:Translate Dialog.Ok}"
+                MinHeight="48"
+                CornerRadius="12"
+                Background="{DynamicResource AccentBrush}"
+                Foreground="White"
+                FontWeight="SemiBold"
+                HorizontalAlignment="Stretch"
+                Margin="0,16,0,0"
+                Click="Close_Click" />
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

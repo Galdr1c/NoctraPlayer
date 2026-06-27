@@ -196,9 +196,19 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("Tag=\"Movies\"", viewSource);
         Assert.Contains("Tag=\"Series\"", viewSource);
         Assert.Contains("Tag=\"More\"", viewSource);
+        Assert.Contains("Button.nav.active", viewSource);
+        Assert.Contains("UpdateNavigationSelection(destination)", codeSource);
+        Assert.Contains("button.Classes.Set(\"active\"", codeSource);
         Assert.Contains("TabletBreakpoint = 720", codeSource);
         Assert.Contains("NavigationRail.IsVisible = useNavigationRail", codeSource);
         Assert.Contains("BottomNavigation.IsVisible = !useNavigationRail", codeSource);
+        Assert.Contains("CanShowNavigationChrome()", codeSource);
+        Assert.Contains("!ProfilesOverlay.IsVisible", codeSource);
+        Assert.Contains("!LegalConsentOverlay.IsVisible", codeSource);
+        Assert.Contains("DispatcherPriority.Loaded", codeSource);
+        Assert.Contains("MaxProfileSelectionRetries", codeSource);
+        Assert.Contains("Loaded += OnLoaded", codeSource);
+        Assert.Contains("StartStartupFlow", codeSource);
     }
 
     [Fact]
@@ -562,11 +572,21 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobileFavoritesView.axaml"));
+        var favoritesCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileFavoritesView.axaml.cs"));
         var myListSource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Mobile",
             "Views",
             "MobileMyListView.axaml"));
+        var myListCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileMyListView.axaml.cs"));
 
         Assert.Contains("<controls:MobileSeriesCard", favoritesSource);
         Assert.Contains("<controls:MobileVodCard", favoritesSource);
@@ -607,11 +627,21 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobileFavoritesView.axaml"));
+        var favoritesCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileFavoritesView.axaml.cs"));
         var myListSource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Mobile",
             "Views",
             "MobileMyListView.axaml"));
+        var myListCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileMyListView.axaml.cs"));
 
         Assert.True(File.Exists(cardPath));
 
@@ -843,6 +873,10 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "ProfileSetupView.axaml"));
+        var appSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "App.axaml"));
         var mainViewSource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Mobile",
@@ -910,6 +944,10 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "ProfileSetupView.axaml"));
+        var appSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "App.axaml"));
 
         Assert.Contains("xmlns:icons=\"clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia\"", viewSource);
         Assert.Contains("Classes=\"AvatarBtn\"", viewSource);
@@ -928,6 +966,11 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("PlaceholderText=\"&#x2022;&#x2022;&#x2022;&#x2022;\"", viewSource);
         Assert.DoesNotContain("PasswordChar=\"*\"", viewSource);
         Assert.Contains("Profiles.Account.M3uLink", viewSource);
+        Assert.Contains("ConnectionHealthToVisibilityConverter", appSource);
+        Assert.Contains("ConnectionHealthToIconConverter", appSource);
+        Assert.Contains("ConnectionHealthToBrushConverter", appSource);
+        Assert.Contains("ConnectionHealth", viewSource);
+        Assert.Contains("Profiles.Account.HealthTooltip", viewSource);
         Assert.Contains("Kind=\"TrashCanOutline\"", viewSource);
     }
 
@@ -1046,6 +1089,8 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("PinHash, Converter={StaticResource StringNotEmptyToVisibilityConverter}", profileListSource);
         Assert.Contains("StrokeDashArray=\"4,2\"", profileListSource);
         Assert.Contains("Kind=\"Plus\"", profileListSource);
+        Assert.Contains("DisplayItems.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=invert", profileListSource);
+        Assert.Contains("x:Name=\"FallbackAddProfileButton\"", profileListSource);
         Assert.Contains("Button.ProfileCardStyle:pointerover", profileListSource);
         Assert.Contains("Button.ProfileCardStyle:focus", profileListSource);
         Assert.Contains("FocusGlow", profileListSource);
@@ -1285,11 +1330,21 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobileFavoritesView.axaml"));
+        var favoritesCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileFavoritesView.axaml.cs"));
         var myListSource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Mobile",
             "Views",
             "MobileMyListView.axaml"));
+        var myListCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileMyListView.axaml.cs"));
         var historySource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Mobile",
@@ -1383,6 +1438,7 @@ public sealed class ReleaseSourceCleanlinessTests
             Assert.Contains("ShowEmptyChannels", contentSource);
         }
 
+        Assert.Contains("ConverterParameter=liveWidth", liveSource);
         Assert.Contains("LoadMoreChannelsIfNeededAsync", liveCode);
         Assert.Contains("LoadMoreChannelsIfNeededAsync", moviesCode);
 
@@ -1434,12 +1490,20 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("FavoriteSeriesItems", favoritesSource);
         Assert.Contains("FavoriteVodChannels", favoritesSource);
         Assert.Contains("ShowFavoritesEmptyState", favoritesSource);
+        Assert.Contains("FavoritesScrollViewer_ScrollChanged", favoritesSource);
+        Assert.Contains("ConverterParameter=liveWidth", favoritesSource);
+        Assert.Contains("LoadMoreChannelsIfNeededAsync", favoritesCode);
+        Assert.Contains("LoadMoreSeriesIfNeededAsync", favoritesCode);
 
         Assert.Contains("vm:MainViewModel", myListSource);
         Assert.Contains("MyListLiveChannels", myListSource);
         Assert.Contains("MyListSeriesItems", myListSource);
         Assert.Contains("MyListVodChannels", myListSource);
         Assert.Contains("ShowMyListEmptyState", myListSource);
+        Assert.Contains("MyListScrollViewer_ScrollChanged", myListSource);
+        Assert.Contains("ConverterParameter=liveWidth", myListSource);
+        Assert.Contains("LoadMoreChannelsIfNeededAsync", myListCode);
+        Assert.Contains("LoadMoreSeriesIfNeededAsync", myListCode);
 
         Assert.Contains("vm:MainViewModel", historySource);
         Assert.Contains("HistoryLiveChannels", historySource);
@@ -1447,10 +1511,12 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("HistoryVodChannels", historySource);
         Assert.Contains("ShowHistoryEmptyState", historySource);
         Assert.Contains("LoadMoreHistoryIfNeededAsync", historyCode);
+        Assert.Contains("ConverterParameter=liveWidth", historySource);
 
         Assert.Contains("vm:MainViewModel", downloadsSource);
         Assert.Contains("TotalDownloadsInfoText", downloadsSource);
         Assert.Contains("SelectedDownloadSortOrder", downloadsSource);
+        Assert.Contains("Theme=\"{StaticResource ModernComboBox}\"", downloadsSource);
         Assert.Contains("DownloadedSeriesItems", downloadsSource);
         Assert.Contains("DownloadedVodChannels", downloadsSource);
         Assert.Contains("DeleteDownloadedMediaCommand", downloadsSource);
@@ -1468,8 +1534,20 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("CancelDownloadCommand", downloadsSource);
         Assert.Contains("DownloadStatusToBrushConverter", appSource);
         Assert.Contains("BoolToMaterialIconKindConverter", appSource);
+        Assert.Contains("BytesToHumanConverter", appSource);
+        Assert.Contains("DoubleToStarGridLengthConverter", appSource);
+        Assert.Contains("WidthToColumnsConverter", appSource);
+        Assert.Contains("WatchedProgressVisibilityConverter", appSource);
         Assert.Contains("Foreground=\"{Binding Status, Converter={StaticResource DownloadStatusToBrushConverter}}\"", downloadsSource);
         Assert.Contains("Kind=\"{Binding IsPaused, Converter={StaticResource BoolToMaterialIconKindConverter}, ConverterParameter='Play|Pause'}\"", downloadsSource);
+        Assert.Contains("StorageOtherPercent", downloadsSource);
+        Assert.Contains("StorageNoctraPercent", downloadsSource);
+        Assert.Contains("StoragePendingPercent", downloadsSource);
+        Assert.Contains("StorageFreePercent", downloadsSource);
+        Assert.Contains("DoubleToStarGridLengthConverter", downloadsSource);
+        Assert.Contains("Url=\"{Binding PosterUrl}\"", downloadsSource);
+        Assert.Contains("Url=\"{Binding CoverUrl}\"", downloadsSource);
+        Assert.Contains("BytesTotal, Converter={StaticResource BytesToHumanConverter}", downloadsSource);
 
         Assert.Contains("xmlns:behaviors=\"using:Noctra.Mobile.Behaviors\"", downloadsSource);
         Assert.Contains("behaviors:MobileTabSlideTransitionBehavior.IsEnabled=\"True\"", downloadsSource);
@@ -1497,8 +1575,28 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MainView.axaml.cs"));
+        var legalConsentSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileLegalConsentView.axaml"));
+        var legalConsentCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileLegalConsentView.axaml.cs"));
+        var legalDocumentSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobileLegalDocumentView.axaml"));
 
         Assert.Contains("x:Name=\"LegalConsentOverlay\"", mainViewSource);
+        Assert.Contains("MobileLegalDocumentView", legalConsentSource);
+        Assert.Contains("LegalDocumentHost", legalConsentSource);
+        Assert.Contains("ShowDocument(", legalConsentCode);
+        Assert.Contains("ScrollViewer", legalDocumentSource);
+        Assert.DoesNotContain("ShowLegalDocumentAsync", legalConsentCode);
         Assert.Contains("ProfilesOverlay", mainViewSource);
         Assert.Contains("Profiles.Title", mainViewSource);
         Assert.Contains("Profiles.SelectProfile", mainViewSource);
@@ -1760,6 +1858,8 @@ public sealed class ReleaseSourceCleanlinessTests
 
         Assert.Contains("vm:SettingsViewModel", settingsSource);
         Assert.Contains("StringFormatConverter", appSource);
+        Assert.Contains("BooleanToSuccessWarningBrushConverter", appSource);
+        Assert.Contains("Resources/Styles.axaml", appSource);
         Assert.Contains("class StringFormatConverter", stringFormatConverterSource);
         Assert.Contains("LocalizationSource.Instance", stringFormatConverterSource);
         Assert.Contains("CurrentProfileName", settingsSource);
@@ -1804,6 +1904,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("Settings.Theme.Dark", settingsSource);
         Assert.Contains("Settings.Theme.Light", settingsSource);
         Assert.Contains("Settings.Language.Title", settingsSource);
+        Assert.Contains("Theme=\"{StaticResource ModernComboBox}\"", settingsSource);
         Assert.Contains("AppLanguage", settingsSource);
         Assert.True(
             CountOccurrences(settingsSource, "Tag=\"de\"") >= 3,
@@ -1946,6 +2047,8 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("IsPremium", settingsSource);
         Assert.Contains("ShowUpsellCommand", settingsSource);
         Assert.Contains("GlobalSettings.About.Upgrade", settingsSource);
+        Assert.Contains("IsPromoCodeStatusSuccess", settingsSource);
+        Assert.Contains("BooleanToSuccessWarningBrushConverter", settingsSource);
         Assert.Contains("UpdateStatusText", settingsSource);
         Assert.Contains("IsCheckingUpdates", settingsSource);
         Assert.Contains("IsIdle", settingsSource);
@@ -2045,6 +2148,9 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("MobileLiveTvCard", liveSource);
         Assert.Contains("MobileVodCard", moviesSource);
         Assert.Contains("MobileSeriesCard", seriesSource);
+        Assert.Contains("Theme=\"{StaticResource ModernComboBox}\"", liveSource);
+        Assert.Contains("Theme=\"{StaticResource ModernComboBox}\"", moviesSource);
+        Assert.Contains("Theme=\"{StaticResource ModernComboBox}\"", seriesSource);
         Assert.Contains("ClearGroupSelection_Click", liveSource);
         Assert.Contains("ClearGroupSelection_Click", moviesSource);
         Assert.Contains("ClearGroupSelection_Click", seriesSource);
@@ -2285,6 +2391,10 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("PlayerViewModel+SleepTimerOption.Minutes60", playerViewSource);
         Assert.Contains("PlayerViewModel+SleepTimerOption.EndOfEpisode", playerViewSource);
         Assert.Contains("IsSleepTimerActive", playerViewSource);
+        Assert.Contains("IsEnabled=\"{Binding IsPremium}\"", playerViewSource);
+        Assert.Contains("IsVisible=\"{Binding !IsPremium}\"", playerViewSource);
+        Assert.Contains("Kind=\"Lock\"", playerViewSource);
+        Assert.Contains("MinHeight=\"48\"", playerViewSource);
     }
 
     [Fact]
@@ -2917,6 +3027,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("AddToMyListCommand", mobileSeriesCardSource);
         Assert.Contains("ToggleFavoriteCommand", mobileVodCardSource);
         Assert.Contains("AddToMyListCommand", mobileVodCardSource);
+        Assert.Contains("WatchedProgressVisibilityConverter", mobileVodCardSource);
     }
 
     [Fact]

@@ -29,11 +29,18 @@
       <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
       <Setter Property="TextElement.Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     </Style>
+    <Style Selector="Button.nav.active /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
+      <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentBrush}" />
+    </Style>
     <Style Selector="Button.nav icons|MaterialIcon">
       <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
     </Style>
     <Style Selector="Button.nav:pressed icons|MaterialIcon">
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+    <Style Selector="Button.nav.active icons|MaterialIcon">
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
     </Style>
     <Style Selector="Border.card">
       <Setter Property="Background" Value="{DynamicResource Surface0Brush}" />

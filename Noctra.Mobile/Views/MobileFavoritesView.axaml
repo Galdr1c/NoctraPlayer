@@ -18,7 +18,8 @@
     <converters:CountToVisibilityConverter x:Key="CountToVisibility" />
   </UserControl.Resources>
 
-  <ScrollViewer>
+  <ScrollViewer x:Name="FavoritesScrollViewer"
+                ScrollChanged="FavoritesScrollViewer_ScrollChanged">
     <!-- Increase margins and spacing to mirror desktop layout -->
     <StackPanel Margin="24" Spacing="20">
       <!-- Title styled like desktop: bold with subtle letter spacing -->
@@ -39,9 +40,15 @@
                    LetterSpacing="1"
                    Foreground="{DynamicResource TextPrimaryBrush}" />
         <ItemsControl ItemsSource="{Binding FavoriteLiveChannels}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="models:Channel">
-              <controls:MobileLiveTvCard />
+              <controls:MobileLiveTvCard Margin="0,0,16,0"
+                                         Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=liveWidth}" />
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>

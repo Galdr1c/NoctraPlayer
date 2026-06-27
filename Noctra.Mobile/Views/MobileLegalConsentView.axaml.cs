@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Media;
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Mobile.Localization;
 using Noctra.Models;
@@ -15,7 +14,6 @@ namespace Noctra.Mobile.Views;
 public partial class MobileLegalConsentView : UserControl
 {
     private ISettingsService? _settingsService;
-    private IDialogService? _dialogService;
     private ILocalizationService? _localizationService;
 
     public MobileLegalConsentView()
@@ -67,7 +65,6 @@ public partial class MobileLegalConsentView : UserControl
             return;
 
         _settingsService = app.Services.GetService<ISettingsService>();
-        _dialogService = app.Services.GetService<IDialogService>();
         _localizationService = app.Services.GetService<ILocalizationService>();
     }
 
@@ -117,23 +114,23 @@ public partial class MobileLegalConsentView : UserControl
         Consented?.Invoke(this, EventArgs.Empty);
     }
 
-    private async void Privacy_Click(object? sender, RoutedEventArgs e)
+    private void Privacy_Click(object? sender, RoutedEventArgs e)
     {
         ResolveServices();
-        if (_dialogService != null && _localizationService != null)
+        if (_localizationService != null)
         {
-            await _dialogService.ShowLegalDocumentAsync(
+            LegalDocumentHost.ShowDocument(
                 _localizationService.GetString("GlobalSettings.Privacy.Title"),
                 _localizationService.GetString("GlobalSettings.Privacy.Message.Current"));
         }
     }
 
-    private async void Terms_Click(object? sender, RoutedEventArgs e)
+    private void Terms_Click(object? sender, RoutedEventArgs e)
     {
         ResolveServices();
-        if (_dialogService != null && _localizationService != null)
+        if (_localizationService != null)
         {
-            await _dialogService.ShowLegalDocumentAsync(
+            LegalDocumentHost.ShowDocument(
                 _localizationService.GetString("GlobalSettings.Terms.Title"),
                 _localizationService.GetString("GlobalSettings.Terms.Message.Current"));
         }

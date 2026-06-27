@@ -30,6 +30,7 @@
                    LetterSpacing="1"
                    Foreground="{DynamicResource TextPrimaryBrush}" />
         <ComboBox Grid.Column="1"
+                  Theme="{StaticResource ModernComboBox}"
                   Width="150"
                   ItemsSource="{Binding SortOptions}"
                   SelectedValue="{Binding SelectedSortOrder}"
@@ -41,6 +42,7 @@
             ColumnSpacing="8"
             IsVisible="{Binding ShowGroupFilter}">
         <ComboBox Grid.Column="0"
+                  Theme="{StaticResource ModernComboBox}"
                   ItemsSource="{Binding Groups}"
                   SelectedItem="{Binding SelectedGroup}"
                   PlaceholderText="{loc:Translate Common.All}"

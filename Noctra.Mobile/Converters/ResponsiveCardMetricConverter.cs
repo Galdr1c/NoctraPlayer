@@ -9,9 +9,11 @@ namespace Noctra.Mobile.Converters;
 /// The converter intentionally keeps the math simple and predictable:
 /// - poster cards: 2 columns on phones, more columns as the viewport grows;
 /// - continue cards: 1 column on phones, 2+ columns on larger/tablet widths.
+/// - live cards: 1 column on phones, 2+ columns on tablets.
 ///
 /// ConverterParameter values:
 /// - "posterWidth" / "posterHeight"
+/// - "liveWidth"
 /// - "continueWidth" / "continueHeight"
 /// - "profileWidth" / "profileHeight"
 /// </summary>
@@ -96,6 +98,12 @@ public sealed class ResponsiveCardMetricConverter : IValueConverter
             {
                 // Landscape cards: one wide card on phones, two or three on larger screens.
                 return new CardMetricProfile(250, 360, 300, 0.56, 16, 4);
+            }
+
+            if (mode.StartsWith("live", StringComparison.OrdinalIgnoreCase))
+            {
+                // Live rows stay full-width on phones, then split cleanly on tablets.
+                return new CardMetricProfile(280, 420, 320, 0.30, 16, 3);
             }
 
             if (mode.StartsWith("profile", StringComparison.OrdinalIgnoreCase))

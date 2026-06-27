@@ -619,23 +619,68 @@
                     Content="{loc:Translate Player.Mobile.Sleep.15min}"
                     Command="{Binding SetSleepTimerCommand}"
                     CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes15}"
+                    IsEnabled="{Binding IsPremium}"
                     MinHeight="44" />
+            <icons:MaterialIcon Grid.Column="1"
+                                Kind="Lock"
+                                Width="18"
+                                Height="18"
+                                Foreground="{DynamicResource TextMutedBrush}"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Margin="0,0,12,0"
+                                IsHitTestVisible="False"
+                                IsVisible="{Binding !IsPremium}" />
             <Button Grid.Row="1"
                     Content="{loc:Translate Player.Mobile.Sleep.30min}"
                     Command="{Binding SetSleepTimerCommand}"
                     CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes30}"
+                    IsEnabled="{Binding IsPremium}"
                     MinHeight="44" />
+            <icons:MaterialIcon Grid.Row="1"
+                                Kind="Lock"
+                                Width="18"
+                                Height="18"
+                                Foreground="{DynamicResource TextMutedBrush}"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Margin="0,0,12,0"
+                                IsHitTestVisible="False"
+                                IsVisible="{Binding !IsPremium}" />
             <Button Grid.Row="1"
                     Grid.Column="1"
                     Content="{loc:Translate Player.Mobile.Sleep.60min}"
                     Command="{Binding SetSleepTimerCommand}"
                     CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes60}"
+                    IsEnabled="{Binding IsPremium}"
                     MinHeight="44" />
+            <icons:MaterialIcon Grid.Row="1"
+                                Grid.Column="1"
+                                Kind="Lock"
+                                Width="18"
+                                Height="18"
+                                Foreground="{DynamicResource TextMutedBrush}"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Margin="0,0,12,0"
+                                IsHitTestVisible="False"
+                                IsVisible="{Binding !IsPremium}" />
             <Button Grid.Row="2"
                     Content="{loc:Translate Player.Mobile.Sleep.End}"
                     Command="{Binding SetSleepTimerCommand}"
                     CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.EndOfEpisode}"
+                    IsEnabled="{Binding IsPremium}"
                     MinHeight="44" />
+            <icons:MaterialIcon Grid.Row="2"
+                                Kind="Lock"
+                                Width="18"
+                                Height="18"
+                                Foreground="{DynamicResource TextMutedBrush}"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Margin="0,0,12,0"
+                                IsHitTestVisible="False"
+                                IsVisible="{Binding !IsPremium}" />
             <Button Grid.Row="2"
                     Grid.Column="1"
                     Content="{loc:Translate Player.Mobile.Sleep.Cancel}"
@@ -1778,6 +1823,7 @@
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:EpgPanelRow">
                       <Border Height="60"
+                              MinHeight="48"
                               BorderBrush="#0DFFFFFF"
                               BorderThickness="0,0,1,1"
                               Background="{Binding IsCurrentChannel, Converter={StaticResource BoolToSelectionBrushConverter}}">
@@ -1833,7 +1879,7 @@
                   <ItemsControl ItemsSource="{Binding EpgRows}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:EpgPanelRow">
-                        <Grid Height="60" ClipToBounds="True">
+                        <Grid Height="60" MinHeight="48" ClipToBounds="True">
                           <Border Background="{Binding IsCurrentChannel, Converter={StaticResource BoolToSelectionBrushConverter}}"
                                   BorderBrush="#0DFFFFFF"
                                   BorderThickness="0,0,0,1" />
