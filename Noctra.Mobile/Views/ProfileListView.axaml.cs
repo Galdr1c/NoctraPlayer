@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Input;
+using Avalonia.Threading;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Data;
@@ -29,6 +31,18 @@ public partial class ProfileListView : UserControl
     public ProfileListView()
     {
         InitializeComponent();
+    }
+
+    public void SetProfilesViewModel(ProfilesViewModel viewModel)
+    {
+        DataContext = viewModel;
+        BindViewModel(viewModel);
+    }
+
+    public void ClearProfilesViewModel()
+    {
+        DataContext = null;
+        BindViewModel(null);
     }
 
     protected override void OnDataContextChanged(EventArgs e)
@@ -105,6 +119,18 @@ public partial class ProfileListView : UserControl
         }
 
         _viewModel.SelectProfileCommand.Execute(profile);
+    }
+
+    /// <summary>
+    /// Üst başlıktaki kalem (✏) veya "Bitti" butonuna tıklanınca
+    /// yönet modunu açar / kapar.
+    /// </summary>
+    private void ToggleManage_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel?.ToggleManageModeCommand.CanExecute(null) == true)
+        {
+            _viewModel.ToggleManageModeCommand.Execute(null);
+        }
     }
 
     private void ViewModel_OnProfileAddRequested(Profile profile)

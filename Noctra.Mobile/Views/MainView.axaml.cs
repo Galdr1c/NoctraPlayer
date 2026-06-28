@@ -122,12 +122,12 @@ public partial class MainView : UserControl
     {
         try
         {
-            if (Application.Current is not App { Services: not null } app)
+            if (Application.Current is not App app)
             {
                 return;
             }
 
-            var reviewService = app.Services.GetService<IReviewPromptService>();
+            var reviewService = app.EnsureServices()?.GetService<IReviewPromptService>();
             if (reviewService is not null)
             {
                 // Surface state check — mirrors desktop's IsReviewPromptAllowedSurface.
@@ -430,26 +430,14 @@ public partial class MainView : UserControl
 
         if (resolver != null)
         {
-            // Dispose old hooks if a previous profiles view model was shown
-            if (_activeProfilesViewModel != null)
-            {
-                _activeProfilesViewModel.PropertyChanged -= ProfilesViewModel_PropertyChanged;
-            }
-
             _activeProfilesViewModel = resolver.GetProfilesViewModel();
-
-            // Subscribe to PropertyChanged to update the manage/done button label.
-            _activeProfilesViewModel.PropertyChanged += ProfilesViewModel_PropertyChanged;
 
             // Bind the overlay list's DataContext to the view model so it
             // populates the profiles.  Do not bind the normal MobileProfileList
             // when using the overlay.
             ProfilesOverlay.DataContext = _activeProfilesViewModel;
-            OverlayProfileList.DataContext = _activeProfilesViewModel;
+            OverlayProfileList.SetProfilesViewModel(_activeProfilesViewModel);
             _activeProfilesViewModel.RefreshProfiles();
-
-            // Update the manage/done button label to reflect the initial state
-            UpdateProfilesManageButton();
         }
 
         // Normal navigation remains hidden while the full-screen profiles overlay is active.
@@ -475,57 +463,11 @@ public partial class MainView : UserControl
         NavigateToDestination("Home");
 
         // Unhook events to avoid memory leaks
-        if (_activeProfilesViewModel != null)
-        {
-            _activeProfilesViewModel.PropertyChanged -= ProfilesViewModel_PropertyChanged;
-            _activeProfilesViewModel = null;
-        }
-        OverlayProfileList.DataContext = null;
+        _activeProfilesViewModel = null;
+        OverlayProfileList.ClearProfilesViewModel();
     }
 
-    /// <summary>
-    /// Updates the Manage/Done button text based on the current manage mode state
-    /// of the active profiles view model.  This method is called initially and
-    /// whenever the IsManageMode property changes.
-    /// </summary>
-    private void UpdateProfilesManageButton()
-    {
-        if (_activeProfilesViewModel == null)
-            return;
 
-        // Determine the correct label: show "Done" when managing, otherwise "Manage"
-        var isManageMode = _activeProfilesViewModel.IsManageMode;
-        string key = isManageMode ? "Profiles.ManageMode.Done" : "Profiles.ManageMode.Manage";
-        // Retrieve localized text via the localization service.  We access
-        // LocalizationSource.Instance directly to avoid passing localization
-        // service through many layers.
-        string text = LocalizationSource.Instance[key];
-
-        // Update the content and style state of the button on the UI thread.  The
-        // Tag property toggles the active state style defined in XAML (see
-        // ManageModeButtonStyle).  When IsManageMode is true, Tag is set
-        // to true to invert colours; otherwise false.
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (ProfilesManageButton != null)
-            {
-                ProfilesManageButton.Content = text;
-                ProfilesManageButton.Tag = isManageMode;
-            }
-        });
-    }
-
-    /// <summary>
-    /// Handles property changes on the profiles view model.  Specifically listens
-    /// for IsManageMode changes to update the button label.
-    /// </summary>
-    private void ProfilesViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(ProfilesViewModel.IsManageMode))
-        {
-            UpdateProfilesManageButton();
-        }
-    }
 
     private MobileViewModelResolver? GetViewModelResolver()
     {
@@ -534,12 +476,12 @@ public partial class MainView : UserControl
             return _viewModelResolver;
         }
 
-        if (Application.Current is not App { Services: not null } app)
+        if (Application.Current is not App app)
         {
             return null;
         }
 
-        _viewModelResolver = app.Services.GetRequiredService<MobileViewModelResolver>();
+        _viewModelResolver = app.EnsureServices()?.GetRequiredService<MobileViewModelResolver>();
         return _viewModelResolver;
     }
 
@@ -550,12 +492,12 @@ public partial class MainView : UserControl
             return _platformServiceResolver;
         }
 
-        if (Application.Current is not App { Services: not null } app)
+        if (Application.Current is not App app)
         {
             return null;
         }
 
-        _platformServiceResolver = app.Services.GetRequiredService<MobilePlatformServiceResolver>();
+        _platformServiceResolver = app.EnsureServices()?.GetRequiredService<MobilePlatformServiceResolver>();
         return _platformServiceResolver;
     }
 

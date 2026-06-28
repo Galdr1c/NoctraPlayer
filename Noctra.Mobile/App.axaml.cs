@@ -23,27 +23,7 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        Services = ServiceProviderFactory?.Invoke();
-        if (Services?.GetService(typeof(ILocalizationService)) is ILocalizationService localization)
-        {
-            LocalizationSource.Instance.Initialize(localization);
-        }
-
-        // Apply the saved theme before creating the first mobile view so
-        // DynamicResource bindings resolve against the correct theme dictionary.
-        if (Services?.GetService(typeof(ISettingsService)) is ISettingsService settingsService)
-        {
-            if (Services.GetService(typeof(IThemeService)) is IThemeService themeService)
-            {
-                themeService.SetTheme(settingsService.Settings.IsDarkTheme);
-            }
-
-            // Inject mobile-specific promo code URL into settings
-            if (string.IsNullOrWhiteSpace(settingsService.Settings.PromoCodeConfigUrl))
-            {
-                settingsService.Settings.PromoCodeConfigUrl = Mobile.Services.MobileAppConfig.PromoCodesUrl;
-            }
-        }
+        EnsureServices();
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -72,7 +52,43 @@ public partial class App : Application
 
     private MainViewModel CreateMainViewModel()
     {
-        return Services?.GetService(typeof(MainViewModel)) as MainViewModel
+        return EnsureServices()?.GetService(typeof(MainViewModel)) as MainViewModel
             ?? new MainViewModel();
+    }
+
+    public IServiceProvider? EnsureServices()
+    {
+        if (Services is not null)
+        {
+            return Services;
+        }
+
+        Services = ServiceProviderFactory?.Invoke();
+        if (Services is null)
+        {
+            return null;
+        }
+
+        if (Services.GetService(typeof(ILocalizationService)) is ILocalizationService localization)
+        {
+            LocalizationSource.Instance.Initialize(localization);
+        }
+
+        // Apply the saved theme before creating or resolving views so
+        // DynamicResource bindings resolve against the correct theme dictionary.
+        if (Services.GetService(typeof(ISettingsService)) is ISettingsService settingsService)
+        {
+            if (Services.GetService(typeof(IThemeService)) is IThemeService themeService)
+            {
+                themeService.SetTheme(settingsService.Settings.IsDarkTheme);
+            }
+
+            if (string.IsNullOrWhiteSpace(settingsService.Settings.PromoCodeConfigUrl))
+            {
+                settingsService.Settings.PromoCodeConfigUrl = Mobile.Services.MobileAppConfig.PromoCodesUrl;
+            }
+        }
+
+        return Services;
     }
 }

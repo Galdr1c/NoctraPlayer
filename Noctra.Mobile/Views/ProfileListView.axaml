@@ -9,24 +9,29 @@
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.ProfileListView"
              x:Name="ProfileListRoot"
-             x:DataType="vm:ProfilesViewModel"
              x:CompileBindings="False"
              mc:Ignorable="d"
              d:DesignWidth="390"
-             d:DesignHeight="420">
+             d:DesignHeight="844"
+             Background="{DynamicResource Bg0Brush}">
+
   <UserControl.Styles>
+
+    <!-- ── Profil kart/buton stili ── -->
     <Style Selector="Button.ProfileCardStyle">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="Padding" Value="0" />
-      <Setter Property="CornerRadius" Value="16" />
-      <Setter Property="ClipToBounds" Value="False" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="RenderTransform" Value="scale(1)" />
       <Setter Property="Transitions">
         <Transitions>
-          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="QuadraticEaseOut" />
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.14" Easing="QuadraticEaseOut" />
         </Transitions>
       </Setter>
+    </Style>
+    <Style Selector="Button.ProfileCardStyle:pressed">
+      <Setter Property="RenderTransform" Value="scale(0.95)" />
     </Style>
     <Style Selector="Button.ProfileCardStyle:pointerover">
       <Setter Property="RenderTransform" Value="scale(1.04)" />
@@ -34,262 +39,373 @@
     <Style Selector="Button.ProfileCardStyle:focus /template/ ContentPresenter">
       <Setter Property="BoxShadow" Value="{DynamicResource FocusGlow}" />
     </Style>
-    <Style Selector="Button.AddProfileButtonStyle">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="Padding" Value="0" />
-      <Setter Property="CornerRadius" Value="16" />
+
+    <!-- ── Add Profile kart alanı ── -->
+    <Style Selector="Border.AddProfileCard">
       <Setter Property="RenderTransform" Value="scale(1)" />
       <Setter Property="Transitions">
         <Transitions>
-          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="QuadraticEaseOut" />
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.14" Easing="QuadraticEaseOut" />
         </Transitions>
       </Setter>
     </Style>
-    <Style Selector="Button.AddProfileButtonStyle:pointerover">
+    <Style Selector="Border.AddProfileCard:pointerover">
       <Setter Property="RenderTransform" Value="scale(1.04)" />
     </Style>
-    <Style Selector="Button.AddProfileButtonStyle:pointerover Rectangle#AddBorder">
-      <Setter Property="Stroke" Value="{DynamicResource TextPrimaryBrush}" />
+
+    <!-- ── Üst çubuk: buton (pencil / Done) ── -->
+    <Style Selector="Button.HeaderIconBtn">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="10" />
+      <Setter Property="CornerRadius" Value="8" />
     </Style>
-    <Style Selector="Button.AddProfileButtonStyle:pointerover Ellipse#PlusCircle">
-      <Setter Property="Stroke" Value="{DynamicResource TextPrimaryBrush}" />
-      <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
+    <Style Selector="Button.HeaderIconBtn:pressed">
+      <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
     </Style>
-    <Style Selector="Button.AddProfileButtonStyle:pointerover icons|MaterialIcon#PlusIcon">
-      <Setter Property="Foreground" Value="White" />
+
+    <!-- ── Done metin butonu ── -->
+    <Style Selector="Button.DoneBtn">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="8,6" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="FontSize" Value="16" />
+      <Setter Property="FontWeight" Value="Medium" />
     </Style>
+    <Style Selector="Button.DoneBtn:pressed">
+      <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
+    </Style>
+
   </UserControl.Styles>
 
-  <Grid RowDefinitions="*,Auto">
-    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12" IsVisible="False">
-      <TextBlock Text="{loc:Translate Profiles.Title}"
-                 FontSize="20"
-                 FontWeight="SemiBold"
-                 Foreground="{DynamicResource TextPrimaryBrush}" />
-      <Button Grid.Column="1"
-              Command="{Binding ToggleManageModeCommand}"
-              Content="{loc:Translate Profiles.ManageMode.Manage}"
-              Background="Transparent"
-              BorderBrush="{DynamicResource BorderBrush}"
-              BorderThickness="1"
-              Foreground="{DynamicResource TextPrimaryBrush}"
-              Padding="12,8"
-              CornerRadius="10" />
+  <!--
+    ┌─────────────────────────────────────────────────────────────┐
+    │  Satır 0 : Üst başlık (normal ↔ yönet modu)                 │
+    │  Satır 1 : Kaydırılabilir içerik (başlık + kartlar)         │
+    │  Satır * : Overlay katmanları (ProfileSetup/Pin/Loading)    │
+    └─────────────────────────────────────────────────────────────┘
+  -->
+  <Grid RowDefinitions="Auto,*">
+
+    <!-- ════════════════════════════════════════════════════════
+         SATIR 0 — ÜST BAŞLIK
+         Normal  : [Logo + Uygulama adı]        [✏ Kalem simgesi]
+         Yönet   : [← geri (boş)]   Profilleri Yönet   [Bitti]
+         ════════════════════════════════════════════════════════ -->
+    <Grid Grid.Row="0" Height="56" Margin="8,0">
+
+      <!-- ── NORMAL MOD başlığı ── -->
+      <Grid ColumnDefinitions="*,Auto"
+            IsVisible="{Binding !IsManageMode}"
+            VerticalAlignment="Center">
+
+        <!-- Sol: Uygulama logosu + adı -->
+        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="8,0">
+          <Image Source="avares://Noctra.Mobile/Assets/Square150x150Logo.png"
+                 Width="22" Height="22"
+                 Stretch="Uniform"
+                 VerticalAlignment="Center" />
+          <TextBlock Text="NOCTRA"
+                     FontSize="18"
+                     FontWeight="Bold"
+                     Foreground="{DynamicResource AccentBrush}"
+                     LetterSpacing="1.5"
+                     VerticalAlignment="Center" />
+        </StackPanel>
+
+        <!-- Sağ: Kalem (Yönet modu başlatır) -->
+        <Button Grid.Column="1"
+                Classes="HeaderIconBtn"
+                Click="ToggleManage_Click"
+                Command="{Binding ToggleManageModeCommand}"
+                VerticalAlignment="Center"
+                ToolTip.Tip="{loc:Translate Profiles.ManageMode.Manage}">
+          <icons:MaterialIcon Kind="PencilOutline" Width="22" Height="22"
+                              Foreground="{DynamicResource TextMutedBrush}" />
+        </Button>
+      </Grid>
+
+      <!-- ── YÖNET MOD başlığı ── -->
+      <Grid ColumnDefinitions="Auto,*,Auto"
+            IsVisible="{Binding IsManageMode}"
+            VerticalAlignment="Center">
+
+        <!-- Sol: Boş denge alanı -->
+        <Border Width="48" />
+
+        <!-- Orta: "Profilleri Yönet" -->
+        <TextBlock Grid.Column="1"
+                   Text="{loc:Translate Profiles.ManageMode.Title}"
+                   FontSize="17"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center" />
+
+        <!-- Sağ: Bitti -->
+        <Button Grid.Column="2"
+                Classes="DoneBtn"
+                Click="ToggleManage_Click"
+                VerticalAlignment="Center"
+                Content="{loc:Translate Profiles.ManageMode.Done}" />
+      </Grid>
     </Grid>
 
-    <ScrollViewer Grid.Row="0">
+    <!-- ════════════════════════════════════════════════════════
+         SATIR 1 — KAYDIRILAB. İÇERİK
+         ════════════════════════════════════════════════════════ -->
+    <ScrollViewer Grid.Row="1"
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
       <StackPanel>
-        <Button x:Name="FallbackAddProfileButton"
-                Command="{Binding AddProfileCommand}"
-                Classes="AddProfileButtonStyle"
-                Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=profileWidth}"
-                Margin="10"
-                HorizontalAlignment="Center"
-                IsVisible="{Binding DisplayItems.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=invert}">
-          <StackPanel Spacing="12">
-            <Grid Width="120"
-                  Height="120"
-                  HorizontalAlignment="Center">
-              <Rectangle RadiusX="14"
-                         RadiusY="14"
-                         Stroke="{DynamicResource BorderBrush}"
-                         StrokeThickness="2"
-                         StrokeDashArray="4,2"
-                         Fill="Transparent" />
-              <Grid HorizontalAlignment="Center"
-                    VerticalAlignment="Center">
-                <Ellipse Width="60"
-                         Height="60"
-                         Stroke="{DynamicResource TextMutedBrush}"
-                         StrokeThickness="2"
-                         Fill="Transparent" />
-                <icons:MaterialIcon Kind="Plus"
-                                    Width="32"
-                                    Height="32"
-                                    Foreground="{DynamicResource TextMutedBrush}"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center" />
-              </Grid>
-            </Grid>
-            <TextBlock Text="{loc:Translate Profiles.AddProfile}"
-                       Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="15"
-                       FontWeight="Medium"
-                       TextAlignment="Center" />
-          </StackPanel>
-        </Button>
 
-        <ItemsControl ItemsSource="{Binding DisplayItems}">
+        <!-- ── "Kimin izlediğini seç?" büyük başlık (sadece normal modda) ── -->
+        <TextBlock Text="{loc:Translate Profiles.Title}"
+                   FontSize="28"
+                   FontWeight="Bold"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   HorizontalAlignment="Center"
+                   TextAlignment="Center"
+                   Margin="24,28,24,4"
+                   IsVisible="{Binding !IsManageMode}" />
+
+        <TextBlock Text="{loc:Translate Profiles.SelectProfile}"
+                   FontSize="14"
+                   Foreground="{DynamicResource TextMutedBrush}"
+                   HorizontalAlignment="Center"
+                   TextAlignment="Center"
+                   Margin="24,0,24,28"
+                   IsVisible="{Binding !IsManageMode}" />
+
+        <!-- ── Yönet modu üst boşluk ── -->
+        <Border Height="20" IsVisible="{Binding IsManageMode}" />
+
+        <!--
+          ── PROFİL KARTLARI + "Profil Ekle" —————————————————————
+          WrapPanel: 2 kart yan yana (telefon); tablet/geniş ekranda otomatik 3+
+          Her kart: kare avatar (150×150) + ad etiketi
+          "Profil Ekle" kartı sadece normal modda görünür
+          ──────────────────────────────────────────────────────────
+        -->
+        <ItemsControl x:Name="ProfileItemsControl"
+                      ItemsSource="{Binding DisplayItems}"
+                      Margin="12,0,12,24">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
-              <WrapPanel />
+              <!--
+                WrapPanel yerine bir Grid'li yaklaşım düşünüldü fakat
+                WrapPanel en esnek çözüm. Kart genişliği converter ile
+                hesaplanıyor → telefonda 2 sütun, tablette 3–4 sütun.
+              -->
+              <WrapPanel HorizontalAlignment="Center" />
             </ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
+
           <ItemsControl.DataTemplates>
-          <DataTemplate DataType="models:Profile">
-            <Button Click="SelectProfile_Click"
-                    Classes="ProfileCardStyle"
-                    Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=profileWidth}"
-                    Margin="10">
-              <StackPanel Spacing="12"
-                          ClipToBounds="False">
-                <Grid Width="140"
-                      Height="140"
-                      HorizontalAlignment="Center"
-                      ClipToBounds="False">
-                  <Border Width="134"
-                          Height="134"
-                          CornerRadius="21"
-                          BorderThickness="3.5"
-                          IsVisible="{Binding IsChild}"
-                          IsHitTestVisible="False"
-                          BoxShadow="0 0 16 0 #708B5CF6">
-                    <Border.BorderBrush>
-                      <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                        <GradientStop Color="#FFB7A6F6" Offset="0" />
-                        <GradientStop Color="#FF8B5CF6" Offset="0.5" />
-                        <GradientStop Color="#FF7C3AED" Offset="1" />
-                      </LinearGradientBrush>
-                    </Border.BorderBrush>
-                  </Border>
 
-                  <Border Width="120"
-                          Height="120"
-                          CornerRadius="14"
-                          ClipToBounds="True"
-                          Background="{DynamicResource IconGradientBrush}"
-                          HorizontalAlignment="Center"
-                          VerticalAlignment="Center">
-                    <Grid>
-                      <Image Source="{Binding Avatar, Converter={StaticResource AvatarPathConverter}}"
-                             Stretch="UniformToFill" />
+            <!-- ── 1. Mevcut profil kartı ── -->
+            <DataTemplate DataType="models:Profile">
+              <Button Classes="ProfileCard"
+                      Click="SelectProfile_Click"
+                      Width="{Binding Bounds.Width,
+                                      RelativeSource={RelativeSource AncestorType=ItemsControl},
+                                      Converter={StaticResource ResponsiveCardMetricConverter},
+                                      ConverterParameter=profileWidth}"
+                      Margin="8,6">
+                <StackPanel Spacing="10">
 
-                      <Border Background="#CC000000"
-                              Opacity="0.7"
-                              CornerRadius="14"
-                              IsVisible="{Binding #ProfileListRoot.DataContext.IsManageMode}">
-                        <Border Width="48"
-                                Height="48"
-                                CornerRadius="24"
-                                Background="Transparent"
-                                BorderBrush="White"
-                                BorderThickness="2"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center">
-                          <icons:MaterialIcon Kind="PencilOutline"
-                                              Width="20"
-                                              Height="20"
-                                              Foreground="White"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center" />
+                  <!--
+                    ── Kare Avatar Alanı ──────────────────────────────
+                    Netflix: avatar karesi ↔ etiket alanının genişliği.
+                    150×150 sabit boyut telefonda 2 kart yan yana sığar,
+                    tablette converter daha geniş genişlik döndürünce otomatik uyum sağlar.
+                  -->
+                  <Grid Width="150" Height="150"
+                        HorizontalAlignment="Center"
+                        ClipToBounds="False">
+
+                    <!-- Çocuk profili çerçevesi (gradyan kenarlık) -->
+                    <Border Width="148" Height="148"
+                            CornerRadius="18"
+                            BorderThickness="3"
+                            IsVisible="{Binding IsChild}"
+                            IsHitTestVisible="False"
+                            BoxShadow="0 0 16 0 #708B5CF6">
+                      <Border.BorderBrush>
+                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                          <GradientStop Color="#FFB7A6F6" Offset="0" />
+                          <GradientStop Color="#FF8B5CF6" Offset="0.5" />
+                          <GradientStop Color="#FF7C3AED" Offset="1" />
+                        </LinearGradientBrush>
+                      </Border.BorderBrush>
+                    </Border>
+
+                    <!-- Avatar resmi -->
+                    <Border Width="140" Height="140"
+                            CornerRadius="16"
+                            ClipToBounds="True"
+                            Background="{DynamicResource IconGradientBrush}"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                      <Grid>
+
+                        <!-- Asıl avatar görseli -->
+                        <Image Source="{Binding Avatar, Converter={StaticResource AvatarPathConverter}}"
+                               Stretch="UniformToFill" />
+
+                        <!--
+                          ── YÖNET MODU kalem overlay'i ──────────────────
+                          Tıklanabilir yönet overlay: yarı saydam siyah + kalem
+                        -->
+                        <Border CornerRadius="16"
+                                Background="#CC000000"
+                                IsVisible="{Binding #ProfileListRoot.DataContext.IsManageMode}">
+                          <Border Width="46" Height="46"
+                                  CornerRadius="23"
+                                  BorderBrush="White"
+                                  BorderThickness="2"
+                                  Background="Transparent"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center">
+                            <icons:MaterialIcon Kind="PencilOutline"
+                                                Width="20" Height="20"
+                                                Foreground="White"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center" />
+                          </Border>
                         </Border>
-                      </Border>
 
-                      <Border CornerRadius="14"
-                              Background="#CC000000"
-                              IsVisible="{Binding IsPendingDeletion}">
-                        <StackPanel VerticalAlignment="Center"
-                                    HorizontalAlignment="Center"
-                                    Spacing="6">
-                          <icons:MaterialIcon Kind="TimerSandFull"
-                                              Width="28"
-                                              Height="28"
-                                              Foreground="{Binding DeletionUrgency, Converter={StaticResource UrgencyToColorConverter}}"
-                                              HorizontalAlignment="Center" />
-                          <TextBlock Text="{Binding TimeUntilDeletion, Converter={StaticResource TimeSpanToCountdownConverter}}"
-                                     FontSize="11"
-                                     FontWeight="SemiBold"
-                                     Foreground="{Binding DeletionUrgency, Converter={StaticResource UrgencyToColorConverter}}"
-                                     TextAlignment="Center"
-                                     HorizontalAlignment="Center" />
-                        </StackPanel>
-                      </Border>
+                        <!-- Silme geri sayım overlay'i -->
+                        <Border CornerRadius="16"
+                                Background="#E0000000"
+                                IsVisible="{Binding IsPendingDeletion}">
+                          <StackPanel VerticalAlignment="Center"
+                                      HorizontalAlignment="Center"
+                                      Spacing="5">
+                            <icons:MaterialIcon Kind="TimerSandFull"
+                                                Width="26" Height="26"
+                                                Foreground="{Binding DeletionUrgency, Converter={StaticResource UrgencyToColorConverter}}"
+                                                HorizontalAlignment="Center" />
+                            <TextBlock Text="{Binding TimeUntilDeletion, Converter={StaticResource TimeSpanToCountdownConverter}}"
+                                       FontSize="11" FontWeight="Bold"
+                                       Foreground="{Binding DeletionUrgency, Converter={StaticResource UrgencyToColorConverter}}"
+                                       TextAlignment="Center"
+                                       HorizontalAlignment="Center" />
+                          </StackPanel>
+                        </Border>
 
-                      <icons:MaterialIcon Kind="Lock"
-                                          Width="14"
-                                          Height="14"
-                                          Foreground="#99FFFFFF"
-                                          HorizontalAlignment="Right"
-                                          VerticalAlignment="Top"
-                                          Margin="0,8,8,0"
-                                          IsVisible="{Binding PinHash, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
-                    </Grid>
-                  </Border>
+                        <!-- PIN kilit simgesi (sağ üst köşe) -->
+                        <icons:MaterialIcon Kind="Lock"
+                                            Width="14" Height="14"
+                                            Foreground="#AAFFFFFF"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Top"
+                                            Margin="0,8,8,0"
+                                            IsVisible="{Binding PinHash, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+                      </Grid>
+                    </Border>
+                  </Grid>
 
-                  <Border Width="120"
-                          Height="120"
-                          CornerRadius="14"
-                          BorderThickness="3"
-                          BorderBrush="Transparent"
-                          Background="Transparent"
-                          HorizontalAlignment="Center"
-                          VerticalAlignment="Center"
-                          IsHitTestVisible="False" />
-                </Grid>
-                <TextBlock Text="{Binding Name}"
-                           Foreground="{DynamicResource TextMutedBrush}"
-                           FontSize="15"
-                           FontWeight="Medium"
-                           TextAlignment="Center"
-                           TextTrimming="CharacterEllipsis" />
-              </StackPanel>
-            </Button>
-          </DataTemplate>
+                  <!-- Profil adı etiketi -->
+                  <TextBlock Text="{Binding Name}"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             FontSize="14"
+                             FontWeight="Medium"
+                             TextAlignment="Center"
+                             TextTrimming="CharacterEllipsis"
+                             MaxWidth="150"
+                             HorizontalAlignment="Center" />
+                </StackPanel>
+              </Button>
+            </DataTemplate>
 
-          <DataTemplate DataType="vm:AddProfilePlaceholder">
-            <Button Command="{Binding #ProfileListRoot.DataContext.AddProfileCommand}"
-                    Classes="AddProfileButtonStyle"
-                    Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=profileWidth}"
-                    Margin="10">
-              <StackPanel Spacing="12">
-                <Grid Width="120"
-                      Height="120"
-                      HorizontalAlignment="Center">
-                  <Rectangle x:Name="AddBorder"
-                             RadiusX="14"
-                             RadiusY="14"
-                             Stroke="{DynamicResource BorderBrush}"
-                             StrokeThickness="2"
-                             StrokeDashArray="4,2"
-                             Fill="Transparent" />
-                  <Grid HorizontalAlignment="Center"
-                        VerticalAlignment="Center">
-                    <Ellipse x:Name="PlusCircle"
-                             Width="60"
-                             Height="60"
-                             Stroke="{DynamicResource TextMutedBrush}"
-                             StrokeThickness="2"
-                             Fill="Transparent" />
-                    <icons:MaterialIcon x:Name="PlusIcon"
-                                        Kind="Plus"
-                                        Width="32"
-                                        Height="32"
+            <!-- ── 2. "Profil Ekle" kartı (sadece normal modda görünür) ── -->
+            <DataTemplate DataType="vm:AddProfilePlaceholder">
+              <!--
+                Netflix: "Add Profile" kartı profil kartlarıyla aynı boyutta;
+                içinde artı simgesi ve "Profil Ekle" yazısı.
+                Yönet modunda bu kart gizlenir.
+              -->
+              <Button Classes="ProfileCardStyle"
+                      Command="{Binding #ProfileListRoot.DataContext.AddProfileCommand}"
+                      Width="{Binding Bounds.Width,
+                                      RelativeSource={RelativeSource AncestorType=ItemsControl},
+                                      Converter={StaticResource ResponsiveCardMetricConverter},
+                                      ConverterParameter=profileWidth}"
+                      Margin="8,6"
+                      IsVisible="{Binding !#ProfileListRoot.DataContext.IsManageMode}">
+                <StackPanel Spacing="10">
+
+                  <!-- Artı kutusu: noktalı kenarlıklı (StrokeDashArray="4,2") -->
+                  <Grid Width="140" Height="140" HorizontalAlignment="Center">
+                    <Rectangle RadiusX="14" RadiusY="14"
+                               Stroke="{DynamicResource BorderBrush}"
+                               StrokeThickness="2"
+                               StrokeDashArray="4,2"
+                               Fill="Transparent" />
+                    <icons:MaterialIcon Kind="Plus"
+                                        Width="42" Height="42"
                                         Foreground="{DynamicResource TextMutedBrush}"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center" />
                   </Grid>
-                </Grid>
-                <TextBlock Text="{loc:Translate Profiles.AddProfile}"
-                           Foreground="{DynamicResource TextMutedBrush}"
-                           FontSize="15"
-                           FontWeight="Medium"
-                           TextAlignment="Center" />
-              </StackPanel>
-            </Button>
-          </DataTemplate>
+
+                  <!-- "Profil Ekle" etiketi -->
+                  <TextBlock Text="{loc:Translate Profiles.AddProfile}"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             FontSize="14"
+                             FontWeight="Medium"
+                             TextAlignment="Center"
+                             MaxWidth="150"
+                             HorizontalAlignment="Center" />
+                </StackPanel>
+              </Button>
+            </DataTemplate>
+
           </ItemsControl.DataTemplates>
         </ItemsControl>
+
+        <!--
+          ── Yedek "Profil Ekle" butonu ────────────────────────────
+          DisplayItems tamamen boşken (ViewModel henüz yüklenmediyse)
+          gösterilen geri dönüş kartı. Profiller yüklenince kaybolur.
+        -->
+        <Button x:Name="FallbackAddProfileButton"
+                Classes="ProfileCardStyle"
+                Command="{Binding AddProfileCommand}"
+                HorizontalAlignment="Center"
+                Margin="8,6"
+                IsVisible="{Binding DisplayItems.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=invert}">
+          <StackPanel Spacing="10">
+            <Grid Width="140" Height="140" HorizontalAlignment="Center">
+              <Rectangle RadiusX="14" RadiusY="14"
+                         Stroke="{DynamicResource BorderBrush}"
+                         StrokeThickness="2"
+                         StrokeDashArray="4,2"
+                         Fill="Transparent" />
+              <icons:MaterialIcon Kind="Plus"
+                                  Width="42" Height="42"
+                                  Foreground="{DynamicResource TextMutedBrush}"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center" />
+            </Grid>
+            <TextBlock Text="{loc:Translate Profiles.AddProfile}"
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       FontSize="14" FontWeight="Medium"
+                       TextAlignment="Center" />
+          </StackPanel>
+        </Button>
+
       </StackPanel>
     </ScrollViewer>
 
-    <TextBlock Grid.Row="1"
-               Text="{loc:Translate Profiles.Add.Description}"
-               Foreground="{DynamicResource TextMutedBrush}"
-               FontSize="12"
-               TextWrapping="Wrap"
-               Margin="0,12,0,0" />
+    <!-- ════════════════════════════════════════════════════════
+         OVERLAY KATMANLARI (RowSpan="2" → tüm ekranı kaplar)
+         ════════════════════════════════════════════════════════ -->
 
+    <!-- Profil kurulum formu -->
     <Border x:Name="ProfileSetupHost"
             Grid.RowSpan="2"
             Background="{DynamicResource Bg0Brush}"
@@ -297,6 +413,7 @@
       <ContentControl x:Name="ProfileSetupContent" />
     </Border>
 
+    <!-- PIN girişi -->
     <Border x:Name="PinEntryHost"
             Grid.RowSpan="2"
             Background="{DynamicResource Bg0Brush}"
@@ -305,12 +422,13 @@
       <views:PinEntryView x:Name="PinEntryContent" />
     </Border>
 
+    <!-- Profil yükleniyor -->
     <Border x:Name="ProfileLoadingHost"
             Grid.RowSpan="2"
             Background="{DynamicResource Bg0Brush}"
-            Padding="18"
             IsVisible="False">
       <views:ProfileLoadingView x:Name="ProfileLoadingContent" />
     </Border>
+
   </Grid>
 </UserControl>

@@ -34,6 +34,10 @@ public class MainActivity : AvaloniaMainActivity
             ?? throw new InvalidOperationException("Android application context is unavailable.");
         Noctra.Mobile.App.ServiceProviderFactory ??=
             () => applicationContext.CreateNoctraAndroidServiceProvider();
+        if (Avalonia.Application.Current is Noctra.Mobile.App existingApp)
+        {
+            existingApp.EnsureServices();
+        }
 
         try
         {

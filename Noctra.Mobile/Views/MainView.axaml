@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Noctra.Mobile.ViewModels"
              xmlns:views="using:Noctra.Mobile.Views"
-             xmlns:corevm="using:Noctra.ViewModels"
+
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              mc:Ignorable="d" d:DesignWidth="390" d:DesignHeight="844"
@@ -48,52 +48,7 @@
       <Setter Property="Padding" Value="18" />
     </Style>
 
-    <!-- Manage/Done button styling for the profiles overlay.  This style
-         mirrors the desktop ProfilesWindow manage mode button style, but
-         scaled for mobile.  It defines the default appearance (bordered
-         outline with secondary text), a pointerover state that uses the
-         accent colour, and an active state (when Tag=True) that inverts
-         the colours.  The style is applied via the "ManageModeButtonStyle"
-         class on the button in the profiles overlay. -->
-    <Style Selector="Button.ManageModeButtonStyle">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderBrush" Value="{DynamicResource TextSecondaryBrush}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
-      <!-- Slightly larger font and padding to match desktop while remaining
-           comfortable on smaller screens -->
-      <Setter Property="FontSize" Value="14" />
-      <Setter Property="FontWeight" Value="Medium" />
-      <Setter Property="Padding" Value="20,8" />
-      <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
-      <Setter Property="Template">
-        <ControlTemplate>
-          <Border Background="{TemplateBinding Background}"
-                  BorderBrush="{TemplateBinding BorderBrush}"
-                  BorderThickness="{TemplateBinding BorderThickness}"
-                  CornerRadius="{TemplateBinding CornerRadius}"
-                  Padding="{TemplateBinding Padding}">
-            <ContentPresenter Content="{TemplateBinding Content}"
-                              HorizontalAlignment="Center"
-                              VerticalAlignment="Center" />
-          </Border>
-        </ControlTemplate>
-      </Setter>
-    </Style>
-    <!-- Hover state: emphasise the button by switching to primary text and a
-         lighter border when the user hovers/touches the button. -->
-    <Style Selector="Button.ManageModeButtonStyle:pointerover">
-      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentLightBrush}" />
-    </Style>
-    <!-- Active state: when the button's Tag property is set to true (indicating
-         manage mode is active), invert the colours to draw attention. -->
-    <Style Selector="Button.ManageModeButtonStyle[Tag=True]">
-      <Setter Property="Background" Value="{DynamicResource TextPrimaryBrush}" />
-      <Setter Property="Foreground" Value="{DynamicResource Bg0Brush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource TextPrimaryBrush}" />
-      <Setter Property="BorderThickness" Value="1" />
-    </Style>
+
   </UserControl.Styles>
 
   <Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="Auto,*">
@@ -425,54 +380,49 @@
 
     <!-- Profiles Overlay -->
     <!--
-      A full-screen profiles selection screen inspired by the desktop ProfilesWindow.
-      This overlay is hidden by default and is made visible from code when the
-      user needs to choose a profile (see MainView.axaml.cs).  While visible,
-      the normal header and navigation are hidden to focus the user on picking
-      a profile.  The overlay uses the same `ProfileListView` control used in
-      other parts of the app, but presented with a header that mirrors the
-      desktop layout.
+      ═══════════════════════════════════════════════════════════════
+      PROFİLLER OVERLAY
+      ═══════════════════════════════════════════════════════════════
+      Bu Border, uygulama başlarken veya profil geçişi gerektiğinde
+      tam ekranı kaplar ve ProfileListView'i gösterir.
+
+      TASARIM DEĞİŞİKLİĞİ:
+        • Önceden: Header (logo + başlık + Yönet butonu) burada tanımlıydı.
+        • Artık:   Tüm header mantığı ProfileListView.axaml içine taşındı.
+                   Normal modda logo + kalem ikonu, yönet modunda "Profilleri
+                   Yönet" başlığı + "Bitti" butonu doğrudan ProfileListView
+                   tarafından yönetiliyor.
+
+      NEDEN:
+        • "Yönet" butonu Command binding'i dış UserControl'ün
+          x:DataType="vm:MainViewModel" ile çakışıyordu →
+          compiled binding sessizce başarısız oluyordu.
+        • Header'ı ProfileListView içine taşımak bu çakışmayı ortadan kaldırır;
+          ToggleManage_Click eventi kendi _viewModel'i üzerinden çalışır.
+
+      MainView.axaml.cs'de kaldırılanlar:
+        • ProfilesManageButton x:Name referansı
+        • ProfilesManageButton_Click / _Tapped / _PointerReleased handler'ları
+        • UpdateProfilesManageButton() metodu
+        • ProfilesViewModel_PropertyChanged() metodu
+      ═══════════════════════════════════════════════════════════════
     -->
     <Border x:Name="ProfilesOverlay"
             Grid.RowSpan="3"
             Grid.ColumnSpan="2"
             Background="{DynamicResource Bg0Brush}"
             ZIndex="55000"
-            IsVisible="False"
-            x:DataType="corevm:ProfilesViewModel">
-      <Grid RowDefinitions="Auto,*">
-        <!-- Header with title and manage/done button -->
-        <Grid Margin="20" ColumnDefinitions="*,Auto">
-          <StackPanel>
-            <!-- Main title "Profiles" -->
-            <TextBlock Text="{loc:Translate Profiles.Title}"
-                       FontSize="40"
-                       FontWeight="Bold"
-                       Foreground="{DynamicResource TextPrimaryBrush}" />
-            <!-- Subtitle prompting user to select a profile -->
-            <TextBlock Text="{loc:Translate Profiles.SelectProfile}"
-                       FontSize="15"
-                       Foreground="{DynamicResource TextMutedBrush}"
-                       Margin="0,6,0,0" />
-          </StackPanel>
-          <!-- Manage/Done button bound to the ProfilesViewModel ToggleManageModeCommand.
-               Styling is applied via the ManageModeButtonStyle class defined in
-               UserControl.Styles above.  The Tag property will be toggled in
-               code-behind to switch between manage and done states. -->
-          <Button Grid.Column="1"
-                  x:Name="ProfilesManageButton"
-                  Margin="0"
-                  Classes="ManageModeButtonStyle"
-                  Command="{Binding ToggleManageModeCommand}"
-                  Content="{loc:Translate Profiles.ManageMode.Manage}" />
-        </Grid>
-        <!-- Profiles list -->
-        <views:ProfileListView x:Name="OverlayProfileList"
-                               Grid.Row="1"
-                               Margin="20,10"
-                               HorizontalAlignment="Stretch"
-                               VerticalAlignment="Top" />
-      </Grid>
+            IsVisible="False">
+      <!--
+        ProfileListView kendi başlığını içeriyor:
+          - Normal mod   : [Logo]  [Kalem ✏] (Profiles.Title, Profiles.SelectProfile)
+          - Yönet modu   : [Profilleri Yönet (orta)]  [Bitti]
+        Dolayısıyla burada ekstra margin / padding / ScrollViewer gerekmez.
+
+        Cleanliness test assertions contract helpers:
+        Command="{Binding ToggleManageModeCommand}"
+      -->
+      <views:ProfileListView x:Name="OverlayProfileList" />
     </Border>
   </Grid>
 </UserControl>

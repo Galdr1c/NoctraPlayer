@@ -61,11 +61,12 @@ public partial class MobileLegalConsentView : UserControl
         if (_settingsService != null)
             return;
 
-        if (Application.Current is not App { Services: not null } app)
+        if (Application.Current is not App app)
             return;
 
-        _settingsService = app.Services.GetService<ISettingsService>();
-        _localizationService = app.Services.GetService<ILocalizationService>();
+        var services = app.EnsureServices();
+        _settingsService = services?.GetService<ISettingsService>();
+        _localizationService = services?.GetService<ILocalizationService>();
     }
 
     private static bool RequiresLegalConsent(AppSettings settings)
