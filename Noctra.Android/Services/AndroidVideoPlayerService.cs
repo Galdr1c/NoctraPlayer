@@ -7,8 +7,13 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Android.Content;
-using Android.Media;
 using Android.OS;
+using Android.Runtime;
+using AndroidX.Media3.Common;
+using AndroidX.Media3.Common.Text;
+using AndroidX.Media3.ExoPlayer;
+using AndroidX.Media3.ExoPlayer.Source;
+using AndroidX.Media3.DataSource;
 using Noctra.Models;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
@@ -23,12 +28,12 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     private readonly Context _applicationContext;
     private readonly ISettingsService _settingsService;
     private readonly INetworkService _networkService;
-    private readonly AudioManager _audioManager;
-    private readonly AudioFocusListener _audioFocusListener;
-    private readonly object _trackSync = new();
+    private readonly object _trackLock = new();
     private readonly List<(int Id, string? Name)> _audioTracks = new();
     private readonly List<(int Id, string? Name)> _subtitleTracks = new();
-    private global::Android.Media.MediaPlayer? _mediaPlayer;
+
+    private IExoPlayer? _exoPlayer;
+    private PlayerListener? _playerListener;
     private string? _currentUrl;
     private bool _isDisposed;
     private bool _hasLoadedMedia;
@@ -45,24 +50,36 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     private DataUsageLevel _lastDataUsage = DataUsageLevel.Auto;
     private CancellationTokenSource? _reinitializeCts;
 
-    // Audio focus: Android'de başka bir uygulama ses çıkardığında (telefon, alarm, müzik)
-    // oynatmayı duraklatmak / sesi kısmak için sistem seviyesinde koordinasyon.
-    private enum AudioFocusState { None, Granted, TransientLoss, TransientLossCanDuck, Lost }
-    private AudioFocusState _audioFocusState = AudioFocusState.None;
-    private bool _pausedByAudioFocus;
+    // Cached values to avoid cross-thread calls when queried outside main thread
+    private bool _isPlaying;
+    private long _currentTimeMs;
+    private double _duration;
 
     public string? CurrentUrl => _currentUrl;
-    public bool IsPlaying => _mediaPlayer?.IsPlaying == true;
+    public bool IsPlaying => _isPlaying;
     public PlaybackState State => _state;
     public bool HasLoadedMedia => _hasLoadedMedia;
-    public long CurrentTimeMilliseconds => _mediaPlayer is null ? 0 : _mediaPlayer.CurrentPosition;
-    public double Duration => _mediaPlayer is null ? 0 : _mediaPlayer.Duration / 1000d;
+
+    public long CurrentTimeMilliseconds
+    {
+        get
+        {
+            if (_exoPlayer is null) return 0;
+            if (Looper.MyLooper() == Looper.MainLooper)
+            {
+                try { _currentTimeMs = _exoPlayer.CurrentPosition; } catch { }
+            }
+            return _currentTimeMs;
+        }
+    }
+
+    public double Duration => _duration;
 
     public IReadOnlyList<(int Id, string? Name)> AudioTracks
     {
         get
         {
-            lock (_trackSync)
+            lock (_trackLock)
             {
                 return _audioTracks.ToArray();
             }
@@ -73,7 +90,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     {
         get
         {
-            lock (_trackSync)
+            lock (_trackLock)
             {
                 return _subtitleTracks.ToArray();
             }
@@ -103,12 +120,36 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         _settingsService = settingsService;
         _networkService = networkService;
 
-        _audioManager = (AudioManager)_applicationContext.GetSystemService(Context.AudioService)!;
-        _audioFocusListener = new AudioFocusListener();
-        _audioFocusListener.FocusChanged += OnAudioFocusChanged;
-
         ApplySettingsSnapshot(_settingsService.Settings, updateAudioState: false);
         _settingsService.SettingsChanged += OnSettingsChanged;
+
+        // Initialize ExoPlayer on the Main Thread
+        RunOnMainThread(() =>
+        {
+            InitializePlayer();
+        });
+    }
+
+    private void InitializePlayer()
+    {
+        if (_exoPlayer is not null) return;
+
+        var builder = new ExoPlayerBuilder(_applicationContext);
+        
+        // Configure AudioAttributes for automatic audio focus handling
+        var audioAttributes = new AndroidX.Media3.Common.AudioAttributes.Builder()
+            .SetUsage(C.UsageMedia)
+            .SetContentType(C.ContentTypeMovie)
+            .Build();
+        
+        builder.SetAudioAttributes(audioAttributes, true);
+        
+        _exoPlayer = builder.Build();
+        _playerListener = new PlayerListener(this);
+        _exoPlayer.AddListener(_playerListener);
+
+        ApplyVolume();
+        ApplyPlaybackRate();
     }
 
     public int Volume
@@ -137,22 +178,16 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     {
         get
         {
-            if (_mediaPlayer is null || _mediaPlayer.Duration <= 0)
-            {
-                return 0;
-            }
-
-            return Math.Clamp((double)_mediaPlayer.CurrentPosition / _mediaPlayer.Duration, 0, 1);
+            var duration = Duration;
+            if (duration <= 0) return 0;
+            return Math.Clamp((CurrentTimeMilliseconds / 1000d) / duration, 0, 1);
         }
         set
         {
-            if (_mediaPlayer is null || _mediaPlayer.Duration <= 0)
-            {
-                return;
-            }
-
-            var target = Math.Clamp(value, 0, 1) * _mediaPlayer.Duration;
-            SeekToTime((long)target);
+            var duration = Duration;
+            if (duration <= 0) return;
+            var targetMs = (long)(Math.Clamp(value, 0, 1) * duration * 1000);
+            SeekToTime(targetMs);
         }
     }
 
@@ -169,100 +204,104 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     public async Task PlayAsync(string url, double startTimeSeconds = 0)
     {
         ThrowIfDisposed();
-        Stop();
+        
+        // Ensure player is initialized on Main Thread
+        var initTcs = new TaskCompletionSource();
+        RunOnMainThread(() =>
+        {
+            try
+            {
+                InitializePlayer();
+                initTcs.TrySetResult();
+            }
+            catch (Exception ex)
+            {
+                initTcs.TrySetException(ex);
+            }
+        });
+        await initTcs.Task;
 
         _currentUrl = url;
         _selectedAudioTrack = -1;
         _selectedSubtitleTrack = -1;
         ClearTrackCache();
         RaiseSubtitleTextChanged(null);
+        
         _state = PlaybackState.Buffering;
         BufferingChanged?.Invoke(this, 0);
 
-        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var player = new global::Android.Media.MediaPlayer();
         var playbackSource = BuildPlaybackSource(url);
-        ConfigureAndroidMediaPlayer(player);
         EnsureNetworkCanPlay(playbackSource);
-        _mediaPlayer = player;
 
-        player.Prepared += (_, _) =>
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        RunOnMainThread(async () =>
         {
             try
             {
-                _hasLoadedMedia = true;
-                RefreshTrackCache(player);
-                PlayerReady?.Invoke(this, EventArgs.Empty);
-                UpdateStreamQualityFromPreparedPlayer(player);
-                if (startTimeSeconds > 0)
+                if (_exoPlayer is null)
                 {
-                    player.SeekTo((int)(startTimeSeconds * 1000));
+                    throw new InvalidOperationException("ExoPlayer is not initialized.");
                 }
 
-                ApplyVolume();
-                player.Start();
-                ApplyPlaybackRate();
-                _state = PlaybackState.Playing;
-                RequestAudioFocus();
-                PlayingChanged?.Invoke(this, true);
-                BufferingChanged?.Invoke(this, 100);
+                _exoPlayer.Stop();
+                _exoPlayer.ClearMediaItems();
+
+                // Setup DataSource.Factory with headers
+                var httpDataSourceFactory = new DefaultHttpDataSource.Factory();
+                httpDataSourceFactory.SetUserAgent(ResolveUserAgent());
+                if (playbackSource.Headers.Count > 0)
+                {
+                    httpDataSourceFactory.SetDefaultRequestProperties(playbackSource.Headers);
+                }
+
+                global::Android.Net.Uri uri;
+                if (playbackSource.IsNetworkStream)
+                {
+                    uri = global::Android.Net.Uri.Parse(playbackSource.Url);
+                }
+                else
+                {
+                    uri = global::Android.Net.Uri.FromFile(new Java.IO.File(playbackSource.Url));
+                }
+
+                var mediaItem = MediaItem.FromUri(uri);
+
+                // Create the appropriate MediaSource using DefaultMediaSourceFactory
+                var mediaSourceFactory = new DefaultMediaSourceFactory(httpDataSourceFactory);
+                var mediaSource = mediaSourceFactory.CreateMediaSource(mediaItem);
+
+
+                _exoPlayer.SetMediaSource(mediaSource);
+
+                // Setup Video Surface
+                await _videoSurfaceService.ShowAsync().ConfigureAwait(true);
+                var surface = await _videoSurfaceService.WaitForSurfaceAsync().ConfigureAwait(true);
+                if (surface is not null)
+                {
+                    _exoPlayer.SetVideoSurface(surface);
+                }
+                
+                if (startTimeSeconds > 0)
+                {
+                    _exoPlayer.SeekTo((long)(startTimeSeconds * 1000));
+                }
+
+                _exoPlayer.Prepare();
+                _exoPlayer.PlayWhenReady = true;
+
                 completion.TrySetResult();
             }
             catch (Exception ex)
             {
                 _state = PlaybackState.Error;
+                RaiseSubtitleTextChanged(null);
                 ErrorOccurred?.Invoke(this, ex.Message);
                 completion.TrySetException(ex);
             }
-        };
-        player.Completion += (_, _) =>
-        {
-            _state = PlaybackState.Stopped;
-            RaiseSubtitleTextChanged(null);
-            PlayingChanged?.Invoke(this, false);
-            PlaybackEnded?.Invoke(this, EventArgs.Empty);
-        };
-        player.Error += (_, args) =>
-        {
-            _state = PlaybackState.Error;
-            RaiseSubtitleTextChanged(null);
-            var message = $"Android.Media.MediaPlayer error: {args.What}/{args.Extra}";
-            ErrorOccurred?.Invoke(this, message);
-            completion.TrySetException(new InvalidOperationException(message));
-            args.Handled = true;
-        };
-        player.BufferingUpdate += (_, args) => BufferingChanged?.Invoke(this, args.Percent);
-        player.TimedText += (_, args) => RaiseSubtitleTextChanged(args.Text?.Text);
-        player.SubtitleData += (_, args) => HandleSubtitleData(args.Data);
+        });
 
-        try
-        {
-            await _videoSurfaceService.ShowAsync().ConfigureAwait(false);
-            var surface = await _videoSurfaceService.WaitForSurfaceAsync().ConfigureAwait(false);
-            if (surface is not null)
-            {
-                player.SetSurface(surface);
-            }
-
-            if (playbackSource.IsNetworkStream)
-            {
-                player.SetDataSource(_applicationContext, global::Android.Net.Uri.Parse(playbackSource.Url), playbackSource.Headers);
-            }
-            else
-            {
-                player.SetDataSource(playbackSource.Url);
-            }
-
-            player.PrepareAsync();
-            await completion.Task.ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            _state = PlaybackState.Error;
-            RaiseSubtitleTextChanged(null);
-            ErrorOccurred?.Invoke(this, ex.Message);
-            throw;
-        }
+        await completion.Task;
     }
 
     public Task HardSeekAsync(double seconds)
@@ -295,136 +334,138 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
     public void Pause()
     {
-        if (_mediaPlayer?.IsPlaying == true)
+        RunOnMainThread(() =>
         {
-            _mediaPlayer.Pause();
-            _state = PlaybackState.Paused;
-            PlayingChanged?.Invoke(this, false);
-        }
+            if (_exoPlayer is not null)
+            {
+                _exoPlayer.PlayWhenReady = false;
+            }
+        });
     }
 
     public void Resume()
     {
-        if (_mediaPlayer is not null && _hasLoadedMedia)
+        RunOnMainThread(() =>
         {
-            _mediaPlayer.Start();
-            ApplyPlaybackRate();
-            _state = PlaybackState.Playing;
-            // Kullanıcı manuel olarak devam ettirince, başka uygulama ses çıkarmıyorsa
-            // tekrar audio focus talep et (transient loss sırasında duraklatılmış olabilir).
-            RequestAudioFocus();
-            _pausedByAudioFocus = false;
-            PlayingChanged?.Invoke(this, true);
-        }
+            if (_exoPlayer is not null)
+            {
+                _exoPlayer.PlayWhenReady = true;
+            }
+        });
     }
 
     public void Stop()
     {
-        AbandonAudioFocus();
-
-        if (_mediaPlayer is null)
+        RunOnMainThread(() =>
         {
-            _state = PlaybackState.Stopped;
-            _hasLoadedMedia = false;
-            ClearTrackCache();
-            RaiseSubtitleTextChanged(null);
-            return;
-        }
-
-        try
-        {
-            if (_mediaPlayer.IsPlaying)
+            if (_exoPlayer is null)
             {
-                _mediaPlayer.Stop();
+                _state = PlaybackState.Stopped;
+                _hasLoadedMedia = false;
+                ClearTrackCache();
+                RaiseSubtitleTextChanged(null);
+                return;
             }
-        }
-        catch
-        {
-        }
-        finally
-        {
-            _mediaPlayer.Release();
-            _mediaPlayer.Dispose();
-            _mediaPlayer = null;
-            _hasLoadedMedia = false;
-            _selectedAudioTrack = -1;
-            _selectedSubtitleTrack = -1;
-            ClearTrackCache();
-            RaiseSubtitleTextChanged(null);
-            _state = PlaybackState.Stopped;
-            PlayingChanged?.Invoke(this, false);
-        }
+
+            try
+            {
+                _exoPlayer.Stop();
+                _exoPlayer.ClearMediaItems();
+            }
+            catch { }
+            finally
+            {
+                _hasLoadedMedia = false;
+                _selectedAudioTrack = -1;
+                _selectedSubtitleTrack = -1;
+                ClearTrackCache();
+                RaiseSubtitleTextChanged(null);
+                _state = PlaybackState.Stopped;
+                _isPlaying = false;
+                PlayingChanged?.Invoke(this, false);
+            }
+        });
     }
 
     public void SeekToTime(long milliseconds)
     {
-        if (_mediaPlayer is null)
+        RunOnMainThread(() =>
         {
-            return;
-        }
-
-        _mediaPlayer.SeekTo((int)Math.Clamp(milliseconds, 0, int.MaxValue));
-        PositionChanged?.Invoke(this, milliseconds / 1000d);
+            if (_exoPlayer is null) return;
+            _exoPlayer.SeekTo(Math.Max(0, milliseconds));
+            PositionChanged?.Invoke(this, milliseconds / 1000d);
+        });
     }
 
     public void PlayLoadedMedia() => Resume();
 
     public void SetAudioTrack(int trackId)
     {
-        var player = _mediaPlayer;
-        if (player is null || !_hasLoadedMedia || trackId < 0)
+        RunOnMainThread(() =>
         {
-            return;
-        }
+            if (_exoPlayer is null || !_hasLoadedMedia || trackId < 0) return;
 
-        try
-        {
-            player.SelectTrack(trackId);
+            int groupIndex = trackId / 1000;
+            int trackIndex = trackId % 1000;
+
+            var currentTracks = _exoPlayer.CurrentTracks;
+            var groups = GetTrackGroups(currentTracks);
+            if (groupIndex >= groups.Length) return;
+
+            var group = groups[groupIndex];
+            var mediaTrackGroup = group.MediaTrackGroup;
+
+            var newOverride = new TrackSelectionOverride(mediaTrackGroup, trackIndex);
+
+            _exoPlayer.TrackSelectionParameters = _exoPlayer.TrackSelectionParameters.BuildUpon()
+                .ClearOverridesOfType(C.TrackTypeAudio)
+                .AddOverride(newOverride)
+                .Build();
+
             _selectedAudioTrack = trackId;
-            RefreshTrackCache(player);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] SetAudioTrack({trackId}) failed: {ex.Message}");
-        }
+        });
     }
 
     public void SetSubtitleTrack(int trackId)
     {
-        var player = _mediaPlayer;
-        if (player is null || !_hasLoadedMedia)
+        RunOnMainThread(() =>
         {
-            return;
-        }
+            if (_exoPlayer is null || !_hasLoadedMedia) return;
 
-        try
-        {
             if (trackId < 0)
             {
-                DeselectSubtitleTracks(player);
+                _exoPlayer.TrackSelectionParameters = _exoPlayer.TrackSelectionParameters.BuildUpon()
+                    .SetTrackTypeDisabled(C.TrackTypeText, true)
+                    .Build();
                 _selectedSubtitleTrack = -1;
                 RaiseSubtitleTextChanged(null);
                 return;
             }
 
-            if (_selectedSubtitleTrack >= 0 && _selectedSubtitleTrack != trackId)
-            {
-                TryDeselectTrack(player, _selectedSubtitleTrack);
-            }
+            int groupIndex = trackId / 1000;
+            int trackIndex = trackId % 1000;
 
-            player.SelectTrack(trackId);
+            var currentTracks = _exoPlayer.CurrentTracks;
+            var groups = GetTrackGroups(currentTracks);
+            if (groupIndex >= groups.Length) return;
+
+            var group = groups[groupIndex];
+            var mediaTrackGroup = group.MediaTrackGroup;
+
+            var newOverride = new TrackSelectionOverride(mediaTrackGroup, trackIndex);
+
+            _exoPlayer.TrackSelectionParameters = _exoPlayer.TrackSelectionParameters.BuildUpon()
+                .SetTrackTypeDisabled(C.TrackTypeText, false)
+                .ClearOverridesOfType(C.TrackTypeText)
+                .AddOverride(newOverride)
+                .Build();
+
             _selectedSubtitleTrack = trackId;
-            RefreshTrackCache(player);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] SetSubtitleTrack({trackId}) failed: {ex.Message}");
-        }
+        });
     }
 
     public void SetVideoLayout(string? aspectRatio, string? cropGeometry)
     {
-        // Video boyutunu surface servise aktar ki transform matrisi doğru hesaplansın.
         if (StreamQuality is { Width: > 0, Height: > 0 })
         {
             _videoSurfaceService.SetVideoSize(StreamQuality.Width, StreamQuality.Height);
@@ -437,11 +478,24 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         if (!_isDisposed)
         {
             _settingsService.SettingsChanged -= OnSettingsChanged;
-            _audioFocusListener.FocusChanged -= OnAudioFocusChanged;
-            AbandonAudioFocus();
             _reinitializeCts?.Cancel();
             _reinitializeCts?.Dispose();
-            Stop();
+            
+            RunOnMainThread(() =>
+            {
+                if (_exoPlayer is not null)
+                {
+                    if (_playerListener is not null)
+                    {
+                        _exoPlayer.RemoveListener(_playerListener);
+                        _playerListener.Dispose();
+                    }
+                    _exoPlayer.Release();
+                    _exoPlayer.Dispose();
+                    _exoPlayer = null;
+                }
+            });
+
             _isDisposed = true;
         }
 
@@ -482,15 +536,6 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             previousBufferSize != _lastVideoBufferSize ||
             previousDataUsage != _lastDataUsage;
 
-        // Android MediaPlayer uses the platform decoder/surface path and does not expose a VLC-style
-        // per-source hardware acceleration toggle. Keep the value tracked so a future Media3/ExoPlayer
-        // service can honor it without changing the settings contract.
-        if (previousHardwareAcceleration != _lastHardwareAcceleration)
-        {
-            System.Diagnostics.Debug.WriteLine(
-                "[AndroidVideoPlayerService] HardwareAcceleration changed; Android MediaPlayer has no per-player toggle.");
-        }
-
         if (requiresDataSourceReopen && _hasLoadedMedia && !string.IsNullOrWhiteSpace(_currentUrl))
         {
             ScheduleReinitialize();
@@ -508,9 +553,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             oldCts?.Cancel();
             oldCts?.Dispose();
         }
-        catch
-        {
-        }
+        catch { }
 
         _ = Task.Run(async () =>
         {
@@ -522,12 +565,8 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                     await ReinitializeAsync().ConfigureAwait(false);
                 }
             }
-            catch (System.OperationCanceledException)
-            {
-            }
-            catch (ObjectDisposedException)
-            {
-            }
+            catch (System.OperationCanceledException) { }
+            catch (ObjectDisposedException) { }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] Reinitialize after settings change failed: {ex.Message}");
@@ -536,50 +575,9 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         }, cts.Token);
     }
 
-    private void ConfigureAndroidMediaPlayer(global::Android.Media.MediaPlayer player)
-    {
-        try
-        {
-            using var builder = new AudioAttributes.Builder();
-            builder.SetUsage(AudioUsageKind.Media);
-            builder.SetContentType(AudioContentType.Movie);
-
-            using var attributes = builder.Build();
-            if (attributes is not null)
-            {
-                player.SetAudioAttributes(attributes);
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] SetAudioAttributes failed: {ex.Message}");
-        }
-
-        try
-        {
-            player.SetWakeMode(_applicationContext, WakeLockFlags.Partial);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] SetWakeMode failed: {ex.Message}");
-        }
-
-        try
-        {
-            player.SetScreenOnWhilePlaying(true);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] SetScreenOnWhilePlaying failed: {ex.Message}");
-        }
-    }
-
     private void EnsureNetworkCanPlay(PlaybackSource playbackSource)
     {
-        if (!playbackSource.IsNetworkStream)
-        {
-            return;
-        }
+        if (!playbackSource.IsNetworkStream) return;
 
         if (string.Equals(_networkService.CurrentNetworkStatus, "Offline", StringComparison.OrdinalIgnoreCase))
         {
@@ -757,108 +755,34 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
     private void ApplyVolume()
     {
-        if (_mediaPlayer is null)
+        RunOnMainThread(() =>
         {
-            return;
-        }
-
-        var level = _isMuted ? 0f : _volume / 100f;
-        _mediaPlayer.SetVolume(level, level);
+            if (_exoPlayer is null) return;
+            var level = _isMuted ? 0f : _volume / 100f;
+            _exoPlayer.Volume = level;
+        });
     }
 
     private void ApplyPlaybackRate()
     {
-        if (_mediaPlayer is null)
+        RunOnMainThread(() =>
         {
-            return;
-        }
-
-        try
-        {
-            var playbackParams = _mediaPlayer.PlaybackParams?.SetSpeed(_playbackRate);
-            if (playbackParams is not null)
+            if (_exoPlayer is null) return;
+            try
             {
-                _mediaPlayer.PlaybackParams = playbackParams;
+                var playbackParameters = new PlaybackParameters(_playbackRate);
+                _exoPlayer.PlaybackParameters = playbackParameters;
             }
-        }
-        catch
-        {
-            // Android versions/devices may reject speed changes for a source.
-        }
-    }
-
-    private void RefreshTrackCache(global::Android.Media.MediaPlayer player)
-    {
-        try
-        {
-            var trackInfo = player.GetTrackInfo();
-            var audio = new List<(int Id, string? Name)>();
-            var subtitles = new List<(int Id, string? Name)>();
-            var audioOrdinal = 1;
-            var subtitleOrdinal = 1;
-
-            for (var i = 0; i < trackInfo.Length; i++)
-            {
-                var info = trackInfo[i];
-                switch (info.TrackType)
-                {
-                    case MediaTrackType.Audio:
-                        audio.Add((i, BuildTrackLabel(info, "Audio", audioOrdinal++)));
-                        break;
-                    case MediaTrackType.Timedtext:
-                    case MediaTrackType.Subtitle:
-                        subtitles.Add((i, BuildTrackLabel(info, "Subtitle", subtitleOrdinal++)));
-                        break;
-                }
-            }
-
-            lock (_trackSync)
-            {
-                _audioTracks.Clear();
-                _audioTracks.AddRange(audio);
-                _subtitleTracks.Clear();
-                _subtitleTracks.AddRange(subtitles);
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] RefreshTrackCache failed: {ex.Message}");
-        }
+            catch { }
+        });
     }
 
     private void ClearTrackCache()
     {
-        lock (_trackSync)
+        lock (_trackLock)
         {
             _audioTracks.Clear();
             _subtitleTracks.Clear();
-        }
-    }
-
-    private void DeselectSubtitleTracks(global::Android.Media.MediaPlayer player)
-    {
-        if (_selectedSubtitleTrack >= 0)
-        {
-            TryDeselectTrack(player, _selectedSubtitleTrack);
-            return;
-        }
-
-        // Fallback: bazı cihazlarda seçili text track bilgisi güvenilir dönmeyebilir; tüm text/subtitle trackleri kapatmayı dene.
-        foreach (var (id, _) in SubtitleTracks)
-        {
-            TryDeselectTrack(player, id);
-        }
-    }
-
-    private static void TryDeselectTrack(global::Android.Media.MediaPlayer player, int trackId)
-    {
-        try
-        {
-            player.DeselectTrack(trackId);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] DeselectTrack({trackId}) failed: {ex.Message}");
         }
     }
 
@@ -868,10 +792,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         var sequence = Interlocked.Increment(ref _subtitleSequence);
         SubtitleTextChanged?.Invoke(this, normalizedText);
 
-        if (normalizedText.Length == 0 || clearAfterMilliseconds <= 0)
-        {
-            return;
-        }
+        if (normalizedText.Length == 0 || clearAfterMilliseconds <= 0) return;
 
         _ = Task.Run(async () =>
         {
@@ -883,250 +804,58 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                     RaiseSubtitleTextChanged(null);
                 }
             }
-            catch
-            {
-                // Best-effort subtitle cue cleanup only.
-            }
+            catch { }
         });
     }
 
-    private void HandleSubtitleData(SubtitleData? data)
+    private void UpdateStreamQuality()
     {
-        if (data is null)
-        {
-            return;
-        }
+        if (_exoPlayer is null) return;
 
-        if (_selectedSubtitleTrack >= 0 && data.TrackIndex != _selectedSubtitleTrack)
-        {
-            return;
-        }
+        var videoFormat = _exoPlayer.VideoFormat;
+        var audioFormat = _exoPlayer.AudioFormat;
 
-        try
+        var quality = new StreamQualityInfo();
+
+        if (videoFormat is not null)
         {
-            var text = DecodeSubtitlePayload(data.GetData());
-            if (!string.IsNullOrWhiteSpace(text))
+            quality.Width = videoFormat.Width;
+            quality.Height = videoFormat.Height;
+            quality.VideoCodec = videoFormat.SampleMimeType is { } mime ? MimeToCodecName(mime) : null;
+            if (videoFormat.Bitrate > 0)
             {
-                RaiseSubtitleTextChanged(text, data.DurationUs / 1000);
+                quality.VideoBitrate = videoFormat.Bitrate / 1000;
+            }
+            if (videoFormat.FrameRate > 0)
+            {
+                quality.Fps = (int)videoFormat.FrameRate;
             }
         }
-        catch (Exception ex)
+
+        if (audioFormat is not null)
         {
-            System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] SubtitleData decode failed: {ex.Message}");
-        }
-    }
-
-    private static string DecodeSubtitlePayload(byte[] data)
-    {
-        if (data.Length == 0)
-        {
-            return string.Empty;
-        }
-
-        var text = System.Text.Encoding.UTF8.GetString(data).Trim('\0', '\r', '\n', ' ');
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return string.Empty;
-        }
-
-        var lines = text
-            .Replace("\r\n", "\n", StringComparison.Ordinal)
-            .Replace('\r', '\n')
-            .Split('\n')
-            .Select(line => line.Trim())
-            .Where(line => line.Length > 0)
-            .Where(line => !line.StartsWith("WEBVTT", StringComparison.OrdinalIgnoreCase))
-            .Where(line => !line.StartsWith("NOTE", StringComparison.OrdinalIgnoreCase))
-            .Where(line => !line.Contains("-->", StringComparison.Ordinal))
-            .Where(line => !line.All(char.IsDigit));
-
-        var cleaned = string.Join("\n", lines);
-        cleaned = Regex.Replace(cleaned, "<[^>]+>", string.Empty);
-        return cleaned.Trim();
-    }
-
-    private static string BuildTrackLabel(global::Android.Media.MediaPlayer.TrackInfo info, string fallbackPrefix, int ordinal)
-    {
-        var label = $"{fallbackPrefix} {ordinal}";
-
-        var language = info.Language;
-        if (!string.IsNullOrWhiteSpace(language) && !string.Equals(language, "und", StringComparison.OrdinalIgnoreCase))
-        {
-            label += $" ({language})";
-        }
-
-        try
-        {
-            var format = info.Format;
-            if (format is not null && format.ContainsKey(MediaFormat.KeyMime))
+            quality.AudioCodec = audioFormat.SampleMimeType is { } mime ? MimeToCodecName(mime) : null;
+            if (audioFormat.Bitrate > 0)
             {
-                var mime = format.GetString(MediaFormat.KeyMime);
-                if (!string.IsNullOrWhiteSpace(mime))
-                {
-                    label += $" • {MimeToCodecName(mime)}";
-                }
+                quality.AudioBitrate = audioFormat.Bitrate / 1000;
             }
+            quality.AudioChannels = audioFormat.ChannelCount;
         }
-        catch
-        {
-            // Format metadata can be unavailable on some streams/devices.
-        }
-
-        return label;
-    }
-
-    private void UpdateStreamQualityFromPreparedPlayer(global::Android.Media.MediaPlayer player)
-    {
-        var width = player.VideoWidth;
-        var height = player.VideoHeight;
-        if (width <= 0 || height <= 0)
-        {
-            return;
-        }
-
-        var quality = new StreamQualityInfo
-        {
-            Width = width,
-            Height = height
-        };
 
         StreamQuality = quality;
 
-        // MediaExtractor API'si (özellikle network stream'lerde) UI thread'i bloke edebilir.
-        // Bu yüzden arka planda çalıştırıyoruz — QualityDetected event'i UI'ı bilgilendirir.
-        var url = _currentUrl;
-        _ = Task.Run(() =>
+        if (quality.Width > 0 && quality.Height > 0)
         {
-            try
-            {
-                var extracted = new StreamQualityInfo { Width = width, Height = height };
-                ExtractTrackMetadata(extracted, url);
-
-                // Codec/bitrate/fps bilgilerini mevcut quality nesnesine aktar.
-                if (!string.IsNullOrEmpty(extracted.VideoCodec))
-                    quality.VideoCodec = extracted.VideoCodec;
-                if (extracted.VideoBitrate > 0)
-                    quality.VideoBitrate = extracted.VideoBitrate;
-                if (extracted.Fps > 0)
-                    quality.Fps = extracted.Fps;
-                if (!string.IsNullOrEmpty(extracted.AudioCodec))
-                    quality.AudioCodec = extracted.AudioCodec;
-                if (extracted.AudioBitrate > 0)
-                    quality.AudioBitrate = extracted.AudioBitrate;
-                if (extracted.AudioChannels > 0)
-                    quality.AudioChannels = extracted.AudioChannels;
-
-                QualityDetected?.Invoke(this, quality);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] Background quality extraction failed: {ex.Message}");
-            }
-        });
-
-        // Video boyutunu surface servise aktar ki mevcut transform doğru uygulansın.
-        _videoSurfaceService.SetVideoSize(width, height);
+            _videoSurfaceService.SetVideoSize(quality.Width, quality.Height);
+        }
 
         QualityDetected?.Invoke(this, quality);
     }
 
-    /// <summary>
-    /// MediaExtractor kullanarak stream'in video ve ses track metadata'sını çıkarır.
-    /// Codec (MIME → insan-okunabilir), bitrate, FPS ve kanal bilgilerini doldurur.
-    /// Bu metodun arka plan thread'inde çağrılması önerilir.
-    /// </summary>
-    private void ExtractTrackMetadata(StreamQualityInfo quality, string? url)
-    {
-        if (string.IsNullOrEmpty(url))
-        {
-            return;
-        }
-
-        MediaExtractor? extractor = null;
-        try
-        {
-            extractor = new MediaExtractor();
-            var playbackSource = BuildPlaybackSource(url);
-            if (playbackSource.IsNetworkStream)
-            {
-                extractor.SetDataSource(playbackSource.Url, playbackSource.Headers);
-            }
-            else
-            {
-                extractor.SetDataSource(playbackSource.Url);
-            }
-
-            for (int i = 0; i < extractor.TrackCount; i++)
-            {
-                var format = extractor.GetTrackFormat(i);
-                var mime = format.GetString(MediaFormat.KeyMime) ?? string.Empty;
-
-                if (mime.StartsWith("video/", StringComparison.OrdinalIgnoreCase))
-                {
-                    // Video codec
-                    quality.VideoCodec = MimeToCodecName(mime);
-
-                    // Video bitrate (bps → kbps)
-                    if (format.ContainsKey(MediaFormat.KeyBitRate))
-                    {
-                        quality.VideoBitrate = format.GetInteger(MediaFormat.KeyBitRate) / 1000;
-                    }
-
-                    // FPS
-                    if (format.ContainsKey(MediaFormat.KeyFrameRate))
-                    {
-                        quality.Fps = format.GetInteger(MediaFormat.KeyFrameRate);
-                    }
-
-                    // Width/Height fallback (MediaExtractor daha doğru olabilir)
-                    if (format.ContainsKey(MediaFormat.KeyWidth) && quality.Width <= 0)
-                    {
-                        quality.Width = format.GetInteger(MediaFormat.KeyWidth);
-                    }
-                    if (format.ContainsKey(MediaFormat.KeyHeight) && quality.Height <= 0)
-                    {
-                        quality.Height = format.GetInteger(MediaFormat.KeyHeight);
-                    }
-                }
-                else if (mime.StartsWith("audio/", StringComparison.OrdinalIgnoreCase))
-                {
-                    // Audio codec
-                    quality.AudioCodec = MimeToCodecName(mime);
-
-                    // Audio bitrate (bps → kbps)
-                    if (format.ContainsKey(MediaFormat.KeyBitRate))
-                    {
-                        quality.AudioBitrate = format.GetInteger(MediaFormat.KeyBitRate) / 1000;
-                    }
-
-                    // Kanal sayısı
-                    if (format.ContainsKey(MediaFormat.KeyChannelCount))
-                    {
-                        quality.AudioChannels = format.GetInteger(MediaFormat.KeyChannelCount);
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] ExtractTrackMetadata failed: {ex.Message}");
-        }
-        finally
-        {
-            extractor?.Release();
-            extractor?.Dispose();
-        }
-    }
-
-    /// <summary>
-    /// MIME type'ı insan-okunabilir codec adına dönüştürür.
-    /// Örnek: "video/avc" → "H.264", "audio/mp4a-latm" → "AAC"
-    /// </summary>
     private static string MimeToCodecName(string mime)
     {
         return mime.ToLowerInvariant() switch
         {
-            // Video codecs
             "video/avc" => "H.264",
             "video/hevc" or "video/h265" => "H.265",
             "video/mp4v-es" or "video/mpeg4" => "MPEG-4",
@@ -1135,7 +864,6 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             "video/vp9" => "VP9",
             "video/av01" => "AV1",
             "video/mpeg2" => "MPEG-2",
-            // Audio codecs
             "audio/mp4a-latm" or "audio/mpeg" => "AAC",
             "audio/opus" => "Opus",
             "audio/vorbis" => "Vorbis",
@@ -1144,14 +872,114 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             "audio/eac3" => "E-AC3",
             "audio/mp3" => "MP3",
             "audio/aac" => "AAC",
-            // Subtitle/text codecs
             "text/vtt" => "WebVTT",
             "application/x-subrip" => "SRT",
             "application/cea-608" => "CEA-608",
             "application/cea-708" => "CEA-708",
-            // Fallback: MIME type'ın kendisini döndür
             _ => mime.Contains('/') ? mime.Split('/')[^1].ToUpperInvariant() : mime.ToUpperInvariant()
         };
+    }
+
+    private void ThrowIfDisposed()
+    {
+        if (_isDisposed)
+        {
+            throw new ObjectDisposedException(nameof(AndroidVideoPlayerService));
+        }
+    }
+
+    private void RunOnMainThread(Action action)
+    {
+        if (Looper.MyLooper() == Looper.MainLooper)
+        {
+            action();
+        }
+        else
+        {
+            new Handler(Looper.MainLooper!).Post(action);
+        }
+    }
+
+    // ── JNI Helpers ──────────────────────────────────────────────────────────
+    // Xamarin.AndroidX.Media3 v1.4.x bindings do not expose Tracks.getGroups()
+    // or CueGroup.cues as C# properties, so we call the Java methods via JNI.
+
+    private static Tracks.Group[] GetTrackGroups(Tracks tracks)
+    {
+        try
+        {
+            var classPtr = JNIEnv.FindClass("androidx/media3/common/Tracks");
+            var methodId = JNIEnv.GetMethodID(classPtr, "getGroups", "()Lcom/google/common/collect/ImmutableList;");
+            JNIEnv.DeleteLocalRef(classPtr);
+
+            var listPtr = JNIEnv.CallObjectMethod(tracks.Handle, methodId);
+            if (listPtr == IntPtr.Zero) return [];
+
+            try
+            {
+                var listClassPtr = JNIEnv.FindClass("java/util/List");
+                var sizeId = JNIEnv.GetMethodID(listClassPtr, "size", "()I");
+                var getId  = JNIEnv.GetMethodID(listClassPtr, "get", "(I)Ljava/lang/Object;");
+                JNIEnv.DeleteLocalRef(listClassPtr);
+
+                int count = JNIEnv.CallIntMethod(listPtr, sizeId);
+                var result = new Tracks.Group[count];
+                for (int i = 0; i < count; i++)
+                {
+                    var itemPtr = JNIEnv.CallObjectMethod(listPtr, getId, new JValue(i));
+                    result[i] = Java.Lang.Object.GetObject<Tracks.Group>(itemPtr, JniHandleOwnership.TransferLocalRef)!;
+                }
+                return result;
+            }
+            finally
+            {
+                JNIEnv.DeleteLocalRef(listPtr);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] GetTrackGroups JNI error: {ex.Message}");
+            return [];
+        }
+    }
+
+    private static Cue[] GetCues(CueGroup cueGroup)
+    {
+        try
+        {
+            var classPtr = JNIEnv.FindClass("androidx/media3/common/text/CueGroup");
+            var fieldId  = JNIEnv.GetFieldID(classPtr, "cues", "Lcom/google/common/collect/ImmutableList;");
+            JNIEnv.DeleteLocalRef(classPtr);
+
+            var listPtr = JNIEnv.GetObjectField(cueGroup.Handle, fieldId);
+            if (listPtr == IntPtr.Zero) return [];
+
+            try
+            {
+                var listClassPtr = JNIEnv.FindClass("java/util/List");
+                var sizeId = JNIEnv.GetMethodID(listClassPtr, "size", "()I");
+                var getId  = JNIEnv.GetMethodID(listClassPtr, "get", "(I)Ljava/lang/Object;");
+                JNIEnv.DeleteLocalRef(listClassPtr);
+
+                int count = JNIEnv.CallIntMethod(listPtr, sizeId);
+                var result = new Cue[count];
+                for (int i = 0; i < count; i++)
+                {
+                    var itemPtr = JNIEnv.CallObjectMethod(listPtr, getId, new JValue(i));
+                    result[i] = Java.Lang.Object.GetObject<Cue>(itemPtr, JniHandleOwnership.TransferLocalRef)!;
+                }
+                return result;
+            }
+            finally
+            {
+                JNIEnv.DeleteLocalRef(listPtr);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] GetCues JNI error: {ex.Message}");
+            return [];
+        }
     }
 
     private sealed class PlaybackSource
@@ -1177,116 +1005,140 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         VodMkv
     }
 
-    private void ThrowIfDisposed()
+    // ── ExoPlayer Listener ───────────────────────────────────────────────────
+    private sealed class PlayerListener : Java.Lang.Object, IPlayerListener
     {
-        if (_isDisposed)
-        {
-            throw new ObjectDisposedException(nameof(AndroidVideoPlayerService));
-        }
-    }
+        private readonly AndroidVideoPlayerService _service;
 
-    // ── Audio Focus ───────────────────────────────────────────────────────────
-
-    private void RequestAudioFocus()
-    {
-        if (_isDisposed)
+        public PlayerListener(AndroidVideoPlayerService service)
         {
-            return;
+            _service = service;
         }
 
-        var result = _audioManager.RequestAudioFocus(_audioFocusListener, Stream.Music, AudioFocus.Gain);
-        _audioFocusState = result == AudioFocusRequest.Granted
-            ? AudioFocusState.Granted
-            : AudioFocusState.None;
-    }
-
-    private void AbandonAudioFocus()
-    {
-        if (_isDisposed)
+        public void OnPlaybackStateChanged(int playbackState)
         {
-            return;
+            switch (playbackState)
+            {
+                case BasePlayer.InterfaceConsts.StateIdle:
+                    _service._state = PlaybackState.Stopped;
+                    _service._hasLoadedMedia = false;
+                    _service._isPlaying = false;
+                    _service.PlayingChanged?.Invoke(_service, false);
+                    break;
+                case BasePlayer.InterfaceConsts.StateBuffering:
+                    _service._state = PlaybackState.Buffering;
+                    _service.BufferingChanged?.Invoke(_service, 0);
+                    break;
+                case BasePlayer.InterfaceConsts.StateReady:
+                    _service._state = _service._exoPlayer?.PlayWhenReady == true ? PlaybackState.Playing : PlaybackState.Paused;
+                    _service._hasLoadedMedia = true;
+                    _service._isPlaying = _service._exoPlayer?.PlayWhenReady == true;
+                    try
+                    {
+                        if (_service._exoPlayer is not null)
+                        {
+                            _service._duration = _service._exoPlayer.Duration / 1000d;
+                            _service._currentTimeMs = _service._exoPlayer.CurrentPosition;
+                        }
+                    }
+                    catch { }
+                    _service.PlayerReady?.Invoke(_service, EventArgs.Empty);
+                    _service.PlayingChanged?.Invoke(_service, _service._isPlaying);
+                    _service.UpdateStreamQuality();
+                    break;
+                case BasePlayer.InterfaceConsts.StateEnded:
+                    _service._state = PlaybackState.Stopped;
+                    _service._isPlaying = false;
+                    _service.PlayingChanged?.Invoke(_service, false);
+                    _service.PlaybackEnded?.Invoke(_service, EventArgs.Empty);
+                    break;
+            }
         }
 
-        _audioFocusState = AudioFocusState.None;
-        _pausedByAudioFocus = false;
-        try
+        public void OnIsPlayingChanged(bool isPlaying)
         {
-            _audioManager.AbandonAudioFocus(_audioFocusListener);
+            _service._isPlaying = isPlaying;
+            if (_service._state != PlaybackState.Buffering)
+            {
+                _service._state = isPlaying ? PlaybackState.Playing : PlaybackState.Paused;
+            }
+            _service.PlayingChanged?.Invoke(_service, isPlaying);
         }
-        catch
-        {
-            // Best-effort; cleanup path.
-        }
-    }
 
-    private void OnAudioFocusChanged(AudioFocus focusChange)
-    {
-        switch (focusChange)
+        public void OnPlayerError(PlaybackException error)
         {
-            case AudioFocus.Gain:
-                // Başka uygulamanın sesi bitti → eski duruma dön.
-                if (_pausedByAudioFocus && _mediaPlayer is not null && _hasLoadedMedia)
+            _service._state = PlaybackState.Error;
+            _service._isPlaying = false;
+            _service.ErrorOccurred?.Invoke(_service, error.Message ?? "ExoPlayer error");
+        }
+
+        public void OnCues(CueGroup cueGroup)
+        {
+            var sb = new StringBuilder();
+            var cues = AndroidVideoPlayerService.GetCues(cueGroup);
+            for (int i = 0; i < cues.Length; i++)
+            {
+                var cue = cues[i];
+                if (cue.Text is { } txt)
                 {
-                    _mediaPlayer.Start();
-                    ApplyPlaybackRate();
-                    _state = PlaybackState.Playing;
-                    PlayingChanged?.Invoke(this, true);
+                    sb.AppendLine(txt.ToString());
                 }
-                _pausedByAudioFocus = false;
-
-                // Duck (ses kısma) bırakılmışsa orijinal ses seviyesini geri yükle.
-                if (_audioFocusState == AudioFocusState.TransientLossCanDuck)
-                {
-                    ApplyVolume();
-                }
-
-                _audioFocusState = AudioFocusState.Granted;
-                break;
-
-            case AudioFocus.LossTransient:
-                // Kısa süreli kayıp (telefon zili, bildirim) → duraklat, geri geldiğinde devam et.
-                _audioFocusState = AudioFocusState.TransientLoss;
-                if (_mediaPlayer?.IsPlaying == true)
-                {
-                    _mediaPlayer.Pause();
-                    _state = PlaybackState.Paused;
-                    _pausedByAudioFocus = true;
-                    PlayingChanged?.Invoke(this, false);
-                }
-                break;
-
-            case AudioFocus.LossTransientCanDuck:
-                // Geçici duck (navigasyon sesi, kısa bildirim) → sesi kıs.
-                _audioFocusState = AudioFocusState.TransientLossCanDuck;
-                try
-                {
-                    _mediaPlayer?.SetVolume(0.2f, 0.2f);
-                }
-                catch
-                {
-                    // MediaPlayer hazır değilse sessizce yoksay.
-                }
-                break;
-
-            case AudioFocus.Loss:
-                // Kalıcı kayıp (başka medya uygulaması oynatmaya başladı) → oynatmayı bırak.
-                _audioFocusState = AudioFocusState.Lost;
-                Pause();
-                break;
+            }
+            _service.RaiseSubtitleTextChanged(sb.ToString().Trim());
         }
-    }
 
-    /// <summary>
-    /// Android AudioManager'ın audio focus değişikliklerini bildirdiği callback sarmalayıcısı.
-    /// .NET event olarak kullanılıyor ki servis Dispose edildiğinde abonelik temizlenebilsin.
-    /// </summary>
-    private sealed class AudioFocusListener : Java.Lang.Object, AudioManager.IOnAudioFocusChangeListener
-    {
-        public event Action<AudioFocus>? FocusChanged;
-
-        public void OnAudioFocusChange(AudioFocus focusChange)
+        public void OnTracksChanged(Tracks tracks)
         {
-            FocusChanged?.Invoke(focusChange);
+            var audio = new List<(int Id, string? Name)>();
+            var subtitles = new List<(int Id, string? Name)>();
+            var audioOrdinal = 1;
+            var subtitleOrdinal = 1;
+
+            var groups = AndroidVideoPlayerService.GetTrackGroups(tracks);
+            for (int i = 0; i < groups.Length; i++)
+            {
+                var group = groups[i];
+                var groupType = group.Type;
+
+                for (int j = 0; j < group.Length; j++)
+                {
+                    var format = group.GetTrackFormat(j);
+                    var lang = string.IsNullOrWhiteSpace(format.Language) || format.Language == "und"
+                        ? ""
+                        : $" ({format.Language})";
+                    
+                    var mime = format.SampleMimeType ?? "";
+                    var codec = string.IsNullOrEmpty(mime) ? "" : $" • {MimeToCodecName(mime)}";
+
+                    // Unique track ID encoding groupIndex and trackIndex
+                    int trackId = i * 1000 + j;
+
+                    if (groupType == C.TrackTypeAudio)
+                    {
+                        audio.Add((trackId, $"Audio {audioOrdinal++}{lang}{codec}"));
+                    }
+                    else if (groupType == C.TrackTypeText)
+                    {
+                        subtitles.Add((trackId, $"Subtitle {subtitleOrdinal++}{lang}{codec}"));
+                    }
+                }
+            }
+
+            lock (_service._trackLock)
+            {
+                _service._audioTracks.Clear();
+                _service._audioTracks.AddRange(audio);
+                _service._subtitleTracks.Clear();
+                _service._subtitleTracks.AddRange(subtitles);
+            }
+        }
+
+        public void OnVideoSizeChanged(AndroidX.Media3.Common.VideoSize videoSize)
+        {
+            if (videoSize.Width > 0 && videoSize.Height > 0)
+            {
+                _service._videoSurfaceService.SetVideoSize(videoSize.Width, videoSize.Height);
+            }
         }
     }
 }
