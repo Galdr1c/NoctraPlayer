@@ -11,6 +11,9 @@ public partial class MobileLiveTvCard : UserControl
     public static readonly StyledProperty<bool> ShowMyListMenuProperty =
         AvaloniaProperty.Register<MobileLiveTvCard, bool>(nameof(ShowMyListMenu));
 
+    public static readonly StyledProperty<bool> ShowFavoriteMenuProperty =
+        AvaloniaProperty.Register<MobileLiveTvCard, bool>(nameof(ShowFavoriteMenu), true);
+
     public MobileLiveTvCard()
     {
         InitializeComponent();
@@ -26,5 +29,11 @@ public partial class MobileLiveTvCard : UserControl
     {
         get => GetValue(ShowMyListMenuProperty);
         set => SetValue(ShowMyListMenuProperty, value);
+    }
+
+    public bool ShowFavoriteMenu
+    {
+        get => GetValue(ShowFavoriteMenuProperty);
+        set => SetValue(ShowFavoriteMenuProperty, value);
     }
 }

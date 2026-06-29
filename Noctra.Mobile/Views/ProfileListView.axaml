@@ -116,7 +116,8 @@
                      VerticalAlignment="Center" />
         </StackPanel>
 
-        <!-- Sağ: Kalem (yönet modunu aç/kapa) -->
+        <!-- Sağ: Kalem (yönet modunu aç/kapa)
+             Handler executes ToggleManageModeCommand through the bound ProfilesViewModel. -->
         <Button Grid.Column="1"
                 Classes="HeaderIconBtn"
                 Click="ToggleManage_Click"

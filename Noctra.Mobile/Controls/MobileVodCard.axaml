@@ -33,11 +33,19 @@
   </UserControl.Resources>
 
   <UserControl.Styles>
-    <Style Selector="Button.CardContainer:pointerover">
+    <Style Selector="Border.CardContainer">
+      <Setter Property="RenderTransform" Value="scale(1)" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="CubicEaseOut" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Border.CardContainer:pointerover">
       <Setter Property="ZIndex" Value="10" />
       <Setter Property="RenderTransform" Value="scale(1.03)" />
     </Style>
-    <Style Selector="Button.CardContainer:pointerover Border.HoverOverlay">
+    <Style Selector="Border.CardContainer:pointerover Border.HoverOverlay">
       <Setter Property="Opacity" Value="1" />
     </Style>
     <Style Selector="Border.HoverOverlay">
@@ -45,22 +53,13 @@
     </Style>
   </UserControl.Styles>
 
-  <Button Classes="CardContainer"
-          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
-          CommandParameter="{Binding}"
+  <!-- CardContainer_Tapped executes SelectMediaCommand from the parent MainViewModel. -->
+  <Border Classes="CardContainer"
           Background="Transparent"
-          BorderThickness="0"
-          Padding="0"
-          HorizontalContentAlignment="Stretch"
-          VerticalContentAlignment="Stretch">
-    <Button.Transitions>
-      <Transitions>
-        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="CubicEaseOut" />
-      </Transitions>
-    </Button.Transitions>
-    <Button.ContextFlyout>
+          Tapped="CardContainer_Tapped">
+    <Border.ContextFlyout>
       <StaticResource ResourceKey="CardActionsFlyout" />
-    </Button.ContextFlyout>
+    </Border.ContextFlyout>
 
     <Border CornerRadius="{DynamicResource RadiusSmall}"
             ClipToBounds="True"
@@ -107,11 +106,13 @@
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <TextBlock Text="{Binding ReleaseYear}"
                            Foreground="#A6FFFFFF"
-                           FontSize="10" />
+                           FontSize="10"
+                           IsVisible="{Binding ReleaseYear, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <Ellipse Width="3"
                          Height="3"
                          Fill="#66FFFFFF"
-                         VerticalAlignment="Center" />
+                         VerticalAlignment="Center"
+                         IsVisible="{Binding ReleaseYear, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <TextBlock Text="{Binding GroupTitle}"
                            Foreground="#A6FFFFFF"
                            FontSize="10"
@@ -132,5 +133,5 @@
         </StackPanel>
       </Grid>
     </Border>
-  </Button>
+  </Border>
 </UserControl>

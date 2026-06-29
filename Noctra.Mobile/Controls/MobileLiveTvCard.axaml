@@ -15,7 +15,8 @@
     <MenuFlyout x:Key="LiveCardActionsFlyout">
       <MenuItem Header="{loc:Translate Context.Favorite.Toggle}"
                 Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}"
-                CommandParameter="{Binding}">
+                CommandParameter="{Binding}"
+                IsVisible="{Binding #LiveTvCardControl.ShowFavoriteMenu}">
         <MenuItem.Icon>
           <icons:MaterialIcon Kind="HeartOutline" />
         </MenuItem.Icon>
@@ -124,7 +125,8 @@
                   MinWidth="48"
                   VerticalAlignment="Center"
                   Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}"
-                  CommandParameter="{Binding}">
+                  CommandParameter="{Binding}"
+                  IsVisible="{Binding #LiveTvCardControl.ShowFavoriteMenu}">
             <Grid>
               <icons:MaterialIcon Kind="Heart"
                                   Width="20"
