@@ -11,6 +11,21 @@ namespace Noctra.Mobile.Behaviors;
 
 public sealed class MobileSlideTransitionBehavior : AvaloniaObject
 {
+    private static readonly string[] NavigationOrder =
+    [
+        "Home",
+        "Live",
+        "Movies",
+        "Series",
+        "Search",
+        "Favorites",
+        "MyList",
+        "History",
+        "Downloads",
+        "Settings",
+        "More"
+    ];
+
     public static readonly AttachedProperty<object?> TriggerValueProperty =
         AvaloniaProperty.RegisterAttached<MobileSlideTransitionBehavior, Control, object?>("TriggerValue");
 
@@ -48,8 +63,8 @@ public sealed class MobileSlideTransitionBehavior : AvaloniaObject
         var cts = new CancellationTokenSource();
         control.SetValue(CancellationProperty, cts);
 
-        var oldOrder = GetSeasonOrder(e.OldValue);
-        var newOrder = GetSeasonOrder(e.NewValue);
+        var oldOrder = GetTransitionOrder(e.OldValue);
+        var newOrder = GetTransitionOrder(e.NewValue);
         var distance = e.OldValue is null ? 12.0 : 32.0;
         var startX = e.OldValue is null || newOrder >= oldOrder ? distance : -distance;
 
@@ -60,11 +75,17 @@ public sealed class MobileSlideTransitionBehavior : AvaloniaObject
         _ = RunAsync(animation, control, cts.Token);
     }
 
-    private static int GetSeasonOrder(object? value)
+    private static int GetTransitionOrder(object? value)
     {
         if (value is null)
         {
             return 0;
+        }
+
+        if (value is string destination)
+        {
+            var index = Array.IndexOf(NavigationOrder, destination);
+            return index >= 0 ? index : 0;
         }
 
         var property = value.GetType().GetProperty("SeasonNumber");

@@ -10,6 +10,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 
 using Microsoft.Extensions.DependencyInjection;
+using Noctra.Mobile.Behaviors;
 using Noctra.Models;
 using Noctra.Mobile.Localization;
 using Noctra.Mobile.Services;
@@ -372,6 +373,7 @@ public partial class MainView : UserControl
         MobileHistoryContent.IsVisible = destination == "History";
         MobileDownloadsContent.IsVisible = destination == "Downloads";
         MobileSettingsContent.IsVisible = destination == "Settings";
+        MobileSlideTransitionBehavior.SetTriggerValue(showCoreContent ? CoreContentHost : ShellContent, destination);
         UpdateNavigationSelection(destination);
     }
 

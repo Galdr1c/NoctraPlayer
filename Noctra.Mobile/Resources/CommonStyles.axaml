@@ -110,4 +110,49 @@
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
   </Style>
+
+  <Style Selector="TabItem.downloadTab">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="16,12" />
+    <Setter Property="Margin" Value="0,0,12,0" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Grid>
+          <Border Background="{TemplateBinding Background}"
+                  Padding="{TemplateBinding Padding}">
+            <ContentPresenter x:Name="PART_HeaderPresenter"
+                              Content="{TemplateBinding Header}"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center" />
+          </Border>
+          <Border x:Name="SelectionIndicator"
+                  Height="3"
+                  Width="0"
+                  Background="{DynamicResource AccentBrush}"
+                  VerticalAlignment="Bottom"
+                  HorizontalAlignment="Center"
+                  CornerRadius="1.5">
+            <Border.Transitions>
+              <Transitions>
+                <DoubleTransition Property="Width" Duration="0:0:0.25" Easing="CubicEaseOut" />
+              </Transitions>
+            </Border.Transitions>
+          </Border>
+        </Grid>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="TabItem.downloadTab:selected">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+  <Style Selector="TabItem.downloadTab:selected /template/ Border#SelectionIndicator">
+    <Setter Property="Width" Value="32" />
+  </Style>
+  <Style Selector="TabItem.downloadTab:pointerover:not(:selected)">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
 </Styles>
