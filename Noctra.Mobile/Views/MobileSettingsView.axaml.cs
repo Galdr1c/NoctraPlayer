@@ -68,6 +68,11 @@ public partial class MobileSettingsView : UserControl
             LocalizationSource.Instance["GlobalSettings.Terms.Message.Current"]);
     }
 
+    private void ShowUpsell_Click(object? sender, RoutedEventArgs e)
+    {
+        UpsellHost.Show();
+    }
+
     private void DarkTheme_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (_viewModel is null)

@@ -979,8 +979,9 @@
             </StackPanel>
           </Grid>
 
+          <!-- ShowUpsellCommand remains on SettingsViewModel; mobile opens a branded bottom-sheet instead. -->
           <Button Classes="SettingsPrimaryActionButton"
-                  Command="{Binding ShowUpsellCommand}"
+                  Click="ShowUpsell_Click"
                   IsVisible="{Binding !IsPremium}"
                   MinHeight="44">
             <StackPanel Orientation="Horizontal" Spacing="8">
@@ -1201,5 +1202,7 @@
 
     <views:MobileLegalDocumentView x:Name="LegalDocumentHost"
                                    IsVisible="False" />
+    <views:MobileUpsellView x:Name="UpsellHost"
+                            IsVisible="False" />
   </Grid>
 </UserControl>
