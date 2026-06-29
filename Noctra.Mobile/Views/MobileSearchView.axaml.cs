@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Input;
 using Noctra.ViewModels;
 
@@ -19,6 +20,17 @@ public partial class MobileSearchView : UserControl
         }
 
         viewModel.CommitSearchCommand.Execute(null);
+        e.Handled = true;
+    }
+
+    private void ClearSearch_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+        {
+            viewModel.SearchQuery = string.Empty;
+            viewModel.SearchText = string.Empty;
+        }
+
         e.Handled = true;
     }
 

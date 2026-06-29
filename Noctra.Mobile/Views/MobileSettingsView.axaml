@@ -13,14 +13,13 @@
              d:DesignHeight="720">
   <Grid Background="{DynamicResource Bg0Brush}">
     <ScrollViewer>
-      <!-- Increase margins and spacing for a more desktop‑like feel -->
+      <!-- Desktop-aligned margins and spacing. -->
       <StackPanel Margin="24" Spacing="20">
       <StackPanel Spacing="4">
         <!-- Page title styled like desktop: bold with slight letter spacing and bottom margin -->
         <TextBlock Text="{loc:Translate Settings.Title}"
-                   FontSize="24"
+                   FontSize="28"
                    FontWeight="Bold"
-                   LetterSpacing="1"
                    Foreground="{DynamicResource TextPrimaryBrush}" />
         <TextBlock Text="{Binding StatusMessage}"
                    Foreground="{DynamicResource TextMutedBrush}"
@@ -1015,8 +1014,7 @@
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
             <TextBox Text="{Binding PromoCodeInput, Mode=TwoWay}"
                      PlaceholderText="{loc:Translate GlobalSettings.Promo.Placeholder}"
-                     MinHeight="44"
-                     LetterSpacing="1" />
+                     MinHeight="44" />
             <Button Grid.Column="1"
                     Command="{Binding ApplyPromoCodeCommand}"
                     MinHeight="44"

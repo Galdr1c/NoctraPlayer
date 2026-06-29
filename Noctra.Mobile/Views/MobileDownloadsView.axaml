@@ -24,11 +24,9 @@
     <!-- Increase margins and spacing to mirror desktop layout -->
     <StackPanel Margin="24" Spacing="20">
       <StackPanel Spacing="4">
-        <!-- Page title styled like desktop: bold with slight letter spacing and bottom margin -->
         <TextBlock Text="{loc:Translate Downloads.Title}"
-                   FontSize="24"
+                   FontSize="28"
                    FontWeight="Bold"
-                   LetterSpacing="1"
                    Foreground="{DynamicResource TextPrimaryBrush}" />
         <TextBlock Text="{Binding TotalDownloadsInfoText}"
                    Foreground="{DynamicResource TextMutedBrush}"
@@ -176,12 +174,11 @@
             <!-- Series Section -->
             <StackPanel Spacing="12"
                         IsVisible="{Binding DownloadedSeriesItems.Count, Converter={StaticResource CountToVisibility}}">
-              <!-- Section header styled like desktop: larger font, semi‑bold weight and primary colour -->
+              <!-- Desktop-aligned section header. -->
               <TextBlock Text="{loc:Translate History.Series}"
                          Foreground="{DynamicResource TextPrimaryBrush}"
-                         FontSize="20"
-                         FontWeight="SemiBold"
-                         LetterSpacing="1" />
+                         FontSize="18"
+                         FontWeight="SemiBold" />
               <ItemsControl ItemsSource="{Binding DownloadedSeriesItems}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="models:Series">
@@ -259,12 +256,11 @@
             <!-- Movies Section -->
             <StackPanel Spacing="12"
                         IsVisible="{Binding DownloadedVodChannels.Count, Converter={StaticResource CountToVisibility}}">
-              <!-- Section header styled like desktop: larger font, semi‑bold weight and primary colour -->
+              <!-- Desktop-aligned section header. -->
               <TextBlock Text="{loc:Translate History.Movies}"
                          Foreground="{DynamicResource TextPrimaryBrush}"
-                         FontSize="20"
-                         FontWeight="SemiBold"
-                         LetterSpacing="1" />
+                         FontSize="18"
+                         FontWeight="SemiBold" />
               <ItemsControl ItemsSource="{Binding DownloadedVodChannels}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="models:Channel">
@@ -350,12 +346,11 @@
                                   Foreground="{DynamicResource TextMutedBrush}"
                                   Opacity="0.5"
                                   HorizontalAlignment="Center" />
-              <!-- Empty title styled like desktop: bold and letter‑spaced -->
+              <!-- Empty state title. -->
               <TextBlock Text="{loc:Translate Downloads.Empty.Title}"
                          Foreground="{DynamicResource TextPrimaryBrush}"
                          FontSize="20"
                          FontWeight="Bold"
-                         LetterSpacing="1"
                          TextAlignment="Center"
                          Margin="0,16,0,4" />
               <TextBlock Text="{loc:Translate Downloads.Empty.Description}"
@@ -420,9 +415,8 @@
               <!-- Ongoing section header styled like desktop: larger font and bold weight -->
               <TextBlock Text="{loc:Translate Downloads.Ongoing.Title}"
                          Foreground="{DynamicResource TextPrimaryBrush}"
-                         FontSize="20"
-                         FontWeight="Bold"
-                         LetterSpacing="1" />
+                         FontSize="18"
+                         FontWeight="Bold" />
               <Button Grid.Column="1"
                       Command="{Binding StopAllDownloadsCommand}"
                       MinHeight="44"
