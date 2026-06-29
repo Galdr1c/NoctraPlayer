@@ -888,6 +888,7 @@
   "Downloads.Action.Cancel": "Cancel",
   "Downloads.Action.Delete": "Delete",
   "Downloads.Action.Pause": "Pause",
+  "Downloads.Action.Resume": "Resume",
   "Downloads.Stats.Speed.Label": "Speed",
   "GlobalSettings.Cache.Clear.Button": "Clear",
   "GlobalSettings.Cache.Description": "Clear temporary files, images and EPG cache",

@@ -507,7 +507,7 @@
                               <icons:MaterialIcon Kind="{Binding IsPaused, Converter={StaticResource BoolToMaterialIconKindConverter}, ConverterParameter='Play|Pause'}"
                                                   Width="16"
                                                   Height="16" />
-                              <TextBlock Text="{loc:Translate Downloads.Action.Pause}" />
+                              <TextBlock Text="{Binding IsPaused, Converter={StaticResource BoolToLocalizedStringConverter}, ConverterParameter='Downloads.Action.Resume|Downloads.Action.Pause'}" />
                             </StackPanel>
                           </Button>
                           <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).CancelDownloadCommand}"

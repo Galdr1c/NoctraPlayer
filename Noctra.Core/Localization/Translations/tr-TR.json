@@ -887,6 +887,7 @@
   "Downloads.Action.Cancel": "İptal",
   "Downloads.Action.Delete": "Sil",
   "Downloads.Action.Pause": "Duraklat",
+  "Downloads.Action.Resume": "Devam Et",
   "Downloads.Stats.Speed.Label": "Hız",
   "GlobalSettings.Cache.Clear.Button": "Temizle",
   "GlobalSettings.Cache.Description": "Geçici dosyaları, görselleri ve EPG önbelleğini temizle",

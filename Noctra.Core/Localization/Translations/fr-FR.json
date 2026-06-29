@@ -887,6 +887,7 @@
   "Downloads.Action.Cancel": "Annuler",
   "Downloads.Action.Delete": "Supprimer",
   "Downloads.Action.Pause": "Pause",
+  "Downloads.Action.Resume": "Reprendre",
   "Downloads.Stats.Speed.Label": "Vitesse",
   "GlobalSettings.Cache.Clear.Button": "Effacer",
   "GlobalSettings.Cache.Description": "Effacer les fichiers temporaires, images et le cache EPG",

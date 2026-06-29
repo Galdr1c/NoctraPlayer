@@ -62,6 +62,7 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="models:Channel">
               <controls:MobileLiveTvCard ShowHistoryMenu="True"
+                  ShowFavoriteMenu="False"
                   Margin="0,0,12,12"
                   Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl},
                                   Converter={StaticResource ResponsiveCardMetricConverter},
@@ -130,12 +131,13 @@
                   HorizontalAlignment="Center"
                   IsVisible="{Binding ShowHistoryEmptyState}">
         <icons:MaterialIcon Kind="History" Width="64" Height="64"
-                            Foreground="{DynamicResource TextDisabledBrush}"
-                            Opacity="0.4" HorizontalAlignment="Center" />
+                            Foreground="{DynamicResource TextMutedBrush}"
+                            Opacity="0.5" HorizontalAlignment="Center" />
         <TextBlock Text="{loc:Translate History.Empty.Title}"
                    FontSize="20" FontWeight="Bold"
                    Foreground="{DynamicResource TextPrimaryBrush}"
-                   TextAlignment="Center" />
+                   TextAlignment="Center"
+                   Margin="0,2,0,0" />
         <TextBlock Text="{loc:Translate History.Empty.Description}"
                    FontSize="14" Foreground="{DynamicResource TextMutedBrush}"
                    TextAlignment="Center" TextWrapping="Wrap" MaxWidth="280" />
