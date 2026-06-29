@@ -81,7 +81,7 @@
       <Grid RowDefinitions="Auto,Auto,Auto"
             RowSpacing="4">
         <Grid Grid.Row="0"
-              ColumnDefinitions="56,*,Auto"
+              ColumnDefinitions="56,*,Auto,Auto"
               ColumnSpacing="10">
           <Border Width="44"
                   Height="44"
@@ -137,6 +137,20 @@
                                   Foreground="{DynamicResource TextMutedBrush}"
                                   IsVisible="{Binding !IsFavorite}" />
             </Grid>
+          </Button>
+
+          <Button Grid.Column="3"
+                  Background="Transparent"
+                  BorderThickness="0"
+                  Padding="12"
+                  MinHeight="48"
+                  MinWidth="48"
+                  VerticalAlignment="Center"
+                  Flyout="{StaticResource LiveCardActionsFlyout}">
+            <icons:MaterialIcon Kind="DotsVertical"
+                                Width="20"
+                                Height="20"
+                                Foreground="{DynamicResource TextMutedBrush}" />
           </Button>
         </Grid>
 

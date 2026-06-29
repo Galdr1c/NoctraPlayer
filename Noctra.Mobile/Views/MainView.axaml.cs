@@ -217,6 +217,9 @@ public partial class MainView : UserControl
             _bottomNavBasePadding.Top,
             _bottomNavBasePadding.Right + safe.Right,
             _bottomNavBasePadding.Bottom + safe.Bottom);
+
+        LegalConsentOverlay.Padding = new Thickness(safe.Left, safe.Top, safe.Right, safe.Bottom);
+        ProfilesOverlay.Padding = new Thickness(safe.Left, safe.Top, safe.Right, safe.Bottom);
     }
 
     /// <summary>
@@ -514,7 +517,7 @@ public partial class MainView : UserControl
             return;
         }
 
-        if (destination is "Settings" or "More")
+        if (!string.Equals(destination, "Series", StringComparison.Ordinal))
         {
             CloseSeriesDetailIfOpen();
         }

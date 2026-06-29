@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Input;
 using Avalonia.Media;
+using Noctra.Mobile.Localization;
 using Noctra.ViewModels;
 
 namespace Noctra.Mobile.Views;
@@ -51,6 +52,20 @@ public partial class MobileSettingsView : UserControl
     private void BackToProfiles_Click(object? sender, RoutedEventArgs e)
     {
         BackToProfilesRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void PrivacyPolicy_Click(object? sender, RoutedEventArgs e)
+    {
+        LegalDocumentHost.ShowDocument(
+            LocalizationSource.Instance["GlobalSettings.Privacy.Title"],
+            LocalizationSource.Instance["GlobalSettings.Privacy.Message.Current"]);
+    }
+
+    private void Terms_Click(object? sender, RoutedEventArgs e)
+    {
+        LegalDocumentHost.ShowDocument(
+            LocalizationSource.Instance["GlobalSettings.Terms.Title"],
+            LocalizationSource.Instance["GlobalSettings.Terms.Message.Current"]);
     }
 
     private void DarkTheme_PointerPressed(object? sender, PointerPressedEventArgs e)

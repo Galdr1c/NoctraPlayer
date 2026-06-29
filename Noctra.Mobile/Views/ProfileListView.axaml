@@ -329,7 +329,7 @@
                 Yönet modunda bu kart gizlenir.
               -->
               <Button Classes="ProfileCardStyle"
-                      Command="{Binding #ProfileListRoot.DataContext.AddProfileCommand}"
+                      Click="AddProfile_Click"
                       Width="{Binding Bounds.Width,
                                       RelativeSource={RelativeSource AncestorType=ItemsControl},
                                       Converter={StaticResource ResponsiveCardMetricConverter},
@@ -374,7 +374,7 @@
         -->
         <Button x:Name="FallbackAddProfileButton"
                 Classes="ProfileCardStyle"
-                Command="{Binding AddProfileCommand}"
+                Click="AddProfile_Click"
                 HorizontalAlignment="Center"
                 Margin="8,6"
                 IsVisible="{Binding DisplayItems.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=invert}">

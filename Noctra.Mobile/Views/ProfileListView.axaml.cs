@@ -133,6 +133,15 @@ public partial class ProfileListView : UserControl
         }
     }
 
+    private void AddProfile_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel?.AddProfileCommand.CanExecute(null) == true)
+        {
+            _viewModel.AddProfileCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
     private void ViewModel_OnProfileAddRequested(Profile profile)
     {
         OpenProfileSetup(null);
