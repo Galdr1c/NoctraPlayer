@@ -61,6 +61,8 @@
         <converters:DoubleToStarGridLengthConverter x:Key="DoubleToStarGridLengthConverter" />
         <converters:WidthToColumnsConverter x:Key="WidthToColumnsConverter" />
         <converters:WatchedProgressVisibilityConverter x:Key="WatchedProgressVisibilityConverter" />
+        <converters:WatchedProgressWidthConverter x:Key="WatchedProgressWidthConverter" />
+        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
         <converters:ConnectionHealthToVisibilityConverter x:Key="ConnectionHealthToVisibilityConverter" />
         <converters:ConnectionHealthToIconConverter x:Key="ConnectionHealthToIconConverter" />
         <converters:ConnectionHealthToBrushConverter x:Key="ConnectionHealthToBrushConverter" />
