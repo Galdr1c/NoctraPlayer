@@ -12,10 +12,28 @@ public partial class MobileVodCard : UserControl
     public static readonly StyledProperty<bool> ShowHistoryMenuProperty =
         AvaloniaProperty.Register<MobileVodCard, bool>(nameof(ShowHistoryMenu));
 
+    public static readonly StyledProperty<bool> ShowRemoveFavoriteMenuProperty =
+        AvaloniaProperty.Register<MobileVodCard, bool>(nameof(ShowRemoveFavoriteMenu));
+
+    public static readonly StyledProperty<bool> ShowRemoveMyListMenuProperty =
+        AvaloniaProperty.Register<MobileVodCard, bool>(nameof(ShowRemoveMyListMenu));
+
     public bool ShowHistoryMenu
     {
         get => GetValue(ShowHistoryMenuProperty);
         set => SetValue(ShowHistoryMenuProperty, value);
+    }
+
+    public bool ShowRemoveFavoriteMenu
+    {
+        get => GetValue(ShowRemoveFavoriteMenuProperty);
+        set => SetValue(ShowRemoveFavoriteMenuProperty, value);
+    }
+
+    public bool ShowRemoveMyListMenu
+    {
+        get => GetValue(ShowRemoveMyListMenuProperty);
+        set => SetValue(ShowRemoveMyListMenuProperty, value);
     }
 
     public MobileVodCard()

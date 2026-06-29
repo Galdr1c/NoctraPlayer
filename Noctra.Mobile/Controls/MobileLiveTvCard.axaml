@@ -21,6 +21,14 @@
           <icons:MaterialIcon Kind="HeartOutline" />
         </MenuItem.Icon>
       </MenuItem>
+      <MenuItem Header="{loc:Translate Context.Favorite.Toggle}"
+                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RemoveFromFavoritesCommand}"
+                CommandParameter="{Binding}"
+                IsVisible="{Binding #LiveTvCardControl.ShowRemoveFavoriteMenu}">
+        <MenuItem.Icon>
+          <icons:MaterialIcon Kind="HeartRemoveOutline" />
+        </MenuItem.Icon>
+      </MenuItem>
       <MenuItem Header="{loc:Translate MyList.Remove}"
                 Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RemoveFromMyListCommand}"
                 CommandParameter="{Binding}"

@@ -17,10 +17,26 @@
                 Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).AddToMyListCommand}"
                 CommandParameter="{Binding}"
                 IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
+      <MenuItem Header="{loc:Translate MyList.Remove}"
+                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RemoveFromMyListCommand}"
+                CommandParameter="{Binding}"
+                IsVisible="{Binding #VodCardControl.ShowRemoveMyListMenu}">
+        <MenuItem.Icon>
+          <icons:MaterialIcon Kind="BookmarkRemoveOutline" />
+        </MenuItem.Icon>
+      </MenuItem>
       <MenuItem Header="{loc:Translate Context.Favorite.Toggle}"
                 Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}"
                 CommandParameter="{Binding}"
                 IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
+      <MenuItem Header="{loc:Translate Context.Favorite.Toggle}"
+                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RemoveFromFavoritesCommand}"
+                CommandParameter="{Binding}"
+                IsVisible="{Binding #VodCardControl.ShowRemoveFavoriteMenu}">
+        <MenuItem.Icon>
+          <icons:MaterialIcon Kind="HeartRemoveOutline" />
+        </MenuItem.Icon>
+      </MenuItem>
       <MenuItem Header="{loc:Translate History.Remove}"
                 Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RemoveFromHistoryCommand}"
                 CommandParameter="{Binding}"
