@@ -16,6 +16,7 @@
   "GlobalSettings.General.Diagnostics.Description": "Allow optional diagnostic details when you choose to send a bug or crash report",
   "ReviewPrompt.Title": "Souhaitez-vous évaluer Noctra ?",
   "ReviewPrompt.Message": "Un rapide avis sur le Microsoft Store nous aide à améliorer Noctra et à faire évoluer l'application dans la bonne direction.",
+  "ReviewPrompt.Message.Android": "Un rapide avis sur le Play Store nous aide à améliorer Noctra et à faire évoluer l'application dans la bonne direction.",
   "ReviewPrompt.Action.Rate": "Évaluer",
   "ReviewPrompt.Action.Later": "Plus tard",
   "ReviewPrompt.Action.Never": "Ne plus demander",

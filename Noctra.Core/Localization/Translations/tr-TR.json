@@ -16,6 +16,7 @@
   "GlobalSettings.General.Diagnostics.Description": "Hata veya çökme raporu göndermeyi seçtiğinizde isteğe bağlı tanılama ayrıntılarına izin ver",
   "ReviewPrompt.Title": "Noctra'yı değerlendirmek ister misiniz?",
   "ReviewPrompt.Message": "Kısa bir Microsoft Store değerlendirmesi Noctra'yı geliştirmemize ve uygulamayı doğru yönde ilerletmemize yardımcı olur.",
+  "ReviewPrompt.Message.Android": "Kısa bir Play Store değerlendirmesi Noctra'yı geliştirmemize ve uygulamayı doğru yönde ilerletmemize yardımcı olur.",
   "ReviewPrompt.Action.Rate": "Değerlendir",
   "ReviewPrompt.Action.Later": "Sonra",
   "ReviewPrompt.Action.Never": "Bir daha sorma",
