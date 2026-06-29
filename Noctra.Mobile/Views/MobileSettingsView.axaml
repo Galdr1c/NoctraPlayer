@@ -26,7 +26,7 @@
                    TextWrapping="Wrap" />
       </StackPanel>
 
-      <Border Background="{DynamicResource Surface0Brush}"
+      <Border Classes="NoctraCard" Background="{DynamicResource Surface0Brush}"
               CornerRadius="20"
               Padding="16">
         <Grid ColumnDefinitions="Auto,*"
@@ -58,7 +58,7 @@
         </Grid>
       </Border>
 
-      <Border Background="{DynamicResource Surface0Brush}"
+      <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
               CornerRadius="18"
               Padding="16">
         <StackPanel Spacing="12">
@@ -73,7 +73,8 @@
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12"
                      TextWrapping="Wrap" />
-          <Button Click="BackToProfiles_Click"
+          <Button Classes="SettingsActionButton"
+                  Click="BackToProfiles_Click"
                   MinHeight="46"
                   Background="{DynamicResource Surface1Brush}"
                   BorderThickness="0"
@@ -102,7 +103,7 @@
         </StackPanel>
       </Border>
 
-      <Border Background="{DynamicResource Surface0Brush}"
+      <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="10">
@@ -159,7 +160,7 @@
         </StackPanel>
       </Border>
 
-      <Border Background="{DynamicResource Surface0Brush}"
+      <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
@@ -320,7 +321,7 @@
         </StackPanel>
       </Border>
 
-      <Border Background="{DynamicResource Surface0Brush}"
+      <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
@@ -390,7 +391,7 @@
         </StackPanel>
       </Border>
 
-      <Border Background="{DynamicResource Surface0Brush}"
+      <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
@@ -447,7 +448,7 @@
         </StackPanel>
       </Border>
 
-      <Border Background="{DynamicResource Surface0Brush}"
+      <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
@@ -496,7 +497,7 @@
         </StackPanel>
       </Border>
 
-      <Border Background="{DynamicResource Surface0Brush}"
+      <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
@@ -685,7 +686,7 @@
         </StackPanel>
       </Border>
 
-      <Border Background="{DynamicResource Surface0Brush}"
+      <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
@@ -730,7 +731,8 @@
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        FontSize="12" />
           </Grid>
-          <Button Command="{Binding RefreshEpgNowCommand}"
+          <Button Classes="SettingsActionButton"
+                  Command="{Binding RefreshEpgNowCommand}"
                   IsEnabled="{Binding !IsGlobalLoading}"
                   MinHeight="44">
             <StackPanel Orientation="Horizontal" Spacing="8">
@@ -865,7 +867,7 @@
         </StackPanel>
       </Border>
 
-      <Border Background="{DynamicResource Surface0Brush}"
+      <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="10">
@@ -887,12 +889,14 @@
             <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.14d}" />
             <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.30d}" />
           </ComboBox>
-          <Button Content="{loc:Translate Settings.Privacy.ClearAllNow}"
+          <Button Classes="SettingsDangerActionButton"
+                  Content="{loc:Translate Settings.Privacy.ClearAllNow}"
                   Command="{Binding ClearHistoryCommand}"
                   MinHeight="44" />
 
           <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,4,0,0">
-            <Button Click="PrivacyPolicy_Click"
+            <Button Classes="SettingsActionButton"
+                    Click="PrivacyPolicy_Click"
                     MinHeight="44"
                     Background="{DynamicResource Surface1Brush}"
                     BorderThickness="1"
@@ -904,7 +908,8 @@
                 <TextBlock Text="{loc:Translate LegalConsent.Action.Privacy}" FontWeight="SemiBold" />
               </StackPanel>
             </Button>
-            <Button Grid.Column="1"
+            <Button Classes="SettingsActionButton"
+                    Grid.Column="1"
                     Click="Terms_Click"
                     MinHeight="44"
                     Background="{DynamicResource Surface1Brush}"
@@ -921,7 +926,7 @@
         </StackPanel>
       </Border>
 
-      <Border Background="{DynamicResource Surface0Brush}"
+      <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
@@ -974,7 +979,8 @@
             </StackPanel>
           </Grid>
 
-          <Button Command="{Binding ShowUpsellCommand}"
+          <Button Classes="SettingsPrimaryActionButton"
+                  Command="{Binding ShowUpsellCommand}"
                   IsVisible="{Binding !IsPremium}"
                   MinHeight="44">
             <StackPanel Orientation="Horizontal" Spacing="8">
@@ -1001,7 +1007,8 @@
                          Foreground="{DynamicResource AccentBrush}"
                          FontSize="12"
                          IsVisible="{Binding IsCheckingUpdates}" />
-              <Button Command="{Binding CheckForUpdatesCommand}"
+              <Button Classes="SettingsActionButton"
+                      Command="{Binding CheckForUpdatesCommand}"
                       IsVisible="{Binding IsIdle}"
                       MinHeight="44">
                 <StackPanel Orientation="Horizontal" Spacing="8">
@@ -1009,7 +1016,8 @@
                   <TextBlock Text="{loc:Translate GlobalSettings.Update.Check}" />
                 </StackPanel>
               </Button>
-              <Button Command="{Binding StartUpdateCommand}"
+              <Button Classes="SettingsPrimaryActionButton"
+                      Command="{Binding StartUpdateCommand}"
                       IsVisible="{Binding IsUpdateAvailable}"
                       MinHeight="44">
                 <StackPanel Orientation="Horizontal" Spacing="8">
@@ -1024,7 +1032,7 @@
       </Border>
 
       <!-- Promo Code Section -->
-      <Border Background="{DynamicResource Surface0Brush}"
+      <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="12">
@@ -1042,7 +1050,8 @@
             <TextBox Text="{Binding PromoCodeInput, Mode=TwoWay}"
                      PlaceholderText="{loc:Translate GlobalSettings.Promo.Placeholder}"
                      MinHeight="44" />
-            <Button Grid.Column="1"
+            <Button Classes="SettingsPrimaryActionButton"
+                    Grid.Column="1"
                     Command="{Binding ApplyPromoCodeCommand}"
                     MinHeight="44"
                     MinWidth="80"
@@ -1077,7 +1086,7 @@
       </Border>
 
       <!-- Cache Section -->
-      <Border Background="{DynamicResource Surface0Brush}"
+      <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
         <StackPanel Spacing="10">
@@ -1100,7 +1109,8 @@
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12"
                      TextWrapping="Wrap" />
-          <Button Command="{Binding ClearCacheCommand}"
+          <Button Classes="SettingsDangerActionButton"
+                  Command="{Binding ClearCacheCommand}"
                   MinHeight="44">
             <StackPanel Orientation="Horizontal" Spacing="8">
               <icons:MaterialIcon Kind="DeleteOutline" Width="18" Height="18" Foreground="{DynamicResource ErrorBrush}" />
@@ -1127,7 +1137,8 @@
                        Foreground="{DynamicResource TextMutedBrush}"
                        TextWrapping="Wrap" />
           </StackPanel>
-          <Button Grid.Column="1"
+          <Button Classes="SettingsPrimaryActionButton"
+                  Grid.Column="1"
                   Command="{Binding ReportBugCommand}"
                   Background="#E50914"
                   Foreground="White"
@@ -1146,10 +1157,12 @@
       <Grid ColumnDefinitions="*,*"
             ColumnSpacing="10"
             Margin="0,0,0,24">
-        <Button Content="{loc:Translate Settings.Action.ResetDefaults}"
+        <Button Classes="SettingsActionButton"
+                Content="{loc:Translate Settings.Action.ResetDefaults}"
                 Command="{Binding ResetToDefaultsCommand}"
                 MinHeight="44" />
-        <Button Grid.Column="1"
+        <Button Classes="SettingsPrimaryActionButton"
+                Grid.Column="1"
                 Content="{loc:Translate Settings.Action.SaveSettings}"
                 Command="{Binding SaveSettingsCommand}"
                 MinHeight="44" />
@@ -1159,7 +1172,7 @@
 
     <Grid Background="{DynamicResource OverlayDimBrush}"
           IsVisible="{Binding IsGlobalLoading}">
-      <Border Background="{DynamicResource Surface0Brush}"
+      <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
               CornerRadius="18"
               Padding="24"
               Width="300"
