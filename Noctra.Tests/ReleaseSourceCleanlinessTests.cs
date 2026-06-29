@@ -499,18 +499,25 @@ public sealed class ReleaseSourceCleanlinessTests
         {
             Path.Combine(repositoryRoot, "Noctra.Mobile", "Controls", "MobileVodCard.axaml"),
             Path.Combine(repositoryRoot, "Noctra.Mobile", "Controls", "MobileSeriesCard.axaml"),
-            Path.Combine(repositoryRoot, "Noctra.Mobile", "Controls", "MobileContinueWatchingCard.axaml")
+            Path.Combine(repositoryRoot, "Noctra.Mobile", "Controls", "MobileContinueWatchingCard.axaml"),
+            Path.Combine(repositoryRoot, "Noctra.Mobile", "Controls", "MobileLiveTvCard.axaml")
         };
 
         foreach (var cardPath in cardPaths)
         {
             var source = File.ReadAllText(cardPath);
 
-            Assert.Contains("x:Key=\"CardActionsFlyout\"", source);
-            Assert.Contains("Flyout=\"{StaticResource CardActionsFlyout}\"", source);
+            Assert.Contains("ActionsFlyout", source);
+            Assert.Contains("Flyout=\"{StaticResource", source);
             Assert.Contains("Kind=\"DotsVertical\"", source);
-            Assert.Contains("Context.MyList.Toggle", source);
             Assert.Contains("Context.Favorite.Toggle", source);
+        }
+
+        // Poster-style cards still expose the MyList bookmark action.
+        foreach (var cardPath in cardPaths.Where(p => !p.Contains("LiveTvCard")))
+        {
+            var source = File.ReadAllText(cardPath);
+            Assert.Contains("Context.MyList.Toggle", source);
         }
     }
 
@@ -903,6 +910,8 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("{loc:Translate Profiles.Add.Title}", viewSource);
         Assert.Contains("{loc:Translate Profiles.Account.Analyze}", viewSource);
         Assert.Contains("{loc:Translate Profiles.Add.Save}", viewSource);
+        Assert.Contains("Profiles.Add.IsChildTooltip", viewSource);
+        Assert.DoesNotContain("Profiles.Add.IsChildDescription", viewSource);
         foreach (var binding in new[]
         {
             "ProfileName",
@@ -1020,7 +1029,8 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("vm:ProfilesViewModel", profileListSource);
         Assert.Contains("DisplayItems", profileListSource);
         Assert.Contains("SelectProfileCommand", profileListCode);
-        Assert.Contains("AddProfileCommand", profileListSource);
+        Assert.Contains("AddProfile_Click", profileListSource);
+        Assert.Contains("AddProfileCommand", profileListCode);
         Assert.Contains("ToggleManageModeCommand", profileListSource);
         Assert.Contains("OnProfileAddRequested", profileListCode);
         Assert.Contains("OnProfileEditRequested", profileListCode);
@@ -1093,6 +1103,8 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("x:Name=\"FallbackAddProfileButton\"", profileListSource);
         Assert.Contains("Button.ProfileCardStyle:pointerover", profileListSource);
         Assert.Contains("Button.ProfileCardStyle:focus", profileListSource);
+        Assert.Contains("Classes=\"ProfileCardStyle\"", profileListSource);
+        Assert.DoesNotContain("Classes=\"ProfileCard\"", profileListSource);
         Assert.Contains("FocusGlow", profileListSource);
         Assert.DoesNotContain("Text=\"+\"", profileListSource);
 
@@ -1254,9 +1266,9 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("KeyDown=\"SearchInput_KeyDown\"", searchSource);
         Assert.Contains("x:Name=\"SearchScrollViewer\"", searchSource);
         Assert.Contains("ScrollChanged=\"SearchScrollViewer_ScrollChanged\"", searchSource);
-        Assert.Contains("FontSize=\"20\"", searchSource);
-        Assert.Contains("FontSize=\"16\"", searchSource);
-        Assert.Contains("LetterSpacing=\"1\"", searchSource);
+        Assert.Contains("FontSize=\"18\"", searchSource);
+        Assert.Contains("FontSize=\"15\"", searchSource);
+        Assert.Contains("Search.Button", searchSource);
         Assert.Contains("Kind=\"Magnify\"", searchSource);
         Assert.Contains("SearchInput_KeyDown", searchCode);
         Assert.Contains("Key.Enter", searchCode);
@@ -1411,12 +1423,9 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("Shell.Nav.Downloads", mainViewSource);
         Assert.Contains("Settings.Title", mainViewSource);
         Assert.Contains("Mobile.Nav.More", mainViewSource);
-        Assert.Contains("Home.ContinueWatching", mainViewSource);
-        Assert.Contains("Home.EmptyState.Description", mainViewSource);
-        Assert.Contains("Live.Title", mainViewSource);
-        Assert.Contains("Settings.Channels.Title", mainViewSource);
-        Assert.Contains("Shell.Nav.Library", mainViewSource);
-        Assert.Contains("Home.QuickAccess.Movies.Description", mainViewSource);
+        Assert.Contains("Mobile.More.Shortcuts", mainViewSource);
+        Assert.Contains("Settings.Profile.Management", mainViewSource);
+        Assert.Contains("Settings.Profile.ManagementDetail", mainViewSource);
         Assert.DoesNotContain("Content=\"Home\"", mainViewSource);
         Assert.DoesNotContain("Content=\"Settings\"", mainViewSource);
         Assert.DoesNotContain("Content=\"More\"", mainViewSource);
@@ -1656,7 +1665,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("<views:MobileSeriesDetailView x:Name=\"MobileSeriesDetailContent\"", mainViewSource);
         Assert.DoesNotContain("MobileSeriesDetailContent\"\r\n                                      IsVisible=\"False\"", mainViewSource);
         Assert.Contains("CloseSeriesDetailIfOpen()", mainViewCode);
-        Assert.Contains("if (destination is \"Settings\" or \"More\")", mainViewCode);
+        Assert.Contains("!string.Equals(destination, \"Series\", StringComparison.Ordinal)", mainViewCode);
         Assert.Contains("_coreMainViewModel ??= GetViewModelResolver()?.GetCoreMainViewModel()", mainViewCode);
         Assert.Contains("_coreMainViewModel?.CloseSeriesDetailCommand.Execute(null)", mainViewCode);
         Assert.Contains("OnSettingsClick", mainViewCode);
@@ -2065,6 +2074,12 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("ResetToDefaultsCommand", settingsSource);
         Assert.Contains("Settings.Action.ResetDefaults", settingsSource);
         Assert.Contains("ClearHistoryCommand", settingsSource);
+        Assert.Contains("MobileLegalDocumentView", settingsSource);
+        Assert.Contains("LegalDocumentHost", settingsSource);
+        Assert.Contains("PrivacyPolicy_Click", settingsSource);
+        Assert.Contains("Terms_Click", settingsSource);
+        Assert.Contains("GlobalSettings.Privacy.Message.Current", settingsCode);
+        Assert.Contains("GlobalSettings.Terms.Message.Current", settingsCode);
         Assert.Contains("Common.Loading", settingsSource);
         Assert.Contains("Dialog.Cancel", settingsSource);
         Assert.DoesNotContain("Text=\"Settings\"", settingsSource);
@@ -2241,7 +2256,8 @@ public sealed class ReleaseSourceCleanlinessTests
             "MobilePlayerView.axaml"));
 
         Assert.Contains("IVideoPlayerService", androidVideoService);
-        Assert.Contains("Android.Media.MediaPlayer", androidVideoService);
+        Assert.Contains("AndroidX.Media3.ExoPlayer", androidVideoService);
+        Assert.Contains("IExoPlayer", androidVideoService);
         Assert.Contains("PlayingChanged", androidVideoService);
         Assert.Contains("ErrorOccurred", androidVideoService);
         Assert.Contains("PositionChanged", androidVideoService);
@@ -2669,12 +2685,12 @@ public sealed class ReleaseSourceCleanlinessTests
 
         Assert.Contains("ApplyPlaybackRate", androidVideoService);
         Assert.Contains("ApplyPlaybackRate();", androidVideoService);
-        Assert.Contains("player.Start();", androidVideoService);
+        Assert.Contains("_exoPlayer.PlayWhenReady = true;", androidVideoService);
         Assert.Contains("Resume()", androidVideoService);
-        Assert.Contains("PlaybackParams", androidVideoService);
-        Assert.Contains("SetSpeed(_playbackRate)", androidVideoService);
+        Assert.Contains("PlaybackParameters", androidVideoService);
+        Assert.Contains("_exoPlayer.PlaybackParameters = playbackParameters", androidVideoService);
 
-        var startIndex = androidVideoService.IndexOf("player.Start();", StringComparison.Ordinal);
+        var startIndex = androidVideoService.IndexOf("_exoPlayer.PlayWhenReady = true;", StringComparison.Ordinal);
         var preparedApplyIndex = androidVideoService.IndexOf("ApplyPlaybackRate();", startIndex, StringComparison.Ordinal);
         Assert.True(preparedApplyIndex > startIndex);
 
@@ -2694,16 +2710,16 @@ public sealed class ReleaseSourceCleanlinessTests
             "AndroidVideoPlayerService.cs"));
 
         Assert.Contains("event EventHandler<StreamQualityInfo>? QualityDetected;", androidVideoService);
-        Assert.Contains("UpdateStreamQualityFromPreparedPlayer", androidVideoService);
-        Assert.Contains("VideoWidth", androidVideoService);
-        Assert.Contains("VideoHeight", androidVideoService);
+        Assert.Contains("UpdateStreamQuality", androidVideoService);
+        Assert.Contains("_exoPlayer.VideoFormat", androidVideoService);
+        Assert.Contains("_exoPlayer.AudioFormat", androidVideoService);
         Assert.Contains("new StreamQualityInfo", androidVideoService);
         Assert.Contains("StreamQuality =", androidVideoService);
         Assert.Contains("QualityDetected?.Invoke(this, quality)", androidVideoService);
 
-        var preparedIndex = androidVideoService.IndexOf("player.Prepared += (_, _) =>", StringComparison.Ordinal);
-        var qualityIndex = androidVideoService.IndexOf("UpdateStreamQualityFromPreparedPlayer", preparedIndex, StringComparison.Ordinal);
-        Assert.True(qualityIndex > preparedIndex);
+        var readyIndex = androidVideoService.IndexOf("case BasePlayer.InterfaceConsts.StateReady:", StringComparison.Ordinal);
+        var qualityIndex = androidVideoService.IndexOf("UpdateStreamQuality();", readyIndex, StringComparison.Ordinal);
+        Assert.True(qualityIndex > readyIndex);
     }
 
     [Fact]
@@ -2754,7 +2770,7 @@ public sealed class ReleaseSourceCleanlinessTests
 
         Assert.Contains("AndroidVideoSurfaceService", videoService);
         Assert.Contains("WaitForSurfaceAsync", videoService);
-        Assert.Contains("SetSurface", videoService);
+        Assert.Contains("SetVideoSurface", videoService);
 
         Assert.Contains("AddSingleton<AndroidVideoSurfaceService>", registrationSource);
         Assert.Contains("AddSingleton<IVideoSurfaceService>", registrationSource);

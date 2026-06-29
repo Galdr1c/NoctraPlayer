@@ -289,6 +289,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
                 _exoPlayer.Prepare();
                 _exoPlayer.PlayWhenReady = true;
+                ApplyPlaybackRate();
 
                 completion.TrySetResult();
             }
@@ -350,6 +351,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             if (_exoPlayer is not null)
             {
                 _exoPlayer.PlayWhenReady = true;
+                ApplyPlaybackRate();
             }
         });
     }

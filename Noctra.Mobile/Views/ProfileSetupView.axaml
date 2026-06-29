@@ -236,7 +236,7 @@
                            FontSize="15"
                            FontWeight="Medium"
                            Foreground="{DynamicResource TextPrimaryBrush}" />
-                <TextBlock Text="{loc:Translate Profiles.Add.IsChildDescription}"
+                <TextBlock Text="{loc:Translate Profiles.Add.IsChildTooltip}"
                            FontSize="12"
                            Foreground="{DynamicResource TextMutedBrush}"
                          TextWrapping="Wrap" />

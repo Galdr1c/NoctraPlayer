@@ -135,9 +135,10 @@ public partial class ProfileListView : UserControl
 
     private void AddProfile_Click(object? sender, RoutedEventArgs e)
     {
-        if (_viewModel?.AddProfileCommand.CanExecute(null) == true)
+        var viewModel = _viewModel ?? DataContext as ProfilesViewModel;
+        if (viewModel?.AddProfileCommand.CanExecute(null) == true)
         {
-            _viewModel.AddProfileCommand.Execute(null);
+            viewModel.AddProfileCommand.Execute(null);
             e.Handled = true;
         }
     }

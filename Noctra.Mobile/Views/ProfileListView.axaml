@@ -9,11 +9,12 @@
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.ProfileListView"
              x:Name="ProfileListRoot"
+             x:DataType="vm:ProfilesViewModel"
              x:CompileBindings="False"
              mc:Ignorable="d"
              d:DesignWidth="390"
              d:DesignHeight="844"
-             Background="{DynamicResource Bg0Brush}">
+             Background="{DynamicResource BackgroundGradientBrush}">
 
   <UserControl.Styles>
 
@@ -115,16 +116,16 @@
                      VerticalAlignment="Center" />
         </StackPanel>
 
-        <!-- Sağ: Kalem (Yönet modu başlatır) -->
+        <!-- Sağ: Kalem (yönet modunu aç/kapa) -->
         <Button Grid.Column="1"
                 Classes="HeaderIconBtn"
                 Click="ToggleManage_Click"
-                Command="{Binding ToggleManageModeCommand}"
-                VerticalAlignment="Center"
-                ToolTip.Tip="{loc:Translate Profiles.ManageMode.Manage}">
-          <icons:MaterialIcon Kind="PencilOutline" Width="22" Height="22"
-                              Foreground="{DynamicResource TextMutedBrush}" />
+                VerticalAlignment="Center">
+          <icons:MaterialIcon Kind="PencilOutline"
+                              Width="22" Height="22"
+                              Foreground="{DynamicResource TextPrimaryBrush}" />
         </Button>
+
       </Grid>
 
       <!-- ── YÖNET MOD başlığı ── -->
@@ -207,7 +208,7 @@
 
             <!-- ── 1. Mevcut profil kartı ── -->
             <DataTemplate DataType="models:Profile">
-              <Button Classes="ProfileCard"
+              <Button Classes="ProfileCardStyle"
                       Click="SelectProfile_Click"
                       Width="{Binding Bounds.Width,
                                       RelativeSource={RelativeSource AncestorType=ItemsControl},
@@ -397,6 +398,8 @@
                        TextAlignment="Center" />
           </StackPanel>
         </Button>
+
+
 
       </StackPanel>
     </ScrollViewer>
