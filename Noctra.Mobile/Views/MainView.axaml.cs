@@ -433,8 +433,7 @@ public partial class MainView : UserControl
             _activeProfilesViewModel = resolver.GetProfilesViewModel();
 
             // Bind the overlay list's DataContext to the view model so it
-            // populates the profiles.  Do not bind the normal MobileProfileList
-            // when using the overlay.
+            // populates the profiles.
             ProfilesOverlay.DataContext = _activeProfilesViewModel;
             OverlayProfileList.SetProfilesViewModel(_activeProfilesViewModel);
             _activeProfilesViewModel.RefreshProfiles();
@@ -520,11 +519,6 @@ public partial class MainView : UserControl
             CloseSeriesDetailIfOpen();
         }
 
-        if (destination == "More")
-        {
-            MobileProfileList.DataContext = resolver.GetProfilesViewModel();
-        }
-
         if (destination == "Settings")
         {
             MobileSettingsContent.DataContext = resolver.GetSettingsViewModel();
@@ -562,6 +556,11 @@ public partial class MainView : UserControl
         }
 
         UpdateContentVisibility(destination);
+    }
+
+    private void OnProfilesClick(object? sender, RoutedEventArgs e)
+    {
+        ShowProfileSelection();
     }
 
     private void CloseSeriesDetailIfOpen()

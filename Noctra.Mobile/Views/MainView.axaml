@@ -162,89 +162,125 @@
     </Border>
 
     <Grid Grid.Row="1" Grid.Column="1">
-      <StackPanel x:Name="ShellContent"
-                  IsVisible="False"
-                  Margin="20"
-                  Spacing="16">
-        <TextBlock Text="{Binding PageDescription}"
-                   FontSize="15"
-                   Foreground="{DynamicResource TextMutedBrush}"
-                   TextWrapping="Wrap" />
-
-        <Border Classes="card">
-          <StackPanel Spacing="8">
-            <TextBlock Text="{loc:Translate Home.ContinueWatching}"
-                       FontSize="18"
-                       FontWeight="SemiBold"
+      <ScrollViewer x:Name="ShellContent"
+                    IsVisible="False">
+        <StackPanel Margin="20,16,20,28"
+                    Spacing="22">
+          <StackPanel Spacing="4">
+            <TextBlock Text="{loc:Translate Mobile.Nav.More}"
+                       FontSize="28"
+                       FontWeight="Bold"
                        Foreground="{DynamicResource TextPrimaryBrush}" />
-            <TextBlock Text="{loc:Translate Home.EmptyState.Description}"
+            <TextBlock Text="{Binding PageDescription}"
+                       FontSize="14"
                        Foreground="{DynamicResource TextMutedBrush}"
                        TextWrapping="Wrap" />
           </StackPanel>
-        </Border>
 
-        <views:ProfileListView x:Name="MobileProfileList"
-                               IsVisible="{Binding IsMoreSelected}" />
-
-        <StackPanel IsVisible="{Binding IsMoreSelected}" Spacing="10">
-          <TextBlock Text="{loc:Translate Mobile.More.Shortcuts}"
-                     FontSize="16"
-                     FontWeight="SemiBold"
-                     Foreground="{DynamicResource TextPrimaryBrush}" />
-
-          <Button Classes="nav" Tag="Series" Click="OnDestinationClick" MinHeight="48">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-              <icons:MaterialIcon Kind="TelevisionPlay" Width="20" Height="20" />
-              <TextBlock Text="{loc:Translate Shell.Nav.Series}" />
-            </StackPanel>
-          </Button>
-          <Button Classes="nav" Tag="Favorites" Click="OnDestinationClick" MinHeight="48">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-              <icons:MaterialIcon Kind="HeartOutline" Width="20" Height="20" />
-              <TextBlock Text="{loc:Translate Shell.Nav.Favorites}" />
-            </StackPanel>
-          </Button>
-          <Button Classes="nav" Tag="MyList" Click="OnDestinationClick" MinHeight="48">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-              <icons:MaterialIcon Kind="BookmarkOutline" Width="20" Height="20" />
-              <TextBlock Text="{loc:Translate Shell.Nav.MyList}" />
-            </StackPanel>
-          </Button>
-          <Button Classes="nav" Tag="History" Click="OnDestinationClick" MinHeight="48">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-              <icons:MaterialIcon Kind="History" Width="20" Height="20" />
-              <TextBlock Text="{loc:Translate Shell.Nav.History}" />
-            </StackPanel>
-          </Button>
-          <Button Classes="nav" Tag="Downloads" Click="OnDestinationClick" MinHeight="48">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-              <icons:MaterialIcon Kind="DownloadOutline" Width="20" Height="20" />
-              <TextBlock Text="{loc:Translate Shell.Nav.Downloads}" />
-            </StackPanel>
-          </Button>
-          <Button Classes="nav" Click="OnSettingsClick" MinHeight="48">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-              <icons:MaterialIcon Kind="CogOutline" Width="20" Height="20" />
-              <TextBlock Text="{loc:Translate Settings.Title}" />
-            </StackPanel>
-          </Button>
-        </StackPanel>
-
-        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
           <Border Classes="card">
-            <StackPanel Spacing="6">
-              <TextBlock Text="{loc:Translate Live.Title}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
-              <TextBlock Text="{loc:Translate Settings.Channels.Title}" Foreground="{DynamicResource AccentBrush}" />
-            </StackPanel>
+            <Grid ColumnDefinitions="Auto,*,Auto"
+                  ColumnSpacing="14">
+              <Border Width="44"
+                      Height="44"
+                      CornerRadius="22"
+                      Background="{DynamicResource AccentHoverBrush}"
+                      VerticalAlignment="Center">
+                <icons:MaterialIcon Kind="AccountSwitchOutline"
+                                    Width="24"
+                                    Height="24"
+                                    Foreground="{DynamicResource AccentBrush}"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center" />
+              </Border>
+              <StackPanel Grid.Column="1"
+                          Spacing="4"
+                          VerticalAlignment="Center">
+                <TextBlock Text="{loc:Translate Settings.Profile.Management}"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBlock Text="{loc:Translate Settings.Profile.ManagementDetail}"
+                           FontSize="12"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+              <Button Grid.Column="2"
+                      Click="OnProfilesClick"
+                      MinHeight="40"
+                      MinWidth="44"
+                      Padding="10,0"
+                      Background="{DynamicResource Surface1Brush}"
+                      BorderThickness="0"
+                      CornerRadius="20"
+                      VerticalAlignment="Center">
+                <icons:MaterialIcon Kind="ChevronRight"
+                                    Width="22"
+                                    Height="22"
+                                    Foreground="{DynamicResource TextPrimaryBrush}" />
+              </Button>
+            </Grid>
           </Border>
-          <Border Grid.Column="1" Classes="card">
-            <StackPanel Spacing="6">
-              <TextBlock Text="{loc:Translate Shell.Nav.Library}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
-              <TextBlock Text="{loc:Translate Home.QuickAccess.Movies.Description}" Foreground="{DynamicResource AccentBrush}" />
-            </StackPanel>
-          </Border>
-        </Grid>
-      </StackPanel>
+
+          <StackPanel Spacing="12">
+            <TextBlock Text="{loc:Translate Mobile.More.Shortcuts}"
+                       FontSize="18"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimaryBrush}" />
+
+            <UniformGrid Columns="2"
+                         RowSpacing="12"
+                         ColumnSpacing="12">
+              <Button Classes="nav" Tag="Series" Click="OnDestinationClick" MinHeight="74">
+                <StackPanel Spacing="6" HorizontalAlignment="Center">
+                  <icons:MaterialIcon Kind="TelevisionPlay" Width="24" Height="24" HorizontalAlignment="Center" />
+                  <TextBlock Text="{loc:Translate Shell.Nav.Series}" TextAlignment="Center" />
+                </StackPanel>
+              </Button>
+              <Button Classes="nav" Tag="Favorites" Click="OnDestinationClick" MinHeight="74">
+                <StackPanel Spacing="6" HorizontalAlignment="Center">
+                  <icons:MaterialIcon Kind="HeartOutline" Width="24" Height="24" HorizontalAlignment="Center" />
+                  <TextBlock Text="{loc:Translate Shell.Nav.Favorites}" TextAlignment="Center" />
+                </StackPanel>
+              </Button>
+              <Button Classes="nav" Tag="MyList" Click="OnDestinationClick" MinHeight="74">
+                <StackPanel Spacing="6" HorizontalAlignment="Center">
+                  <icons:MaterialIcon Kind="BookmarkOutline" Width="24" Height="24" HorizontalAlignment="Center" />
+                  <TextBlock Text="{loc:Translate Shell.Nav.MyList}" TextAlignment="Center" />
+                </StackPanel>
+              </Button>
+              <Button Classes="nav" Tag="History" Click="OnDestinationClick" MinHeight="74">
+                <StackPanel Spacing="6" HorizontalAlignment="Center">
+                  <icons:MaterialIcon Kind="History" Width="24" Height="24" HorizontalAlignment="Center" />
+                  <TextBlock Text="{loc:Translate Shell.Nav.History}" TextAlignment="Center" />
+                </StackPanel>
+              </Button>
+            </UniformGrid>
+          </StackPanel>
+
+          <StackPanel Spacing="10">
+            <Button Classes="nav" Tag="Downloads" Click="OnDestinationClick" MinHeight="54">
+              <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                <icons:MaterialIcon Kind="DownloadOutline" Width="22" Height="22" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1"
+                           Text="{loc:Translate Shell.Nav.Downloads}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+                <icons:MaterialIcon Grid.Column="2" Kind="ChevronRight" Width="20" Height="20" VerticalAlignment="Center" />
+              </Grid>
+            </Button>
+            <Button Classes="nav" Click="OnSettingsClick" MinHeight="54">
+              <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                <icons:MaterialIcon Kind="CogOutline" Width="22" Height="22" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1"
+                           Text="{loc:Translate Settings.Title}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+                <icons:MaterialIcon Grid.Column="2" Kind="ChevronRight" Width="20" Height="20" VerticalAlignment="Center" />
+              </Grid>
+            </Button>
+          </StackPanel>
+        </StackPanel>
+      </ScrollViewer>
 
       <Grid x:Name="CoreContentHost"
             IsVisible="False">
