@@ -149,6 +149,24 @@ public partial class MobilePlayerView : UserControl
         LayoutUpdated += OnLayoutUpdated;
     }
 
+    public void ApplyWatermarkInsets(Thickness safeArea, bool isFullScreen, bool isPictureInPicture)
+    {
+        const double normalRight = 24;
+        const double normalBottom = 120;
+        const double fullScreenBottom = 72;
+        const double pictureInPictureRight = 14;
+        const double pictureInPictureBottom = 18;
+
+        var right = (isPictureInPicture ? pictureInPictureRight : normalRight) + safeArea.Right;
+        var bottom = (isPictureInPicture
+            ? pictureInPictureBottom
+            : isFullScreen
+                ? fullScreenBottom
+                : normalBottom) + safeArea.Bottom;
+
+        MobileWatermark.Margin = new Thickness(0, 0, right, bottom);
+    }
+
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);

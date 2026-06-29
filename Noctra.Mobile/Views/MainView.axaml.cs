@@ -37,6 +37,7 @@ public partial class MainView : UserControl
     private readonly DispatcherTimer _backExitToastTimer;
     private readonly Thickness _headerBasePadding;
     private readonly Thickness _bottomNavBasePadding;
+    private Thickness _lastSafeArea;
     private int _profileSelectionRetryCount;
     private bool _startupFlowStarted;
 
@@ -220,6 +221,8 @@ public partial class MainView : UserControl
 
         LegalConsentOverlay.Padding = new Thickness(safe.Left, safe.Top, safe.Right, safe.Bottom);
         ProfilesOverlay.Padding = new Thickness(safe.Left, safe.Top, safe.Right, safe.Bottom);
+        _lastSafeArea = safe;
+        UpdatePlayerWatermarkInsets();
     }
 
     /// <summary>
@@ -694,6 +697,7 @@ public partial class MainView : UserControl
         {
             MobilePlayerContent.MobileWatermark.DataContext = watermarkVm;
         }
+        UpdatePlayerWatermarkInsets();
 
         await _playerViewModel.PlayChannelAsync(channel);
         UpdatePictureInPictureState();
@@ -789,6 +793,11 @@ public partial class MainView : UserControl
             UpdatePlayerChromeState();
             // Tam ekranda yatay yön + immersive sistem çubukları.
             GetPlayerWindowService()?.SetFullScreenMode(_playerViewModel?.IsFullScreen == true);
+            UpdatePlayerWatermarkInsets();
+        }
+        else if (e.PropertyName == nameof(PlayerViewModel.IsPiPMode))
+        {
+            UpdatePlayerWatermarkInsets();
         }
         else if (e.PropertyName == nameof(PlayerViewModel.IsPlaying))
         {
@@ -850,5 +859,14 @@ public partial class MainView : UserControl
         HeaderBar.IsVisible = !_isPlayerFullScreen;
         SelectedMediaHost.IsVisible = !_isPlayerFullScreen && SelectedMediaHost.IsVisible;
         UpdateNavigationMode(Bounds.Width);
+        UpdatePlayerWatermarkInsets();
+    }
+
+    private void UpdatePlayerWatermarkInsets()
+    {
+        MobilePlayerContent.ApplyWatermarkInsets(
+            _lastSafeArea,
+            PlayerHost.IsVisible && _playerViewModel?.IsFullScreen == true,
+            _playerViewModel?.IsPiPMode == true);
     }
 }

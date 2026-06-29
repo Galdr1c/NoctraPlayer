@@ -24,7 +24,7 @@
   </UserControl.Styles>
 
   <Grid Background="Transparent" Tapped="OnPlayerBackgroundTapped">
-    <!-- Watermark overlay for free tier, positioned above the bottom sheet -->
+    <!-- Watermark overlay for free tier. MainView updates the margin from safe-area/fullscreen/PiP state. -->
     <views:MobileWatermarkView x:Name="MobileWatermark"
                                 Grid.ColumnSpan="2"
                                 ZIndex="10"
