@@ -131,17 +131,19 @@
                 </TextBlock>
 
                 <!-- 4 Dot Indicator -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
-                            Spacing="12" Margin="0,0,0,4">
-                    <Ellipse Width="12" Height="12"
-                             Fill="{Binding PinLength, Converter={StaticResource PinDotConverter}, ConverterParameter=1}"/>
-                    <Ellipse Width="12" Height="12"
-                             Fill="{Binding PinLength, Converter={StaticResource PinDotConverter}, ConverterParameter=2}"/>
-                    <Ellipse Width="12" Height="12"
-                             Fill="{Binding PinLength, Converter={StaticResource PinDotConverter}, ConverterParameter=3}"/>
-                    <Ellipse Width="12" Height="12"
-                             Fill="{Binding PinLength, Converter={StaticResource PinDotConverter}, ConverterParameter=4}"/>
-                </StackPanel>
+                <Border x:Name="PinDotsHost" HorizontalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
+                                Spacing="12" Margin="0,0,0,4">
+                        <Ellipse x:Name="Dot1" Width="12" Height="12"
+                                 Fill="{Binding PinLength, Converter={StaticResource PinDotConverter}, ConverterParameter=1}"/>
+                        <Ellipse x:Name="Dot2" Width="12" Height="12"
+                                 Fill="{Binding PinLength, Converter={StaticResource PinDotConverter}, ConverterParameter=2}"/>
+                        <Ellipse x:Name="Dot3" Width="12" Height="12"
+                                 Fill="{Binding PinLength, Converter={StaticResource PinDotConverter}, ConverterParameter=3}"/>
+                        <Ellipse x:Name="Dot4" Width="12" Height="12"
+                                 Fill="{Binding PinLength, Converter={StaticResource PinDotConverter}, ConverterParameter=4}"/>
+                    </StackPanel>
+                </Border>
 
                 <!-- Error Message (Lockout sırasında gizlenir — geri sayım gösterilir) -->
                 <TextBlock Text="{Binding ErrorMessage}"

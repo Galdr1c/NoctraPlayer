@@ -36,6 +36,13 @@ public partial class PinEntryViewModel : ObservableObject
     [ObservableProperty]
     private string _purpose = string.Empty;
 
+    /// <summary>
+    /// Her hatalı PIN girişinde 1 artar. UI tarafı bu değişikliği dinleyip
+    /// sallanma (shake) animasyonunu tetikler.
+    /// </summary>
+    [ObservableProperty]
+    private int _shakeTrigger;
+
     public int PinLength => EnteredPin.Length;
 
     /// <summary>
@@ -105,6 +112,8 @@ public partial class PinEntryViewModel : ObservableObject
             _attemptCount++;
             EnteredPin = string.Empty;
             OnPropertyChanged(nameof(PinLength));
+
+            ShakeTrigger++;
 
             if (_attemptCount >= MaxAttempts)
             {
