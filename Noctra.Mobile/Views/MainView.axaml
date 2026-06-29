@@ -250,10 +250,10 @@
             <UniformGrid Columns="2"
                          RowSpacing="12"
                          ColumnSpacing="12">
-              <Button Classes="nav" Tag="Series" Click="OnDestinationClick" MinHeight="74">
+              <Button Classes="nav" Tag="Search" Click="OnDestinationClick" MinHeight="74">
                 <StackPanel Spacing="6" HorizontalAlignment="Center">
-                  <icons:MaterialIcon Kind="TelevisionPlay" Width="24" Height="24" HorizontalAlignment="Center" />
-                  <TextBlock Text="{loc:Translate Shell.Nav.Series}" TextAlignment="Center" />
+                  <icons:MaterialIcon Kind="Magnify" Width="24" Height="24" HorizontalAlignment="Center" />
+                  <TextBlock Text="{loc:Translate Shell.Search.Tooltip}" TextAlignment="Center" />
                 </StackPanel>
               </Button>
               <Button Classes="nav" Tag="Favorites" Click="OnDestinationClick" MinHeight="74">
@@ -394,12 +394,12 @@
             </StackPanel>
           </Panel>
         </Button>
-        <Button Grid.Column="3" Classes="nav" Tag="Search" Click="OnDestinationClick">
+        <Button Grid.Column="3" Classes="nav" Tag="Series" Click="OnDestinationClick">
           <Panel>
             <Border Classes="ActiveIndicator" />
             <StackPanel Spacing="2" HorizontalAlignment="Center">
-              <icons:MaterialIcon Kind="Magnify" Width="24" Height="24" HorizontalAlignment="Center" />
-              <TextBlock Text="{loc:Translate Shell.Search.Tooltip}" FontSize="11" TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
+              <icons:MaterialIcon Kind="TelevisionPlay" Width="24" Height="24" HorizontalAlignment="Center" />
+              <TextBlock Text="{loc:Translate Shell.Nav.Series}" FontSize="11" TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
             </StackPanel>
           </Panel>
         </Button>

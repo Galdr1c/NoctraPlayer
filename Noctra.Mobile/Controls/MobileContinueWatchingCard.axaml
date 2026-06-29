@@ -62,18 +62,23 @@
             Background="{DynamicResource Surface0Brush}"
             BoxShadow="{DynamicResource CardShadow}">
       <Grid>
-        <Border Background="{DynamicResource SurfaceLightBrush}">
-          <Grid>
-            <icons:MaterialIcon Kind="MoviePlay"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Width="34"
-                                Height="34"
-                                Opacity="0.32" />
-            <controls:RemoteImage Url="{Binding CoverUrl}"
-                                        Stretch="UniformToFill"
-                                        RenderOptions.BitmapInterpolationMode="MediumQuality" />
-          </Grid>
+        <Border x:Name="PlaceholderBorder" Background="{DynamicResource SurfaceLightBrush}">
+          <Border.IsVisible>
+            <Binding Path="#BackdropImage.IsImageLoaded" Converter="{StaticResource InverseBoolConverter}" />
+          </Border.IsVisible>
+          <icons:MaterialIcon Kind="MoviePlay"
+                              Foreground="{DynamicResource TextMutedBrush}"
+                              Width="34"
+                              Height="34"
+                              Opacity="0.32"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center" />
         </Border>
+
+        <controls:RemoteImage x:Name="BackdropImage"
+                              Url="{Binding CoverUrl}"
+                              Stretch="UniformToFill"
+                              RenderOptions.BitmapInterpolationMode="MediumQuality" />
 
         <Border Classes="HoverOverlay" Background="#80000000" IsHitTestVisible="False">
           <icons:MaterialIcon Kind="PlayCircle"
@@ -128,7 +133,8 @@
                        Value="{Binding WatchedPercentage}"
                        Foreground="{DynamicResource AccentBrush}"
                        Background="#4D000000"
-                       BorderThickness="0" />
+                       BorderThickness="0"
+                       IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}" />
         </StackPanel>
       </Grid>
     </Border>

@@ -368,7 +368,7 @@ public partial class MainView : UserControl
 
     private void UpdateNavigationSelection(string destination)
     {
-        var bottomNavVisibleDestinations = new[] { "Home", "Live", "Movies", "Search" };
+        var bottomNavVisibleDestinations = new[] { "Home", "Live", "Movies", "Series" };
         var activateMoreInBottomNav = !bottomNavVisibleDestinations.Contains(destination, StringComparer.Ordinal);
 
         foreach (var root in new Control[] { NavigationRail, BottomNavigation, ShellContent })
@@ -407,6 +407,12 @@ public partial class MainView : UserControl
 
     private void ShowProfileSelection()
     {
+        // Profil seçiminde oynatmayı durdur — profil değişimi playback context'ini sıfırlar.
+        if (PlayerHost.IsVisible)
+        {
+            _playerViewModel?.ClosePlayerCommand.Execute(null);
+        }
+
         ProfilesOverlay.IsVisible = true;
         HeaderBar.IsVisible = false;
         NavigationRail.IsVisible = false;
@@ -503,6 +509,16 @@ public partial class MainView : UserControl
         return _platformServiceResolver;
     }
 
+    /// <summary>
+    /// Navigates to the specified content destination.
+    ///
+    /// DESIGN DECISION — Player state:
+    ///   Player is NOT closed during content navigation (Home, Live, Movies, Series,
+    ///   Search, Settings, etc.) to match desktop behavior and standard media-app UX.
+    ///   The user can close the player manually via back button or the player's close
+    ///   button. Player IS closed on profile selection (ShowProfileSelection) since
+    ///   switching profiles resets the playback context.
+    /// </summary>
     internal void NavigateToDestination(string destination)
     {
         if (DataContext is not MobileMainViewModel viewModel)
