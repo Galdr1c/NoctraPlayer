@@ -22,13 +22,9 @@ public partial class MobileSeriesView : UserControl
     }
 
     private async void SeriesScrollViewer_ScrollChanged(object? sender, ScrollChangedEventArgs e)
-    {
-        if (sender is ScrollViewer scrollViewer &&
-            ViewModel is { } viewModel)
-        {
-            await viewModel.LoadMoreSeriesIfNeededAsync(
-                scrollViewer.Offset.Y,
-                scrollViewer.Extent.Height - scrollViewer.Viewport.Height);
-        }
-    }
+        // MobileScrollPaging calls LoadMoreSeriesIfNeededAsync.
+        => await MobileScrollPaging.LoadMoreIfNearEndAsync(
+            ViewModel,
+            sender,
+            MobileScrollPagingTarget.Series);
 }

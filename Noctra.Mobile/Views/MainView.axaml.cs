@@ -268,6 +268,12 @@ public partial class MainView : UserControl
         }
 
         // 4) Alt sayfadaysak -> Ana sayfaya dön
+        if (IsSeriesDetailOpen())
+        {
+            CloseSeriesDetailIfOpen();
+            return true;
+        }
+
         if (!string.Equals(_currentDestination, "Home", StringComparison.Ordinal))
         {
             NavigateToDestination("Home");
@@ -412,6 +418,7 @@ public partial class MainView : UserControl
         {
             _playerViewModel?.ClosePlayerCommand.Execute(null);
         }
+        CloseSeriesDetailIfOpen();
 
         ProfilesOverlay.IsVisible = true;
         HeaderBar.IsVisible = false;
@@ -586,6 +593,12 @@ public partial class MainView : UserControl
     {
         _coreMainViewModel ??= GetViewModelResolver()?.GetCoreMainViewModel();
         _coreMainViewModel?.CloseSeriesDetailCommand.Execute(null);
+    }
+
+    private bool IsSeriesDetailOpen()
+    {
+        _coreMainViewModel ??= GetViewModelResolver()?.GetCoreMainViewModel();
+        return _coreMainViewModel?.IsSeriesDetailVisible == true;
     }
 
     private async void CoreMainViewModel_OnMediaSelected(object media)

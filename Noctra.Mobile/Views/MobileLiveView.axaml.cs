@@ -22,13 +22,9 @@ public partial class MobileLiveView : UserControl
     }
 
     private async void LiveScrollViewer_ScrollChanged(object? sender, ScrollChangedEventArgs e)
-    {
-        if (sender is ScrollViewer scrollViewer &&
-            ViewModel is { } viewModel)
-        {
-            await viewModel.LoadMoreChannelsIfNeededAsync(
-                scrollViewer.Offset.Y,
-                scrollViewer.Extent.Height - scrollViewer.Viewport.Height);
-        }
-    }
+        // MobileScrollPaging calls LoadMoreChannelsIfNeededAsync.
+        => await MobileScrollPaging.LoadMoreIfNearEndAsync(
+            ViewModel,
+            sender,
+            MobileScrollPagingTarget.Channels);
 }

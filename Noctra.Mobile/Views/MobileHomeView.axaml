@@ -19,7 +19,9 @@
     <converters:InverseBoolConverter x:Key="InverseBool" />
   </UserControl.Resources>
 
-  <ScrollViewer VerticalScrollBarVisibility="Auto"
+  <ScrollViewer x:Name="HomeScrollViewer"
+                ScrollChanged="HomeScrollViewer_ScrollChanged"
+                VerticalScrollBarVisibility="Auto"
                 HorizontalScrollBarVisibility="Disabled">
     <!-- Use slightly larger margins to mirror the desktop layout -->
     <StackPanel Margin="24">
