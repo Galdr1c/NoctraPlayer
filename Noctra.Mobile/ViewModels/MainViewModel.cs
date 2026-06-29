@@ -1,5 +1,6 @@
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Noctra.Mobile.Localization;
 using Noctra.Services.Interfaces;
 
 namespace Noctra.Mobile.ViewModels;
@@ -12,11 +13,12 @@ public partial class MainViewModel : ViewModelBase
     private string _selectedDestination = "Home";
 
     [ObservableProperty]
-    private string _pageTitle = "Home";
+    private string _pageTitle = string.Empty;
 
     [ObservableProperty]
-    private string _pageDescription = "Your channels, movies and series in one place.";
+    private string _pageDescription = string.Empty;
 
+    // Design-time only — production uses the parameterized constructor via DI.
     public MainViewModel()
     {
         UpdatePageText(SelectedDestination);
@@ -48,33 +50,35 @@ public partial class MainViewModel : ViewModelBase
 
     private void UpdatePageText(string destination)
     {
-        var (titleKey, descriptionKey, fallbackTitle, fallbackDescription) = destination switch
+        var (titleKey, descriptionKey) = destination switch
         {
-            "Live" => ("Shell.Nav.Live", "Mobile.Page.Live.Description", "Live TV", "Browse live channels and current programs."),
-            "Movies" => ("Shell.Nav.Movies", "Mobile.Page.Movies.Description", "Movies", "Continue watching or explore your movie library."),
-            "Series" => ("Shell.Nav.Series", "Mobile.Page.Series.Description", "Series", "Pick up your episodes and discover new series."),
-            "Search" => ("Shell.Search.Tooltip", "Mobile.Page.Search.Description", "Search", "Find live channels, movies and series."),
-            "Favorites" => ("Shell.Nav.Favorites", "Mobile.Page.Favorites.Description", "Favorites", "Your saved live channels, movies and series."),
-            "MyList" => ("Shell.Nav.MyList", "Mobile.Page.MyList.Description", "My List", "Everything you saved for later."),
-            "History" => ("Shell.Nav.History", "Mobile.Page.History.Description", "History", "Continue from recently watched content."),
-            "Downloads" => ("Shell.Nav.Downloads", "Mobile.Page.Downloads.Description", "Downloads", "Watch saved movies and series offline."),
-            "Settings" => ("Settings.Title", "Mobile.Page.Settings.Description", "Settings", "Adjust playback, downloads, privacy and appearance."),
-            "More" => ("Mobile.Nav.More", "Mobile.Page.More.Description", "More", "Profiles, favorites, settings and premium features."),
-            _ => ("Shell.Nav.Home", "Mobile.Page.Home.Description", "Home", "Your channels, movies and series in one place.")
+            "Live" => ("Shell.Nav.Live", "Mobile.Page.Live.Description"),
+            "Movies" => ("Shell.Nav.Movies", "Mobile.Page.Movies.Description"),
+            "Series" => ("Shell.Nav.Series", "Mobile.Page.Series.Description"),
+            "Search" => ("Shell.Search.Tooltip", "Mobile.Page.Search.Description"),
+            "Favorites" => ("Shell.Nav.Favorites", "Mobile.Page.Favorites.Description"),
+            "MyList" => ("Shell.Nav.MyList", "Mobile.Page.MyList.Description"),
+            "History" => ("Shell.Nav.History", "Mobile.Page.History.Description"),
+            "Downloads" => ("Shell.Nav.Downloads", "Mobile.Page.Downloads.Description"),
+            "Settings" => ("Settings.Title", "Mobile.Page.Settings.Description"),
+            "More" => ("Mobile.Nav.More", "Mobile.Page.More.Description"),
+            _ => ("Shell.Nav.Home", "Mobile.Page.Home.Description")
         };
 
-        PageTitle = GetString(titleKey, fallbackTitle);
-        PageDescription = GetString(descriptionKey, fallbackDescription);
+        PageTitle = GetString(titleKey);
+        PageDescription = GetString(descriptionKey);
     }
 
-    private string GetString(string key, string fallback)
+    private string GetString(string key)
     {
-        if (_localizationService is null)
+        if (_localizationService is not null)
         {
-            return fallback;
+            var value = _localizationService.GetString(key);
+            if (!string.Equals(value, key, StringComparison.Ordinal))
+                return value;
         }
 
-        var value = _localizationService.GetString(key);
-        return string.Equals(value, key, StringComparison.Ordinal) ? fallback : value;
+        // Fallback: LocalizationSource.Instance has its own internal fallback LocalizationService
+        return LocalizationSource.Instance[key];
     }
 }

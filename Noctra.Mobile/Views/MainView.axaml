@@ -42,6 +42,26 @@
     <Style Selector="Button.nav.active icons|MaterialIcon">
       <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
     </Style>
+
+    <!-- Active indicator bar (left accent stripe, matches desktop navItem pattern) -->
+    <Style Selector="Button.nav Border.ActiveIndicator">
+      <Setter Property="IsVisible" Value="False" />
+      <Setter Property="Width" Value="0" />
+      <Setter Property="CornerRadius" Value="0,2,2,0" />
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+      <Setter Property="VerticalAlignment" Value="Stretch" />
+      <Setter Property="Margin" Value="0,4,0,4" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Property="Width" Duration="0:0:0.25" Easing="CubicEaseOut" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.nav.active Border.ActiveIndicator">
+      <Setter Property="IsVisible" Value="True" />
+      <Setter Property="Width" Value="4" />
+    </Style>
     <Style Selector="Border.card">
       <Setter Property="Background" Value="{DynamicResource Surface0Brush}" />
       <Setter Property="CornerRadius" Value="18" />
@@ -348,34 +368,49 @@
             IsVisible="False">
       <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="4">
         <Button Grid.Column="0" Classes="nav" Tag="Home" Click="OnDestinationClick">
-          <StackPanel Spacing="2" HorizontalAlignment="Center">
-            <icons:MaterialIcon Kind="HomeVariantOutline" Width="24" Height="24" HorizontalAlignment="Center" />
-            <TextBlock Text="{loc:Translate Shell.Nav.Home}" FontSize="11" TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
-          </StackPanel>
+          <Panel>
+            <Border Classes="ActiveIndicator" />
+            <StackPanel Spacing="2" HorizontalAlignment="Center">
+              <icons:MaterialIcon Kind="HomeVariantOutline" Width="24" Height="24" HorizontalAlignment="Center" />
+              <TextBlock Text="{loc:Translate Shell.Nav.Home}" FontSize="11" TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
+            </StackPanel>
+          </Panel>
         </Button>
         <Button Grid.Column="1" Classes="nav" Tag="Live" Click="OnDestinationClick">
-          <StackPanel Spacing="2" HorizontalAlignment="Center">
-            <icons:MaterialIcon Kind="Television" Width="24" Height="24" HorizontalAlignment="Center" />
-            <TextBlock Text="{loc:Translate Shell.Nav.Live}" FontSize="11" TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
-          </StackPanel>
+          <Panel>
+            <Border Classes="ActiveIndicator" />
+            <StackPanel Spacing="2" HorizontalAlignment="Center">
+              <icons:MaterialIcon Kind="Television" Width="24" Height="24" HorizontalAlignment="Center" />
+              <TextBlock Text="{loc:Translate Shell.Nav.Live}" FontSize="11" TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
+            </StackPanel>
+          </Panel>
         </Button>
         <Button Grid.Column="2" Classes="nav" Tag="Movies" Click="OnDestinationClick">
-          <StackPanel Spacing="2" HorizontalAlignment="Center">
-            <icons:MaterialIcon Kind="Filmstrip" Width="24" Height="24" HorizontalAlignment="Center" />
-            <TextBlock Text="{loc:Translate Shell.Nav.Movies}" FontSize="11" TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
-          </StackPanel>
+          <Panel>
+            <Border Classes="ActiveIndicator" />
+            <StackPanel Spacing="2" HorizontalAlignment="Center">
+              <icons:MaterialIcon Kind="Filmstrip" Width="24" Height="24" HorizontalAlignment="Center" />
+              <TextBlock Text="{loc:Translate Shell.Nav.Movies}" FontSize="11" TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
+            </StackPanel>
+          </Panel>
         </Button>
         <Button Grid.Column="3" Classes="nav" Tag="Search" Click="OnDestinationClick">
-          <StackPanel Spacing="2" HorizontalAlignment="Center">
-            <icons:MaterialIcon Kind="Magnify" Width="24" Height="24" HorizontalAlignment="Center" />
-            <TextBlock Text="{loc:Translate Shell.Search.Tooltip}" FontSize="11" TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
-          </StackPanel>
+          <Panel>
+            <Border Classes="ActiveIndicator" />
+            <StackPanel Spacing="2" HorizontalAlignment="Center">
+              <icons:MaterialIcon Kind="Magnify" Width="24" Height="24" HorizontalAlignment="Center" />
+              <TextBlock Text="{loc:Translate Shell.Search.Tooltip}" FontSize="11" TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
+            </StackPanel>
+          </Panel>
         </Button>
         <Button Grid.Column="4" Classes="nav" Tag="More" Click="OnDestinationClick">
-          <StackPanel Spacing="2" HorizontalAlignment="Center">
-            <icons:MaterialIcon Kind="Menu" Width="24" Height="24" HorizontalAlignment="Center" />
-            <TextBlock Text="{loc:Translate Mobile.Nav.More}" FontSize="11" TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
-          </StackPanel>
+          <Panel>
+            <Border Classes="ActiveIndicator" />
+            <StackPanel Spacing="2" HorizontalAlignment="Center">
+              <icons:MaterialIcon Kind="Menu" Width="24" Height="24" HorizontalAlignment="Center" />
+              <TextBlock Text="{loc:Translate Mobile.Nav.More}" FontSize="11" TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
+            </StackPanel>
+          </Panel>
         </Button>
       </Grid>
     </Border>

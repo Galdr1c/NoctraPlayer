@@ -41,7 +41,16 @@
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Padding" Value="0"/>
-            <Setter Property="Margin" Value="10"/>
+            <Setter Property="Margin" Value="8"/>
+            <Setter Property="RenderTransform" Value="scale(1)"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.AvatarItemBtn:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.04)"/>
         </Style>
         <Style Selector="Button.AvatarItemBtn:pointerover Border.AvatarBorder">
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
@@ -88,7 +97,7 @@
                             <Button Classes="AvatarItemBtn"
                                     Command="{Binding DataContext.SelectAvatarCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                     CommandParameter="{Binding}">
-                                <Border Width="100" Height="100" CornerRadius="4" 
+                                <Border Width="100" Height="100" CornerRadius="10" 
                                         BorderBrush="Transparent" BorderThickness="2" 
                                         Classes="AvatarBorder"
                                         Background="{Binding Converter={StaticResource ProfileColorConverter}}"
