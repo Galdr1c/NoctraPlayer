@@ -77,6 +77,7 @@
         <materialIcons:MaterialIconStyles />
         <FluentTheme />
         <StyleInclude Source="avares://Noctra.Mobile/Controls/PremiumSpinner.axaml" />
+        <StyleInclude Source="avares://Noctra.Mobile/Resources/CommonStyles.axaml" />
         <StyleInclude Source="avares://Noctra.Mobile/Resources/SettingsStyles.axaml" />
         <Style Selector="Button">
             <Setter Property="Cursor" Value="Hand"/>
