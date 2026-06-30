@@ -2258,10 +2258,14 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("IVideoPlayerService", androidVideoService);
         Assert.Contains("AndroidX.Media3.ExoPlayer", androidVideoService);
         Assert.Contains("IExoPlayer", androidVideoService);
+        Assert.Contains("ExoPlayerBuilder", androidVideoService);
         Assert.Contains("PlayingChanged", androidVideoService);
         Assert.Contains("ErrorOccurred", androidVideoService);
         Assert.Contains("PositionChanged", androidVideoService);
         Assert.Contains("PlaybackEnded", androidVideoService);
+        Assert.DoesNotContain("Android.Media.MediaPlayer", androidVideoService);
+        Assert.DoesNotContain("MediaPlayer(", androidVideoService);
+        Assert.DoesNotContain("player.Start();", androidVideoService);
 
         Assert.Contains("AddSingleton<IVideoPlayerService, AndroidVideoPlayerService>", registrationSource);
         Assert.Contains("AddSingleton<PlayerViewModel>", registrationSource);
@@ -2723,7 +2727,7 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
-    public void AndroidPlaybackSurface_BindsMediaPlayerToNativeTextureView()
+    public void AndroidPlaybackSurface_BindsExoPlayerToNativeTextureView()
     {
         var repositoryRoot = FindRepositoryRoot();
         var surfaceInterface = File.ReadAllText(Path.Combine(
@@ -2771,6 +2775,10 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("AndroidVideoSurfaceService", videoService);
         Assert.Contains("WaitForSurfaceAsync", videoService);
         Assert.Contains("SetVideoSurface", videoService);
+        Assert.Contains("ClearVideoSurface", videoService);
+        Assert.Contains("SurfaceAvailable += VideoSurfaceService_SurfaceAvailable", videoService);
+        Assert.Contains("SurfaceDestroyed += VideoSurfaceService_SurfaceDestroyed", videoService);
+        Assert.DoesNotContain("SetSurface(", videoService);
 
         Assert.Contains("AddSingleton<AndroidVideoSurfaceService>", registrationSource);
         Assert.Contains("AddSingleton<IVideoSurfaceService>", registrationSource);
@@ -2780,6 +2788,35 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("GetVideoSurfaceService", mobilePlatformServiceResolverSource);
         Assert.Contains("ShowAsync", mainViewCode);
         Assert.Contains("Hide", mainViewCode);
+    }
+
+    [Fact]
+    public void AndroidExoPlayerMigration_AppliesPlaybackSettingsAndRejectsLegacyMediaPlayerCode()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var androidVideoService = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "Services",
+            "AndroidVideoPlayerService.cs"));
+
+        Assert.Contains("SetLoadControl(CreateLoadControl(_lastVideoBufferSize))", androidVideoService);
+        Assert.Contains("DefaultLoadControl.Builder", androidVideoService);
+        Assert.Contains("SetBufferDurationsMs", androidVideoService);
+
+        Assert.Contains("ApplyDataUsageConstraints", androidVideoService);
+        Assert.Contains("SetMaxVideoSize", androidVideoService);
+        Assert.Contains("SetMaxVideoBitrate", androidVideoService);
+        Assert.Contains("SetForceLowestBitrate", androidVideoService);
+
+        Assert.Contains("NormalizeDurationSeconds", androidVideoService);
+        Assert.Contains("C.TimeUnset", androidVideoService);
+        Assert.Contains("_localizationService.GetString(\"Player.Error.NetworkOffline\")", androidVideoService);
+
+        Assert.DoesNotContain("Android.Media.MediaPlayer", androidVideoService);
+        Assert.DoesNotContain("UpdateStreamQualityFromPreparedPlayer", androidVideoService);
+        Assert.DoesNotContain("OnPreparedListener", androidVideoService);
+        Assert.DoesNotContain("player.Start();", androidVideoService);
     }
 
     [Fact]

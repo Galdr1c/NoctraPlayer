@@ -36,8 +36,10 @@ tmdb-proxy/.env.*
 providers.json
 
 # Local-only assets and MSIX packaging (never push)
-Noctra.Avalonia/Assets/
-Noctra.Mobile/Assets/
+Noctra.Avalonia/Assets/*
+!Noctra.Avalonia/Assets/Noctra.ico
+Noctra.Mobile/Assets/*
+!Noctra.Mobile/Assets/Noctra.ico
 Noctra.Packaging/Assets/
 Noctra.Packaging/
 scratch_inspect
