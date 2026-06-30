@@ -56,9 +56,7 @@ public partial class App : Application
             db.Database.EnsureCreated();
             StartupLogger.Log("Database ensured");
             
-            // Phase 29: Move blocking schema fixups to an async flow to avoid deadlock
-            // ApplySchemaFixupsAsync(db).GetAwaiter().GetResult(); 
-            // We will call this inside OnFrameworkInitializationCompleted's background task
+            // Schema fixups run later in the async warmup flow to avoid blocking startup.
             
 
             var settings = scope.ServiceProvider.GetRequiredService<ISettingsService>();
@@ -128,9 +126,9 @@ public partial class App : Application
                         {
                             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                             
-                            // Phase 29: Apply schema fixups here (async) to avoid UI hang
                             StartupLogger.Log("Step 2a: Applying schema fixups...");
-                            await ApplySchemaFixupsAsync(db);
+                            var schemaFixups = Services.GetRequiredService<IDatabaseSchemaFixupService>();
+                            await schemaFixups.ApplyAsync(db, DatabaseSchemaFixupProfile.Desktop);
                             StartupLogger.Log("Step 2b: Checking profiles table...");
                             await db.Profiles.AnyAsync();
                             StartupLogger.Log("Step 2: ✅ EF Core ready");
@@ -433,178 +431,6 @@ public partial class App : Application
         var client = new HttpClient(handler) { Timeout = SharedHttpClientTimeout };
         client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
         return client;
-    }
-
-    private static async Task ApplySchemaFixupsAsync(AppDbContext context)
-    {
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE ProviderAccounts ADD COLUMN ExpirationDate TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Profiles ADD COLUMN CreatedAt TEXT NOT NULL DEFAULT '0001-01-01 00:00:00';"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Profiles ADD COLUMN PinHash TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Profiles ADD COLUMN PendingDeletionAt TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Playlists ADD COLUMN EpgUrl TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Playlists ADD COLUMN DetectedCountry TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Playlists ADD COLUMN EpgLastUpdated TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Playlists ADD COLUMN EpgLastError TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Playlists ADD COLUMN SourceEtag TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Playlists ADD COLUMN SourceLastModified TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Playlists ADD COLUMN SourceContentLength INTEGER;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN IsCompleted INTEGER NOT NULL DEFAULT 0;"); } catch { }
-        
-        // Phase 29: Defensive fix for phantom CurrentProgramId column seen in logs
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN CurrentProgramId INTEGER;"); } catch { }
-
-        // Composite indexes for hot menu/filter paths. Single-column indexes are not enough for
-        // PlaylistId + Type + GroupTitle + newest-first paging used by the card grids.
-        try { await context.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_Channels_Playlist_Type_Group_Id ON Channels(PlaylistId, Type, GroupTitle, Id DESC);"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_Channels_Playlist_Type_Id ON Channels(PlaylistId, Type, Id DESC);"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_Channels_Playlist_Group_Id ON Channels(PlaylistId, GroupTitle, Id DESC);"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_Channels_Playlist_Favorite_Id ON Channels(PlaylistId, IsFavorite, Id DESC);"); } catch { }
-        
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN IsCompleted INTEGER NOT NULL DEFAULT 0;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN IntroStartSec REAL;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN IntroEndSec REAL;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN CreditsStartSec REAL;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN IsFavorite INTEGER NOT NULL DEFAULT 0;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN IsInMyList INTEGER NOT NULL DEFAULT 0;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN Genre TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN Plot TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN ReleaseYear INTEGER;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN Rating REAL;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN ContentRating TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN PlaylistId INTEGER NOT NULL DEFAULT 0;"); } catch { }
-        
-        // TMDB Extensions
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN TmdbId INTEGER;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN TmdbTitle TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN LastTmdbSync TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN Cast TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN Director TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN BackdropUrl TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN TrailerUrl TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN MetadataFetchedAt TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN GroupTitle TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN NetworkName TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Series ADD COLUMN NetworkLogoUrl TEXT;"); } catch { }
-        
-        try 
-        { 
-            // Invalidate TMDB cache for EU series so they fetch English metadata instead of the cached Turkish metadata
-            await context.Database.ExecuteSqlRawAsync(@"
-                UPDATE Series 
-                SET Plot = NULL, Cast = NULL, BackdropUrl = NULL, TrailerUrl = NULL, ContentRating = NULL, MetadataFetchedAt = NULL 
-                WHERE GroupTitle LIKE 'EU %' OR GroupTitle LIKE 'EU|%' OR GroupTitle = 'EU'");
-        } catch { }
-
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Seasons ADD COLUMN TmdbSeasonId INTEGER;"); } catch { }
-        
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN Genre TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN ReleaseYear INTEGER;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN Rating REAL;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN ContentRating TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN TmdbId INTEGER;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN LastTmdbSync TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN IsInMyList INTEGER NOT NULL DEFAULT 0;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN IsFavorite INTEGER NOT NULL DEFAULT 0;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN WatchedPosition TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Channels ADD COLUMN Country TEXT;"); } catch { }
-        
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Seasons ADD COLUMN Plot TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN AirDate TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Episodes ADD COLUMN TmdbEpisodeName TEXT;"); } catch { }
-        try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE SeriesEpisodeProgresses ADD COLUMN TmdbId INTEGER;"); } catch { }
-        
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync(@"
-CREATE TABLE IF NOT EXISTS DownloadItems (
-    Id INTEGER NOT NULL CONSTRAINT PK_DownloadItems PRIMARY KEY AUTOINCREMENT,
-    ProfileId INTEGER NOT NULL,
-    PlaylistId INTEGER NOT NULL DEFAULT 0,
-    ChannelId INTEGER NULL,
-    EpisodeId INTEGER NULL,
-    ChannelType INTEGER NOT NULL DEFAULT 1,
-    DisplayName TEXT NOT NULL,
-    PosterUrl TEXT NULL,
-    SourceUrl TEXT NOT NULL,
-    LocalFilePath TEXT NULL,
-    TempFilePath TEXT NULL,
-    AudioTracksJson TEXT NULL,
-    SubtitleTracksJson TEXT NULL,
-    Status INTEGER NOT NULL DEFAULT 0,
-    BytesDownloaded INTEGER NOT NULL DEFAULT 0,
-    BytesTotal INTEGER NULL,
-    SpeedBytesPerSecond REAL NOT NULL DEFAULT 0,
-    EstimatedSecondsRemaining INTEGER NULL,
-    ErrorMessage TEXT NULL,
-    CreatedAt TEXT NOT NULL,
-    UpdatedAt TEXT NOT NULL,
-    CompletedAt TEXT NULL
-);");
-            await context.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_DownloadItems_ProfileId ON DownloadItems(ProfileId);");
-            await context.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_DownloadItems_Status ON DownloadItems(Status);");
-            await context.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_DownloadItems_ProfileStatusCreated ON DownloadItems(ProfileId, Status, CreatedAt);");
-            
-            // Fix: Rename LocalEncryptedPath to LocalFilePath if it's an old database
-            try
-            {
-                await context.Database.ExecuteSqlRawAsync(
-                    "ALTER TABLE DownloadItems RENAME COLUMN LocalEncryptedPath TO LocalFilePath;");
-            }
-            catch { }
-
-            // Cleanup: Mark old encrypted files as failed/obsolete
-            try
-            {
-                await context.Database.ExecuteSqlRawAsync(
-                    "UPDATE DownloadItems SET Status = 4, ErrorMessage = 'Eski format. Lütfen tekrar indirin.' " +
-                    "WHERE LocalFilePath LIKE '%.nctra' AND Status = 3;");
-            }
-            catch { }
-        }
-        catch { }
-
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync(@"
-CREATE TABLE IF NOT EXISTS SeriesEpisodeProgresses (
-    Id INTEGER NOT NULL CONSTRAINT PK_SeriesEpisodeProgresses PRIMARY KEY AUTOINCREMENT,
-    ProfileId INTEGER NOT NULL,
-    SeriesKey TEXT NOT NULL,
-    SeriesTitle TEXT NOT NULL,
-    SeasonNumber INTEGER NOT NULL,
-    EpisodeNumber INTEGER NOT NULL,
-    LastWatchedAt TEXT NOT NULL,
-    StoppedAt TEXT NOT NULL,
-    Duration TEXT NULL,
-    Completed INTEGER NOT NULL DEFAULT 0
-);");
-            await context.Database.ExecuteSqlRawAsync("CREATE INDEX IF NOT EXISTS IX_SeriesEpisodeProgresses_ProfileId ON SeriesEpisodeProgresses(ProfileId);");
-            await context.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX IF NOT EXISTS IX_SeriesEpisodeProgresses_UniqueEpisode ON SeriesEpisodeProgresses(ProfileId, SeriesKey, SeasonNumber, EpisodeNumber);");
-        }
-        catch { }
-
-        // Enable Foreign Keys for SQLite to ensure Cascade Deletes work properly
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON;");
-        }
-        catch (Exception ex)
-        {
-        }
-
-        // SQLite WAL mode + performance PRAGMAs
-        // WAL enables concurrent reads during writes — UI stays responsive while importing
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
-            await context.Database.ExecuteSqlRawAsync("PRAGMA synchronous=NORMAL;");
-            await context.Database.ExecuteSqlRawAsync("PRAGMA cache_size=-64000;"); // 64MB cache
-            await context.Database.ExecuteSqlRawAsync("PRAGMA temp_store=MEMORY;");
-            await context.Database.ExecuteSqlRawAsync("PRAGMA mmap_size=268435456;"); // 256MB mmap
-        }
-        catch (Exception ex)
-        {
-        }
     }
 
     private static void ApplyApplicationLanguage(string? languageCode)

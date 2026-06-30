@@ -3116,6 +3116,47 @@ public sealed class ReleaseSourceCleanlinessTests
         }
     }
 
+    [Fact]
+    public void DatabaseSchemaFixups_AreCentralizedInCoreService()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var desktopAppSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Avalonia",
+            "App.axaml.cs"));
+        var mobileAppSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "App.axaml.cs"));
+        var schemaFixupSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Core",
+            "Services",
+            "DatabaseSchemaFixupService.cs"));
+        var serviceRegistrationSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Core",
+            "DependencyInjection",
+            "ServiceCollectionExtensions.cs"));
+
+        Assert.DoesNotContain("ALTER TABLE", desktopAppSource, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ALTER TABLE", mobileAppSource, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ExecuteSqlRaw", desktopAppSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ExecuteSqlRaw", mobileAppSource, StringComparison.Ordinal);
+
+        Assert.Contains("IDatabaseSchemaFixupService", desktopAppSource);
+        Assert.Contains("DatabaseSchemaFixupProfile.Desktop", desktopAppSource);
+        Assert.Contains("IDatabaseSchemaFixupService", mobileAppSource);
+        Assert.Contains("DatabaseSchemaFixupProfile.Mobile", mobileAppSource);
+
+        Assert.Contains("ALTER TABLE", schemaFixupSource);
+        Assert.Contains("ExecuteSqlRawAsync", schemaFixupSource);
+        Assert.Contains("DatabaseSchemaFixupProfile.Mobile", schemaFixupSource);
+        Assert.Contains("PRAGMA cache_size=-32000", schemaFixupSource);
+        Assert.Contains("PRAGMA cache_size=-64000", schemaFixupSource);
+        Assert.Contains("AddSingleton<IDatabaseSchemaFixupService, DatabaseSchemaFixupService>", serviceRegistrationSource);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
