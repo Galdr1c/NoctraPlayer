@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Android.Content;
 using Android.OS;
 using Android.Runtime;
+using Android.Views;
 using AndroidX.Media3.Common;
 using AndroidX.Media3.Common.Text;
 using AndroidX.Media3.ExoPlayer;
@@ -49,6 +50,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     private bool _lastHardwareAcceleration = true;
     private DataUsageLevel _lastDataUsage = DataUsageLevel.Auto;
     private CancellationTokenSource? _reinitializeCts;
+    private bool _requiresPlayerRebuild;
 
     // Cached values to avoid cross-thread calls when queried outside main thread
     private bool _isPlaying;
@@ -122,6 +124,8 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
         ApplySettingsSnapshot(_settingsService.Settings, updateAudioState: false);
         _settingsService.SettingsChanged += OnSettingsChanged;
+        _videoSurfaceService.SurfaceAvailable += VideoSurfaceService_SurfaceAvailable;
+        _videoSurfaceService.SurfaceDestroyed += VideoSurfaceService_SurfaceDestroyed;
 
         // Initialize ExoPlayer on the Main Thread
         RunOnMainThread(() =>
@@ -134,7 +138,8 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     {
         if (_exoPlayer is not null) return;
 
-        var builder = new ExoPlayerBuilder(_applicationContext);
+        var builder = new ExoPlayerBuilder(_applicationContext)
+            .SetLoadControl(CreateLoadControl(_lastVideoBufferSize));
         
         // Configure AudioAttributes for automatic audio focus handling
         var audioAttributes = new AndroidX.Media3.Common.AudioAttributes.Builder()
@@ -150,6 +155,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
         ApplyVolume();
         ApplyPlaybackRate();
+        ApplyDataUsageConstraints();
     }
 
     public int Volume
@@ -204,6 +210,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     public async Task PlayAsync(string url, double startTimeSeconds = 0)
     {
         ThrowIfDisposed();
+        RebuildPlayerIfNeeded();
         
         // Ensure player is initialized on Main Thread
         var initTcs = new TaskCompletionSource();
@@ -273,6 +280,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
 
                 _exoPlayer.SetMediaSource(mediaSource);
+                ApplyDataUsageConstraints();
 
                 // Setup Video Surface
                 await _videoSurfaceService.ShowAsync().ConfigureAwait(true);
@@ -324,6 +332,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
         var currentPositionSeconds = CurrentTimeMilliseconds / 1000d;
         var wasPlaying = IsPlaying;
+        RebuildPlayerIfNeeded();
 
         await PlayAsync(url, currentPositionSeconds).ConfigureAwait(false);
 
@@ -480,22 +489,14 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         if (!_isDisposed)
         {
             _settingsService.SettingsChanged -= OnSettingsChanged;
+            _videoSurfaceService.SurfaceAvailable -= VideoSurfaceService_SurfaceAvailable;
+            _videoSurfaceService.SurfaceDestroyed -= VideoSurfaceService_SurfaceDestroyed;
             _reinitializeCts?.Cancel();
             _reinitializeCts?.Dispose();
             
             RunOnMainThread(() =>
             {
-                if (_exoPlayer is not null)
-                {
-                    if (_playerListener is not null)
-                    {
-                        _exoPlayer.RemoveListener(_playerListener);
-                        _playerListener.Dispose();
-                    }
-                    _exoPlayer.Release();
-                    _exoPlayer.Dispose();
-                    _exoPlayer = null;
-                }
+                ReleasePlayer();
             });
 
             _isDisposed = true;
@@ -538,6 +539,16 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             previousBufferSize != _lastVideoBufferSize ||
             previousDataUsage != _lastDataUsage;
 
+        if (previousBufferSize != _lastVideoBufferSize)
+        {
+            _requiresPlayerRebuild = true;
+        }
+
+        if (previousDataUsage != _lastDataUsage)
+        {
+            ApplyDataUsageConstraints();
+        }
+
         if (requiresDataSourceReopen && _hasLoadedMedia && !string.IsNullOrWhiteSpace(_currentUrl))
         {
             ScheduleReinitialize();
@@ -575,6 +586,148 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 ErrorOccurred?.Invoke(this, ex.Message);
             }
         }, cts.Token);
+    }
+
+    private void VideoSurfaceService_SurfaceAvailable(object? sender, Surface surface)
+    {
+        RunOnMainThread(() =>
+        {
+            if (_exoPlayer is null || _isDisposed)
+            {
+                return;
+            }
+
+            try
+            {
+                _exoPlayer.SetVideoSurface(surface);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] Failed to attach recreated surface: {ex.Message}");
+            }
+        });
+    }
+
+    private void VideoSurfaceService_SurfaceDestroyed(object? sender, EventArgs e)
+    {
+        RunOnMainThread(() =>
+        {
+            if (_exoPlayer is null || _isDisposed)
+            {
+                return;
+            }
+
+            try
+            {
+                _exoPlayer.ClearVideoSurface();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] Failed to clear destroyed surface: {ex.Message}");
+            }
+        });
+    }
+
+    private void RebuildPlayerIfNeeded()
+    {
+        if (!_requiresPlayerRebuild)
+        {
+            return;
+        }
+
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        RunOnMainThread(() =>
+        {
+            try
+            {
+                ReleasePlayer();
+                _requiresPlayerRebuild = false;
+                InitializePlayer();
+                completion.TrySetResult();
+            }
+            catch (Exception ex)
+            {
+                completion.TrySetException(ex);
+            }
+        });
+
+        completion.Task.GetAwaiter().GetResult();
+    }
+
+    private void ReleasePlayer()
+    {
+        if (_exoPlayer is null)
+        {
+            return;
+        }
+
+        try
+        {
+            if (_playerListener is not null)
+            {
+                _exoPlayer.RemoveListener(_playerListener);
+                _playerListener.Dispose();
+                _playerListener = null;
+            }
+
+            _exoPlayer.Release();
+            _exoPlayer.Dispose();
+        }
+        finally
+        {
+            _exoPlayer = null;
+        }
+    }
+
+    private static DefaultLoadControl CreateLoadControl(BufferSize bufferSize)
+    {
+        var (minBufferMs, maxBufferMs, playbackMs, rebufferMs) = bufferSize switch
+        {
+            BufferSize.Small => (2_000, 8_000, 750, 1_500),
+            BufferSize.Large => (15_000, 60_000, 1_500, 5_000),
+            _ => (5_000, 30_000, 1_000, 2_500)
+        };
+
+        return new DefaultLoadControl.Builder()
+            .SetBufferDurationsMs(minBufferMs, maxBufferMs, playbackMs, rebufferMs)
+            .Build();
+    }
+
+    private void ApplyDataUsageConstraints()
+    {
+        RunOnMainThread(() =>
+        {
+            if (_exoPlayer is null || _isDisposed)
+            {
+                return;
+            }
+
+            var (maxWidth, maxHeight, maxBitrate, forceLowestBitrate) = GetDataUsageConstraints(_lastDataUsage);
+
+            try
+            {
+                _exoPlayer.TrackSelectionParameters = _exoPlayer.TrackSelectionParameters.BuildUpon()
+                    .SetMaxVideoSize(maxWidth, maxHeight)
+                    .SetMaxVideoBitrate(maxBitrate)
+                    .SetForceLowestBitrate(forceLowestBitrate)
+                    .Build();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] Failed to apply data usage constraints: {ex.Message}");
+            }
+        });
+    }
+
+    private static (int MaxWidth, int MaxHeight, int MaxBitrate, bool ForceLowestBitrate) GetDataUsageConstraints(DataUsageLevel dataUsage)
+    {
+        return dataUsage switch
+        {
+            DataUsageLevel.Low => (854, 480, 1_200_000, true),
+            DataUsageLevel.Medium => (1280, 720, 3_000_000, false),
+            DataUsageLevel.High => (1920, 1080, 6_000_000, false),
+            _ => (int.MaxValue, int.MaxValue, int.MaxValue, false)
+        };
     }
 
     private void EnsureNetworkCanPlay(PlaybackSource playbackSource)

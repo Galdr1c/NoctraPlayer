@@ -32,6 +32,9 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
     private float _userPanX;
     private float _userPanY;
 
+    internal event EventHandler<Surface>? SurfaceAvailable;
+    internal event EventHandler? SurfaceDestroyed;
+
     public AndroidVideoSurfaceService(AndroidActivityProvider activityProvider)
     {
         _activityProvider = activityProvider;
@@ -90,6 +93,7 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
             }
 
             // Sonraki gösterimde tam ekran başlasın.
+            SurfaceDestroyed?.Invoke(this, EventArgs.Empty);
             _boundsW = -1;
             _boundsH = -1;
             ResetInteractionTransformState();
@@ -397,6 +401,7 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
 
         var surfaceObj = new Surface(surface);
         tcs.TrySetResult(surfaceObj);
+        SurfaceAvailable?.Invoke(this, surfaceObj);
 
         // İlk boyut bilgisi geldiğinde transform'u uygula.
         _activityProvider.CurrentActivity?.RunOnUiThread(ApplyVideoTransform);
@@ -410,6 +415,7 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
 
     public bool OnSurfaceTextureDestroyed(SurfaceTexture surface)
     {
+        NotifySurfaceDestroyed();
         lock (_surfaceLock)
         {
             _surfaceReady = new TaskCompletionSource<Surface>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -417,6 +423,9 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
 
         return true; // Uygulamanın SurfaceTexture'ı serbest bırakmasına izin ver.
     }
+
+    private void NotifySurfaceDestroyed()
+        => SurfaceDestroyed?.Invoke(this, EventArgs.Empty);
 
     public void OnSurfaceTextureUpdated(SurfaceTexture surface)
     {
