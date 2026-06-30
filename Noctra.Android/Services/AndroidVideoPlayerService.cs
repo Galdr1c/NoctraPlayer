@@ -267,6 +267,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 }
 
                 _exoPlayer.Stop();
+                _exoPlayer.ClearVideoSurface();
                 _exoPlayer.ClearMediaItems();
 
                 // Setup DataSource.Factory with headers
@@ -396,6 +397,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             try
             {
                 _exoPlayer.Stop();
+                _exoPlayer.ClearVideoSurface();
                 _exoPlayer.ClearMediaItems();
             }
             catch (Exception ex)
@@ -691,6 +693,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 _playerListener = null;
             }
 
+            _exoPlayer.ClearVideoSurface();
             _exoPlayer.Release();
             _exoPlayer.Dispose();
         }

@@ -2220,11 +2220,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     public Task PlayChannelAsync(Channel channel, double? startPosition = null, int? existingRequestVersion = null)
         => PlaybackController.PlayChannelAsync(channel, startPosition, existingRequestVersion);
 
-    private static string FormatBitrate(int bitrate)
+    private static string FormatBitrate(int bitrateKbps)
     {
-        if (bitrate >= 1_000_000) return $"{bitrate / 1_000_000.0:F2} Mbps";
-        if (bitrate >= 1_000) return $"{bitrate / 1_000.0:F1} Kbps";
-        return $"{bitrate} bps";
+        if (bitrateKbps >= 1_000) return $"{(bitrateKbps / 1_000.0).ToString("F2", System.Globalization.CultureInfo.InvariantCulture)} Mbps";
+        return $"{bitrateKbps} Kbps";
     }
 
     internal void ApplyVideoFillMode()

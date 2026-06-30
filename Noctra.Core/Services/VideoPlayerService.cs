@@ -1273,7 +1273,7 @@ public class VideoPlayerService : IVideoPlayerService
                     measured.VideoCodec = track.Codec > 0 
                         ? FourCCToString(track.Codec) 
                         : track.Description ?? "";
-                    measured.VideoBitrate = Math.Max(measured.VideoBitrate, (int)track.Bitrate);
+                    measured.VideoBitrate = Math.Max(measured.VideoBitrate, (int)(track.Bitrate / 1000)); // bps -> kbps
                 }
                 else if (track.TrackType == TrackType.Audio)
                 {
@@ -1301,7 +1301,7 @@ public class VideoPlayerService : IVideoPlayerService
 
             System.Diagnostics.Debug.WriteLine(
                 $"[VideoPlayerService] Quality detected: {merged.Width}x{merged.Height} " +
-                $"@{merged.Fps}fps, {merged.VideoCodec}, {merged.VideoBitrate}bps | " +
+                $"@{merged.Fps}fps, {merged.VideoCodec}, {merged.VideoBitrate}kbps | " +
                 $"Audio: {merged.AudioCodec} {merged.AudioChannels}ch {merged.AudioBitrate}kbps");
 
             _dispatcherService.BeginInvoke(() => QualityDetected?.Invoke(this, merged));
@@ -1405,5 +1405,4 @@ public class VideoPlayerService : IVideoPlayerService
         Unknown
     }
 }
-
 

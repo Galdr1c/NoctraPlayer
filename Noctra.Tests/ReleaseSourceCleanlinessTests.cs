@@ -2813,6 +2813,9 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("NormalizeDurationSeconds", androidVideoService);
         Assert.Contains("C.TimeUnset", androidVideoService);
         Assert.Contains("_localizationService.GetString(\"Player.Error.NetworkOffline\")", androidVideoService);
+        Assert.Contains("ClearVideoSurface", androidVideoService);
+        Assert.Contains("quality.VideoBitrate = videoFormat.Bitrate / 1000", androidVideoService);
+        Assert.Contains("quality.AudioBitrate = audioFormat.Bitrate / 1000", androidVideoService);
 
         Assert.DoesNotContain("Android.Media.MediaPlayer", androidVideoService);
         Assert.DoesNotContain("UpdateStreamQualityFromPreparedPlayer", androidVideoService);

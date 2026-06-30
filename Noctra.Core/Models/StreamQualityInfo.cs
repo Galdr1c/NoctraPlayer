@@ -9,6 +9,9 @@ public class StreamQualityInfo
     public int Width { get; set; }
     public int Height { get; set; }
     public int Fps { get; set; }
+    /// <summary>
+    /// Video bitrate in kilobits per second (kbps).
+    /// </summary>
     public int VideoBitrate { get; set; }
     public string VideoCodec { get; set; } = string.Empty;
     public string VideoCodecDisplay => string.IsNullOrWhiteSpace(VideoCodec)
@@ -16,6 +19,9 @@ public class StreamQualityInfo
         : VideoCodec.ToUpperInvariant();
 
     // Audio
+    /// <summary>
+    /// Audio bitrate in kilobits per second (kbps).
+    /// </summary>
     public int AudioBitrate { get; set; }
     public int AudioChannels { get; set; }
     public string AudioCodec { get; set; } = string.Empty;
@@ -87,7 +93,7 @@ public class StreamQualityInfo
         {
             var parts = new List<string>();
             if (!string.IsNullOrEmpty(VideoCodec)) parts.Add(VideoCodec.ToUpperInvariant());
-            if (VideoBitrate > 0) parts.Add($"{VideoBitrate / 1000.0:F1} Mbps");
+            if (VideoBitrate > 0) parts.Add($"{(VideoBitrate / 1000.0).ToString("F1", System.Globalization.CultureInfo.InvariantCulture)} Mbps");
             return parts.Count > 0 ? string.Join(" • ", parts) : "";
         }
     }
