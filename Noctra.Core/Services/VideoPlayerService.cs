@@ -180,7 +180,10 @@ public class VideoPlayerService : IVideoPlayerService
                 }
                 catch (OperationCanceledException) { }
                 catch (ObjectDisposedException) { }
-                catch (Exception) { }
+                catch (Exception ex)
+                {
+                    LogDebug($"Reinitialize after settings change failed: {ex.Message}");
+                }
             }, token);
         }
     }
@@ -1402,6 +1405,5 @@ public class VideoPlayerService : IVideoPlayerService
         Unknown
     }
 }
-
 
 

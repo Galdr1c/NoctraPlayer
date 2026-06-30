@@ -268,7 +268,15 @@ public partial class MainWindow : Window
         // resume dialog await'inde durur.
         var cts = new CancellationTokenSource();
         var oldCts = Interlocked.Exchange(ref _mediaSelectionCts, cts);
-        try { oldCts.Cancel(); oldCts.Dispose(); } catch { }
+        try
+        {
+            oldCts.Cancel();
+            oldCts.Dispose();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainWindow] Failed to replace media selection token: {ex.Message}");
+        }
         var token = cts.Token;
 
         try

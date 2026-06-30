@@ -1196,7 +1196,10 @@ public partial class SettingsViewModel : ObservableObject
             }
             await db.SaveChangesAsync();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[SettingsViewModel] Failed to clear EPG errors before refresh: {ex.Message}");
+        }
 
         _epgRefreshWatchCts?.Cancel();
         _epgRefreshWatchCts?.Dispose();

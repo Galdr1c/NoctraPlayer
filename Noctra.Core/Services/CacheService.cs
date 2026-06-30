@@ -44,14 +44,28 @@ public class CacheService : ICacheService
             var dbPath = _appPaths.DatabasePath;
             if (File.Exists(dbPath))
             {
-                try { size += new FileInfo(dbPath).Length; } catch { }
+                try
+                {
+                    size += new FileInfo(dbPath).Length;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[CacheService] Failed to read database size: {ex.Message}");
+                }
             }
 
             // Include legacy database file
             var legacyDbPath = _appPaths.LegacyDatabasePath;
             if (File.Exists(legacyDbPath))
             {
-                try { size += new FileInfo(legacyDbPath).Length; } catch { }
+                try
+                {
+                    size += new FileInfo(legacyDbPath).Length;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[CacheService] Failed to read legacy database size: {ex.Message}");
+                }
             }
 
             return size;

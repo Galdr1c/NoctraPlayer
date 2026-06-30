@@ -879,7 +879,10 @@ public partial class MainViewModel : ObservableObject
                                                                         ThrowIfProfileLoadCancelled(profileScope);
                                                                         _mediaService.RaiseAggregationCompleted(playlist.Id);
                                                                     }
-                                                                    catch { }
+                                                                    catch (Exception ex)
+                                                                    {
+                                                                        _logger?.LogError(ex, "[Xtream] AggregateContent failed for playlist {PlaylistId}", playlist.Id);
+                                                                    }
 
                                                                     BeginInvokeIfProfileScopeActive(profileScope, async () =>
                                                                     {
@@ -4037,7 +4040,14 @@ public partial class MainViewModel : ObservableObject
             // Diske yazma işlemini arayüzü dondurmamak için arka planda yap
             _ = Task.Run(async () => 
             {
-                try { await _settingsService.SaveAsync(); } catch { }
+                try
+                {
+                    await _settingsService.SaveAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogDebug(ex, "Failed to persist hidden groups after filter update");
+                }
             });
         }
     }

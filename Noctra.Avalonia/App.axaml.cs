@@ -80,8 +80,9 @@ public partial class App : Application
                         themeService.SetTheme(settings.Settings.IsDarkTheme);
                         localizationService.SetLanguage(settings.Settings.Language ?? "en");
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        StartupLogger.LogError("SettingsChanged", ex);
                     }
                 });
             };
@@ -201,7 +202,10 @@ public partial class App : Application
                                         });
                                     }
                                 }
-                                catch { /* Ignore background update check failures */ }
+                                catch (Exception ex)
+                                {
+                                    StartupLogger.LogError("Step 6 (background update check)", ex);
+                                }
                             });
                         }
                         else
@@ -283,6 +287,7 @@ public partial class App : Application
                                 }
                                 catch (Exception ex)
                                 {
+                                    StartupLogger.LogError("Shutdown clear history on exit", ex);
                                 }
                             }).Wait();
                         }
@@ -292,6 +297,7 @@ public partial class App : Application
                     }
                     catch (Exception ex)
                     {
+                        StartupLogger.LogError("Shutdown cleanup", ex);
                     }
 
                     if (Services is IDisposable disposableServices)
@@ -302,6 +308,7 @@ public partial class App : Application
                         }
                         catch (Exception ex)
                         {
+                            StartupLogger.LogError("Service provider dispose", ex);
                         }
                     }
 
@@ -312,6 +319,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
+            StartupLogger.LogError("OnFrameworkInitializationCompleted", ex);
             throw;
         }
     }

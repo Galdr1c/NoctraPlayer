@@ -1355,7 +1355,10 @@ public class EpgService : IEpgService
                 return dt.ToUniversalTime();
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[EpgService] Failed to parse XMLTV date '{dateStr}': {ex.Message}");
+        }
 
         return DateTime.MinValue;
     }

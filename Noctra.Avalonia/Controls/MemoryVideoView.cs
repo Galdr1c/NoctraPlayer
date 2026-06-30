@@ -152,7 +152,10 @@ public class MemoryVideoView : NativeControlHost
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 _mediaPlayer.NsObject = _platformHandle.Handle;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MemoryVideoView] Failed to attach native video handle: {ex.Message}");
+        }
     }
 
     private void Detach()
@@ -188,7 +191,10 @@ public class MemoryVideoView : NativeControlHost
                 }
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MemoryVideoView] Failed to detach native video handle: {ex.Message}");
+        }
     }
 
     // ─── Overlay Management ───────────────────────────────────────

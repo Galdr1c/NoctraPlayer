@@ -70,7 +70,14 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             if (_exoPlayer is null) return 0;
             if (Looper.MyLooper() == Looper.MainLooper)
             {
-                try { _currentTimeMs = _exoPlayer.CurrentPosition; } catch { }
+                try
+                {
+                    _currentTimeMs = _exoPlayer.CurrentPosition;
+                }
+                catch (Exception ex)
+                {
+                    LogDebug($"Failed to read current position: {ex.Message}");
+                }
             }
             return _currentTimeMs;
         }
@@ -111,6 +118,11 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     public event EventHandler<string>? ErrorOccurred;
     public event EventHandler<string?>? SubtitleTextChanged;
     public event EventHandler<StreamQualityInfo>? QualityDetected;
+
+    private static void LogDebug(string message)
+    {
+        System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] {message}");
+    }
 
     public AndroidVideoPlayerService(
         AndroidVideoSurfaceService videoSurfaceService,
@@ -386,7 +398,10 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 _exoPlayer.Stop();
                 _exoPlayer.ClearMediaItems();
             }
-            catch { }
+            catch (Exception ex)
+            {
+                LogDebug($"Failed to stop player cleanly: {ex.Message}");
+            }
             finally
             {
                 _hasLoadedMedia = false;
@@ -569,7 +584,10 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             oldCts?.Cancel();
             oldCts?.Dispose();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            LogDebug($"Failed to replace reinitialize token: {ex.Message}");
+        }
 
         _ = Task.Run(async () =>
         {
@@ -585,7 +603,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             catch (ObjectDisposedException) { }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] Reinitialize after settings change failed: {ex.Message}");
+                LogDebug($"Reinitialize after settings change failed: {ex.Message}");
                 ErrorOccurred?.Invoke(this, ex.Message);
             }
         }, cts.Token);
@@ -606,7 +624,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] Failed to attach recreated surface: {ex.Message}");
+                LogDebug($"Failed to attach recreated surface: {ex.Message}");
             }
         });
     }
@@ -626,7 +644,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] Failed to clear destroyed surface: {ex.Message}");
+                LogDebug($"Failed to clear destroyed surface: {ex.Message}");
             }
         });
     }
@@ -717,7 +735,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] Failed to apply data usage constraints: {ex.Message}");
+                LogDebug($"Failed to apply data usage constraints: {ex.Message}");
             }
         });
     }
@@ -938,7 +956,10 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 var playbackParameters = new PlaybackParameters(_playbackRate);
                 _exoPlayer.PlaybackParameters = playbackParameters;
             }
-            catch { }
+            catch (Exception ex)
+            {
+                LogDebug($"Failed to apply playback rate: {ex.Message}");
+            }
         });
     }
 
@@ -969,7 +990,10 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                     RaiseSubtitleTextChanged(null);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                LogDebug($"Failed to clear subtitle text after cue timeout: {ex.Message}");
+            }
         });
     }
 
@@ -1206,7 +1230,10 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                             _service._currentTimeMs = _service._exoPlayer.CurrentPosition;
                         }
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        AndroidVideoPlayerService.LogDebug($"Failed to read player position on ready: {ex.Message}");
+                    }
                     _service.PlayerReady?.Invoke(_service, EventArgs.Empty);
                     _service.PlayingChanged?.Invoke(_service, _service._isPlaying);
                     _service.UpdateStreamQuality();

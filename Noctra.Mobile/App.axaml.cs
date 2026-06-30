@@ -129,7 +129,10 @@ public partial class App : Application
                         if (Services.GetService(typeof(ILocalizationService)) is ILocalizationService ls)
                             ls.SetLanguage(settingsService.Settings.Language ?? "en");
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[Mobile.App] Failed to apply settings change: {ex.Message}");
+                    }
                 });
             };
         }
@@ -140,7 +143,10 @@ public partial class App : Application
             _ = Task.Run(async () =>
             {
                 try { await profileService.PurgeExpiredProfilesAsync(); }
-                catch { }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Mobile.App] Failed to purge expired profiles: {ex.Message}");
+                }
             });
         }
 

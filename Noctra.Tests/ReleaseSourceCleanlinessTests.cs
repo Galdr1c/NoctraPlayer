@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 namespace Noctra.Tests;
@@ -3155,6 +3156,30 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("PRAGMA cache_size=-32000", schemaFixupSource);
         Assert.Contains("PRAGMA cache_size=-64000", schemaFixupSource);
         Assert.Contains("AddSingleton<IDatabaseSchemaFixupService, DatabaseSchemaFixupService>", serviceRegistrationSource);
+    }
+
+    [Fact]
+    public void CriticalStartupAndPlayerSources_DoNotUseBroadEmptyCatchBlocks()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var criticalFiles = new[]
+        {
+            Path.Combine(repositoryRoot, "Noctra.Avalonia", "App.axaml.cs"),
+            Path.Combine(repositoryRoot, "Noctra.Mobile", "App.axaml.cs"),
+            Path.Combine(repositoryRoot, "Noctra.Android", "Services", "AndroidVideoPlayerService.cs"),
+            Path.Combine(repositoryRoot, "Noctra.Core", "Services", "VideoPlayerService.cs")
+        };
+        var broadEmptyCatch = new Regex(
+            @"catch\s*(?:\(\s*Exception(?:\s+\w+)?\s*\))?\s*\{\s*\}",
+            RegexOptions.Multiline);
+
+        var matches = criticalFiles
+            .SelectMany(path => broadEmptyCatch
+                .Matches(File.ReadAllText(path))
+                .Select(_ => Path.GetRelativePath(repositoryRoot, path)))
+            .ToList();
+
+        Assert.Empty(matches);
     }
 
     private static string FindRepositoryRoot()

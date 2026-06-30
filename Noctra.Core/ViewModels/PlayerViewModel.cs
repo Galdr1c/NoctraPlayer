@@ -453,7 +453,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 }
                 catch (OperationCanceledException) { }
                 catch (ObjectDisposedException) { }
-                catch (Exception) { }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PlayerViewModel] Failed to persist volume: {ex.Message}");
+                }
             }, token);
         }
     }

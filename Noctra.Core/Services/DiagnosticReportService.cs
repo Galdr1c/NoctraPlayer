@@ -44,7 +44,10 @@ public class DiagnosticReportService : IDiagnosticReportService
                 UseShellExecute = true
             });
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[DiagnosticReportService] Failed to open mail client: {ex.Message}");
+        }
     }
 
     private string BuildBugBody()
