@@ -15,6 +15,7 @@ namespace Noctra.Mobile.Converters;
 /// - "posterWidth" / "posterHeight"
 /// - "liveWidth"
 /// - "continueWidth" / "continueHeight"
+/// - "moreShortcutWidth"
 /// - "profileWidth" / "profileHeight"
 /// </summary>
 public sealed class ResponsiveCardMetricConverter : IValueConverter
@@ -110,6 +111,12 @@ public sealed class ResponsiveCardMetricConverter : IValueConverter
             {
                 // Profile cards keep the avatar-heavy shape used in the desktop profile window.
                 return new CardMetricProfile(132, 170, 150, 1.18, 16, 5);
+            }
+
+            if (mode.StartsWith("moreShortcut", StringComparison.OrdinalIgnoreCase))
+            {
+                // More menu action tiles: two columns on phones, more on tablets.
+                return new CardMetricProfile(150, 190, 160, 0.62, 12, 4);
             }
 
             // Poster cards: 2 columns on most phones, 3+ on foldables/tablets.

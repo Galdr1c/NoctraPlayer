@@ -13,13 +13,14 @@
     <AndroidPackageFormat Condition="'$(Configuration)' == 'Release'">aab</AndroidPackageFormat>
     <AndroidEnableAssemblyCompression Condition="'$(Configuration)' == 'Debug'">false</AndroidEnableAssemblyCompression>
     <AndroidStoreUncompressedFileExtensions Condition="'$(Configuration)' == 'Debug'">.so;$(AndroidStoreUncompressedFileExtensions)</AndroidStoreUncompressedFileExtensions>
+    <EmbedAssembliesIntoApk Condition="'$(Configuration)' == 'Debug'">true</EmbedAssembliesIntoApk>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
   </PropertyGroup>
 
   <ItemGroup>
     <AndroidResource Remove="Resources\PlayStore_Assets\**\*" />
     <AndroidResource Include="Icon.png">
-      <Link>Resources\drawable\Icon.png</Link>
+      <Link>Resources\drawable\icon.png</Link>
     </AndroidResource>
   </ItemGroup>
 

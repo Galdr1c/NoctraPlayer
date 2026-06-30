@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:vm="using:Noctra.ViewModels"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
              xmlns:controls="using:Noctra.Mobile.Controls"
              x:Class="Noctra.Mobile.Views.ProfileLoadingView"
              x:DataType="vm:ProfileLoadingViewModel"
@@ -31,59 +31,24 @@
                 HorizontalAlignment="Center"
                 Spacing="0">
 
-      <!-- PremiumSpinner içinde pulsing logo -->
+      <!-- PremiumSpinner içinde aktif profil avatarı -->
       <controls:PremiumSpinner Width="90" Height="90"
                                HorizontalAlignment="Center">
-        <Image Source="avares://Noctra.Mobile/Assets/Square150x150Logo.png"
-               Width="44" Height="44"
-               HorizontalAlignment="Center"
-               VerticalAlignment="Center"
-               RenderTransformOrigin="50%,50%">
-          <Image.RenderTransform>
-            <ScaleTransform ScaleX="1" ScaleY="1" />
-          </Image.RenderTransform>
-          <Image.Styles>
-            <Style Selector="Image">
-              <Style.Animations>
-                <Animation Duration="0:0:1.6"
-                           IterationCount="Infinite"
-                           Easing="SineEaseInOut">
-                  <KeyFrame Cue="0%">
-                    <Setter Property="Opacity" Value="0.55" />
-                    <Setter Property="ScaleTransform.ScaleX" Value="0.88" />
-                    <Setter Property="ScaleTransform.ScaleY" Value="0.88" />
-                  </KeyFrame>
-                  <KeyFrame Cue="50%">
-                    <Setter Property="Opacity" Value="1.0" />
-                    <Setter Property="ScaleTransform.ScaleX" Value="1.0" />
-                    <Setter Property="ScaleTransform.ScaleY" Value="1.0" />
-                  </KeyFrame>
-                  <KeyFrame Cue="100%">
-                    <Setter Property="Opacity" Value="0.55" />
-                    <Setter Property="ScaleTransform.ScaleX" Value="0.88" />
-                    <Setter Property="ScaleTransform.ScaleY" Value="0.88" />
-                  </KeyFrame>
-                </Animation>
-              </Style.Animations>
-            </Style>
-          </Image.Styles>
-        </Image>
+        <Border Width="54" Height="54"
+                CornerRadius="12"
+                ClipToBounds="True"
+                Background="{DynamicResource Surface1Brush}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+          <Image Source="{Binding Avatar, Converter={StaticResource AvatarPathConverter}}"
+                 Stretch="UniformToFill" />
+        </Border>
       </controls:PremiumSpinner>
 
       <!-- Profil bilgisi (avatar + ad) -->
       <StackPanel HorizontalAlignment="Center"
                   Spacing="16"
                   Margin="0,40,0,0">
-
-        <!-- Profil avatarı -->
-        <Border Width="72" Height="72"
-                CornerRadius="12"
-                ClipToBounds="True"
-                Background="{DynamicResource Surface1Brush}"
-                HorizontalAlignment="Center">
-          <Image Source="{Binding Avatar, Converter={StaticResource AvatarPathConverter}}"
-                 Stretch="UniformToFill" />
-        </Border>
 
         <!-- Profil adı -->
         <TextBlock Text="{Binding ProfileName}"

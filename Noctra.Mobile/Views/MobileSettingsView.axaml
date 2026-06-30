@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:views="using:Noctra.Mobile.Views"
-             xmlns:vm="using:Noctra.ViewModels"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.MobileSettingsView"
              x:DataType="vm:SettingsViewModel"

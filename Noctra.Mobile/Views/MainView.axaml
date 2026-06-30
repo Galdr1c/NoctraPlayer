@@ -127,20 +127,17 @@
     <Border x:Name="HeaderBar"
             Grid.Row="0"
             Grid.ColumnSpan="2"
-            Padding="20,18,20,14"
+            Padding="20,12,20,10"
             Background="{DynamicResource Bg1Brush}"
             IsVisible="False">
       <Grid ColumnDefinitions="*,Auto">
-        <StackPanel Spacing="2">
+        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
           <TextBlock Text="NOCTRA"
                      FontSize="12"
                      FontWeight="Bold"
                      Foreground="{DynamicResource AccentBrush}"
-                     LetterSpacing="2" />
-          <TextBlock Text="{Binding PageTitle}"
-                     FontSize="26"
-                     FontWeight="SemiBold"
-                     Foreground="{DynamicResource TextPrimaryBrush}" />
+                     LetterSpacing="2"
+                     VerticalAlignment="Center" />
         </StackPanel>
         <Border Grid.Column="1"
                 Width="40"
@@ -304,43 +301,47 @@
             </Button>
           </Border>
 
-          <StackPanel Spacing="12">
-            <TextBlock Text="{loc:Translate Mobile.More.Shortcuts}"
-                       FontSize="18"
-                       FontWeight="SemiBold"
-                       Foreground="{DynamicResource TextPrimaryBrush}" />
-
-            <UniformGrid Columns="2"
-                         RowSpacing="12"
-                         ColumnSpacing="12">
-              <Button Classes="nav" Tag="Search" Click="OnDestinationClick" MinHeight="74">
-                <StackPanel Spacing="6" HorizontalAlignment="Center">
-                  <icons:MaterialIcon Kind="Magnify" Width="24" Height="24" HorizontalAlignment="Center" />
-                  <TextBlock Text="{loc:Translate Shell.Search.Tooltip}" TextAlignment="Center" />
-                </StackPanel>
-              </Button>
-              <Button Classes="nav" Tag="Favorites" Click="OnDestinationClick" MinHeight="74">
-                <StackPanel Spacing="6" HorizontalAlignment="Center">
-                  <icons:MaterialIcon Kind="HeartOutline" Width="24" Height="24" HorizontalAlignment="Center" />
-                  <TextBlock Text="{loc:Translate Shell.Nav.Favorites}" TextAlignment="Center" />
-                </StackPanel>
-              </Button>
-              <Button Classes="nav" Tag="MyList" Click="OnDestinationClick" MinHeight="74">
-                <StackPanel Spacing="6" HorizontalAlignment="Center">
-                  <icons:MaterialIcon Kind="BookmarkOutline" Width="24" Height="24" HorizontalAlignment="Center" />
-                  <TextBlock Text="{loc:Translate Shell.Nav.MyList}" TextAlignment="Center" />
-                </StackPanel>
-              </Button>
-              <Button Classes="nav" Tag="History" Click="OnDestinationClick" MinHeight="74">
-                <StackPanel Spacing="6" HorizontalAlignment="Center">
-                  <icons:MaterialIcon Kind="History" Width="24" Height="24" HorizontalAlignment="Center" />
-                  <TextBlock Text="{loc:Translate Shell.Nav.History}" TextAlignment="Center" />
-                </StackPanel>
-              </Button>
-            </UniformGrid>
-          </StackPanel>
-
           <StackPanel Spacing="10">
+            <Button Classes="nav" Tag="Search" Click="OnDestinationClick" MinHeight="54">
+              <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                <icons:MaterialIcon Kind="Magnify" Width="22" Height="22" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1"
+                           Text="{loc:Translate Shell.Search.Tooltip}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+                <icons:MaterialIcon Grid.Column="2" Kind="ChevronRight" Width="20" Height="20" VerticalAlignment="Center" />
+              </Grid>
+            </Button>
+            <Button Classes="nav" Tag="Favorites" Click="OnDestinationClick" MinHeight="54">
+              <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                <icons:MaterialIcon Kind="HeartOutline" Width="22" Height="22" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1"
+                           Text="{loc:Translate Shell.Nav.Favorites}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+                <icons:MaterialIcon Grid.Column="2" Kind="ChevronRight" Width="20" Height="20" VerticalAlignment="Center" />
+              </Grid>
+            </Button>
+            <Button Classes="nav" Tag="MyList" Click="OnDestinationClick" MinHeight="54">
+              <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                <icons:MaterialIcon Kind="BookmarkOutline" Width="22" Height="22" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1"
+                           Text="{loc:Translate Shell.Nav.MyList}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+                <icons:MaterialIcon Grid.Column="2" Kind="ChevronRight" Width="20" Height="20" VerticalAlignment="Center" />
+              </Grid>
+            </Button>
+            <Button Classes="nav" Tag="History" Click="OnDestinationClick" MinHeight="54">
+              <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                <icons:MaterialIcon Kind="History" Width="22" Height="22" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1"
+                           Text="{loc:Translate Shell.Nav.History}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+                <icons:MaterialIcon Grid.Column="2" Kind="ChevronRight" Width="20" Height="20" VerticalAlignment="Center" />
+              </Grid>
+            </Button>
             <Button Classes="nav" Tag="Downloads" Click="OnDestinationClick" MinHeight="54">
               <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                 <icons:MaterialIcon Kind="DownloadOutline" Width="22" Height="22" VerticalAlignment="Center" />

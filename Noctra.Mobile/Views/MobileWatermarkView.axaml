@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:Noctra.ViewModels"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
              x:Class="Noctra.Mobile.Views.MobileWatermarkView"
              x:DataType="vm:WatermarkViewModel"
              IsHitTestVisible="False">

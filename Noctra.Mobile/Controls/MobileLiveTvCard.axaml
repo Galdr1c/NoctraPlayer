@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:models="using:Noctra.Models"
-             xmlns:vm="using:Noctra.ViewModels"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
              xmlns:controls="using:Noctra.Mobile.Controls"
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
@@ -90,7 +90,7 @@
       <Grid RowDefinitions="Auto,Auto,Auto"
             RowSpacing="4">
         <Grid Grid.Row="0"
-              ColumnDefinitions="56,*,Auto,Auto"
+              ColumnDefinitions="56,*,Auto"
               ColumnSpacing="10">
           <Border Width="44"
                   Height="44"
@@ -149,19 +149,6 @@
             </Grid>
           </Button>
 
-          <Button Grid.Column="3"
-                  Background="Transparent"
-                  BorderThickness="0"
-                  Padding="12"
-                  MinHeight="48"
-                  MinWidth="48"
-                  VerticalAlignment="Center"
-                  Flyout="{StaticResource LiveCardActionsFlyout}">
-            <icons:MaterialIcon Kind="DotsVertical"
-                                Width="20"
-                                Height="20"
-                                Foreground="{DynamicResource TextMutedBrush}" />
-          </Button>
         </Grid>
 
         <TextBlock Grid.Row="1"

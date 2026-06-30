@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Android.App;
@@ -9,7 +8,9 @@ using Android.Graphics.Drawables;
 using Android.Views;
 using Android.Widget;
 using Noctra.Core.Services;
+using Noctra.Services;
 using Noctra.Services.Interfaces;
+using Debug = System.Diagnostics.Debug;
 
 namespace Noctra.Android.Services;
 
@@ -287,11 +288,11 @@ public sealed class AndroidReviewPromptService : IReviewPromptService
             Orientation = Orientation.Vertical
         };
         root.SetPadding(Dp(context, 22), Dp(context, 22), Dp(context, 22), Dp(context, 18));
-        root.SetBackground(CreateRoundedBackground(
+        root.Background = CreateRoundedBackground(
             Color.ParseColor("#151515"),
             Dp(context, 24),
             Color.ParseColor("#333333"),
-            Dp(context, 1)));
+            Dp(context, 1));
 
         var rootParams = new ViewGroup.MarginLayoutParams(
             ViewGroup.LayoutParams.MatchParent,
@@ -301,13 +302,13 @@ public sealed class AndroidReviewPromptService : IReviewPromptService
 
         var header = new LinearLayout(context)
         {
-            Orientation = Orientation.Horizontal,
-            Gravity = GravityFlags.CenterVertical
+            Orientation = Orientation.Horizontal
         };
+        header.SetGravity(GravityFlags.CenterVertical);
         root.AddView(header);
 
         var iconFrame = new FrameLayout(context);
-        iconFrame.SetBackground(CreateRoundedBackground(Color.ParseColor("#268B5CF6"), Dp(context, 18)));
+        iconFrame.Background = CreateRoundedBackground(Color.ParseColor("#268B5CF6"), Dp(context, 18));
         header.AddView(iconFrame, new LinearLayout.LayoutParams(Dp(context, 48), Dp(context, 48)));
 
         var icon = new TextView(context)
@@ -388,11 +389,11 @@ public sealed class AndroidReviewPromptService : IReviewPromptService
         };
         button.SetTextColor(Color.White);
         button.SetPadding(Dp(context, 16), Dp(context, 12), Dp(context, 16), Dp(context, 12));
-        button.SetBackground(CreateRoundedBackground(
+        button.Background = CreateRoundedBackground(
             primary ? Color.ParseColor("#8B5CF6") : Color.ParseColor("#242424"),
             Dp(context, 12),
             primary ? Color.ParseColor("#8B5CF6") : Color.ParseColor("#333333"),
-            Dp(context, 1)));
+            Dp(context, 1));
         button.Click += (_, _) => action();
 
         var parameters = new LinearLayout.LayoutParams(

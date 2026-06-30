@@ -3,7 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:models="using:Noctra.Models"
-             xmlns:vm="using:Noctra.ViewModels"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
              xmlns:views="using:Noctra.Mobile.Views"
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
@@ -32,10 +32,16 @@
       </Setter>
     </Style>
     <Style Selector="Button.ProfileCardStyle:pressed">
-      <Setter Property="RenderTransform" Value="scale(0.95)" />
+      <Setter Property="RenderTransform" Value="scale(1)" />
+    </Style>
+    <Style Selector="Button.ProfileCardStyle:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.ProfileCardStyle:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
     </Style>
     <Style Selector="Button.ProfileCardStyle:pointerover">
-      <Setter Property="RenderTransform" Value="scale(1.04)" />
+      <Setter Property="RenderTransform" Value="scale(1)" />
     </Style>
     <Style Selector="Button.ProfileCardStyle:focus /template/ ContentPresenter">
       <Setter Property="BoxShadow" Value="{DynamicResource FocusGlow}" />
@@ -51,7 +57,7 @@
       </Setter>
     </Style>
     <Style Selector="Border.AddProfileCard:pointerover">
-      <Setter Property="RenderTransform" Value="scale(1.04)" />
+      <Setter Property="RenderTransform" Value="scale(1)" />
     </Style>
 
     <!-- ── Üst çubuk: buton (pencil / Done) ── -->
