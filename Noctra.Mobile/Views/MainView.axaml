@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Noctra.Mobile.ViewModels"
+             xmlns:coreVm="using:Noctra.ViewModels"
              xmlns:views="using:Noctra.Mobile.Views"
 
              xmlns:loc="using:Noctra.Mobile.Localization"
@@ -16,13 +17,33 @@
   </Design.DataContext>
 
   <UserControl.Styles>
+
+    <!--
+    ══════════════════════════════════════════════════════════════════
+    NAV BUTON STİLLERİ
+    ══════════════════════════════════════════════════════════════════
+    Button.nav 4 farklı bağlamda kullanılıyor:
+      1) BottomNavigation  → ikon+etiket dikey, NavPill arka plan       (Class: nav navBottom)
+      2) NavigationRail    → ikon+etiket yatay, tam-buton highlight     (Class: nav)
+      3) More > Kısayollar → kare kutu, tam-buton highlight             (Class: nav)
+      4) More > Liste satırı (Downloads/Settings) → tam-buton highlight (Class: nav)
+
+    ÇÖZÜM: "nav" temel sınıfı GENEL tam-buton highlight'ı korur
+    (önceki davranış — Rail/Shortcuts/Liste için doğru).
+    "navBottom" ek sınıfı SADECE BottomNavigation'da kullanılır ve
+    tam-buton highlight'ı kapatıp NavPill+NavLabel tabanlı ince
+    highlight'a geçer (alt nav için daha temiz görünüm).
+    ══════════════════════════════════════════════════════════════════
+    -->
+
+    <!-- ── TEMEL (Rail / Shortcuts / Liste satırları için) ── -->
     <Style Selector="Button.nav">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="CornerRadius" Value="12" />
       <Setter Property="Padding" Value="8,8" />
-      <Setter Property="MinHeight" Value="56" />
+      <Setter Property="MinHeight" Value="52" />
       <Setter Property="HorizontalContentAlignment" Value="Center" />
     </Style>
     <Style Selector="Button.nav:pressed /template/ ContentPresenter">
@@ -43,31 +64,62 @@
       <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
     </Style>
 
-    <!-- Active indicator bar (left accent stripe, matches desktop navItem pattern) -->
-    <Style Selector="Button.nav Border.ActiveIndicator">
-      <Setter Property="IsVisible" Value="False" />
-      <Setter Property="Width" Value="0" />
-      <Setter Property="CornerRadius" Value="0,2,2,0" />
-      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
-      <Setter Property="HorizontalAlignment" Value="Left" />
-      <Setter Property="VerticalAlignment" Value="Stretch" />
-      <Setter Property="Margin" Value="0,4,0,4" />
+    <!-- ── BOTTOM NAV ÖZEL (NavPill tabanlı, tam-buton highlight kapalı) ── -->
+    <Style Selector="Button.navBottom">
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="MinHeight" Value="0" />
+      <Setter Property="CornerRadius" Value="0" />
+    </Style>
+    <!-- Tam-buton highlight'ı geçersiz kıl — sadece NavPill highlight göstersin -->
+    <Style Selector="Button.navBottom:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Opacity" Value="0.65" />
+    </Style>
+    <Style Selector="Button.navBottom.active /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <!-- NavPill: ikon etrafındaki kapsül arka plan (sadece navBottom içinde kullanılır) -->
+    <Style Selector="Button.navBottom Border.NavPill">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="CornerRadius" Value="{DynamicResource RadiusPill}" />
+      <Setter Property="Padding" Value="12,5" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
       <Setter Property="Transitions">
         <Transitions>
-          <DoubleTransition Property="Width" Duration="0:0:0.25" Easing="CubicEaseOut" />
+          <BrushTransition Property="Background" Duration="0:0:0.18" />
         </Transitions>
       </Setter>
     </Style>
-    <Style Selector="Button.nav.active Border.ActiveIndicator">
-      <Setter Property="IsVisible" Value="True" />
-      <Setter Property="Width" Value="4" />
+    <Style Selector="Button.navBottom.active Border.NavPill">
+      <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}" />
     </Style>
+
+    <!-- NavLabel: küçük etiket metni (sadece navBottom içinde) -->
+    <Style Selector="Button.navBottom TextBlock.NavLabel">
+      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+      <Setter Property="FontSize" Value="10" />
+      <Setter Property="TextAlignment" Value="Center" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Foreground" Duration="0:0:0.16" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.navBottom.active TextBlock.NavLabel">
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="FontWeight" Value="Medium" />
+    </Style>
+    <!-- navBottom içindeki ikon, aktifken accent rengi alır (NavPill ile birlikte) -->
+    <Style Selector="Button.navBottom.active icons|MaterialIcon">
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    </Style>
+
     <Style Selector="Border.card">
       <Setter Property="Background" Value="{DynamicResource Surface0Brush}" />
       <Setter Property="CornerRadius" Value="18" />
       <Setter Property="Padding" Value="18" />
     </Style>
-
 
   </UserControl.Styles>
 
@@ -197,48 +249,59 @@
                        TextWrapping="Wrap" />
           </StackPanel>
 
-          <Border Classes="card">
-            <Grid ColumnDefinitions="Auto,*,Auto"
-                  ColumnSpacing="14">
-              <Border Width="44"
-                      Height="44"
-                      CornerRadius="22"
-                      Background="{DynamicResource AccentHoverBrush}"
-                      VerticalAlignment="Center">
-                <icons:MaterialIcon Kind="AccountSwitchOutline"
-                                    Width="24"
-                                    Height="24"
-                                    Foreground="{DynamicResource AccentBrush}"
-                                    HorizontalAlignment="Center"
+          <!--
+            ── AKTİF PROFİL KARTI ───────────────────────────────────
+            BUG FIX: Bu Border'ın üst ebeveyni (ShellContent) MainView'ın
+            kendi DataContext'ini (lightweight Mobile.ViewModels.MainViewModel)
+            miras alır — bu view-model'de CurrentProfileName/Avatar YOK.
+            Bu yüzden x:Name veriyoruz ve MainView.axaml.cs'de diğer
+            içerik panelleri gibi (_coreMainViewModel) DataContext'i
+            açıkça atıyoruz. Bkz. ShowCoreContent() metoduna eklenen satır.
+          ──────────────────────────────────────────────────────────── -->
+          <Border x:Name="MoreProfileCard"
+                  Classes="card"
+                  x:DataType="coreVm:MainViewModel"
+                  x:CompileBindings="False">
+            <Button Background="Transparent"
+                    BorderThickness="0"
+                    Padding="0"
+                    Click="OnProfilesClick"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Stretch">
+              <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+
+                <!-- Gerçek profil avatarı -->
+                <Border Width="52" Height="52"
+                        CornerRadius="16"
+                        ClipToBounds="True"
+                        Background="{DynamicResource AccentHoverBrush}"
+                        VerticalAlignment="Center">
+                  <Image Source="{Binding CurrentProfile.Avatar,
+                                          Converter={StaticResource AvatarPathConverter}}"
+                         Stretch="UniformToFill" />
+                </Border>
+
+                <StackPanel Grid.Column="1"
+                            Spacing="3"
+                            VerticalAlignment="Center">
+                  <TextBlock Text="{Binding CurrentProfile.Name}"
+                             FontSize="17"
+                             FontWeight="SemiBold"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             TextTrimming="CharacterEllipsis" />
+                  <TextBlock Text="{loc:Translate Settings.Profile.ManagementDetail}"
+                             FontSize="12"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+
+                <icons:MaterialIcon Grid.Column="2"
+                                    Kind="ChevronRight"
+                                    Width="20" Height="20"
+                                    Foreground="{DynamicResource TextMutedBrush}"
                                     VerticalAlignment="Center" />
-              </Border>
-              <StackPanel Grid.Column="1"
-                          Spacing="4"
-                          VerticalAlignment="Center">
-                <TextBlock Text="{loc:Translate Settings.Profile.Management}"
-                           FontSize="18"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextPrimaryBrush}" />
-                <TextBlock Text="{loc:Translate Settings.Profile.ManagementDetail}"
-                           FontSize="12"
-                           Foreground="{DynamicResource TextMutedBrush}"
-                           TextWrapping="Wrap" />
-              </StackPanel>
-              <Button Grid.Column="2"
-                      Click="OnProfilesClick"
-                      MinHeight="40"
-                      MinWidth="44"
-                      Padding="10,0"
-                      Background="{DynamicResource Surface1Brush}"
-                      BorderThickness="0"
-                      CornerRadius="20"
-                      VerticalAlignment="Center">
-                <icons:MaterialIcon Kind="ChevronRight"
-                                    Width="22"
-                                    Height="22"
-                                    Foreground="{DynamicResource TextPrimaryBrush}" />
-              </Button>
-            </Grid>
+              </Grid>
+            </Button>
           </Border>
 
           <StackPanel Spacing="12">
@@ -363,55 +426,68 @@
     <Border x:Name="BottomNavigation"
             Grid.Row="2"
             Grid.ColumnSpan="2"
-            Padding="8,6,8,10"
-            Background="{DynamicResource Bg1Brush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="0,1,0,0"
+            Background="{DynamicResource Bg0Brush}"
             IsVisible="False">
-      <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="4">
-        <Button Grid.Column="0" Classes="nav" Tag="Home" Click="OnDestinationClick">
-          <Panel>
-            <Border Classes="ActiveIndicator" />
-            <StackPanel Spacing="2" HorizontalAlignment="Center">
-              <icons:MaterialIcon Kind="HomeVariantOutline" Width="24" Height="24" HorizontalAlignment="Center" />
-              <TextBlock Text="{loc:Translate Shell.Nav.Home}" FontSize="11" TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
-            </StackPanel>
-          </Panel>
+
+      <Grid ColumnDefinitions="*,*,*,*,*" Height="62">
+
+        <!-- HOME -->
+        <Button Grid.Column="0" Classes="nav navBottom" Tag="Home" Click="OnDestinationClick"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+          <StackPanel Spacing="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Border Classes="NavPill">
+              <icons:MaterialIcon Kind="HomeVariant" Width="22" Height="22" />
+            </Border>
+            <TextBlock Classes="NavLabel" Text="{loc:Translate Shell.Nav.Home}" />
+          </StackPanel>
         </Button>
-        <Button Grid.Column="1" Classes="nav" Tag="Live" Click="OnDestinationClick">
-          <Panel>
-            <Border Classes="ActiveIndicator" />
-            <StackPanel Spacing="2" HorizontalAlignment="Center">
-              <icons:MaterialIcon Kind="Television" Width="24" Height="24" HorizontalAlignment="Center" />
-              <TextBlock Text="{loc:Translate Shell.Nav.Live}" FontSize="11" TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
-            </StackPanel>
-          </Panel>
+
+        <!-- LIVE -->
+        <Button Grid.Column="1" Classes="nav navBottom" Tag="Live" Click="OnDestinationClick"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+          <StackPanel Spacing="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Border Classes="NavPill">
+              <icons:MaterialIcon Kind="Television" Width="22" Height="22" />
+            </Border>
+            <TextBlock Classes="NavLabel" Text="{loc:Translate Shell.Nav.Live}" />
+          </StackPanel>
         </Button>
-        <Button Grid.Column="2" Classes="nav" Tag="Movies" Click="OnDestinationClick">
-          <Panel>
-            <Border Classes="ActiveIndicator" />
-            <StackPanel Spacing="2" HorizontalAlignment="Center">
-              <icons:MaterialIcon Kind="Filmstrip" Width="24" Height="24" HorizontalAlignment="Center" />
-              <TextBlock Text="{loc:Translate Shell.Nav.Movies}" FontSize="11" TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
-            </StackPanel>
-          </Panel>
+
+        <!-- MOVIES -->
+        <Button Grid.Column="2" Classes="nav navBottom" Tag="Movies" Click="OnDestinationClick"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+          <StackPanel Spacing="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Border Classes="NavPill">
+              <icons:MaterialIcon Kind="Movie" Width="22" Height="22" />
+            </Border>
+            <TextBlock Classes="NavLabel" Text="{loc:Translate Shell.Nav.Movies}" />
+          </StackPanel>
         </Button>
-        <Button Grid.Column="3" Classes="nav" Tag="Series" Click="OnDestinationClick">
-          <Panel>
-            <Border Classes="ActiveIndicator" />
-            <StackPanel Spacing="2" HorizontalAlignment="Center">
-              <icons:MaterialIcon Kind="TelevisionPlay" Width="24" Height="24" HorizontalAlignment="Center" />
-              <TextBlock Text="{loc:Translate Shell.Nav.Series}" FontSize="11" TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
-            </StackPanel>
-          </Panel>
+
+        <!-- SERIES -->
+        <Button Grid.Column="3" Classes="nav navBottom" Tag="Series" Click="OnDestinationClick"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+          <StackPanel Spacing="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Border Classes="NavPill">
+              <icons:MaterialIcon Kind="TelevisionPlay" Width="22" Height="22" />
+            </Border>
+            <TextBlock Classes="NavLabel" Text="{loc:Translate Shell.Nav.Series}" />
+          </StackPanel>
         </Button>
-        <Button Grid.Column="4" Classes="nav" Tag="More" Click="OnDestinationClick">
-          <Panel>
-            <Border Classes="ActiveIndicator" />
-            <StackPanel Spacing="2" HorizontalAlignment="Center">
-              <icons:MaterialIcon Kind="Menu" Width="24" Height="24" HorizontalAlignment="Center" />
-              <TextBlock Text="{loc:Translate Mobile.Nav.More}" FontSize="11" TextAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
-            </StackPanel>
-          </Panel>
+
+        <!-- MORE -->
+        <Button Grid.Column="4" Classes="nav navBottom" Tag="More" Click="OnDestinationClick"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+          <StackPanel Spacing="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Border Classes="NavPill">
+              <icons:MaterialIcon Kind="Menu" Width="22" Height="22" />
+            </Border>
+            <TextBlock Classes="NavLabel" Text="{loc:Translate Mobile.Nav.More}" />
+          </StackPanel>
         </Button>
+
       </Grid>
     </Border>
 

@@ -555,6 +555,15 @@ public partial class MainView : UserControl
             MobileSettingsContent.DataContext = resolver.GetSettingsViewModel();
         }
 
+        // BUG FIX: "More" menüsündeki profil kartı (avatar+ad) Core MainViewModel'e
+        // ihtiyaç duyuyor — MainView'ın kendi DataContext'i (lightweight Mobile VM)
+        // CurrentProfile bilgisini içermiyor. Diğer içerik panelleri gibi açıkça atıyoruz.
+        if (destination == "More")
+        {
+            _coreMainViewModel ??= resolver.GetCoreMainViewModel();
+            MoreProfileCard.DataContext = _coreMainViewModel;
+        }
+
         if (destination is "Home" or "Live" or "Movies" or "Series" or "Search" or "Favorites" or "MyList" or "History" or "Downloads")
         {
             _coreMainViewModel ??= resolver.GetCoreMainViewModel();
