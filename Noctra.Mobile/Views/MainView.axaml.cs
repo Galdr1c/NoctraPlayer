@@ -107,7 +107,6 @@ public partial class MainView : UserControl
             await ShowLegalConsentIfNeededAsync();
 
             await Dispatcher.UIThread.InvokeAsync(ShowProfileSelection);
-            _ = TryShowReviewPromptAsync();
         }
         catch
         {
@@ -481,6 +480,7 @@ public partial class MainView : UserControl
 
         // Navigate to the home screen by selecting the Home destination
         NavigateToDestination("Home");
+        _ = TryShowReviewPromptAsync();
 
         // Unhook events to avoid memory leaks
         _activeProfilesViewModel = null;
