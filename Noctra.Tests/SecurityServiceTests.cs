@@ -61,6 +61,18 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public void Decrypt_InvalidOrCorruptPayload_ShouldReturnNull_OnWindows()
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return;
+            }
+
+            Assert.Null(_securityService.Decrypt("not-a-base64-payload"));
+            Assert.Null(_securityService.Decrypt(Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("plain-text"))));
+        }
+
+        [Fact]
         public void HashPin_ShouldReturnVersionedPbkdf2Hash()
         {
             var hash = _securityService.HashPin("1234");

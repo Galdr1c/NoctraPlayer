@@ -49,8 +49,7 @@ public class DesktopSecurityService : ISecurityService
         }
         catch
         {
-            // If decryption fails, it might be plain text from an older version or corrupted.
-            return cipherText;
+            return null;
         }
     }
 
