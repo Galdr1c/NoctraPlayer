@@ -821,6 +821,7 @@
   "Player.Status.FetchingVideoUrl": "Fetching video URL...",
   "Player.Error.StalkerVideoUrl": "Could not retrieve video URL from Stalker server for this episode.",
   "Player.Error.StreamUrlNotFound": "Channel stream URL not found.",
+  "Player.Error.NetworkOffline": "No network connection. Playback could not be started.",
   "Player.Error.SleepTimerLive": "Sleep timer cannot be used during live broadcast.",
   "Player.SleepTimer.EndOfEpisode": "End of Episode",
   "Player.Status.SleepTimerStopped": "Sleep timer: Playback stopped 🌙",

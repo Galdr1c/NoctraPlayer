@@ -821,6 +821,7 @@
   "Player.Status.FetchingVideoUrl": "Obteniendo URL del video...",
   "Player.Error.StalkerVideoUrl": "No se pudo obtener la URL del video para este episodio del servidor Stalker.",
   "Player.Error.StreamUrlNotFound": "No se encontró la URL de transmisión del canal.",
+  "Player.Error.NetworkOffline": "No hay conexión de red. No se pudo iniciar la reproducción.",
   "Player.Error.SleepTimerLive": "El temporizador de apagado no se puede usar durante transmisiones en vivo.",
   "Player.SleepTimer.EndOfEpisode": "Al final del episodio",
   "Player.Status.SleepTimerStopped": "Temporizador: Reproducción detenida 🌙",

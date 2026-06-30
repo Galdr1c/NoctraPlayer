@@ -821,6 +821,7 @@
   "Player.Status.FetchingVideoUrl": "Récupération de l'URL de la vidéo...",
   "Player.Error.StalkerVideoUrl": "Impossible de récupérer l'URL de la vidéo pour cet épisode depuis le serveur Stalker.",
   "Player.Error.StreamUrlNotFound": "URL du flux de la chaîne non trouvée.",
+  "Player.Error.NetworkOffline": "Aucune connexion réseau. La lecture n'a pas pu démarrer.",
   "Player.Error.SleepTimerLive": "La mise en veille ne peut pas être utilisée lors des diffusions en direct.",
   "Player.SleepTimer.EndOfEpisode": "À la fin de l'épisode",
   "Player.Status.SleepTimerStopped": "Mise en veille : Lecture arrêtée 🌙",

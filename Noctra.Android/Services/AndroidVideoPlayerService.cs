@@ -29,6 +29,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     private readonly Context _applicationContext;
     private readonly ISettingsService _settingsService;
     private readonly INetworkService _networkService;
+    private readonly ILocalizationService _localizationService;
     private readonly object _trackLock = new();
     private readonly List<(int Id, string? Name)> _audioTracks = new();
     private readonly List<(int Id, string? Name)> _subtitleTracks = new();
@@ -115,12 +116,14 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         AndroidVideoSurfaceService videoSurfaceService,
         Context applicationContext,
         ISettingsService settingsService,
-        INetworkService networkService)
+        INetworkService networkService,
+        ILocalizationService localizationService)
     {
         _videoSurfaceService = videoSurfaceService;
         _applicationContext = applicationContext.ApplicationContext ?? applicationContext;
         _settingsService = settingsService;
         _networkService = networkService;
+        _localizationService = localizationService;
 
         ApplySettingsSnapshot(_settingsService.Settings, updateAudioState: false);
         _settingsService.SettingsChanged += OnSettingsChanged;
@@ -730,13 +733,20 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         };
     }
 
+    private static double NormalizeDurationSeconds(long durationMs)
+    {
+        return durationMs == C.TimeUnset || durationMs <= 0
+            ? 0d
+            : durationMs / 1000d;
+    }
+
     private void EnsureNetworkCanPlay(PlaybackSource playbackSource)
     {
         if (!playbackSource.IsNetworkStream) return;
 
         if (string.Equals(_networkService.CurrentNetworkStatus, "Offline", StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException("Ağ bağlantısı yok. Yayın başlatılamadı.");
+            throw new InvalidOperationException(_localizationService.GetString("Player.Error.NetworkOffline"));
         }
     }
 
@@ -1192,7 +1202,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                     {
                         if (_service._exoPlayer is not null)
                         {
-                            _service._duration = _service._exoPlayer.Duration / 1000d;
+                            _service._duration = NormalizeDurationSeconds(_service._exoPlayer.Duration);
                             _service._currentTimeMs = _service._exoPlayer.CurrentPosition;
                         }
                     }

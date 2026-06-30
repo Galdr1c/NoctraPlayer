@@ -821,6 +821,7 @@
   "Player.Status.FetchingVideoUrl": "Video bağlantısı alınıyor...",
   "Player.Error.StalkerVideoUrl": "Bu bölümün video bağlantısı Stalker sunucusundan alınamadı.",
   "Player.Error.StreamUrlNotFound": "Kanal akış adresi bulunamadı.",
+  "Player.Error.NetworkOffline": "Ağ bağlantısı yok. Yayın başlatılamadı.",
   "Player.Error.SleepTimerLive": "Uyku zamanlayıcısı canlı yayında kullanılamaz.",
   "Player.SleepTimer.EndOfEpisode": "Bölüm Bitince",
   "Player.Status.SleepTimerStopped": "Uyku zamanlayıcısı: Oynatma durduruldu 🌙",
