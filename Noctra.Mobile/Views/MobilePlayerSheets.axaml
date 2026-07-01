@@ -1,0 +1,1008 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="using:Noctra.Models"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
+             xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:controls="using:Noctra.Mobile.Controls"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.Mobile.Views.MobilePlayerSheets"
+             x:DataType="vm:PlayerViewModel"
+             x:CompileBindings="False">    <Border x:Name="MobilePlayerSheetHost"
+            Grid.ColumnSpan="2"
+            ZIndex="50"
+            Background="#F20A0A0A"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1"
+            Padding="14"
+            CornerRadius="22,22,0,0"
+            VerticalAlignment="Bottom"
+            Margin="0"
+            MaxHeight="560"
+            IsVisible="{Binding IsMobileDetailPanelOpen}">
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="12">
+      <Border Background="{DynamicResource OverlayBackgroundBrush}"
+              CornerRadius="14"
+              Padding="12"
+              IsVisible="{Binding IsSleepTimerPanelOpen}">
+        <StackPanel Spacing="8">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{Binding SleepTimerLabel}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontSize="14"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center" />
+            <Button Grid.Column="1"
+                    Content="{loc:Translate Common.Close}"
+                    Command="{Binding ClosePanelsCommand}"
+                    MinHeight="44"
+                    Margin="10,0,0,0" />
+          </Grid>
+          <Grid ColumnDefinitions="*,*"
+                RowDefinitions="Auto,Auto,Auto"
+                ColumnSpacing="8"
+                RowSpacing="8">
+            <Button Content="{loc:Translate Player.Mobile.Sleep.Off}"
+                    Command="{Binding SetSleepTimerCommand}"
+                    CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Off}"
+                    MinHeight="44" />
+            <Button Grid.Column="1"
+                    Content="{loc:Translate Player.Mobile.Sleep.15min}"
+                    Command="{Binding SetSleepTimerCommand}"
+                    CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes15}"
+                    IsEnabled="{Binding IsPremium}"
+                    MinHeight="44" />
+            <icons:MaterialIcon Grid.Column="1"
+                                Kind="Lock"
+                                Width="18"
+                                Height="18"
+                                Foreground="{DynamicResource TextMutedBrush}"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Margin="0,0,12,0"
+                                IsHitTestVisible="False"
+                                IsVisible="{Binding !IsPremium}" />
+            <Button Grid.Row="1"
+                    Content="{loc:Translate Player.Mobile.Sleep.30min}"
+                    Command="{Binding SetSleepTimerCommand}"
+                    CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes30}"
+                    IsEnabled="{Binding IsPremium}"
+                    MinHeight="44" />
+            <icons:MaterialIcon Grid.Row="1"
+                                Kind="Lock"
+                                Width="18"
+                                Height="18"
+                                Foreground="{DynamicResource TextMutedBrush}"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Margin="0,0,12,0"
+                                IsHitTestVisible="False"
+                                IsVisible="{Binding !IsPremium}" />
+            <Button Grid.Row="1"
+                    Grid.Column="1"
+                    Content="{loc:Translate Player.Mobile.Sleep.60min}"
+                    Command="{Binding SetSleepTimerCommand}"
+                    CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes60}"
+                    IsEnabled="{Binding IsPremium}"
+                    MinHeight="44" />
+            <icons:MaterialIcon Grid.Row="1"
+                                Grid.Column="1"
+                                Kind="Lock"
+                                Width="18"
+                                Height="18"
+                                Foreground="{DynamicResource TextMutedBrush}"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Margin="0,0,12,0"
+                                IsHitTestVisible="False"
+                                IsVisible="{Binding !IsPremium}" />
+            <Button Grid.Row="2"
+                    Content="{loc:Translate Player.Mobile.Sleep.End}"
+                    Command="{Binding SetSleepTimerCommand}"
+                    CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.EndOfEpisode}"
+                    IsEnabled="{Binding IsPremium}"
+                    MinHeight="44" />
+            <icons:MaterialIcon Grid.Row="2"
+                                Kind="Lock"
+                                Width="18"
+                                Height="18"
+                                Foreground="{DynamicResource TextMutedBrush}"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Margin="0,0,12,0"
+                                IsHitTestVisible="False"
+                                IsVisible="{Binding !IsPremium}" />
+            <Button Grid.Row="2"
+                    Grid.Column="1"
+                    Content="{loc:Translate Player.Mobile.Sleep.Cancel}"
+                    Command="{Binding CancelSleepTimerCommand}"
+                    IsVisible="{Binding IsSleepTimerActive}"
+                    MinHeight="44" />
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <Border Background="{DynamicResource OverlayBackgroundBrush}"
+              CornerRadius="14"
+              Padding="12"
+              IsVisible="{Binding IsAudioSettingsOpen}">
+        <StackPanel Spacing="12">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{loc:Translate Player.Mobile.AudioSubtitles}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontSize="14"
+                       FontWeight="SemiBold" />
+            <Button Grid.Column="1"
+                    Content="{loc:Translate Common.Close}"
+                    Command="{Binding ClosePanelsCommand}"
+                    MinHeight="44"
+                    Margin="10,0,0,0" />
+          </Grid>
+
+          <StackPanel Spacing="8"
+                      IsVisible="{Binding !IsLiveContent}">
+            <TextBlock Text="{loc:Translate Player.Mobile.SubtitleSize}"
+                       Foreground="{DynamicResource TextDisabledBrush}"
+                       FontSize="10"
+                       FontWeight="Bold" />
+            <Grid ColumnDefinitions="*,*,*"
+                  ColumnSpacing="8">
+              <Button Content="{loc:Translate Player.Settings.SubtitleSize.Small}"
+                      Command="{Binding SetSubtitleSizeCommand}"
+                      CommandParameter="28"
+                      MinHeight="44" />
+              <Button Grid.Column="1"
+                      Content="{loc:Translate Player.Settings.SubtitleSize.Normal}"
+                      Command="{Binding SetSubtitleSizeCommand}"
+                      CommandParameter="40"
+                      MinHeight="44" />
+              <Button Grid.Column="2"
+                      Content="{loc:Translate Player.Settings.SubtitleSize.Large}"
+                      Command="{Binding SetSubtitleSizeCommand}"
+                      CommandParameter="60"
+                      MinHeight="44" />
+            </Grid>
+          </StackPanel>
+
+          <StackPanel Spacing="8"
+                      IsVisible="{Binding !IsLiveContent}">
+            <TextBlock Text="{loc:Translate Player.Mobile.SubtitleBackground}"
+                       Foreground="{DynamicResource TextDisabledBrush}"
+                       FontSize="10"
+                       FontWeight="Bold" />
+            <Grid ColumnDefinitions="*,*,*"
+                  ColumnSpacing="8">
+              <Button Content="{loc:Translate Player.Settings.SubtitleBackground.Off}"
+                      Command="{Binding SetSubtitleBackgroundCommand}"
+                      CommandParameter="0"
+                      MinHeight="44" />
+              <Button Grid.Column="1"
+                      Content="{loc:Translate Player.Settings.SubtitleBackground.Semi}"
+                      Command="{Binding SetSubtitleBackgroundCommand}"
+                      CommandParameter="128"
+                      MinHeight="44" />
+              <Button Grid.Column="2"
+                      Content="{loc:Translate Player.Settings.SubtitleBackground.Black}"
+                      Command="{Binding SetSubtitleBackgroundCommand}"
+                      CommandParameter="255"
+                      MinHeight="44" />
+            </Grid>
+          </StackPanel>
+
+          <StackPanel Spacing="8"
+                      IsVisible="{Binding !IsLiveContent}">
+            <TextBlock Text="{loc:Translate Player.Mobile.SubtitlePosition}"
+                       Foreground="{DynamicResource TextDisabledBrush}"
+                       FontSize="10"
+                       FontWeight="Bold" />
+            <Grid ColumnDefinitions="*,*"
+                  ColumnSpacing="8">
+              <Button Content="{loc:Translate Player.Settings.SubtitlePosition.Bottom}"
+                      Command="{Binding SetSubtitlePositionCommand}"
+                      CommandParameter="40"
+                      MinHeight="44" />
+              <Button Grid.Column="1"
+                      Content="{loc:Translate Player.Settings.SubtitlePosition.Top}"
+                      Command="{Binding SetSubtitlePositionCommand}"
+                      CommandParameter="900"
+                      MinHeight="44" />
+            </Grid>
+          </StackPanel>
+
+          <ScrollViewer MaxHeight="220"
+                        HorizontalScrollBarVisibility="Disabled"
+                        VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="12">
+              <StackPanel Spacing="8">
+                <TextBlock Text="{loc:Translate Player.Settings.Audio}"
+                           Foreground="{DynamicResource TextDisabledBrush}"
+                           FontSize="10"
+                           FontWeight="Bold" />
+                <ItemsControl ItemsSource="{Binding AudioTracks}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Button Command="{Binding #PlayerRoot.DataContext.SetAudioTrackCommand}"
+                              CommandParameter="{Binding Id}"
+                              MinHeight="46"
+                              Margin="0,0,0,8"
+                              Padding="12,8"
+                              BorderThickness="1"
+                              HorizontalContentAlignment="Stretch">
+                        <Button.Background>
+                          <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="AccentHoverBrush">
+                            <Binding Path="Id" />
+                            <Binding Path="#PlayerRoot.DataContext.SelectedAudioTrack" />
+                          </MultiBinding>
+                        </Button.Background>
+                        <Button.BorderBrush>
+                          <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="AccentBrush">
+                            <Binding Path="Id" />
+                            <Binding Path="#PlayerRoot.DataContext.SelectedAudioTrack" />
+                          </MultiBinding>
+                        </Button.BorderBrush>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                          <StackPanel Spacing="2">
+                            <TextBlock Text="{Binding Name}"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                          <icons:MaterialIcon Grid.Column="1"
+                                              Kind="CheckCircle"
+                                              Width="18"
+                                              Height="18"
+                                              Foreground="{DynamicResource AccentLightBrush}"
+                                              VerticalAlignment="Center">
+                            <icons:MaterialIcon.IsVisible>
+                              <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                                <Binding Path="Id" />
+                                <Binding Path="#PlayerRoot.DataContext.SelectedAudioTrack" />
+                              </MultiBinding>
+                            </icons:MaterialIcon.IsVisible>
+                          </icons:MaterialIcon>
+                        </Grid>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+
+              <StackPanel Spacing="8">
+                <TextBlock Text="{loc:Translate Player.Settings.Subtitle}"
+                           Foreground="{DynamicResource TextDisabledBrush}"
+                           FontSize="10"
+                           FontWeight="Bold" />
+                <ItemsControl ItemsSource="{Binding SubtitleTracks}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Button Command="{Binding #PlayerRoot.DataContext.SetSubtitleTrackCommand}"
+                              CommandParameter="{Binding Id}"
+                              MinHeight="46"
+                              Margin="0,0,0,8"
+                              Padding="12,8"
+                              BorderThickness="1"
+                              HorizontalContentAlignment="Stretch">
+                        <Button.Background>
+                          <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="AccentHoverBrush">
+                            <Binding Path="Id" />
+                            <Binding Path="#PlayerRoot.DataContext.SelectedSubtitleTrack" />
+                          </MultiBinding>
+                        </Button.Background>
+                        <Button.BorderBrush>
+                          <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="AccentBrush">
+                            <Binding Path="Id" />
+                            <Binding Path="#PlayerRoot.DataContext.SelectedSubtitleTrack" />
+                          </MultiBinding>
+                        </Button.BorderBrush>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                          <TextBlock Text="{Binding Name}"
+                                     Foreground="{DynamicResource TextPrimaryBrush}"
+                                     FontSize="13"
+                                     FontWeight="SemiBold"
+                                     TextTrimming="CharacterEllipsis"
+                                     VerticalAlignment="Center" />
+                          <icons:MaterialIcon Grid.Column="1"
+                                              Kind="CheckCircle"
+                                              Width="18"
+                                              Height="18"
+                                              Foreground="{DynamicResource AccentLightBrush}"
+                                              VerticalAlignment="Center">
+                            <icons:MaterialIcon.IsVisible>
+                              <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                                <Binding Path="Id" />
+                                <Binding Path="#PlayerRoot.DataContext.SelectedSubtitleTrack" />
+                              </MultiBinding>
+                            </icons:MaterialIcon.IsVisible>
+                          </icons:MaterialIcon>
+                        </Grid>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+        </StackPanel>
+      </Border>
+
+      <Border Background="{DynamicResource OverlayBackgroundBrush}"
+              CornerRadius="14"
+              Padding="12"
+              IsVisible="{Binding IsEpisodesPanelOpen}">
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="2"
+                        VerticalAlignment="Center">
+              <TextBlock Text="{loc:Translate Player.Overlay.Episodes.Tooltip}"
+                         Foreground="{DynamicResource TextDisabledBrush}"
+                         FontSize="10"
+                         FontWeight="Bold" />
+              <TextBlock Text="{Binding EpisodesPanelTitle}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="15"
+                         FontWeight="SemiBold"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+            <Button Grid.Column="1"
+                    Command="{Binding ClosePanelsCommand}"
+                    MinHeight="44"
+                    MinWidth="44"
+                    Padding="10"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    CornerRadius="22"
+                    Margin="10,0,0,0">
+              <icons:MaterialIcon Kind="Close" Width="20" Height="20" />
+            </Button>
+          </Grid>
+
+          <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding EpisodeSeasons}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" Spacing="8" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Season">
+                  <Button Command="{Binding #PlayerRoot.DataContext.SelectEpisodeSeasonCommand}"
+                          CommandParameter="{Binding}"
+                          MinHeight="44"
+                          Padding="14,8"
+                          BorderThickness="1"
+                          CornerRadius="22">
+                    <Button.Background>
+                      <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="AccentHoverBrush">
+                        <Binding Path="SeasonNumber" />
+                        <Binding Path="#PlayerRoot.DataContext.SelectedEpisodeSeason.SeasonNumber" />
+                      </MultiBinding>
+                    </Button.Background>
+                    <Button.BorderBrush>
+                      <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="AccentBrush">
+                        <Binding Path="SeasonNumber" />
+                        <Binding Path="#PlayerRoot.DataContext.SelectedEpisodeSeason.SeasonNumber" />
+                      </MultiBinding>
+                    </Button.BorderBrush>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock Text="{loc:Translate Player.Episodes.Season}"
+                                 Foreground="{DynamicResource TextPrimaryBrush}"
+                                 FontSize="12"
+                                 FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding SeasonNumber}"
+                                 Foreground="{DynamicResource TextPrimaryBrush}"
+                                 FontSize="12"
+                                 FontWeight="Bold" />
+                      <Border Background="{DynamicResource Surface1Brush}"
+                              CornerRadius="9"
+                              Padding="6,1">
+                        <TextBlock Text="{Binding Episodes.Count}"
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   FontSize="10"
+                                   FontWeight="Bold" />
+                      </Border>
+                    </StackPanel>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+
+          <ScrollViewer MaxHeight="330"
+                        HorizontalScrollBarVisibility="Disabled"
+                        VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding SelectedEpisodeSeasonEpisodes}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Episode">
+                  <Button Command="{Binding #PlayerRoot.DataContext.PlayEpisodeFromOverlayCommand}"
+                          CommandParameter="{Binding}"
+                          MinHeight="92"
+                          Margin="0,0,0,10"
+                          Padding="0"
+                          Background="Transparent"
+                          BorderThickness="0"
+                          HorizontalContentAlignment="Stretch">
+                    <Panel>
+                      <Border Background="{DynamicResource Surface1Brush}"
+                              CornerRadius="14"
+                              BorderThickness="1.5"
+                              ClipToBounds="True">
+                        <Border.BorderBrush>
+                          <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="AccentBrush">
+                            <Binding Path="." Converter="{StaticResource EpisodeIdentityConverter}" />
+                            <Binding Path="#PlayerRoot.DataContext.CurrentEpisodeIdentity" />
+                          </MultiBinding>
+                        </Border.BorderBrush>
+                      </Border>
+
+                      <Border CornerRadius="14"
+                              Background="{DynamicResource AccentBrush}"
+                              Opacity="0.08"
+                              IsHitTestVisible="False">
+                        <Border.IsVisible>
+                          <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                            <Binding Path="." Converter="{StaticResource EpisodeIdentityConverter}" />
+                            <Binding Path="#PlayerRoot.DataContext.CurrentEpisodeIdentity" />
+                          </MultiBinding>
+                        </Border.IsVisible>
+                      </Border>
+
+                      <Grid ColumnDefinitions="92,*"
+                            ColumnSpacing="10"
+                            Margin="8">
+                        <Border Width="92"
+                                Height="64"
+                                CornerRadius="10"
+                                ClipToBounds="True"
+                                Background="{DynamicResource Surface0Brush}"
+                                VerticalAlignment="Top">
+                          <Grid>
+                            <controls:RemoteImage Url="{Binding CoverUrl}"
+                                                  Stretch="UniformToFill" />
+
+                            <Border Background="#99000000">
+                              <Border.IsVisible>
+                                <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                                  <Binding Path="." Converter="{StaticResource EpisodeIdentityConverter}" />
+                                  <Binding Path="#PlayerRoot.DataContext.CurrentEpisodeIdentity" />
+                                </MultiBinding>
+                              </Border.IsVisible>
+                              <icons:MaterialIcon Kind="PlayCircle"
+                                                  Width="28"
+                                                  Height="28"
+                                                  Foreground="White"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Opacity="0.95" />
+                            </Border>
+
+                            <Border VerticalAlignment="Bottom"
+                                    HorizontalAlignment="Left"
+                                    Background="#AA000000"
+                                    CornerRadius="0,8,0,0"
+                                    Padding="6,3,8,3">
+                              <TextBlock Text="{Binding EpisodeNumber}"
+                                         Foreground="White"
+                                         FontSize="11"
+                                         FontWeight="Bold" />
+                            </Border>
+
+                            <Border VerticalAlignment="Bottom"
+                                    Height="6"
+                                    CornerRadius="0,0,10,10"
+                                    Background="#66000000"
+                                    IsVisible="{Binding WatchedPercentage, Converter={StaticResource CountToVisibilityConverter}}">
+                              <Border HorizontalAlignment="Left"
+                                      CornerRadius="0,0,0,10"
+                                      Background="{DynamicResource AccentBrush}"
+                                      Width="{Binding WatchedPercentage, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=92}" />
+                            </Border>
+                          </Grid>
+                        </Border>
+
+                        <StackPanel Grid.Column="1"
+                                    Spacing="4"
+                                    VerticalAlignment="Center">
+                          <TextBlock Text="{Binding TmdbEpisodeName}"
+                                     Foreground="{DynamicResource AccentBrush}"
+                                     FontSize="12"
+                                     FontStyle="Italic"
+                                     Opacity="0.9"
+                                     TextTrimming="CharacterEllipsis"
+                                     MaxLines="1"
+                                     IsVisible="{Binding TmdbEpisodeName, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+
+                          <DockPanel LastChildFill="True">
+                            <Border DockPanel.Dock="Right"
+                                    Background="{DynamicResource AccentHoverBrush}"
+                                    CornerRadius="10"
+                                    Padding="6,2"
+                                    Margin="8,0,0,0"
+                                    IsVisible="{Binding IsCompleted}">
+                              <StackPanel Orientation="Horizontal" Spacing="3">
+                                <icons:MaterialIcon Kind="CheckCircle"
+                                                    Width="13"
+                                                    Height="13"
+                                                    Foreground="{DynamicResource AccentBrush}" />
+                                <TextBlock Text="{loc:Translate Player.Overlay.Watched}"
+                                           Foreground="{DynamicResource AccentBrush}"
+                                           FontSize="9"
+                                           FontWeight="Bold" />
+                              </StackPanel>
+                            </Border>
+                            <TextBlock Text="{Binding Name}"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       FontSize="13"
+                                       FontWeight="Bold"
+                                       TextWrapping="Wrap"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="2"
+                                       LineHeight="17" />
+                          </DockPanel>
+
+                          <TextBlock Text="{Binding EpisodeMetaText}"
+                                     Foreground="{DynamicResource TextMutedBrush}"
+                                     FontSize="11"
+                                     TextTrimming="CharacterEllipsis"
+                                     IsVisible="{Binding EpisodeMetaText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+
+                          <StackPanel Orientation="Horizontal"
+                                      Spacing="6"
+                                      Margin="0,1,0,0">
+                            <StackPanel.IsVisible>
+                              <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                                <Binding Path="." Converter="{StaticResource EpisodeIdentityConverter}" />
+                                <Binding Path="#PlayerRoot.DataContext.CurrentEpisodeIdentity" />
+                              </MultiBinding>
+                            </StackPanel.IsVisible>
+                            <Ellipse Width="6"
+                                     Height="6"
+                                     Fill="{DynamicResource AccentBrush}"
+                                     VerticalAlignment="Center" />
+                            <TextBlock Text="{loc:Translate Player.Info.NowPlaying}"
+                                       Foreground="{DynamicResource AccentBrush}"
+                                       FontSize="10"
+                                       FontWeight="Black"
+                                       LetterSpacing="0.5"
+                                       VerticalAlignment="Center" />
+                          </StackPanel>
+
+                          <TextBlock Text="{Binding Plot}"
+                                     Foreground="{DynamicResource TextMutedBrush}"
+                                     FontSize="11"
+                                     TextWrapping="Wrap"
+                                     TextTrimming="CharacterEllipsis"
+                                     MaxLines="2"
+                                     IsVisible="{Binding Plot, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+                        </StackPanel>
+                      </Grid>
+                    </Panel>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </StackPanel>
+      </Border>
+
+
+      <Border Background="{DynamicResource OverlayBackgroundBrush}"
+              CornerRadius="14"
+              Padding="12"
+              IsVisible="{Binding IsInfoPanelOpen}">
+        <Grid RowDefinitions="Auto,*">
+          <Grid ColumnDefinitions="*,Auto"
+                Margin="0,0,0,10">
+            <StackPanel Spacing="2"
+                        VerticalAlignment="Center">
+              <TextBlock Text="{loc:Translate Player.Info.Title}"
+                         Foreground="{DynamicResource TextDisabledBrush}"
+                         FontSize="10"
+                         FontWeight="Bold" />
+              <TextBlock Text="{Binding CurrentChannel.Name}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="15"
+                         FontWeight="SemiBold"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+            <Button Grid.Column="1"
+                    Content="{loc:Translate Common.Close}"
+                    Command="{Binding OpenInfoPanelCommand}"
+                    MinHeight="44"
+                    Margin="10,0,0,0" />
+          </Grid>
+
+          <ScrollViewer Grid.Row="1"
+                        MaxHeight="300"
+                        HorizontalScrollBarVisibility="Disabled"
+                        VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="10">
+              <!-- Live: current EPG program and description. -->
+              <Border Background="{DynamicResource Surface1Brush}"
+                      CornerRadius="12"
+                      Padding="12"
+                      IsVisible="{Binding IsLiveInfoVisible}">
+                <StackPanel Spacing="5">
+                  <TextBlock Text="{loc:Translate Player.Info.NowPlaying}"
+                             Foreground="{DynamicResource AccentBrush}"
+                             FontSize="10"
+                             FontWeight="Bold" />
+                  <TextBlock Text="{Binding CurrentProgram.Title}"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             FontSize="14"
+                             FontWeight="SemiBold"
+                             TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding CurrentProgram.TimeRange}"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             FontSize="11"
+                             IsVisible="{Binding HasCurrentProgramInfo}" />
+                  <TextBlock Text="{Binding CurrentProgram.Description}"
+                             Foreground="{DynamicResource OverlayTextBrush}"
+                             FontSize="12"
+                             LineHeight="18"
+                             TextWrapping="Wrap"
+                             IsVisible="{Binding CurrentProgram.Description, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+                </StackPanel>
+              </Border>
+
+              <!-- Series: show series context plus the selected episode metadata. -->
+              <Border Background="{DynamicResource Surface1Brush}"
+                      CornerRadius="12"
+                      Padding="12"
+                      IsVisible="{Binding IsInfoSeriesHeaderVisible}">
+                <StackPanel Spacing="5">
+                  <TextBlock Text="{Binding SeriesInfoTitle}"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             FontSize="14"
+                             FontWeight="SemiBold"
+                             TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding SeriesInfoPlot}"
+                             Foreground="{DynamicResource OverlayTextBrush}"
+                             FontSize="12"
+                             LineHeight="18"
+                             TextWrapping="Wrap"
+                             MaxHeight="96"
+                             IsVisible="{Binding SeriesInfoPlot, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+                </StackPanel>
+              </Border>
+
+              <Border Background="{DynamicResource Surface1Brush}"
+                      CornerRadius="12"
+                      Padding="12"
+                      IsVisible="{Binding IsInfoEpisodeVisible}">
+                <StackPanel Spacing="5">
+                  <TextBlock Text="{Binding CurrentEpisodeDisplayTitle}"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             FontSize="14"
+                             FontWeight="SemiBold"
+                             TextWrapping="Wrap"
+                             IsVisible="{Binding CurrentEpisodeDisplayTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+                  <TextBlock Text="{Binding CurrentEpisodeMetaText}"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             FontSize="11"
+                             IsVisible="{Binding CurrentEpisodeMetaText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+                  <TextBlock Text="{Binding CurrentEpisode.Plot}"
+                             Foreground="{DynamicResource OverlayTextBrush}"
+                             FontSize="12"
+                             LineHeight="18"
+                             TextWrapping="Wrap"
+                             MaxHeight="110"
+                             IsVisible="{Binding CurrentEpisode.Plot, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+                </StackPanel>
+              </Border>
+
+              <!-- Movies / VOD: full plot plus year, rating, maturity and duration when available. -->
+              <Border Background="{DynamicResource Surface1Brush}"
+                      CornerRadius="12"
+                      Padding="12"
+                      IsVisible="{Binding IsVodPlotVisible}">
+                <StackPanel Spacing="5">
+                  <TextBlock Text="{Binding InfoVodMetaText}"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             FontSize="11"
+                             IsVisible="{Binding InfoVodMetaText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+                  <TextBlock Text="{Binding CurrentChannel.Plot}"
+                             Foreground="{DynamicResource OverlayTextBrush}"
+                             FontSize="12"
+                             LineHeight="18"
+                             TextWrapping="Wrap"
+                             MaxHeight="130" />
+                </StackPanel>
+              </Border>
+
+              <Border Background="{DynamicResource Surface1Brush}"
+                      CornerRadius="12"
+                      Padding="12"
+                      IsVisible="{Binding IsInfoDirectorVisible}">
+                <StackPanel Spacing="5">
+                  <TextBlock Text="{loc:Translate Player.Info.Director}"
+                             Foreground="{DynamicResource TextDisabledBrush}"
+                             FontSize="10"
+                             FontWeight="Bold" />
+                  <TextBlock Text="{Binding InfoDirectorText}"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             FontSize="12"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
+
+              <Border Background="{DynamicResource Surface1Brush}"
+                      CornerRadius="12"
+                      Padding="12"
+                      IsVisible="{Binding IsInfoCastVisible}">
+                <StackPanel Spacing="5">
+                  <TextBlock Text="{loc:Translate Player.Info.Cast}"
+                             Foreground="{DynamicResource TextDisabledBrush}"
+                             FontSize="10"
+                             FontWeight="Bold" />
+                  <TextBlock Text="{Binding InfoCastText}"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             FontSize="12"
+                             LineHeight="18"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </ScrollViewer>
+        </Grid>
+      </Border>
+
+      <Button Content="{loc:Translate Player.Mobile.Quality}"
+              Command="{Binding OpenQualitySettingsCommand}"
+              MinHeight="44"
+              IsVisible="False" />
+
+      <Border Background="{DynamicResource OverlayBackgroundBrush}"
+              CornerRadius="14"
+              Padding="12"
+              IsVisible="{Binding IsQualitySettingsOpen}">
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{loc:Translate Player.Mobile.Quality}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontSize="14"
+                       FontWeight="SemiBold" />
+            <Button Grid.Column="1"
+                    Content="{loc:Translate Common.Close}"
+                    Command="{Binding OpenQualitySettingsCommand}"
+                    MinHeight="44"
+                    Margin="10,0,0,0" />
+          </Grid>
+
+          <Grid ColumnDefinitions="*,*"
+                RowDefinitions="Auto,Auto,Auto"
+                ColumnSpacing="10"
+                RowSpacing="8">
+            <StackPanel Spacing="2">
+              <TextBlock Text="{loc:Translate Player.Quality.Resolution}"
+                         Foreground="{DynamicResource TextDisabledBrush}"
+                         FontSize="10"
+                         FontWeight="Bold" />
+              <TextBlock Text="{Binding QualityResolutionText}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="12"
+                         FontWeight="SemiBold" />
+            </StackPanel>
+            <StackPanel Grid.Column="1"
+                        Spacing="2">
+              <TextBlock Text="{loc:Translate Player.Quality.Fps}"
+                         Foreground="{DynamicResource TextDisabledBrush}"
+                         FontSize="10"
+                         FontWeight="Bold" />
+              <TextBlock Text="{Binding QualityFpsText}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="12"
+                         FontWeight="SemiBold" />
+            </StackPanel>
+            <StackPanel Grid.Row="1"
+                        Spacing="2">
+              <TextBlock Text="{loc:Translate Player.Quality.Codec}"
+                         Foreground="{DynamicResource TextDisabledBrush}"
+                         FontSize="10"
+                         FontWeight="Bold" />
+              <TextBlock Text="{Binding QualityVideoCodecText}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="12"
+                         FontWeight="SemiBold" />
+            </StackPanel>
+            <StackPanel Grid.Row="1"
+                        Grid.Column="1"
+                        Spacing="2">
+              <TextBlock Text="{loc:Translate Player.Quality.Bitrate}"
+                         Foreground="{DynamicResource TextDisabledBrush}"
+                         FontSize="10"
+                         FontWeight="Bold" />
+              <TextBlock Text="{Binding QualityVideoBitrateText}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="12"
+                         FontWeight="SemiBold" />
+            </StackPanel>
+            <StackPanel Grid.Row="2"
+                        Grid.ColumnSpan="2"
+                        Spacing="2">
+              <TextBlock Text="{loc:Translate Player.Quality.Audio}"
+                         Foreground="{DynamicResource TextDisabledBrush}"
+                         FontSize="10"
+                         FontWeight="Bold" />
+              <TextBlock Text="{Binding QualityAudioText}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="12"
+                         FontWeight="SemiBold"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Grid>
+
+          <TextBlock Text="{loc:Translate Player.Mobile.Speed}"
+                     Foreground="{DynamicResource TextDisabledBrush}"
+                     FontSize="10"
+                     FontWeight="Bold" />
+          <Grid ColumnDefinitions="*,*,*"
+                RowDefinitions="Auto,Auto"
+                ColumnSpacing="8"
+                RowSpacing="8">
+            <Button Content="0.5x"
+                    Command="{Binding SetPlaybackSpeedCommand}"
+                    CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=0.5}"
+                    MinHeight="38" />
+            <Button Grid.Column="1"
+                    Content="0.75x"
+                    Command="{Binding SetPlaybackSpeedCommand}"
+                    CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=0.75}"
+                    MinHeight="38" />
+            <Button Grid.Column="2"
+                    Content="1.0x"
+                    Command="{Binding SetPlaybackSpeedCommand}"
+                    CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=1.0}"
+                    MinHeight="38" />
+            <Button Grid.Row="1"
+                    Content="1.25x"
+                    Command="{Binding SetPlaybackSpeedCommand}"
+                    CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=1.25}"
+                    MinHeight="38" />
+            <Button Grid.Row="1"
+                    Grid.Column="1"
+                    Content="1.5x"
+                    Command="{Binding SetPlaybackSpeedCommand}"
+                    CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=1.5}"
+                    MinHeight="38" />
+            <Button Grid.Row="1"
+                    Grid.Column="2"
+                    Content="2.0x"
+                    Command="{Binding SetPlaybackSpeedCommand}"
+                    CommandParameter="{Binding Converter={StaticResource DoubleToFloatConverter}, ConverterParameter=2.0}"
+                    MinHeight="38" />
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <!-- Next episode prompt shown near the end of an episode. -->
+      <Border Background="{DynamicResource Surface0Brush}"
+              CornerRadius="16"
+              Padding="16"
+              IsVisible="{Binding IsNextEpisodePromptVisible}">
+        <StackPanel Spacing="10">
+          <TextBlock Text="{loc:Translate Player.Overlay.NextEpisode}"
+                     FontSize="12"
+                     Foreground="{DynamicResource TextMutedBrush}" />
+          <TextBlock Text="{Binding NextEpisode.Name}"
+                     FontSize="15"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
+                     TextTrimming="CharacterEllipsis"
+                     MaxLines="1" />
+          <Button Command="{Binding PlayNextEpisodeCommand}"
+                  MinHeight="44"
+                  CornerRadius="10"
+                  Background="{DynamicResource AccentBrush}"
+                  Foreground="{DynamicResource TextPrimaryBrush}"
+                  FontSize="14"
+                  FontWeight="Bold"
+                  BorderThickness="0"
+                  HorizontalAlignment="Stretch">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+              <icons:MaterialIcon Kind="Play" Width="16" Height="16" Foreground="{DynamicResource TextPrimaryBrush}" />
+              <TextBlock Text="{loc:Translate Player.NextEpisode.WatchNow}" FontSize="14" FontWeight="Bold" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </Border>
+
+      <!-- Resume dialog inline card for mobile. -->
+      <Border Background="{DynamicResource Surface0Brush}"
+              CornerRadius="16"
+              Padding="20"
+              IsVisible="{Binding IsResumeDialogVisible}">
+        <StackPanel Spacing="16">
+          <StackPanel Spacing="8" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="PlayCircleOutline"
+                                Width="40" Height="40"
+                                Foreground="{DynamicResource AccentBrush}"
+                                HorizontalAlignment="Center" />
+            <TextBlock Text="{loc:Translate Player.Resume.Title}"
+                       FontSize="18" FontWeight="Bold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       HorizontalAlignment="Center" />
+          </StackPanel>
+          <Border Background="{DynamicResource Surface1Brush}" CornerRadius="10" Padding="14,10">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+              <icons:MaterialIcon Kind="ClockOutline" Width="16" Height="16"
+                                  Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" />
+              <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <TextBlock Text="{loc:Translate Player.Resume.LastPosition}"
+                           Foreground="{DynamicResource TextMutedBrush}" FontSize="13" />
+                <TextBlock Text="{Binding ResumePositionText}"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           FontSize="13" FontWeight="SemiBold" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+          <StackPanel Spacing="10">
+            <Button Command="{Binding ResumeFromPositionCommand}"
+                    IsVisible="{Binding IsPremiumResume}"
+                    MinHeight="48" BorderThickness="0" CornerRadius="12"
+                    HorizontalAlignment="Stretch">
+              <Button.Background>
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                  <GradientStop Color="#8B5CF6" Offset="0" />
+                  <GradientStop Color="#A855F7" Offset="1" />
+                </LinearGradientBrush>
+              </Button.Background>
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                <icons:MaterialIcon Kind="Play" Width="18" Height="18" Foreground="White" />
+                <TextBlock Text="{loc:Translate Player.Resume.Continue}" Foreground="White"
+                           FontSize="14" FontWeight="SemiBold" />
+              </StackPanel>
+            </Button>
+            <Button IsVisible="{Binding !IsPremiumResume}" IsEnabled="False"
+                    MinHeight="48" CornerRadius="12" BorderThickness="1"
+                    Background="{DynamicResource Surface1Brush}"
+                    HorizontalAlignment="Stretch">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Orientation="Horizontal"
+                            HorizontalAlignment="Center" Spacing="8">
+                  <icons:MaterialIcon Kind="Play" Width="18" Height="18"
+                                      Foreground="{DynamicResource TextMutedBrush}" />
+                  <TextBlock Text="{loc:Translate Player.Resume.Continue}"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             FontSize="14" FontWeight="SemiBold" />
+                </StackPanel>
+                <icons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18"
+                                    Foreground="{DynamicResource TextMutedBrush}"
+                                    VerticalAlignment="Center" Margin="0,0,16,0" />
+              </Grid>
+            </Button>
+            <Button Command="{Binding StartFromBeginningCommand}"
+                    MinHeight="48" CornerRadius="12"
+                    Background="{DynamicResource Surface0Brush}"
+                    Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14"
+                    BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                    HorizontalAlignment="Stretch">
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                <icons:MaterialIcon Kind="SkipBackward" Width="18" Height="18" />
+                <TextBlock Text="{loc:Translate Player.Resume.StartOver}" FontWeight="SemiBold" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+          <Border IsVisible="{Binding !IsPremiumResume}"
+                  Background="Transparent" Padding="4" HorizontalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <icons:MaterialIcon Kind="Crown" Width="14" Height="14"
+                                  Foreground="{DynamicResource AccentLightBrush}" />
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="{loc:Translate Common.Premium}" FontSize="12"
+                           Foreground="{DynamicResource AccentLightBrush}" />
+                <TextBlock Text="{loc:Translate Player.Resume.UpgradeNote}" FontSize="12"
+                           Foreground="{DynamicResource TextMutedBrush}" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Border>
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+
+    <!-- EPG mode: video uses a smaller transparent slot above the timeline. -->
+</UserControl>

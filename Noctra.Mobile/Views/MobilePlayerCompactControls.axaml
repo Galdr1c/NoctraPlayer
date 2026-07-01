@@ -1,0 +1,377 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
+             xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.Mobile.Views.MobilePlayerCompactControls"
+             x:DataType="vm:PlayerViewModel"
+             x:CompileBindings="False">
+  <UserControl.Styles>
+    <Style Selector="Button.compactPlayerAction">
+      <Setter Property="MinHeight" Value="44" />
+      <Setter Property="MinWidth" Value="96" />
+      <Setter Property="Padding" Value="10,0" />
+      <Setter Property="CornerRadius" Value="22" />
+    </Style>
+  </UserControl.Styles>
+    <!-- Normal mode controls: desktop video overlay adapted to a mobile bottom sheet. -->
+    <Border x:Name="MobilePlayerCompactControlsHost"
+            Grid.ColumnSpan="2"
+            ZIndex="30"
+            Background="#E60A0A0A"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="0"
+            Padding="14"
+            CornerRadius="18"
+            VerticalAlignment="Bottom"
+            Margin="10,0,10,10"
+            MaxHeight="360"
+            IsVisible="{Binding IsBottomControlsVisible}">
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="12">
+      <StackPanel Spacing="12"
+                  IsVisible="{Binding IsBottomControlsVisible}">
+      <Grid ColumnDefinitions="*,Auto"
+            IsVisible="False">
+        <StackPanel Spacing="4">
+          <TextBlock Text="{Binding CurrentChannel.Name}"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
+                     FontSize="22"
+                     FontWeight="Black"
+                     LetterSpacing="-0.5"
+                     TextWrapping="Wrap" />
+          <TextBlock Text="{Binding ConnectionStatus}"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     FontSize="13"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+        <Button Grid.Column="1"
+                Command="{Binding CloseCommand}"
+                Width="48"
+                Height="48"
+                Padding="0"
+                CornerRadius="24"
+                Background="{DynamicResource Surface1Brush}"
+                BorderThickness="0"
+                Margin="12,0,0,0">
+          <icons:MaterialIcon Kind="Close" Width="24" Height="24" />
+        </Button>
+      </Grid>
+
+      <!-- Live badge and current program, visible only for live streams. -->
+      <StackPanel Orientation="Horizontal"
+                  Spacing="12"
+                  IsVisible="{Binding IsLiveContent}">
+        <Border Background="{DynamicResource ErrorBrush}"
+                CornerRadius="6"
+                Padding="12,6"
+                VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Ellipse Width="8" Height="8" Fill="White" VerticalAlignment="Center">
+              <Ellipse.Styles>
+                <Style Selector="Ellipse">
+                  <Style.Animations>
+                    <Animation Duration="0:0:1" IterationCount="INFINITE" PlaybackDirection="Alternate">
+                      <KeyFrame Cue="0%"><Setter Property="Opacity" Value="1"/></KeyFrame>
+                      <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.3"/></KeyFrame>
+                    </Animation>
+                  </Style.Animations>
+                </Style>
+              </Ellipse.Styles>
+            </Ellipse>
+            <TextBlock Text="{loc:Translate Player.Overlay.Live}"
+                       FontSize="12" FontWeight="Black" Foreground="White"
+                       VerticalAlignment="Center" LetterSpacing="1" />
+          </StackPanel>
+        </Border>
+        <StackPanel VerticalAlignment="Center" Spacing="1">
+          <TextBlock Text="{Binding CurrentProgram.Title}"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
+                     FontSize="15" FontWeight="Bold"
+                     TextTrimming="CharacterEllipsis" MaxLines="1"
+                     IsVisible="{Binding CurrentProgram.Title, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+          <TextBlock Text="{Binding CurrentProgram.TimeRange}"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     FontSize="12" FontWeight="Medium"
+                     IsVisible="{Binding HasCurrentProgramInfo}" />
+        </StackPanel>
+      </StackPanel>
+
+      <Grid ColumnDefinitions="*,*,*"
+            ColumnSpacing="8">
+        <Button Command="{Binding ToggleLockCommand}"
+                MinHeight="44">
+          <Grid Width="22" Height="22" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="LockOutline" Width="22" Height="22"
+                                IsVisible="{Binding IsLocked, Converter={StaticResource InverseBoolConverter}}" />
+            <icons:MaterialIcon Kind="Lock" Width="22" Height="22"
+                                IsVisible="{Binding IsLocked}" />
+          </Grid>
+        </Button>
+        <Button Grid.Column="1"
+                Command="{Binding ToggleFullScreenCommand}"
+                MinHeight="44">
+          <Grid Width="22" Height="22" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="Fullscreen" Width="22" Height="22"
+                                IsVisible="{Binding IsFullScreen, Converter={StaticResource InverseBoolConverter}}" />
+            <icons:MaterialIcon Kind="FullscreenExit" Width="22" Height="22"
+                                IsVisible="{Binding IsFullScreen}" />
+          </Grid>
+        </Button>
+        <Button Grid.Column="2"
+                Command="{Binding EnterPiPCommand}"
+                MinHeight="44">
+          <icons:MaterialIcon Kind="PictureInPictureBottomRight" Width="22" Height="22" />
+        </Button>
+      </Grid>
+
+      <TextBlock Text="{Binding ErrorMessage}"
+                 Foreground="{DynamicResource ErrorBrush}"
+                 TextWrapping="Wrap" />
+
+      <Grid ColumnDefinitions="Auto,*,Auto"
+            ColumnSpacing="10"
+            VerticalAlignment="Center"
+            IsVisible="{Binding !IsLiveContent}">
+        <TextBlock Text="{Binding PositionText}"
+                   Foreground="{DynamicResource OverlayTextBrush}"
+                   FontSize="12"
+                   FontWeight="SemiBold"
+                   VerticalAlignment="Center" />
+        <Slider Grid.Column="1"
+                Minimum="0"
+                Maximum="{Binding Duration}"
+                Value="{Binding Position, Mode=TwoWay}"
+                IsEnabled="{Binding IsPlaying}" />
+        <TextBlock Grid.Column="2"
+                   Text="{Binding DurationText}"
+                   Foreground="{DynamicResource TextMutedBrush}"
+                   FontSize="12"
+                   FontWeight="SemiBold"
+                   VerticalAlignment="Center" />
+      </Grid>
+
+      <Grid ColumnDefinitions="*,Auto"
+            ColumnSpacing="10">
+        <TextBlock Text="{Binding RemainingTime}"
+                   Foreground="{DynamicResource TextMutedBrush}"
+                   FontSize="12"
+                   VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1"
+                   Text="{Binding StreamInfo}"
+                   Foreground="{DynamicResource TextMutedBrush}"
+                   FontSize="12"
+                   TextAlignment="Right"
+                   VerticalAlignment="Center" />
+      </Grid>
+
+      <Grid ColumnDefinitions="Auto,Auto,*,Auto"
+            ColumnSpacing="8"
+            VerticalAlignment="Center">
+        <Button Command="{Binding PlayPauseCommand}"
+                MinHeight="64"
+                MinWidth="72"
+                CornerRadius="32"
+                Background="{DynamicResource AccentBrush}"
+                Foreground="{DynamicResource TextPrimaryBrush}"
+                IsVisible="False">
+          <Grid Width="36" Height="36">
+            <icons:MaterialIcon Kind="Pause" Width="36" Height="36"
+                                IsVisible="{Binding IsPlaying}" />
+            <icons:MaterialIcon Kind="Play" Width="36" Height="36"
+                                IsVisible="{Binding IsPlaying, Converter={StaticResource InverseBoolConverter}}" />
+          </Grid>
+        </Button>
+        <Button Grid.Column="1"
+                Command="{Binding StopCommand}"
+                MinHeight="44"
+                Width="44"
+                CornerRadius="22"
+                IsVisible="False">
+          <icons:MaterialIcon Kind="Stop" Width="24" Height="24" />
+        </Button>
+        <Slider Grid.Column="2"
+                Minimum="0"
+                Maximum="100"
+                Value="{Binding Volume, Mode=TwoWay}"
+                VerticalAlignment="Center" />
+        <Button Grid.Column="3"
+                Command="{Binding ToggleMuteCommand}"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <Grid Width="20" Height="20">
+              <icons:MaterialIcon Kind="VolumeOff" Width="20" Height="20"
+                                  IsVisible="{Binding IsMuted}" />
+              <icons:MaterialIcon Kind="VolumeHigh" Width="20" Height="20"
+                                  IsVisible="{Binding IsMuted, Converter={StaticResource InverseBoolConverter}}" />
+            </Grid>
+            <TextBlock Text="{loc:Translate Player.Mobile.Mute}" />
+          </StackPanel>
+        </Button>
+      </Grid>
+
+      <WrapPanel Orientation="Horizontal"
+                 ItemSpacing="8"
+                 LineSpacing="8">
+        <Button Classes="compactPlayerAction"
+                Command="{Binding SkipBackwardCommand}"
+                CommandParameter="10"
+                IsVisible="False"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="Rewind10" Width="18" Height="18" />
+            <TextBlock Text="-10s" />
+          </StackPanel>
+        </Button>
+        <Button Classes="compactPlayerAction"
+                Command="{Binding SkipForwardCommand}"
+                CommandParameter="10"
+                IsVisible="False"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="FastForward10" Width="18" Height="18" />
+            <TextBlock Text="+10s" />
+          </StackPanel>
+        </Button>
+        <Button Classes="compactPlayerAction"
+                Command="{Binding ToggleSubtitleTrackCommand}"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+            <icons:MaterialIcon Width="18" Height="18"
+                                Kind="{Binding SelectedSubtitleTrack,
+                                        Converter={StaticResource SubtitleIconConverter}}" />
+            <TextBlock Text="{loc:Translate Player.Mobile.CC}" />
+          </StackPanel>
+        </Button>
+        <Button Classes="compactPlayerAction"
+                Command="{Binding ToggleLiveFavoriteCommand}"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="HeartOutline" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Player.Mobile.Favorite}" />
+          </StackPanel>
+        </Button>
+        <Button Classes="compactPlayerAction"
+                Command="{Binding GoToLiveCommand}"
+                IsVisible="{Binding CanShowGoToLiveButton}"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="Broadcast" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Player.Mobile.GoToLive}" />
+          </StackPanel>
+        </Button>
+        <Button Classes="compactPlayerAction"
+                Command="{Binding CycleVideoFillModeCommand}"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="{Binding VideoFillMode,
+                                      Converter={StaticResource FillModeToIconConverter}}"
+                                Width="18" Height="18" />
+            <TextBlock Text="{Binding VideoFillMode}" />
+          </StackPanel>
+        </Button>
+        <Button Classes="compactPlayerAction"
+                Command="{Binding ShowSleepTimerMenuCommand}"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="TimerOutline" Width="18" Height="18" />
+            <TextBlock Text="{Binding SleepTimerLabel}" />
+          </StackPanel>
+        </Button>
+        <Button Classes="compactPlayerAction"
+                Command="{Binding ToggleEpgPanelCommand}"
+                IsVisible="{Binding IsLiveContent}"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="CalendarClock" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Player.Epg.GuideTooltip}" />
+          </StackPanel>
+        </Button>
+      </WrapPanel>
+
+      <Grid ColumnDefinitions="*,*"
+            ColumnSpacing="8"
+            IsVisible="{Binding IsLiveContent}">
+        <Button Content="{loc:Translate Player.Mobile.Previous}"
+                Command="{Binding PlayPreviousLiveChannelCommand}"
+                MinHeight="44" />
+        <Button Grid.Column="1"
+                Content="{loc:Translate Player.Mobile.Next}"
+                Command="{Binding PlayNextLiveChannelCommand}"
+                MinHeight="44" />
+      </Grid>
+
+      <Grid ColumnDefinitions="*,*"
+            ColumnSpacing="8"
+            IsVisible="{Binding IsSeriesContent}">
+        <Button Command="{Binding OpenEpisodesCommand}"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="Animation" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Player.Overlay.Episodes.Tooltip}" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="1"
+                Command="{Binding PlayNextEpisodeCommand}"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="StepForward" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Player.Overlay.NextEpisode}" />
+          </StackPanel>
+        </Button>
+      </Grid>
+
+      <TextBlock Text="{Binding SleepTimerCountdown}"
+                 Foreground="{DynamicResource TextMutedBrush}"
+                 FontSize="12"
+                 HorizontalAlignment="Right" />
+
+      <Grid ColumnDefinitions="*,*,*,*"
+            ColumnSpacing="8">
+        <Button Command="{Binding DownloadCurrentContentCommand}"
+                IsVisible="{Binding CanShowDownloadButton}"
+                IsEnabled="{Binding CanDownloadCurrentContent}"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="Download" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Player.Overlay.Download.Tooltip}" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="1"
+                Command="{Binding OpenInfoPanelCommand}"
+                IsVisible="{Binding CanShowInfoButton}"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="InformationBoxOutline" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Player.Overlay.Info.Tooltip}" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="2"
+                Command="{Binding OpenAudioSettingsCommand}"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="Subtitles" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Player.Settings.Audio}" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="3"
+                Command="{Binding OpenQualitySettingsCommand}"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="Tune" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Player.Mobile.Quality}" />
+          </StackPanel>
+        </Button>
+      </Grid>
+
+      <TextBlock Text="{Binding DownloadStatusMessage}"
+                 Foreground="{DynamicResource TextMutedBrush}"
+                 FontSize="12"
+                 TextWrapping="Wrap" />
+      </StackPanel>
+
+      </StackPanel>
+      </ScrollViewer>
+    </Border>
+</UserControl>

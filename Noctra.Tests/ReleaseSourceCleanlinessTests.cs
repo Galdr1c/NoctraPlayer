@@ -282,6 +282,7 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobilePlayerView.axaml"));
+        var playerContractSource = ReadMobilePlayerContractSource(repositoryRoot);
 
         Assert.Contains("xmlns:icons=\"clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia\"", mainViewSource);
         Assert.Contains("Kind=\"HomeVariantOutline\"", mainViewSource);
@@ -289,11 +290,11 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("Kind=\"Magnify\"", mainViewSource);
         Assert.Contains("Kind=\"DotsHorizontal\"", mainViewSource);
 
-        Assert.Contains("xmlns:icons=\"clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia\"", playerViewSource);
-        Assert.Contains("Kind=\"Play\"", playerViewSource);
-        Assert.Contains("Kind=\"Stop\"", playerViewSource);
-        Assert.Contains("Kind=\"VolumeOff\"", playerViewSource);
-        Assert.Contains("Kind=\"PictureInPictureBottomRight\"", playerViewSource);
+        Assert.Contains("xmlns:icons=\"clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia\"", playerContractSource);
+        Assert.Contains("Kind=\"Play\"", playerContractSource);
+        Assert.Contains("Kind=\"Stop\"", playerContractSource);
+        Assert.Contains("Kind=\"VolumeOff\"", playerContractSource);
+        Assert.Contains("Kind=\"PictureInPictureBottomRight\"", playerContractSource);
     }
 
     [Fact]
@@ -310,6 +311,7 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobilePlayerView.axaml"));
+        var playerContractSource = ReadMobilePlayerContractSource(repositoryRoot);
 
         Assert.Contains("ColumnDefinitions=\"*,*,*,*,*\"", mainViewSource);
         Assert.DoesNotContain("ColumnDefinitions=\"*,*,*,*,*,*,*\"", mainViewSource);
@@ -318,10 +320,10 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("Classes=\"nav navBottom\"", mainViewSource);
         Assert.Contains("Classes=\"NavIndicator\"", mainViewSource);
 
-        Assert.DoesNotContain("ColumnDefinitions=\"*,*,*,*,*\"", playerViewSource);
-        Assert.Contains("<WrapPanel", playerViewSource);
-        Assert.Contains("Classes=\"compactPlayerAction\"", playerViewSource);
-        Assert.Contains("<Setter Property=\"MinWidth\" Value=\"96\" />", playerViewSource);
+        Assert.DoesNotContain("ColumnDefinitions=\"*,*,*,*,*\"", playerContractSource);
+        Assert.Contains("<WrapPanel", playerContractSource);
+        Assert.Contains("Classes=\"compactPlayerAction\"", playerContractSource);
+        Assert.Contains("<Setter Property=\"MinWidth\" Value=\"96\" />", playerContractSource);
     }
 
     [Fact]
@@ -2265,6 +2267,7 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobilePlayerView.axaml"));
+        var playerContractSource = ReadMobilePlayerContractSource(repositoryRoot);
 
         Assert.Contains("IVideoPlayerService", androidVideoService);
         Assert.Contains("AndroidX.Media3.ExoPlayer", androidVideoService);
@@ -2288,11 +2291,11 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("MobilePlayerContent.DataContext", mainViewCode);
 
         Assert.Contains("vm:PlayerViewModel", playerViewSource);
-        Assert.Contains("CurrentChannel.Name", playerViewSource);
-        Assert.Contains("PauseCommand", playerViewSource);
-        Assert.Contains("StopCommand", playerViewSource);
-        Assert.Contains("CloseCommand", playerViewSource);
-        Assert.Contains("IsPlaying", playerViewSource);
+        Assert.Contains("CurrentChannel.Name", playerContractSource);
+        Assert.Contains("PauseCommand", playerContractSource);
+        Assert.Contains("StopCommand", playerContractSource);
+        Assert.Contains("CloseCommand", playerContractSource);
+        Assert.Contains("IsPlaying", playerContractSource);
     }
 
     [Fact]
@@ -2304,32 +2307,33 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobilePlayerView.axaml"));
+        var playerControlsSource = ReadMobilePlayerContractSource(repositoryRoot);
 
-        Assert.Contains("PlayPauseCommand", playerViewSource);
-        Assert.Contains("ToggleMuteCommand", playerViewSource);
-        Assert.Contains("Volume", playerViewSource);
-        Assert.Contains("Position", playerViewSource);
-        Assert.Contains("Duration", playerViewSource);
-        Assert.Contains("PositionText", playerViewSource);
-        Assert.Contains("DurationText", playerViewSource);
-        Assert.Contains("RemainingTime", playerViewSource);
-        Assert.Contains("StreamInfo", playerViewSource);
-        Assert.Contains("QualityResolutionText", playerViewSource);
-        Assert.Contains("QualityFpsText", playerViewSource);
-        Assert.Contains("QualityAudioText", playerViewSource);
+        Assert.Contains("PlayPauseCommand", playerControlsSource);
+        Assert.Contains("ToggleMuteCommand", playerControlsSource);
+        Assert.Contains("Volume", playerControlsSource);
+        Assert.Contains("Position", playerControlsSource);
+        Assert.Contains("Duration", playerControlsSource);
+        Assert.Contains("PositionText", playerControlsSource);
+        Assert.Contains("DurationText", playerControlsSource);
+        Assert.Contains("RemainingTime", playerControlsSource);
+        Assert.Contains("StreamInfo", playerControlsSource);
+        Assert.Contains("QualityResolutionText", playerControlsSource);
+        Assert.Contains("QualityFpsText", playerControlsSource);
+        Assert.Contains("QualityAudioText", playerControlsSource);
         Assert.Contains("VideoSurfaceSlot", playerViewSource);
         Assert.Contains("IsBottomControlsVisible", playerViewSource);
-        Assert.Contains("OpenQualitySettingsCommand", playerViewSource);
-        Assert.Contains("EnterPiPCommand", playerViewSource);
-        Assert.Contains("PictureInPictureBottomRight", playerViewSource);
-        Assert.Contains("Player.Episodes.Season", playerViewSource);
-        Assert.Contains("SeasonNumber", playerViewSource);
-        Assert.DoesNotContain("Player.Mobile.LockFormat", playerViewSource);
-        Assert.DoesNotContain("Player.Mobile.FullscreenFormat", playerViewSource);
-        Assert.DoesNotContain("StringFormat='Lock: {0}'", playerViewSource);
-        Assert.DoesNotContain("StringFormat='Fullscreen: {0}'", playerViewSource);
-        Assert.DoesNotContain("Content=\"PiP\"", playerViewSource);
-        Assert.DoesNotContain("StringFormat='Season {0}'", playerViewSource);
+        Assert.Contains("OpenQualitySettingsCommand", playerControlsSource);
+        Assert.Contains("EnterPiPCommand", playerControlsSource);
+        Assert.Contains("PictureInPictureBottomRight", playerControlsSource);
+        Assert.Contains("Player.Episodes.Season", playerControlsSource);
+        Assert.Contains("SeasonNumber", playerControlsSource);
+        Assert.DoesNotContain("Player.Mobile.LockFormat", playerControlsSource);
+        Assert.DoesNotContain("Player.Mobile.FullscreenFormat", playerControlsSource);
+        Assert.DoesNotContain("StringFormat='Lock: {0}'", playerControlsSource);
+        Assert.DoesNotContain("StringFormat='Fullscreen: {0}'", playerControlsSource);
+        Assert.DoesNotContain("Content=\"PiP\"", playerControlsSource);
+        Assert.DoesNotContain("StringFormat='Season {0}'", playerControlsSource);
     }
 
     [Fact]
@@ -2348,16 +2352,16 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("x:Name=\"VideoSurfaceSlot\"", playerViewSource);
         Assert.Contains("x:Name=\"MobileWatermark\"", playerViewSource);
 
-        Assert.Contains("x:Name=\"MobilePlayerCompactControlsHost\"", playerViewSource);
+        Assert.Contains("views:MobilePlayerCompactControls", playerViewSource);
         Assert.Contains("IsVisible=\"{Binding IsBottomControlsVisible}\"", playerViewSource);
         Assert.Contains("IsVisible=\"{Binding IsTopOverlayVisible}\"", playerViewSource);
-        Assert.Contains("x:Name=\"MobilePlayerSheetHost\"", playerViewSource);
+        Assert.Contains("views:MobilePlayerSheets", playerViewSource);
         Assert.Contains("ZIndex=\"50\"", playerViewSource);
         Assert.Contains("IsVisible=\"{Binding IsMobileDetailPanelOpen}\"", playerViewSource);
 
         Assert.True(
-            playerViewSource.IndexOf("x:Name=\"MobilePlayerSheetHost\"", StringComparison.Ordinal) >
-            playerViewSource.IndexOf("x:Name=\"MobilePlayerCompactControlsHost\"", StringComparison.Ordinal));
+            playerViewSource.IndexOf("views:MobilePlayerSheets", StringComparison.Ordinal) >
+            playerViewSource.IndexOf("views:MobilePlayerCompactControls", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -2387,6 +2391,92 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("QualityResolutionText", topOverlaySource);
         Assert.Contains("HasTopQualityBadgesReady", topOverlaySource);
         Assert.Contains("Kind=\"HighDefinition\"", topOverlaySource);
+    }
+
+    [Fact]
+    public void MobilePlayerCenterControls_ExtractsQuickPlaybackControls()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var playerViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml"));
+        var centerControlsPath = Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerCenterControls.axaml");
+
+        Assert.Contains("views:MobilePlayerCenterControls", playerViewSource);
+        Assert.True(File.Exists(centerControlsPath));
+
+        var centerControlsSource = File.ReadAllText(centerControlsPath);
+        Assert.Contains("SkipBackwardCommand", centerControlsSource);
+        Assert.Contains("PlayPauseCommand", centerControlsSource);
+        Assert.Contains("SkipForwardCommand", centerControlsSource);
+        Assert.Contains("CommandParameter=\"10\"", centerControlsSource);
+        Assert.Contains("Kind=\"Rewind10\"", centerControlsSource);
+        Assert.Contains("Kind=\"FastForward10\"", centerControlsSource);
+    }
+
+    [Fact]
+    public void MobilePlayerCompactControls_ExtractsBottomControlBar()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var playerViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml"));
+        var compactControlsPath = Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerCompactControls.axaml");
+
+        Assert.Contains("views:MobilePlayerCompactControls", playerViewSource);
+        Assert.True(File.Exists(compactControlsPath));
+
+        var compactControlsSource = File.ReadAllText(compactControlsPath);
+        Assert.Contains("x:Name=\"MobilePlayerCompactControlsHost\"", compactControlsSource);
+        Assert.Contains("ToggleMuteCommand", compactControlsSource);
+        Assert.Contains("OpenAudioSettingsCommand", compactControlsSource);
+        Assert.Contains("OpenQualitySettingsCommand", compactControlsSource);
+        Assert.Contains("ToggleEpgPanelCommand", compactControlsSource);
+        Assert.Contains("CycleVideoFillModeCommand", compactControlsSource);
+        Assert.Contains("DownloadCurrentContentCommand", compactControlsSource);
+        Assert.DoesNotContain("x:Name=\"MobilePlayerCompactControlsHost\"", playerViewSource);
+    }
+
+    [Fact]
+    public void MobilePlayerSheets_ExtractsDetailBottomSheets()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var playerViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml"));
+        var sheetsPath = Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerSheets.axaml");
+
+        Assert.Contains("views:MobilePlayerSheets", playerViewSource);
+        Assert.True(File.Exists(sheetsPath));
+
+        var sheetsSource = File.ReadAllText(sheetsPath);
+        Assert.Contains("x:Name=\"MobilePlayerSheetHost\"", sheetsSource);
+        Assert.Contains("IsSleepTimerPanelOpen", sheetsSource);
+        Assert.Contains("IsAudioSettingsOpen", sheetsSource);
+        Assert.Contains("IsEpisodesPanelOpen", sheetsSource);
+        Assert.Contains("IsInfoPanelOpen", sheetsSource);
+        Assert.Contains("IsQualitySettingsOpen", sheetsSource);
+        Assert.Contains("IsNextEpisodePromptVisible", sheetsSource);
+        Assert.Contains("IsResumeDialogVisible", sheetsSource);
+        Assert.DoesNotContain("x:Name=\"MobilePlayerSheetHost\"", playerViewSource);
     }
 
     [Fact]
@@ -2426,16 +2516,17 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobilePlayerView.axaml"));
+        var playerContractSource = ReadMobilePlayerContractSource(repositoryRoot);
 
-        Assert.Contains("SkipBackwardCommand", playerViewSource);
-        Assert.Contains("SkipForwardCommand", playerViewSource);
-        Assert.Contains("CommandParameter=\"10\"", playerViewSource);
-        Assert.Contains("ToggleLiveFavoriteCommand", playerViewSource);
-        Assert.Contains("CycleVideoFillModeCommand", playerViewSource);
-        Assert.Contains("VideoFillMode", playerViewSource);
-        Assert.Contains("ShowSleepTimerMenuCommand", playerViewSource);
-        Assert.Contains("SleepTimerLabel", playerViewSource);
-        Assert.Contains("SleepTimerCountdown", playerViewSource);
+        Assert.Contains("SkipBackwardCommand", playerContractSource);
+        Assert.Contains("SkipForwardCommand", playerContractSource);
+        Assert.Contains("CommandParameter=\"10\"", playerContractSource);
+        Assert.Contains("ToggleLiveFavoriteCommand", playerContractSource);
+        Assert.Contains("CycleVideoFillModeCommand", playerContractSource);
+        Assert.Contains("VideoFillMode", playerContractSource);
+        Assert.Contains("ShowSleepTimerMenuCommand", playerContractSource);
+        Assert.Contains("SleepTimerLabel", playerContractSource);
+        Assert.Contains("SleepTimerCountdown", playerContractSource);
     }
 
     [Fact]
@@ -2447,15 +2538,16 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobilePlayerView.axaml"));
+        var playerContractSource = ReadMobilePlayerContractSource(repositoryRoot);
         var mainViewCode = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Mobile",
             "Views",
             "MainView.axaml.cs"));
 
-        Assert.Contains("PlayPreviousLiveChannelCommand", playerViewSource);
-        Assert.Contains("PlayNextLiveChannelCommand", playerViewSource);
-        Assert.Contains("IsLiveContent", playerViewSource);
+        Assert.Contains("PlayPreviousLiveChannelCommand", playerContractSource);
+        Assert.Contains("PlayNextLiveChannelCommand", playerContractSource);
+        Assert.Contains("IsLiveContent", playerContractSource);
 
         Assert.Contains("NextLiveChannelRequested", mainViewCode);
         Assert.Contains("PreviousLiveChannelRequested", mainViewCode);
@@ -2474,15 +2566,16 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobilePlayerView.axaml"));
+        var playerContractSource = ReadMobilePlayerContractSource(repositoryRoot);
         var mainViewCode = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Mobile",
             "Views",
             "MainView.axaml.cs"));
 
-        Assert.Contains("PlayNextEpisodeCommand", playerViewSource);
-        Assert.Contains("OpenEpisodesCommand", playerViewSource);
-        Assert.Contains("IsSeriesContent", playerViewSource);
+        Assert.Contains("PlayNextEpisodeCommand", playerContractSource);
+        Assert.Contains("OpenEpisodesCommand", playerContractSource);
+        Assert.Contains("IsSeriesContent", playerContractSource);
 
         Assert.Contains("NextEpisodeRequested", mainViewCode);
         Assert.Contains("EpisodeRequested", mainViewCode);
@@ -2500,20 +2593,21 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobilePlayerView.axaml"));
+        var playerContractSource = ReadMobilePlayerContractSource(repositoryRoot);
 
-        Assert.Contains("IsSleepTimerPanelOpen", playerViewSource);
-        Assert.Contains("SetSleepTimerCommand", playerViewSource);
-        Assert.Contains("CancelSleepTimerCommand", playerViewSource);
-        Assert.Contains("PlayerViewModel+SleepTimerOption.Off", playerViewSource);
-        Assert.Contains("PlayerViewModel+SleepTimerOption.Minutes15", playerViewSource);
-        Assert.Contains("PlayerViewModel+SleepTimerOption.Minutes30", playerViewSource);
-        Assert.Contains("PlayerViewModel+SleepTimerOption.Minutes60", playerViewSource);
-        Assert.Contains("PlayerViewModel+SleepTimerOption.EndOfEpisode", playerViewSource);
-        Assert.Contains("IsSleepTimerActive", playerViewSource);
-        Assert.Contains("IsEnabled=\"{Binding IsPremium}\"", playerViewSource);
-        Assert.Contains("IsVisible=\"{Binding !IsPremium}\"", playerViewSource);
-        Assert.Contains("Kind=\"Lock\"", playerViewSource);
-        Assert.Contains("MinHeight=\"48\"", playerViewSource);
+        Assert.Contains("IsSleepTimerPanelOpen", playerContractSource);
+        Assert.Contains("SetSleepTimerCommand", playerContractSource);
+        Assert.Contains("CancelSleepTimerCommand", playerContractSource);
+        Assert.Contains("PlayerViewModel+SleepTimerOption.Off", playerContractSource);
+        Assert.Contains("PlayerViewModel+SleepTimerOption.Minutes15", playerContractSource);
+        Assert.Contains("PlayerViewModel+SleepTimerOption.Minutes30", playerContractSource);
+        Assert.Contains("PlayerViewModel+SleepTimerOption.Minutes60", playerContractSource);
+        Assert.Contains("PlayerViewModel+SleepTimerOption.EndOfEpisode", playerContractSource);
+        Assert.Contains("IsSleepTimerActive", playerContractSource);
+        Assert.Contains("IsEnabled=\"{Binding IsPremium}\"", playerContractSource);
+        Assert.Contains("IsVisible=\"{Binding !IsPremium}\"", playerContractSource);
+        Assert.Contains("Kind=\"Lock\"", playerContractSource);
+        Assert.Contains("MinHeight=\"48\"", playerContractSource);
     }
 
     [Fact]
@@ -2525,18 +2619,19 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobilePlayerView.axaml"));
+        var playerContractSource = ReadMobilePlayerContractSource(repositoryRoot);
 
-        Assert.Contains("DownloadCurrentContentCommand", playerViewSource);
-        Assert.Contains("CanShowDownloadButton", playerViewSource);
-        Assert.Contains("CanDownloadCurrentContent", playerViewSource);
-        Assert.Contains("DownloadStatusMessage", playerViewSource);
-        Assert.Contains("OpenInfoPanelCommand", playerViewSource);
-        Assert.Contains("CanShowInfoButton", playerViewSource);
-        Assert.Contains("IsInfoPanelOpen", playerViewSource);
-        Assert.Contains("CurrentProgram.Title", playerViewSource);
-        Assert.Contains("CurrentEpisodeDisplayTitle", playerViewSource);
-        Assert.Contains("CurrentEpisodeMetaText", playerViewSource);
-        Assert.Contains("CurrentChannel.Plot", playerViewSource);
+        Assert.Contains("DownloadCurrentContentCommand", playerContractSource);
+        Assert.Contains("CanShowDownloadButton", playerContractSource);
+        Assert.Contains("CanDownloadCurrentContent", playerContractSource);
+        Assert.Contains("DownloadStatusMessage", playerContractSource);
+        Assert.Contains("OpenInfoPanelCommand", playerContractSource);
+        Assert.Contains("CanShowInfoButton", playerContractSource);
+        Assert.Contains("IsInfoPanelOpen", playerContractSource);
+        Assert.Contains("CurrentProgram.Title", playerContractSource);
+        Assert.Contains("CurrentEpisodeDisplayTitle", playerContractSource);
+        Assert.Contains("CurrentEpisodeMetaText", playerContractSource);
+        Assert.Contains("CurrentChannel.Plot", playerContractSource);
     }
 
     [Fact]
@@ -2548,16 +2643,17 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobilePlayerView.axaml"));
+        var playerContractSource = ReadMobilePlayerContractSource(repositoryRoot);
 
-        Assert.Contains("OpenAudioSettingsCommand", playerViewSource);
-        Assert.Contains("IsAudioSettingsOpen", playerViewSource);
-        Assert.Contains("SetSubtitleSizeCommand", playerViewSource);
-        Assert.Contains("SetSubtitleBackgroundCommand", playerViewSource);
-        Assert.Contains("SetSubtitlePositionCommand", playerViewSource);
-        Assert.Contains("AudioTracks", playerViewSource);
-        Assert.Contains("SetAudioTrackCommand", playerViewSource);
-        Assert.Contains("SubtitleTracks", playerViewSource);
-        Assert.Contains("SetSubtitleTrackCommand", playerViewSource);
+        Assert.Contains("OpenAudioSettingsCommand", playerContractSource);
+        Assert.Contains("IsAudioSettingsOpen", playerContractSource);
+        Assert.Contains("SetSubtitleSizeCommand", playerContractSource);
+        Assert.Contains("SetSubtitleBackgroundCommand", playerContractSource);
+        Assert.Contains("SetSubtitlePositionCommand", playerContractSource);
+        Assert.Contains("AudioTracks", playerContractSource);
+        Assert.Contains("SetAudioTrackCommand", playerContractSource);
+        Assert.Contains("SubtitleTracks", playerContractSource);
+        Assert.Contains("SetSubtitleTrackCommand", playerContractSource);
     }
 
     [Fact]
@@ -2569,6 +2665,7 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobilePlayerView.axaml"));
+        var playerContractSource = ReadMobilePlayerContractSource(repositoryRoot);
         var mobileAppSource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Mobile",
@@ -2579,21 +2676,21 @@ public sealed class ReleaseSourceCleanlinessTests
             "Converters",
             "DoubleToFloatConverter.cs"));
 
-        Assert.Contains("OpenQualitySettingsCommand", playerViewSource);
-        Assert.Contains("IsQualitySettingsOpen", playerViewSource);
-        Assert.Contains("QualityResolutionText", playerViewSource);
-        Assert.Contains("QualityFpsText", playerViewSource);
-        Assert.Contains("QualityVideoCodecText", playerViewSource);
-        Assert.Contains("QualityVideoBitrateText", playerViewSource);
-        Assert.Contains("QualityAudioText", playerViewSource);
-        Assert.Contains("SetPlaybackSpeedCommand", playerViewSource);
-        Assert.Contains("ConverterParameter=0.5", playerViewSource);
-        Assert.Contains("ConverterParameter=0.75", playerViewSource);
-        Assert.Contains("ConverterParameter=1.0", playerViewSource);
-        Assert.Contains("ConverterParameter=1.25", playerViewSource);
-        Assert.Contains("ConverterParameter=1.5", playerViewSource);
-        Assert.Contains("ConverterParameter=2.0", playerViewSource);
-        Assert.Contains("DoubleToFloatConverter", playerViewSource);
+        Assert.Contains("OpenQualitySettingsCommand", playerContractSource);
+        Assert.Contains("IsQualitySettingsOpen", playerContractSource);
+        Assert.Contains("QualityResolutionText", playerContractSource);
+        Assert.Contains("QualityFpsText", playerContractSource);
+        Assert.Contains("QualityVideoCodecText", playerContractSource);
+        Assert.Contains("QualityVideoBitrateText", playerContractSource);
+        Assert.Contains("QualityAudioText", playerContractSource);
+        Assert.Contains("SetPlaybackSpeedCommand", playerContractSource);
+        Assert.Contains("ConverterParameter=0.5", playerContractSource);
+        Assert.Contains("ConverterParameter=0.75", playerContractSource);
+        Assert.Contains("ConverterParameter=1.0", playerContractSource);
+        Assert.Contains("ConverterParameter=1.25", playerContractSource);
+        Assert.Contains("ConverterParameter=1.5", playerContractSource);
+        Assert.Contains("ConverterParameter=2.0", playerContractSource);
+        Assert.Contains("DoubleToFloatConverter", playerContractSource);
         Assert.Contains("DoubleToFloatConverter", mobileAppSource);
         Assert.Contains("class DoubleToFloatConverter", converterSource);
     }
@@ -2607,6 +2704,7 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobilePlayerView.axaml"));
+        var playerContractSource = ReadMobilePlayerContractSource(repositoryRoot);
         var mainViewSource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Mobile",
@@ -2623,11 +2721,11 @@ public sealed class ReleaseSourceCleanlinessTests
             "Services",
             "MobilePlatformServiceResolver.cs"));
 
-        Assert.Contains("ToggleLockCommand", playerViewSource);
-        Assert.Contains("ToggleFullScreenCommand", playerViewSource);
-        Assert.Contains("EnterPiPCommand", playerViewSource);
-        Assert.Contains("IsLocked", playerViewSource);
-        Assert.Contains("IsFullScreen", playerViewSource);
+        Assert.Contains("ToggleLockCommand", playerContractSource);
+        Assert.Contains("ToggleFullScreenCommand", playerContractSource);
+        Assert.Contains("EnterPiPCommand", playerContractSource);
+        Assert.Contains("IsLocked", playerContractSource);
+        Assert.Contains("IsFullScreen", playerContractSource);
 
         Assert.Contains("x:Name=\"HeaderBar\"", mainViewSource);
         Assert.Contains("PlayerViewModel_PropertyChanged", mainViewCode);
@@ -2981,19 +3079,20 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobilePlayerView.axaml"));
+        var mobilePlayerContractSource = ReadMobilePlayerContractSource(repositoryRoot);
         var mobileAppSource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Mobile",
             "App.axaml"));
 
-        Assert.DoesNotContain("Kind=\"PlayPause\"", mobilePlayerSource);
-        Assert.Contains("Kind=\"Pause\"", mobilePlayerSource);
-        Assert.Contains("Kind=\"Play\"", mobilePlayerSource);
-        Assert.Contains("Kind=\"FullscreenExit\"", mobilePlayerSource);
-        Assert.Contains("IsVisible=\"{Binding IsFullScreen, Converter={StaticResource InverseBoolConverter}}\"", mobilePlayerSource);
-        Assert.Contains("Kind=\"VolumeHigh\"", mobilePlayerSource);
+        Assert.DoesNotContain("Kind=\"PlayPause\"", mobilePlayerContractSource);
+        Assert.Contains("Kind=\"Pause\"", mobilePlayerContractSource);
+        Assert.Contains("Kind=\"Play\"", mobilePlayerContractSource);
+        Assert.Contains("Kind=\"FullscreenExit\"", mobilePlayerContractSource);
+        Assert.Contains("IsVisible=\"{Binding IsFullScreen, Converter={StaticResource InverseBoolConverter}}\"", mobilePlayerContractSource);
+        Assert.Contains("Kind=\"VolumeHigh\"", mobilePlayerContractSource);
         Assert.Contains("FillModeToIconConverter", mobileAppSource);
-        Assert.Contains("Converter={StaticResource FillModeToIconConverter}", mobilePlayerSource);
+        Assert.Contains("Converter={StaticResource FillModeToIconConverter}", mobilePlayerContractSource);
     }
 
     [Fact]
@@ -3010,6 +3109,7 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobilePlayerView.axaml"));
+        var mobilePlayerContractSource = ReadMobilePlayerContractSource(repositoryRoot);
         var downloadsSource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Mobile",
@@ -3031,15 +3131,15 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("Text=\"{loc:Translate Shell.Nav.Movies}\"", mainViewSource);
         Assert.Contains("Classes=\"NavIndicator\"", mainViewSource);
 
-        Assert.Contains("IsVisible=\"{Binding !IsLiveContent}\"", mobilePlayerSource);
-        Assert.Contains("IsVisible=\"{Binding CanShowGoToLiveButton}\"", mobilePlayerSource);
+        Assert.Contains("IsVisible=\"{Binding !IsLiveContent}\"", mobilePlayerContractSource);
+        Assert.Contains("IsVisible=\"{Binding CanShowGoToLiveButton}\"", mobilePlayerContractSource);
         Assert.Contains("public bool CanShowGoToLiveButton", playerViewModelSource);
 
-        Assert.Contains("Kind=\"Animation\"", mobilePlayerSource);
-        Assert.Contains("Kind=\"StepForward\"", mobilePlayerSource);
-        Assert.Contains("Kind=\"Download\"", mobilePlayerSource);
-        Assert.Contains("Kind=\"InformationBoxOutline\"", mobilePlayerSource);
-        Assert.Contains("Kind=\"Subtitles\"", mobilePlayerSource);
+        Assert.Contains("Kind=\"Animation\"", mobilePlayerContractSource);
+        Assert.Contains("Kind=\"StepForward\"", mobilePlayerContractSource);
+        Assert.Contains("Kind=\"Download\"", mobilePlayerContractSource);
+        Assert.Contains("Kind=\"InformationBoxOutline\"", mobilePlayerContractSource);
+        Assert.Contains("Kind=\"Subtitles\"", mobilePlayerContractSource);
 
         Assert.DoesNotContain("MinHeight=\"34\"", downloadsSource);
         Assert.DoesNotContain("MinHeight=\"40\"", downloadsSource);
@@ -3061,6 +3161,7 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobilePlayerView.axaml"));
+        var mobilePlayerContractSource = ReadMobilePlayerContractSource(repositoryRoot);
         var playerViewModelSource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "Noctra.Core",
@@ -3078,16 +3179,16 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("SelectEpisodeSeason", playerViewModelSource);
         Assert.Contains("SelectedEpisodeSeason = selectedSeason", episodeNavigatorSource);
 
-        Assert.Contains("HorizontalScrollBarVisibility=\"Auto\"", mobilePlayerSource);
-        Assert.Contains("ItemsSource=\"{Binding EpisodeSeasons}\"", mobilePlayerSource);
-        Assert.Contains("Command=\"{Binding #PlayerRoot.DataContext.SelectEpisodeSeasonCommand}\"", mobilePlayerSource);
-        Assert.Contains("ItemsSource=\"{Binding SelectedEpisodeSeasonEpisodes}\"", mobilePlayerSource);
-        Assert.DoesNotContain("<ItemsControl ItemsSource=\"{Binding Episodes}\">", mobilePlayerSource);
+        Assert.Contains("HorizontalScrollBarVisibility=\"Auto\"", mobilePlayerContractSource);
+        Assert.Contains("ItemsSource=\"{Binding EpisodeSeasons}\"", mobilePlayerContractSource);
+        Assert.Contains("Command=\"{Binding #PlayerRoot.DataContext.SelectEpisodeSeasonCommand}\"", mobilePlayerContractSource);
+        Assert.Contains("ItemsSource=\"{Binding SelectedEpisodeSeasonEpisodes}\"", mobilePlayerContractSource);
+        Assert.DoesNotContain("<ItemsControl ItemsSource=\"{Binding Episodes}\">", mobilePlayerContractSource);
 
-        Assert.Contains("Kind=\"Close\"", mobilePlayerSource);
-        Assert.Contains("Text=\"{loc:Translate Player.Info.NowPlaying}\"", mobilePlayerSource);
-        Assert.Contains("Text=\"{loc:Translate Player.Overlay.Watched}\"", mobilePlayerSource);
-        Assert.Contains("Height=\"6\"", mobilePlayerSource);
+        Assert.Contains("Kind=\"Close\"", mobilePlayerContractSource);
+        Assert.Contains("Text=\"{loc:Translate Player.Info.NowPlaying}\"", mobilePlayerContractSource);
+        Assert.Contains("Text=\"{loc:Translate Player.Overlay.Watched}\"", mobilePlayerContractSource);
+        Assert.Contains("Height=\"6\"", mobilePlayerContractSource);
     }
 
     [Fact]
@@ -3298,6 +3399,21 @@ public sealed class ReleaseSourceCleanlinessTests
         }
 
         throw new DirectoryNotFoundException("Could not locate the repository root.");
+    }
+
+    private static string ReadMobilePlayerContractSource(string repositoryRoot)
+    {
+        var viewDirectory = Path.Combine(repositoryRoot, "Noctra.Mobile", "Views");
+        var files = new[]
+        {
+            "MobilePlayerView.axaml",
+            "MobilePlayerTopOverlay.axaml",
+            "MobilePlayerCenterControls.axaml",
+            "MobilePlayerCompactControls.axaml",
+            "MobilePlayerSheets.axaml"
+        };
+
+        return string.Concat(files.Select(file => File.ReadAllText(Path.Combine(viewDirectory, file))));
     }
 
     private static int CountOccurrences(string source, string value)
