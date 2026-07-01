@@ -417,6 +417,61 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public void MobilePanelState_TracksActivePanelAndExcludesEpgFromBottomSheet()
+        {
+            var ctx = new PlayerTestContext(isPremium: true);
+            ctx.VM.IsVisible = true;
+
+            Assert.Equal(PlayerViewModel.MobilePanelState.None, ctx.VM.ActiveMobilePanelState);
+            Assert.False(ctx.VM.IsPanelOpen);
+            Assert.True(ctx.VM.IsMobileCompactControlsVisible);
+
+            ctx.VM.IsAudioSettingsOpen = true;
+
+            Assert.Equal(PlayerViewModel.MobilePanelState.Audio, ctx.VM.ActiveMobilePanelState);
+            Assert.True(ctx.VM.IsPanelOpen);
+            Assert.True(ctx.VM.IsMobileDetailPanelOpen);
+            Assert.False(ctx.VM.IsMobileCompactControlsVisible);
+
+            ctx.VM.IsAudioSettingsOpen = false;
+            ctx.VM.IsEpgPanelOpen = true;
+
+            Assert.Equal(PlayerViewModel.MobilePanelState.Epg, ctx.VM.ActiveMobilePanelState);
+            Assert.True(ctx.VM.IsPanelOpen);
+            Assert.False(ctx.VM.AreMobileControlsVisible);
+            Assert.False(ctx.VM.IsMobileDetailPanelOpen);
+            Assert.False(ctx.VM.IsMobileCompactControlsVisible);
+        }
+
+        [Fact]
+        public void MobileControlAliases_FollowLegacyVisibilityAndPanelState()
+        {
+            var ctx = new PlayerTestContext(isPremium: true);
+            ctx.VM.IsVisible = true;
+            ctx.VM.IsPiPMode = false;
+            ctx.VM.IsEpgPanelOpen = false;
+
+            Assert.True(ctx.VM.IsPlayerVisible);
+            Assert.True(ctx.VM.IsControlsVisible);
+            Assert.True(ctx.VM.IsTopOverlayVisible);
+            Assert.True(ctx.VM.IsBottomControlsVisible);
+
+            ctx.VM.IsInfoPanelOpen = true;
+
+            Assert.True(ctx.VM.IsControlsVisible);
+            Assert.True(ctx.VM.IsTopOverlayVisible);
+            Assert.False(ctx.VM.IsBottomControlsVisible);
+
+            ctx.VM.IsInfoPanelOpen = false;
+            ctx.VM.IsPiPMode = true;
+
+            Assert.True(ctx.VM.IsPlayerVisible);
+            Assert.False(ctx.VM.IsControlsVisible);
+            Assert.False(ctx.VM.IsTopOverlayVisible);
+            Assert.False(ctx.VM.IsBottomControlsVisible);
+        }
+
+        [Fact]
         public void VolumeChanged_FromService_UpdatesVmVolume()
         {
             var ctx = new PlayerTestContext();

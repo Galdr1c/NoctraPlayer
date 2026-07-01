@@ -45,6 +45,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     public enum SleepTimerOption { Off, Minutes15, Minutes30, Minutes60, EndOfEpisode }
     public enum FillMode { Fit, Fill, Stretch, Original }
+    public enum MobilePanelState { None, Audio, Quality, Info, Episodes, Sleep, Epg, Resume, NextEpisode }
 
     // ── Controllers / Subclasses (Decomposition Pattern) ────────────────────
     public PlayerPlaybackController PlaybackController { get; }
@@ -66,7 +67,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private string _sleepTimerCountdown = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActiveMobilePanelState))]
+    [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
     [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
+    [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     private bool _isSleepTimerPanelOpen;
 
@@ -117,7 +121,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPiPControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(IsPlayerVisible))]
+    [NotifyPropertyChangedFor(nameof(IsControlsVisible))]
     [NotifyPropertyChangedFor(nameof(AreMobileControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(IsTopOverlayVisible))]
+    [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     private bool _isVisible = true;
 
@@ -148,7 +156,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPiPControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(IsControlsVisible))]
     [NotifyPropertyChangedFor(nameof(AreMobileControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(IsTopOverlayVisible))]
+    [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     private bool _isPiPMode;
 
@@ -163,7 +174,29 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     /// Kontroller görünürken ve EPG paneli kapalıyken true olur.
     /// Tek dokunuşla aç/kapat (ToggleControls) ve otomatik gizleme bu değeri sürer.
     /// </summary>
-    public bool AreMobileControlsVisible => IsVisible && !IsEpgPanelOpen && !IsPiPMode;
+    public bool IsPlayerVisible => IsVisible;
+    public bool IsControlsVisible => IsVisible && !IsPiPMode;
+    public bool AreMobileControlsVisible => IsControlsVisible && !IsEpgPanelOpen;
+    public bool IsTopOverlayVisible => AreMobileControlsVisible;
+
+    public MobilePanelState ActiveMobilePanelState
+    {
+        get
+        {
+            if (IsEpgPanelOpen) return MobilePanelState.Epg;
+            if (IsAudioSettingsOpen) return MobilePanelState.Audio;
+            if (IsQualitySettingsOpen) return MobilePanelState.Quality;
+            if (IsInfoPanelOpen) return MobilePanelState.Info;
+            if (IsEpisodesPanelOpen) return MobilePanelState.Episodes;
+            if (IsSleepTimerPanelOpen) return MobilePanelState.Sleep;
+            if (IsResumeDialogVisible) return MobilePanelState.Resume;
+            if (IsNextEpisodePromptVisible) return MobilePanelState.NextEpisode;
+
+            return MobilePanelState.None;
+        }
+    }
+
+    public bool IsPanelOpen => ActiveMobilePanelState != MobilePanelState.None;
 
     public bool IsMobileDetailPanelOpen =>
         IsAudioSettingsOpen ||
@@ -177,9 +210,49 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     public bool IsMobileCompactControlsVisible =>
         AreMobileControlsVisible && !IsMobileDetailPanelOpen;
 
+    public bool IsBottomControlsVisible => IsMobileCompactControlsVisible;
+
+    internal void SetMobilePanelState(MobilePanelState state)
+    {
+        if (state is MobilePanelState.Resume or MobilePanelState.NextEpisode)
+        {
+            return;
+        }
+
+        IsAudioSettingsOpen = state == MobilePanelState.Audio;
+        IsQualitySettingsOpen = state == MobilePanelState.Quality;
+        IsInfoPanelOpen = state == MobilePanelState.Info;
+        IsEpisodesPanelOpen = state == MobilePanelState.Episodes;
+        IsSleepTimerPanelOpen = state == MobilePanelState.Sleep;
+        IsEpgPanelOpen = state == MobilePanelState.Epg;
+
+        var isPanelOpen = state != MobilePanelState.None;
+        IsLocked = isPanelOpen;
+
+        if (isPanelOpen)
+        {
+            _autoHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            IsVisible = true;
+        }
+    }
+
+    internal void ToggleMobilePanelState(MobilePanelState state)
+    {
+        if (state is MobilePanelState.Resume or MobilePanelState.NextEpisode)
+        {
+            return;
+        }
+
+        SetMobilePanelState(ActiveMobilePanelState == state ? MobilePanelState.None : state);
+    }
+
     // ── EPG Timeline Panel ──────────────────────────────────────────────────
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActiveMobilePanelState))]
+    [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
     [NotifyPropertyChangedFor(nameof(AreMobileControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(IsTopOverlayVisible))]
+    [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     private bool _isEpgPanelOpen;
     [ObservableProperty] private bool _isEpgLoading;
@@ -265,7 +338,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private bool _isResizing;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActiveMobilePanelState))]
+    [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
     [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
+    [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     private bool _isAudioSettingsOpen;
 
@@ -520,12 +596,18 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     public string SelectedSubtitleTrackName => SubtitleTracks.FirstOrDefault(t => t.Id == SelectedSubtitleTrack)?.Name ?? string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActiveMobilePanelState))]
+    [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
     [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
+    [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     private bool _isQualitySettingsOpen;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActiveMobilePanelState))]
+    [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
     [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
+    [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     private bool _isEpisodesPanelOpen;
 
@@ -559,7 +641,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         !string.IsNullOrWhiteSpace(StreamQuality.VideoCodecDisplay);
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActiveMobilePanelState))]
+    [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
     [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
+    [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     private bool _isInfoPanelOpen;
 
@@ -585,7 +670,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private string _currentEpisodeIdentity = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActiveMobilePanelState))]
+    [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
     [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
+    [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     private bool _isNextEpisodePromptVisible;
 
@@ -1556,12 +1644,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         if (!IsSeriesContent) return;
         if (EpisodeSeasons.Count == 0) return;
 
-        var isOpening = !IsEpisodesPanelOpen;
-        IsAudioSettingsOpen = false;
-        IsQualitySettingsOpen = false;
-        IsInfoPanelOpen = false;
-        IsEpisodesPanelOpen = isOpening;
-        IsLocked = isOpening;
+        ToggleMobilePanelState(MobilePanelState.Episodes);
         RestartAutoHideTimer();
     }
 
@@ -1573,18 +1656,12 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         LogDebug("UI Action: ToggleEpgPanel clicked");
         if (IsEpgPanelOpen)
         {
-            IsEpgPanelOpen = false;
+            SetMobilePanelState(MobilePanelState.None);
             return;
         }
 
         // Diğer panel/kilitleri kapat
-        IsAudioSettingsOpen    = false;
-        IsQualitySettingsOpen  = false;
-        IsInfoPanelOpen        = false;
-        IsEpisodesPanelOpen    = false;
-        IsSleepTimerPanelOpen  = false;
-        IsLocked               = true;
-        IsEpgPanelOpen         = true;
+        SetMobilePanelState(MobilePanelState.Epg);
 
         await LoadEpgPanelAsync();
     }
@@ -1816,7 +1893,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private TaskCompletionSource<bool>? _resumeDialogTcs;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActiveMobilePanelState))]
+    [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
     [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
+    [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     private bool _isResumeDialogVisible;
     [ObservableProperty] private string _resumePositionText = string.Empty;

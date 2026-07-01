@@ -2318,7 +2318,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("QualityFpsText", playerViewSource);
         Assert.Contains("QualityAudioText", playerViewSource);
         Assert.Contains("VideoSurfaceSlot", playerViewSource);
-        Assert.Contains("IsMobileCompactControlsVisible", playerViewSource);
+        Assert.Contains("IsBottomControlsVisible", playerViewSource);
         Assert.Contains("OpenQualitySettingsCommand", playerViewSource);
         Assert.Contains("EnterPiPCommand", playerViewSource);
         Assert.Contains("PictureInPictureBottomRight", playerViewSource);
@@ -2349,7 +2349,8 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("x:Name=\"MobileWatermark\"", playerViewSource);
 
         Assert.Contains("x:Name=\"MobilePlayerCompactControlsHost\"", playerViewSource);
-        Assert.Contains("IsVisible=\"{Binding IsMobileCompactControlsVisible}\"", playerViewSource);
+        Assert.Contains("IsVisible=\"{Binding IsBottomControlsVisible}\"", playerViewSource);
+        Assert.Contains("IsVisible=\"{Binding IsTopOverlayVisible}\"", playerViewSource);
         Assert.Contains("x:Name=\"MobilePlayerSheetHost\"", playerViewSource);
         Assert.Contains("ZIndex=\"50\"", playerViewSource);
         Assert.Contains("IsVisible=\"{Binding IsMobileDetailPanelOpen}\"", playerViewSource);
@@ -2368,12 +2369,52 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "MobilePlayerView.axaml"));
+        var topOverlaySource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerTopOverlay.axaml"));
 
-        Assert.Contains("Kind=\"KeyboardBackspace\"", playerViewSource);
-        Assert.Contains("Command=\"{Binding CloseCommand}\"", playerViewSource);
-        Assert.Contains("QualityResolutionText", playerViewSource);
-        Assert.Contains("HasTopQualityBadgesReady", playerViewSource);
-        Assert.Contains("Kind=\"HighDefinition\"", playerViewSource);
+        Assert.Contains("views:MobilePlayerTopOverlay", playerViewSource);
+        Assert.True(File.Exists(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerTopOverlay.axaml")));
+
+        Assert.Contains("Kind=\"KeyboardBackspace\"", topOverlaySource);
+        Assert.Contains("Command=\"{Binding CloseCommand}\"", topOverlaySource);
+        Assert.Contains("QualityResolutionText", topOverlaySource);
+        Assert.Contains("HasTopQualityBadgesReady", topOverlaySource);
+        Assert.Contains("Kind=\"HighDefinition\"", topOverlaySource);
+    }
+
+    [Fact]
+    public void PlayerViewModel_MobilePanelsUseCentralPanelStateHelpers()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var playerViewModelSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Core",
+            "ViewModels",
+            "PlayerViewModel.cs"));
+        var overlayManagerSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Core",
+            "ViewModels",
+            "Player",
+            "PlayerOverlayManager.cs"));
+
+        Assert.Contains("enum MobilePanelState", playerViewModelSource);
+        Assert.Contains("SetMobilePanelState(MobilePanelState", playerViewModelSource);
+        Assert.Contains("ToggleMobilePanelState(MobilePanelState", playerViewModelSource);
+        Assert.Contains("ToggleMobilePanelState(MobilePanelState.Episodes)", playerViewModelSource);
+        Assert.Contains("SetMobilePanelState(MobilePanelState.Epg)", playerViewModelSource);
+
+        Assert.Contains("ToggleMobilePanelState(MobilePanelState.Audio)", overlayManagerSource);
+        Assert.Contains("ToggleMobilePanelState(MobilePanelState.Quality)", overlayManagerSource);
+        Assert.Contains("ToggleMobilePanelState(MobilePanelState.Info)", overlayManagerSource);
+        Assert.Contains("ToggleMobilePanelState(MobilePanelState.Sleep)", overlayManagerSource);
     }
 
     [Fact]

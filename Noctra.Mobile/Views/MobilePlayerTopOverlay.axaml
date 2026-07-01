@@ -1,0 +1,72 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.Mobile.Views.MobilePlayerTopOverlay"
+             x:DataType="vm:PlayerViewModel"
+             x:CompileBindings="False">
+  <Grid ColumnDefinitions="Auto,*,Auto,Auto"
+        ColumnSpacing="10"
+        Margin="16,18,16,0">
+    <Button Command="{Binding CloseCommand}"
+            Width="44"
+            Height="44"
+            Padding="0"
+            CornerRadius="22"
+            Background="#99000000"
+            BorderThickness="0"
+            VerticalAlignment="Top">
+      <icons:MaterialIcon Kind="KeyboardBackspace" Width="24" Height="24" Foreground="White" />
+    </Button>
+
+    <StackPanel Grid.Column="1"
+                Spacing="3"
+                VerticalAlignment="Center"
+                Margin="0,0,12,0">
+      <TextBlock Text="{Binding CurrentChannel.Name}"
+                 Foreground="White"
+                 FontSize="20"
+                 FontWeight="Bold"
+                 LetterSpacing="0.2"
+                 TextWrapping="NoWrap"
+                 TextTrimming="CharacterEllipsis"
+                 MaxLines="1" />
+      <TextBlock Text="{Binding ConnectionStatus}"
+                 Foreground="#CCFFFFFF"
+                 FontSize="12"
+                 TextWrapping="NoWrap"
+                 TextTrimming="CharacterEllipsis"
+                 MaxLines="1" />
+    </StackPanel>
+
+    <Border Grid.Column="2"
+            CornerRadius="16"
+            Padding="10,6"
+            Background="#99000000"
+            BorderBrush="#40FFFFFF"
+            BorderThickness="1"
+            VerticalAlignment="Top"
+            IsVisible="{Binding HasTopQualityBadgesReady}">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <icons:MaterialIcon Kind="HighDefinition" Width="16" Height="16" Foreground="White" />
+        <TextBlock Text="{Binding QualityResolutionText}"
+                   Foreground="White"
+                   FontSize="12"
+                   FontWeight="SemiBold"
+                   VerticalAlignment="Center" />
+      </StackPanel>
+    </Border>
+
+    <Button Grid.Column="3"
+            Command="{Binding CloseCommand}"
+            Width="44"
+            Height="44"
+            Padding="0"
+            CornerRadius="22"
+            Background="#99000000"
+            BorderThickness="0"
+            VerticalAlignment="Top">
+      <icons:MaterialIcon Kind="Close" Width="24" Height="24" Foreground="White" />
+    </Button>
+  </Grid>
+</UserControl>

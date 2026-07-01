@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Noctra.Models;
+using static Noctra.ViewModels.PlayerViewModel;
 
 namespace Noctra.ViewModels;
 
@@ -68,13 +69,9 @@ public class PlayerOverlayManager
     public void OpenAudioSettings()
     {
         _vm.LogDebug("UI Action: OpenAudioSettings clicked");
-        _vm.IsAudioSettingsOpen = !_vm.IsAudioSettingsOpen;
+        _vm.ToggleMobilePanelState(MobilePanelState.Audio);
         if (_vm.IsAudioSettingsOpen)
         {
-            _vm.IsQualitySettingsOpen = false;
-            _vm.IsEpisodesPanelOpen = false;
-            _vm.IsInfoPanelOpen = false;
-            _vm.IsLocked = true;
             _vm.UpdateMediaInfo();
             _ = _vm.RefreshTracksWithRetryAsync();
         }
@@ -83,14 +80,7 @@ public class PlayerOverlayManager
     public void OpenQualitySettings()
     {
         _vm.LogDebug("UI Action: OpenQualitySettings clicked");
-        _vm.IsQualitySettingsOpen = !_vm.IsQualitySettingsOpen;
-        if (_vm.IsQualitySettingsOpen)
-        {
-            _vm.IsAudioSettingsOpen = false;
-            _vm.IsEpisodesPanelOpen = false;
-            _vm.IsInfoPanelOpen = false;
-            _vm.IsLocked = true;
-        }
+        _vm.ToggleMobilePanelState(MobilePanelState.Quality);
     }
 
     public void OpenInfoPanel()
@@ -101,41 +91,20 @@ public class PlayerOverlayManager
             return;
         }
 
-        _vm.IsInfoPanelOpen = !_vm.IsInfoPanelOpen;
-        if (_vm.IsInfoPanelOpen)
-        {
-            _vm.IsAudioSettingsOpen = false;
-            _vm.IsQualitySettingsOpen = false;
-            _vm.IsEpisodesPanelOpen = false;
-            _vm.IsLocked = true;
-        }
+        _vm.ToggleMobilePanelState(MobilePanelState.Info);
     }
 
     public void ClosePanels()
     {
         _vm.LogDebug("UI Action: ClosePanels clicked");
-        _vm.IsAudioSettingsOpen    = false;
-        _vm.IsQualitySettingsOpen  = false;
-        _vm.IsEpisodesPanelOpen    = false;
-        _vm.IsInfoPanelOpen        = false;
-        _vm.IsSleepTimerPanelOpen  = false;
-        _vm.IsEpgPanelOpen         = false;
-        _vm.IsLocked               = false;
+        _vm.SetMobilePanelState(MobilePanelState.None);
         RestartAutoHideTimer();
     }
 
     public void ShowSleepTimerMenu()
     {
         _vm.LogDebug("UI Action: ShowSleepTimerMenu clicked");
-        _vm.IsSleepTimerPanelOpen = !_vm.IsSleepTimerPanelOpen;
-        if (_vm.IsSleepTimerPanelOpen)
-        {
-            _vm.IsAudioSettingsOpen = false;
-            _vm.IsQualitySettingsOpen = false;
-            _vm.IsEpisodesPanelOpen = false;
-            _vm.IsInfoPanelOpen = false;
-            _vm.IsLocked = true;
-        }
+        _vm.ToggleMobilePanelState(MobilePanelState.Sleep);
     }
 
     public void SetSleepTimer(PlayerViewModel.SleepTimerOption mode)
