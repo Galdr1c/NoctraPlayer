@@ -316,7 +316,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("TextTrimming=\"CharacterEllipsis\"", mainViewSource);
         Assert.Contains("<Setter Property=\"MinHeight\" Value=\"52\" />", mainViewSource);
         Assert.Contains("Classes=\"nav navBottom\"", mainViewSource);
-        Assert.Contains("Classes=\"NavPill\"", mainViewSource);
+        Assert.Contains("Classes=\"NavIndicator\"", mainViewSource);
 
         Assert.DoesNotContain("ColumnDefinitions=\"*,*,*,*,*\"", playerViewSource);
         Assert.Contains("<WrapPanel", playerViewSource);
@@ -1456,8 +1456,10 @@ public sealed class ReleaseSourceCleanlinessTests
         }
 
         Assert.Contains("ConverterParameter=liveWidth", liveSource);
-        Assert.Contains("LoadMoreChannelsIfNeededAsync", liveCode);
-        Assert.Contains("LoadMoreChannelsIfNeededAsync", moviesCode);
+        Assert.Contains("MobileScrollPaging.LoadMoreIfNearEndAsync", liveCode);
+        Assert.Contains("MobileScrollPagingTarget.Channels", liveCode);
+        Assert.Contains("MobileScrollPaging.LoadMoreIfNearEndAsync", moviesCode);
+        Assert.Contains("MobileScrollPagingTarget.Channels", moviesCode);
 
         Assert.Contains("vm:MainViewModel", seriesSource);
         Assert.Contains("SeriesViewItems", seriesSource);
@@ -1466,7 +1468,8 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("SelectedSortOrder", seriesSource);
         Assert.Contains("IsContentLoading", seriesSource);
         Assert.Contains("ShowEmptyChannels", seriesSource);
-        Assert.Contains("LoadMoreSeriesIfNeededAsync", seriesCode);
+        Assert.Contains("MobileScrollPaging.LoadMoreIfNearEndAsync", seriesCode);
+        Assert.Contains("MobileScrollPagingTarget.Series", seriesCode);
         Assert.Contains("SelectedSeries", seriesDetailSource);
         Assert.Contains("IsSeriesDetailVisible", seriesDetailSource);
         Assert.Contains("CloseSeriesDetailCommand", seriesDetailSource);
@@ -2330,6 +2333,50 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobilePlayerOverlay_UsesRootLevelSheetsAndSlotBoundWatermark()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var playerViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml"));
+
+        Assert.Contains("<Grid Background=\"Black\"", playerViewSource);
+        Assert.Contains("ClipToBounds=\"True\"", playerViewSource);
+        Assert.Contains("x:Name=\"VideoSurfaceLayer\"", playerViewSource);
+        Assert.Contains("x:Name=\"VideoSurfaceSlot\"", playerViewSource);
+        Assert.Contains("x:Name=\"MobileWatermark\"", playerViewSource);
+
+        Assert.Contains("x:Name=\"MobilePlayerCompactControlsHost\"", playerViewSource);
+        Assert.Contains("IsVisible=\"{Binding IsMobileCompactControlsVisible}\"", playerViewSource);
+        Assert.Contains("x:Name=\"MobilePlayerSheetHost\"", playerViewSource);
+        Assert.Contains("ZIndex=\"50\"", playerViewSource);
+        Assert.Contains("IsVisible=\"{Binding IsMobileDetailPanelOpen}\"", playerViewSource);
+
+        Assert.True(
+            playerViewSource.IndexOf("x:Name=\"MobilePlayerSheetHost\"", StringComparison.Ordinal) >
+            playerViewSource.IndexOf("x:Name=\"MobilePlayerCompactControlsHost\"", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void MobilePlayerTopOverlay_ExposesBackAndQualityBadge()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var playerViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml"));
+
+        Assert.Contains("Kind=\"KeyboardBackspace\"", playerViewSource);
+        Assert.Contains("Command=\"{Binding CloseCommand}\"", playerViewSource);
+        Assert.Contains("QualityResolutionText", playerViewSource);
+        Assert.Contains("HasTopQualityBadgesReady", playerViewSource);
+        Assert.Contains("Kind=\"HighDefinition\"", playerViewSource);
+    }
+
+    [Fact]
     public void MobilePlayerSecondaryControls_ReusesDesktopPlayerControlContract()
     {
         var repositoryRoot = FindRepositoryRoot();
@@ -2941,7 +2988,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.DoesNotContain("Tag=\"Movies\" Click=\"OnDestinationClick\">\r\n          <StackPanel Spacing=\"2\" HorizontalAlignment=\"Center\">\r\n            <icons:MaterialIcon Kind=\"PlayBoxMultipleOutline\"", mainViewSource);
         Assert.DoesNotContain("Text=\"{loc:Translate Shell.Nav.Library}\" FontSize=\"11\"", mainViewSource);
         Assert.Contains("Text=\"{loc:Translate Shell.Nav.Movies}\"", mainViewSource);
-        Assert.Contains("Classes=\"NavLabel\"", mainViewSource);
+        Assert.Contains("Classes=\"NavIndicator\"", mainViewSource);
 
         Assert.Contains("IsVisible=\"{Binding !IsLiveContent}\"", mobilePlayerSource);
         Assert.Contains("IsVisible=\"{Binding CanShowGoToLiveButton}\"", mobilePlayerSource);

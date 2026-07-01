@@ -23,27 +23,32 @@
     </Style>
   </UserControl.Styles>
 
-  <Grid Background="Transparent" Tapped="OnPlayerBackgroundTapped">
-    <!-- Watermark overlay for free tier. MainView updates the margin from safe-area/fullscreen/PiP state. -->
-    <views:MobileWatermarkView x:Name="MobileWatermark"
-                                Grid.ColumnSpan="2"
-                                ZIndex="10"
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Bottom"
-                                Margin="0,0,24,120"
-                                IsHitTestVisible="False" />
-    <!-- Double Tap Zones -->
+  <Grid Background="Black"
+        ClipToBounds="True"
+        Tapped="OnPlayerBackgroundTapped">
+    <!-- Double tap and gesture zones split the visible player area into left/right halves. -->
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="*" />
       <ColumnDefinition Width="*" />
     </Grid.ColumnDefinitions>
 
-    <Border x:Name="VideoSurfaceSlot"
-            Grid.ColumnSpan="2"
-            Background="Transparent"
-            ClipToBounds="True"
-            IsHitTestVisible="False"
-            IsVisible="{Binding !IsEpgPanelOpen}" />
+    <Grid x:Name="VideoSurfaceLayer"
+          Grid.ColumnSpan="2"
+          ClipToBounds="True"
+          IsVisible="{Binding !IsEpgPanelOpen}">
+      <Border x:Name="VideoSurfaceSlot"
+              Background="Transparent"
+              ClipToBounds="True"
+              IsHitTestVisible="False" />
+
+      <!-- Watermark is bound to the same visual layer as the native video slot. -->
+      <views:MobileWatermarkView x:Name="MobileWatermark"
+                                  ZIndex="10"
+                                  HorizontalAlignment="Right"
+                                  VerticalAlignment="Bottom"
+                                  Margin="0,0,24,120"
+                                  IsHitTestVisible="False" />
+    </Grid>
 
     <Border Grid.ColumnSpan="2"
             ZIndex="4"
@@ -75,11 +80,24 @@
 
     <Grid Grid.ColumnSpan="2"
           ZIndex="35"
-          ColumnDefinitions="*,Auto"
+          ColumnDefinitions="Auto,*,Auto,Auto"
+          ColumnSpacing="10"
           Margin="16,18,16,0"
           VerticalAlignment="Top"
           IsVisible="{Binding AreMobileControlsVisible}">
-      <StackPanel Spacing="3"
+      <Button Command="{Binding CloseCommand}"
+              Width="44"
+              Height="44"
+              Padding="0"
+              CornerRadius="22"
+              Background="#99000000"
+              BorderThickness="0"
+              VerticalAlignment="Top">
+        <icons:MaterialIcon Kind="KeyboardBackspace" Width="24" Height="24" Foreground="White" />
+      </Button>
+
+      <StackPanel Grid.Column="1"
+                  Spacing="3"
                   VerticalAlignment="Center"
                   Margin="0,0,12,0">
         <TextBlock Text="{Binding CurrentChannel.Name}"
@@ -97,7 +115,26 @@
                    TextTrimming="CharacterEllipsis"
                    MaxLines="1" />
       </StackPanel>
-      <Button Grid.Column="1"
+
+      <Border Grid.Column="2"
+              CornerRadius="16"
+              Padding="10,6"
+              Background="#99000000"
+              BorderBrush="#40FFFFFF"
+              BorderThickness="1"
+              VerticalAlignment="Top"
+              IsVisible="{Binding HasTopQualityBadgesReady}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <icons:MaterialIcon Kind="HighDefinition" Width="16" Height="16" Foreground="White" />
+          <TextBlock Text="{Binding QualityResolutionText}"
+                     Foreground="White"
+                     FontSize="12"
+                     FontWeight="SemiBold"
+                     VerticalAlignment="Center" />
+        </StackPanel>
+      </Border>
+
+      <Button Grid.Column="3"
               Command="{Binding CloseCommand}"
               Width="44"
               Height="44"
@@ -410,7 +447,8 @@
     </Button>
 
     <!-- Normal mode controls: desktop video overlay adapted to a mobile bottom sheet. -->
-    <Border Grid.ColumnSpan="2"
+    <Border x:Name="MobilePlayerCompactControlsHost"
+            Grid.ColumnSpan="2"
             ZIndex="30"
             Background="#E60A0A0A"
             BorderBrush="{DynamicResource BorderBrush}"
@@ -419,8 +457,8 @@
             CornerRadius="18"
             VerticalAlignment="Bottom"
             Margin="10,0,10,10"
-            MaxHeight="520"
-            IsVisible="{Binding AreMobileControlsVisible}">
+            MaxHeight="360"
+            IsVisible="{Binding IsMobileCompactControlsVisible}">
       <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                     VerticalScrollBarVisibility="Auto">
       <StackPanel Spacing="12">
@@ -765,6 +803,25 @@
                  TextWrapping="Wrap" />
       </StackPanel>
 
+      </StackPanel>
+      </ScrollViewer>
+    </Border>
+
+    <Border x:Name="MobilePlayerSheetHost"
+            Grid.ColumnSpan="2"
+            ZIndex="50"
+            Background="#F20A0A0A"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1"
+            Padding="14"
+            CornerRadius="22,22,0,0"
+            VerticalAlignment="Bottom"
+            Margin="0"
+            MaxHeight="560"
+            IsVisible="{Binding IsMobileDetailPanelOpen}">
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="12">
       <Border Background="{DynamicResource OverlayBackgroundBrush}"
               CornerRadius="14"
               Padding="12"
@@ -1743,9 +1800,9 @@
           </Border>
         </StackPanel>
       </Border>
-      </StackPanel>
+        </StackPanel>
       </ScrollViewer>
-  </Border>
+    </Border>
 
     <!-- EPG mode: video uses a smaller transparent slot above the timeline. -->
     <Grid x:Name="EpgModeRoot" Grid.ColumnSpan="2"
