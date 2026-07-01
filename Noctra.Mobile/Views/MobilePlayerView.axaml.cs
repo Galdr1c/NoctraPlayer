@@ -135,6 +135,8 @@ public partial class MobilePlayerView : UserControl
     {
         InitializeComponent();
 
+        EpgPanel.ChannelSelected += channel => ChannelSelected?.Invoke(channel);
+
         _volumeToastTimer = CreateToastTimer(() => IsVolumeToastVisible = false, TimeSpan.FromMilliseconds(900));
         _seekToastTimer = CreateToastTimer(() => IsSeekToastVisible = false, TimeSpan.FromMilliseconds(850));
         _downloadToastTimer = CreateToastTimer(() => IsDownloadToastVisible = false, TimeSpan.FromMilliseconds(2200));
@@ -219,7 +221,7 @@ public partial class MobilePlayerView : UserControl
         {
             if (_boundVm?.IsEpgPanelOpen == true)
             {
-                InitializeEpgTimelineHeader();
+                EpgPanel.InitializeTimelineHeader();
                 _lastSurfaceRect = default;
                 QueueVideoSurfaceLayoutUpdate();
             }
@@ -236,7 +238,7 @@ public partial class MobilePlayerView : UserControl
         if (e.PropertyName == nameof(PlayerViewModel.EpgFocusRowIndex)
             && _boundVm?.IsEpgPanelOpen == true)
         {
-            QueueFocusCurrentEpgRow();
+            EpgPanel.QueueFocusCurrentRow();
         }
     }
 
@@ -289,7 +291,8 @@ public partial class MobilePlayerView : UserControl
     /// </summary>
     private void UpdateEpgVideoLayout()
     {
-        if (VideoSlot is null)
+        var videoSlot = EpgPanel.VideoSlotControl;
+        if (videoSlot is null)
         {
             return;
         }
@@ -309,14 +312,14 @@ public partial class MobilePlayerView : UserControl
 
         // Video yüksekliği: 16:9, ancak ekranın yarısını geçmesin.
         var desiredHeight = Math.Min(totalWidth * 9.0 / 16.0, totalHeight * 0.5);
-        if (Math.Abs(VideoSlot.Height - desiredHeight) > 0.5)
+        if (Math.Abs(videoSlot.Height - desiredHeight) > 0.5)
         {
-            VideoSlot.Height = desiredHeight;
+            videoSlot.Height = desiredHeight;
             return; // yükseklik değişti; yeni layout pass UpdateEpgVideoLayout'u tekrar tetikler
         }
 
         // VideoSlot'un pencereye göre konumunu al, piksel ölçeğine çevir.
-        var topLeft = VideoSlot.TranslatePoint(new Point(0, 0), topLevel);
+        var topLeft = videoSlot.TranslatePoint(new Point(0, 0), topLevel);
         if (topLeft is null)
         {
             return;
@@ -325,8 +328,8 @@ public partial class MobilePlayerView : UserControl
         var scaling = topLevel.RenderScaling;
         var px = (int)Math.Round(topLeft.Value.X * scaling);
         var py = (int)Math.Round(topLeft.Value.Y * scaling);
-        var pw = (int)Math.Round(VideoSlot.Bounds.Width * scaling);
-        var ph = (int)Math.Round(VideoSlot.Bounds.Height * scaling);
+        var pw = (int)Math.Round(videoSlot.Bounds.Width * scaling);
+        var ph = (int)Math.Round(videoSlot.Bounds.Height * scaling);
         if (pw <= 0 || ph <= 0)
         {
             return;
@@ -510,194 +513,6 @@ public partial class MobilePlayerView : UserControl
         return string.IsNullOrWhiteSpace(value) || string.Equals(value, key, StringComparison.Ordinal)
             ? fallback
             : value;
-    }
-
-    /// <summary>
-    /// Desktop EPG'deki saat başlığı / zaman penceresi mantığını mobile timeline'a uygular.
-    /// </summary>
-    private void InitializeEpgTimelineHeader()
-    {
-        var now = DateTime.Now;
-        BuildEpgTimeHeader(now);
-
-        var windowLabel = this.FindControl<TextBlock>("EpgTimeWindowLabel");
-        if (windowLabel is not null)
-        {
-            var start = now.AddHours(-PlayerViewModel.EpgPastHours).ToString("HH:mm");
-            var end = now.AddHours(PlayerViewModel.EpgFutureHours).ToString("HH:mm");
-            windowLabel.Text = $"{start} – {end}";
-        }
-
-        QueueFocusCurrentEpgRow();
-    }
-
-    private void BuildEpgTimeHeader(DateTime now)
-    {
-        var canvas = this.FindControl<Canvas>("EpgTimeHeaderCanvas");
-        if (canvas is null)
-        {
-            return;
-        }
-
-        canvas.Children.Clear();
-
-        var lineBrush = new SolidColorBrush(Color.Parse("#33FFFFFF"));
-        var halfLineBrush = new SolidColorBrush(Color.Parse("#1AFFFFFF"));
-        var nowBrush = new SolidColorBrush(Color.Parse("#CC7B2FBE"));
-        var accentBrush = new SolidColorBrush(Color.Parse("#7B2FBE"));
-        var totalMinutes = (PlayerViewModel.EpgPastHours + PlayerViewModel.EpgFutureHours) * 60;
-
-        for (var minute = 30; minute < totalMinutes; minute += 30)
-        {
-            var line = new Border
-            {
-                Width = 1,
-                Height = 36,
-                Background = minute % 60 == 0 ? lineBrush : halfLineBrush
-            };
-            Canvas.SetLeft(line, minute * PlayerViewModel.EpgPxPerMinute);
-            canvas.Children.Add(line);
-        }
-
-        for (var hour = -(int)PlayerViewModel.EpgPastHours; hour <= (int)PlayerViewModel.EpgFutureHours; hour++)
-        {
-            if (hour == 0)
-            {
-                continue;
-            }
-
-            var label = new TextBlock
-            {
-                Text = now.AddHours(hour).ToString("HH:mm"),
-                FontSize = 10,
-                FontWeight = FontWeight.Bold,
-                Foreground = new SolidColorBrush(Color.Parse("#80FFFFFF"))
-            };
-            Canvas.SetLeft(label, (hour + PlayerViewModel.EpgPastHours) * 60 * PlayerViewModel.EpgPxPerMinute + 4);
-            Canvas.SetTop(label, 14);
-            canvas.Children.Add(label);
-        }
-
-        var nowLine = new Border
-        {
-            Width = 1.5,
-            Height = 36,
-            Background = nowBrush,
-            ZIndex = 10
-        };
-        Canvas.SetLeft(nowLine, PlayerViewModel.EpgNowPixelPos);
-        canvas.Children.Add(nowLine);
-
-        var nowLabel = new TextBlock
-        {
-            FontSize = 7,
-            FontWeight = FontWeight.Bold,
-            Foreground = Brushes.White,
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
-        };
-        nowLabel.Bind(TextBlock.TextProperty, new Binding("[Player.Epg.Now]")
-        {
-            Source = LocalizationSource.Instance
-        });
-
-        var nowBadge = new Border
-        {
-            Width = 26,
-            Height = 17,
-            CornerRadius = new CornerRadius(4),
-            Background = accentBrush,
-            ZIndex = 11,
-            Child = nowLabel
-        };
-        Canvas.SetLeft(nowBadge, PlayerViewModel.EpgNowPixelPos - 13);
-        Canvas.SetTop(nowBadge, 5);
-        canvas.Children.Add(nowBadge);
-    }
-
-    private void QueueFocusCurrentEpgRow()
-    {
-        Dispatcher.UIThread.Post(FocusCurrentEpgRow, DispatcherPriority.Loaded);
-        Dispatcher.UIThread.Post(FocusCurrentEpgRow, DispatcherPriority.Background);
-    }
-
-    private void FocusCurrentEpgRow()
-    {
-        var timelineScroll = this.FindControl<ScrollViewer>("EpgTimelineScroll");
-        if (timelineScroll is null)
-        {
-            return;
-        }
-
-        var targetX = Math.Max(0, PlayerViewModel.EpgNowPixelPos - timelineScroll.Viewport.Width / 2);
-        var targetY = timelineScroll.Offset.Y;
-
-        if (_boundVm?.EpgFocusRowIndex >= 0)
-        {
-            const double rowHeight = 60;
-            targetY = Math.Max(0, _boundVm.EpgFocusRowIndex * rowHeight - timelineScroll.Viewport.Height / 2 + rowHeight / 2);
-        }
-
-        timelineScroll.Offset = new Vector(targetX, targetY);
-
-        var timeHeader = this.FindControl<ScrollViewer>("EpgTimeHeaderScroll");
-        if (timeHeader is not null)
-        {
-            timeHeader.Offset = new Vector(targetX, 0);
-        }
-
-        var namesScroll = this.FindControl<ScrollViewer>("EpgNamesScroll");
-        if (namesScroll is not null)
-        {
-            namesScroll.Offset = new Vector(0, targetY);
-        }
-    }
-
-    /// <summary>
-    /// Timeline scroll değişince üst saat başlığını ve soldaki frozen kanal listesini senkron tutar.
-    /// </summary>
-    private void EpgTimelineScroll_ScrollChanged(object? sender, ScrollChangedEventArgs e)
-    {
-        if (sender is not ScrollViewer timelineScroll)
-        {
-            return;
-        }
-
-        var timeHeader = this.FindControl<ScrollViewer>("EpgTimeHeaderScroll");
-        if (timeHeader is not null)
-        {
-            timeHeader.Offset = new Vector(timelineScroll.Offset.X, 0);
-        }
-
-        var namesScroll = this.FindControl<ScrollViewer>("EpgNamesScroll");
-        if (namesScroll is not null)
-        {
-            namesScroll.Offset = new Vector(0, timelineScroll.Offset.Y);
-        }
-    }
-
-    /// <summary>
-    /// EPG timeline kanal satırına tıklandığında çağrılır.
-    /// Seçilen kanalı ChannelSelected event'i ile iletir, EPG panelini kapatır.
-    /// </summary>
-    private void EpgRow_PointerReleased(object? sender, PointerReleasedEventArgs e)
-    {
-        var point = e.GetCurrentPoint(this);
-        if (point.Properties.PointerUpdateKind != PointerUpdateKind.LeftButtonReleased)
-            return;
-
-        if (sender is Control control && control.DataContext is EpgPanelRow row)
-        {
-            // EPG panelini kapat
-            if (DataContext is PlayerViewModel playerVm)
-            {
-                playerVm.ToggleEpgPanelCommand.Execute(null);
-            }
-
-            // Kanal seçim event'ini fırlat
-            ChannelSelected?.Invoke(row.Channel);
-            e.Handled = true;
-        }
     }
 
     private void OnLeftDoubleTapped(object? sender, TappedEventArgs e)

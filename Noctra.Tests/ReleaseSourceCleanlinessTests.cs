@@ -2480,6 +2480,57 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobilePlayerEpgPanel_ExtractsTimelinePanelAndEventBridge()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var playerViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml"));
+        var playerViewCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml.cs"));
+        var epgPanelPath = Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerEpgPanel.axaml");
+        var epgPanelCodePath = Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerEpgPanel.axaml.cs");
+
+        Assert.Contains("views:MobilePlayerEpgPanel", playerViewSource);
+        Assert.True(File.Exists(epgPanelPath));
+        Assert.True(File.Exists(epgPanelCodePath));
+
+        var epgPanelSource = File.ReadAllText(epgPanelPath);
+        var epgPanelCode = File.ReadAllText(epgPanelCodePath);
+
+        Assert.Contains("x:Name=\"EpgModeRoot\"", epgPanelSource);
+        Assert.Contains("x:Name=\"VideoSlot\"", epgPanelSource);
+        Assert.Contains("x:Name=\"EpgTimelineScroll\"", epgPanelSource);
+        Assert.Contains("ScrollChanged=\"EpgTimelineScroll_ScrollChanged\"", epgPanelSource);
+        Assert.Contains("PointerReleased=\"EpgRow_PointerReleased\"", epgPanelSource);
+        Assert.Contains("public event Action<Channel>? ChannelSelected", epgPanelCode);
+        Assert.Contains("public Control? VideoSlotControl", epgPanelCode);
+        Assert.Contains("public void InitializeTimelineHeader()", epgPanelCode);
+        Assert.Contains("public void QueueFocusCurrentRow()", epgPanelCode);
+
+        Assert.Contains("EpgPanel.InitializeTimelineHeader()", playerViewCode);
+        Assert.Contains("EpgPanel.QueueFocusCurrentRow()", playerViewCode);
+        Assert.Contains("EpgPanel.VideoSlotControl", playerViewCode);
+        Assert.Contains("EpgPanel.ChannelSelected", playerViewCode);
+        Assert.DoesNotContain("private void EpgTimelineScroll_ScrollChanged", playerViewCode);
+        Assert.DoesNotContain("private void EpgRow_PointerReleased", playerViewCode);
+        Assert.DoesNotContain("x:Name=\"EpgTimelineScroll\"", playerViewSource);
+    }
+
+    [Fact]
     public void PlayerViewModel_MobilePanelsUseCentralPanelStateHelpers()
     {
         var repositoryRoot = FindRepositoryRoot();
@@ -3410,7 +3461,8 @@ public sealed class ReleaseSourceCleanlinessTests
             "MobilePlayerTopOverlay.axaml",
             "MobilePlayerCenterControls.axaml",
             "MobilePlayerCompactControls.axaml",
-            "MobilePlayerSheets.axaml"
+            "MobilePlayerSheets.axaml",
+            "MobilePlayerEpgPanel.axaml"
         };
 
         return string.Concat(files.Select(file => File.ReadAllText(Path.Combine(viewDirectory, file))));
